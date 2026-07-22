@@ -117,10 +117,10 @@ rqr_vb_fit <- function(y, X, coverage_level, learning_rate = 1,
 
   out <- list(
     method = "vb",
-    family = "rqr_desn",
+    family = "rqr_fixed_design",
     approximation = "coordinate_gaussian_vb",
     model_spec = list(
-      family = "rqr_desn",
+      family = "rqr_fixed_design",
       parameterization = "two_root_readouts",
       coverage_level = constants$alpha,
       learning_rate = constants$omega,
@@ -140,7 +140,7 @@ rqr_vb_fit <- function(y, X, coverage_level, learning_rate = 1,
     diagnostics = list(
       objective_trace = objective,
       delta_trace = delta,
-      converged = is.finite(tail(delta, 1L)) && tail(delta, 1L) < tol,
+      converged = is.finite(utils::tail(delta, 1L)) && utils::tail(delta, 1L) < tol,
       warning = "VB is an approximation to the RQR generalized posterior and is not calibrated by default."
     ),
     beta_prior = list(type = beta_prior_type, hypers = beta_prior_obj$hypers),

@@ -1,0 +1,30 @@
+Package: rqrgibbs
+Type: Package
+Title: Generalized Bayes Interval Regression with Gibbs Sampling
+Version: 0.1.0.9000
+Authors@R: c(
+    person("Antonio", "De Leon", role = c("aut", "cre"),
+           email = "jaguir26@ucsc.edu"),
+    person("Raquel", "Prado", role = "aut"),
+    person("Bruno", "Sanso", role = "aut")
+  )
+Description: Research implementation of loss-based interval regression with
+    fixed-design, deep echo-state-network readout, and linear dynamic model
+    embeddings. The normal-exponential construction augments an exponentiated
+    interval loss and is not a response likelihood.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1.0)
+Imports:
+    Rcpp,
+    stats,
+    utils
+LinkingTo:
+    Rcpp,
+    RcppArmadillo
+Suggests:
+    exdqlm,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+SystemRequirements: C++17
+Config/roxygen2/version: 8.0.0

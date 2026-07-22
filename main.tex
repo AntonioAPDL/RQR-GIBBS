@@ -47,17 +47,18 @@ that construction fixes endpoint probabilities before assessing how interval
 coverage, width, and asymmetry interact. Relaxed quantile regression (RQR)
 instead estimates two interval roots directly through a residual-product loss.
 We develop a Bayesian generalized-posterior formulation for this target and
-show that the exponentiated RQR loss admits a pseudo-asymmetric-Laplace
-normal--exponential augmentation. Conditional on one root and the latent
-scales, the other root has a Gaussian full conditional, yielding a Gibbs
-sampler for ridge and regularized-horseshoe readout priors. The same
-construction supports fixed nonlinear readouts, including RQR-DESN, and
-motivates a linear dynamic/state-space extension in which root trajectories can
-be updated by forward-filtering backward-sampling. The resulting posterior
-summaries are intervals under a loss-based update, not posterior predictive
-draws from a response likelihood. Simulation and application evidence will
-therefore be reported through interval score, empirical coverage, width,
-endpoint recovery, and calibration diagnostics.
+show that a normalized exponentiated RQR loss admits a
+pseudo-asymmetric-Laplace normal--exponential augmentation. Conditional on one
+root and the latent scales, the other root has a Gaussian full conditional.
+This yields a partially collapsed Gibbs sampler with either a fixed learning
+rate or a learned inverse loss scale. The construction supports fixed nonlinear
+readouts, including RQR-DESN, and a linear dynamic extension in which each root
+trajectory is updated by forward-filtering backward-sampling. We distinguish
+fixed evolution covariances, frozen component-discount templates, and an
+experimental adaptive discount recursion. Only the first two currently define
+the stated exact generalized-posterior target. Posterior summaries are
+interval-root functions under a loss-based update, not posterior predictive
+response draws.
 \end{abstract}
 
 \section{Introduction}
@@ -108,9 +109,11 @@ The interpretation is deliberately limited. The generalized posterior updates
 beliefs about interval endpoint functions under the declared RQR loss and
 prior. It is not an ordinary response likelihood and does not define posterior
 predictive response draws. Empirical validation should therefore focus on
-interval score, empirical coverage, width, endpoint recovery when oracle
-endpoints are known, root-switching diagnostics, and sensitivity to the
-generalized-Bayes learning rate
+held-out RQR loss, empirical coverage, width, endpoint recovery when oracle
+RQR roots are known, root-switching diagnostics, and sensitivity to the
+generalized-Bayes learning rate. The usual interval score is informative as a
+secondary comparator but targets equal-tailed intervals and is not neutral
+between all intervals having the same coverage
 \citep{GneitingRaftery2007,Gneiting2011,GneitingKatzfuss2014,
 SyringMartin2019GeneralPosteriorCalibration,Shaby2014OpenFacedSandwich}.
 
@@ -145,8 +148,11 @@ RQR loss is
 \mathcal L_{T,c}(\vect\beta_1,\vect\beta_2)
 =\sum_{t=1}^T \rho_c(e_t).
 \]
-Under unrestricted endpoint functions and an interior solution, the population
-first-order conditions imply a coverage-plus-mean-balance target:
+Suppose the conditional risk is finite and differentiable, the conditional
+distribution has no mass at the endpoints, and an unrestricted pointwise
+minimizer satisfies \(L(x)<U(x)\) in the interior of its parameter space. The
+two population first-order conditions then imply the coverage and first-moment
+balance equations
 \[
 \Pr\{L(X)<Y<U(X)\mid X=x\}=c,
 \]
@@ -157,7 +163,11 @@ and
 \]
 This motivates RQR as a direct interval target that can adapt to asymmetric
 conditional error structure without assigning endpoint quantile levels in
-advance.
+advance. These equations characterize an unrestricted population target only
+under the stated conditions. With linear or otherwise restricted root classes,
+optimization instead enforces design-weighted score equations; it need not
+give conditional coverage at every covariate value. The supplement records
+both forms and does not rely on a data-dependent-interval proof.
 
 \section{Generalized Posterior and Augmentation}
 \label{sec:posterior}
@@ -172,9 +182,28 @@ For priors \(\pi_\beta(\vect\beta_1)\) and
 \exp\{-\omega_{\mathrm R}\mathcal L_{T,c}(\vect\beta_1,\vect\beta_2)\},
 \]
 where \(\omega_{\mathrm R}>0\) is a learning rate. A learned-scale version
-places a Gamma prior on the inverse loss scale \(\lambda\) and replaces
-\(\omega_{\mathrm R}\) by \(\lambda\), with the exact normalizing convention
-recorded in the supplement.
+uses a positive reference loss scale \(s_L\), sets
+\(\omega_{\mathrm R}=\lambda/s_L\), and places a Gamma prior on \(\lambda\).
+We use the normalized loss-kernel target
+
+\[
+\Pi_{\mathrm R}(d\vartheta,d\lambda\mid\vect y)
+\propto
+\pi(d\vartheta)\lambda^{T}\pi_\lambda(d\lambda)
+\exp\{-\lambda\mathcal L_{T,c}(\vartheta)/s_L\},
+\]
+where \(\vartheta\) collects both roots. If
+\(\lambda\sim\mathrm{Gamma}(a_\lambda,b_\lambda)\) in shape--rate form, its
+collapsed conditional is
+
+\[
+\lambda\mid\vartheta,\vect y
+\sim\mathrm{Gamma}\left(a_\lambda+T,
+b_\lambda+\mathcal L_{T,c}(\vartheta)/s_L\right).
+\]
+The factor \(\lambda^T\) is part of the declared target rather than an
+irrelevant constant when \(\lambda\) is learned. A pure-loss sensitivity target
+that omits this factor is kept separate.
 
 Let
 \[
@@ -183,7 +212,7 @@ m_t^{\mathrm R}=y_t(\eta_{1t}+\eta_{2t})-\eta_{1t}\eta_{2t}.
 \]
 Then \(r_t-m_t^{\mathrm R}=e_t\). With
 \[
-\sigma_{\mathrm R}=\omega_{\mathrm R}^{-1},\qquad
+\sigma_{\mathrm R}=s_L/\lambda=\omega_{\mathrm R}^{-1},\qquad
 \xi_c=\frac{1-2c}{c(1-c)},\qquad
 \phi_c=\frac{2}{c(1-c)},
 \]
@@ -206,7 +235,7 @@ Conditional on \(\vect\beta_2\), the pseudo-observation equation is linear in
 \(\vect\beta_1\):
 \[
 \mat A_1=\diag(\vect y-\vect\eta_2)\mat X,\qquad
-\vect z_1=\vect y^{\,2}-\vect y\circ\vect\eta_2-\xi_c\vect v.
+\vect z_1=\vect y\circ(\vect y-\vect\eta_2)-\xi_c\vect v.
 \]
 With \(W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_t)^{-1}\}\) and Gaussian prior
 canonical parameters \((\mat Q_{01},\vect h_{01})\),
@@ -220,9 +249,12 @@ so
 \Normal(\mat Q_1^{-1}\vect h_1,\mat Q_1^{-1}).
 \]
 The update for \(\vect\beta_2\) is identical after swapping root labels. The
-latent scales have generalized inverse Gaussian full conditionals. Adaptive
-shrinkage priors use separate shrinkage states for the two root coefficient
-vectors.
+latent scales have generalized inverse Gaussian full conditionals. For the
+learned-scale target, one valid partially collapsed scan draws \(\lambda\) from
+its collapsed Gamma conditional, refreshes all latent scales using that new
+draw, and then updates roots 1 and 2. The refresh order is part of the sampler
+contract. Adaptive shrinkage priors use separate shrinkage states for the two
+root coefficient vectors.
 
 \section{Model Embeddings}
 \label{sec:embeddings}
@@ -238,40 +270,61 @@ latent state path, for example
 \[
 \eta_{kt}=F_t^\top\theta_{kt},\qquad
 \theta_{kt}=G_t\theta_{k,t-1}+\epsilon_{kt},
+\qquad \epsilon_{kt}\sim\Normal(0,W_{kt}),
 \qquad k=1,2.
 \]
 Conditional on the second root path and the RQR latent scales, the first root
-path enters through a Gaussian pseudo-observation equation with design
-\((y_t-\eta_{2t})F_t\). Thus the root path can be sampled by
-forward-filtering backward-sampling. The second root path is analogous. This
-is the main reason the RQR-DLM extension is a natural standalone contribution
-rather than a small supplement to Q-DESN.
+path enters through
+\[
+z_{1t}=y_t(y_t-\eta_{2t})-\xi_c v_t,\qquad
+H_{1t}=(y_t-\eta_{2t})F_t^\top,qquad
+V_t=\phi_c s_Lv_t/\lambda.
+\]
+This is a scalar-observation Gaussian state-space system, so the complete root
+path can be sampled by forward-filtering backward-sampling. The second root
+path is analogous.
+
+The evolution specification matters to the target. Fixed \(W_{kt}\) defines a
+Gaussian state prior and gives exact alternating FFBS. A frozen discount
+template first maps component-specific discounts to a complete \(W_{1:T}\)
+sequence through a declared reference covariance recursion and then holds that
+sequence fixed throughout MCMC. Conditional on that template, this gives an
+exact sampler for the stated prior; a template estimated from training data is
+recorded as an empirical-Bayes specification. By contrast, recomputing \(W_t\)
+from each conditional filter covariance
+makes it depend on the other root and latent-scale blocks. We retain that
+exdqlm-compatible recursion only as an experimental working update until a
+coherent joint-target derivation is available. The two roots use identical
+evolution specifications by default.
 
 \section{Validation Plan}
 \label{sec:validation}
 
-The standalone simulation study should compare fixed-design RQR, RQR-DESN,
+The standalone simulation study will compare fixed-design RQR, RQR-DESN,
 RQR-DLM, quantile-derived intervals, and empirical interval baselines under
-matched train/test splits. The primary metrics are interval score, empirical
-coverage, coverage error, mean width, endpoint mean absolute error when oracle
-endpoints are available, midpoint error, learned-scale summaries, and
-root-switching diagnostics. VB may be useful for screening or initialization,
-but calibrated VB interval uncertainty should not be promoted until it receives
-its own validation.
+matched data-generating mechanisms, samples, train/test splits, seeds, and
+forecast windows. Primary summaries are held-out RQR loss, empirical coverage
+and coverage error, width at comparable coverage, and endpoint recovery against
+oracle RQR roots. Midpoint error, root switching, learned-scale diagnostics,
+and the standard interval score are secondary summaries. Results will be
+stratified by data-generating mechanism and forecast horizon rather than
+collapsed into unsupported global claims. VB may be useful for screening or
+initialization, but calibrated VB uncertainty will not be promoted until it
+receives its own derivation and validation.
 
 \section{Discussion}
 \label{sec:discussion}
 
-RQR-GIBBS is best viewed as a Bayesian workflow for direct interval targets.
-Its value is not that it replaces quantile forecasting in all settings, but
-that it gives a coherent loss-based posterior over interval endpoints when the
-scientific target is an interval rather than a pair of fixed quantile levels.
-The next methodological steps are to complete the native standalone code path,
-validate the state-space sampler, and run a matched simulation study before
-promoting application-level claims.
+RQR-GIBBS is best viewed as a generalized-Bayes workflow for direct interval
+targets. Its value is not that it replaces quantile forecasting in all
+settings, but that it gives a declared loss-based update over interval roots
+when the scientific target is an interval rather than a pair of fixed quantile
+levels. The native fixed-design and state-space paths now share the same loss,
+scale, and root-ordering contracts. Production evidence remains gated on
+mathematical review of adaptive discounting, numerical parity tests for the
+compiled FFBS kernel, and a frozen matched simulation protocol.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
 
 \end{document}
-

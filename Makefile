@@ -3,7 +3,7 @@ PDFLATEX ?= pdflatex
 BIBTEX ?= bibtex
 LATEXMK ?= latexmk
 
-.PHONY: pdf supplement all-pdf smoke test-exdqlm-rqr literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf smoke package-install test-native package-check test-exdqlm-rqr literature-manifest clean-tex
 
 pdf:
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
@@ -30,6 +30,16 @@ all-pdf: pdf supplement
 smoke:
 	$(R) application/scripts/00_validate_environment.R
 
+package-install:
+	R CMD INSTALL --preclean application
+
+test-native: package-install
+	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "native", reporter = "summary")'
+
+package-check:
+	R CMD build application
+	R CMD check --no-manual rqrgibbs_0.1.0.9000.tar.gz
+
 test-exdqlm-rqr:
 	$(R) application/scripts/02_smoke_rqr_exdqlm_branch.R
 
@@ -38,4 +48,3 @@ literature-manifest:
 
 clean-tex:
 	rm -f *.aux *.bbl *.blg *.fdb_latexmk *.fls *.log *.out *.synctex.gz *.toc *.run.xml *.bcf
-

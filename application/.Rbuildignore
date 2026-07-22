@@ -1,0 +1,10 @@
+^README\.md$
+^R/README\.md$
+^cache$
+^configs$
+^data_local$
+^logs$
+^manifests$
+^outputs$
+^runs$
+^scripts$

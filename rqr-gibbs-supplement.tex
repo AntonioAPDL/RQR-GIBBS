@@ -29,7 +29,7 @@
 \renewcommand{\thesection}{S\arabic{section}}
 \renewcommand{\thesubsection}{S\arabic{section}.\arabic{subsection}}
 
-\title{Supplementary Material for ``Bayesian Relaxed Quantile Regression for Direct Interval Forecasting''}
+\title{Supplementary Material for \emph{Bayesian Relaxed Quantile Regression for Direct Interval Forecasting}}
 \author{Antonio De Leon \and Raquel Prado \and Bruno Sans\'o}
 \date{\today}
 
@@ -38,22 +38,66 @@
 
 \begin{abstract}
 \noindent
-This supplement records the RQR loss target, pseudo-AL augmentation, Gibbs
-blocks, learned-scale extension, DESN readout contract, planned DLM/FFBS
-extension, and reproducibility gates for the standalone RQR-GIBBS article.
+This supplement records the RQR population target, pseudo-AL augmentation,
+partially collapsed learned-scale sampler, fixed-design Gaussian blocks,
+dynamic FFBS equations, component-discount contracts, and reproducibility
+gates for the standalone RQR-GIBBS article.
 \end{abstract}
 
 \section{Scope}
 
 The main article presents the statistical target and the core Gibbs sampler.
 This supplement keeps the derivations and implementation contracts recoverable.
-All response-simulation language is avoided because the RQR update is
-loss-based and does not define an ordinary response likelihood.
+The RQR update is loss based and does not define an ordinary response
+likelihood. Root-trajectory draws from a state evolution equation remain draws
+of endpoint functions; they are not posterior predictive draws of the observed
+response.
+
+\section{Population Target and Restricted Score Equations}
+
+Fix a covariate value \(x\), write \(a=L(x)<U(x)=b\), and define
+\(I_{a,b}(Y)=\ind(a<Y<b)\). Assume the conditional risk is finite and
+differentiable at an interior minimizer and that the conditional distribution
+places no mass at \(a\) or \(b\). Since
+\[
+\frac{\partial}{\partial a}(Y-a)(Y-b)=b-Y,
+\qquad
+\frac{\partial}{\partial b}(Y-a)(Y-b)=a-Y,
+\]
+the pointwise first-order conditions are
+\begin{align}
+\E\left[\{c-I_{a,b}(Y)\}(b-Y)\mid X=x\right]&=0,
+\label{eq:pop-foc-a}\\
+\E\left[\{c-I_{a,b}(Y)\}(a-Y)\mid X=x\right]&=0.
+\label{eq:pop-foc-b}
+\end{align}
+Subtracting \eqref{eq:pop-foc-b} from \eqref{eq:pop-foc-a} and using
+\(b-a>0\) gives
+\[
+\Pr\{a<Y<b\mid X=x\}=c.
+\]
+Substitution into either first-order condition then gives
+\[
+\E\{Y\ind(a<Y<b)\mid X=x\}=c\E(Y\mid X=x).
+\]
+
+These implications are conditional, pointwise, and assumption dependent. They
+do not follow by treating estimated data-dependent endpoints as fixed. For
+linear roots \(\eta_k(X)=X^\top\beta_k\), the corresponding population score
+conditions are instead
+\begin{align}
+\E\left[X\{c-I_{\eta_1,\eta_2}(Y)\}(\eta_2-Y)\right]&=0,\\
+\E\left[X\{c-I_{\eta_1,\eta_2}(Y)\}(\eta_1-Y)\right]&=0,
+\end{align}
+where \(I_{\eta_1,\eta_2}(Y)\) indicates that \(Y\) lies between the
+unordered roots. These design-weighted projection equations need not imply
+conditional coverage for every \(x\).
 
 \section{Pseudo-AL Kernel}
 
 For \(e_t=(y_t-\eta_{1t})(y_t-\eta_{2t})\) and
-\(\rho_c(e)=e\{c-\ind(e<0)\}\), the generalized posterior is proportional to
+\(\rho_c(e)=e\{c-\ind(e<0)\}\), a fixed-rate generalized posterior is
+proportional to
 \(\exp\{-\omega_{\mathrm R}\sum_t\rho_c(e_t)\}\) times the prior. Setting
 \[
 r_t=y_t^2,\qquad
@@ -65,10 +109,21 @@ gives \(r_t-m_t^{\mathrm R}=e_t\). With
 \xi_c=\frac{1-2c}{c(1-c)},\qquad
 \phi_c=\frac{2}{c(1-c)},
 \]
-the loss kernel is represented by a normal--exponential mixture in the
-pseudo-residual \(r_t-m_t^{\mathrm R}\). The latent-scale update uses the
-\(\GIG(p,a,b)\) convention proportional to
-\(x^{p-1}\exp\{-(ax+b/x)/2\}\):
+the normalized asymmetric-Laplace kernel in the pseudo-residual is
+\begin{align}
+&\frac{c(1-c)}{\sigma_{\mathrm R}}
+\exp\{-\rho_c(e_t)/\sigma_{\mathrm R}\}\notag\\
+&\quad=\int_0^\infty
+\Normal\!\left(e_t\mid\xi_cv_t,\phi_c\sigma_{\mathrm R}v_t\right)
+\Exp\!\left(v_t\mid\mathrm{rate}=1/\sigma_{\mathrm R}\right)\,dv_t.
+\label{eq:pseudo-al-mixture}
+\end{align}
+Equation \eqref{eq:pseudo-al-mixture} is an identity for an exponentiated loss
+kernel. Its left-hand side is evaluated at a residual product containing
+\(y_t\); it is not a sampling density for \(y_t\).
+
+The latent-scale update uses the \(\GIG(\nu,a,b)\) convention proportional to
+\(v^{\nu-1}\exp\{-(av+b/v)/2\}\):
 \[
 v_t\mid\cdot\sim
 \GIG\left\{
@@ -77,14 +132,21 @@ v_t\mid\cdot\sim
 \frac{c(1-c)e_t^2}{2\sigma_{\mathrm R}}
 \right\}.
 \]
+At \(e_t=0\), this reduces to
+\(v_t\sim\mathrm{Gamma}(1/2,\mathrm{rate}=a/2)\). For \(e_t\ne0\), the native
+implementation uses the reciprocal identity
+\[
+v_t^{-1}\sim\mathrm{IG}\left(\sqrt{a/b_t},a\right),
+\]
+where the inverse-Gaussian parameters are mean and shape.
 
-\section{Coefficient Blocks}
+\section{Fixed-Design Gaussian Blocks}
 
 Let \(W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_t)^{-1}\}\). Conditional on the
 second root, define
 \[
 \mat A_1=\diag(\vect y-\vect\eta_2)\mat X,\qquad
-\vect z_1=\vect y^{\,2}-\vect y\circ\vect\eta_2-\xi_c\vect v.
+\vect z_1=\vect y\circ(\vect y-\vect\eta_2)-\xi_c\vect v.
 \]
 For Gaussian prior canonical parameters \((\mat Q_{01},\vect h_{01})\),
 \[
@@ -98,18 +160,53 @@ The conditional draw is
 \]
 The second root uses the same update after exchanging labels. Ridge and
 \(\RHS\) priors enter through the same Gaussian canonical form, with separate
-shrinkage states for each root.
+shrinkage states for each root. The current native dynamic implementation uses
+Gaussian state priors; fixed-design RHS-family support remains an explicit
+adapter to the pinned exdqlm implementation until it is promoted natively.
 
 \section{Learned Inverse-Loss Scale}
 
-The learned-scale extension replaces the fixed learning rate by
-\(\lambda>0\). Under the normalized loss-kernel convention used in the current
-implementation, a Gamma prior \(\lambda\sim\mathrm{Gamma}(a_\lambda,b_\lambda)\)
-leads to a Gamma full conditional whose shape includes the kernel power
-contribution and whose rate includes the current RQR loss divided by the
-reference scale. The exact convention must be stated with the implementation
-because different generalized-posterior normalizations imply different
-conditionals for \(\lambda\).
+Let \(s_L>0\) be a declared reference loss scale and set
+\(\sigma_{\mathrm R}=s_L/\lambda\). The normalized target is
+\[
+\pi(\vartheta,\lambda\mid\vect y)
+\propto
+\pi(\vartheta)\pi_\lambda(\lambda)
+\lambda^n\exp\{-\lambda\mathcal L_{n,c}(\vartheta)/s_L\},
+\label{eq:normalized-scale-target}
+\]
+where \(\vartheta\) denotes both roots. For
+\(\lambda\sim\mathrm{Gamma}(a_\lambda,b_\lambda)\) in shape--rate form,
+\[
+\lambda\mid\vartheta,\vect y
+\sim\mathrm{Gamma}\left(a_\lambda+n,
+b_\lambda+\mathcal L_{n,c}(\vartheta)/s_L\right).
+\label{eq:lambda-collapsed}
+\]
+
+If one conditions additionally on \(\vect v\), the normalized augmented
+conditional is
+\begin{align}
+\lambda\mid\vartheta,\vect v,\vect y
+\sim\mathrm{Gamma}\Bigg(&a_\lambda+\frac{3n}{2},\notag\\
+&b_\lambda+\frac{1}{s_L}\sum_{t=1}^n
+\left[v_t+\frac{(e_t-\xi_cv_t)^2}{2\phi_cv_t}\right]\Bigg).
+\label{eq:lambda-augmented}
+\end{align}
+
+The diagnostic pure-loss target omits \(\lambda^n\). Its collapsed shape is
+\(a_\lambda\), and a compatible augmented representation has shape
+\(a_\lambda+n/2\). These alternatives are different targets, not two
+implementations of the same posterior.
+
+The implemented partially collapsed scan uses the following order:
+\begin{enumerate}[leftmargin=2.2em]
+\item draw \(\lambda\) from \eqref{eq:lambda-collapsed} using the current roots;
+\item refresh every \(v_t\) from its GIG conditional using the new \(\lambda\);
+\item update root 1 conditional on root 2 and the refreshed scales;
+\item update root 2 conditional on the new root 1 and the refreshed scales.
+\end{enumerate}
+The second step cannot be skipped after the collapsed draw.
 
 \section{RQR-DESN Contract}
 
@@ -118,18 +215,99 @@ depth, units, lag window, spectral radius, leak rate, input scaling, washout,
 and feature reducers are design variables, not posterior unknowns. Posterior
 summaries are ordered endpoint functions, widths, and midpoints.
 
-\section{RQR-DLM Contract}
+\section{RQR-DLM Contract and FFBS}
 
 For root \(k=1,2\), let
 \[
 \eta_{kt}=F_t^\top\theta_{kt},\qquad
-\theta_{kt}=G_t\theta_{k,t-1}+\epsilon_{kt}.
+\theta_{k0}\sim\Normal(m_0,C_0),\qquad
+\theta_{kt}=G_t\theta_{k,t-1}+\epsilon_{kt},\qquad
+\epsilon_{kt}\sim\Normal(0,W_{kt}).
 \]
-Conditional on \(\theta_{2,1:T}\) and \(v_{1:T}\), root 1 has Gaussian
-pseudo-observations with design \((y_t-\eta_{2t})F_t\). Therefore root 1 can
-be updated by FFBS. Root 2 is analogous. Tests should check dimensions,
-positive variances, root-label invariance, and recovery in small local-level
-examples before any large simulation.
+Conditional on \(\theta_{2,1:T}\), \(v_{1:T}\), and \(\lambda\), root 1 has
+\begin{align}
+z_{1t}&=H_{1t}\theta_{1t}+\varepsilon_{1t},\\
+z_{1t}&=y_t(y_t-\eta_{2t})-\xi_cv_t,\\
+H_{1t}&=(y_t-\eta_{2t})F_t^\top,\\
+\varepsilon_{1t}&\sim\Normal(0,V_t),\qquad
+V_t=\phi_cs_Lv_t/\lambda.
+\end{align}
+Root 2 is obtained by exchanging labels.
+
+For either conditional Gaussian system, write \(m_{t-1},C_{t-1}\) for filtered
+moments. The forward recursion is
+\begin{align}
+a_t&=G_tm_{t-1}, & P_t&=G_tC_{t-1}G_t^\top,\\
+R_t&=P_t+W_t, & q_t&=H_tR_tH_t^\top+V_t,\\
+A_t&=R_tH_t^\top/q_t, & m_t&=a_t+A_t(z_t-H_ta_t),\\
+C_t&=R_t-A_tq_tA_t^\top.
+\end{align}
+Starting from \(\theta_T\sim\Normal(m_T,C_T)\), the backward draw for
+\(t=T-1,\ldots,1\) uses
+\begin{align}
+B_t&=C_tG_{t+1}^\top R_{t+1}^{-1},\\
+h_t&=m_t+B_t(\theta_{t+1}-a_{t+1}),\\
+H_t^{\mathrm B}&=C_t-B_tR_{t+1}B_t^\top,\\
+\theta_t\mid\theta_{t+1},\cdot&\sim\Normal(h_t,H_t^{\mathrm B}).
+\end{align}
+
+Missing responses skip the measurement update. The implementation uses
+Cholesky factorization with a declared jitter ladder and reports every use of
+jitter; it does not silently turn an indefinite covariance into a positive one
+by taking absolute singular values.
+
+\section{Component-Specific Discount Factors}
+
+Let component discounts be \(\delta_1,\ldots,\delta_J\), with
+\(0<\delta_j\le1\), and let their state dimensions sum to \(p\). Define the
+\(p\times p\) matrix \(D\) to have value
+\((1-\delta_j)/\delta_j\) throughout the within-component block \(j\) and zero
+between components. This reproduces the public \texttt{df}/\texttt{dim.df}
+construction in exdqlm 1.1.0. The covariance recursion is
+\[
+P_t=G_tC_{t-1}G_t^\top,\qquad
+W_t=D\circ P_t,\qquad
+R_t=P_t+W_t,
+\]
+where \(\circ\) denotes an elementwise product. Thus a within-component
+covariance block is inflated by \(1/\delta_j\), whereas cross-component
+covariances are not inflated.
+
+The standalone API distinguishes three uses:
+\begin{enumerate}[leftmargin=2.2em]
+\item \texttt{fixed\_W}: \(W_{1:T}\) is supplied and fixed. This gives exact
+FFBS for the declared Gaussian state prior.
+\item \texttt{discount\_template}: a reference design and reference observation
+variance generate \(W_{1:T}\) once through the recursion above. The sequence is
+then frozen before MCMC. This also gives exact FFBS for the resulting declared
+prior, conditional on the frozen template. If the reference quantities are
+estimated from the training responses, the resulting prior specification is
+empirical Bayes and must be recorded as such.
+\item \texttt{adaptive\_discount}: \(W_t\) is recomputed inside each conditional
+filter. In RQR, \(H_t\) and \(V_t\) depend on the other root, \(v_t\), and
+\(\lambda\), so the implied evolution covariance also depends on those blocks.
+The current alternating kernel omits terms that would generally arise from
+such dependence in a fixed joint density. This mode is therefore experimental
+and is not described as exact Gibbs for the stated generalized posterior.
+\end{enumerate}
+The same discounts are used for both roots unless a future model deliberately
+breaks their prior exchangeability.
+
+\section{Validation Gates}
+
+Before a production simulation, the package must pass pure-R/C++ filtering and
+smoothing parity, multiblock discount construction, missing-observation,
+learned-scale, root-label, and small end-to-end tests. A run manifest must then
+freeze data-generating mechanisms, sample sizes, train/test windows, forecast
+horizons, method configurations, seeds, package versions, and repository
+commits. Heavy state draws and fitted objects remain in ignored local output
+directories.
+
+Held-out RQR loss, empirical coverage error, and width at comparable coverage
+are primary. Oracle endpoint recovery is primary when the population RQR roots
+are available. The standard interval score is secondary because its canonical
+target is an equal-tailed interval, whereas RQR does not preassign endpoint
+quantile probabilities.
 
 \section{Migrated Preliminary RQR-DESN Table}
 
@@ -139,7 +317,7 @@ study because it does not include the planned RQR-DLM comparison.
 
 \input{tables/rqr_desn_targeted_confirmation_winner_map.tex}
 
-\nocite{PouplinEtAl2024RQR,BissiriHolmesWalker2016GeneralBayes,KozumiKobayashi2011Gibbs}
+\nocite{PouplinEtAl2024RQR,BissiriHolmesWalker2016GeneralBayes,KozumiKobayashi2011Gibbs,GoncalvesMigonBastos2020DQLM}
 \bibliographystyle{plainnat}
 \bibliography{refs}
 

@@ -23,6 +23,11 @@
 .RData
 .Ruserdata
 Rplots.pdf
+*.tar.gz
+*.Rcheck/
+*.o
+*.so
+*.dll
 __pycache__/
 *.py[cod]
 
@@ -52,3 +57,4 @@ local_trackers/
 .codex_work/
 CODEX_*
 docs/implementation_notes/chatgpt_pro_project_prompt.md
+Chatgpt_output*

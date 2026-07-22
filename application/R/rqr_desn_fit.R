@@ -120,6 +120,9 @@ rqr_desn_fit <- function(y, coverage_level, ...,
       init = vb_args$init %||% list()
     )
   }
+  fit$family <- "rqr_desn"
+  fit$model_spec$family <- "rqr_desn"
+  fit$model_spec$embedding <- "desn"
 
   out <- list(
     fit = fit,

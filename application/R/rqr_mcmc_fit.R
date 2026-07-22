@@ -211,9 +211,9 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   learning_rate_report <- if (learn_lambda) lambda_summary$mean else lambda_current
   out <- list(
     method = "mcmc",
-    family = "rqr_desn",
+    family = "rqr_fixed_design",
     model_spec = list(
-      family = "rqr_desn",
+      family = "rqr_fixed_design",
       parameterization = "two_root_readouts",
       coverage_level = constants$alpha,
       learning_rate = learning_rate_report,
