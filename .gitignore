@@ -51,4 +51,4 @@ application/manifests/*.RDS
 local_trackers/
 .codex_work/
 CODEX_*
-
+docs/implementation_notes/chatgpt_pro_project_prompt.md
