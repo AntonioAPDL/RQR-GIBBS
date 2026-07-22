@@ -18,9 +18,9 @@ base path: /data/muscat_data/jaguir26/local/src
 
 ## Repositories
 
-| Repo | Branch | Commit | Dirty count | Role |
+| Repo | Branch | Verified Commit | Dirty count | Role |
 |---|---|---:|---:|---|
-| `RQR-GIBBS` | `main` | `d1ed1ac911164f9c9b1be29ef01b458dca67db76` | 0 | Standalone article and reproducibility repo |
+| `RQR-GIBBS` | `main` | `fa8a2242e3fea481322b9c727860f764a8bb6393` | 0 | Standalone article and reproducibility repo |
 | `exdqlm__wt__qdesn_0p4p0_integration` | `feature/rqr-desn-readout-20260716` | `dffb71ee70b597d6a716ee74be1cbc99731cd453` | 0 | Pinned RQR implementation source of truth |
 | `Article-Q-DESN---Version-2` | `main` | `f9f22804eff3871bb5350c8add04b7c9f4d4957b` | 0 | Style/reference repo only |
 
