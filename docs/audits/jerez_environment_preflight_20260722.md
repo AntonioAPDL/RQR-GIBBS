@@ -13,8 +13,12 @@ under the intended Jerez workspace.
 
 ```text
 server: jerez.be.ucsc.edu
-base path: /data/muscat_data/jaguir26/local/src
+base path: /data/muscat_data/jaguir26
 ```
+
+The first bootstrap briefly used `/data/muscat_data/jaguir26/local/src`.
+Those three working trees were subsequently moved to the top-level repo
+directory and compatibility symlinks were left behind under `local/src`.
 
 ## Repositories
 

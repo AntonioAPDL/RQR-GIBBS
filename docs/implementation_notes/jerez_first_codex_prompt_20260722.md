@@ -6,7 +6,7 @@ Recommended VS Code entry point:
 
 ```text
 Remote-SSH target: jaguir26@jerez.be.ucsc.edu
-Open folder: /data/muscat_data/jaguir26/local/src/RQR-GIBBS
+Open folder: /data/muscat_data/jaguir26/RQR-GIBBS
 Start a new Codex chat from that workspace and paste the prompt below.
 ```
 
@@ -21,13 +21,13 @@ augmentation, RQR-DESN, and the planned linear dynamic/state-space RQR-DLM path
 are substantial enough to be a separate article.
 
 Primary repo:
-/data/muscat_data/jaguir26/local/src/RQR-GIBBS
+/data/muscat_data/jaguir26/RQR-GIBBS
 remote: https://github.com/AntonioAPDL/RQR-GIBBS
 expected branch: main
 expected commit at handoff or newer: fa8a2242e3fea481322b9c727860f764a8bb6393
 
 Pinned reference implementation repo:
-/data/muscat_data/jaguir26/local/src/exdqlm__wt__qdesn_0p4p0_integration
+/data/muscat_data/jaguir26/exdqlm__wt__qdesn_0p4p0_integration
 remote/source project: AntonioAPDL/exdqlm
 expected branch: feature/rqr-desn-readout-20260716
 expected commit: dffb71ee70b597d6a716ee74be1cbc99731cd453
@@ -35,7 +35,7 @@ role: implementation source of truth for the existing RQR-DESN code until the
 standalone repo promotes a native API.
 
 Q-DESN article/style reference repo:
-/data/muscat_data/jaguir26/local/src/Article-Q-DESN---Version-2
+/data/muscat_data/jaguir26/Article-Q-DESN---Version-2
 remote/source project: AntonioAPDL/Article-Q-DESN---Version-2
 expected branch: main
 expected commit at handoff or newer: f9f22804eff3871bb5350c8add04b7c9f4d4957b

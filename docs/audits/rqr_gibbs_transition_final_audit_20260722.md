@@ -23,9 +23,9 @@ posterior computation, simulation study, and applications.
 | Location | Repo | Branch | Minimum Expected Commit | Role |
 |---|---|---|---:|---|
 | Muscat | `/data/jaguir26/local/src/RQR-GIBBS` | `main` | `fa8a2242e3fea481322b9c727860f764a8bb6393` or newer | Standalone RQR manuscript/reproducibility repo |
-| Jerez | `/data/muscat_data/jaguir26/local/src/RQR-GIBBS` | `main` | `fa8a2242e3fea481322b9c727860f764a8bb6393` or newer | New working repo for future RQR development |
-| Jerez | `/data/muscat_data/jaguir26/local/src/exdqlm__wt__qdesn_0p4p0_integration` | `feature/rqr-desn-readout-20260716` | `dffb71ee70b597d6a716ee74be1cbc99731cd453` | Pinned RQR implementation source of truth |
-| Muscat/Jerez | `Article-Q-DESN---Version-2` | `main` | `f9f22804eff3871bb5350c8add04b7c9f4d4957b` | Q-DESN article/style reference only |
+| Jerez | `/data/muscat_data/jaguir26/RQR-GIBBS` | `main` | `fa8a2242e3fea481322b9c727860f764a8bb6393` or newer | New working repo for future RQR development |
+| Jerez | `/data/muscat_data/jaguir26/exdqlm__wt__qdesn_0p4p0_integration` | `feature/rqr-desn-readout-20260716` | `dffb71ee70b597d6a716ee74be1cbc99731cd453` | Pinned RQR implementation source of truth |
+| Jerez | `/data/muscat_data/jaguir26/Article-Q-DESN---Version-2` | `main` | `f9f22804eff3871bb5350c8add04b7c9f4d4957b` | Q-DESN article/style reference only |
 
 ## RQR-GIBBS Contents
 

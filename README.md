@@ -45,7 +45,7 @@ expected commit: dffb71ee70b597d6a716ee74be1cbc99731cd453
 On Jerez, clone it beside this repo:
 
 ```bash
-BASE=/data/muscat_data/jaguir26/local/src
+BASE=/data/muscat_data/jaguir26
 cd "$BASE"
 git clone https://github.com/AntonioAPDL/exdqlm.git exdqlm__wt__qdesn_0p4p0_integration
 cd exdqlm__wt__qdesn_0p4p0_integration
@@ -89,7 +89,7 @@ Target server:
 
 ```text
 jaguir26@jerez.be.ucsc.edu
-/data/muscat_data/jaguir26/local/src
+/data/muscat_data/jaguir26
 ```
 
 The first Jerez Codex chat should validate:
@@ -101,4 +101,3 @@ The first Jerez Codex chat should validate:
 5. `pdflatex` can compile the article scaffold.
 
 Do not launch heavy simulations until those gates pass.
-
