@@ -1,0 +1,146 @@
+% !TeX program = pdflatex
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{amsmath,amssymb,mathtools,bm,booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage[round,authoryear]{natbib}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Normal}{\mathcal{N}}
+\newcommand{\Exp}{\mathrm{Exp}}
+\newcommand{\GIG}{\mathrm{GIG}}
+\newcommand{\ind}{\mathbf{1}}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\vect}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\bm{#1}}
+\newcommand{\RHS}{\mathrm{RHS}}
+\newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.08}}
+
+\renewcommand{\theequation}{S\arabic{equation}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thesection}{S\arabic{section}}
+\renewcommand{\thesubsection}{S\arabic{section}.\arabic{subsection}}
+
+\title{Supplementary Material for ``Bayesian Relaxed Quantile Regression for Direct Interval Forecasting''}
+\author{Antonio De Leon \and Raquel Prado \and Bruno Sans\'o}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+This supplement records the RQR loss target, pseudo-AL augmentation, Gibbs
+blocks, learned-scale extension, DESN readout contract, planned DLM/FFBS
+extension, and reproducibility gates for the standalone RQR-GIBBS article.
+\end{abstract}
+
+\section{Scope}
+
+The main article presents the statistical target and the core Gibbs sampler.
+This supplement keeps the derivations and implementation contracts recoverable.
+All response-simulation language is avoided because the RQR update is
+loss-based and does not define an ordinary response likelihood.
+
+\section{Pseudo-AL Kernel}
+
+For \(e_t=(y_t-\eta_{1t})(y_t-\eta_{2t})\) and
+\(\rho_c(e)=e\{c-\ind(e<0)\}\), the generalized posterior is proportional to
+\(\exp\{-\omega_{\mathrm R}\sum_t\rho_c(e_t)\}\) times the prior. Setting
+\[
+r_t=y_t^2,\qquad
+m_t^{\mathrm R}=y_t(\eta_{1t}+\eta_{2t})-\eta_{1t}\eta_{2t}
+\]
+gives \(r_t-m_t^{\mathrm R}=e_t\). With
+\[
+\sigma_{\mathrm R}=\omega_{\mathrm R}^{-1},\qquad
+\xi_c=\frac{1-2c}{c(1-c)},\qquad
+\phi_c=\frac{2}{c(1-c)},
+\]
+the loss kernel is represented by a normal--exponential mixture in the
+pseudo-residual \(r_t-m_t^{\mathrm R}\). The latent-scale update uses the
+\(\GIG(p,a,b)\) convention proportional to
+\(x^{p-1}\exp\{-(ax+b/x)/2\}\):
+\[
+v_t\mid\cdot\sim
+\GIG\left\{
+\frac12,\
+\frac{1}{2\sigma_{\mathrm R}c(1-c)},\
+\frac{c(1-c)e_t^2}{2\sigma_{\mathrm R}}
+\right\}.
+\]
+
+\section{Coefficient Blocks}
+
+Let \(W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_t)^{-1}\}\). Conditional on the
+second root, define
+\[
+\mat A_1=\diag(\vect y-\vect\eta_2)\mat X,\qquad
+\vect z_1=\vect y^{\,2}-\vect y\circ\vect\eta_2-\xi_c\vect v.
+\]
+For Gaussian prior canonical parameters \((\mat Q_{01},\vect h_{01})\),
+\[
+\mat Q_1=\mat Q_{01}+\mat A_1^\top W_v\mat A_1,\qquad
+\vect h_1=\vect h_{01}+\mat A_1^\top W_v\vect z_1.
+\]
+The conditional draw is
+\[
+\vect\beta_1\mid\cdot\sim
+\Normal(\mat Q_1^{-1}\vect h_1,\mat Q_1^{-1}).
+\]
+The second root uses the same update after exchanging labels. Ridge and
+\(\RHS\) priors enter through the same Gaussian canonical form, with separate
+shrinkage states for each root.
+
+\section{Learned Inverse-Loss Scale}
+
+The learned-scale extension replaces the fixed learning rate by
+\(\lambda>0\). Under the normalized loss-kernel convention used in the current
+implementation, a Gamma prior \(\lambda\sim\mathrm{Gamma}(a_\lambda,b_\lambda)\)
+leads to a Gamma full conditional whose shape includes the kernel power
+contribution and whose rate includes the current RQR loss divided by the
+reference scale. The exact convention must be stated with the implementation
+because different generalized-posterior normalizations imply different
+conditionals for \(\lambda\).
+
+\section{RQR-DESN Contract}
+
+RQR-DESN conditions on a deterministic DESN feature matrix. The reservoir seed,
+depth, units, lag window, spectral radius, leak rate, input scaling, washout,
+and feature reducers are design variables, not posterior unknowns. Posterior
+summaries are ordered endpoint functions, widths, and midpoints.
+
+\section{RQR-DLM Contract}
+
+For root \(k=1,2\), let
+\[
+\eta_{kt}=F_t^\top\theta_{kt},\qquad
+\theta_{kt}=G_t\theta_{k,t-1}+\epsilon_{kt}.
+\]
+Conditional on \(\theta_{2,1:T}\) and \(v_{1:T}\), root 1 has Gaussian
+pseudo-observations with design \((y_t-\eta_{2t})F_t\). Therefore root 1 can
+be updated by FFBS. Root 2 is analogous. Tests should check dimensions,
+positive variances, root-label invariance, and recovery in small local-level
+examples before any large simulation.
+
+\section{Migrated Preliminary RQR-DESN Table}
+
+The table below is migrated from the Q-DESN supplement as preliminary,
+calibration-screened evidence. It is not yet the final standalone simulation
+study because it does not include the planned RQR-DLM comparison.
+
+\input{tables/rqr_desn_targeted_confirmation_winner_map.tex}
+
+\nocite{PouplinEtAl2024RQR,BissiriHolmesWalker2016GeneralBayes,KozumiKobayashi2011Gibbs}
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

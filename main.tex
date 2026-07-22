@@ -1,14 +1,277 @@
-\documentclass{article}
-\usepackage{graphicx} % Required for inserting images
+% !TeX program = pdflatex
+\documentclass[11pt]{article}
 
-\title{RQR-GIBBS}
-\author{Antonio Aguirre}
-\date{July 2026}
+\usepackage[margin=1in]{geometry}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{amsthm}
+\numberwithin{equation}{section}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage[round,authoryear]{natbib}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Normal}{\mathcal{N}}
+\newcommand{\Exp}{\mathrm{Exp}}
+\newcommand{\GIG}{\mathrm{GIG}}
+\newcommand{\ind}{\mathbf{1}}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\vect}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\bm{#1}}
+\newcommand{\RHS}{\mathrm{RHS}}
+\newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4.5pt}\renewcommand{\arraystretch}{1.12}}
+\DeclareMathOperator{\argmin}{arg\,min}
+
+\title{\vspace{-0.6cm}Bayesian Relaxed Quantile Regression for Direct Interval Forecasting}
+\author{Antonio De Leon$^{1}$ \and Raquel Prado$^{1}$ \and Bruno Sans\'o$^{1}$}
+\date{\small $^{1}$Department of Statistics, University of California, Santa Cruz\\
+\vspace{0.25em}\today}
 
 \begin{document}
-
 \maketitle
+\vspace{-1.25em}
+
+\begin{abstract}
+\noindent
+Prediction intervals are often built from two fitted conditional quantiles, but
+that construction fixes endpoint probabilities before assessing how interval
+coverage, width, and asymmetry interact. Relaxed quantile regression (RQR)
+instead estimates two interval roots directly through a residual-product loss.
+We develop a Bayesian generalized-posterior formulation for this target and
+show that the exponentiated RQR loss admits a pseudo-asymmetric-Laplace
+normal--exponential augmentation. Conditional on one root and the latent
+scales, the other root has a Gaussian full conditional, yielding a Gibbs
+sampler for ridge and regularized-horseshoe readout priors. The same
+construction supports fixed nonlinear readouts, including RQR-DESN, and
+motivates a linear dynamic/state-space extension in which root trajectories can
+be updated by forward-filtering backward-sampling. The resulting posterior
+summaries are intervals under a loss-based update, not posterior predictive
+draws from a response likelihood. Simulation and application evidence will
+therefore be reported through interval score, empirical coverage, width,
+endpoint recovery, and calibration diagnostics.
+\end{abstract}
 
 \section{Introduction}
+\label{sec:introduction}
+
+Interval forecasts are central when decisions depend on uncertainty ranges
+rather than on a conditional mean or a single quantile. A common construction
+fits two quantile models, for example at probabilities \(\alpha/2\) and
+\(1-\alpha/2\), and reports the resulting lower and upper curves. That
+workflow is natural when equal-tailed quantiles are the target, but it fixes
+the endpoint probabilities before considering whether an asymmetric interval
+could achieve the same coverage with a better score or more appropriate
+balance for the application.
+
+Relaxed quantile regression (RQR) provides a different route by estimating two
+interval roots directly \citep{PouplinEtAl2024RQR}. For a target coverage
+level \(c\in(0,1)\), RQR applies a check loss to the product
+\((y-\eta_1)(y-\eta_2)\). The sign of this product records whether the
+response lies between the two roots, so the loss targets an interval rather
+than a preassigned pair of endpoint quantiles. The original RQR construction
+is optimization-based. This paper develops a Bayesian generalized-posterior
+route for the same core loss.
+
+The contribution is computational as well as statistical. By exponentiating
+the RQR loss in the generalized-Bayes sense of
+\citet{BissiriHolmesWalker2016GeneralBayes}, the residual-product loss can be
+written with the normal--exponential augmentation used for asymmetric Laplace
+quantile regression \citep{yu2001bayesian,KozumiKobayashi2011Gibbs}. The
+augmentation is applied to a pseudo-residual, not to the original response.
+Conditional on the latent scales and one root, the other root enters linearly.
+This gives Gaussian block updates and makes Gibbs sampling feasible for
+high-dimensional readouts with ridge or regularized-horseshoe shrinkage
+\citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS}.
+
+The fixed-feature version embeds this sampler in nonlinear dynamic
+representations. In RQR-DESN, a deep echo state network supplies a deterministic
+feature map and posterior computation is performed only on the two interval
+readouts \citep{Jaeger2001EchoState,LukoseviciusJaeger2009ReservoirComputing,
+GallicchioMicheliPedrelli2018DeepESNDesign,McDermottWikle2018DeepESNUQ}.
+The same algebra also suggests a linear dynamic RQR model: conditional on one
+root trajectory and the latent scales, the other root trajectory has a Gaussian
+state-space observation equation and can be sampled by FFBS. This extension is
+important because it places RQR beside dynamic quantile and state-space
+forecasting methods while preserving the direct-interval target
+\citep{GoncalvesMigonBastos2020DQLM,SinghRaman2025ESNStateSpace}.
+
+The interpretation is deliberately limited. The generalized posterior updates
+beliefs about interval endpoint functions under the declared RQR loss and
+prior. It is not an ordinary response likelihood and does not define posterior
+predictive response draws. Empirical validation should therefore focus on
+interval score, empirical coverage, width, endpoint recovery when oracle
+endpoints are known, root-switching diagnostics, and sensitivity to the
+generalized-Bayes learning rate
+\citep{GneitingRaftery2007,Gneiting2011,GneitingKatzfuss2014,
+SyringMartin2019GeneralPosteriorCalibration,Shaby2014OpenFacedSandwich}.
+
+\section{Relaxed Quantile Loss}
+\label{sec:rqr-loss}
+
+Let \(y_t\) be the response and let \(\vect x_t\in\R^p\) be a fixed design row.
+For a coverage level \(c\in(0,1)\), define two exchangeable root readouts
+\[
+\eta_{1t}=\vect x_t^\top\vect\beta_1,\qquad
+\eta_{2t}=\vect x_t^\top\vect\beta_2.
+\]
+The reported interval endpoints are ordered after fitting:
+\[
+L_t=\min(\eta_{1t},\eta_{2t}),\qquad
+U_t=\max(\eta_{1t},\eta_{2t}).
+\]
+The root labels are not lower and upper labels; they are exchangeable
+computational labels.
+
+Define the residual product
+\[
+e_t=(y_t-\eta_{1t})(y_t-\eta_{2t})
+\]
+and the check loss
+\[
+\rho_c(e)=e\{c-\ind(e<0)\}.
+\]
+Then \(e_t<0\) if and only if \(y_t\) lies between the two roots. The empirical
+RQR loss is
+\[
+\mathcal L_{T,c}(\vect\beta_1,\vect\beta_2)
+=\sum_{t=1}^T \rho_c(e_t).
+\]
+Under unrestricted endpoint functions and an interior solution, the population
+first-order conditions imply a coverage-plus-mean-balance target:
+\[
+\Pr\{L(X)<Y<U(X)\mid X=x\}=c,
+\]
+and
+\[
+\E\{Y\ind(L(X)<Y<U(X))\mid X=x\}
+=c\,\E(Y\mid X=x).
+\]
+This motivates RQR as a direct interval target that can adapt to asymmetric
+conditional error structure without assigning endpoint quantile levels in
+advance.
+
+\section{Generalized Posterior and Augmentation}
+\label{sec:posterior}
+
+For priors \(\pi_\beta(\vect\beta_1)\) and
+\(\pi_\beta(\vect\beta_2)\), define the generalized posterior
+\[
+\Pi_{\mathrm R}
+(d\vect\beta_1,d\vect\beta_2\mid\vect y,\mat X)
+\propto
+\pi_\beta(d\vect\beta_1)\pi_\beta(d\vect\beta_2)
+\exp\{-\omega_{\mathrm R}\mathcal L_{T,c}(\vect\beta_1,\vect\beta_2)\},
+\]
+where \(\omega_{\mathrm R}>0\) is a learning rate. A learned-scale version
+places a Gamma prior on the inverse loss scale \(\lambda\) and replaces
+\(\omega_{\mathrm R}\) by \(\lambda\), with the exact normalizing convention
+recorded in the supplement.
+
+Let
+\[
+r_t=y_t^2,\qquad
+m_t^{\mathrm R}=y_t(\eta_{1t}+\eta_{2t})-\eta_{1t}\eta_{2t}.
+\]
+Then \(r_t-m_t^{\mathrm R}=e_t\). With
+\[
+\sigma_{\mathrm R}=\omega_{\mathrm R}^{-1},\qquad
+\xi_c=\frac{1-2c}{c(1-c)},\qquad
+\phi_c=\frac{2}{c(1-c)},
+\]
+the exponentiated loss contribution is proportional to
+\[
+\int_0^\infty
+\Normal\!\left(
+r_t\mid m_t^{\mathrm R}+\xi_c v_t,\,
+\phi_c\sigma_{\mathrm R}v_t
+\right)
+\Exp(v_t\mid \text{rate}=1/\sigma_{\mathrm R})\,dv_t .
+\]
+This identity is a computational representation of the loss kernel. It should
+not be read as a response model for \(y_t\).
+
+\section{Gibbs Sampling}
+\label{sec:gibbs}
+
+Conditional on \(\vect\beta_2\), the pseudo-observation equation is linear in
+\(\vect\beta_1\):
+\[
+\mat A_1=\diag(\vect y-\vect\eta_2)\mat X,\qquad
+\vect z_1=\vect y^{\,2}-\vect y\circ\vect\eta_2-\xi_c\vect v.
+\]
+With \(W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_t)^{-1}\}\) and Gaussian prior
+canonical parameters \((\mat Q_{01},\vect h_{01})\),
+\[
+\mat Q_1=\mat Q_{01}+\mat A_1^\top W_v\mat A_1,\qquad
+\vect h_1=\vect h_{01}+\mat A_1^\top W_v\vect z_1,
+\]
+so
+\[
+\vect\beta_1\mid\cdot\sim
+\Normal(\mat Q_1^{-1}\vect h_1,\mat Q_1^{-1}).
+\]
+The update for \(\vect\beta_2\) is identical after swapping root labels. The
+latent scales have generalized inverse Gaussian full conditionals. Adaptive
+shrinkage priors use separate shrinkage states for the two root coefficient
+vectors.
+
+\section{Model Embeddings}
+\label{sec:embeddings}
+
+The Gibbs update applies to any fixed design. In a linear regression embedding,
+\(\mat X\) contains ordinary covariates. In RQR-DESN, \(\mat X\) contains
+deterministic deep echo state features computed from a recorded reservoir
+architecture, seed, scaling rule, and washout convention. The posterior
+conditions on those features and updates only the two readout surfaces.
+
+For an RQR-DLM or state-space embedding, each root can be represented by a
+latent state path, for example
+\[
+\eta_{kt}=F_t^\top\theta_{kt},\qquad
+\theta_{kt}=G_t\theta_{k,t-1}+\epsilon_{kt},
+\qquad k=1,2.
+\]
+Conditional on the second root path and the RQR latent scales, the first root
+path enters through a Gaussian pseudo-observation equation with design
+\((y_t-\eta_{2t})F_t\). Thus the root path can be sampled by
+forward-filtering backward-sampling. The second root path is analogous. This
+is the main reason the RQR-DLM extension is a natural standalone contribution
+rather than a small supplement to Q-DESN.
+
+\section{Validation Plan}
+\label{sec:validation}
+
+The standalone simulation study should compare fixed-design RQR, RQR-DESN,
+RQR-DLM, quantile-derived intervals, and empirical interval baselines under
+matched train/test splits. The primary metrics are interval score, empirical
+coverage, coverage error, mean width, endpoint mean absolute error when oracle
+endpoints are available, midpoint error, learned-scale summaries, and
+root-switching diagnostics. VB may be useful for screening or initialization,
+but calibrated VB interval uncertainty should not be promoted until it receives
+its own validation.
+
+\section{Discussion}
+\label{sec:discussion}
+
+RQR-GIBBS is best viewed as a Bayesian workflow for direct interval targets.
+Its value is not that it replaces quantile forecasting in all settings, but
+that it gives a coherent loss-based posterior over interval endpoints when the
+scientific target is an interval rather than a pair of fixed quantile levels.
+The next methodological steps are to complete the native standalone code path,
+validate the state-space sampler, and run a matched simulation study before
+promoting application-level claims.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
 
 \end{document}
+

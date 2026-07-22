@@ -1,0 +1,54 @@
+# LaTeX build artifacts.
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.run.xml
+*.bcf
+*.pdf
+
+# Keep source table/figure placeholders.
+!figures/.gitkeep
+!tables/.gitkeep
+
+# R and local runtime artifacts.
+.Rhistory
+.RData
+.Ruserdata
+Rplots.pdf
+__pycache__/
+*.py[cod]
+
+# Local-only literature workspace.
+literature/pdfs/*
+literature/notes/*
+literature/SHA256SUMS
+literature/pdf_manifest.csv
+!literature/pdfs/.gitkeep
+!literature/notes/.gitkeep
+
+# Local-only application outputs.
+application/data_local/
+application/cache/
+application/runs/
+application/logs/
+application/outputs/
+application/manifests/*.csv
+application/manifests/*.json
+application/manifests/*.rds
+application/manifests/*.Rds
+application/manifests/*.RDS
+!application/manifests/README.md
+
+# Local operational trackers and Codex planning notes.
+local_trackers/
+.codex_work/
+CODEX_*
+
