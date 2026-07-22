@@ -114,15 +114,17 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 }
 
 .rqr_learning_rate_mode <- function(learning_rate_mode) {
-  mode <- tolower(as.character(learning_rate_mode %||% "fixed")[1L])
+  mode <- tolower(as.character(learning_rate_mode %||% "fixed_rate")[1L])
   mode <- switch(mode,
-    learned = "learned_scale",
-    scale = "learned_scale",
-    learned_loss_scale = "learned_scale",
+    fixed = "fixed_rate",
+    learned = "learned_pseudoresidual_normalized",
+    scale = "learned_pseudoresidual_normalized",
+    learned_scale = "learned_pseudoresidual_normalized",
+    learned_loss_scale = "learned_pseudoresidual_normalized",
     pure = "learned_pure",
     mode
   )
-  choices <- c("fixed", "learned_scale", "learned_pure")
+  choices <- c("fixed_rate", "learned_pseudoresidual_normalized", "learned_pure")
   if (!mode %in% choices) {
     stop(
       sprintf(
@@ -135,27 +137,37 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   mode
 }
 
-.rqr_lambda_prior <- function(lambda_prior = list(), learning_rate_mode = "fixed") {
+.rqr_lambda_prior <- function(lambda_prior = list(), learning_rate_mode = "fixed_rate") {
   mode <- .rqr_learning_rate_mode(learning_rate_mode)
+  if (inherits(lambda_prior, "rqr_lambda_prior")) {
+    if (!identical(lambda_prior$mode, mode)) {
+      stop("Internal lambda prior mode does not match learning_rate_mode.", call. = FALSE)
+    }
+    return(lambda_prior)
+  }
   if (is.null(lambda_prior)) lambda_prior <- list()
   if (!is.list(lambda_prior)) {
     stop("lambda_prior must be a list with positive shape and rate.", call. = FALSE)
   }
   shape <- as.numeric(lambda_prior$shape %||% lambda_prior$a %||% 4)[1L]
   rate <- as.numeric(lambda_prior$rate %||% lambda_prior$b %||% 4)[1L]
-  default_power <- if (identical(mode, "learned_scale")) 1 else 0
-  power <- as.numeric(lambda_prior$power %||% lambda_prior$nu %||% default_power)[1L]
-  if (identical(mode, "fixed")) {
+  if (!is.null(lambda_prior$power) || !is.null(lambda_prior$nu)) {
+    stop(
+      "lambda_prior$power and lambda_prior$nu are not accepted: the normalized and pure targets have fixed powers.",
+      call. = FALSE
+    )
+  }
+  power <- if (identical(mode, "learned_pseudoresidual_normalized")) 1 else 0
+  if (identical(mode, "fixed_rate")) {
     if (!is.finite(shape)) shape <- 4
     if (!is.finite(rate)) rate <- 4
-    if (!is.finite(power)) power <- 0
   }
   if (!is.finite(shape) || shape <= 0) stop("lambda_prior$shape must be positive.", call. = FALSE)
   if (!is.finite(rate) || rate <= 0) stop("lambda_prior$rate must be positive.", call. = FALSE)
-  if (!is.finite(power) || power < 0) stop("lambda_prior$power must be nonnegative.", call. = FALSE)
-  if (identical(mode, "learned_pure")) power <- 0
-  if (identical(mode, "fixed")) power <- 0
-  list(shape = shape, rate = rate, power = power)
+  structure(
+    list(shape = shape, rate = rate, power = power, mode = mode),
+    class = c("rqr_lambda_prior", "list")
+  )
 }
 
 .rqr_lambda_posterior_params <- function(loss_sum, n, lambda_prior, learning_rate_mode) {
@@ -165,7 +177,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   n <- as.integer(n)[1L]
   if (!is.finite(loss_sum) || loss_sum < 0) stop("loss_sum must be finite and nonnegative.", call. = FALSE)
   if (!is.finite(n) || n <= 0L) stop("n must be a positive integer.", call. = FALSE)
-  if (identical(mode, "fixed")) {
+  if (identical(mode, "fixed_rate")) {
     return(list(shape = NA_real_, rate = NA_real_, power_count = 0))
   }
   power_count <- prior$power * n
@@ -173,6 +185,111 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     shape = prior$shape + power_count,
     rate = prior$rate + loss_sum,
     power_count = power_count
+  )
+}
+
+.rqr_target_formula <- function(learning_rate_mode) {
+  mode <- .rqr_learning_rate_mode(learning_rate_mode)
+  switch(mode,
+    fixed_rate = "pi(theta|y) proportional to pi(theta) exp{-omega_R L(theta)}",
+    learned_pseudoresidual_normalized = paste0(
+      "pi(theta,lambda|y) proportional to pi(theta) pi(lambda) ",
+      "lambda^n_obs exp{-lambda L(theta)/s_L}"
+    ),
+    learned_pure = paste0(
+      "pi(theta,lambda|y) proportional to pi(theta) pi(lambda) ",
+      "exp{-lambda L(theta)/s_L}"
+    )
+  )
+}
+
+.rqr_scalar_integer <- function(x, name, minimum = 0L, maximum = .Machine$integer.max) {
+  if (length(x) != 1L || is.na(x) || !is.finite(x) || x != floor(x) ||
+      x < minimum || x > maximum) {
+    stop(
+      sprintf("%s must be one finite integer in [%d, %d].", name, minimum, maximum),
+      call. = FALSE
+    )
+  }
+  as.integer(x)
+}
+
+.rqr_positive_integer_vector <- function(x, name) {
+  if (!is.numeric(x) || !length(x) || anyNA(x) || any(!is.finite(x)) ||
+      any(x != floor(x)) || any(x < 1) || any(x > .Machine$integer.max)) {
+    stop(sprintf("%s must contain positive integers.", name), call. = FALSE)
+  }
+  as.integer(x)
+}
+
+.rqr_rng_state <- function() {
+  if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) return(NULL)
+  get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+}
+
+.rqr_restore_rng <- function(state) {
+  if (is.null(state)) return(invisible(FALSE))
+  state <- as.integer(state)
+  if (length(state) < 2L || anyNA(state)) {
+    stop("init$rng_state must be a complete integer .Random.seed vector.", call. = FALSE)
+  }
+  assign(".Random.seed", state, envir = .GlobalEnv)
+  invisible(TRUE)
+}
+
+.rqr_digest <- function(object) {
+  digest::digest(object, algo = "sha256", serialize = TRUE)
+}
+
+.rqr_find_repo_root <- function(start = getwd()) {
+  current <- normalizePath(start, winslash = "/", mustWork = FALSE)
+  repeat {
+    if (file.exists(file.path(current, ".git")) &&
+        file.exists(file.path(current, "application", "DESCRIPTION"))) return(current)
+    parent <- dirname(current)
+    if (identical(parent, current)) return(NA_character_)
+    current <- parent
+  }
+}
+
+.rqr_git_value <- function(repo_root, args) {
+  if (is.na(repo_root) || !nzchar(repo_root) || !nzchar(Sys.which("git"))) return(NA_character_)
+  out <- suppressWarnings(tryCatch(
+    system2("git", c("-C", repo_root, args), stdout = TRUE, stderr = FALSE),
+    error = function(e) character(0)
+  ))
+  if (!length(out)) NA_character_ else paste(out, collapse = "\n")
+}
+
+.rqr_provenance <- function(data, matrices = list(), numerical_policy = NA_character_,
+                            initial_seed = NULL, repo_root = NULL) {
+  if (is.null(repo_root)) repo_root <- .rqr_find_repo_root()
+  pkg_version <- tryCatch(as.character(utils::packageVersion("rqrgibbs")), error = function(e) NA_character_)
+  dependency_names <- c("Rcpp", "RcppArmadillo", "digest")
+  dependency_versions <- vapply(dependency_names, function(pkg) {
+    tryCatch(as.character(utils::packageVersion(pkg)), error = function(e) NA_character_)
+  }, character(1L))
+  git_commit <- .rqr_git_value(repo_root, c("rev-parse", "HEAD"))
+  dirty <- .rqr_git_value(repo_root, c("status", "--porcelain"))
+  ext <- extSoftVersion()
+  list(
+    schema_version = "rqrgibbs_fit/1.0.0",
+    package_version = pkg_version,
+    git_commit = git_commit,
+    git_dirty = !is.na(dirty) && nzchar(dirty),
+    repo_root = repo_root,
+    R_version = R.version.string,
+    platform = R.version$platform,
+    compiler = R.version$compiler %||% NA_character_,
+    BLAS = unname(ext["BLAS"] %||% NA_character_),
+    LAPACK = unname(ext["LAPACK"] %||% NA_character_),
+    dependency_versions = dependency_versions,
+    RNGkind = RNGkind(),
+    initial_seed = initial_seed,
+    numerical_policy = numerical_policy,
+    data_digest = .rqr_digest(data),
+    matrix_digests = lapply(matrices, .rqr_digest),
+    recorded_at = format(Sys.time(), tz = "UTC", usetz = TRUE)
   )
 }
 
@@ -321,14 +438,22 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   eta2 <- X %*% t(beta2_draws)
   lower <- pmin(eta1, eta2)
   upper <- pmax(eta1, eta2)
+  lower_mean <- rowMeans(lower)
+  upper_mean <- rowMeans(upper)
+  covered_by_draw <- sweep(lower, 1L, y, `<=`) & sweep(upper, 1L, y, `>=`)
+  coverage_by_draw <- colMeans(covered_by_draw)
   list(
     beta_root1_mean = colMeans(beta1_draws),
     beta_root2_mean = colMeans(beta2_draws),
-    lower_mean = rowMeans(lower),
-    upper_mean = rowMeans(upper),
+    lower_mean = lower_mean,
+    upper_mean = upper_mean,
     midpoint_mean = rowMeans(0.5 * (lower + upper)),
     width_mean = rowMeans(upper - lower),
-    coverage_in_sample = mean(y >= rowMeans(lower) & y <= rowMeans(upper)),
+    coverage_posterior_mean_endpoints = mean(y >= lower_mean & y <= upper_mean),
+    coverage_draw_mean = mean(coverage_by_draw),
+    coverage_draw_quantiles = stats::quantile(
+      coverage_by_draw, c(0.05, 0.5, 0.95), names = TRUE, type = 8
+    ),
     width_mean_scalar = mean(rowMeans(upper - lower))
   )
 }

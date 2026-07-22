@@ -45,13 +45,12 @@ the returned metadata sets `exact_joint_target = FALSE` and the fit warns.
 
 The implementation uses a partially collapsed sweep:
 
-1. update the generalized-Bayes loss scale when it is learned;
-2. draw the shared asymmetric-Laplace mixing scale conditionally with the
-   current roots integrated out;
-3. refresh the full latent mixing path;
-4. sample the lower-root state path with FFBS conditional on the upper root;
-5. sample the upper-root state path with FFBS conditional on the refreshed
-   lower root.
+1. evaluate the loss at the current root paths and draw learned `lambda` from
+   its conditional with the latent mixing path integrated out;
+2. refresh the full latent mixing path using the new `lambda`;
+3. sample root 1 by FFBS conditional on root 2 and the refreshed scales;
+4. sample root 2 by FFBS conditional on the updated root 1 and the refreshed
+   scales.
 
 The code and manuscript call this an asymmetric-Laplace augmentation of a loss
 update, not an ordinary response likelihood or a posterior predictive response
@@ -89,10 +88,13 @@ Generated PDFs, TeX logs, package archives, check directories, compiled
 objects, fitted models, and simulation outputs remain ignored. No heavy
 simulation was launched.
 
+This document records the first implementation gate. The later ChatGPT Pro
+output 2 audit and corrective implementation supersede its open
+adaptive-discount and numerical-repair questions; they do not change the
+historical validation facts recorded here.
+
 ## Handoff Decision
 
-The next review should audit the mathematical derivation against the native
-code, especially the partially collapsed ordering, normalized scale update,
-component-specific discount semantics, and the status of any future stochastic
-discount update. After that review, freeze a matched simulation protocol and
-only then launch promotion-grade runs.
+This review was subsequently completed. Its resolved findings and remaining
+bounded-pilot gate are recorded in the dedicated output 2 audit rather than
+retroactively folded into this historical snapshot.

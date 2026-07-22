@@ -12,6 +12,7 @@
 #' @param ... Arguments forwarded to `qdesn_fit_vb()` for design construction.
 #' @param inference One of `"mcmc"` or `"vb"`.
 #' @param learning_rate Positive generalized-Bayes learning rate.
+#' @param lambda_initial Positive initial inverse scale for learned MCMC modes.
 #' @param loss_reference_scale Positive scale dividing the RQR loss before
 #'   applying the learning rate. Passed to [rqr_mcmc_fit()].
 #' @param learning_rate_mode Learning-rate treatment passed to
@@ -26,8 +27,11 @@
 rqr_desn_fit <- function(y, coverage_level, ...,
                          inference = c("mcmc", "vb"),
                          learning_rate = 1,
+                         lambda_initial = 1,
                          loss_reference_scale = 1,
-                         learning_rate_mode = c("fixed", "learned_scale", "learned_pure"),
+                         learning_rate_mode = c(
+                           "fixed_rate", "learned_pseudoresidual_normalized", "learned_pure"
+                         ),
                          lambda_prior = list(shape = 4, rate = 4),
                          mcmc_args = list(),
                          vb_args = list(),
@@ -39,7 +43,7 @@ rqr_desn_fit <- function(y, coverage_level, ...,
   if (!is.finite(loss_reference_scale) || loss_reference_scale <= 0) {
     stop("loss_reference_scale must be finite and positive.", call. = FALSE)
   }
-  if (identical(inference, "vb") && !identical(learning_rate_mode, "fixed")) {
+  if (identical(inference, "vb") && !identical(learning_rate_mode, "fixed_rate")) {
     stop("rqr_desn_fit learned-scale RQR is currently implemented for MCMC; keep VB fixed-rate until separately validated.", call. = FALSE)
   }
   args <- list(...)
@@ -72,7 +76,7 @@ rqr_desn_fit <- function(y, coverage_level, ...,
   )
   if (!isTRUE(fit_readout)) {
     design_fit$meta$rqr_design_only <- TRUE
-    design_fit$meta$rqr_coverage_level <- rqr_constants(coverage_level, learning_rate / loss_reference_scale)$alpha
+    design_fit$meta$rqr_coverage_level <- rqr_constants(coverage_level, learning_rate)$alpha
     design_fit$meta$rqr_loss_reference_scale <- loss_reference_scale
     return(design_fit)
   }
@@ -103,6 +107,7 @@ rqr_desn_fit <- function(y, coverage_level, ...,
       X = design_fit$X,
       coverage_level = coverage_level,
       learning_rate = learning_rate,
+      lambda_initial = mcmc_args$lambda_initial %||% lambda_initial,
       loss_reference_scale = mcmc_args$loss_reference_scale %||% loss_reference_scale,
       learning_rate_mode = mcmc_args$learning_rate_mode %||% learning_rate_mode,
       lambda_prior = mcmc_args$lambda_prior %||% lambda_prior,

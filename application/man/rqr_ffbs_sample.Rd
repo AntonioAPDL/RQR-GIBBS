@@ -13,7 +13,8 @@ rqr_ffbs_sample(
   C0,
   evolution,
   backend = c("cpp", "R", "auto"),
-  jitter_ladder = c(0, 1e-12, 1e-10, 1e-08, 1e-06)
+  jitter_ladder = c(0, 1e-12, 1e-10, 1e-08, 1e-06),
+  numerical_policy = c("fail", "record_repair")
 )
 }
 \arguments{
@@ -32,6 +33,8 @@ rqr_ffbs_sample(
 \item{backend}{One of `"cpp"`, `"R"`, or `"auto"`.}
 
 \item{jitter_ladder}{Declared relative Cholesky jitter ladder.}
+
+\item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
 }
 \value{
 Filtering/smoothing moments and one sampled state path.

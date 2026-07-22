@@ -30,6 +30,7 @@
 \newcommand{\RHS}{\mathrm{RHS}}
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4.5pt}\renewcommand{\arraystretch}{1.12}}
 \DeclareMathOperator{\argmin}{arg\,min}
+\newtheorem{proposition}{Proposition}
 
 \title{\vspace{-0.6cm}Bayesian Relaxed Quantile Regression for Direct Interval Forecasting}
 \author{Antonio De Leon$^{1}$ \and Raquel Prado$^{1}$ \and Bruno Sans\'o$^{1}$}
@@ -46,17 +47,19 @@ Prediction intervals are often built from two fitted conditional quantiles, but
 that construction fixes endpoint probabilities before assessing how interval
 coverage, width, and asymmetry interact. Relaxed quantile regression (RQR)
 instead estimates two interval roots directly through a residual-product loss.
-We develop a Bayesian generalized-posterior formulation for this target and
-show that a normalized exponentiated RQR loss admits a
+We develop a Bayesian generalized-posterior formulation for this target,
+described as coverage-targeted interval-root regression under the RQR loss, and
+show that a pseudo-residual-normalized exponentiated loss admits a
 pseudo-asymmetric-Laplace normal--exponential augmentation. Conditional on one
 root and the latent scales, the other root has a Gaussian full conditional.
 This yields a partially collapsed Gibbs sampler with either a fixed learning
 rate or a learned inverse loss scale. The construction supports fixed nonlinear
 readouts, including RQR-DESN, and a linear dynamic extension in which each root
-trajectory is updated by forward-filtering backward-sampling. We distinguish
-fixed evolution covariances, frozen component-discount templates, and an
-experimental adaptive discount recursion. Only the first two currently define
-the stated exact generalized-posterior target. Posterior summaries are
+trajectory is updated by forward-filtering backward-sampling. Fixed evolution
+covariances, frozen component-discount templates, and shared component-specific
+evolution scales define coherent state priors. We show that the analogous
+adaptive conditional-discount recursion is generally incompatible with the
+advertised pair of Gaussian full conditionals. Posterior summaries are
 interval-root functions under a loss-based update, not posterior predictive
 response draws.
 \end{abstract}
@@ -148,19 +151,37 @@ RQR loss is
 \mathcal L_{T,c}(\vect\beta_1,\vect\beta_2)
 =\sum_{t=1}^T \rho_c(e_t).
 \]
-Suppose the conditional risk is finite and differentiable, the conditional
-distribution has no mass at the endpoints, and an unrestricted pointwise
-minimizer satisfies \(L(x)<U(x)\) in the interior of its parameter space. The
-two population first-order conditions then imply the coverage and first-moment
-balance equations
+\begin{proposition}[Population characterization]
+\label{prop:population-characterization}
+Fix \(x\) and let \(a<b\). Suppose
+\(\E(Y^2\mid X=x)<\infty\), the conditional distribution has no mass at \(a\)
+or \(b\), differentiation may be interchanged with conditional expectation,
+and \((a,b)\) is an interior stationary point over an unrestricted pointwise
+endpoint class. Then the two population first-order conditions imply
 \[
-\Pr\{L(X)<Y<U(X)\mid X=x\}=c,
+\Pr(a<Y<b\mid X=x)=c,
 \]
 and
 \[
-\E\{Y\ind(L(X)<Y<U(X))\mid X=x\}
+\E\{Y\ind(a<Y<b)\mid X=x\}
 =c\,\E(Y\mid X=x).
 \]
+The second equality is equivalently zero conditional covariance between \(Y\)
+and the interval-membership indicator.
+\end{proposition}
+
+The population coverage implication is due to
+\citet{PouplinEtAl2024RQR}. The conditional first-moment equation is a further
+consequence of the same first-order system and, to our knowledge, was not
+stated in the original article. If the conditional law has endpoint atoms,
+the corresponding directional conditions give
+\[
+\Pr(a<Y<b\mid X=x)\le c\le\Pr(a\le Y\le b\mid X=x),
+\]
+so exact open-interval coverage requires endpoint continuity. Coincident roots
+reduce the loss to \(c(Y-a)^2\) and target the conditional mean rather than a
+nontrivial interval.
+
 This motivates RQR as a direct interval target that can adapt to asymmetric
 conditional error structure without assigning endpoint quantile levels in
 advance. These equations characterize an unrestricted population target only
@@ -168,6 +189,11 @@ under the stated conditions. With linear or otherwise restricted root classes,
 optimization instead enforces design-weighted score equations; it need not
 give conditional coverage at every covariate value. The supplement records
 both forms and does not rely on a data-dependent-interval proof.
+In particular, we do not use the original article's finite-sample unbiasedness
+argument: fitted endpoints are data dependent, and the empirical objective is
+nonsmooth when an observation coincides with a root. A valid finite-sample or
+asymptotic generalization result requires a separate empirical-process
+analysis.
 
 \section{Generalized Posterior and Augmentation}
 \label{sec:posterior}
@@ -184,7 +210,7 @@ For priors \(\pi_\beta(\vect\beta_1)\) and
 where \(\omega_{\mathrm R}>0\) is a learning rate. A learned-scale version
 uses a positive reference loss scale \(s_L\), sets
 \(\omega_{\mathrm R}=\lambda/s_L\), and places a Gamma prior on \(\lambda\).
-We use the normalized loss-kernel target
+We call
 
 \[
 \Pi_{\mathrm R}(d\vartheta,d\lambda\mid\vect y)
@@ -192,7 +218,10 @@ We use the normalized loss-kernel target
 \pi(d\vartheta)\lambda^{T}\pi_\lambda(d\lambda)
 \exp\{-\lambda\mathcal L_{T,c}(\vartheta)/s_L\},
 \]
-where \(\vartheta\) collects both roots. If
+the \emph{pseudo-residual-normalized learned-scale target}. The factor
+\(\lambda^T\) arises from normalizing an asymmetric-Laplace kernel in the
+abstract pseudo-residual \(e_t\); it does not normalize a response density in
+\(y_t\). Here \(\vartheta\) collects both roots. If
 \(\lambda\sim\mathrm{Gamma}(a_\lambda,b_\lambda)\) in shape--rate form, its
 collapsed conditional is
 
@@ -204,6 +233,17 @@ b_\lambda+\mathcal L_{T,c}(\vartheta)/s_L\right).
 The factor \(\lambda^T\) is part of the declared target rather than an
 irrelevant constant when \(\lambda\) is learned. A pure-loss sensitivity target
 that omits this factor is kept separate.
+
+The learned \(\lambda\) is part of this declared hierarchical generalized
+target. Coherence for a fixed loss scale does not establish that \(\lambda\) is
+an ordinary jointly learnable response parameter or that its generalized
+posterior calibrates endpoint uncertainty
+\citep{LeeLiuNicholls2025LearningRate,WuMartin2020LearningRateComparison}.
+We therefore use fixed-rate sensitivity analyses as the primary specification
+and treat learned-scale inference as an additional convention. When \(s_L\) is
+computed from training responses, its calculation sample and variance
+convention are recorded and \(s_L\) is frozen before simulation; the resulting
+target is data dependent in an empirical-Bayes sense.
 
 Let
 \[
@@ -293,9 +333,30 @@ exact sampler for the stated prior; a template estimated from training data is
 recorded as an empirical-Bayes specification. By contrast, recomputing \(W_t\)
 from each conditional filter covariance
 makes it depend on the other root and latent-scale blocks. We retain that
-exdqlm-compatible recursion only as an experimental working update until a
-coherent joint-target derivation is available. The two roots use identical
-evolution specifications by default.
+exdqlm-compatible recursion only as an experimental working update. A
+two-time scalar mixed-derivative argument in the supplement shows that its two
+advertised conditional FFBS kernels are generally incompatible with a common
+positive smooth joint density.
+
+For an exact component-specific alternative, partition the state into blocks
+and set
+\[
+W_t(\vect q)=\operatorname{blockdiag}
+\{q_1Q_{1t},\ldots,q_JQ_{Jt}\},
+\qquad q_j\sim\operatorname{IG}(a_j,b_j),
+\]
+where \(Q_{jt}\) are fixed positive-definite templates. The multipliers are
+shared across the two roots to preserve prior exchangeability. Sampling the
+time-zero states restores the innovation factorization and yields conjugate
+inverse-Gamma updates for each \(q_j\); the complete derivation appears in the
+supplement.
+
+The implementation distinguishes mathematical target status from numerical
+execution. Fixed and component-scale modes have a declared joint target, but a
+fit is promotion eligible only if every covariance factorization succeeds
+without repair. A fail-fast policy is the default. An audit policy may instead
+record the matrix role, time, root, iteration, jitter, and eigenvalue diagnostic
+for every repair.
 
 \section{Validation Plan}
 \label{sec:validation}
@@ -312,6 +373,13 @@ collapsed into unsupported global claims. VB may be useful for screening or
 initialization, but calibrated VB uncertainty will not be promoted until it
 receives its own derivation and validation.
 
+The standard interval score remains secondary because its canonical endpoints
+are the corresponding equal-tailed quantiles. RQR does not preassign those
+endpoint probabilities. Reproducible fits record a schema version, exact Git
+and package provenance, data and matrix digests, numerical policy, RNG state,
+and a complete continuation checkpoint. Full state paths are opt-in; terminal
+state draws are retained for root forecasting.
+
 \section{Discussion}
 \label{sec:discussion}
 
@@ -320,9 +388,12 @@ targets. Its value is not that it replaces quantile forecasting in all
 settings, but that it gives a declared loss-based update over interval roots
 when the scientific target is an interval rather than a pair of fixed quantile
 levels. The native fixed-design and state-space paths now share the same loss,
-scale, and root-ordering contracts. Production evidence remains gated on
-mathematical review of adaptive discounting, numerical parity tests for the
-compiled FFBS kernel, and a frozen matched simulation protocol.
+scale, and root-ordering contracts. Adaptive discounting has been resolved as a
+working rather than exact conditional recursion, while the shared
+component-scale construction provides a coherent alternative. Production
+evidence remains gated on bounded pilot validation and a frozen matched
+simulation protocol; no response-predictive interpretation follows from the
+loss update.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}

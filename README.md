@@ -2,7 +2,8 @@
 
 Standalone manuscript and reproducibility workspace for Bayesian relaxed
 quantile regression (RQR) with Gibbs sampling, fixed nonlinear DESN readouts,
-and a native linear dynamic/state-space extension.
+and a native linear dynamic/state-space extension. The working descriptor is
+coverage-targeted interval-root regression under the RQR loss.
 
 ## Purpose
 
@@ -21,17 +22,30 @@ package under **application/**:
 - **rqr-gibbs-supplement.tex** gives the population, augmentation,
   learned-scale, FFBS, and component-discount derivations.
 - **application/R/** contains fixed-design utilities, exdqlm-compatible DLM
-  model builders, pure-R FFBS, the RQR-DLM sampler, and DESN adapters.
+  model builders, pure-R FFBS, exact component-scale evolution, the RQR-DLM
+  sampler, restart helpers, and DESN adapters.
 - **application/src/** contains the C++17/RcppArmadillo FFBS kernel.
 - **application/tests/** contains native package gates and copied exdqlm
   reference tests.
 - **docs/implementation_notes/rqr_dlm_native_design_20260722.md** freezes the
   exact and experimental evolution-mode contracts.
 
-Fixed evolution covariances and frozen discount templates define exact samplers
-for the stated generalized posterior. The exdqlm-style adaptive discount
-recursion is available only as an explicitly experimental working update
-because its fixed-joint-target interpretation has not been established.
+Fixed evolution covariances, frozen discount templates, and shared
+component-specific inverse-Gamma evolution scales define exact samplers for
+their stated generalized posteriors. A mixed-derivative audit shows that the
+exdqlm-style adaptive conditional-discount kernels are not generally compatible
+with a common smooth joint density while retaining their simple FFBS forms.
+That mode remains available only as an explicitly experimental working update.
+The public constructor is deliberately named
+`rqr_evolution_adaptive_working()`; exact alternatives use
+`rqr_evolution_fixed()`, `rqr_freeze_discount_template()`, or
+`rqr_evolution_component_scale()`.
+
+The package defaults to fail-fast covariance numerics. An audit mode can record
+repairs, but mathematical target status and numerical execution status are
+reported separately, and repaired fits are not promotion eligible. Compact fit
+objects retain terminal state draws, full RNG checkpoints, schema and Git/R/
+compiler/BLAS provenance, and data/matrix digests; full paths are opt-in.
 
 The pinned exdqlm branch remains the read-only implementation reference for
 RQR-DESN and RHS-family compatibility.

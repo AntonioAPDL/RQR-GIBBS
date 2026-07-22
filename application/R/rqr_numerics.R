@@ -5,6 +5,40 @@
   0.5 * (x + t(x))
 }
 
+.rqr_numerical_policy <- function(policy = c("fail", "record_repair")) {
+  match.arg(as.character(policy)[1L], c("fail", "record_repair"))
+}
+
+.rqr_jitter_ladder <- function(policy, jitter_ladder) {
+  policy <- .rqr_numerical_policy(policy)
+  if (identical(policy, "fail")) return(0)
+  ladder <- unique(as.numeric(jitter_ladder))
+  if (!length(ladder) || any(!is.finite(ladder)) || any(ladder < 0)) {
+    stop("jitter_ladder must contain finite nonnegative values.", call. = FALSE)
+  }
+  sort(unique(c(0, ladder)))
+}
+
+.rqr_validate_covariance_cube <- function(x, name = "covariance", tolerance = 100 * .Machine$double.eps) {
+  if (length(dim(x)) != 3L || dim(x)[1L] != dim(x)[2L] || any(!is.finite(x))) {
+    stop(sprintf("%s must be a finite square covariance cube.", name), call. = FALSE)
+  }
+  for (tt in seq_len(dim(x)[3L])) {
+    current <- matrix(x[, , tt], nrow = dim(x)[1L], ncol = dim(x)[2L])
+    scale <- max(1, max(abs(current)))
+    if (max(abs(current - t(current))) > tolerance * scale) {
+      stop(sprintf("%s slice %d is not symmetric.", name, tt), call. = FALSE)
+    }
+    current <- .rqr_symmetrize(current)
+    minimum <- min(eigen(current, symmetric = TRUE, only.values = TRUE)$values)
+    if (minimum < -tolerance * scale) {
+      stop(sprintf("%s slice %d is materially indefinite.", name, tt), call. = FALSE)
+    }
+    x[, , tt] <- current
+  }
+  x
+}
+
 .rqr_chol_with_jitter <- function(x, jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6)) {
   x <- .rqr_symmetrize(x)
   if (nrow(x) != ncol(x) || any(!is.finite(x))) {
@@ -13,11 +47,19 @@
   scale <- max(1, max(abs(diag(x))))
   ladder <- unique(as.numeric(jitter_ladder))
   ladder <- ladder[is.finite(ladder) & ladder >= 0]
+  min_eigenvalue <- NA_real_
   for (jj in ladder) {
     candidate <- if (jj == 0) x else x + diag(jj * scale, nrow(x))
     ans <- tryCatch(chol(candidate), error = function(e) NULL)
     if (!is.null(ans)) {
-      return(list(chol = ans, matrix = candidate, jitter = jj * scale))
+      if (jj > 0 && is.na(min_eigenvalue)) {
+        min_eigenvalue <- min(eigen(x, symmetric = TRUE, only.values = TRUE)$values)
+      }
+      return(list(
+        chol = ans, matrix = candidate, jitter = jj * scale,
+        relative_jitter = jj, min_eigenvalue = min_eigenvalue,
+        matrix_scale = scale
+      ))
     }
   }
   stop("Positive-definite Cholesky factorization failed after the declared jitter ladder.", call. = FALSE)
@@ -51,7 +93,11 @@
   if (!is.null(direct)) {
     return(list(
       draw = as.numeric(mean + t(direct) %*% stats::rnorm(length(mean))),
-      info = list(strategy = "cholesky", jitter = 0)
+      info = list(
+        strategy = "cholesky", jitter = 0, relative_jitter = 0,
+        min_eigenvalue = NA_real_, clamped_eigenvalues = 0L,
+        matrix_scale = max(1, max(abs(covariance)))
+      )
     ))
   }
   ee <- eigen(covariance, symmetric = TRUE)
@@ -62,16 +108,23 @@
       draw = as.numeric(mean + ee$vectors %*% (sqrt(values) * stats::rnorm(length(mean)))),
       info = list(
         strategy = "psd_eigen",
-        jitter = 0,
+        jitter = 0, relative_jitter = 0,
         min_eigenvalue = min(ee$values),
-        clamped_eigenvalues = sum(ee$values < 0)
+        clamped_eigenvalues = sum(ee$values < 0),
+        matrix_scale = scale
       )
     ))
   }
   fac <- .rqr_chol_with_jitter(covariance, jitter_ladder)
   list(
     draw = as.numeric(mean + t(fac$chol) %*% stats::rnorm(length(mean))),
-    info = list(strategy = "cholesky_jitter", jitter = fac$jitter)
+    info = list(
+      strategy = "cholesky_jitter", jitter = fac$jitter,
+      relative_jitter = fac$relative_jitter,
+      min_eigenvalue = fac$min_eigenvalue,
+      clamped_eigenvalues = 0L,
+      matrix_scale = fac$matrix_scale
+    )
   )
 }
 
@@ -97,26 +150,54 @@
 
 .exal_gig_floor <- function() sqrt(.Machine$double.eps)
 
-.rqr_rinvgauss <- function(n, mean, shape) {
+.rqr_rinvgauss_log <- function(n, log_mean, log_shape) {
   n <- as.integer(n)[1L]
-  mean <- rep_len(as.numeric(mean), n)
-  shape <- rep_len(as.numeric(shape), n)
-  if (n < 1L || any(!is.finite(mean)) || any(mean <= 0) ||
+  log_mean <- rep_len(as.numeric(log_mean), n)
+  log_shape <- rep_len(as.numeric(log_shape), n)
+  if (n < 1L || any(!is.finite(log_mean)) || any(!is.finite(log_shape))) {
+    stop("Log inverse-Gaussian mean and shape must be finite.", call. = FALSE)
+  }
+  z2 <- stats::rnorm(n)^2
+  log_w <- log_mean + log(z2) - log_shape
+  log_denominator <- numeric(n)
+  moderate <- is.finite(log_w) & log_w <= 350
+  if (any(moderate)) {
+    w <- exp(log_w[moderate])
+    log_denominator[moderate] <- log1p(
+      0.5 * w + 0.5 * sqrt(w) * sqrt(w + 4)
+    )
+  }
+  large <- is.finite(log_w) & log_w > 350
+  if (any(large)) {
+    # d = 1 + w/2 + sqrt(w^2 + 4w)/2 = w{1/w + 1/2 + sqrt(1+4/w)/2}.
+    inv_w <- exp(-log_w[large])
+    log_denominator[large] <- log_w[large] + log(
+      inv_w + 0.5 + 0.5 * sqrt(1 + 4 * inv_w)
+    )
+  }
+  log_denominator[is.infinite(log_w) & log_w < 0] <- 0
+  if (any(!is.finite(log_denominator))) {
+    stop("Inverse-Gaussian transform produced a nonfinite log denominator.", call. = FALSE)
+  }
+  log_x <- log_mean - log_denominator
+  # P(X=x)=mu/(mu+x)=1/{1+exp(-log(d))}; this form cannot overflow.
+  choose_x <- stats::runif(n) <= stats::plogis(log_denominator)
+  ifelse(choose_x, log_x, log_mean + log_denominator)
+}
+
+.rqr_rinvgauss <- function(n, mean, shape) {
+  mean <- as.numeric(mean)
+  shape <- as.numeric(shape)
+  if (any(!is.finite(mean)) || any(mean <= 0) ||
       any(!is.finite(shape)) || any(shape <= 0)) {
     stop("Inverse-Gaussian mean and shape must be finite and positive.", call. = FALSE)
   }
-  z2 <- stats::rnorm(n)^2
-  w <- mean * z2 / shape
-  # Stable forms of mu * {1 + w/2 - sqrt(w^2 + 4w)/2}.
-  x <- mean
-  small <- w > 0 & w < 1
-  x[small] <- mean[small] /
-    (1 + 0.5 * w[small] + 0.5 * sqrt(w[small]) * sqrt(w[small] + 4))
-  large <- w >= 1
-  x[large] <- (shape[large] / z2[large]) /
-    (1 / w[large] + 0.5 + 0.5 * sqrt(1 + 4 / w[large]))
-  choose_x <- stats::runif(n) <= mean / (mean + x)
-  ifelse(choose_x, x, mean^2 / x)
+  log_draw <- .rqr_rinvgauss_log(n, log(mean), log(shape))
+  draw <- exp(log_draw)
+  if (any(!is.finite(draw)) || any(draw <= 0)) {
+    stop("Inverse-Gaussian draw is outside the finite positive floating-point range.", call. = FALSE)
+  }
+  draw
 }
 
 #' Sample the GIG distribution used by RQR
@@ -140,12 +221,15 @@ rqr_sample_gig_half <- function(b, a) {
   if (any(zero)) out[zero] <- stats::rgamma(sum(zero), shape = 0.5, rate = a[zero] / 2)
   if (any(!zero)) {
     # If X ~ GIG(1/2,a,b), then 1/X ~ IG(sqrt(a/b), shape=a).
-    inv <- .rqr_rinvgauss(
+    log_inv <- .rqr_rinvgauss_log(
       sum(!zero),
-      mean = sqrt(a[!zero]) / sqrt(b[!zero]),
-      shape = a[!zero]
+      log_mean = 0.5 * (log(a[!zero]) - log(b[!zero])),
+      log_shape = log(a[!zero])
     )
-    out[!zero] <- 1 / inv
+    out[!zero] <- exp(-log_inv)
+    if (any(!is.finite(out[!zero])) || any(out[!zero] <= 0)) {
+      stop("GIG draw is outside the finite positive floating-point range.", call. = FALSE)
+    }
   }
   out
 }

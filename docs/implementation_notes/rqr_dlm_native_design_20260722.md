@@ -1,14 +1,15 @@
 # Native RQR-DLM design and validation gates
 
 Date: 2026-07-22  
-Status: implementation contract; no production simulation authorized
+Status: post-audit implementation contract; bounded pilot still gated
 
 ## Purpose
 
-This note freezes the first native state-space contract for the standalone
-RQR-GIBBS repository. It separates mathematics that currently defines an exact
-generalized posterior from an exdqlm-compatible adaptive discount recursion
-whose joint-target interpretation still requires a derivation.
+This note freezes the audited native state-space contract for the standalone
+RQR-GIBBS repository. It separates fixed-joint generalized posteriors from the
+exdqlm-compatible adaptive discount recursion, which a two-time
+mixed-derivative counterexample shows is generally incompatible with the
+advertised pair of Gaussian full conditionals.
 
 The RQR update is loss based. Its normal--exponential representation is an
 augmentation of an exponentiated loss kernel; it is not a response likelihood
@@ -24,7 +25,7 @@ rho_c(e) = e * (c - 1(e < 0))
 L = sum_t rho_c(e[t])
 ```
 
-The normalized learned-scale target implemented here is
+The pseudo-residual-normalized learned-scale target implemented here is
 
 ```
 pi(theta1, theta2, lambda | y)
@@ -66,6 +67,17 @@ where `GIG(nu,a,b)` has density proportional to
 the reciprocal inverse-Gaussian identity and does not require an external GIG
 package.
 
+The public target modes are locked:
+
+- `fixed_rate`: `learning_rate` is exactly `omega_R`, independent of `s_L`;
+- `learned_pseudoresidual_normalized`: the power is exactly `lambda^n`;
+- `learned_pure`: the power is exactly zero and the mode is diagnostic.
+
+Custom powers are rejected. `lambda_initial` initializes learned modes without
+changing fixed-rate semantics. Fixed-rate sensitivity is primary; the learned
+scale is an additional declared generalized-target convention, not a calibrated
+response parameter.
+
 ## Dynamic root equations
 
 For roots `k=1,2`,
@@ -101,7 +113,7 @@ this order changes the transition kernel.
 
 ## Evolution modes
 
-The native API exposes three modes rather than treating all discount-factor
+The native API exposes four modes rather than treating all discount-factor
 uses as equivalent.
 
 ### `fixed_W`
@@ -129,24 +141,52 @@ If those reference quantities are estimated from the training responses, the
 template is an empirical-Bayes prior specification; conditional FFBS remains
 exact for the frozen template, but the data dependence must be disclosed.
 
+### `component_scale`
+
+For model component dimensions `d[j]`, fixed SPD templates `Q[j,t]`, and
+shared positive scales `q[j]`, the state covariance is
+
+```
+W[t] = blockdiag(q[1] Q[1,t], ..., q[J] Q[J,t]).
+q[j] ~ Inverse-Gamma(a[j], b[j]).
+```
+
+The same scales are shared across the two exchangeable roots. The sampler draws
+the integrated time-zero state after each root path, then uses all innovations
+from both roots in the exact conditional
+
+```
+q[j] | ... ~ Inverse-Gamma(
+  a[j] + T*d[j],
+  b[j] + 0.5 * sum_{k,t} d[k,j,t]' solve(Q[j,t]) d[k,j,t]
+).
+```
+
+This provides a coherent component-specific dynamic-variance path without
+assigning a posterior interpretation to adaptive filter covariances.
+
 ### `adaptive_discount`
 
 At every conditional FFBS call, the exdqlm recursion computes
 `W[t] = D * P[t]` from the current filter covariance. Because the RQR
 pseudo-design and observation variance depend on the other root, `v`, and
 `lambda`, this recursion also makes the implied evolution covariance depend on
-those blocks. The simple alternating sampler does not include the additional
-normalizing and quadratic terms that would generally appear if that recursion
-were interpreted as a joint prior. Accordingly:
+those blocks. The scalar `T=2` mixed-derivative counterexample in the supplement
+establishes that the two simple conditional FFBS densities are generically
+incompatible with a common positive smooth joint density. Accordingly:
 
 - this mode is labeled experimental and working/sequential;
 - fitted objects set `exact_joint_target = FALSE`;
 - manuscript claims do not present it as exact Gibbs for a fixed joint target;
-- production comparisons cannot use it until the mathematical contract is
-  either derived or replaced by a coherent alternative.
+- production comparisons cannot present it as the exact RQR-DLM; the
+  `component_scale` mode is the coherent component-specific alternative.
 
 Both roots use the same component discounts by default to preserve prior
 exchangeability.
+
+The matching public constructors are `rqr_evolution_fixed()`,
+`rqr_freeze_discount_template()`, `rqr_evolution_component_scale()`, and the
+deliberately explicit `rqr_evolution_adaptive_working()`.
 
 ## exdqlm 1.1.0 compatibility audit
 
@@ -179,7 +219,9 @@ The pinned development repository remains read-only at
 - `R/rqr_dlm_model.R`: exdqlm-compatible model constructors and composition;
 - `R/rqr_ffbs.R`: pure-R reference FFBS and backend dispatcher;
 - `src/rqr_ffbs.cpp`: C++17/RcppArmadillo FFBS bottleneck;
-- `R/rqr_dlm_fit.R`: partially collapsed RQR-DLM sampler;
+- `R/rqr_evolution.R`: exact shared component-scale evolution prior;
+- `R/rqr_dlm_fit.R`: partially collapsed RQR-DLM sampler, provenance schema,
+  compact terminal-state storage, and exact checkpoint continuation;
 - existing fixed-design and DESN files remain available while private exdqlm
   dependencies are retired incrementally;
 - `tests/testthat/` contains deterministic parity, discount, invariance, and
@@ -193,25 +235,29 @@ layer from silently redefining the statistical target.
 ## Gates before a heavy run
 
 1. Package installation and all native tests pass in a clean R session.
-2. Pure-R and C++ filters/smoothers agree on fixed and multiblock discount
-   fixtures; seeded path draws satisfy distributional rather than bitwise
-   checks.
+2. Pure-R and C++ filters/smoothers agree with an independent dense Gaussian
+   reference on fixed and multiblock fixtures; seeded path draws satisfy
+   distributional rather than bitwise checks.
 3. Root-label exchangeability is checked under identical root priors.
 4. The learned-scale collapsed update and post-lambda latent-scale refresh are
    tested directly.
-5. Local-level and regression-state synthetic cases pass coverage, endpoint,
-   and numerical diagnostics.
+5. Component-scale inverse-Gamma conditionals, time-zero states, extreme-scale
+   GIG draws, restart continuation, local-level cases, missing observations,
+   and numerical diagnostics pass focused tests.
 6. The simulation protocol freezes common data-generating mechanisms, sample
    sizes, train/test windows, seeds, methods, and scoring rules.
 7. Every run manifest records this repository commit, the pinned exdqlm
    commit, package/session information, configuration, and seeds.
-8. Heavy objects remain under ignored local directories.
+8. Fit objects record schema, Git/package/R/compiler/BLAS provenance, RNG state,
+   data and matrix digests, and numerical-repair status.
+9. Promotion-grade exact-target fixtures use the fail-fast numerical policy and
+   record zero repairs.
+10. Heavy objects remain under ignored local directories.
 
-## Open question for external mathematical review
+## External-review resolution
 
-The next ChatGPT Pro review should focus on one question: can the adaptive
-discount recursion above be derived from a coherent joint generalized
-posterior while retaining the advertised simple conditional FFBS blocks? If
-not, the review should recommend a coherent component-specific evolution-prior
-alternative and derive every affected conditional. The local Pro prompt asks
-for that result without allowing it to blur the exact and experimental modes.
+The adaptive conditional-discount question is resolved negatively for the
+advertised simple kernels. The exact shared `component_scale` mode implements
+the recommended coherent alternative. The next external review should audit
+the proof statement, component-scale implementation, numerical-repair ledger,
+and continuation/provenance schema before any bounded pilot is authorized.

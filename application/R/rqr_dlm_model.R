@@ -50,7 +50,7 @@ rqr_as_dlm_model <- function(model) {
   GG <- model$GG
   C0 <- as.matrix(model$C0)
   storage.mode(FF) <- storage.mode(C0) <- "double"
-  if (nrow(FF) != p || !all(dim(C0) == c(p, p))) {
+  if (p < 1L || ncol(FF) < 1L || nrow(FF) != p || !all(dim(C0) == c(p, p))) {
     stop("FF, m0, and C0 have incompatible dimensions.", call. = FALSE)
   }
   dg <- dim(GG)
@@ -61,13 +61,25 @@ rqr_as_dlm_model <- function(model) {
     stop("model matrices must be finite.", call. = FALSE)
   }
   .rqr_chol_with_jitter(C0, jitter_ladder = 0)
+  component_dims <- .rqr_positive_integer_vector(
+    model$component_dims %||% p, "component_dims"
+  )
+  component_names <- as.character(model$component_names %||% "component1")
+  if (!length(component_dims) || anyNA(component_dims) || any(component_dims < 1L) ||
+      sum(component_dims) != p) {
+    stop("component_dims must be positive integers summing to length(m0).", call. = FALSE)
+  }
+  if (length(component_names) != length(component_dims) || anyNA(component_names) ||
+      any(!nzchar(component_names)) || anyDuplicated(component_names)) {
+    stop("component_names must be unique nonempty names matching component_dims.", call. = FALSE)
+  }
   out <- list(
     FF = FF,
     GG = GG,
     m0 = matrix(m0, p, 1L),
     C0 = .rqr_symmetrize(C0),
-    component_dims = as.integer(model$component_dims %||% p),
-    component_names = model$component_names %||% "component1"
+    component_dims = component_dims,
+    component_names = component_names
   )
   class(out) <- "rqr_dlm_model"
   out
@@ -82,8 +94,7 @@ rqr_as_dlm_model <- function(model) {
 #' @return An `rqr_dlm_model`.
 #' @export
 rqr_polytrend <- function(order = 1L, m0 = NULL, C0 = NULL, name = "trend") {
-  order <- as.integer(order)[1L]
-  if (!is.finite(order) || order < 1L) stop("order must be positive.", call. = FALSE)
+  order <- .rqr_scalar_integer(order, "order", 1L)
   GG <- diag(order)
   if (order > 1L) GG[cbind(seq_len(order - 1L), 2:order)] <- 1
   FF <- matrix(c(1, rep(0, order - 1L)), order, 1L)
@@ -106,6 +117,10 @@ rqr_polytrend <- function(order = 1L, m0 = NULL, C0 = NULL, name = "trend") {
 #' @export
 rqr_seasonal <- function(period, harmonics = 1L, m0 = NULL, C0 = NULL, name = "seasonal") {
   period <- as.numeric(period)[1L]
+  if (!is.numeric(harmonics) || !length(harmonics) || anyNA(harmonics) ||
+      any(!is.finite(harmonics)) || any(harmonics != floor(harmonics))) {
+    stop("period and harmonics define an invalid Fourier component.", call. = FALSE)
+  }
   harmonics <- as.integer(harmonics)
   if (!is.finite(period) || period <= 1 || !length(harmonics) ||
       any(!is.finite(harmonics)) || any(harmonics < 1L) ||
@@ -196,8 +211,8 @@ rqr_regression <- function(X, m0 = NULL, C0 = NULL, name = "regression") {
 #' @export
 rqr_discount_matrix <- function(df, dim.df, p = sum(dim.df)) {
   df <- as.numeric(df)
-  dim.df <- as.integer(dim.df)
-  p <- as.integer(p)[1L]
+  dim.df <- .rqr_positive_integer_vector(dim.df, "dim.df")
+  p <- .rqr_scalar_integer(p, "p", 1L)
   if (!length(df) || length(df) != length(dim.df) || any(!is.finite(df)) ||
       any(df <= 0) || any(df > 1) || any(!is.finite(dim.df)) ||
       any(dim.df < 1L) || sum(dim.df) != p) {
@@ -232,23 +247,35 @@ rqr_discount_matrix <- function(df, dim.df, p = sum(dim.df)) {
 #' @param df,dim.df exdqlm-compatible component discounts and dimensions.
 #' @param reference_variance Positive scalar or length-`n_time` vector.
 #' @param reference_design Optional `p x n_time` pseudo-design; defaults to FF.
-#' @return An evolution specification containing a fixed `W` cube.
+#' @param numerical_policy Either `"fail"` or `"record_repair"`.
+#' @param jitter_ladder Relative jitter ladder used only under record-repair.
+#' @return An evolution specification containing a fixed `W` cube and a
+#'   construction audit.
 #' @export
 rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
                                           reference_variance,
-                                          reference_design = NULL) {
+                                          reference_design = NULL,
+                                          numerical_policy = c("fail", "record_repair"),
+                                          jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6)) {
   ex <- .rqr_expand_model(model, n_time)
   D <- rqr_discount_matrix(df, dim.df, ex$p)
-  V <- rep_len(as.numeric(reference_variance), n_time)
-  if (length(V) != n_time || any(!is.finite(V)) || any(V <= 0)) {
+  reference_variance <- as.numeric(reference_variance)
+  if (!length(reference_variance) %in% c(1L, n_time) ||
+      any(!is.finite(reference_variance)) || any(reference_variance <= 0)) {
     stop("reference_variance must be positive and have length 1 or n_time.", call. = FALSE)
   }
+  V <- rep_len(reference_variance, n_time)
   H <- if (is.null(reference_design)) ex$FF else as.matrix(reference_design)
   if (!all(dim(H) == c(ex$p, n_time)) || any(!is.finite(H))) {
     stop("reference_design must be finite p x n_time.", call. = FALSE)
   }
   C <- ex$C0
   W <- array(0, c(ex$p, ex$p, n_time))
+  numerical_policy <- .rqr_numerical_policy(numerical_policy)
+  ladder <- .rqr_jitter_ladder(numerical_policy, jitter_ladder)
+  repair_time <- integer(0)
+  repair_jitter <- numeric(0)
+  minimum_eigenvalue <- numeric(n_time)
   for (tt in seq_len(n_time)) {
     P <- .rqr_symmetrize(ex$GG[, , tt] %*% C %*% t(ex$GG[, , tt]))
     W[, , tt] <- .rqr_symmetrize(D * P)
@@ -256,7 +283,20 @@ rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
     h <- H[, tt]
     q <- drop(crossprod(h, R %*% h)) + V[tt]
     if (!is.finite(q) || q <= 0) stop("Reference discount recursion produced a nonpositive variance.", call. = FALSE)
-    C <- .rqr_symmetrize(R - tcrossprod(R %*% h) / q)
+    gain <- drop(R %*% h) / q
+    identity <- diag(ex$p)
+    # Joseph form avoids subtractive loss of positive semidefiniteness.
+    C <- .rqr_symmetrize(
+      (identity - tcrossprod(gain, h)) %*% R %*% t(identity - tcrossprod(gain, h)) +
+        tcrossprod(gain) * V[tt]
+    )
+    minimum_eigenvalue[tt] <- min(eigen(C, symmetric = TRUE, only.values = TRUE)$values)
+    fac <- .rqr_chol_with_jitter(C, ladder)
+    if (fac$jitter > 0) {
+      repair_time <- c(repair_time, tt)
+      repair_jitter <- c(repair_jitter, fac$jitter)
+    }
+    C <- fac$matrix
   }
   structure(list(
     mode = "discount_template",
@@ -267,6 +307,13 @@ rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
     reference_variance = V,
     reference_design = H,
     exact_joint_target = TRUE,
-    frozen_before_mcmc = TRUE
+    frozen_before_mcmc = TRUE,
+    construction_audit = list(
+      numerical_policy = numerical_policy,
+      repair_count = length(repair_time),
+      repair_time = repair_time,
+      repair_jitter = repair_jitter,
+      minimum_eigenvalue = minimum_eigenvalue
+    )
   ), class = "rqr_evolution")
 }

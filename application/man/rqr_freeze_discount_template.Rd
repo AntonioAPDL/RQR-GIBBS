@@ -10,7 +10,9 @@ rqr_freeze_discount_template(
   df,
   dim.df,
   reference_variance,
-  reference_design = NULL
+  reference_design = NULL,
+  numerical_policy = c("fail", "record_repair"),
+  jitter_ladder = c(0, 1e-12, 1e-10, 1e-08, 1e-06)
 )
 }
 \arguments{
@@ -23,9 +25,14 @@ rqr_freeze_discount_template(
 \item{reference_variance}{Positive scalar or length-`n_time` vector.}
 
 \item{reference_design}{Optional `p x n_time` pseudo-design; defaults to FF.}
+
+\item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
+
+\item{jitter_ladder}{Relative jitter ladder used only under record-repair.}
 }
 \value{
-An evolution specification containing a fixed `W` cube.
+An evolution specification containing a fixed `W` cube and a
+  construction audit.
 }
 \description{
 Freeze a component-discount covariance template

@@ -6,7 +6,7 @@
 \usepackage{microtype}
 \usepackage{setspace}
 \onehalfspacing
-\usepackage{amsmath,amssymb,mathtools,bm,booktabs,tabularx,array}
+\usepackage{amsmath,amssymb,mathtools,bm,booktabs,tabularx,array,amsthm}
 \usepackage{enumitem}
 \usepackage[round,authoryear]{natbib}
 \usepackage{hyperref}
@@ -23,6 +23,7 @@
 \newcommand{\mat}[1]{\bm{#1}}
 \newcommand{\RHS}{\mathrm{RHS}}
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.08}}
+\newtheorem{proposition}{Proposition}
 
 \renewcommand{\theequation}{S\arabic{equation}}
 \renewcommand{\thetable}{S\arabic{table}}
@@ -56,9 +57,11 @@ response.
 \section{Population Target and Restricted Score Equations}
 
 Fix a covariate value \(x\), write \(a=L(x)<U(x)=b\), and define
-\(I_{a,b}(Y)=\ind(a<Y<b)\). Assume the conditional risk is finite and
-differentiable at an interior minimizer and that the conditional distribution
-places no mass at \(a\) or \(b\). Since
+\(I_{a,b}(Y)=\ind(a<Y<b)\). Assume
+\(\E(Y^2\mid X=x)<\infty\), the conditional risk is differentiable at an
+interior stationary point, differentiation and conditional expectation may be
+interchanged, and the conditional distribution places no mass at \(a\) or
+\(b\). Since
 \[
 \frac{\partial}{\partial a}(Y-a)(Y-b)=b-Y,
 \qquad
@@ -81,6 +84,30 @@ Substitution into either first-order condition then gives
 \E\{Y\ind(a<Y<b)\mid X=x\}=c\E(Y\mid X=x).
 \]
 
+The second equation is equivalently
+\(\operatorname{Cov}\{Y,I_{a,b}(Y)\mid X=x\}=0\). It does not imply
+independence, symmetry, equal-tailed endpoints, or uniqueness. The coverage
+implication is established by \citet{PouplinEtAl2024RQR}; the conditional
+first-moment implication is a further consequence of their first-order system.
+
+Endpoint atoms require directional conditions. Write
+\(m=(a+b)/2\), \(h=(b-a)/2>0\), so
+\(e=(Y-m)^2-h^2\). The left and right derivatives in \(h\) are
+\[
+D_-R_x(m,h)=2h\{\Pr(a<Y<b\mid x)-c\},
+\]
+and
+\[
+D_+R_x(m,h)=2h\{\Pr(a\le Y\le b\mid x)-c\}.
+\]
+At a local minimum, \(D_-R_x\le0\le D_+R_x\), and therefore
+\[
+\Pr(a<Y<b\mid X=x)\le c\le\Pr(a\le Y\le b\mid X=x).
+\]
+If \(a=b=m\), then \(e=(Y-m)^2\) and the risk is
+\(c\E\{(Y-m)^2\mid X=x\}\); the coincident-root target is the conditional
+mean when the second moment exists.
+
 These implications are conditional, pointwise, and assumption dependent. They
 do not follow by treating estimated data-dependent endpoints as fixed. For
 linear roots \(\eta_k(X)=X^\top\beta_k\), the corresponding population score
@@ -92,6 +119,13 @@ conditions are instead
 where \(I_{\eta_1,\eta_2}(Y)\) indicates that \(Y\) lies between the
 unordered roots. These design-weighted projection equations need not imply
 conditional coverage for every \(x\).
+
+We do not use the finite-sample unbiasedness argument in
+\citet{PouplinEtAl2024RQR}. Its Monte Carlo step treats fitted,
+data-dependent endpoints as fixed, and its zero-gradient argument does not
+cover nonsmooth optima at sample points coinciding with a root. A valid
+finite-sample or asymptotic result requires a separate empirical-process
+analysis.
 
 \section{Pseudo-AL Kernel}
 
@@ -184,6 +218,19 @@ b_\lambda+\mathcal L_{n,c}(\vartheta)/s_L\right).
 \label{eq:lambda-collapsed}
 \]
 
+We call \eqref{eq:normalized-scale-target} the
+\emph{pseudo-residual-normalized learned-scale target}. The factor
+\(\lambda^n\) normalizes an asymmetric-Laplace kernel in the abstract
+pseudo-residual \(e_t\), not a density in \(y_t\). It is an analyst-declared
+joint generalized target rather than a consequence that \(\lambda\) is an
+ordinary response parameter. Coherence of a fixed-rate loss update does not by
+itself establish same-data learning or calibration of this scale
+\citep{LeeLiuNicholls2025LearningRate,WuMartin2020LearningRateComparison}.
+Fixed-rate sensitivity grids are therefore primary. If \(s_L\) is estimated
+from the training responses, the calculation convention is recorded and the
+value is frozen before MCMC; this is a data-dependent empirical-Bayes
+specification.
+
 If one conditions additionally on \(\vect v\), the normalized augmented
 conditional is
 \begin{align}
@@ -251,10 +298,24 @@ H_t^{\mathrm B}&=C_t-B_tR_{t+1}B_t^\top,\\
 \theta_t\mid\theta_{t+1},\cdot&\sim\Normal(h_t,H_t^{\mathrm B}).
 \end{align}
 
+For fixed evolution covariances, the implementation integrates
+\(\theta_{k0}\) out of the root-path update. Thus
+\[
+a_{k1}=G_1m_0,\qquad
+R_{k1}=G_1C_0G_1^\top+W_1,
+\]
+and backward sampling terminates at \(t=1\). The component-scale extension
+samples \(\theta_{k0}\) separately because its first innovation is required by
+the conjugate scale update.
+
 Missing responses skip the measurement update. The implementation uses
-Cholesky factorization with a declared jitter ladder and reports every use of
-jitter; it does not silently turn an indefinite covariance into a positive one
-by taking absolute singular values.
+Cholesky factorization and does not silently turn an indefinite covariance into
+a positive one by taking absolute singular values. Under the default fail-fast
+policy, a failed factorization stops the fit. The audit policy uses a declared
+jitter ladder and records every covariance alteration. When a backward prior
+covariance is repaired, the repaired matrix is used consistently in the gain,
+smoothing covariance, and path-draw covariance. Fixed-target fits with nonzero
+repair counts are not eligible for promotion-grade exact-target analyses.
 
 \section{Component-Specific Discount Factors}
 
@@ -293,15 +354,100 @@ and is not described as exact Gibbs for the stated generalized posterior.
 The same discounts are used for both roots unless a future model deliberately
 breaks their prior exchangeability.
 
+\subsection{Incompatibility of adaptive conditional discounts}
+
+The experimental designation can be made precise. Consider \(T=2\), \(p=1\),
+\(F_t=G_t=1\), and a nonzero discount inflation \(d=(1-\delta)/\delta\).
+For the root-1 conditional filter, the time-1 covariance and time-2 innovation
+variance include
+\[
+C_{11}=\frac{R_{11}V_1}
+{(y_1-\theta_{21})^2R_{11}+V_1},
+\qquad
+w_1(\theta_{21})=dC_{11}.
+\]
+The conditional log density therefore contains
+\[
+-\frac12\log w_1(\theta_{21})
+-\frac{(\theta_{12}-\theta_{11})^2}{2w_1(\theta_{21})},
+\]
+whose mixed derivative is generically
+\[
+\frac{\partial^2}{\partial\theta_{21}\partial\theta_{12}}
+\log\pi(\vect\theta_1\mid\vect\theta_2,\cdot)
+=
+\frac{(\theta_{12}-\theta_{11})w_1'(\theta_{21})}
+{w_1(\theta_{21})^2}\ne0.
+\]
+In the advertised root-2 conditional, the adaptive variance depends on
+\(\theta_{11}\), not \(\theta_{12}\); its time-1 pseudo-observation does not
+involve \(\theta_{12}\), and its time-2 pseudo-observation does not involve
+\(\theta_{21}\). Hence the corresponding mixed derivative is zero. A positive
+twice-differentiable joint density would require equality of these derivatives.
+Except in degenerate cases such as \(d=0\), the two conditional adaptive FFBS
+kernels are therefore incompatible with a common smooth joint density while
+retaining their advertised Gaussian forms.
+
+\subsection{Exact shared component scales}
+
+Partition the state into \(J\) blocks of dimensions \(d_j\), let \(S_j\)
+select block \(j\), and fix positive-definite templates \(Q_{jt}\). Define
+\[
+W_t(\vect q)=\operatorname{blockdiag}
+\{q_1Q_{1t},\ldots,q_JQ_{Jt}\},
+\qquad
+q_j\sim\operatorname{IG}(a_j,b_j),
+\]
+where the inverse-Gamma density is proportional to
+\(q_j^{-a_j-1}\exp(-b_j/q_j)\). The same \(q_j\) is shared by the two roots.
+For
+\[
+d_{kjt}=S_j\{\theta_{kt}-G_t\theta_{k,t-1}\},
+\]
+the full conditional is
+\[
+q_j\mid\cdot\sim\operatorname{IG}\left(
+a_j+Td_j,
+b_j+\frac12\sum_{k=1}^2\sum_{t=1}^T
+d_{kjt}^\top Q_{jt}^{-1}d_{kjt}
+\right).
+\]
+The \(Td_j\) shape increment includes two roots, each contributing
+\(Td_j/2\).
+
+Because the fixed-\(W\) FFBS implementation integrates out the time-zero
+state, the component-scale sampler restores it after each root-path draw. Its
+conditional moments are
+\begin{align}
+C_{k0}^\star
+&=\{C_0^{-1}+G_1^\top W_1(\vect q)^{-1}G_1\}^{-1},\\
+m_{k0}^\star
+&=C_{k0}^\star\{C_0^{-1}m_0+
+G_1^\top W_1(\vect q)^{-1}\theta_{k1}\},
+\end{align}
+and
+\[
+\theta_{k0}\mid\theta_{k1},\vect q
+\sim\Normal(m_{k0}^\star,C_{k0}^\star).
+\]
+One exact sweep updates collapsed \(\lambda\), refreshes \(\vect v\), samples
+each root path and its time-zero state, updates all \(q_j\), and optionally
+swaps the two complete root labels. Static \(q_j=0\) components are separate
+degenerate models and are not part of the inverse-Gamma support.
+
 \section{Validation Gates}
 
 Before a production simulation, the package must pass pure-R/C++ filtering and
-smoothing parity, multiblock discount construction, missing-observation,
-learned-scale, root-label, and small end-to-end tests. A run manifest must then
-freeze data-generating mechanisms, sample sizes, train/test windows, forecast
-horizons, method configurations, seeds, package versions, and repository
-commits. Heavy state draws and fitted objects remain in ignored local output
-directories.
+smoothing parity against an independent dense Gaussian reference,
+multiblock discount construction, missing-observation, extreme-scale GIG,
+learned-scale, component-scale conditional, checkpoint-continuation,
+root-label, and small end-to-end tests. Promotion-grade exact-target fits must
+have zero numerical repairs. A run manifest must then freeze data-generating
+mechanisms, sample sizes, train/test windows, forecast horizons, method
+configurations, seeds, package versions, and repository commits. Fit objects
+record data and matrix digests, RNG state, compiler and BLAS provenance, and a
+versioned schema. Heavy state draws and fitted objects remain in ignored local
+output directories.
 
 Held-out RQR loss, empirical coverage error, and width at comparable coverage
 are primary. Oracle endpoint recovery is primary when the population RQR roots

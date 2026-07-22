@@ -10,11 +10,13 @@ rqr_forecast_roots(
   GG_future,
   W_future,
   nd = NULL,
-  seed = NULL
+  seed = NULL,
+  numerical_policy = object$model_spec$numerical_policy \%||\% "fail",
+  jitter_ladder = object$misc$jitter_ladder \%||\% c(0, 1e-12, 1e-10, 1e-08, 1e-06)
 )
 }
 \arguments{
-\item{object}{An `rqr_dlm_mcmc` fit with stored state draws.}
+\item{object}{An `rqr_dlm_mcmc` fit.}
 
 \item{FF_future}{State-by-horizon observation design.}
 
@@ -25,12 +27,15 @@ rqr_forecast_roots(
 \item{nd}{Number of saved MCMC draws to use.}
 
 \item{seed}{Optional seed.}
+
+\item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
+
+\item{jitter_ladder}{Relative jitter ladder for record-repair mode.}
 }
 \value{
-Future root and ordered endpoint draws.
+Future root and ordered endpoint draws with repair diagnostics.
 }
 \description{
 These are state-evolution draws for interval roots, not predictive response
-draws. Future evolution covariances are explicit so the forecasting contract
-cannot silently reuse an in-sample adaptive recursion.
+draws. Future evolution covariances are explicit and validated.
 }

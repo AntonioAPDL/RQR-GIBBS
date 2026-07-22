@@ -2,22 +2,30 @@
 % Please edit documentation in R/rqr_dlm_fit.R
 \name{rqr_dlm_fit}
 \alias{rqr_dlm_fit}
-\title{Fit a dynamic RQR interval model with alternating FFBS}
+\title{Fit a dynamic RQR interval-root model with alternating FFBS}
 \usage{
 rqr_dlm_fit(
   y,
   model,
   coverage_level,
-  evolution_mode = c("fixed_W", "discount_template", "adaptive_discount"),
+  evolution_mode = c("fixed_W", "discount_template", "component_scale",
+    "adaptive_discount"),
+  evolution_spec = NULL,
   W = NULL,
   df = NULL,
   dim.df = NULL,
   reference_variance = NULL,
   reference_design = NULL,
+  component_templates = NULL,
+  evolution_scale_prior = list(shape = 2, rate = 1),
+  evolution_scale_initial = 1,
   learning_rate = 1,
+  lambda_initial = 1,
   loss_reference_scale = 1,
-  learning_rate_mode = c("fixed", "learned_scale", "learned_pure"),
+  learning_rate_mode = c("fixed_rate", "learned_pseudoresidual_normalized",
+    "learned_pure"),
   lambda_prior = list(shape = 4, rate = 4),
+  numerical_policy = c("fail", "record_repair"),
   mcmc_control = list(),
   init = list()
 )
@@ -29,8 +37,11 @@ rqr_dlm_fit(
 
 \item{coverage_level}{Interval coverage target in `(0,1)`.}
 
-\item{evolution_mode}{One of `"fixed_W"`, `"discount_template"`, or
-`"adaptive_discount"`.}
+\item{evolution_mode}{One of `"fixed_W"`, `"discount_template"`,
+`"component_scale"`, or `"adaptive_discount"`.}
+
+\item{evolution_spec}{Optional previously constructed evolution object. Used
+for exact continuation and overrides the other evolution arguments.}
 
 \item{W}{Fixed evolution covariance matrix or cube.}
 
@@ -39,26 +50,40 @@ rqr_dlm_fit(
 \item{reference_variance, reference_design}{Inputs used to freeze a discount
 template before MCMC.}
 
-\item{learning_rate}{Fixed learning rate or initial learned inverse scale.}
+\item{component_templates}{Fixed SPD templates for exact component scales.}
 
-\item{loss_reference_scale}{Positive scale `s_L` dividing the loss.}
+\item{evolution_scale_prior}{Inverse-Gamma shape and rate for component
+evolution multipliers.}
 
-\item{learning_rate_mode}{`"fixed"`, normalized `"learned_scale"`, or
-diagnostic `"learned_pure"`.}
+\item{evolution_scale_initial}{Initial positive component multipliers.}
 
-\item{lambda_prior}{Gamma shape--rate prior.}
+\item{learning_rate}{Fixed generalized-Bayes learning rate `omega_R`.}
+
+\item{lambda_initial}{Initial inverse loss scale for learned modes.}
+
+\item{loss_reference_scale}{Positive fixed scale `s_L` dividing the loss.}
+
+\item{learning_rate_mode}{One of `"fixed_rate"`,
+`"learned_pseudoresidual_normalized"`, or `"learned_pure"`. Legacy mode
+spellings are accepted and normalized to these names.}
+
+\item{lambda_prior}{Gamma shape--rate prior without a custom power field.}
+
+\item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
 
 \item{mcmc_control}{Iteration, seed, storage, backend, progress, and jitter
 controls.}
 
-\item{init}{Optional initial states, latent scales, and lambda.}
+\item{init}{Optional initial states, latent scales, lambda, evolution scales,
+time-zero states, and RNG state.}
 }
 \value{
 An `rqr_dlm_mcmc` object.
 }
 \description{
 This sampler targets root trajectories under an exponentiated RQR loss and
-Gaussian state priors. It does not define a response likelihood. Fixed `W`
-and frozen discount templates define exact generalized-posterior samplers;
-adaptive discount recursion is an explicitly experimental working update.
+Gaussian state priors. It does not define a response likelihood. Fixed `W`,
+frozen discount templates, and component-scale evolution priors define exact
+generalized-posterior samplers when no numerical repair is used. Adaptive
+discount recursion is an explicitly experimental working update.
 }

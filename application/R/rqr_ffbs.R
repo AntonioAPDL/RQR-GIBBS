@@ -2,11 +2,14 @@
   if (!is.list(evolution) || is.null(evolution$mode)) {
     stop("evolution must be an RQR evolution specification.", call. = FALSE)
   }
-  mode <- match.arg(as.character(evolution$mode)[1L], c("fixed_W", "discount_template", "adaptive_discount"))
-  if (mode %in% c("fixed_W", "discount_template")) {
+  mode <- match.arg(
+    as.character(evolution$mode)[1L],
+    c("fixed_W", "discount_template", "component_scale", "adaptive_discount")
+  )
+  if (mode %in% c("fixed_W", "discount_template", "component_scale")) {
     if (is.null(evolution$W)) stop("fixed evolution requires W.", call. = FALSE)
     W <- .rqr_expand_cube(evolution$W, n_time, p, "evolution$W")
-    if (any(!is.finite(W))) stop("W must be finite.", call. = FALSE)
+    W <- .rqr_validate_covariance_cube(W, "evolution$W")
     for (tt in seq_len(n_time)) {
       W[, , tt] <- .rqr_symmetrize(W[, , tt])
       ev <- eigen(W[, , tt], symmetric = TRUE, only.values = TRUE)$values
@@ -24,9 +27,39 @@
   list(mode = mode, mode_code = 1L, W = array(0, c(p, p, n_time)), D = D)
 }
 
+.rqr_empty_repair_records <- function() {
+  data.frame(
+    stage = character(0), time = integer(0), strategy = character(0),
+    jitter = numeric(0), relative_jitter = numeric(0),
+    min_eigenvalue = numeric(0), matrix_scale = numeric(0),
+    clamped_eigenvalues = integer(0),
+    stringsAsFactors = FALSE
+  )
+}
+
+.rqr_add_repair_record <- function(records, stage, time, info) {
+  clamped <- as.integer(info$clamped_eigenvalues %||% 0L)
+  jitter <- as.numeric(info$jitter %||% 0)
+  if (jitter <= 0 && clamped <= 0L) return(records)
+  rbind(records, data.frame(
+    stage = stage, time = as.integer(time),
+    strategy = as.character(info$strategy %||% if (jitter > 0) "cholesky_jitter" else "eigen_clamp"),
+    jitter = jitter,
+    relative_jitter = as.numeric(info$relative_jitter %||% NA_real_),
+    min_eigenvalue = as.numeric(info$min_eigenvalue %||% NA_real_),
+    matrix_scale = as.numeric(info$matrix_scale %||% NA_real_),
+    clamped_eigenvalues = clamped,
+    stringsAsFactors = FALSE
+  ))
+}
+
 .rqr_ffbs_r <- function(z, H, V, GG, m0, C0, evolution, sample = FALSE,
-                        jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6)) {
+                        jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6),
+                        numerical_policy = c("fail", "record_repair")) {
   z <- as.numeric(z)
+  if (any(is.nan(z)) || any(is.infinite(z))) {
+    stop("z may contain finite values or NA only; NaN and Inf are invalid.", call. = FALSE)
+  }
   H <- as.matrix(H)
   V <- as.numeric(V)
   p <- length(m0)
@@ -40,6 +73,9 @@
   a <- m <- matrix(NA_real_, p, n_time)
   R <- C <- array(NA_real_, c(p, p, n_time))
   q <- residual <- rep(NA_real_, n_time)
+  numerical_policy <- .rqr_numerical_policy(numerical_policy)
+  jitter_ladder <- .rqr_jitter_ladder(numerical_policy, jitter_ladder)
+  repair_records <- .rqr_empty_repair_records()
   jitter_used <- numeric(0)
   m_prev <- as.numeric(m0)
   C_prev <- .rqr_symmetrize(C0)
@@ -49,7 +85,7 @@
     P <- .rqr_symmetrize(gt %*% C_prev %*% t(gt))
     Wt <- if (evo$mode_code == 0L) evo$W[, , tt] else .rqr_symmetrize(evo$D * P)
     R[, , tt] <- .rqr_symmetrize(P + Wt)
-    if (is.finite(z[tt])) {
+    if (!is.na(z[tt])) {
       h <- H[, tt]
       rh <- drop(R[, , tt] %*% h)
       q[tt] <- drop(crossprod(h, rh)) + V[tt]
@@ -64,6 +100,15 @@
     # Fail early on a materially indefinite covariance.
     fac <- .rqr_chol_with_jitter(C[, , tt], jitter_ladder)
     jitter_used <- c(jitter_used, fac$jitter)
+    repair_records <- .rqr_add_repair_record(
+      repair_records, "filter_covariance", tt,
+      list(
+        strategy = "cholesky_jitter", jitter = fac$jitter,
+        relative_jitter = fac$relative_jitter,
+        min_eigenvalue = fac$min_eigenvalue, matrix_scale = fac$matrix_scale,
+        clamped_eigenvalues = 0L
+      )
+    )
     C[, , tt] <- fac$matrix
     m_prev <- m[, tt]
     C_prev <- C[, , tt]
@@ -74,9 +119,20 @@
     for (tt in (n_time - 1L):1L) {
       facR <- .rqr_chol_with_jitter(R[, , tt + 1L], jitter_ladder)
       invR <- chol2inv(facR$chol)
+      Rstar <- facR$matrix
+      jitter_used <- c(jitter_used, facR$jitter)
+      repair_records <- .rqr_add_repair_record(
+        repair_records, "backward_smoothing_prior_covariance", tt + 1L,
+        list(
+          strategy = "cholesky_jitter", jitter = facR$jitter,
+          relative_jitter = facR$relative_jitter,
+          min_eigenvalue = facR$min_eigenvalue, matrix_scale = facR$matrix_scale,
+          clamped_eigenvalues = 0L
+        )
+      )
       B <- C[, , tt] %*% t(GG[, , tt + 1L]) %*% invR
       sm[, tt] <- m[, tt] + B %*% (sm[, tt + 1L] - a[, tt + 1L])
-      sC[, , tt] <- .rqr_symmetrize(C[, , tt] + B %*% (sC[, , tt + 1L] - R[, , tt + 1L]) %*% t(B))
+      sC[, , tt] <- .rqr_symmetrize(C[, , tt] + B %*% (sC[, , tt + 1L] - Rstar) %*% t(B))
     }
   }
   path <- NULL
@@ -86,16 +142,33 @@
     last_draw <- .rqr_sample_mvnorm_covariance(m[, n_time], C[, , n_time], jitter_ladder)
     path[, n_time] <- last_draw$draw
     jitter_used <- c(jitter_used, last_draw$info$jitter)
+    repair_records <- .rqr_add_repair_record(
+      repair_records, "terminal_draw_covariance", n_time, last_draw$info
+    )
     psd_draw_count <- psd_draw_count + as.integer(last_draw$info$strategy == "psd_eigen")
     if (n_time > 1L) {
       for (tt in (n_time - 1L):1L) {
         facR <- .rqr_chol_with_jitter(R[, , tt + 1L], jitter_ladder)
+        Rstar <- facR$matrix
+        jitter_used <- c(jitter_used, facR$jitter)
+        repair_records <- .rqr_add_repair_record(
+          repair_records, "backward_sampling_prior_covariance", tt + 1L,
+          list(
+            strategy = "cholesky_jitter", jitter = facR$jitter,
+            relative_jitter = facR$relative_jitter,
+            min_eigenvalue = facR$min_eigenvalue, matrix_scale = facR$matrix_scale,
+            clamped_eigenvalues = 0L
+          )
+        )
         B <- C[, , tt] %*% t(GG[, , tt + 1L]) %*% chol2inv(facR$chol)
         h <- m[, tt] + B %*% (path[, tt + 1L] - a[, tt + 1L])
-        HC <- .rqr_symmetrize(C[, , tt] - B %*% R[, , tt + 1L] %*% t(B))
+        HC <- .rqr_symmetrize(C[, , tt] - B %*% Rstar %*% t(B))
         state_draw <- .rqr_sample_mvnorm_covariance(h, HC, jitter_ladder)
         path[, tt] <- state_draw$draw
         jitter_used <- c(jitter_used, state_draw$info$jitter)
+        repair_records <- .rqr_add_repair_record(
+          repair_records, "backward_draw_covariance", tt, state_draw$info
+        )
         psd_draw_count <- psd_draw_count + as.integer(state_draw$info$strategy == "psd_eigen")
       }
     }
@@ -109,18 +182,24 @@
       backend = "R", evolution_mode = evo$mode,
       max_jitter = max(jitter_used, 0), jitter_count = sum(jitter_used > 0),
       psd_draw_count = psd_draw_count,
+      numerical_policy = numerical_policy,
+      repair_count = nrow(repair_records),
+      repair_records = repair_records,
       min_forecast_variance = if (all(is.na(q))) NA_real_ else min(q, na.rm = TRUE)
     )
   )
 }
 
 .rqr_ffbs_dispatch <- function(z, H, V, GG, m0, C0, evolution,
-                               sample, backend, jitter_ladder) {
+                               sample, backend, jitter_ladder,
+                               numerical_policy = c("fail", "record_repair")) {
   backend <- match.arg(backend, c("cpp", "R", "auto"))
   p <- length(m0)
   n_time <- length(z)
   H <- .rqr_expand_columns(H, n_time, "H")
   evo <- .rqr_prepare_evolution(evolution, p, n_time)
+  numerical_policy <- .rqr_numerical_policy(numerical_policy)
+  jitter_ladder <- .rqr_jitter_ladder(numerical_policy, jitter_ladder)
   use_cpp <- backend != "R" && exists("rqr_ffbs_cpp", mode = "function")
   if (backend == "cpp" && !use_cpp) stop("Compiled FFBS backend is unavailable.", call. = FALSE)
   if (use_cpp) {
@@ -134,9 +213,13 @@
     )
     out$forecast_variance <- as.numeric(out$forecast_variance)
     out$residual <- as.numeric(out$residual)
+    out$diagnostics$numerical_policy <- numerical_policy
     return(out)
   }
-  .rqr_ffbs_r(z, H, V, GG, m0, C0, evolution, sample, jitter_ladder)
+  .rqr_ffbs_r(
+    z, H, V, GG, m0, C0, evolution, sample, jitter_ladder,
+    numerical_policy
+  )
 }
 
 #' Filter and smooth a scalar-observation Gaussian state-space model
@@ -149,12 +232,17 @@
 #' @param evolution Evolution specification.
 #' @param backend One of `"cpp"`, `"R"`, or `"auto"`.
 #' @param jitter_ladder Declared relative Cholesky jitter ladder.
+#' @param numerical_policy Either `"fail"` or `"record_repair"`.
 #' @return Filtering and smoothing moments with numerical diagnostics.
 #' @export
 rqr_ffbs_smooth <- function(z, H, V, GG, m0, C0, evolution,
                             backend = c("cpp", "R", "auto"),
-                            jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6)) {
-  .rqr_ffbs_dispatch(z, H, V, GG, m0, C0, evolution, FALSE, backend, jitter_ladder)
+                            jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6),
+                            numerical_policy = c("fail", "record_repair")) {
+  .rqr_ffbs_dispatch(
+    z, H, V, GG, m0, C0, evolution, FALSE, backend, jitter_ladder,
+    numerical_policy
+  )
 }
 
 #' Draw a Gaussian state path by FFBS
@@ -164,6 +252,10 @@ rqr_ffbs_smooth <- function(z, H, V, GG, m0, C0, evolution,
 #' @export
 rqr_ffbs_sample <- function(z, H, V, GG, m0, C0, evolution,
                             backend = c("cpp", "R", "auto"),
-                            jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6)) {
-  .rqr_ffbs_dispatch(z, H, V, GG, m0, C0, evolution, TRUE, backend, jitter_ladder)
+                            jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6),
+                            numerical_policy = c("fail", "record_repair")) {
+  .rqr_ffbs_dispatch(
+    z, H, V, GG, m0, C0, evolution, TRUE, backend, jitter_ladder,
+    numerical_policy
+  )
 }

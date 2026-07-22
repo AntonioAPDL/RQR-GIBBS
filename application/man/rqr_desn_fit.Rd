@@ -10,8 +10,10 @@ rqr_desn_fit(
   ...,
   inference = c("mcmc", "vb"),
   learning_rate = 1,
+  lambda_initial = 1,
   loss_reference_scale = 1,
-  learning_rate_mode = c("fixed", "learned_scale", "learned_pure"),
+  learning_rate_mode = c("fixed_rate", "learned_pseudoresidual_normalized",
+    "learned_pure"),
   lambda_prior = list(shape = 4, rate = 4),
   mcmc_args = list(),
   vb_args = list(),
@@ -28,6 +30,8 @@ rqr_desn_fit(
 \item{inference}{One of `"mcmc"` or `"vb"`.}
 
 \item{learning_rate}{Positive generalized-Bayes learning rate.}
+
+\item{lambda_initial}{Positive initial inverse scale for learned MCMC modes.}
 
 \item{loss_reference_scale}{Positive scale dividing the RQR loss before
 applying the learning rate. Passed to [rqr_mcmc_fit()].}

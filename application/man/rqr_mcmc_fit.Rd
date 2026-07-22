@@ -9,8 +9,10 @@ rqr_mcmc_fit(
   X,
   coverage_level,
   learning_rate = 1,
+  lambda_initial = 1,
   loss_reference_scale = 1,
-  learning_rate_mode = c("fixed", "learned_scale", "learned_pure"),
+  learning_rate_mode = c("fixed_rate", "learned_pseudoresidual_normalized",
+    "learned_pure"),
   lambda_prior = list(shape = 4, rate = 4),
   beta_prior_obj = NULL,
   mcmc_control = list(),
@@ -25,21 +27,23 @@ rqr_mcmc_fit(
 
 \item{coverage_level}{Interval coverage level in `(0, 1)`.}
 
-\item{learning_rate}{Positive generalized-Bayes learning rate.}
+\item{learning_rate}{Positive fixed generalized-Bayes rate `omega_R`.}
+
+\item{lambda_initial}{Positive initial inverse loss scale for learned modes.}
 
 \item{loss_reference_scale}{Positive scale dividing the RQR loss before
 applying `learning_rate` or learned `lambda`. The default `1` reproduces
 the existing raw-loss target.}
 
-\item{learning_rate_mode}{Learning-rate treatment. `"fixed"` preserves the
-existing fixed generalized-Bayes target. `"learned_scale"` samples the
-recommended inverse-loss scale from the generalized posterior proportional
+\item{learning_rate_mode}{Learning-rate treatment. `"fixed_rate"` uses
+`learning_rate` directly as `omega_R`.
+`"learned_pseudoresidual_normalized"` samples the inverse-loss scale from
+the generalized posterior proportional
 to `lambda^T exp(-lambda L_c)`. `"learned_pure"` is a diagnostic target
 proportional to `exp(-lambda L_c)`.}
 
 \item{lambda_prior}{Gamma prior for learned `lambda`, as a list with
-positive `shape` and `rate`. The optional `power` field defaults to one
-for `"learned_scale"` and zero for `"learned_pure"`.}
+positive `shape` and `rate`. Target powers are fixed by the selected mode.}
 
 \item{beta_prior_obj}{Beta prior object from [beta_prior()]. Version 1
 supports `"ridge"` and `"rhs_ns"`.}
