@@ -20,9 +20,9 @@ base path: /data/muscat_data/jaguir26/local/src
 
 | Repo | Branch | Commit | Dirty count | Role |
 |---|---|---:|---:|---|
-| `RQR-GIBBS` | `main` | `4866b5572b600b88ca389be41e5830c4ad1326c7` | 0 | Standalone article and reproducibility repo |
+| `RQR-GIBBS` | `main` | `d1ed1ac911164f9c9b1be29ef01b458dca67db76` | 0 | Standalone article and reproducibility repo |
 | `exdqlm__wt__qdesn_0p4p0_integration` | `feature/rqr-desn-readout-20260716` | `dffb71ee70b597d6a716ee74be1cbc99731cd453` | 0 | Pinned RQR implementation source of truth |
-| `Article-Q-DESN---Version-2` | `main` | `d9937a3f4e99156e0f6fa7cae17a297d906e85f0` | 0 | Style/reference repo only |
+| `Article-Q-DESN---Version-2` | `main` | `f9f22804eff3871bb5350c8add04b7c9f4d4957b` | 0 | Style/reference repo only |
 
 ## Tool Preflight
 
@@ -113,4 +113,3 @@ Jerez is ready for a new Codex chat to inspect and continue the standalone
 RQR-GIBBS project. Heavy simulations should still wait until the next chat
 confirms the scaffold, implements or validates the RQR-DLM/FFBS path, and
 freezes a matched standalone simulation manifest.
-
