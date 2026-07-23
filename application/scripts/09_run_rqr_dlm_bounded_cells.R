@@ -64,7 +64,10 @@ verify_reference_bundle <- function() {
   artifact_verified <- vapply(seq_len(nrow(artifacts)), function(index) {
     path <- file.path(reference_dir, artifacts$path[index])
     file.exists(path) &&
-      identical(as.numeric(file.info(path)$size), artifacts$bytes[index]) &&
+      isTRUE(
+        as.numeric(file.info(path)$size) ==
+          as.numeric(artifacts$bytes[index])
+      ) &&
       identical(file_sha256(path), artifacts$sha256[index])
   }, logical(1L))
   if (!all(artifact_verified)) {
