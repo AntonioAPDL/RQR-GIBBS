@@ -9,7 +9,8 @@ rqr_dlm_continue(
   n_mcmc,
   thin = object$misc$thin,
   store_state_draws = object$misc$store_state_draws,
-  store_latent_draws = object$misc$store_latent_draws
+  store_latent_draws = object$misc$store_latent_draws,
+  allow_environment_mismatch = FALSE
 )
 }
 \arguments{
@@ -20,6 +21,10 @@ rqr_dlm_continue(
 \item{thin}{Positive thinning interval; defaults to the original fit.}
 
 \item{store_state_draws, store_latent_draws}{Storage choices for new draws.}
+
+\item{allow_environment_mismatch}{If `TRUE`, continue after an explicit
+warning when package, R, platform, BLAS/LAPACK, dependency, or source-commit
+metadata differ. Schema and data/model digest mismatches always stop.}
 }
 \value{
 A new `rqr_dlm_mcmc` segment beginning at the checkpoint.

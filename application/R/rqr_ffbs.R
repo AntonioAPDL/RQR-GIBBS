@@ -27,32 +27,6 @@
   list(mode = mode, mode_code = 1L, W = array(0, c(p, p, n_time)), D = D)
 }
 
-.rqr_empty_repair_records <- function() {
-  data.frame(
-    stage = character(0), time = integer(0), strategy = character(0),
-    jitter = numeric(0), relative_jitter = numeric(0),
-    min_eigenvalue = numeric(0), matrix_scale = numeric(0),
-    clamped_eigenvalues = integer(0),
-    stringsAsFactors = FALSE
-  )
-}
-
-.rqr_add_repair_record <- function(records, stage, time, info) {
-  clamped <- as.integer(info$clamped_eigenvalues %||% 0L)
-  jitter <- as.numeric(info$jitter %||% 0)
-  if (jitter <= 0 && clamped <= 0L) return(records)
-  rbind(records, data.frame(
-    stage = stage, time = as.integer(time),
-    strategy = as.character(info$strategy %||% if (jitter > 0) "cholesky_jitter" else "eigen_clamp"),
-    jitter = jitter,
-    relative_jitter = as.numeric(info$relative_jitter %||% NA_real_),
-    min_eigenvalue = as.numeric(info$min_eigenvalue %||% NA_real_),
-    matrix_scale = as.numeric(info$matrix_scale %||% NA_real_),
-    clamped_eigenvalues = clamped,
-    stringsAsFactors = FALSE
-  ))
-}
-
 .rqr_ffbs_r <- function(z, H, V, GG, m0, C0, evolution, sample = FALSE,
                         jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6),
                         numerical_policy = c("fail", "record_repair")) {
@@ -139,7 +113,9 @@
   psd_draw_count <- 0L
   if (isTRUE(sample)) {
     path <- matrix(NA_real_, p, n_time)
-    last_draw <- .rqr_sample_mvnorm_covariance(m[, n_time], C[, , n_time], jitter_ladder)
+    last_draw <- .rqr_sample_mvnorm_covariance(
+      m[, n_time], C[, , n_time], jitter_ladder, numerical_policy
+    )
     path[, n_time] <- last_draw$draw
     jitter_used <- c(jitter_used, last_draw$info$jitter)
     repair_records <- .rqr_add_repair_record(
@@ -163,7 +139,9 @@
         B <- C[, , tt] %*% t(GG[, , tt + 1L]) %*% chol2inv(facR$chol)
         h <- m[, tt] + B %*% (path[, tt + 1L] - a[, tt + 1L])
         HC <- .rqr_symmetrize(C[, , tt] - B %*% Rstar %*% t(B))
-        state_draw <- .rqr_sample_mvnorm_covariance(h, HC, jitter_ladder)
+        state_draw <- .rqr_sample_mvnorm_covariance(
+          h, HC, jitter_ladder, numerical_policy
+        )
         path[, tt] <- state_draw$draw
         jitter_used <- c(jitter_used, state_draw$info$jitter)
         repair_records <- .rqr_add_repair_record(
@@ -209,7 +187,8 @@
       m0 = as.numeric(m0), C0 = as.matrix(C0),
       evolution_mode = evo$mode_code, W = evo$W, D = evo$D,
       sample_path = isTRUE(sample), jitter_ladder = as.numeric(jitter_ladder),
-      evolution_label = evo$mode
+      evolution_label = evo$mode,
+      allow_covariance_repair = identical(numerical_policy, "record_repair")
     )
     out$forecast_variance <- as.numeric(out$forecast_variance)
     out$residual <- as.numeric(out$residual)

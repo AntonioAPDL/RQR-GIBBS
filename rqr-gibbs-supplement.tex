@@ -311,8 +311,10 @@ the conjugate scale update.
 Missing responses skip the measurement update. The implementation uses
 Cholesky factorization and does not silently turn an indefinite covariance into
 a positive one by taking absolute singular values. Under the default fail-fast
-policy, a failed factorization stops the fit. The audit policy uses a declared
-jitter ladder and records every covariance alteration. When a backward prior
+policy, a failed factorization or negative-eigenvalue projection stops the fit;
+an exact positive-semidefinite draw with zero eigenvalues remains admissible.
+The audit policy uses a declared jitter ladder and records every covariance
+alteration. When a backward prior
 covariance is repaired, the repaired matrix is used consistently in the gain,
 smoothing covariance, and path-draw covariance. Fixed-target fits with nonzero
 repair counts are not eligible for promotion-grade exact-target analyses.
@@ -445,9 +447,12 @@ root-label, and small end-to-end tests. Promotion-grade exact-target fits must
 have zero numerical repairs. A run manifest must then freeze data-generating
 mechanisms, sample sizes, train/test windows, forecast horizons, method
 configurations, seeds, package versions, and repository commits. Fit objects
-record data and matrix digests, RNG state, compiler and BLAS provenance, and a
-versioned schema. Heavy state draws and fitted objects remain in ignored local
-output directories.
+record data and matrix digests, RNG state, compiler and BLAS/LAPACK provenance,
+and a versioned schema. Promotion requires a clean detected checkout matching
+the exact commit declared in the run manifest. Exact continuation stops on
+schema or data/model-digest mismatch and, by default, on package, R, numerical
+library, or source-commit mismatch. Heavy state draws and fitted objects remain
+in ignored local output directories.
 
 Held-out RQR loss, empirical coverage error, and width at comparable coverage
 are primary. Oracle endpoint recovery is primary when the population RQR roots

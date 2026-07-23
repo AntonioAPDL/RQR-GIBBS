@@ -15,6 +15,8 @@ rqr_desn_fit(
   learning_rate_mode = c("fixed_rate", "learned_pseudoresidual_normalized",
     "learned_pure"),
   lambda_prior = list(shape = 4, rate = 4),
+  numerical_policy = c("fail", "record_repair"),
+  provenance_control = list(),
   mcmc_args = list(),
   vb_args = list(),
   fit_readout = TRUE
@@ -33,14 +35,19 @@ rqr_desn_fit(
 
 \item{lambda_initial}{Positive initial inverse scale for learned MCMC modes.}
 
-\item{loss_reference_scale}{Positive scale dividing the RQR loss before
-applying the learning rate. Passed to [rqr_mcmc_fit()].}
+\item{loss_reference_scale}{Positive reference scale `s_L`. It does not
+alter fixed `learning_rate`; learned modes use `lambda/s_L`. Passed to
+[rqr_mcmc_fit()].}
 
 \item{learning_rate_mode}{Learning-rate treatment passed to
 [rqr_mcmc_fit()]. Learned-scale inference is currently available for MCMC.}
 
 \item{lambda_prior}{Gamma prior for learned `lambda`, passed to
 [rqr_mcmc_fit()].}
+
+\item{numerical_policy}{Numerical factorization policy for MCMC.}
+
+\item{provenance_control}{Provenance gate passed to [rqr_mcmc_fit()].}
 
 \item{mcmc_args}{Named list for [rqr_mcmc_fit()].}
 

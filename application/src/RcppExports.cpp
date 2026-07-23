@@ -11,9 +11,23 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// rqr_mvn_draw_cpp
+Rcpp::List rqr_mvn_draw_cpp(const arma::vec& mean, const arma::mat& covariance, const arma::vec& jitter_ladder, const bool allow_repair);
+RcppExport SEXP _rqrgibbs_rqr_mvn_draw_cpp(SEXP meanSEXP, SEXP covarianceSEXP, SEXP jitter_ladderSEXP, SEXP allow_repairSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type mean(meanSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type covariance(covarianceSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type jitter_ladder(jitter_ladderSEXP);
+    Rcpp::traits::input_parameter< const bool >::type allow_repair(allow_repairSEXP);
+    rcpp_result_gen = Rcpp::wrap(rqr_mvn_draw_cpp(mean, covariance, jitter_ladder, allow_repair));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rqr_ffbs_cpp
-Rcpp::List rqr_ffbs_cpp(const arma::vec& z, const arma::mat& H, const arma::vec& V, const arma::cube& GG, const arma::vec& m0, const arma::mat& C0, const int evolution_mode, const arma::cube& W, const arma::mat& D, const bool sample_path, const arma::vec& jitter_ladder, const std::string evolution_label);
-RcppExport SEXP _rqrgibbs_rqr_ffbs_cpp(SEXP zSEXP, SEXP HSEXP, SEXP VSEXP, SEXP GGSEXP, SEXP m0SEXP, SEXP C0SEXP, SEXP evolution_modeSEXP, SEXP WSEXP, SEXP DSEXP, SEXP sample_pathSEXP, SEXP jitter_ladderSEXP, SEXP evolution_labelSEXP) {
+Rcpp::List rqr_ffbs_cpp(const arma::vec& z, const arma::mat& H, const arma::vec& V, const arma::cube& GG, const arma::vec& m0, const arma::mat& C0, const int evolution_mode, const arma::cube& W, const arma::mat& D, const bool sample_path, const arma::vec& jitter_ladder, const std::string evolution_label, const bool allow_covariance_repair);
+RcppExport SEXP _rqrgibbs_rqr_ffbs_cpp(SEXP zSEXP, SEXP HSEXP, SEXP VSEXP, SEXP GGSEXP, SEXP m0SEXP, SEXP C0SEXP, SEXP evolution_modeSEXP, SEXP WSEXP, SEXP DSEXP, SEXP sample_pathSEXP, SEXP jitter_ladderSEXP, SEXP evolution_labelSEXP, SEXP allow_covariance_repairSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -29,13 +43,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const bool >::type sample_path(sample_pathSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type jitter_ladder(jitter_ladderSEXP);
     Rcpp::traits::input_parameter< const std::string >::type evolution_label(evolution_labelSEXP);
-    rcpp_result_gen = Rcpp::wrap(rqr_ffbs_cpp(z, H, V, GG, m0, C0, evolution_mode, W, D, sample_path, jitter_ladder, evolution_label));
+    Rcpp::traits::input_parameter< const bool >::type allow_covariance_repair(allow_covariance_repairSEXP);
+    rcpp_result_gen = Rcpp::wrap(rqr_ffbs_cpp(z, H, V, GG, m0, C0, evolution_mode, W, D, sample_path, jitter_ladder, evolution_label, allow_covariance_repair));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rqrgibbs_rqr_ffbs_cpp", (DL_FUNC) &_rqrgibbs_rqr_ffbs_cpp, 12},
+    {"_rqrgibbs_rqr_mvn_draw_cpp", (DL_FUNC) &_rqrgibbs_rqr_mvn_draw_cpp, 4},
+    {"_rqrgibbs_rqr_ffbs_cpp", (DL_FUNC) &_rqrgibbs_rqr_ffbs_cpp, 13},
     {NULL, NULL, 0}
 };
 

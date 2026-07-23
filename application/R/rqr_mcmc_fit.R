@@ -9,19 +9,24 @@
 #' @param coverage_level Interval coverage level in `(0, 1)`.
 #' @param learning_rate Positive fixed generalized-Bayes rate `omega_R`.
 #' @param lambda_initial Positive initial inverse loss scale for learned modes.
-#' @param loss_reference_scale Positive scale dividing the RQR loss before
-#'   applying `learning_rate` or learned `lambda`. The default `1` reproduces
-#'   the existing raw-loss target.
+#' @param loss_reference_scale Positive reference scale `s_L`. In fixed-rate
+#'   mode, `learning_rate` is the effective rate `omega_R` and this argument
+#'   does not alter the target. Learned modes use `omega_R=lambda/s_L`.
 #' @param learning_rate_mode Learning-rate treatment. `"fixed_rate"` uses
 #'   `learning_rate` directly as `omega_R`.
 #'   `"learned_pseudoresidual_normalized"` samples the inverse-loss scale from
 #'   the generalized posterior proportional
-#'   to `lambda^T exp(-lambda L_c)`. `"learned_pure"` is a diagnostic target
-#'   proportional to `exp(-lambda L_c)`.
+#'   to `lambda^T exp(-lambda L_c/s_L)`. `"learned_pure"` is a diagnostic target
+#'   proportional to `exp(-lambda L_c/s_L)`.
 #' @param lambda_prior Gamma prior for learned `lambda`, as a list with
 #'   positive `shape` and `rate`. Target powers are fixed by the selected mode.
 #' @param beta_prior_obj Beta prior object from [beta_prior()]. Version 1
 #'   supports `"ridge"` and `"rhs_ns"`.
+#' @param numerical_policy Either `"fail"` or `"record_repair"` for Gaussian
+#'   precision factorizations.
+#' @param provenance_control Optional list with `repo_root` and a complete
+#'   40-character `expected_git_commit`. Promotion eligibility requires a
+#'   verified clean checkout at that expected commit.
 #' @param mcmc_control Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
 #'   `verbose`, `progress_every`, `precision_beta`, and `store_latent_draws`.
 #' @param init Optional initial values.
@@ -36,6 +41,8 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
                          ),
                          lambda_prior = list(shape = 4, rate = 4),
                          beta_prior_obj = NULL,
+                         numerical_policy = c("fail", "record_repair"),
+                         provenance_control = list(),
                          mcmc_control = list(),
                          init = list(),
                          ...) {
@@ -46,6 +53,8 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   p <- ncol(X)
   learning_rate_mode <- .rqr_learning_rate_mode(learning_rate_mode)
   lambda_prior <- .rqr_lambda_prior(lambda_prior, learning_rate_mode)
+  numerical_policy <- .rqr_numerical_policy(numerical_policy)
+  provenance_control <- .rqr_provenance_control(provenance_control)
   loss_reference_scale <- as.numeric(loss_reference_scale %||% 1)[1L]
   if (!is.finite(loss_reference_scale) || loss_reference_scale <= 0) {
     stop("loss_reference_scale must be finite and positive.", call. = FALSE)
@@ -95,6 +104,9 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   precision_beta_cfg <- .exal_normalize_mcmc_precision_beta_cfg(
     mcmc_control$precision_beta %||% mcmc_control$precision %||% list()
   )
+  precision_beta_cfg$jitter_ladder <- .rqr_jitter_ladder(
+    numerical_policy, precision_beta_cfg$jitter_ladder
+  )
 
   init_roots <- .rqr_init_roots(y, X, coverage_level, init = init)
   beta1 <- init_roots$beta1
@@ -126,6 +138,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   rhs_stats1 <- vector("list", n_keep)
   rhs_stats2 <- vector("list", n_keep)
   root_swap_trace <- logical(n_burn + n_keep * thin)
+  repair_records <- NULL
 
   total_iter <- n_burn + n_keep * thin
   save_idx <- 0L
@@ -174,6 +187,15 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     )
     beta1 <- upd1$draw
     pstats1 <- upd1$info %||% list()
+    current_repair <- .rqr_add_repair_record(
+      .rqr_empty_repair_records(), "beta_precision", NA_integer_, pstats1
+    )
+    if (nrow(current_repair)) {
+      current_repair$iteration <- iter
+      current_repair$root <- "root1"
+      repair_records <- if (is.null(repair_records)) current_repair else
+        rbind(repair_records, current_repair)
+    }
     pr_upd1 <- .rqr_prior_state_update(beta_prior_obj, state1, beta1)
     state1 <- pr_upd1$state
 
@@ -196,6 +218,15 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     )
     beta2 <- upd2$draw
     pstats2 <- upd2$info %||% list()
+    current_repair <- .rqr_add_repair_record(
+      .rqr_empty_repair_records(), "beta_precision", NA_integer_, pstats2
+    )
+    if (nrow(current_repair)) {
+      current_repair$iteration <- iter
+      current_repair$root <- "root2"
+      repair_records <- if (is.null(repair_records)) current_repair else
+        rbind(repair_records, current_repair)
+    }
     pr_upd2 <- .rqr_prior_state_update(beta_prior_obj, state2, beta2)
     state2 <- pr_upd2$state
 
@@ -235,12 +266,18 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   effective_learning_rate_summary <- .rqr_lambda_summary(lambda_draws / loss_reference_scale)
   learning_rate_report <- if (learn_lambda) lambda_summary$mean / loss_reference_scale else learning_rate
   rng_state <- .rqr_rng_state()
+  numerical_repair_count <- if (is.null(repair_records)) 0L else nrow(repair_records)
+  numerically_exact <- numerical_repair_count == 0L
   provenance <- .rqr_provenance(
     data = list(y = y, X = X),
     matrices = list(X = X),
-    numerical_policy = "declared_precision_cholesky",
-    initial_seed = seed
+    numerical_policy = numerical_policy,
+    initial_seed = seed,
+    repo_root = provenance_control$repo_root,
+    expected_git_commit = provenance_control$expected_git_commit,
+    backend = "R_precision_cholesky"
   )
+  target_numerical_eligible <- numerically_exact
   out <- list(
     method = "mcmc",
     family = "rqr_fixed_design",
@@ -265,7 +302,15 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       sigma = if (learn_lambda) effective_learning_rate_summary$implied_sigma_mean else constants$sigma,
       inference = "mcmc",
       generalized_bayes = TRUE,
-      response_likelihood = FALSE
+      response_likelihood = FALSE,
+      target_contract = "fixed_joint_exact",
+      exact_joint_target = TRUE,
+      numerical_policy = numerical_policy,
+      numerical_repair_count = numerical_repair_count,
+      numerically_exact_transition = numerically_exact,
+      target_numerical_eligible = target_numerical_eligible,
+      reproducibility_eligible = provenance$reproducibility_eligible,
+      promotion_eligible = target_numerical_eligible && provenance$reproducibility_eligible
     ),
     y = y,
     X = X,
@@ -285,6 +330,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       precision_strategy_root1 = precision_strategy_root1,
       precision_strategy_root2 = precision_strategy_root2,
       precision_beta = precision_beta_cfg,
+      numerical_repairs = repair_records %||% data.frame(),
       root_swap_trace = root_swap_trace,
       rhs_stats_root1 = rhs_stats1,
       rhs_stats_root2 = rhs_stats2
@@ -329,15 +375,15 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
 #' @export
 rqr_posterior_draws.rqr_mcmc <- function(object, nd = NULL, seed = NULL, ...) {
   if (!inherits(object, "rqr_mcmc")) stop("Expected an rqr_mcmc object.", call. = FALSE)
-  if (!is.null(seed)) set.seed(as.integer(seed)[1L])
+  if (!is.null(seed)) set.seed(.rqr_scalar_integer(seed, "seed", 0L))
   b1 <- as.matrix(object$samp.beta_root1)
   b2 <- as.matrix(object$samp.beta_root2)
   n_save <- nrow(b1)
   lambda_all <- as.numeric(object$samp.lambda %||% rep(object$model_spec$learning_rate %||% NA_real_, n_save))
-  if (is.null(nd) || is.na(nd)) {
+  if (is.null(nd)) {
     idx <- seq_len(n_save)
   } else {
-    nd <- max(1L, as.integer(nd)[1L])
+    nd <- .rqr_scalar_integer(nd, "nd", 1L)
     idx <- sample.int(n_save, size = nd, replace = nd > n_save)
   }
   list(
@@ -383,6 +429,8 @@ print.rqr_mcmc <- function(x, ...) {
   if (isTRUE(x$model_spec$learned_inverse_loss_scale)) {
     cat(sprintf("  lambda_mean:    %.4f\n", x$model_spec$lambda_summary$mean))
   }
+  cat(sprintf("  numerical repairs: %d\n", x$model_spec$numerical_repair_count %||% 0L))
+  cat(sprintf("  promotion eligible: %s\n", if (isTRUE(x$model_spec$promotion_eligible)) "yes" else "no"))
   cat(sprintf("  draws:          %d\n", nrow(x$samp.beta_root1)))
   cat("  interpretation: generalized-Bayes interval readout, not response likelihood\n")
   invisible(x)

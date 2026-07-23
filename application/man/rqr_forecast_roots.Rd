@@ -8,7 +8,8 @@ rqr_forecast_roots(
   object,
   FF_future,
   GG_future,
-  W_future,
+  W_future = NULL,
+  component_templates_future = NULL,
   nd = NULL,
   seed = NULL,
   numerical_policy = object$model_spec$numerical_policy \%||\% "fail",
@@ -22,7 +23,12 @@ rqr_forecast_roots(
 
 \item{GG_future}{Evolution matrix or cube.}
 
-\item{W_future}{Evolution covariance matrix or cube.}
+\item{W_future}{Explicit evolution covariance matrix or cube. Supply either
+this argument or `component_templates_future`.}
+
+\item{component_templates_future}{Optional fixed future component templates.
+For a component-scale fit, these are combined with the saved draw-specific
+evolution multipliers.}
 
 \item{nd}{Number of saved MCMC draws to use.}
 

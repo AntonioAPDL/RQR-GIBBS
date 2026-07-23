@@ -26,6 +26,7 @@ rqr_dlm_fit(
     "learned_pure"),
   lambda_prior = list(shape = 4, rate = 4),
   numerical_policy = c("fail", "record_repair"),
+  provenance_control = list(),
   mcmc_control = list(),
   init = list()
 )
@@ -61,7 +62,8 @@ evolution multipliers.}
 
 \item{lambda_initial}{Initial inverse loss scale for learned modes.}
 
-\item{loss_reference_scale}{Positive fixed scale `s_L` dividing the loss.}
+\item{loss_reference_scale}{Positive reference scale `s_L`. It does not
+alter fixed `learning_rate`; learned modes use `lambda/s_L`.}
 
 \item{learning_rate_mode}{One of `"fixed_rate"`,
 `"learned_pseudoresidual_normalized"`, or `"learned_pure"`. Legacy mode
@@ -70,6 +72,10 @@ spellings are accepted and normalized to these names.}
 \item{lambda_prior}{Gamma shape--rate prior without a custom power field.}
 
 \item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
+
+\item{provenance_control}{Optional list with `repo_root` and a complete
+40-character `expected_git_commit`. Promotion eligibility requires a
+verified clean checkout at that expected commit.}
 
 \item{mcmc_control}{Iteration, seed, storage, backend, progress, and jitter
 controls.}

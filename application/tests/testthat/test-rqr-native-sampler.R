@@ -2,13 +2,23 @@ test_that("native GIG half sampler has the declared limiting and mean contracts"
   set.seed(992)
   zero <- rqr_sample_gig_half(rep(0, 2000), a = 2)
   expect_true(all(is.finite(zero) & zero > 0))
-  expect_equal(mean(zero), 0.5, tolerance = 0.06)
+  expect_lte(abs(mean(zero) - 0.5), 4 * stats::sd(zero) / sqrt(length(zero)))
 
   b <- 1.5
   a <- 2.2
   draw <- rqr_sample_gig_half(rep(b, 20000), a)
   expected <- sqrt(b / a) + 1 / a
-  expect_equal(mean(draw), expected, tolerance = 0.04)
+  expect_lte(abs(mean(draw) - expected), 4 * stats::sd(draw) / sqrt(length(draw)))
+
+  normalizer <- 2 * (b / a)^0.25 * besselK(sqrt(a * b), 0.5)
+  cutoff <- expected
+  probability <- integrate(
+    function(v) v^(-0.5) * exp(-0.5 * (a * v + b / v)) / normalizer,
+    lower = 0, upper = cutoff, rel.tol = 1e-10
+  )$value
+  empirical <- mean(draw <= cutoff)
+  empirical_mcse <- sqrt(probability * (1 - probability) / length(draw))
+  expect_lte(abs(empirical - probability), 4 * empirical_mcse + 1 / length(draw))
 })
 
 test_that("GIG half sampler remains finite across representable extreme scales", {
@@ -75,7 +85,9 @@ test_that("dynamic learned-scale sampler follows the partially collapsed contrac
   expect_true(all(na.omit(fit$diagnostics$lambda_post_shape_trace) == 4 + T))
   expect_true(all(is.finite(fit$samp.lambda) & fit$samp.lambda > 0))
   expect_identical(fit$model_spec$learning_rate_mode, "learned_pseudoresidual_normalized")
-  expect_true(fit$model_spec$promotion_eligible)
+  expect_true(fit$model_spec$target_numerical_eligible)
+  expect_false(fit$model_spec$reproducibility_eligible)
+  expect_false(fit$model_spec$promotion_eligible)
   expect_equal(fit$model_spec$numerical_repair_count, 0L)
   expect_null(fit$samp.theta_root1)
   expect_equal(dim(fit$samp.theta_terminal_root1), c(1L, 12L))
@@ -96,6 +108,23 @@ test_that("native fixed-design ridge MCMC has no private exdqlm dependency", {
   expect_identical(fit$model_spec$family, "rqr_fixed_design")
   expect_true(all(is.finite(fit$samp.beta_root1)))
   expect_true(all(fit$summary$upper_mean >= fit$summary$lower_mean))
+  expect_identical(fit$model_spec$numerical_policy, "fail")
+  expect_equal(fit$model_spec$numerical_repair_count, 0L)
+  expect_true(fit$model_spec$target_numerical_eligible)
+  expect_false(fit$model_spec$reproducibility_eligible)
+  expect_false(fit$model_spec$promotion_eligible)
+  expect_error(rqr_posterior_draws(fit, nd = 2.9), "nd")
+  expect_error(rqr_posterior_draws(fit, seed = 1.5), "seed")
+
+  repaired <- rqrgibbs:::.rqr_sample_mvnorm_precision(
+    rhs = c(0, 0), precision = matrix(c(1, 1, 1, 1), 2, 2),
+    jitter_ladder = c(0, 1e-8)
+  )
+  expect_identical(repaired$info$strategy, "cholesky_jitter")
+  expect_true(all(c(
+    "jitter", "relative_jitter", "min_eigenvalue", "matrix_scale",
+    "clamped_eigenvalues"
+  ) %in% names(repaired$info)))
 })
 
 test_that("RQR-DLM skips missing response measurements", {
@@ -183,10 +212,29 @@ test_that("exact component scales use the analytic shared inverse-Gamma conditio
   )
   expect_identical(fit$model_spec$evolution_mode, "component_scale")
   expect_true(fit$model_spec$exact_joint_target)
-  expect_true(fit$model_spec$promotion_eligible)
+  expect_true(fit$model_spec$target_numerical_eligible)
+  expect_false(fit$model_spec$promotion_eligible)
   expect_equal(dim(fit$samp.evolution_scale), c(4L, 1L))
   expect_equal(dim(fit$samp.theta0_root1), c(1L, 4L))
   expect_true(all(is.finite(fit$samp.evolution_scale) & fit$samp.evolution_scale > 0))
+
+  forecast <- rqr_forecast_roots(
+    fit, FF_future = matrix(1, 1, 2), GG_future = 1,
+    component_templates_future = list(matrix(1, 1, 1)), nd = 3, seed = 1207
+  )
+  expect_identical(forecast$diagnostics$future_evolution_mode, "component_scale")
+  expect_equal(dim(forecast$lower_draws), c(2L, 3L))
+  expect_equal(
+    forecast$diagnostics$component_scale_draws,
+    fit$samp.evolution_scale[forecast$draw_index, , drop = FALSE]
+  )
+  expect_error(
+    rqr_forecast_roots(
+      fit, FF_future = matrix(1, 1, 1), GG_future = 1, W_future = 1,
+      component_templates_future = list(matrix(1, 1, 1))
+    ),
+    "not both"
+  )
 })
 
 test_that("DLM checkpoints continue with the same RNG stream", {
@@ -210,13 +258,29 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.0.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.1.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
                     names(first$provenance$matrix_digests)))
   expect_equal(first$provenance$initial_seed, 1205L)
   expect_identical(first$model_spec$loss_name, "rqr_residual_product_check_loss")
+
+  altered_data <- first
+  altered_data$y[1] <- altered_data$y[1] + 1
+  expect_error(rqr_dlm_continue(altered_data, 1), "data digest")
+  altered_schema <- first
+  altered_schema$checkpoint_state$schema_version <- "rqrgibbs_fit/0.0.0"
+  expect_error(rqr_dlm_continue(altered_schema, 1), "requires schema")
+  altered_environment <- first
+  altered_environment$provenance$package_version <- "0.0.0"
+  expect_error(rqr_dlm_continue(altered_environment, 1), "environment differs")
+  expect_warning(
+    rqr_dlm_continue(
+      altered_environment, 1, allow_environment_mismatch = TRUE
+    ),
+    "not claimed"
+  )
 })
 
 test_that("iteration controls fail with actionable scalar-integer errors", {
@@ -249,4 +313,31 @@ test_that("mathematical target status is separate from numerical repairs", {
   expect_false(fit$model_spec$promotion_eligible)
   expect_gt(nrow(fit$diagnostics$numerical_repairs), 0L)
   expect_true(all(is.finite(fit$diagnostics$numerical_repairs$matrix_scale)))
+})
+
+test_that("unknown Git status is distinct from a clean checkout", {
+  provenance <- rqrgibbs:::.rqr_provenance(
+    data = list(y = 1:3), matrices = list(X = diag(3)),
+    repo_root = tempdir()
+  )
+  expect_false(provenance$git_commit_available)
+  expect_false(provenance$git_status_available)
+  expect_true(is.na(provenance$git_dirty))
+  expect_false(provenance$provenance_complete)
+  expect_false(provenance$reproducibility_eligible)
+})
+
+test_that("VB draw and iteration controls reject fractional values", {
+  X <- cbind(1, seq(-1, 1, length.out = 8))
+  y <- seq(-0.5, 0.5, length.out = 8)
+  fit <- rqr_vb_fit(
+    y, X, 0.8,
+    vb_control = list(max_iter = 2, n_draws = 20, seed = 1208)
+  )
+  expect_error(rqr_posterior_draws(fit, nd = 2.5), "nd")
+  expect_error(rqr_posterior_draws(fit, seed = 1.5), "seed")
+  expect_error(
+    rqr_vb_fit(y, X, 0.8, vb_control = list(max_iter = 2.5, n_draws = 20)),
+    "max_iter"
+  )
 })

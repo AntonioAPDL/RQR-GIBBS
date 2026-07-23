@@ -113,6 +113,17 @@
   if (is.null(records)) current else rbind(records, current)
 }
 
+.rqr_dlm_provenance_matrices <- function(expanded, evolution) {
+  list(
+    FF = expanded$FF,
+    GG = expanded$GG,
+    C0 = expanded$C0,
+    evolution_W = evolution$W %||% NULL,
+    evolution_templates = evolution$templates %||% NULL,
+    evolution_discount = evolution$D %||% NULL
+  )
+}
+
 .rqr_dlm_coverage_summary <- function(y, observed, lower, upper) {
   lower_mean <- rowMeans(lower)
   upper_mean <- rowMeans(upper)
@@ -163,12 +174,16 @@
 #' @param evolution_scale_initial Initial positive component multipliers.
 #' @param learning_rate Fixed generalized-Bayes learning rate `omega_R`.
 #' @param lambda_initial Initial inverse loss scale for learned modes.
-#' @param loss_reference_scale Positive fixed scale `s_L` dividing the loss.
+#' @param loss_reference_scale Positive reference scale `s_L`. It does not
+#'   alter fixed `learning_rate`; learned modes use `lambda/s_L`.
 #' @param learning_rate_mode One of `"fixed_rate"`,
 #'   `"learned_pseudoresidual_normalized"`, or `"learned_pure"`. Legacy mode
 #'   spellings are accepted and normalized to these names.
 #' @param lambda_prior Gamma shape--rate prior without a custom power field.
 #' @param numerical_policy Either `"fail"` or `"record_repair"`.
+#' @param provenance_control Optional list with `repo_root` and a complete
+#'   40-character `expected_git_commit`. Promotion eligibility requires a
+#'   verified clean checkout at that expected commit.
 #' @param mcmc_control Iteration, seed, storage, backend, progress, and jitter
 #'   controls.
 #' @param init Optional initial states, latent scales, lambda, evolution scales,
@@ -192,6 +207,7 @@ rqr_dlm_fit <- function(
     ),
     lambda_prior = list(shape = 4, rate = 4),
     numerical_policy = c("fail", "record_repair"),
+    provenance_control = list(),
     mcmc_control = list(), init = list()) {
   y <- as.numeric(y)
   if (!length(y) || !any(!is.na(y)) || any(is.nan(y)) || any(is.infinite(y))) {
@@ -204,6 +220,7 @@ rqr_dlm_fit <- function(
   observed <- !is.na(y)
   n_obs <- sum(observed)
   numerical_policy <- .rqr_numerical_policy(numerical_policy)
+  provenance_control <- .rqr_provenance_control(provenance_control)
   if (!is.list(mcmc_control)) stop("mcmc_control must be a list.", call. = FALSE)
   jitter_ladder <- as.numeric(
     mcmc_control$jitter_ladder %||% c(0, 1e-12, 1e-10, 1e-8, 1e-6)
@@ -439,17 +456,14 @@ rqr_dlm_fit <- function(
   completed_offset <- as.integer(init$completed_iterations %||% 0L)
   provenance <- .rqr_provenance(
     data = list(y = y),
-    matrices = list(
-      FF = expanded$FF,
-      GG = expanded$GG,
-      C0 = expanded$C0,
-      evolution_W = evolution$W %||% NULL,
-      evolution_templates = evolution$templates %||% NULL,
-      evolution_discount = evolution$D %||% NULL
-    ),
+    matrices = .rqr_dlm_provenance_matrices(expanded, evolution),
     numerical_policy = numerical_policy,
-    initial_seed = seed
+    initial_seed = seed,
+    repo_root = provenance_control$repo_root,
+    expected_git_commit = provenance_control$expected_git_commit,
+    backend = backend
   )
+  target_numerical_eligible <- mathematical_exact && numerical_exact
   checkpoint <- list(
     schema_version = provenance$schema_version,
     completed_iterations = completed_offset + total_iter,
@@ -492,7 +506,9 @@ rqr_dlm_fit <- function(
       numerical_policy = numerical_policy,
       numerical_repair_count = total_repairs,
       numerically_exact_transition = numerical_exact,
-      promotion_eligible = mathematical_exact && numerical_exact,
+      target_numerical_eligible = target_numerical_eligible,
+      reproducibility_eligible = provenance$reproducibility_eligible,
+      promotion_eligible = target_numerical_eligible && provenance$reproducibility_eligible,
       root_priors_exchangeable = TRUE,
       root_swap_move = TRUE
     ),
@@ -541,6 +557,74 @@ rqr_dlm_fit <- function(
   out
 }
 
+.rqr_validate_dlm_continuation <- function(object, allow_environment_mismatch = FALSE) {
+  if (length(allow_environment_mismatch) != 1L ||
+      !is.logical(allow_environment_mismatch) || is.na(allow_environment_mismatch)) {
+    stop("allow_environment_mismatch must be TRUE or FALSE.", call. = FALSE)
+  }
+  supported_schema <- .rqr_schema_version()
+  object_schema <- object$provenance$schema_version %||% NA_character_
+  checkpoint_schema <- object$checkpoint_state$schema_version %||% NA_character_
+  if (!identical(object_schema, supported_schema) ||
+      !identical(checkpoint_schema, supported_schema)) {
+    stop(
+      sprintf(
+        "Continuation requires schema %s in both the fit and checkpoint.",
+        supported_schema
+      ),
+      call. = FALSE
+    )
+  }
+
+  expanded <- .rqr_expand_model(rqr_as_dlm_model(object$model), length(object$y))
+  current_data_digest <- .rqr_digest(list(y = as.numeric(object$y)))
+  current_matrix_digests <- lapply(
+    .rqr_dlm_provenance_matrices(expanded, object$evolution), .rqr_digest
+  )
+  if (!identical(current_data_digest, object$provenance$data_digest)) {
+    stop("Continuation data digest does not match the fitted object.", call. = FALSE)
+  }
+  if (!identical(current_matrix_digests, object$provenance$matrix_digests)) {
+    stop("Continuation model/evolution matrix digests do not match the fitted object.", call. = FALSE)
+  }
+
+  stored_expected <- object$provenance$expected_git_commit %||% NA_character_
+  current <- .rqr_provenance(
+    data = list(y = as.numeric(object$y)),
+    matrices = .rqr_dlm_provenance_matrices(expanded, object$evolution),
+    numerical_policy = object$model_spec$numerical_policy,
+    repo_root = object$provenance$repo_root %||% NA_character_,
+    expected_git_commit = if (is.na(stored_expected)) NULL else stored_expected,
+    backend = object$misc$backend
+  )
+  compare_fields <- c(
+    "package_version", "R_version", "platform", "compiler", "BLAS", "LAPACK",
+    "git_commit", "backend"
+  )
+  mismatches <- compare_fields[!vapply(compare_fields, function(field) {
+    identical(object$provenance[[field]], current[[field]])
+  }, logical(1L))]
+  if (!identical(object$provenance$dependency_versions, current$dependency_versions)) {
+    mismatches <- c(mismatches, "dependency_versions")
+  }
+  if (length(mismatches)) {
+    message <- sprintf(
+      "Continuation environment differs in: %s.", paste(unique(mismatches), collapse = ", ")
+    )
+    if (!allow_environment_mismatch) {
+      stop(
+        paste(message, "Set allow_environment_mismatch=TRUE only for a non-bitwise portability run."),
+        call. = FALSE
+      )
+    }
+    warning(
+      paste(message, "Exact bitwise continuation is not claimed for this segment."),
+      call. = FALSE
+    )
+  }
+  invisible(list(current_provenance = current, environment_mismatches = mismatches))
+}
+
 #' Continue an RQR-DLM chain from its exact checkpoint
 #'
 #' Continuation restores the full RNG state and every Markov state required by
@@ -550,14 +634,19 @@ rqr_dlm_fit <- function(
 #' @param n_mcmc Positive number of additional retained draws.
 #' @param thin Positive thinning interval; defaults to the original fit.
 #' @param store_state_draws,store_latent_draws Storage choices for new draws.
+#' @param allow_environment_mismatch If `TRUE`, continue after an explicit
+#'   warning when package, R, platform, BLAS/LAPACK, dependency, or source-commit
+#'   metadata differ. Schema and data/model digest mismatches always stop.
 #' @return A new `rqr_dlm_mcmc` segment beginning at the checkpoint.
 #' @export
 rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
                              store_state_draws = object$misc$store_state_draws,
-                             store_latent_draws = object$misc$store_latent_draws) {
+                             store_latent_draws = object$misc$store_latent_draws,
+                             allow_environment_mismatch = FALSE) {
   if (!inherits(object, "rqr_dlm_mcmc")) stop("Expected an rqr_dlm_mcmc object.", call. = FALSE)
   n_mcmc <- .rqr_scalar_integer(n_mcmc, "n_mcmc", 1L)
   thin <- .rqr_scalar_integer(thin, "thin", 1L)
+  .rqr_validate_dlm_continuation(object, allow_environment_mismatch)
   checkpoint <- object$checkpoint_state
   if (is.null(checkpoint$rng_state)) stop("The fit does not contain a complete RNG checkpoint.", call. = FALSE)
   fixed_rate <- object$model_spec$fixed_learning_rate
@@ -573,6 +662,14 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
     learning_rate_mode = object$model_spec$learning_rate_mode,
     lambda_prior = object$model_spec$lambda_prior,
     numerical_policy = object$model_spec$numerical_policy,
+    provenance_control = list(
+      repo_root = if (is.na(object$provenance$repo_root)) NULL else object$provenance$repo_root,
+      expected_git_commit = if (is.na(object$provenance$expected_git_commit)) {
+        NULL
+      } else {
+        object$provenance$expected_git_commit
+      }
+    ),
     mcmc_control = list(
       n_burn = 0L, n_mcmc = n_mcmc, thin = thin, seed = NULL,
       backend = object$misc$backend,
@@ -632,7 +729,11 @@ predict_interval.rqr_dlm_mcmc <- function(object, nd = NULL, draws = NULL, seed 
 #' @param object An `rqr_dlm_mcmc` fit.
 #' @param FF_future State-by-horizon observation design.
 #' @param GG_future Evolution matrix or cube.
-#' @param W_future Evolution covariance matrix or cube.
+#' @param W_future Explicit evolution covariance matrix or cube. Supply either
+#'   this argument or `component_templates_future`.
+#' @param component_templates_future Optional fixed future component templates.
+#'   For a component-scale fit, these are combined with the saved draw-specific
+#'   evolution multipliers.
 #' @param nd Number of saved MCMC draws to use.
 #' @param seed Optional seed.
 #' @param numerical_policy Either `"fail"` or `"record_repair"`.
@@ -640,7 +741,8 @@ predict_interval.rqr_dlm_mcmc <- function(object, nd = NULL, draws = NULL, seed 
 #' @return Future root and ordered endpoint draws with repair diagnostics.
 #' @export
 rqr_forecast_roots <- function(
-    object, FF_future, GG_future, W_future, nd = NULL, seed = NULL,
+    object, FF_future, GG_future, W_future = NULL,
+    component_templates_future = NULL, nd = NULL, seed = NULL,
     numerical_policy = object$model_spec$numerical_policy %||% "fail",
     jitter_ladder = object$misc$jitter_ladder %||% c(0, 1e-12, 1e-10, 1e-8, 1e-6)) {
   if (!inherits(object, "rqr_dlm_mcmc")) stop("Expected an rqr_dlm_mcmc object.", call. = FALSE)
@@ -661,8 +763,36 @@ rqr_forecast_roots <- function(
     stop("FF_future must be finite p x H.", call. = FALSE)
   }
   GG <- .rqr_expand_cube(GG_future, H, p, "GG_future")
-  evo <- .rqr_prepare_evolution(list(mode = "fixed_W", W = W_future), p, H)
-  W <- evo$W
+  if (!is.null(W_future) && !is.null(component_templates_future)) {
+    stop("Supply W_future or component_templates_future, not both.", call. = FALSE)
+  }
+  if (is.null(W_future) && is.null(component_templates_future)) {
+    stop("Supply W_future or component_templates_future.", call. = FALSE)
+  }
+  component_future <- !is.null(component_templates_future)
+  W_fixed <- NULL
+  future_component_evolution <- NULL
+  if (component_future) {
+    if (!identical(object$model_spec$evolution_mode, "component_scale") ||
+        is.null(object$samp.evolution_scale)) {
+      stop(
+        "component_templates_future requires a component_scale fit with saved scale draws.",
+        call. = FALSE
+      )
+    }
+    future_component_evolution <- rqr_evolution_component_scale(
+      templates = component_templates_future,
+      component_dims = object$evolution$component_dims,
+      prior = object$evolution$prior,
+      initial = 1,
+      component_names = object$evolution$component_names
+    )
+    .rqr_expand_component_templates(future_component_evolution, H, p)
+  } else {
+    W_fixed <- .rqr_prepare_evolution(
+      list(mode = "fixed_W", W = W_future), p, H
+    )$W
+  }
   numerical_policy <- .rqr_numerical_policy(numerical_policy)
   ladder <- .rqr_jitter_ladder(numerical_policy, jitter_ladder)
   n_save <- ncol(terminal1)
@@ -675,11 +805,25 @@ rqr_forecast_roots <- function(
   for (j in seq_along(idx)) {
     s1 <- terminal1[, idx[j]]
     s2 <- terminal2[, idx[j]]
+    W_draw <- if (component_future) {
+      .rqr_materialize_component_evolution(
+        future_component_evolution,
+        q = object$samp.evolution_scale[idx[j], ],
+        n_time = H,
+        p = p
+      )$W
+    } else {
+      W_fixed
+    }
     for (hh in seq_len(H)) {
       mu1 <- drop(GG[, , hh] %*% s1)
       mu2 <- drop(GG[, , hh] %*% s2)
-      d1 <- .rqr_sample_mvnorm_covariance(mu1, W[, , hh], ladder)
-      d2 <- .rqr_sample_mvnorm_covariance(mu2, W[, , hh], ladder)
+      d1 <- .rqr_sample_mvnorm_covariance(
+        mu1, W_draw[, , hh], ladder, numerical_policy
+      )
+      d2 <- .rqr_sample_mvnorm_covariance(
+        mu2, W_draw[, , hh], ladder, numerical_policy
+      )
       s1 <- d1$draw
       s2 <- d2$draw
       new_repair <- .rqr_add_repair_record(
@@ -707,10 +851,17 @@ rqr_forecast_roots <- function(
     lower_draws = lower, upper_draws = upper,
     midpoint_draws = 0.5 * (lower + upper), width_draws = upper - lower,
     lower_mean = rowMeans(lower), upper_mean = rowMeans(upper),
+    draw_index = idx,
     diagnostics = list(
       numerical_policy = numerical_policy,
       repair_count = if (is.null(repairs)) 0L else nrow(repairs),
-      repair_records = repairs %||% data.frame()
+      repair_records = repairs %||% data.frame(),
+      future_evolution_mode = if (component_future) "component_scale" else "fixed_W",
+      component_scale_draws = if (component_future) {
+        object$samp.evolution_scale[idx, , drop = FALSE]
+      } else {
+        NULL
+      }
     ),
     interpretation = "Future interval-root state draws; no response simulation contract is implied."
   )

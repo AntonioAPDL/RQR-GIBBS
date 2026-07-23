@@ -16,7 +16,8 @@ rqr_ffbs_cpp(
   D,
   sample_path,
   jitter_ladder,
-  evolution_label
+  evolution_label,
+  allow_covariance_repair
 )
 }
 \description{

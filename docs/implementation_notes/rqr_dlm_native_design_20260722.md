@@ -248,10 +248,12 @@ layer from silently redefining the statistical target.
    sizes, train/test windows, seeds, methods, and scoring rules.
 7. Every run manifest records this repository commit, the pinned exdqlm
    commit, package/session information, configuration, and seeds.
-8. Fit objects record schema, Git/package/R/compiler/BLAS provenance, RNG state,
+8. Fit objects distinguish unavailable Git state from a clean checkout and
+   record schema, Git/package/R/compiler/BLAS/LAPACK provenance, RNG state,
    data and matrix digests, and numerical-repair status.
-9. Promotion-grade exact-target fixtures use the fail-fast numerical policy and
-   record zero repairs.
+9. Promotion-grade fixtures use the fail-fast numerical policy, record zero
+   repairs, and match a clean checkout to the exact commit declared in the run
+   manifest.
 10. Heavy objects remain under ignored local directories.
 
 ## External-review resolution
@@ -259,5 +261,6 @@ layer from silently redefining the statistical target.
 The adaptive conditional-discount question is resolved negatively for the
 advertised simple kernels. The exact shared `component_scale` mode implements
 the recommended coherent alternative. The next external review should audit
-the proof statement, component-scale implementation, numerical-repair ledger,
-and continuation/provenance schema before any bounded pilot is authorized.
+the proof statement, draw-specific component-scale forecasting, strict
+negative-eigenvalue policy, complete repair ledgers, and enforced
+continuation/provenance schema before any bounded pilot is authorized.

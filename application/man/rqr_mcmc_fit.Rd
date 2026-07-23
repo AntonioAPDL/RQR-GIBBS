@@ -15,6 +15,8 @@ rqr_mcmc_fit(
     "learned_pure"),
   lambda_prior = list(shape = 4, rate = 4),
   beta_prior_obj = NULL,
+  numerical_policy = c("fail", "record_repair"),
+  provenance_control = list(),
   mcmc_control = list(),
   init = list(),
   ...
@@ -31,22 +33,29 @@ rqr_mcmc_fit(
 
 \item{lambda_initial}{Positive initial inverse loss scale for learned modes.}
 
-\item{loss_reference_scale}{Positive scale dividing the RQR loss before
-applying `learning_rate` or learned `lambda`. The default `1` reproduces
-the existing raw-loss target.}
+\item{loss_reference_scale}{Positive reference scale `s_L`. In fixed-rate
+mode, `learning_rate` is the effective rate `omega_R` and this argument
+does not alter the target. Learned modes use `omega_R=lambda/s_L`.}
 
 \item{learning_rate_mode}{Learning-rate treatment. `"fixed_rate"` uses
 `learning_rate` directly as `omega_R`.
 `"learned_pseudoresidual_normalized"` samples the inverse-loss scale from
 the generalized posterior proportional
-to `lambda^T exp(-lambda L_c)`. `"learned_pure"` is a diagnostic target
-proportional to `exp(-lambda L_c)`.}
+to `lambda^T exp(-lambda L_c/s_L)`. `"learned_pure"` is a diagnostic target
+proportional to `exp(-lambda L_c/s_L)`.}
 
 \item{lambda_prior}{Gamma prior for learned `lambda`, as a list with
 positive `shape` and `rate`. Target powers are fixed by the selected mode.}
 
 \item{beta_prior_obj}{Beta prior object from [beta_prior()]. Version 1
 supports `"ridge"` and `"rhs_ns"`.}
+
+\item{numerical_policy}{Either `"fail"` or `"record_repair"` for Gaussian
+precision factorizations.}
+
+\item{provenance_control}{Optional list with `repo_root` and a complete
+40-character `expected_git_commit`. Promotion eligibility requires a
+verified clean checkout at that expected commit.}
 
 \item{mcmc_control}{Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
 `verbose`, `progress_every`, `precision_beta`, and `store_latent_draws`.}

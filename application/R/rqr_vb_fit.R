@@ -46,12 +46,15 @@ rqr_vb_fit <- function(y, X, coverage_level, learning_rate = 1,
   constants <- rqr_constants(coverage_level, learning_rate)
   if (!is.list(vb_control)) stop("vb_control must be a list.", call. = FALSE)
   seed <- vb_control$seed %||% vb_control$rng_seed %||% NULL
-  if (!is.null(seed)) set.seed(as.integer(seed)[1L])
-  max_iter <- max(1L, as.integer(vb_control$max_iter %||% 200L))
+  if (!is.null(seed)) {
+    seed <- .rqr_scalar_integer(seed, "vb_control$seed", 0L)
+    set.seed(seed)
+  }
+  max_iter <- .rqr_scalar_integer(vb_control$max_iter %||% 200L, "vb_control$max_iter", 1L)
   tol <- as.numeric(vb_control$tol %||% 1e-5)[1L]
   if (!is.finite(tol) || tol <= 0) tol <- 1e-5
   verbose <- isTRUE(vb_control$verbose %||% FALSE)
-  n_draws <- max(20L, as.integer(vb_control$n_draws %||% 1000L))
+  n_draws <- .rqr_scalar_integer(vb_control$n_draws %||% 1000L, "vb_control$n_draws", 20L)
 
   if (is.null(beta_prior_obj)) {
     beta_prior_obj <- beta_prior("ridge", ridge = list(tau2 = vb_control$beta_ridge_tau2 %||% vb_control$tau2 %||% 1e4))
@@ -159,14 +162,14 @@ rqr_vb_fit <- function(y, X, coverage_level, learning_rate = 1,
 #' @export
 rqr_posterior_draws.rqr_vb <- function(object, nd = NULL, seed = NULL, ...) {
   if (!inherits(object, "rqr_vb")) stop("Expected an rqr_vb object.", call. = FALSE)
-  if (!is.null(seed)) set.seed(as.integer(seed)[1L])
+  if (!is.null(seed)) set.seed(.rqr_scalar_integer(seed, "seed", 0L))
   b1 <- as.matrix(object$draws$beta_root1)
   b2 <- as.matrix(object$draws$beta_root2)
   n_save <- nrow(b1)
-  if (is.null(nd) || is.na(nd)) {
+  if (is.null(nd)) {
     idx <- seq_len(n_save)
   } else {
-    nd <- max(1L, as.integer(nd)[1L])
+    nd <- .rqr_scalar_integer(nd, "nd", 1L)
     idx <- sample.int(n_save, size = nd, replace = nd > n_save)
   }
   list(beta_root1 = b1[idx, , drop = FALSE], beta_root2 = b2[idx, , drop = FALSE], nd = length(idx))

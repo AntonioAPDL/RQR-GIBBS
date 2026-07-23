@@ -158,3 +158,45 @@ test_that("only NA denotes a missing pseudo-observation", {
     )
   }
 })
+
+test_that("fail policy rejects eigenvalue projection in R and C++", {
+  near_indefinite <- diag(c(1, -1e-12))
+  exact_psd <- diag(c(1, 0))
+
+  expect_error(
+    rqrgibbs:::.rqr_sample_mvnorm_covariance(
+      c(0, 0), near_indefinite, jitter_ladder = 0,
+      numerical_policy = "fail"
+    ),
+    "projection is disabled"
+  )
+  expect_error(
+    rqrgibbs:::rqr_mvn_draw_cpp(
+      c(0, 0), near_indefinite, jitter_ladder = 0,
+      allow_repair = FALSE
+    ),
+    "projection is disabled"
+  )
+
+  repaired_r <- rqrgibbs:::.rqr_sample_mvnorm_covariance(
+    c(0, 0), near_indefinite, jitter_ladder = 0,
+    numerical_policy = "record_repair"
+  )
+  repaired_cpp <- rqrgibbs:::rqr_mvn_draw_cpp(
+    c(0, 0), near_indefinite, jitter_ladder = 0,
+    allow_repair = TRUE
+  )
+  expect_identical(repaired_r$info$strategy, "psd_eigen")
+  expect_identical(repaired_r$info$clamped_eigenvalues, 1L)
+  expect_identical(repaired_cpp$info$strategy, "psd_eigen")
+  expect_identical(repaired_cpp$info$clamped_eigenvalues, 1L)
+
+  psd_r <- rqrgibbs:::.rqr_sample_mvnorm_covariance(
+    c(0, 0), exact_psd, jitter_ladder = 0, numerical_policy = "fail"
+  )
+  psd_cpp <- rqrgibbs:::rqr_mvn_draw_cpp(
+    c(0, 0), exact_psd, jitter_ladder = 0, allow_repair = FALSE
+  )
+  expect_identical(psd_r$info$clamped_eigenvalues, 0L)
+  expect_identical(psd_cpp$info$clamped_eigenvalues, 0L)
+})

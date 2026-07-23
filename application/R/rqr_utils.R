@@ -241,6 +241,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
+.rqr_schema_version <- function() "rqrgibbs_fit/1.1.0"
+
 .rqr_find_repo_root <- function(start = getwd()) {
   current <- normalizePath(start, winslash = "/", mustWork = FALSE)
   repeat {
@@ -252,43 +254,111 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   }
 }
 
-.rqr_git_value <- function(repo_root, args) {
-  if (is.na(repo_root) || !nzchar(repo_root) || !nzchar(Sys.which("git"))) return(NA_character_)
+.rqr_git_result <- function(repo_root, args) {
+  git <- Sys.which("git")
+  if (length(repo_root) != 1L || is.na(repo_root) || !nzchar(repo_root) || !nzchar(git)) {
+    return(list(available = FALSE, value = NA_character_))
+  }
   out <- suppressWarnings(tryCatch(
-    system2("git", c("-C", repo_root, args), stdout = TRUE, stderr = FALSE),
-    error = function(e) character(0)
+    system2(git, c("-C", shQuote(repo_root), args), stdout = TRUE, stderr = TRUE),
+    error = function(e) structure(character(0), status = 1L)
   ))
-  if (!length(out)) NA_character_ else paste(out, collapse = "\n")
+  status <- attr(out, "status") %||% 0L
+  if (!identical(as.integer(status), 0L)) {
+    return(list(available = FALSE, value = NA_character_))
+  }
+  list(available = TRUE, value = paste(out, collapse = "\n"))
+}
+
+.rqr_git_value <- function(repo_root, args) {
+  .rqr_git_result(repo_root, args)$value
+}
+
+.rqr_provenance_control <- function(control = list()) {
+  if (is.null(control)) control <- list()
+  if (!is.list(control)) stop("provenance_control must be a list.", call. = FALSE)
+  repo_root <- control$repo_root %||% NULL
+  if (!is.null(repo_root)) {
+    if (length(repo_root) != 1L || is.na(repo_root) || !nzchar(as.character(repo_root))) {
+      stop("provenance_control$repo_root must be one nonempty path.", call. = FALSE)
+    }
+    repo_root <- normalizePath(as.character(repo_root), winslash = "/", mustWork = FALSE)
+  }
+  expected <- control$expected_git_commit %||% NULL
+  if (!is.null(expected)) {
+    expected <- tolower(as.character(expected))
+    if (length(expected) != 1L || is.na(expected) ||
+        !grepl("^[0-9a-f]{40}$", expected)) {
+      stop(
+        "provenance_control$expected_git_commit must be one complete 40-character Git SHA.",
+        call. = FALSE
+      )
+    }
+  }
+  list(repo_root = repo_root, expected_git_commit = expected)
 }
 
 .rqr_provenance <- function(data, matrices = list(), numerical_policy = NA_character_,
-                            initial_seed = NULL, repo_root = NULL) {
+                            initial_seed = NULL, repo_root = NULL,
+                            expected_git_commit = NULL, backend = NA_character_) {
   if (is.null(repo_root)) repo_root <- .rqr_find_repo_root()
   pkg_version <- tryCatch(as.character(utils::packageVersion("rqrgibbs")), error = function(e) NA_character_)
   dependency_names <- c("Rcpp", "RcppArmadillo", "digest")
   dependency_versions <- vapply(dependency_names, function(pkg) {
     tryCatch(as.character(utils::packageVersion(pkg)), error = function(e) NA_character_)
   }, character(1L))
-  git_commit <- .rqr_git_value(repo_root, c("rev-parse", "HEAD"))
-  dirty <- .rqr_git_value(repo_root, c("status", "--porcelain"))
+  commit_result <- .rqr_git_result(repo_root, c("rev-parse", "HEAD"))
+  status_result <- .rqr_git_result(repo_root, c("status", "--porcelain"))
+  git_commit <- if (commit_result$available) tolower(commit_result$value) else NA_character_
+  dirty <- status_result$value
+  expected_git_commit <- if (is.null(expected_git_commit)) {
+    NA_character_
+  } else {
+    tolower(as.character(expected_git_commit)[1L])
+  }
+  commit_match <- if (is.na(expected_git_commit) || is.na(git_commit)) {
+    NA
+  } else {
+    identical(git_commit, expected_git_commit)
+  }
   ext <- extSoftVersion()
+  session <- utils::sessionInfo()
+  matrix_digests <- lapply(matrices, .rqr_digest)
+  data_digest <- .rqr_digest(data)
+  provenance_complete <- isTRUE(commit_result$available) &&
+    isTRUE(status_result$available) &&
+    !is.na(pkg_version) && nzchar(pkg_version) &&
+    !is.na(R.version.string) && nzchar(R.version.string) &&
+    !is.na(R.version$platform) && nzchar(R.version$platform) &&
+    all(!is.na(dependency_versions) & nzchar(dependency_versions)) &&
+    nzchar(data_digest) && all(vapply(matrix_digests, nzchar, logical(1L)))
+  git_dirty <- if (status_result$available) nzchar(dirty) else NA
+  reproducibility_eligible <- provenance_complete &&
+    !is.na(git_dirty) && !git_dirty && isTRUE(commit_match)
   list(
-    schema_version = "rqrgibbs_fit/1.0.0",
+    schema_version = .rqr_schema_version(),
     package_version = pkg_version,
     git_commit = git_commit,
-    git_dirty = !is.na(dirty) && nzchar(dirty),
+    git_commit_available = isTRUE(commit_result$available),
+    git_status_available = isTRUE(status_result$available),
+    git_dirty = git_dirty,
+    expected_git_commit = expected_git_commit,
+    expected_git_commit_match = commit_match,
     repo_root = repo_root,
     R_version = R.version.string,
     platform = R.version$platform,
     compiler = R.version$compiler %||% NA_character_,
-    BLAS = unname(ext["BLAS"] %||% NA_character_),
-    LAPACK = unname(ext["LAPACK"] %||% NA_character_),
+    BLAS = as.character(session$BLAS %||% unname(ext["BLAS"] %||% NA_character_)),
+    LAPACK = as.character(session$LAPACK %||% tryCatch(La_library(), error = function(e) NA_character_)),
     dependency_versions = dependency_versions,
     RNGkind = RNGkind(),
     initial_seed = initial_seed,
     numerical_policy = numerical_policy,
-    data_digest = .rqr_digest(data),
-    matrix_digests = lapply(matrices, .rqr_digest),
+    backend = as.character(backend)[1L],
+    data_digest = data_digest,
+    matrix_digests = matrix_digests,
+    provenance_complete = provenance_complete,
+    reproducibility_eligible = reproducibility_eligible,
     recorded_at = format(Sys.time(), tz = "UTC", usetz = TRUE)
   )
 }

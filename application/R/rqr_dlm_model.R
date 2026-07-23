@@ -273,8 +273,7 @@ rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
   W <- array(0, c(ex$p, ex$p, n_time))
   numerical_policy <- .rqr_numerical_policy(numerical_policy)
   ladder <- .rqr_jitter_ladder(numerical_policy, jitter_ladder)
-  repair_time <- integer(0)
-  repair_jitter <- numeric(0)
+  repair_records <- .rqr_empty_repair_records()
   minimum_eigenvalue <- numeric(n_time)
   for (tt in seq_len(n_time)) {
     P <- .rqr_symmetrize(ex$GG[, , tt] %*% C %*% t(ex$GG[, , tt]))
@@ -292,10 +291,19 @@ rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
     )
     minimum_eigenvalue[tt] <- min(eigen(C, symmetric = TRUE, only.values = TRUE)$values)
     fac <- .rqr_chol_with_jitter(C, ladder)
-    if (fac$jitter > 0) {
-      repair_time <- c(repair_time, tt)
-      repair_jitter <- c(repair_jitter, fac$jitter)
-    }
+    repair_records <- .rqr_add_repair_record(
+      repair_records,
+      stage = "discount_template_filter_covariance",
+      time = tt,
+      info = list(
+        strategy = "cholesky_jitter",
+        jitter = fac$jitter,
+        relative_jitter = fac$relative_jitter,
+        min_eigenvalue = fac$min_eigenvalue,
+        matrix_scale = fac$matrix_scale,
+        clamped_eigenvalues = 0L
+      )
+    )
     C <- fac$matrix
   }
   structure(list(
@@ -310,9 +318,10 @@ rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
     frozen_before_mcmc = TRUE,
     construction_audit = list(
       numerical_policy = numerical_policy,
-      repair_count = length(repair_time),
-      repair_time = repair_time,
-      repair_jitter = repair_jitter,
+      repair_count = nrow(repair_records),
+      repair_records = repair_records,
+      repair_time = repair_records$time,
+      repair_jitter = repair_records$jitter,
       minimum_eigenvalue = minimum_eigenvalue
     )
   ), class = "rqr_evolution")

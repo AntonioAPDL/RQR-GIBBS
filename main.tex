@@ -351,12 +351,14 @@ time-zero states restores the innovation factorization and yields conjugate
 inverse-Gamma updates for each \(q_j\); the complete derivation appears in the
 supplement.
 
-The implementation distinguishes mathematical target status from numerical
-execution. Fixed and component-scale modes have a declared joint target, but a
-fit is promotion eligible only if every covariance factorization succeeds
-without repair. A fail-fast policy is the default. An audit policy may instead
-record the matrix role, time, root, iteration, jitter, and eigenvalue diagnostic
-for every repair.
+The implementation distinguishes mathematical target status, numerical
+execution, and reproducibility eligibility. Fixed and component-scale modes
+have a declared joint target, but they are target-and-numerical eligible only
+when every Gaussian factorization succeeds without repair. The default policy
+rejects jitter and negative-eigenvalue projection. An audit policy may instead
+record the matrix role, time, root and iteration where applicable, jitter, and
+eigenvalue diagnostics for every repair. Promotion additionally requires a
+clean checkout at an explicitly expected repository commit.
 
 \section{Validation Plan}
 \label{sec:validation}
@@ -375,10 +377,14 @@ receives its own derivation and validation.
 
 The standard interval score remains secondary because its canonical endpoints
 are the corresponding equal-tailed quantiles. RQR does not preassign those
-endpoint probabilities. Reproducible fits record a schema version, exact Git
-and package provenance, data and matrix digests, numerical policy, RNG state,
-and a complete continuation checkpoint. Full state paths are opt-in; terminal
-state draws are retained for root forecasting.
+endpoint probabilities. Promotion-grade run manifests require an exact expected
+repository commit. Fit objects record the detected commit and clean or unknown
+status separately, together with package provenance, data and matrix digests,
+numerical policy, RNG state, and a complete continuation checkpoint under a
+versioned schema. Continuation verifies schema, data and model digests, and the
+recorded numerical environment before claiming bitwise equivalence. Full state
+paths are opt-in; terminal states and component-scale draws are retained for
+root forecasting with explicit future covariance templates.
 
 \section{Discussion}
 \label{sec:discussion}

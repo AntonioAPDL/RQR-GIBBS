@@ -62,7 +62,7 @@ arma::mat inv_from_lower(const arma::mat& L) {
 }
 
 DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
-                    const arma::vec& ladder) {
+                    const arma::vec& ladder, const bool allow_repair) {
   arma::mat cov = symm(covariance);
   const double matrix_scale = std::max(1.0, arma::abs(cov).max());
   arma::mat L;
@@ -80,6 +80,12 @@ DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
   const double scale = std::max(1.0, arma::abs(values).max());
   if (values.min() >= -1e-10 * scale) {
     const double min_eigenvalue = values.min();
+    if (!allow_repair && arma::any(values < 0.0)) {
+      Rcpp::stop(
+        "Gaussian covariance has a negative eigenvalue, and projection is "
+        "disabled under numerical_policy='fail'."
+      );
+    }
     int clamped = 0;
     for (arma::uword j = 0; j < values.n_elem; ++j) {
       if (values(j) < 0.0) { values(j) = 0.0; ++clamped; }
@@ -89,6 +95,12 @@ DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
       0.0, 0.0, true, clamped, min_eigenvalue, matrix_scale
     };
   }
+  if (!allow_repair) {
+    Rcpp::stop(
+      "Gaussian covariance is indefinite, and repair is disabled under "
+      "numerical_policy='fail'."
+    );
+  }
   SpdResult fac = spd_factor(cov, ladder);
   return DrawResult{
     mean + fac.chol_lower * arma::randn<arma::vec>(mean.n_elem),
@@ -97,6 +109,30 @@ DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
 }
 
 } // namespace
+
+//' C++ Gaussian covariance-draw diagnostic kernel
+//'
+//' @keywords internal
+// [[Rcpp::export]]
+Rcpp::List rqr_mvn_draw_cpp(const arma::vec& mean,
+                            const arma::mat& covariance,
+                            const arma::vec& jitter_ladder,
+                            const bool allow_repair) {
+  Rcpp::RNGScope scope;
+  DrawResult result = mvn_draw(mean, covariance, jitter_ladder, allow_repair);
+  return Rcpp::List::create(
+    Rcpp::Named("draw") = result.draw,
+    Rcpp::Named("info") = Rcpp::List::create(
+      Rcpp::Named("strategy") = result.jitter > 0.0 ? "cholesky_jitter" :
+        (result.used_psd ? "psd_eigen" : "cholesky"),
+      Rcpp::Named("jitter") = result.jitter,
+      Rcpp::Named("relative_jitter") = result.relative_jitter,
+      Rcpp::Named("min_eigenvalue") = result.min_eigenvalue,
+      Rcpp::Named("matrix_scale") = result.matrix_scale,
+      Rcpp::Named("clamped_eigenvalues") = result.clamped_eigenvalues
+    )
+  );
+}
 
 //' C++ scalar-observation FFBS kernel
 //'
@@ -113,7 +149,8 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
                         const arma::mat& D,
                         const bool sample_path,
                         const arma::vec& jitter_ladder,
-                        const std::string evolution_label) {
+                        const std::string evolution_label,
+                        const bool allow_covariance_repair) {
   Rcpp::RNGScope scope;
   const arma::uword p = m0.n_elem;
   const arma::uword T = z.n_elem;
@@ -213,7 +250,9 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
   Rcpp::RObject path_out = R_NilValue;
   if (sample_path) {
     arma::mat path(p, T);
-    DrawResult terminal = mvn_draw(m.col(T - 1), C.slice(T - 1), jitter_ladder);
+    DrawResult terminal = mvn_draw(
+      m.col(T - 1), C.slice(T - 1), jitter_ladder, allow_covariance_repair
+    );
     path.col(T - 1) = terminal.draw;
     if (terminal.used_psd) ++psd_draw_count;
     if (terminal.jitter > 0.0) { ++jitter_count; max_jitter = std::max(max_jitter, terminal.jitter); }
@@ -235,7 +274,7 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
         arma::mat B = C.slice(t) * GG.slice(t + 1).t() * inv_from_lower(rf.chol_lower);
         arma::vec h = m.col(t) + B * (path.col(t + 1) - a.col(t + 1));
         arma::mat HC = symm(C.slice(t) - B * rf.matrix * B.t());
-        DrawResult state = mvn_draw(h, HC, jitter_ladder);
+        DrawResult state = mvn_draw(h, HC, jitter_ladder, allow_covariance_repair);
         path.col(t) = state.draw;
         if (state.used_psd) ++psd_draw_count;
         if (state.jitter > 0.0) { ++jitter_count; max_jitter = std::max(max_jitter, state.jitter); }

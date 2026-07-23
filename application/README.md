@@ -40,12 +40,17 @@ Use `rqr_evolution_fixed()` for an explicit fixed prior,
 `rqr_evolution_adaptive_working()` only when the experimental status is
 intentional.
 
-The default numerical policy fails on any covariance factorization requiring
-repair. The optional audit policy records each repair and prevents the fit from
-being marked promotion eligible. Full state-path storage defaults to off;
-terminal state draws remain available to `rqr_forecast_roots()`. Fit objects
-include a versioned provenance and RNG checkpoint, and `rqr_dlm_continue()`
-restarts the exact native Markov stream on the same platform.
+The default numerical policy fails on any Gaussian factorization requiring
+repair, including a negative-eigenvalue projection. The optional audit policy
+records each repair. Mathematical/numerical eligibility is separate from
+reproducibility eligibility; promotion additionally requires a clean checkout
+at an explicitly expected commit. Full state-path storage defaults to off;
+terminal state draws remain available to `rqr_forecast_roots()`, which can use
+either explicit future covariances or saved component-scale draws with fixed
+future templates. Fit objects include a versioned provenance and RNG
+checkpoint. `rqr_dlm_continue()` verifies schema, data/model digests, package,
+R, BLAS/LAPACK, dependencies, and source commit before claiming exact
+same-environment continuation.
 
 The heavy directories **data_local**, **cache**, **runs**, **logs**, and
 **outputs** are ignored by git.

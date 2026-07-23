@@ -41,11 +41,15 @@ The public constructor is deliberately named
 `rqr_evolution_fixed()`, `rqr_freeze_discount_template()`, or
 `rqr_evolution_component_scale()`.
 
-The package defaults to fail-fast covariance numerics. An audit mode can record
-repairs, but mathematical target status and numerical execution status are
-reported separately, and repaired fits are not promotion eligible. Compact fit
-objects retain terminal state draws, full RNG checkpoints, schema and Git/R/
-compiler/BLAS provenance, and data/matrix digests; full paths are opt-in.
+The package defaults to fail-fast Gaussian factorizations and rejects any
+negative-eigenvalue projection. An audit mode can record repairs, but
+mathematical target status, numerical execution status, and reproducibility
+eligibility are reported separately. Promotion requires an exact target, zero
+repairs, and a clean checkout at an explicitly expected commit. Compact fit
+objects retain terminal state draws, full RNG checkpoints, a versioned schema,
+Git/R/compiler/BLAS provenance, and data/matrix digests; full paths are opt-in.
+Component-scale forecasts can combine saved evolution-scale draws with fixed
+future component templates.
 
 The pinned exdqlm branch remains the read-only implementation reference for
 RQR-DESN and RHS-family compatibility.

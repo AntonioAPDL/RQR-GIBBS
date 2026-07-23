@@ -38,7 +38,7 @@ test-native: package-install
 
 package-check:
 	R CMD build application
-	R CMD check --no-manual rqrgibbs_0.1.0.9001.tar.gz
+	R CMD check --no-manual rqrgibbs_0.1.0.9002.tar.gz
 
 test-exdqlm-rqr:
 	$(R) application/scripts/02_smoke_rqr_exdqlm_branch.R

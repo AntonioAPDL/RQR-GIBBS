@@ -19,6 +19,34 @@
   sort(unique(c(0, ladder)))
 }
 
+.rqr_empty_repair_records <- function() {
+  data.frame(
+    stage = character(0), time = integer(0), strategy = character(0),
+    jitter = numeric(0), relative_jitter = numeric(0),
+    min_eigenvalue = numeric(0), matrix_scale = numeric(0),
+    clamped_eigenvalues = integer(0),
+    stringsAsFactors = FALSE
+  )
+}
+
+.rqr_add_repair_record <- function(records, stage, time, info) {
+  clamped <- as.integer(info$clamped_eigenvalues %||% 0L)
+  jitter <- as.numeric(info$jitter %||% 0)
+  if (jitter <= 0 && clamped <= 0L) return(records)
+  rbind(records, data.frame(
+    stage = as.character(stage), time = as.integer(time),
+    strategy = as.character(
+      info$strategy %||% if (jitter > 0) "cholesky_jitter" else "eigen_clamp"
+    ),
+    jitter = jitter,
+    relative_jitter = as.numeric(info$relative_jitter %||% NA_real_),
+    min_eigenvalue = as.numeric(info$min_eigenvalue %||% NA_real_),
+    matrix_scale = as.numeric(info$matrix_scale %||% NA_real_),
+    clamped_eigenvalues = clamped,
+    stringsAsFactors = FALSE
+  ))
+}
+
 .rqr_validate_covariance_cube <- function(x, name = "covariance", tolerance = 100 * .Machine$double.eps) {
   if (length(dim(x)) != 3L || dim(x)[1L] != dim(x)[2L] || any(!is.finite(x))) {
     stop(sprintf("%s must be a finite square covariance cube.", name), call. = FALSE)
@@ -77,12 +105,17 @@
   draw <- as.numeric(mean + backsolve(fac$chol, stats::rnorm(length(rhs))))
   list(draw = draw, mean = as.numeric(mean), info = list(
     strategy = if (fac$jitter == 0) "cholesky" else "cholesky_jitter",
-    jitter = fac$jitter
+    jitter = fac$jitter,
+    relative_jitter = fac$relative_jitter,
+    min_eigenvalue = fac$min_eigenvalue,
+    clamped_eigenvalues = 0L,
+    matrix_scale = fac$matrix_scale
   ))
 }
 
 .rqr_sample_mvnorm_covariance <- function(mean, covariance,
-                                           jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6)) {
+                                           jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6),
+                                           numerical_policy = c("fail", "record_repair")) {
   mean <- as.numeric(mean)
   covariance <- .rqr_symmetrize(covariance)
   if (!all(dim(covariance) == c(length(mean), length(mean))) ||
@@ -100,9 +133,19 @@
       )
     ))
   }
+  numerical_policy <- .rqr_numerical_policy(numerical_policy)
   ee <- eigen(covariance, symmetric = TRUE)
   scale <- max(1, max(abs(ee$values)))
   if (min(ee$values) >= -1e-10 * scale) {
+    if (identical(numerical_policy, "fail") && any(ee$values < 0)) {
+      stop(
+        paste(
+          "Gaussian covariance has a negative eigenvalue, and projection is",
+          "disabled under numerical_policy='fail'."
+        ),
+        call. = FALSE
+      )
+    }
     values <- pmax(ee$values, 0)
     return(list(
       draw = as.numeric(mean + ee$vectors %*% (sqrt(values) * stats::rnorm(length(mean)))),
@@ -114,6 +157,15 @@
         matrix_scale = scale
       )
     ))
+  }
+  if (identical(numerical_policy, "fail")) {
+    stop(
+      paste(
+        "Gaussian covariance is indefinite, and repair is disabled under",
+        "numerical_policy='fail'."
+      ),
+      call. = FALSE
+    )
   }
   fac <- .rqr_chol_with_jitter(covariance, jitter_ladder)
   list(

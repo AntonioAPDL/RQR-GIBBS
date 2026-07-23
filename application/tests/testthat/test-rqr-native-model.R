@@ -32,11 +32,49 @@ test_that("discount templates are deterministic and frozen", {
   expect_true(a$exact_joint_target)
   expect_true(a$frozen_before_mcmc)
   expect_equal(a$construction_audit$repair_count, 0L)
+  expect_identical(
+    names(a$construction_audit$repair_records),
+    c(
+      "stage", "time", "strategy", "jitter", "relative_jitter",
+      "min_eigenvalue", "matrix_scale", "clamped_eigenvalues"
+    )
+  )
   for (tt in seq_len(dim(a$W)[3L])) {
     Wt <- matrix(a$W[, , tt], nrow = dim(a$W)[1L], ncol = dim(a$W)[2L])
     expect_equal(Wt, t(Wt), tolerance = 1e-14)
     expect_gte(min(eigen(Wt, symmetric = TRUE, only.values = TRUE)$values), -1e-12)
   }
+})
+
+test_that("discount-template repairs use the complete FFBS ledger schema", {
+  model <- rqr_as_dlm_model(list(
+    FF = matrix(c(1, 0), 2, 1),
+    GG = diag(c(1, 0)),
+    m0 = c(0, 0),
+    C0 = diag(2),
+    component_dims = c(1, 1),
+    component_names = c("level", "degenerate")
+  ))
+  template <- rqr_freeze_discount_template(
+    model, n_time = 2, df = c(0.9, 1), dim.df = c(1, 1),
+    reference_variance = 1, numerical_policy = "record_repair"
+  )
+  records <- template$construction_audit$repair_records
+  expect_gt(nrow(records), 0L)
+  expect_equal(template$construction_audit$repair_count, nrow(records))
+  expect_true(all(records$stage == "discount_template_filter_covariance"))
+  expect_true(all(is.finite(records$jitter) & records$jitter > 0))
+  expect_true(all(is.finite(records$relative_jitter)))
+  expect_true(all(is.finite(records$min_eigenvalue)))
+  expect_true(all(is.finite(records$matrix_scale)))
+  expect_true(all(records$clamped_eigenvalues == 0L))
+  expect_error(
+    rqr_freeze_discount_template(
+      model, n_time = 2, df = c(0.9, 1), dim.df = c(1, 1),
+      reference_variance = 1, numerical_policy = "fail"
+    ),
+    "Cholesky"
+  )
 })
 
 test_that("fixed evolution covariances are symmetric positive semidefinite", {
@@ -99,6 +137,11 @@ test_that("component-scale evolution validates SPD templates and model blocks", 
   expect_s3_class(evo, "rqr_evolution")
   expect_identical(evo$mode, "component_scale")
   expect_true(evo$exact_joint_target)
+  materialized <- rqrgibbs:::.rqr_materialize_component_evolution(
+    evo, q = c(0.5, 2), n_time = 2, p = 3
+  )
+  expect_equal(materialized$W[, , 1], diag(c(0.5, 0.5, 1)))
+  expect_equal(materialized$W[, , 2], materialized$W[, , 1])
   expect_error(
     rqr_evolution_component_scale(
       templates = list(matrix(c(1, 2, 2, 1), 2, 2)), component_dims = 2
