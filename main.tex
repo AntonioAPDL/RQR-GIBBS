@@ -313,6 +313,20 @@ latent state path, for example
 \qquad \epsilon_{kt}\sim\Normal(0,W_{kt}),
 \qquad k=1,2.
 \]
+The two trajectories can be written as one stacked state with block-diagonal
+evolution matrices. That representation does not, however, give one Gaussian
+FFBS update. Jointly in the two root states, the augmented observation kernel
+contains the square of
+\[
+(y_t-F_t^\top\theta_{1t})(y_t-F_t^\top\theta_{2t}),
+\]
+and therefore includes fourth-order cross-terms. Conditional on either complete
+root path, the same expression is linear in the other path. The sampler
+accordingly partitions the stacked state by root and uses two sequential FFBS
+blocks. These are exact full-conditional updates for the declared fixed-joint
+target; the issue is potential Markov-chain mixing, not posterior
+approximation.
+
 Conditional on the second root path and the RQR latent scales, the first root
 path enters through
 \[
@@ -322,7 +336,7 @@ V_t=\phi_c s_Lv_t/\lambda.
 \]
 This is a scalar-observation Gaussian state-space system, so the complete root
 path can be sampled by forward-filtering backward-sampling. The second root
-path is analogous.
+path is analogous and conditions on the newly drawn first path.
 
 The evolution specification matters to the target. Fixed \(W_{kt}\) defines a
 Gaussian state prior and gives exact alternating FFBS. A frozen discount

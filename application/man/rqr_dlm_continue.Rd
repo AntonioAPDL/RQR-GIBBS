@@ -24,7 +24,9 @@ rqr_dlm_continue(
 
 \item{allow_environment_mismatch}{If `TRUE`, continue after an explicit
 warning when package, R, platform, BLAS/LAPACK, dependency, or source-commit
-metadata differ. Schema and data/model digest mismatches always stop.}
+metadata differ. Schema, checkpoint, data, model, target, and evolution
+digest mismatches always stop. The override is persisted and removes
+reproducibility and promotion eligibility from the returned segment.}
 }
 \value{
 A new `rqr_dlm_mcmc` segment beginning at the checkpoint.

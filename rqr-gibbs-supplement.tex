@@ -271,6 +271,33 @@ For root \(k=1,2\), let
 \theta_{kt}=G_t\theta_{k,t-1}+\epsilon_{kt},\qquad
 \epsilon_{kt}\sim\Normal(0,W_{kt}).
 \]
+Equivalently, define
+\[
+\alpha_t=
+\begin{pmatrix}\theta_{1t}\\\theta_{2t}\end{pmatrix},
+\qquad
+\mathcal G_t=
+\begin{pmatrix}G_t&0\\0&G_t\end{pmatrix},
+\qquad
+\mathcal W_t=
+\begin{pmatrix}W_{1t}&0\\0&W_{2t}\end{pmatrix}.
+\]
+Then \(\alpha_t=\mathcal G_t\alpha_{t-1}+\varepsilon_t\) is one stacked
+Gaussian state prior. It does not induce one conditionally Gaussian
+measurement update. Writing \(a_t=F_t^\top\theta_{1t}\) and
+\(b_t=F_t^\top\theta_{2t}\), the augmented kernel contains
+\[
+\left\{(y_t-a_t)(y_t-b_t)-\xi_cv_t\right\}^2.
+\]
+Expansion produces \(a_t^2b_t^2\), so its log kernel is quartic rather than
+quadratic in the stacked state. A conventional joint FFBS draw is therefore
+unavailable. Holding \(b_t\) fixed makes the expression affine in \(a_t\), and
+holding \(a_t\) fixed does the same for \(b_t\). Alternating the two
+root-specific FFBS draws is thus an exact blocked Gibbs scan for the stated
+target, not an approximation obtained by fitting the roots separately. A
+general non-Gaussian joint path sampler could target the same generalized
+posterior, but would give up the closed-form Gaussian FFBS blocks.
+
 Conditional on \(\theta_{2,1:T}\), \(v_{1:T}\), and \(\lambda\), root 1 has
 \begin{align}
 z_{1t}&=H_{1t}\theta_{1t}+\varepsilon_{1t},\\
@@ -447,12 +474,15 @@ root-label, and small end-to-end tests. Promotion-grade exact-target fits must
 have zero numerical repairs. A run manifest must then freeze data-generating
 mechanisms, sample sizes, train/test windows, forecast horizons, method
 configurations, seeds, package versions, and repository commits. Fit objects
-record data and matrix digests, RNG state, compiler and BLAS/LAPACK provenance,
-and a versioned schema. Promotion requires a clean detected checkout matching
-the exact commit declared in the run manifest. Exact continuation stops on
-schema or data/model-digest mismatch and, by default, on package, R, numerical
-library, or source-commit mismatch. Heavy state draws and fitted objects remain
-in ignored local output directories.
+record data, complete model/target/evolution, and checkpoint digests; RNG state;
+compiler and BLAS/LAPACK provenance; required external-repository states; and a
+versioned schema. Promotion requires clean detected checkouts matching every
+exact commit declared in the run manifest. Exact continuation stops on schema,
+checkpoint, data, model, target, or evolution mismatch and, by default, on
+package, R, numerical-library, dependency, or source-commit mismatch. An
+explicit portability override is persisted and removes reproducibility and
+promotion eligibility. Heavy state draws and fitted objects remain in ignored
+local output directories.
 
 Held-out RQR loss, empirical coverage error, and width at comparable coverage
 are primary. Oracle endpoint recovery is primary when the population RQR roots

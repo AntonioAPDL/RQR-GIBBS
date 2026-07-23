@@ -126,6 +126,36 @@ test_that("discount template inputs and component metadata fail explicitly", {
   expect_error(rqr_discount_matrix(0.9, 1.5), "positive integers")
 })
 
+test_that("material covariance asymmetry is rejected rather than silently changed", {
+  asymmetric <- matrix(c(1, 0, 0.2, 1), 2, 2)
+  expect_error(
+    rqr_as_dlm_model(list(
+      FF = matrix(c(1, 0), 2, 1),
+      GG = diag(2),
+      m0 = c(0, 0),
+      C0 = asymmetric
+    )),
+    "C0 is not symmetric"
+  )
+  expect_error(
+    rqr_evolution_component_scale(
+      templates = list(asymmetric),
+      component_dims = 2
+    ),
+    "templates\\[\\[1\\]\\] slice 1 is not symmetric"
+  )
+
+  machine_noise <- diag(2)
+  machine_noise[1, 2] <- .Machine$double.eps
+  model <- rqr_as_dlm_model(list(
+    FF = matrix(c(1, 0), 2, 1),
+    GG = diag(2),
+    m0 = c(0, 0),
+    C0 = machine_noise
+  ))
+  expect_equal(model$C0, t(model$C0), tolerance = 0)
+})
+
 test_that("component-scale evolution validates SPD templates and model blocks", {
   evo <- rqr_evolution_component_scale(
     templates = list(diag(2), matrix(0.5, 1, 1)),

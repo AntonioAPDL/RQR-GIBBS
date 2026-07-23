@@ -100,6 +100,15 @@ V[t]   = phi_c * s_L * v[t] / lambda.
 Root 2 is obtained by exchanging labels. Each conditional path draw is a
 scalar-observation Gaussian state-space update and is sampled by FFBS.
 
+The two paths can be concatenated into one state vector with block-diagonal
+`G` and `W` for the joint Gaussian state prior. They cannot be drawn by one
+ordinary Gaussian FFBS step. Jointly, the augmented observation term squares
+`(y - F' theta[1,t]) * (y - F' theta[2,t]) - xi_c * v[t]` and therefore
+contains a fourth-order cross-term. Fixing one path makes the same term affine
+in the other path. The two sequential root-specific FFBS steps are exact
+blocked full-conditionals for the fixed-joint target; only their mixing, not
+their target correctness, remains an empirical question.
+
 One partially collapsed scan is ordered as follows:
 
 1. Evaluate the loss from the current two paths.
@@ -241,26 +250,30 @@ layer from silently redefining the statistical target.
 3. Root-label exchangeability is checked under identical root priors.
 4. The learned-scale collapsed update and post-lambda latent-scale refresh are
    tested directly.
-5. Component-scale inverse-Gamma conditionals, time-zero states, extreme-scale
-   GIG draws, restart continuation, local-level cases, missing observations,
-   and numerical diagnostics pass focused tests.
+5. Component-scale inverse-Gamma conditionals, analytic forecast moments,
+   time-zero states, extreme-scale GIG draws, restart continuation, checkpoint
+   mutation rejection, local-level cases, missing observations, cross-time
+   path moments, and numerical diagnostics pass focused tests.
 6. The simulation protocol freezes common data-generating mechanisms, sample
    sizes, train/test windows, seeds, methods, and scoring rules.
 7. Every run manifest records this repository commit, the pinned exdqlm
    commit, package/session information, configuration, and seeds.
 8. Fit objects distinguish unavailable Git state from a clean checkout and
    record schema, Git/package/R/compiler/BLAS/LAPACK provenance, RNG state,
-   data and matrix digests, and numerical-repair status.
+   complete data/model/target/evolution and checkpoint digests, required
+   external-repository states, and numerical-repair status.
 9. Promotion-grade fixtures use the fail-fast numerical policy, record zero
-   repairs, and match a clean checkout to the exact commit declared in the run
-   manifest.
+   repairs, and match clean primary and required external checkouts to the
+   exact commits declared in the run manifest. An environment override is
+   durable and makes the continued segment ineligible.
 10. Heavy objects remain under ignored local directories.
 
 ## External-review resolution
 
 The adaptive conditional-discount question is resolved negatively for the
 advertised simple kernels. The exact shared `component_scale` mode implements
-the recommended coherent alternative. The next external review should audit
-the proof statement, draw-specific component-scale forecasting, strict
-negative-eigenvalue policy, complete repair ledgers, and enforced
-continuation/provenance schema before any bounded pilot is authorized.
+the recommended coherent alternative. Output-4 continuation and provenance
+gaps are closed through complete contract digests, external exdqlm enforcement,
+strict checkpoint integrity, and durable portability metadata. A bounded pilot
+remains gated on the complete validation matrix and frozen manifest rather than
+on additional production-scale implementation.

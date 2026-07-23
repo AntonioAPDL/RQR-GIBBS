@@ -47,17 +47,30 @@
   ))
 }
 
+.rqr_validate_symmetric_matrix <- function(
+    x, name = "matrix", tolerance = 100 * .Machine$double.eps) {
+  x <- as.matrix(x)
+  if (nrow(x) != ncol(x) || any(!is.finite(x))) {
+    stop(sprintf("%s must be a finite square matrix.", name), call. = FALSE)
+  }
+  scale <- max(1, max(abs(x)))
+  if (max(abs(x - t(x))) > tolerance * scale) {
+    stop(sprintf("%s is not symmetric.", name), call. = FALSE)
+  }
+  .rqr_symmetrize(x)
+}
+
 .rqr_validate_covariance_cube <- function(x, name = "covariance", tolerance = 100 * .Machine$double.eps) {
   if (length(dim(x)) != 3L || dim(x)[1L] != dim(x)[2L] || any(!is.finite(x))) {
     stop(sprintf("%s must be a finite square covariance cube.", name), call. = FALSE)
   }
   for (tt in seq_len(dim(x)[3L])) {
-    current <- matrix(x[, , tt], nrow = dim(x)[1L], ncol = dim(x)[2L])
+    current <- .rqr_validate_symmetric_matrix(
+      matrix(x[, , tt], nrow = dim(x)[1L], ncol = dim(x)[2L]),
+      sprintf("%s slice %d", name, tt),
+      tolerance
+    )
     scale <- max(1, max(abs(current)))
-    if (max(abs(current - t(current))) > tolerance * scale) {
-      stop(sprintf("%s slice %d is not symmetric.", name, tt), call. = FALSE)
-    }
-    current <- .rqr_symmetrize(current)
     minimum <- min(eigen(current, symmetric = TRUE, only.values = TRUE)$values)
     if (minimum < -tolerance * scale) {
       stop(sprintf("%s slice %d is materially indefinite.", name, tt), call. = FALSE)

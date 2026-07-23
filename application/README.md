@@ -48,9 +48,13 @@ at an explicitly expected commit. Full state-path storage defaults to off;
 terminal state draws remain available to `rqr_forecast_roots()`, which can use
 either explicit future covariances or saved component-scale draws with fixed
 future templates. Fit objects include a versioned provenance and RNG
-checkpoint. `rqr_dlm_continue()` verifies schema, data/model digests, package,
-R, BLAS/LAPACK, dependencies, and source commit before claiming exact
-same-environment continuation.
+checkpoint. `rqr_dlm_continue()` verifies schema, checkpoint integrity,
+complete model/target/evolution digests, package, R, compiler, BLAS/LAPACK,
+dependencies, RNG kind, and source commits before claiming exact
+same-environment continuation. Any explicit environment override is stored in
+the returned segment and removes reproducibility and promotion eligibility.
+RQR-DESN and RHS promotion also requires the installed exdqlm version and a
+clean detected checkout at the pinned exdqlm commit.
 
 The heavy directories **data_local**, **cache**, **runs**, **logs**, and
 **outputs** are ignored by git.

@@ -105,6 +105,32 @@ test_that("fixed-W FFBS moments match an independent dense Gaussian posterior", 
   expect_equal(fit_cpp$smooth_cov, fit_r$smooth_cov, tolerance = 1e-12)
   expect_equal(fit_r$diagnostics$repair_count, 0L)
   expect_equal(fit_cpp$diagnostics$repair_count, 0L)
+
+  set.seed(1202)
+  n_path <- 5000L
+  sampled_paths <- replicate(
+    n_path,
+    as.vector(rqr_ffbs_sample(
+      z, H, V, GG, m0, C0, list(mode = "fixed_W", W = W),
+      backend = "cpp", numerical_policy = "fail"
+    )$path)
+  )
+  sampled_mean <- rowMeans(sampled_paths)
+  mean_mcse <- sqrt(diag(post_cov) / n_path)
+  expect_lte(max(abs(sampled_mean - post_mean) / mean_mcse), 5)
+
+  sampled_cov <- stats::cov(t(sampled_paths))
+  cross_time_pairs <- rbind(c(1L, 7L), c(2L, 8L), c(1L, 4L))
+  covariance_z <- apply(cross_time_pairs, 1L, function(pair) {
+    ii <- pair[1L]
+    jj <- pair[2L]
+    covariance_mcse <- sqrt(
+      (post_cov[ii, ii] * post_cov[jj, jj] + post_cov[ii, jj]^2) /
+        (n_path - 1L)
+    )
+    abs(sampled_cov[ii, jj] - post_cov[ii, jj]) / covariance_mcse
+  })
+  expect_lte(max(covariance_z), 5)
 })
 
 test_that("backward covariance repair is consistent and fully recorded", {

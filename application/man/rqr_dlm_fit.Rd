@@ -73,9 +73,9 @@ spellings are accepted and normalized to these names.}
 
 \item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
 
-\item{provenance_control}{Optional list with `repo_root` and a complete
-40-character `expected_git_commit`. Promotion eligibility requires a
-verified clean checkout at that expected commit.}
+\item{provenance_control}{Optional primary-repository provenance plus named
+`external_repositories`. Repository specifications contain `repo_root` and
+a complete 40-character `expected_git_commit`.}
 
 \item{mcmc_control}{Iteration, seed, storage, backend, progress, and jitter
 controls.}

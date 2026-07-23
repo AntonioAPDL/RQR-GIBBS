@@ -24,9 +24,10 @@
 #'   supports `"ridge"` and `"rhs_ns"`.
 #' @param numerical_policy Either `"fail"` or `"record_repair"` for Gaussian
 #'   precision factorizations.
-#' @param provenance_control Optional list with `repo_root` and a complete
-#'   40-character `expected_git_commit`. Promotion eligibility requires a
-#'   verified clean checkout at that expected commit.
+#' @param provenance_control Optional primary-repository provenance plus named
+#'   `external_repositories`. Each repository specification contains
+#'   `repo_root` and a complete 40-character `expected_git_commit`. RHS fits
+#'   require the pinned exdqlm repository for promotion eligibility.
 #' @param mcmc_control Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
 #'   `verbose`, `progress_every`, `precision_beta`, and `store_latent_draws`.
 #' @param init Optional initial values.
@@ -83,6 +84,9 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   }
   if (identical(beta_prior_type, "rhs_ns")) {
     .qdesn_assert_rhs_prior_obj_intercept_policy(beta_prior_obj, context = "rqr_mcmc_fit")
+    provenance_control <- .rqr_require_external_repository(
+      provenance_control, "exdqlm", .rqr_pinned_exdqlm_commit()
+    )
   }
 
   if (!is.list(mcmc_control)) stop("mcmc_control must be a list.", call. = FALSE)
@@ -275,7 +279,23 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     initial_seed = seed,
     repo_root = provenance_control$repo_root,
     expected_git_commit = provenance_control$expected_git_commit,
-    backend = "R_precision_cholesky"
+    backend = "R_precision_cholesky",
+    objects = list(
+      target = list(
+        coverage_level = constants$alpha,
+        learning_rate_mode = learning_rate_mode,
+        fixed_learning_rate = if (learn_lambda) NA_real_ else learning_rate,
+        loss_reference_scale = loss_reference_scale,
+        lambda_prior = lambda_prior,
+        beta_prior_type = beta_prior_type,
+        beta_prior_hypers = beta_prior_obj$hypers,
+        numerical_policy = numerical_policy,
+        precision_beta = precision_beta_cfg
+      )
+    ),
+    external_repositories = provenance_control$external_repositories,
+    required_external_repositories =
+      provenance_control$required_external_repositories
   )
   target_numerical_eligible <- numerically_exact
   out <- list(

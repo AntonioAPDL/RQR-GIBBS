@@ -237,6 +237,53 @@ test_that("exact component scales use the analytic shared inverse-Gamma conditio
   )
 })
 
+test_that("component-scale root forecasts match analytic state moments", {
+  n_save <- 1L
+  q <- 0.4
+  terminal <- 2
+  fixture <- structure(list(
+    samp.theta_terminal_root1 = matrix(terminal, 1, n_save),
+    samp.theta_terminal_root2 = matrix(terminal, 1, n_save),
+    samp.evolution_scale = matrix(q, n_save, 1),
+    evolution = rqr_evolution_component_scale(
+      templates = list(matrix(1, 1, 1)),
+      component_dims = 1L,
+      prior = list(shape = 2, rate = 1),
+      initial = 1,
+      component_names = "level"
+    ),
+    model_spec = list(
+      evolution_mode = "component_scale",
+      numerical_policy = "fail"
+    ),
+    misc = list(jitter_ladder = 0)
+  ), class = c("rqr_dlm_mcmc", "rqr_fit"))
+
+  n_draw <- 4000L
+  H <- 3L
+  forecast <- rqr_forecast_roots(
+    fixture,
+    FF_future = matrix(1, 1, H),
+    GG_future = 1,
+    component_templates_future = list(matrix(1, 1, 1)),
+    nd = n_draw,
+    seed = 1210
+  )
+  analytic_mean <- rep(terminal, H)
+  analytic_variance <- seq_len(H) * q
+  empirical_mean <- rowMeans(forecast$eta_root1)
+  empirical_variance <- apply(forecast$eta_root1, 1L, stats::var)
+  mean_mcse <- sqrt(analytic_variance / n_draw)
+  variance_mcse <- sqrt(2 * analytic_variance^2 / (n_draw - 1L))
+  expect_lte(max(abs(empirical_mean - analytic_mean) / mean_mcse), 5)
+  expect_lte(max(abs(empirical_variance - analytic_variance) / variance_mcse), 5)
+  expect_equal(
+    forecast$diagnostics$component_scale_draws,
+    matrix(q, n_draw, 1)
+  )
+  expect_equal(forecast$diagnostics$repair_count, 0L)
+})
+
 test_that("DLM checkpoints continue with the same RNG stream", {
   y <- sin(seq_len(9) / 3)
   model <- rqr_polytrend(1L, C0 = 2)
@@ -258,13 +305,28 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.1.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.2.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
                     names(first$provenance$matrix_digests)))
+  expect_identical(
+    names(first$provenance$object_digests),
+    c("model", "target", "evolution")
+  )
+  expect_identical(
+    first$checkpoint_digest,
+    rqrgibbs:::.rqr_digest(first$checkpoint_state)
+  )
   expect_equal(first$provenance$initial_seed, 1205L)
   expect_identical(first$model_spec$loss_name, "rqr_residual_product_check_loss")
+  expect_true(second$continuation_contract$continued_from_checkpoint)
+  expect_true(second$continuation_contract$bitwise_continuation_claim)
+  expect_false(second$continuation_contract$environment_override_used)
+  expect_identical(
+    second$continuation_contract$parent_checkpoint_digest,
+    first$checkpoint_digest
+  )
 
   altered_data <- first
   altered_data$y[1] <- altered_data$y[1] + 1
@@ -276,11 +338,128 @@ test_that("DLM checkpoints continue with the same RNG stream", {
   altered_environment$provenance$package_version <- "0.0.0"
   expect_error(rqr_dlm_continue(altered_environment, 1), "environment differs")
   expect_warning(
-    rqr_dlm_continue(
+    portable <- rqr_dlm_continue(
       altered_environment, 1, allow_environment_mismatch = TRUE
     ),
     "not claimed"
   )
+  expect_true(portable$continuation_contract$environment_override_used)
+  expect_false(portable$continuation_contract$bitwise_continuation_claim)
+  expect_true("package_version" %in%
+                portable$continuation_contract$environment_mismatches)
+  expect_false(portable$model_spec$reproducibility_eligible)
+  expect_false(portable$model_spec$promotion_eligible)
+})
+
+test_that("DLM continuation rejects every target and checkpoint mutation", {
+  y <- cos(seq_len(7) / 4)
+  model <- rqr_as_dlm_model(list(
+    FF = matrix(1, 1, 1), GG = matrix(1, 1, 1), m0 = 0, C0 = 2,
+    component_dims = 1L, component_names = "level"
+  ))
+  fit <- rqr_dlm_fit(
+    y, model, 0.8,
+    evolution_mode = "component_scale",
+    component_templates = list(matrix(1, 1, 1)),
+    evolution_scale_prior = list(shape = 3, rate = 2),
+    learning_rate_mode = "learned_pseudoresidual_normalized",
+    lambda_prior = list(shape = 4, rate = 5),
+    mcmc_control = list(n_burn = 0, n_mcmc = 2, seed = 1211, backend = "cpp")
+  )
+
+  target_mutations <- list(
+    m0 = function(x) {
+      x$model$m0[1] <- x$model$m0[1] + 1
+      x
+    },
+    component_name = function(x) {
+      x$model$component_names[1] <- "changed"
+      x
+    },
+    coverage = function(x) {
+      x$model_spec$coverage_level <- 0.7
+      x
+    },
+    loss_scale = function(x) {
+      x$model_spec$loss_reference_scale <- 2
+      x
+    },
+    lambda_prior = function(x) {
+      x$model_spec$lambda_prior$rate <- x$model_spec$lambda_prior$rate + 1
+      x
+    },
+    evolution_prior = function(x) {
+      x$evolution$prior$rate[1] <- x$evolution$prior$rate[1] + 1
+      x
+    },
+    numerical_ladder = function(x) {
+      x$misc$jitter_ladder <- c(0, 1e-9)
+      x
+    }
+  )
+  for (name in names(target_mutations)) {
+    altered <- target_mutations[[name]](fit)
+    expect_error(
+      rqr_dlm_continue(altered, 1),
+      "model, target, or evolution digest",
+      info = name
+    )
+  }
+
+  checkpoint_mutations <- list(
+    root1 = function(x) {
+      x$checkpoint_state$theta_root1[1, 1] <-
+        x$checkpoint_state$theta_root1[1, 1] + 1
+      x
+    },
+    root2 = function(x) {
+      x$checkpoint_state$theta_root2[1, 1] <-
+        x$checkpoint_state$theta_root2[1, 1] + 1
+      x
+    },
+    latent_v = function(x) {
+      x$checkpoint_state$latent_v[1] <-
+        x$checkpoint_state$latent_v[1] + 1
+      x
+    },
+    lambda = function(x) {
+      x$checkpoint_state$lambda <- x$checkpoint_state$lambda + 1
+      x
+    },
+    component_scale = function(x) {
+      x$checkpoint_state$evolution_scale[1] <-
+        x$checkpoint_state$evolution_scale[1] + 1
+      x
+    },
+    theta0_root1 = function(x) {
+      x$checkpoint_state$theta0_root1[1] <-
+        x$checkpoint_state$theta0_root1[1] + 1
+      x
+    },
+    theta0_root2 = function(x) {
+      x$checkpoint_state$theta0_root2[1] <-
+        x$checkpoint_state$theta0_root2[1] + 1
+      x
+    },
+    iteration = function(x) {
+      x$checkpoint_state$completed_iterations <-
+        x$checkpoint_state$completed_iterations + 1L
+      x
+    },
+    rng = function(x) {
+      set.seed(999)
+      x$checkpoint_state$rng_state <- .Random.seed
+      x
+    }
+  )
+  for (name in names(checkpoint_mutations)) {
+    altered <- checkpoint_mutations[[name]](fit)
+    expect_error(
+      rqr_dlm_continue(altered, 1),
+      "checkpoint digest",
+      info = name
+    )
+  }
 })
 
 test_that("iteration controls fail with actionable scalar-integer errors", {
@@ -325,6 +504,86 @@ test_that("unknown Git status is distinct from a clean checkout", {
   expect_true(is.na(provenance$git_dirty))
   expect_false(provenance$provenance_complete)
   expect_false(provenance$reproducibility_eligible)
+})
+
+test_that("strict provenance includes toolchain and required external repositories", {
+  skip_if(Sys.which("git") == "", "git is required for provenance fixtures")
+  make_repo <- function(label) {
+    path <- tempfile(label)
+    dir.create(path)
+    system2("git", c("-C", path, "init", "--quiet"))
+    system2("git", c("-C", path, "config", "user.email", "test@example.org"))
+    system2("git", c("-C", path, "config", "user.name", "RQR Test"))
+    writeLines(label, file.path(path, "fixture.txt"))
+    system2("git", c("-C", path, "add", "fixture.txt"))
+    system2("git", c("-C", path, "commit", "--quiet", "-m", "fixture"))
+    list(
+      root = normalizePath(path, mustWork = TRUE),
+      commit = trimws(system2(
+        "git", c("-C", path, "rev-parse", "HEAD"), stdout = TRUE
+      )[1])
+    )
+  }
+  primary <- make_repo("primary")
+  external <- make_repo("external")
+  control <- rqrgibbs:::.rqr_require_external_repository(
+    list(
+      repo_root = primary$root,
+      expected_git_commit = primary$commit,
+      external_repositories = list(
+        exdqlm = list(
+          repo_root = external$root,
+          expected_git_commit = external$commit
+        )
+      )
+    ),
+    "exdqlm", external$commit
+  )
+  provenance <- rqrgibbs:::.rqr_provenance(
+    data = list(y = 1:3),
+    matrices = list(X = diag(3)),
+    repo_root = control$repo_root,
+    expected_git_commit = control$expected_git_commit,
+    backend = "test_backend",
+    external_repositories = control$external_repositories,
+    required_external_repositories = control$required_external_repositories
+  )
+  expect_true(all(c("compiler", "BLAS", "LAPACK", "backend", "RNGkind") %in%
+                    names(provenance)))
+  expect_true(all(vapply(
+    provenance[c("compiler", "BLAS", "LAPACK", "backend")],
+    rqrgibbs:::.rqr_nonmissing_text,
+    logical(1L)
+  )))
+  expect_true("exdqlm" %in% names(provenance$dependency_versions))
+  expect_true(provenance$external_repositories$exdqlm$provenance_complete)
+  expect_true(provenance$external_repositories$exdqlm$reproducibility_eligible)
+
+  missing_external <- rqrgibbs:::.rqr_provenance(
+    data = list(y = 1:3), matrices = list(X = diag(3)),
+    repo_root = primary$root, backend = "test_backend",
+    required_external_repositories = "exdqlm"
+  )
+  expect_false(missing_external$provenance_complete)
+  expect_false(missing_external$reproducibility_eligible)
+  expect_error(
+    rqrgibbs:::.rqr_require_external_repository(
+      list(external_repositories = list(
+        exdqlm = list(expected_git_commit = paste(rep("0", 40), collapse = ""))
+      )),
+      "exdqlm",
+      rqrgibbs:::.rqr_pinned_exdqlm_commit()
+    ),
+    "pinned commit"
+  )
+})
+
+test_that("DESN forecast horizon rejects fractional values", {
+  object <- structure(list(), class = "rqr_desn_fit")
+  expect_error(
+    forecast_paths.rqr_desn_fit(object, H = 2.9),
+    "H must be one finite integer"
+  )
 })
 
 test_that("VB draw and iteration controls reject fractional values", {

@@ -20,10 +20,9 @@ forecast_paths.rqr_desn_fit <- function(object, H, X_future = NULL,
                                         plugin = NULL,
                                         nd = NULL,
                                         seed = NULL,
-                                        ...) {
+  ...) {
   if (!inherits(object, "rqr_desn_fit")) stop("Expected an rqr_desn_fit object.", call. = FALSE)
-  H <- as.integer(H)[1L]
-  if (!is.finite(H) || H < 1L) stop("H must be a positive integer.", call. = FALSE)
+  H <- .rqr_scalar_integer(H, "H", 1L)
   history_driver <- match.arg(history_driver)
 
   if (is.null(X_future) && identical(history_driver, "plugin")) {

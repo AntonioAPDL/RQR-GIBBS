@@ -124,6 +124,48 @@
   )
 }
 
+.rqr_dlm_model_contract <- function(expanded) {
+  list(
+    FF = expanded$FF,
+    GG = expanded$GG,
+    m0 = expanded$m0,
+    C0 = expanded$C0,
+    component_dims = expanded$component_dims,
+    component_names = expanded$component_names,
+    state_dimension = expanded$p,
+    n_time = expanded$n_time
+  )
+}
+
+.rqr_dlm_target_contract <- function(
+    coverage_level, learning_rate_mode, fixed_learning_rate,
+    loss_reference_scale, lambda_prior, numerical_policy, jitter_ladder) {
+  list(
+    loss_name = "rqr_residual_product_check_loss",
+    coverage_level = coverage_level,
+    learning_rate_mode = learning_rate_mode,
+    fixed_learning_rate = fixed_learning_rate,
+    loss_reference_scale = loss_reference_scale,
+    lambda_prior = lambda_prior,
+    numerical_policy = numerical_policy,
+    jitter_ladder = as.numeric(jitter_ladder),
+    root_priors_exchangeable = TRUE,
+    root_swap_move = TRUE
+  )
+}
+
+.rqr_dlm_evolution_contract <- function(evolution) {
+  unclass(evolution)
+}
+
+.rqr_dlm_provenance_objects <- function(expanded, evolution, target_contract) {
+  list(
+    model = .rqr_dlm_model_contract(expanded),
+    target = target_contract,
+    evolution = .rqr_dlm_evolution_contract(evolution)
+  )
+}
+
 .rqr_dlm_coverage_summary <- function(y, observed, lower, upper) {
   lower_mean <- rowMeans(lower)
   upper_mean <- rowMeans(upper)
@@ -181,9 +223,9 @@
 #'   spellings are accepted and normalized to these names.
 #' @param lambda_prior Gamma shape--rate prior without a custom power field.
 #' @param numerical_policy Either `"fail"` or `"record_repair"`.
-#' @param provenance_control Optional list with `repo_root` and a complete
-#'   40-character `expected_git_commit`. Promotion eligibility requires a
-#'   verified clean checkout at that expected commit.
+#' @param provenance_control Optional primary-repository provenance plus named
+#'   `external_repositories`. Repository specifications contain `repo_root` and
+#'   a complete 40-character `expected_git_commit`.
 #' @param mcmc_control Iteration, seed, storage, backend, progress, and jitter
 #'   controls.
 #' @param init Optional initial states, latent scales, lambda, evolution scales,
@@ -454,6 +496,15 @@ rqr_dlm_fit <- function(
   mathematical_exact <- isTRUE(evolution$exact_joint_target)
   rng_state <- .rqr_rng_state()
   completed_offset <- as.integer(init$completed_iterations %||% 0L)
+  target_contract <- .rqr_dlm_target_contract(
+    coverage_level = constants$alpha,
+    learning_rate_mode = learning_rate_mode,
+    fixed_learning_rate = if (learn_lambda) NA_real_ else learning_rate,
+    loss_reference_scale = loss_reference_scale,
+    lambda_prior = lambda_prior,
+    numerical_policy = numerical_policy,
+    jitter_ladder = jitter_ladder
+  )
   provenance <- .rqr_provenance(
     data = list(y = y),
     matrices = .rqr_dlm_provenance_matrices(expanded, evolution),
@@ -461,7 +512,13 @@ rqr_dlm_fit <- function(
     initial_seed = seed,
     repo_root = provenance_control$repo_root,
     expected_git_commit = provenance_control$expected_git_commit,
-    backend = backend
+    backend = backend,
+    objects = .rqr_dlm_provenance_objects(
+      expanded, evolution, target_contract
+    ),
+    external_repositories = provenance_control$external_repositories,
+    required_external_repositories =
+      provenance_control$required_external_repositories
   )
   target_numerical_eligible <- mathematical_exact && numerical_exact
   checkpoint <- list(
@@ -476,6 +533,7 @@ rqr_dlm_fit <- function(
     evolution_scale = q_evolution,
     rng_state = rng_state
   )
+  checkpoint_digest <- .rqr_digest(checkpoint)
   out <- list(
     method = "mcmc_ffbs",
     family = "rqr_dlm",
@@ -542,6 +600,7 @@ rqr_dlm_fit <- function(
     ),
     provenance = provenance,
     checkpoint_state = checkpoint,
+    checkpoint_digest = checkpoint_digest,
     last = checkpoint,
     misc = list(
       n_burn = n_burn, n_mcmc = n_keep, thin = thin, seed = seed,
@@ -575,6 +634,14 @@ rqr_dlm_fit <- function(
       call. = FALSE
     )
   }
+  stored_checkpoint_digest <- object$checkpoint_digest %||% NA_character_
+  if (!.rqr_nonmissing_text(stored_checkpoint_digest) ||
+      !identical(.rqr_digest(object$checkpoint_state), stored_checkpoint_digest)) {
+    stop(
+      "Continuation checkpoint digest does not match the fitted object.",
+      call. = FALSE
+    )
+  }
 
   expanded <- .rqr_expand_model(rqr_as_dlm_model(object$model), length(object$y))
   current_data_digest <- .rqr_digest(list(y = as.numeric(object$y)))
@@ -587,6 +654,29 @@ rqr_dlm_fit <- function(
   if (!identical(current_matrix_digests, object$provenance$matrix_digests)) {
     stop("Continuation model/evolution matrix digests do not match the fitted object.", call. = FALSE)
   }
+  fixed_rate <- object$model_spec$fixed_learning_rate
+  if (is.null(fixed_rate) || !is.finite(fixed_rate)) fixed_rate <- NA_real_
+  current_target_contract <- .rqr_dlm_target_contract(
+    coverage_level = object$model_spec$coverage_level,
+    learning_rate_mode = object$model_spec$learning_rate_mode,
+    fixed_learning_rate = fixed_rate,
+    loss_reference_scale = object$model_spec$loss_reference_scale,
+    lambda_prior = object$model_spec$lambda_prior,
+    numerical_policy = object$model_spec$numerical_policy,
+    jitter_ladder = object$misc$jitter_ladder
+  )
+  current_object_digests <- lapply(
+    .rqr_dlm_provenance_objects(
+      expanded, object$evolution, current_target_contract
+    ),
+    .rqr_digest
+  )
+  if (!identical(current_object_digests, object$provenance$object_digests)) {
+    stop(
+      "Continuation model, target, or evolution digest does not match the fitted object.",
+      call. = FALSE
+    )
+  }
 
   stored_expected <- object$provenance$expected_git_commit %||% NA_character_
   current <- .rqr_provenance(
@@ -595,17 +685,29 @@ rqr_dlm_fit <- function(
     numerical_policy = object$model_spec$numerical_policy,
     repo_root = object$provenance$repo_root %||% NA_character_,
     expected_git_commit = if (is.na(stored_expected)) NULL else stored_expected,
-    backend = object$misc$backend
+    backend = object$misc$backend,
+    objects = .rqr_dlm_provenance_objects(
+      expanded, object$evolution, current_target_contract
+    ),
+    external_repositories = object$provenance$external_repositories,
+    required_external_repositories =
+      object$provenance$required_external_repositories
   )
   compare_fields <- c(
     "package_version", "R_version", "platform", "compiler", "BLAS", "LAPACK",
-    "git_commit", "backend"
+    "git_commit", "backend", "RNGkind"
   )
   mismatches <- compare_fields[!vapply(compare_fields, function(field) {
     identical(object$provenance[[field]], current[[field]])
   }, logical(1L))]
   if (!identical(object$provenance$dependency_versions, current$dependency_versions)) {
     mismatches <- c(mismatches, "dependency_versions")
+  }
+  if (!identical(
+        object$provenance$external_repositories,
+        current$external_repositories
+      )) {
+    mismatches <- c(mismatches, "external_repositories")
   }
   if (length(mismatches)) {
     message <- sprintf(
@@ -622,7 +724,12 @@ rqr_dlm_fit <- function(
       call. = FALSE
     )
   }
-  invisible(list(current_provenance = current, environment_mismatches = mismatches))
+  invisible(list(
+    current_provenance = current,
+    environment_mismatches = unique(mismatches),
+    checkpoint_digest = stored_checkpoint_digest,
+    object_digests = current_object_digests
+  ))
 }
 
 #' Continue an RQR-DLM chain from its exact checkpoint
@@ -636,7 +743,9 @@ rqr_dlm_fit <- function(
 #' @param store_state_draws,store_latent_draws Storage choices for new draws.
 #' @param allow_environment_mismatch If `TRUE`, continue after an explicit
 #'   warning when package, R, platform, BLAS/LAPACK, dependency, or source-commit
-#'   metadata differ. Schema and data/model digest mismatches always stop.
+#'   metadata differ. Schema, checkpoint, data, model, target, and evolution
+#'   digest mismatches always stop. The override is persisted and removes
+#'   reproducibility and promotion eligibility from the returned segment.
 #' @return A new `rqr_dlm_mcmc` segment beginning at the checkpoint.
 #' @export
 rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
@@ -646,12 +755,14 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
   if (!inherits(object, "rqr_dlm_mcmc")) stop("Expected an rqr_dlm_mcmc object.", call. = FALSE)
   n_mcmc <- .rqr_scalar_integer(n_mcmc, "n_mcmc", 1L)
   thin <- .rqr_scalar_integer(thin, "thin", 1L)
-  .rqr_validate_dlm_continuation(object, allow_environment_mismatch)
+  validation <- .rqr_validate_dlm_continuation(
+    object, allow_environment_mismatch
+  )
   checkpoint <- object$checkpoint_state
   if (is.null(checkpoint$rng_state)) stop("The fit does not contain a complete RNG checkpoint.", call. = FALSE)
   fixed_rate <- object$model_spec$fixed_learning_rate
   if (is.null(fixed_rate) || !is.finite(fixed_rate)) fixed_rate <- 1
-  rqr_dlm_fit(
+  segment <- rqr_dlm_fit(
     y = object$y,
     model = object$model,
     coverage_level = object$model_spec$coverage_level,
@@ -668,7 +779,20 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
         NULL
       } else {
         object$provenance$expected_git_commit
-      }
+      },
+      external_repositories = lapply(
+        object$provenance$external_repositories %||% list(),
+        function(x) list(
+          repo_root = if (is.na(x$repo_root)) NULL else x$repo_root,
+          expected_git_commit = if (is.na(x$expected_git_commit)) {
+            NULL
+          } else {
+            x$expected_git_commit
+          }
+        )
+      ),
+      required_external_repositories =
+        object$provenance$required_external_repositories %||% character(0)
     ),
     mcmc_control = list(
       n_burn = 0L, n_mcmc = n_mcmc, thin = thin, seed = NULL,
@@ -689,6 +813,38 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
       completed_iterations = checkpoint$completed_iterations
     )
   )
+  environment_override_used <- length(validation$environment_mismatches) > 0L
+  parent_reproducibility_eligible <- isTRUE(
+    object$provenance$reproducibility_eligible
+  )
+  current_environment_eligible <- isTRUE(
+    segment$provenance$reproducibility_eligible
+  )
+  inherited_reproducibility_eligible <- current_environment_eligible &&
+    parent_reproducibility_eligible && !environment_override_used
+  segment$continuation_contract <- list(
+    continued_from_checkpoint = TRUE,
+    parent_checkpoint_digest = validation$checkpoint_digest,
+    parent_completed_iterations = checkpoint$completed_iterations,
+    model_target_evolution_digests = validation$object_digests,
+    environment_mismatches = validation$environment_mismatches,
+    environment_override_used = environment_override_used,
+    bitwise_continuation_claim = !environment_override_used,
+    parent_reproducibility_eligible = parent_reproducibility_eligible,
+    current_environment_reproducibility_eligible =
+      current_environment_eligible
+  )
+  segment$provenance$continued_from_checkpoint <- TRUE
+  segment$provenance$parent_checkpoint_digest <- validation$checkpoint_digest
+  segment$provenance$environment_override_used <- environment_override_used
+  segment$provenance$reproducibility_eligible <-
+    inherited_reproducibility_eligible
+  segment$model_spec$reproducibility_eligible <-
+    inherited_reproducibility_eligible
+  segment$model_spec$promotion_eligible <-
+    isTRUE(segment$model_spec$target_numerical_eligible) &&
+    inherited_reproducibility_eligible
+  segment
 }
 
 #' @export

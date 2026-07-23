@@ -54,7 +54,9 @@ rqr_evolution_adaptive_working <- function(df, component_dims) {
     stop(sprintf("%s must be a finite %d x %d matrix or cube.", name, d, d), call. = FALSE)
   }
   for (tt in seq_len(dx[3L])) {
-    x[, , tt] <- .rqr_symmetrize(x[, , tt])
+    x[, , tt] <- .rqr_validate_symmetric_matrix(
+      x[, , tt], sprintf("%s slice %d", name, tt)
+    )
     .rqr_chol_with_jitter(x[, , tt], jitter_ladder = 0)
   }
   x

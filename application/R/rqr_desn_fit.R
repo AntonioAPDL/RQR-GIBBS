@@ -21,7 +21,9 @@
 #' @param lambda_prior Gamma prior for learned `lambda`, passed to
 #'   [rqr_mcmc_fit()].
 #' @param numerical_policy Numerical factorization policy for MCMC.
-#' @param provenance_control Provenance gate passed to [rqr_mcmc_fit()].
+#' @param provenance_control Provenance gate passed to [rqr_mcmc_fit()]. For
+#'   MCMC, the exact pinned exdqlm checkout is required for reproducibility and
+#'   promotion eligibility because exdqlm constructs the DESN design.
 #' @param mcmc_args Named list for [rqr_mcmc_fit()].
 #' @param vb_args Named list for [rqr_vb_fit()].
 #' @param fit_readout If `FALSE`, return the design shell before fitting RQR.
@@ -109,6 +111,11 @@ rqr_desn_fit <- function(y, coverage_level, ...,
         stop("rqr_desn_fit MCMC supports beta_prior_type in {'ridge','rhs_ns'}.", call. = FALSE)
       }
     }
+    desn_provenance_control <- .rqr_require_external_repository(
+      mcmc_args$provenance_control %||% provenance_control,
+      "exdqlm",
+      .rqr_pinned_exdqlm_commit()
+    )
     fit <- rqr_mcmc_fit(
       y = design_fit$y_fit,
       X = design_fit$X,
@@ -120,7 +127,7 @@ rqr_desn_fit <- function(y, coverage_level, ...,
       lambda_prior = mcmc_args$lambda_prior %||% lambda_prior,
       beta_prior_obj = beta_prior_obj,
       numerical_policy = mcmc_args$numerical_policy %||% numerical_policy,
-      provenance_control = mcmc_args$provenance_control %||% provenance_control,
+      provenance_control = desn_provenance_control,
       mcmc_control = mcmc_args$mcmc_control %||% mcmc_args,
       init = mcmc_args$init %||% list()
     )

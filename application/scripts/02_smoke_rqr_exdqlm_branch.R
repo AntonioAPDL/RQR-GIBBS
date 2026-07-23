@@ -29,13 +29,31 @@ if (is.na(exdqlm_repo)) {
 exdqlm_repo <- normalizePath(exdqlm_repo, mustWork = TRUE)
 
 expected_commit <- "dffb71ee70b597d6a716ee74be1cbc99731cd453"
-actual_commit <- system2("git", c("-C", exdqlm_repo, "rev-parse", "HEAD"), stdout = TRUE)
-branch <- system2("git", c("-C", exdqlm_repo, "rev-parse", "--abbrev-ref", "HEAD"), stdout = TRUE)
+expected_branch <- "feature/rqr-desn-readout-20260716"
+actual_commit <- trimws(system2(
+  "git", c("-C", exdqlm_repo, "rev-parse", "HEAD"), stdout = TRUE
+)[1])
+branch <- trimws(system2(
+  "git", c("-C", exdqlm_repo, "rev-parse", "--abbrev-ref", "HEAD"), stdout = TRUE
+)[1])
+dirty <- system2(
+  "git", c("-C", exdqlm_repo, "status", "--porcelain"), stdout = TRUE
+)
 cat("exdqlm_repo:", exdqlm_repo, "\n")
 cat("branch:", branch, "\n")
 cat("commit:", actual_commit, "\n")
 if (!identical(actual_commit, expected_commit)) {
-  warning("exdqlm commit differs from expected RQR seed commit: ", expected_commit, call. = FALSE)
+  stop("exdqlm commit differs from pinned RQR commit: ", expected_commit, call. = FALSE)
+}
+if (!identical(branch, expected_branch)) {
+  stop("exdqlm branch differs from pinned RQR branch: ", expected_branch, call. = FALSE)
+}
+if (length(dirty)) {
+  stop(
+    "The pinned exdqlm worktree must be clean. Dirty entries: ",
+    paste(dirty, collapse = "; "),
+    call. = FALSE
+  )
 }
 
 if (!requireNamespace("pkgload", quietly = TRUE)) {

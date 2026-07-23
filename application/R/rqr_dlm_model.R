@@ -60,6 +60,7 @@ rqr_as_dlm_model <- function(model) {
   if (any(!is.finite(FF)) || any(!is.finite(GG)) || any(!is.finite(m0)) || any(!is.finite(C0))) {
     stop("model matrices must be finite.", call. = FALSE)
   }
+  C0 <- .rqr_validate_symmetric_matrix(C0, "C0")
   .rqr_chol_with_jitter(C0, jitter_ladder = 0)
   component_dims <- .rqr_positive_integer_vector(
     model$component_dims %||% p, "component_dims"
@@ -77,7 +78,7 @@ rqr_as_dlm_model <- function(model) {
     FF = FF,
     GG = GG,
     m0 = matrix(m0, p, 1L),
-    C0 = .rqr_symmetrize(C0),
+    C0 = C0,
     component_dims = component_dims,
     component_names = component_names
   )
