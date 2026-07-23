@@ -64,10 +64,13 @@ docs/implementation_notes/chatgpt_pro_output5_followup_prompt.md
 docs/implementation_notes/chatgpt_pro_output6_followup_prompt.md
 docs/implementation_notes/chatgpt_pro_output7_followup_prompt.md
 docs/implementation_notes/chatgpt_pro_output8_followup_prompt.md
+docs/implementation_notes/chatgpt_pro_output9_followup_prompt.md
 Chatgpt_output*
+/*chatgpt_pro_output*
 /chatgpt_pro_output*_audit_*.md
 /chatgpt_pro_output*_codex_handoff_*.md
 /chatgpt_pro_output*_artifact_hashes.csv
+/chatgpt_pro_output*_findings_*.csv
 /output*_independent_cdf_check.csv
 /output*_independent_quadrature_check.csv
 /output*_corrected_cdf_gate_check*

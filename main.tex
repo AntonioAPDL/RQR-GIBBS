@@ -409,9 +409,10 @@ external namespaces are built in isolated libraries from Git archives whose
 file modes, blob identifiers, and paths match the declared commit trees.
 Promotion also requires the executing primary namespace to match that isolated
 runtime; a clean source checkout alone is insufficient. The local-build
-attestation rehashes the build and installation command receipts and logs,
-checks the built source-package contents against the verified archive, and
-binds the installed runtime to that source package.
+attestation compares the complete expected and built source-package file sets,
+rehashes post-command build and installation receipts and logs, requires one
+successful full-package installation, and binds both the pre-marker and final
+installed-runtime digests to that source package.
 Terminal states and component-scale draws are retained for root forecasting
 with explicit future covariance templates.
 

@@ -3,7 +3,7 @@ PDFLATEX ?= pdflatex
 BIBTEX ?= bibtex
 LATEXMK ?= latexmk
 
-.PHONY: pdf supplement all-pdf smoke package-install prepare-primary-runtime prepare-exdqlm-runtime test-native package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded execute-dlm-bounded literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf smoke package-install prepare-primary-runtime prepare-exdqlm-runtime test-native package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded benchmark-dlm-bounded-one-cell execute-dlm-bounded literature-manifest clean-tex
 
 pdf:
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
@@ -44,7 +44,7 @@ test-native: package-install
 
 package-check:
 	R CMD build application
-	R CMD check --no-manual rqrgibbs_0.1.0.9008.tar.gz
+	R CMD check --no-manual rqrgibbs_0.1.0.9009.tar.gz
 
 test-exdqlm-rqr: package-install prepare-exdqlm-runtime
 	$(R) application/scripts/02_smoke_rqr_exdqlm_branch.R
@@ -59,6 +59,9 @@ preflight-dlm-bounded: prepare-primary-runtime
 
 reference-dlm-bounded: prepare-primary-runtime
 	application/scripts/08_run_rqr_dlm_bounded_validation.sh reference-only
+
+benchmark-dlm-bounded-one-cell: prepare-primary-runtime
+	application/scripts/08_run_rqr_dlm_bounded_validation.sh benchmark-one-cell
 
 execute-dlm-bounded: prepare-primary-runtime
 	application/scripts/08_run_rqr_dlm_bounded_validation.sh execute-bounded

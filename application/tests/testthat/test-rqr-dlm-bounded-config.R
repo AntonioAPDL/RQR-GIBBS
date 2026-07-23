@@ -8,7 +8,7 @@ test_that("bounded dynamic fixture configuration is exact and non-production", {
   config <- environment$rqr_dlm_bounded_dynamic_fixtures
 
   expect_identical(
-    config$schema_version, "rqrgibbs_dlm_bounded_fixtures/3.0.0"
+    config$schema_version, "rqrgibbs_dlm_bounded_fixtures/4.0.0"
   )
   expect_true(config$generalized_bayes)
   expect_false(config$response_likelihood)
@@ -17,8 +17,17 @@ test_that("bounded dynamic fixture configuration is exact and non-production", {
   expect_false(config$bounded_dynamic_execution_authorized)
   expect_identical(
     config$runner_modes,
-    c("preflight", "reference-only", "execute-bounded")
+    c(
+      "preflight", "reference-only", "benchmark-one-cell",
+      "execute-bounded"
+    )
   )
+  expect_true(config$benchmark_one_cell_authorized)
+  expect_identical(
+    config$benchmark$fixture_id,
+    "shared_component_scale_trend_regression"
+  )
+  expect_identical(config$benchmark$chains, 4L)
   expect_identical(config$mcmc$chains, 4L)
   expect_identical(config$mcmc$burn_in, 2000L)
   expect_identical(config$mcmc$retained_per_chain, 4000L)
@@ -34,6 +43,10 @@ test_that("bounded dynamic fixture configuration is exact and non-production", {
   expect_identical(config$continuation$uninterrupted_retained, 6L)
   expect_true(config$resources$sequential_execution)
   expect_true(config$resources$require_active_process_tree_monitor)
+  expect_identical(
+    config$resources$monitor_kind, "pgid_sampled_fallback"
+  )
+  expect_false(config$resources$kernel_hard_memory_ceiling)
   expect_identical(config$gates$mcse_provider, "posterior_mcse_mean")
   expect_setequal(
     vapply(

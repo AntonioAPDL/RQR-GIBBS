@@ -26,8 +26,10 @@ launcher fixes the common BLAS/OpenMP thread controls at one before fitting.
 Its Linux `VmHWM` value is explicitly a main-R-process sidecar, not a
 whole-process-tree memory measurement. The intercept-only pilot enforces its
 wall-time and artifact-size gates and does not read an application dataset.
-The dynamic runner uses a separate process-group monitor to record peak summed
-RSS, process count, and thread count and to enforce a hard timeout.
+The dynamic runner uses a separate process-group monitor with signal traps and
+a final process-group sweep. It enforces a hard wall-time limit and terminates
+when a sampled resource limit is exceeded. Its summed RSS, process-count, and
+thread-count maxima are sampled telemetry, not kernel-hard peaks.
 
 ## Fixed learned-scale fixture
 
@@ -133,13 +135,32 @@ profiles, four chains, and a six-draw continuation check split into three
 history segments with generation indices 0, 1, and 2. It also fixes
 zero-repair numerics, maintained rank-normalized diagnostics and mean MCSE,
 state-path storage for validation, latent-scale non-storage, and isolated
-primary runtime binding. Root-swap activity is a sidecar because the
+primary runtime binding. The isolated-runtime verifier requires equality of
+the complete expected and built source-package file sets, post-command build
+and installation receipts, one successful full-package installation, and both
+pre-marker and final installed-runtime digests. Root-swap activity is a
+sidecar because the
 algorithm deliberately proposes a global label swap; ordered endpoints,
 widths, midpoints, loss, learning rate, and component scales are the primary
 mixing targets. The discount fixture extends its frozen recursion through
 `T+H` and verifies exact reproduction of its first `T` slices. Future
 component templates are explicit. The config excludes `adaptive_discount`,
-marks itself non-production, and does not authorize execution. Use
-`make preflight-dlm-bounded` and then `make reference-dlm-bounded` only after
-supplying the reviewed primary commit. The committed execution flag remains
+marks itself non-production, and does not authorize the 24-fit execution.
+
+The schema-4 runner has four modes. `preflight` constructs the canonical
+objects. `reference-only` adds full cross-time Gaussian FFBS covariance,
+canonical missing-index invariance, public future-root moments for every
+fixture, retained two-component inverse-Gamma conditionals, and bitwise
+`6=2+2+2` continuation for all six fixture/mode cells. It also rejects
+digest-consistent fractional and otherwise invalid history counts.
+`benchmark-one-cell` runs the full four-chain schedule only for the
+component-scale learned-rate cell and records timing and storage; its
+diagnostics are descriptive rather than promotion gates. `execute-bounded`
+requires an independently reviewed full commit, the complete hashed reference
+bundle from the identical runtime and toolchain, an explicit confirmation, and
+a separately enabled configuration flag. It diagnoses every training-time and
+future interval-root functional and stops after any failing four-chain cell.
+All chain files are written atomically below ignored output roots, while compact
+summaries, failure records, checkpoint and provenance manifests, and recursive
+artifact hashes are retained as review evidence. The execution flag remains
 false, so the 24 fits cannot be launched from this protocol revision.

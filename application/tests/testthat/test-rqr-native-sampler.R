@@ -208,13 +208,48 @@ test_that("exact component scales use the analytic shared inverse-Gamma conditio
     evolution_mode = "component_scale",
     component_templates = list(matrix(1, 1, 1)),
     evolution_scale_prior = list(shape = 3, rate = 2),
-    mcmc_control = list(n_burn = 1, n_mcmc = 4, seed = 1204, backend = "cpp")
+    mcmc_control = list(
+      n_burn = 1, n_mcmc = 4, seed = 1204, backend = "cpp",
+      store_state_draws = TRUE
+    )
   )
   expect_identical(fit$model_spec$evolution_mode, "component_scale")
   expect_true(fit$model_spec$exact_joint_target)
   expect_true(fit$model_spec$target_numerical_eligible)
   expect_false(fit$model_spec$promotion_eligible)
   expect_equal(dim(fit$samp.evolution_scale), c(4L, 1L))
+  expect_equal(
+    dim(fit$samp.evolution_scale_shape),
+    dim(fit$samp.evolution_scale)
+  )
+  expect_equal(
+    dim(fit$samp.evolution_scale_rate),
+    dim(fit$samp.evolution_scale)
+  )
+  recomputed <- lapply(seq_len(4L), function(draw) {
+    rqrgibbs:::.rqr_component_scale_posterior(
+      matrix(
+        fit$samp.theta_root1[, , draw],
+        nrow = fit$expanded_model$p
+      ),
+      matrix(
+        fit$samp.theta_root2[, , draw],
+        nrow = fit$expanded_model$p
+      ),
+      fit$samp.theta0_root1[, draw],
+      fit$samp.theta0_root2[, draw],
+      fit$expanded_model$GG,
+      fit$evolution
+    )
+  })
+  expect_equal(
+    unname(fit$samp.evolution_scale_shape),
+    do.call(rbind, lapply(recomputed, `[[`, "shape"))
+  )
+  expect_equal(
+    unname(fit$samp.evolution_scale_rate),
+    do.call(rbind, lapply(recomputed, `[[`, "rate"))
+  )
   expect_equal(dim(fit$samp.theta0_root1), c(1L, 4L))
   expect_true(all(is.finite(fit$samp.evolution_scale) & fit$samp.evolution_scale > 0))
 
@@ -305,7 +340,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.6.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.7.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
@@ -504,6 +539,46 @@ test_that("continuation inherits numerical and source history cumulatively", {
   expect_error(
     rqr_dlm_continue(impossible_target, n_mcmc = 1),
     "conflicts with redundant fit metadata"
+  )
+
+  invalid_counts <- c(0.5, -0.5, Inf, .Machine$integer.max + 1)
+  for (generation_index in 1:2) {
+    for (field in c(
+        "generation", "segment_numerical_repair_count",
+        "cumulative_numerical_repair_count"
+      )) {
+      for (value in invalid_counts) {
+        invalid <- grandchild
+        invalid$continuation_history_contract$
+          segments[[generation_index]][[field]] <- value
+        invalid$continuation_history_digest <- rqrgibbs:::.rqr_digest(
+          invalid$continuation_history_contract
+        )
+        expect_error(
+          rqr_dlm_continue(invalid, n_mcmc = 1),
+          "structurally invalid|cumulative recursion",
+          info = paste(generation_index - 1L, field, value)
+        )
+      }
+    }
+  }
+  invalid_completed <- grandchild
+  invalid_completed$checkpoint_state$completed_iterations <- 0.5
+  invalid_completed$checkpoint_digest <- rqrgibbs:::.rqr_digest(
+    invalid_completed$checkpoint_state
+  )
+  final_segment <- length(
+    invalid_completed$continuation_history_contract$segments
+  )
+  invalid_completed$continuation_history_contract$
+    segments[[final_segment]]$checkpoint_digest <-
+      invalid_completed$checkpoint_digest
+  invalid_completed$continuation_history_digest <- rqrgibbs:::.rqr_digest(
+    invalid_completed$continuation_history_contract
+  )
+  expect_error(
+    rqr_dlm_continue(invalid_completed, n_mcmc = 1),
+    "completed_iterations"
   )
 
   altered_source <- fit
@@ -788,7 +863,7 @@ test_that("strict provenance includes toolchain and required external repositori
   )
 })
 
-test_that("runtime lineage binds a real build and rejects mixed artifacts", {
+test_that("runtime lineage binds one complete build and install", {
   skip_if(Sys.which("git") == "", "git is required for provenance fixtures")
   skip_if(Sys.which("R") == "", "R is required for package-build fixtures")
   package <- "rqrlineagefixture"
@@ -797,6 +872,7 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
   staging <- file.path(artifacts, "staging")
   library <- file.path(artifacts, "library")
   dir.create(file.path(source, "R"), recursive = TRUE)
+  dir.create(file.path(source, "inst", "extdata"), recursive = TRUE)
   dir.create(staging, recursive = TRUE)
   dir.create(library, recursive = TRUE)
   writeLines(
@@ -816,6 +892,10 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
   writeLines(
     "lineage_value <- function() 'archive-A'",
     file.path(source, "R", "lineage.R")
+  )
+  writeLines(
+    "required,lineage\nTRUE,archive-A",
+    file.path(source, "inst", "extdata", "required.csv")
   )
   git <- function(args, stdout = FALSE) {
     system2(
@@ -851,22 +931,50 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
     0L
   )
   utils::untar(source_archive, exdir = staging)
-  source_archive_sha <- digest::digest(
-    file = source_archive, algo = "sha256", serialize = FALSE
+  file_sha <- function(path) digest::digest(
+    file = path, algo = "sha256", serialize = FALSE
   )
+  source_archive_sha <- file_sha(source_archive)
   r_bin <- file.path(R.home("bin"), "R")
-  command_receipt <- function(path, executable, arguments, workdir,
-                              input_path, input_sha) {
+  directory_sha <- rqrgibbs:::.rqr_directory_digest
+  command_receipt <- function(
+      path, phase, executable, arguments, workdir,
+      input_path, input_sha, output_path, output_sha,
+      stdout_path, stderr_path, exit_status, started_at, ended_at,
+      library_path = NA_character_) {
     receipt <- list(
+      schema_version = "rqrgibbs_command_receipt/2.0.0",
+      phase = phase,
       executable = normalizePath(executable, winslash = "/", mustWork = TRUE),
       arguments = arguments,
       working_directory = normalizePath(
         workdir, winslash = "/", mustWork = TRUE
       ),
-      input_path = normalizePath(
+      input_paths = normalizePath(
         input_path, winslash = "/", mustWork = TRUE
       ),
-      input_sha256 = input_sha
+      input_sha256 = input_sha,
+      output_path = normalizePath(
+        output_path, winslash = "/", mustWork = TRUE
+      ),
+      output_sha256 = output_sha,
+      library_path = if (is.na(library_path)) {
+        NA_character_
+      } else {
+        normalizePath(library_path, winslash = "/", mustWork = TRUE)
+      },
+      stdout_path = normalizePath(
+        stdout_path, winslash = "/", mustWork = TRUE
+      ),
+      stdout_sha256 = file_sha(stdout_path),
+      stderr_path = normalizePath(
+        stderr_path, winslash = "/", mustWork = TRUE
+      ),
+      stderr_sha256 = file_sha(stderr_path),
+      exit_status = as.integer(exit_status),
+      started_at = started_at,
+      ended_at = ended_at,
+      elapsed_seconds = ended_at - started_at
     )
     saveRDS(receipt, path, version = 3)
     list(
@@ -882,17 +990,18 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
   build_arguments <- c(
     "CMD", "build", "--no-manual", "--no-build-vignettes", package
   )
-  build_receipt <- command_receipt(
-    file.path(artifacts, "build.command.rds"), r_bin, build_arguments,
-    staging, file.path(staging, package), source_archive_sha
-  )
+  build_input <- file.path(staging, package)
+  build_input_sha <- directory_sha(build_input)
   old <- setwd(staging)
   on.exit(setwd(old), add = TRUE)
+  build_started <- as.numeric(Sys.time())
+  build_status <- system2(
+    r_bin, build_arguments,
+    stdout = build_stdout, stderr = build_stderr
+  )
+  build_ended <- as.numeric(Sys.time())
   expect_identical(
-    system2(
-      r_bin, build_arguments,
-      stdout = build_stdout, stderr = build_stderr
-    ),
+    build_status,
     0L
   )
   setwd(old)
@@ -901,6 +1010,12 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
   )
   source_package_sha <- digest::digest(
     file = source_package, algo = "sha256", serialize = FALSE
+  )
+  build_receipt <- command_receipt(
+    file.path(artifacts, "build.command.rds"), "build",
+    r_bin, build_arguments, staging,
+    build_input, build_input_sha, source_package, source_package_sha,
+    build_stdout, build_stderr, build_status, build_started, build_ended
   )
   source_lineage <- rqrgibbs:::.rqr_source_package_lineage(
     source_archive, package, source_package
@@ -912,29 +1027,38 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
     "CMD", "INSTALL", "--preclean", "--clean",
     paste0("--library=", shQuote(library)), shQuote(source_package)
   )
-  install_receipt <- command_receipt(
-    file.path(artifacts, "install.command.rds"), r_bin,
-    install_arguments, artifacts, source_package, source_package_sha
+  install_started <- as.numeric(Sys.time())
+  install_status <- system2(
+    r_bin, install_arguments,
+    stdout = install_stdout, stderr = install_stderr
   )
+  install_ended <- as.numeric(Sys.time())
   expect_identical(
-    system2(
-      r_bin, install_arguments,
-      stdout = install_stdout, stderr = install_stderr
-    ),
+    install_status,
     0L
   )
   runtime_path <- normalizePath(
     file.path(library, package), winslash = "/", mustWork = TRUE
   )
+  runtime_pre_marker_digest <- directory_sha(runtime_path)
+  install_receipt <- command_receipt(
+    file.path(artifacts, "install.command.rds"), "install",
+    r_bin, install_arguments, artifacts,
+    source_package, source_package_sha,
+    runtime_path, runtime_pre_marker_digest,
+    install_stdout, install_stderr, install_status,
+    install_started, install_ended, library
+  )
   marker_path <- file.path(runtime_path, "RQR-RUNTIME-LINEAGE.rds")
   marker <- list(
-    schema_version = "rqrgibbs_runtime_lineage_marker/1.0.0",
+    schema_version = "rqrgibbs_runtime_lineage_marker/2.0.0",
     package = package,
     package_version = "0.0.1",
     source_package_sha256 = source_package_sha,
     built_source_manifest_digest =
       source_lineage$built_source_manifest_digest,
-    install_command_receipt_sha256 = install_receipt$sha256
+    install_command_receipt_sha256 = install_receipt$sha256,
+    installed_tree_pre_marker_digest = runtime_pre_marker_digest
   )
   saveRDS(marker, marker_path, version = 3)
   marker_sha <- digest::digest(
@@ -945,9 +1069,6 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
   on.exit({
     if (package %in% loadedNamespaces()) unloadNamespace(package)
   }, add = TRUE)
-  file_sha <- function(path) digest::digest(
-    file = path, algo = "sha256", serialize = FALSE
-  )
   git_manifest <- rqrgibbs:::.rqr_git_manifest_payload(
     source, commit, "."
   )
@@ -955,7 +1076,7 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
     source_archive, package
   )
   attestation <- list(
-    schema_version = "rqrgibbs_runtime_attestation/4.0.0",
+    schema_version = "rqrgibbs_runtime_attestation/5.0.0",
     package = package,
     package_version = "0.0.1",
     source_commit = commit,
@@ -980,6 +1101,11 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
     source_package_path = source_package,
     source_package_sha256 = source_package_sha,
     source_package_archive_match = TRUE,
+    expected_source_manifest_digest =
+      source_lineage$expected_source_manifest_digest,
+    expected_source_manifest_entries =
+      source_lineage$expected_source_manifest_entries,
+    build_input_tree_digest = build_input_sha,
     built_source_manifest_digest =
       source_lineage$built_source_manifest_digest,
     built_source_manifest_entries =
@@ -1012,9 +1138,13 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
     install_input_path = normalizePath(
       source_package, winslash = "/", mustWork = TRUE
     ),
+    install_library_path = normalizePath(
+      library, winslash = "/", mustWork = TRUE
+    ),
     runtime_package_path = runtime_path,
     runtime_lineage_marker_path = marker_path,
     runtime_lineage_marker_sha256 = marker_sha,
+    runtime_pre_marker_tree_digest = runtime_pre_marker_digest,
     runtime_package_tree_digest = runtime_digest,
     runtime_isolated_from_source = TRUE,
     R_version = R.version.string,
@@ -1025,6 +1155,7 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
     source_package_sha256 = source_package_sha,
     built_source_manifest_digest =
       source_lineage$built_source_manifest_digest,
+    runtime_pre_marker_tree_digest = runtime_pre_marker_digest,
     runtime_package_tree_digest = runtime_digest,
     build_stdout_sha256 = file_sha(build_stdout),
     build_stderr_sha256 = file_sha(build_stderr),
@@ -1056,6 +1187,45 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
   expect_true(matched$runtime_source_match)
   expect_true(matched$reproducibility_eligible)
 
+  subset_root <- file.path(artifacts, "subset")
+  dir.create(subset_root)
+  utils::untar(source_package, exdir = subset_root)
+  unlink(file.path(
+    subset_root, package, "inst", "extdata", "required.csv"
+  ))
+  subset_package <- file.path(artifacts, "source-subset.tar.gz")
+  expect_identical(
+    system2(
+      "tar",
+      c("-czf", subset_package, "-C", subset_root, package)
+    ),
+    0L
+  )
+  subset_lineage <- rqrgibbs:::.rqr_source_package_lineage(
+    source_archive, package, subset_package
+  )
+  expect_false(subset_lineage$match)
+  expect_identical(
+    subset_lineage$missing_expected_entries,
+    "inst/extdata/required.csv"
+  )
+  expect_false(rqrgibbs:::.rqr_command_shape_verified(
+    "install",
+    c(install_arguments, shQuote(subset_package)),
+    source_package,
+    library
+  ))
+  failed_receipt <- install_receipt$receipt
+  failed_receipt$exit_status <- 1L
+  failed_path <- file.path(artifacts, "failed-install.command.rds")
+  saveRDS(failed_receipt, failed_path, version = 3)
+  failed_sha <- file_sha(failed_path)
+  expect_false(rqrgibbs:::.rqr_command_receipt_verified(
+    failed_path, failed_sha, "install",
+    source_package, source_package_sha,
+    runtime_path, runtime_pre_marker_digest, library
+  ))
+
   mixed_root <- file.path(artifacts, "mixed")
   dir.create(mixed_root)
   utils::untar(source_package, exdir = mixed_root)
@@ -1074,26 +1244,6 @@ test_that("runtime lineage binds a real build and rejects mixed artifacts", {
   mixed <- attestation
   mixed$source_package_path <- mixed_package
   mixed$source_package_sha256 <- file_sha(mixed_package)
-  mixed$install_input_path <- mixed_package
-  mixed_install_receipt <- command_receipt(
-    file.path(artifacts, "mixed-install.command.rds"), r_bin,
-    c(
-      "CMD", "INSTALL", "--preclean", "--clean",
-      paste0("--library=", shQuote(library)), shQuote(mixed_package)
-    ),
-    artifacts, mixed_package, mixed$source_package_sha256
-  )
-  mixed$install_arguments <- mixed_install_receipt$receipt$arguments
-  mixed$install_command_receipt_path <- mixed_install_receipt$path
-  mixed$install_command_receipt_sha256 <- mixed_install_receipt$sha256
-  mixed_receipt_args <- receipt_args
-  mixed_receipt_args$source_package_sha256 <- mixed$source_package_sha256
-  mixed_receipt_args$install_command_receipt_sha256 <-
-    mixed_install_receipt$sha256
-  mixed$runtime_install_receipt_digest <- do.call(
-    rqrgibbs:::.rqr_runtime_install_receipt_digest,
-    mixed_receipt_args
-  )
   saveRDS(mixed, attestation_path, version = 3)
   rejected <- rqrgibbs:::.rqr_repository_provenance(list(
     repo_root = source,

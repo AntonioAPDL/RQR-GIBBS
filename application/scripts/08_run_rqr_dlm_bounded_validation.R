@@ -1,9 +1,11 @@
 #!/usr/bin/env Rscript
 
-# Three-mode bounded RQR-DLM validation runner.
+# Four-mode bounded RQR-DLM validation runner.
 #
 # preflight       construct and hash all canonical objects;
 # reference-only  execute deterministic and small Monte Carlo reference gates;
+# benchmark-one-cell
+#                 execute one full four-chain representative cell only;
 # execute-bounded run the frozen 3 x 2 x 4 fits only after a separately reviewed
 #                 source commit and explicit dual authorization.
 #
@@ -13,7 +15,10 @@
 
 arguments <- commandArgs(trailingOnly = TRUE)
 mode <- if (length(arguments)) arguments[1L] else "preflight"
-allowed_modes <- c("preflight", "reference-only", "execute-bounded")
+allowed_modes <- c(
+  "preflight", "reference-only", "benchmark-one-cell",
+  "execute-bounded"
+)
 if (!mode %in% allowed_modes) {
   stop(
     "Mode must be one of: ", paste(allowed_modes, collapse = ", "),
@@ -150,7 +155,7 @@ config <- config_environment$rqr_dlm_bounded_dynamic_fixtures
 if (!is.list(config) ||
     !identical(
       config$schema_version,
-      "rqrgibbs_dlm_bounded_fixtures/3.0.0"
+      "rqrgibbs_dlm_bounded_fixtures/4.0.0"
     ) ||
     !identical(config$mcmc$backend, "cpp") ||
     !identical(config$mcmc$numerical_policy, "fail") ||
@@ -187,7 +192,8 @@ monitor_contract <- c(
 expected_monitor_contract <- c(
   timeout_seconds = 60 * config$resources$hard_timeout_minutes,
   maximum_rss_kib =
-    1024^2 * config$resources$maximum_process_tree_rss_gib,
+    1024^2 *
+      config$resources$maximum_sampled_process_group_rss_gib,
   maximum_threads =
     config$resources$maximum_process_tree_threads,
   maximum_processes =
@@ -198,6 +204,16 @@ if (mode != "preflight" &&
     (!all(is.finite(monitor_contract)) ||
       !identical(
         unname(monitor_contract), unname(expected_monitor_contract)
+      ) ||
+      !identical(
+        Sys.getenv("RQR_PROCESS_MONITOR_KIND", unset = ""),
+        config$resources$monitor_kind
+      ) ||
+      !identical(
+        Sys.getenv(
+          "RQR_MONITOR_KERNEL_HARD_MEMORY", unset = ""
+        ),
+        "FALSE"
       ))) {
   stop(
     "The active process monitor does not match the frozen resource contract.",
@@ -228,6 +244,80 @@ if (!nzchar(output_dir)) {
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 output_dir <- normalizePath(output_dir, winslash = "/", mustWork = TRUE)
 
+atomic_path <- function(path) {
+  tempfile(
+    paste0(".", basename(path), "-"),
+    tmpdir = dirname(path)
+  )
+}
+atomic_write_csv <- function(value, path) {
+  temporary <- atomic_path(path)
+  on.exit(unlink(temporary), add = TRUE)
+  utils::write.csv(value, temporary, row.names = FALSE)
+  if (!file.rename(temporary, path)) {
+    stop("Could not atomically publish ", basename(path), ".", call. = FALSE)
+  }
+  invisible(path)
+}
+atomic_write_json <- function(value, path) {
+  temporary <- atomic_path(path)
+  on.exit(unlink(temporary), add = TRUE)
+  jsonlite::write_json(
+    value, temporary, auto_unbox = TRUE, pretty = TRUE,
+    digits = NA, null = "null"
+  )
+  if (!file.rename(temporary, path)) {
+    stop("Could not atomically publish ", basename(path), ".", call. = FALSE)
+  }
+  invisible(path)
+}
+atomic_save_rds <- function(value, path, compress = TRUE) {
+  temporary <- atomic_path(path)
+  on.exit(unlink(temporary), add = TRUE)
+  saveRDS(value, temporary, version = 3, compress = compress)
+  if (!file.rename(temporary, path)) {
+    stop("Could not atomically publish ", basename(path), ".", call. = FALSE)
+  }
+  invisible(path)
+}
+atomic_write_lines <- function(value, path) {
+  temporary <- atomic_path(path)
+  on.exit(unlink(temporary), add = TRUE)
+  writeLines(value, temporary, useBytes = TRUE)
+  if (!file.rename(temporary, path)) {
+    stop("Could not atomically publish ", basename(path), ".", call. = FALSE)
+  }
+  invisible(path)
+}
+
+failure_columns <- c(
+  "recorded_at", "mode", "stage", "fixture_id",
+  "learning_rate_mode", "chain", "message"
+)
+failure_log <- as.data.frame(
+  setNames(replicate(
+    length(failure_columns), character(0), simplify = FALSE
+  ), failure_columns),
+  stringsAsFactors = FALSE
+)
+failure_path <- file.path(output_dir, "failure_log.csv")
+atomic_write_csv(failure_log, failure_path)
+record_failure <- function(
+    stage, message, fixture_id = NA_character_,
+    learning_rate_mode = NA_character_, chain = NA_integer_) {
+  failure_log <<- rbind(failure_log, data.frame(
+    recorded_at = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    mode = mode,
+    stage = as.character(stage),
+    fixture_id = as.character(fixture_id),
+    learning_rate_mode = as.character(learning_rate_mode),
+    chain = as.character(chain),
+    message = conditionMessage(message),
+    stringsAsFactors = FALSE
+  ))
+  atomic_write_csv(failure_log, failure_path)
+}
+
 construction <- do.call(rbind, lapply(constructed, function(item) {
   audit <- item$construction_audit
   data.frame(
@@ -250,13 +340,43 @@ construction <- do.call(rbind, lapply(constructed, function(item) {
     stringsAsFactors = FALSE
   )
 }))
-utils::write.csv(
-  construction, file.path(output_dir, "fixture_construction.csv"),
-  row.names = FALSE
+atomic_write_csv(
+  construction, file.path(output_dir, "fixture_construction.csv")
+)
+
+dependency_versions <- vapply(
+  required_packages,
+  function(package) as.character(utils::packageVersion(package)),
+  character(1L)
+)
+external_software <- extSoftVersion()
+runtime_contract <- list(
+  schema_version = "rqrgibbs_runtime_toolchain/1.0.0",
+  R_version = R.version.string,
+  platform = R.version$platform,
+  compiler = R.version$compiler,
+  BLAS = unname(external_software[["BLAS"]]),
+  LAPACK = unname(external_software[["LAPACK"]]),
+  dependency_versions = as.list(dependency_versions),
+  primary_runtime_tree_digest =
+    runtime_state$runtime_package_tree_digest,
+  primary_runtime_attestation_sha256 = digest::digest(
+    file = primary_attestation, algo = "sha256", serialize = FALSE
+  )
+)
+runtime_contract$digest <- digest::digest(
+  runtime_contract, algo = "sha256", serialize = TRUE
+)
+atomic_write_json(
+  runtime_contract, file.path(output_dir, "runtime_toolchain.json")
+)
+session_capture <- capture.output(utils::sessionInfo())
+atomic_write_lines(
+  session_capture, file.path(output_dir, "session_info.txt")
 )
 
 base_manifest <- list(
-  schema_version = "rqrgibbs_dlm_bounded_run/1.0.0",
+  schema_version = "rqrgibbs_dlm_bounded_run/2.0.0",
   mode = mode,
   config_id = config$config_id,
   config_digest = digest::digest(
@@ -270,6 +390,9 @@ base_manifest <- list(
   primary_runtime_attestation = primary_attestation,
   primary_runtime_attestation_schema =
     runtime_state$runtime_attestation_schema,
+  primary_runtime_attestation_sha256 =
+    runtime_contract$primary_runtime_attestation_sha256,
+  runtime_toolchain_digest = runtime_contract$digest,
   runtime_gates = as.list(runtime_gates),
   requested_fit_count =
     length(constructed) *
@@ -284,14 +407,20 @@ base_manifest <- list(
     Sys.getenv("RQR_RESOURCE_MONITOR_ACTIVE", unset = "FALSE"),
     "TRUE"
   ),
+  process_tree_monitor_kind = Sys.getenv(
+    "RQR_PROCESS_MONITOR_KIND", unset = "none"
+  ),
+  kernel_hard_memory_ceiling = identical(
+    Sys.getenv("RQR_MONITOR_KERNEL_HARD_MEMORY", unset = "FALSE"),
+    "TRUE"
+  ),
   recorded_at = format(Sys.time(), tz = "UTC", usetz = TRUE)
 )
 
 write_manifest <- function(values) {
-  jsonlite::write_json(
+  atomic_write_json(
     utils::modifyList(base_manifest, values),
-    file.path(output_dir, "run_manifest.json"),
-    auto_unbox = TRUE, pretty = TRUE, digits = NA, null = "null"
+    file.path(output_dir, "run_manifest.json")
   )
 }
 
@@ -416,6 +545,29 @@ run_dense_ffbs_reference <- function() {
   )
   mean_z <- max(abs(rowMeans(sampled) - post_mean) /
     sqrt(diag(post_cov) / n_path))
+  sampled_cov <- stats::cov(t(sampled))
+  covariance_se <- sqrt((
+    post_cov^2 + outer(diag(post_cov), diag(post_cov))
+  ) / (n_path - 1L))
+  covariance_z <- abs(sampled_cov - post_cov) / covariance_se
+  adjacent_pairs <- unlist(lapply(seq_len(T - 1L), function(time) {
+    first <- ((time - 1L) * p + 1L):(time * p)
+    second <- (time * p + 1L):((time + 1L) * p)
+    as.vector(outer(first, second, function(x, y) {
+      x + (y - 1L) * nrow(covariance_z)
+    }))
+  }))
+  max_full_covariance_z <- max(covariance_z)
+  max_adjacent_covariance_z <- max(covariance_z[adjacent_pairs])
+  atomic_save_rds(
+    list(
+      posterior_mean = post_mean,
+      posterior_covariance = post_cov,
+      sampled_mean = rowMeans(sampled),
+      sampled_covariance = sampled_cov
+    ),
+    file.path(output_dir, "dense_ffbs_reference.rds")
+  )
   list(
     gates = rbind(
       reference_gate(
@@ -436,6 +588,21 @@ run_dense_ffbs_reference <- function() {
         "1500 conditional FFBS paths"
       ),
       reference_gate(
+        "cpp_sampled_full_cross_time_covariance",
+        max_full_covariance_z <= 6,
+        max_full_covariance_z, 6,
+        paste(
+          "Gaussian sample-covariance standard errors;",
+          "all state-time pairs"
+        )
+      ),
+      reference_gate(
+        "cpp_sampled_adjacent_time_covariance",
+        max_adjacent_covariance_z <= 6,
+        max_adjacent_covariance_z, 6,
+        "selected adjacent-time state covariance blocks"
+      ),
+      reference_gate(
         "missing_measurement_omission",
         is.na(fit_cpp$residual[3L]) &&
           is.na(fit_cpp$forecast_variance[3L]),
@@ -449,62 +616,200 @@ run_dense_ffbs_reference <- function() {
   )
 }
 
-run_future_moment_reference <- function() {
-  set.seed(config$seeds$future_state)
-  terminal_mean <- c(0.4, -0.2)
-  terminal_cov <- matrix(c(0.6, 0.1, 0.1, 0.4), 2L, 2L)
-  GG <- matrix(c(1, 1, 0, 1), 2L, 2L, byrow = TRUE)
-  W <- diag(c(0.03, 0.01))
-  horizon <- 3L
-  analytic_mean <- matrix(0, 2L, horizon)
-  analytic_cov <- array(0, c(2L, 2L, horizon))
-  mean_now <- terminal_mean
-  cov_now <- terminal_cov
-  for (time in seq_len(horizon)) {
-    mean_now <- drop(GG %*% mean_now)
-    cov_now <- GG %*% cov_now %*% t(GG) + W
-    analytic_mean[, time] <- mean_now
-    analytic_cov[, , time] <- cov_now
-  }
-  n_draw <- 8000L
-  initial <- replicate(
-    n_draw,
-    rqrgibbs:::.rqr_sample_mvnorm_covariance(
-      terminal_mean, terminal_cov, numerical_policy = "fail"
-    )$draw
-  )
-  paths <- array(0, c(2L, horizon, n_draw))
-  current <- initial
-  for (time in seq_len(horizon)) {
-    current <- vapply(seq_len(n_draw), function(draw) {
-      rqrgibbs:::.rqr_sample_mvnorm_covariance(
-        drop(GG %*% current[, draw]), W,
-        numerical_policy = "fail"
-      )$draw
-    }, numeric(2L))
-    paths[, time, ] <- current
-  }
-  mean_z <- max(vapply(seq_len(horizon), function(time) {
-    empirical <- rowMeans(paths[, time, , drop = FALSE])
-    max(abs(empirical - analytic_mean[, time]) /
-      sqrt(diag(analytic_cov[, , time]) / n_draw))
-  }, numeric(1L)))
-  covariance_z <- max(vapply(seq_len(horizon), function(time) {
-    empirical <- stats::cov(t(paths[, time, ]))
-    target <- analytic_cov[, , time]
-    max(abs(empirical - target)) /
-      max(sqrt(diag(target)^2 / (n_draw - 1L)))
-  }, numeric(1L)))
-  rbind(
-    reference_gate(
-      "analytic_future_state_mean", mean_z <= 5, mean_z, 5,
-      "unconditional Gaussian root-state propagation"
-    ),
-    reference_gate(
-      "analytic_future_state_covariance",
-      covariance_z <= 6, covariance_z, 6
+run_canonical_missing_references <- function() {
+  rows <- lapply(constructed, function(fixture) {
+    missing <- which(!fixture$observed)
+    if (!length(missing)) return(NULL)
+    expanded <- fixture$expanded_model
+    T <- length(fixture$y)
+    p <- expanded$p
+    W <- if (!is.null(fixture$evolution$W)) {
+      fixture$evolution$W
+    } else {
+      rqrgibbs:::.rqr_materialize_component_evolution(
+        fixture$evolution, fixture$evolution$initial, T, p
+      )$W
+    }
+    evolution <- list(mode = "fixed_W", W = W)
+    H <- expanded$FF
+    H_alternative <- H
+    H_alternative[, missing] <- H_alternative[, missing, drop = FALSE] +
+      matrix(
+        seq_len(p * length(missing)) * 1e6,
+        p, length(missing)
+      )
+    z <- fixture$y
+    V <- rep(1, T)
+    baseline <- rqrgibbs::rqr_ffbs_smooth(
+      z, H, V, expanded$GG, expanded$m0, expanded$C0,
+      evolution, backend = "cpp", numerical_policy = "fail"
     )
+    alternative <- rqrgibbs::rqr_ffbs_smooth(
+      z, H_alternative, V, expanded$GG, expanded$m0,
+      expanded$C0, evolution, backend = "cpp",
+      numerical_policy = "fail"
+    )
+    data.frame(
+      fixture_id = fixture$fixture_id,
+      expected_missing_indices = paste(missing, collapse = ","),
+      detected_missing_indices = paste(
+        which(is.na(baseline$residual)), collapse = ","
+      ),
+      maximum_placeholder_invariance_error = max(
+        abs(baseline$smooth_mean - alternative$smooth_mean),
+        abs(baseline$smooth_cov - alternative$smooth_cov)
+      ),
+      pass = identical(which(is.na(baseline$residual)), missing) &&
+        identical(which(is.na(baseline$forecast_variance)), missing) &&
+        identical(baseline$smooth_mean, alternative$smooth_mean) &&
+        identical(baseline$smooth_cov, alternative$smooth_cov),
+      stringsAsFactors = FALSE
+    )
+  })
+  table <- do.call(rbind, Filter(Negate(is.null), rows))
+  atomic_write_csv(
+    table, file.path(output_dir, "canonical_missing_checks.csv")
   )
+  do.call(rbind, lapply(seq_len(nrow(table)), function(index) {
+    reference_gate(
+      paste0(
+        "canonical_missing_placeholder_invariance__",
+        table$fixture_id[index]
+      ),
+      table$pass[index],
+      table$maximum_placeholder_invariance_error[index],
+      0,
+      paste("missing indices", table$expected_missing_indices[index])
+    )
+  }))
+}
+
+run_public_future_references <- function() {
+  n_draw <- 4000L
+  rows <- lapply(seq_along(constructed), function(fixture_index) {
+    fixture <- constructed[[fixture_index]]
+    p <- fixture$expanded_model$p
+    H <- fixture$future$H
+    terminal <- seq_len(p) / 10
+    terminal_draws <- matrix(terminal, p, n_draw)
+    component_mode <- identical(
+      fixture$evolution$mode, "component_scale"
+    )
+    fake_fit <- structure(list(
+      samp.theta_terminal_root1 = terminal_draws,
+      samp.theta_terminal_root2 = terminal_draws,
+      samp.evolution_scale = if (component_mode) {
+        matrix(
+          rep(fixture$evolution$initial, each = n_draw),
+          n_draw, length(fixture$evolution$initial)
+        )
+      } else {
+        NULL
+      },
+      evolution = fixture$evolution,
+      model_spec = list(
+        evolution_mode = fixture$evolution$mode,
+        numerical_policy = "fail"
+      ),
+      misc = list(jitter_ladder = 0)
+    ), class = c("rqr_dlm_mcmc", "rqr_fit"))
+    forecast_arguments <- list(
+      object = fake_fit,
+      FF_future = fixture$future$FF,
+      GG_future = fixture$future$GG,
+      nd = NULL,
+      seed = unname(
+        config$seeds$forecast_by_fixture[[fixture$fixture_id]]
+      ),
+      numerical_policy = "fail",
+      jitter_ladder = 0
+    )
+    W <- if (component_mode) {
+      forecast_arguments$component_templates_future <-
+        fixture$future$component_templates
+      future_evolution <- rqrgibbs::rqr_evolution_component_scale(
+        templates = fixture$future$component_templates,
+        component_dims = fixture$evolution$component_dims,
+        prior = fixture$evolution$prior,
+        initial = fixture$evolution$initial,
+        component_names = fixture$evolution$component_names
+      )
+      rqrgibbs:::.rqr_materialize_component_evolution(
+        future_evolution, fixture$evolution$initial, H, p
+      )$W
+    } else {
+      forecast_arguments$W_future <- fixture$future$W
+      fixture$future$W
+    }
+    forecast <- do.call(
+      rqrgibbs::rqr_forecast_roots, forecast_arguments
+    )
+    GG <- rqrgibbs:::.rqr_expand_cube(
+      fixture$future$GG, H, p, "GG_future"
+    )
+    state_mean <- terminal
+    state_covariance <- matrix(0, p, p)
+    eta_mean <- eta_variance <- numeric(H)
+    for (time in seq_len(H)) {
+      state_mean <- drop(GG[, , time] %*% state_mean)
+      state_covariance <-
+        GG[, , time] %*% state_covariance %*%
+          t(GG[, , time]) + W[, , time]
+      direction <- fixture$future$FF[, time]
+      eta_mean[time] <- drop(crossprod(direction, state_mean))
+      eta_variance[time] <- drop(
+        crossprod(direction, state_covariance %*% direction)
+      )
+    }
+    empirical_mean <- rowMeans(forecast$eta_root1)
+    empirical_variance <- apply(
+      forecast$eta_root1, 1L, stats::var
+    )
+    mean_z <- max(
+      abs(empirical_mean - eta_mean) /
+        sqrt(eta_variance / n_draw)
+    )
+    variance_z <- max(
+      abs(empirical_variance - eta_variance) /
+        sqrt(2 * eta_variance^2 / (n_draw - 1L))
+    )
+    data.frame(
+      fixture_id = fixture$fixture_id,
+      mean_standardized_error = mean_z,
+      variance_standardized_error = variance_z,
+      repair_count = forecast$diagnostics$repair_count,
+      interpretation_pass = grepl(
+        "no response simulation", forecast$interpretation
+      ),
+      pass = mean_z <= 5 && variance_z <= 6 &&
+        forecast$diagnostics$repair_count == 0L &&
+        grepl("no response simulation", forecast$interpretation),
+      stringsAsFactors = FALSE
+    )
+  })
+  table <- do.call(rbind, rows)
+  atomic_write_csv(
+    table, file.path(output_dir, "public_future_root_checks.csv")
+  )
+  do.call(rbind, lapply(seq_len(nrow(table)), function(index) {
+    rbind(
+      reference_gate(
+        paste0(
+          "public_future_mean__", table$fixture_id[index]
+        ),
+        table$mean_standardized_error[index] <= 5,
+        table$mean_standardized_error[index], 5
+      ),
+      reference_gate(
+        paste0(
+          "public_future_variance__", table$fixture_id[index]
+        ),
+        table$variance_standardized_error[index] <= 6,
+        table$variance_standardized_error[index], 6,
+        "exact Gaussian sample-variance standard error"
+      )
+    )
+  }))
 }
 
 run_component_scale_reference <- function() {
@@ -524,7 +829,7 @@ run_component_scale_reference <- function() {
   innovations <- c(1, 1, 2, -1, 1, 1)
   expected_shape <- 6
   expected_rate <- 4 + 0.5 * sum(innovations^2 / 2)
-  rbind(
+  scalar_gates <- rbind(
     reference_gate(
       "component_scale_inverse_gamma_shape",
       identical(posterior$shape, expected_shape),
@@ -536,6 +841,88 @@ run_component_scale_reference <- function() {
       abs(posterior$rate - expected_rate), 1e-14
     )
   )
+  fixture <- constructed$shared_component_scale_trend_regression
+  arguments <- rqr_bounded_fit_arguments(
+    fixture, config, "learned_pseudoresidual_normalized", 1L,
+    provenance_control, n_burn = 0L, n_mcmc = 3L
+  )
+  arguments$mcmc_control$seed <- config$seeds$component_scale
+  fit <- do.call(rqrgibbs::rqr_dlm_fit, arguments)
+  recomputed <- lapply(seq_len(nrow(fit$samp.evolution_scale)), function(draw) {
+    rqrgibbs:::.rqr_component_scale_posterior(
+      fit$samp.theta_root1[, , draw],
+      fit$samp.theta_root2[, , draw],
+      fit$samp.theta0_root1[, draw],
+      fit$samp.theta0_root2[, draw],
+      fit$expanded_model$GG,
+      fit$evolution
+    )
+  })
+  recomputed_shape <- do.call(rbind, lapply(
+    recomputed, `[[`, "shape"
+  ))
+  recomputed_rate <- do.call(rbind, lapply(
+    recomputed, `[[`, "rate"
+  ))
+  shape_error <- max(abs(
+    fit$samp.evolution_scale_shape - recomputed_shape
+  ))
+  rate_error <- max(abs(
+    fit$samp.evolution_scale_rate - recomputed_rate
+  ))
+  orientation_pass <-
+    identical(
+      dim(fit$samp.evolution_scale),
+      c(3L, length(fit$evolution$component_dims))
+    ) &&
+    identical(
+      dim(fit$samp.evolution_scale_shape),
+      dim(fit$samp.evolution_scale)
+    ) &&
+    identical(
+      dim(fit$samp.evolution_scale_rate),
+      dim(fit$samp.evolution_scale)
+    ) &&
+    identical(
+      colnames(fit$samp.evolution_scale),
+      fit$evolution$component_names
+    )
+  atomic_write_csv(
+    data.frame(
+      draw = rep(
+        seq_len(nrow(recomputed_shape)),
+        each = ncol(recomputed_shape)
+      ),
+      component = rep(
+        fit$evolution$component_names,
+        times = nrow(recomputed_shape)
+      ),
+      saved_shape = as.vector(t(
+        fit$samp.evolution_scale_shape
+      )),
+      recomputed_shape = as.vector(t(recomputed_shape)),
+      saved_rate = as.vector(t(fit$samp.evolution_scale_rate)),
+      recomputed_rate = as.vector(t(recomputed_rate)),
+      stringsAsFactors = FALSE
+    ),
+    file.path(output_dir, "component_scale_conditionals.csv")
+  )
+  rbind(
+    scalar_gates,
+    reference_gate(
+      "canonical_component_scale_shape", shape_error <= 1e-14,
+      shape_error, 1e-14, "two components with dimensions 2 and 1"
+    ),
+    reference_gate(
+      "canonical_component_scale_rate", rate_error <= 1e-12,
+      rate_error, 1e-12,
+      "retained-iteration conditionals recomputed from saved paths"
+    ),
+    reference_gate(
+      "canonical_component_scale_orientation", orientation_pass,
+      detail = "retained draws by named component"
+    )
+  )
 }
 
 provenance_control <- list(
@@ -545,44 +932,132 @@ provenance_control <- list(
 )
 
 run_continuation_reference <- function() {
-  fixture <- constructed$fixed_W_local_level
-  arguments <- rqr_bounded_fit_arguments(
-    fixture, config, "learned_pseudoresidual_normalized", 1L,
-    provenance_control, n_burn = 0L, n_mcmc = 6L
-  )
-  arguments$mcmc_control$seed <- config$seeds$continuation
-  full <- do.call(rqrgibbs::rqr_dlm_fit, arguments)
-  arguments$mcmc_control$n_mcmc <- 2L
-  first <- do.call(rqrgibbs::rqr_dlm_fit, arguments)
-  second <- rqrgibbs::rqr_dlm_continue(first, n_mcmc = 2L)
-  third <- rqrgibbs::rqr_dlm_continue(second, n_mcmc = 2L)
-  bind_columns <- function(field) {
-    do.call(cbind, lapply(list(first, second, third), `[[`, field))
-  }
-  draw_fields <- c(
+  column_fields <- c(
     "samp.eta_root1", "samp.eta_root2",
-    "samp.theta_terminal_root1", "samp.theta_terminal_root2"
+    "samp.theta_terminal_root1", "samp.theta_terminal_root2",
+    "samp.theta0_root1", "samp.theta0_root2"
   )
-  bitwise_draws <- all(vapply(draw_fields, function(field) {
-    identical(full[[field]], bind_columns(field))
-  }, logical(1L))) &&
-    identical(
-      full$samp.lambda,
-      c(first$samp.lambda, second$samp.lambda, third$samp.lambda)
+  row_fields <- c(
+    "samp.evolution_scale", "samp.evolution_scale_shape",
+    "samp.evolution_scale_rate"
+  )
+  array_fields <- c("samp.theta_root1", "samp.theta_root2")
+  vector_fields <- "samp.lambda"
+  bind_field <- function(segments, field, margin) {
+    values <- lapply(segments, `[[`, field)
+    if (all(vapply(values, is.null, logical(1L)))) return(NULL)
+    if (any(vapply(values, is.null, logical(1L)))) return(structure(
+      NA, mismatch = TRUE
+    ))
+    if (identical(margin, "columns")) return(do.call(cbind, values))
+    if (identical(margin, "rows")) return(do.call(rbind, values))
+    if (identical(margin, "vector")) return(do.call(c, values))
+    dimensions <- dim(values[[1L]])
+    array(
+      do.call(c, values),
+      dim = c(
+        dimensions[1:2],
+        sum(vapply(values, function(value) dim(value)[3L], integer(1L)))
+      )
     )
-  bitwise_checkpoint <- identical(
-    full$checkpoint_state, third$checkpoint_state
-  ) && identical(full$checkpoint_digest, third$checkpoint_digest)
-  history_shape <- identical(
-    third$continuation_history_contract$generation, 2L
-  ) && length(third$continuation_history_contract$segments) == 3L
-
-  rehash <- function(object) {
-    object$continuation_history_digest <-
-      rqrgibbs:::.rqr_digest(object$continuation_history_contract)
-    object
   }
+  cell_rows <- list()
+  gates <- list()
+  last_segmented <- NULL
+  cell_index <- 0L
+  for (fixture_id in names(constructed)) {
+    for (learning_rate_mode in config$learning_rate_modes) {
+      cell_index <- cell_index + 1L
+      fixture <- constructed[[fixture_id]]
+      arguments <- rqr_bounded_fit_arguments(
+        fixture, config, learning_rate_mode, 1L,
+        provenance_control, n_burn = 0L, n_mcmc = 6L
+      )
+      arguments$mcmc_control$seed <-
+        config$seeds$continuation + cell_index - 1L
+      full <- do.call(rqrgibbs::rqr_dlm_fit, arguments)
+      arguments$mcmc_control$n_mcmc <- 2L
+      first <- do.call(rqrgibbs::rqr_dlm_fit, arguments)
+      second <- rqrgibbs::rqr_dlm_continue(
+        first, n_mcmc = 2L, store_state_draws = TRUE
+      )
+      third <- rqrgibbs::rqr_dlm_continue(
+        second, n_mcmc = 2L, store_state_draws = TRUE
+      )
+      segments <- list(first, second, third)
+      saved_equal <- all(c(
+        vapply(column_fields, function(field) {
+          identical(
+            full[[field]], bind_field(segments, field, "columns")
+          )
+        }, logical(1L)),
+        vapply(row_fields, function(field) {
+          identical(full[[field]], bind_field(segments, field, "rows"))
+        }, logical(1L)),
+        vapply(array_fields, function(field) {
+          identical(full[[field]], bind_field(segments, field, "array"))
+        }, logical(1L)),
+        vapply(vector_fields, function(field) {
+          identical(
+            full[[field]], bind_field(segments, field, "vector")
+          )
+        }, logical(1L))
+      ))
+      checkpoint_equal <- identical(
+        full$checkpoint_state, third$checkpoint_state
+      ) && identical(full$checkpoint_digest, third$checkpoint_digest)
+      history_shape <- identical(
+        third$continuation_history_contract$generation, 2L
+      ) &&
+        identical(
+          vapply(
+            third$continuation_history_contract$segments,
+            `[[`, integer(1L), "generation"
+          ),
+          0:2
+        )
+      cell_id <- paste(fixture_id, learning_rate_mode, sep = "__")
+      cell_rows[[cell_index]] <- data.frame(
+        fixture_id = fixture_id,
+        learning_rate_mode = learning_rate_mode,
+        seed = arguments$mcmc_control$seed,
+        all_saved_stochastic_fields_bitwise = saved_equal,
+        final_checkpoint_bitwise = checkpoint_equal,
+        three_segment_history = history_shape,
+        full_checkpoint_digest = full$checkpoint_digest,
+        segmented_checkpoint_digest = third$checkpoint_digest,
+        continuation_history_digest =
+          third$continuation_history_digest,
+        stringsAsFactors = FALSE
+      )
+      gates[[length(gates) + 1L]] <- reference_gate(
+        paste0("all_saved_fields_6_vs_2_plus_2_plus_2__", cell_id),
+        saved_equal,
+        detail = paste(
+          "root ordinates, full and terminal states, time-zero states,",
+          "lambda, component scales, and retained conditional parameters"
+        )
+      )
+      gates[[length(gates) + 1L]] <- reference_gate(
+        paste0("checkpoint_6_vs_2_plus_2_plus_2__", cell_id),
+        checkpoint_equal
+      )
+      gates[[length(gates) + 1L]] <- reference_gate(
+        paste0("history_shape_2_plus_2_plus_2__", cell_id),
+        history_shape
+      )
+      last_segmented <- third
+    }
+  }
+  cell_table <- do.call(rbind, cell_rows)
+  atomic_write_csv(
+    cell_table, file.path(output_dir, "continuation_cells.csv")
+  )
+
   invalid_history <- function(object) {
+    object$continuation_history_digest <- rqrgibbs:::.rqr_digest(
+      object$continuation_history_contract
+    )
     inherits(
       try(
         rqrgibbs:::.rqr_validate_continuation_history(object),
@@ -591,104 +1066,180 @@ run_continuation_reference <- function() {
       "try-error"
     )
   }
-  mutations <- list(
-    generation0_repair_exactness = function(x) {
+  mutation_rows <- list()
+  mutation_index <- 0L
+  invalid_values <- c(0.5, -0.5, Inf, .Machine$integer.max + 1)
+  for (generation_index in 1:2) {
+    for (field in c(
+        "generation", "segment_numerical_repair_count",
+        "cumulative_numerical_repair_count"
+      )) {
+      for (value in invalid_values) {
+        mutation_index <- mutation_index + 1L
+        mutated <- last_segmented
+        mutated$continuation_history_contract$
+          segments[[generation_index]][[field]] <- value
+        mutation_rows[[mutation_index]] <- data.frame(
+          generation = generation_index - 1L,
+          field = field,
+          value = as.character(value),
+          rejected = invalid_history(mutated),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+  }
+  semantic_mutations <- list(
+    generation0_target_status = function(x) {
       x$continuation_history_contract$segments[[1L]]$
-        segment_numerical_repair_count <- 1L
-      rehash(x)
-    },
-    generation1_target_status = function(x) {
-      x$continuation_history_contract$segments[[2L]]$
         segment_target_numerical_eligible <- FALSE
-      rehash(x)
+      x
     },
     generation0_mismatch_without_override = function(x) {
       x$continuation_history_contract$segments[[1L]]$
         environment_mismatches <- "package_version"
-      rehash(x)
+      x
     },
     generation1_backend_without_mismatch = function(x) {
       x$continuation_history_contract$segments[[2L]]$
         backend_resolved <- "R"
       x$continuation_history_contract$segments[[3L]]$
         parent_backend_resolved <- "R"
-      rehash(x)
-    },
-    generation0_target_digest = function(x) {
-      x$continuation_history_contract$segments[[1L]]$
-        segment_target_contract_digest <- paste(rep("0", 64L), collapse = "")
-      rehash(x)
+      x
     }
   )
-  mutation_rejected <- vapply(
-    mutations,
-    function(mutation) invalid_history(mutation(third)),
-    logical(1L)
-  )
-  mutation_table <- data.frame(
-    mutation = names(mutation_rejected),
-    rejected = unname(mutation_rejected),
-    stringsAsFactors = FALSE
-  )
-  utils::write.csv(
-    mutation_table,
-    file.path(output_dir, "continuation_history_mutations.csv"),
-    row.names = FALSE
-  )
-  saveRDS(
-    list(
-      full_checkpoint_digest = full$checkpoint_digest,
-      segmented_checkpoint_digest = third$checkpoint_digest,
-      continuation_history_digest =
-        third$continuation_history_digest,
-      generation = third$continuation_history_contract$generation
-    ),
-    file.path(output_dir, "continuation_reference_digests.rds"),
-    version = 3
-  )
-  rbind(
-    reference_gate(
-      "six_vs_2_plus_2_plus_2_draws", bitwise_draws,
-      detail = "three history segments with generation indices 0, 1, 2"
-    ),
-    reference_gate(
-      "six_vs_2_plus_2_plus_2_checkpoint", bitwise_checkpoint
-    ),
-    reference_gate(
-      "three_segment_history_shape", history_shape
-    ),
-    reference_gate(
-      "rehashed_early_history_mutations",
-      all(mutation_rejected),
-      sum(mutation_rejected), length(mutation_rejected)
+  for (name in names(semantic_mutations)) {
+    mutation_index <- mutation_index + 1L
+    mutation_rows[[mutation_index]] <- data.frame(
+      generation = NA_integer_,
+      field = name,
+      value = "semantic",
+      rejected = invalid_history(
+        semantic_mutations[[name]](last_segmented)
+      ),
+      stringsAsFactors = FALSE
     )
+  }
+  mutation_table <- do.call(rbind, mutation_rows)
+  atomic_write_csv(
+    mutation_table,
+    file.path(output_dir, "continuation_history_mutations.csv")
   )
+  atomic_save_rds(
+    cell_table,
+    file.path(output_dir, "continuation_reference_digests.rds")
+  )
+  gates[[length(gates) + 1L]] <- reference_gate(
+    "rehashed_early_history_raw_and_semantic_mutations",
+    all(mutation_table$rejected),
+    sum(mutation_table$rejected), nrow(mutation_table)
+  )
+  do.call(rbind, gates)
 }
 
 if (identical(mode, "reference-only")) {
-  dense <- run_dense_ffbs_reference()
+  run_reference_stage <- function(stage, function_to_run) {
+    tryCatch(
+      function_to_run(),
+      error = function(error) {
+        record_failure(stage, error)
+        stop(error)
+      }
+    )
+  }
+  dense <- run_reference_stage(
+    "dense_ffbs_reference", run_dense_ffbs_reference
+  )
   gates <- rbind(
     dense$gates,
-    run_future_moment_reference(),
-    run_component_scale_reference(),
-    run_continuation_reference(),
+    run_reference_stage(
+      "canonical_missing_references",
+      run_canonical_missing_references
+    ),
+    run_reference_stage(
+      "public_future_references", run_public_future_references
+    ),
+    run_reference_stage(
+      "component_scale_reference", run_component_scale_reference
+    ),
+    run_reference_stage(
+      "continuation_reference", run_continuation_reference
+    ),
     reference_gate(
       "active_process_tree_monitor",
-      isTRUE(base_manifest$process_tree_monitor_active),
-      detail = "runner must be launched through the monitored shell wrapper"
+      isTRUE(base_manifest$process_tree_monitor_active) &&
+        identical(
+          base_manifest$process_tree_monitor_kind,
+          "pgid_sampled_fallback"
+        ) &&
+        !isTRUE(base_manifest$kernel_hard_memory_ceiling),
+      detail = paste(
+        "PGID sampling fallback with traps and a final sweep;",
+        "sampled RSS is telemetry, not a kernel-hard peak"
+      )
     )
   )
-  utils::write.csv(
-    gates, file.path(output_dir, "reference_gates.csv"),
-    row.names = FALSE
+  reference_gates_path <- file.path(output_dir, "reference_gates.csv")
+  atomic_write_csv(
+    gates, reference_gates_path
   )
   pass <- all(gates$pass)
+  reference_bundle_files <- c(
+    "fixture_construction.csv", "runtime_toolchain.json",
+    "session_info.txt", "failure_log.csv", "reference_gates.csv",
+    "dense_ffbs_reference.rds", "canonical_missing_checks.csv",
+    "public_future_root_checks.csv",
+    "component_scale_conditionals.csv", "continuation_cells.csv",
+    "continuation_history_mutations.csv",
+    "continuation_reference_digests.rds"
+  )
+  missing_bundle_files <- reference_bundle_files[
+    !file.exists(file.path(output_dir, reference_bundle_files))
+  ]
+  if (length(missing_bundle_files)) {
+    stop(
+      "Reference bundle is incomplete: ",
+      paste(missing_bundle_files, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  reference_bundle <- list(
+    schema_version = "rqrgibbs_reference_bundle/1.0.0",
+    primary_commit = actual_commit,
+    config_digest = base_manifest$config_digest,
+    runtime_tree_digest =
+      runtime_state$runtime_package_tree_digest,
+    runtime_attestation_sha256 =
+      runtime_contract$primary_runtime_attestation_sha256,
+    runtime_toolchain_digest = runtime_contract$digest,
+    files = as.list(stats::setNames(
+      vapply(reference_bundle_files, function(file) {
+        digest::digest(
+          file = file.path(output_dir, file),
+          algo = "sha256", serialize = FALSE
+        )
+      }, character(1L)),
+      reference_bundle_files
+    ))
+  )
+  atomic_write_json(
+    reference_bundle,
+    file.path(output_dir, "reference_bundle.json")
+  )
   write_manifest(list(
     status = if (pass) "passed" else "failed",
     fixture_construction_passed = TRUE,
     reference_gates_executed = TRUE,
     reference_gate_count = nrow(gates),
     reference_gate_pass_count = sum(gates$pass),
+    reference_gates_sha256 = digest::digest(
+      file = reference_gates_path,
+      algo = "sha256", serialize = FALSE
+    ),
+    reference_bundle_sha256 = digest::digest(
+      file = file.path(output_dir, "reference_bundle.json"),
+      algo = "sha256", serialize = FALSE
+    ),
     bounded_dynamic_execution_authorized = FALSE
   ))
   if (!pass) {
@@ -704,341 +1255,15 @@ if (identical(mode, "reference-only")) {
   quit(save = "no", status = 0L)
 }
 
-confirmation <- Sys.getenv(
-  "RQR_CONFIRM_BOUNDED_DYNAMIC_EXECUTION", unset = ""
+# Benchmark and bounded-grid execution are isolated in a separate source file
+# so the reviewed reference calculations above cannot drift with cell-running
+# mechanics. The sourced stage must terminate explicitly; returning is a
+# fail-closed error.
+sys.source(
+  file.path(
+    repo_root, "application", "scripts",
+    "09_run_rqr_dlm_bounded_cells.R"
+  ),
+  envir = environment()
 )
-reviewed_commit <- tolower(Sys.getenv(
-  "RQR_REVIEWED_BOUNDED_RUNNER_COMMIT", unset = ""
-))
-reference_manifest_path <- Sys.getenv(
-  "RQR_REVIEWED_REFERENCE_MANIFEST", unset = ""
-)
-reference_manifest_sha <- tolower(Sys.getenv(
-  "RQR_REVIEWED_REFERENCE_MANIFEST_SHA256", unset = ""
-))
-reference_resource_path <- Sys.getenv(
-  "RQR_REVIEWED_REFERENCE_RESOURCE_SUMMARY", unset = ""
-)
-reference_resource_sha <- tolower(Sys.getenv(
-  "RQR_REVIEWED_REFERENCE_RESOURCE_SUMMARY_SHA256", unset = ""
-))
-reference_manifest_verified <-
-  nzchar(reference_manifest_path) &&
-  file.exists(reference_manifest_path) &&
-  grepl("^[0-9a-f]{64}$", reference_manifest_sha) &&
-  identical(
-    digest::digest(
-      file = reference_manifest_path,
-      algo = "sha256", serialize = FALSE
-    ),
-    reference_manifest_sha
-  )
-reference_manifest <- if (reference_manifest_verified) {
-  tryCatch(
-    jsonlite::read_json(reference_manifest_path, simplifyVector = TRUE),
-    error = function(e) NULL
-  )
-} else {
-  NULL
-}
-reference_manifest_verified <- reference_manifest_verified &&
-  is.list(reference_manifest) &&
-  identical(reference_manifest$mode, "reference-only") &&
-  identical(reference_manifest$status, "passed") &&
-  identical(
-    tolower(reference_manifest$primary_commit), expected_commit
-  ) &&
-  identical(reference_manifest$config_digest, base_manifest$config_digest) &&
-  isTRUE(reference_manifest$process_tree_monitor_active)
-reference_resource_verified <-
-  reference_manifest_verified &&
-  nzchar(reference_resource_path) &&
-  file.exists(reference_resource_path) &&
-  grepl("^[0-9a-f]{64}$", reference_resource_sha) &&
-  identical(
-    digest::digest(
-      file = reference_resource_path,
-      algo = "sha256", serialize = FALSE
-    ),
-    reference_resource_sha
-  ) &&
-  identical(
-    normalizePath(
-      dirname(reference_resource_path), winslash = "/", mustWork = TRUE
-    ),
-    normalizePath(
-      dirname(reference_manifest_path), winslash = "/", mustWork = TRUE
-    )
-  )
-reference_resource <- if (reference_resource_verified) {
-  tryCatch(
-    utils::read.csv(
-      reference_resource_path, stringsAsFactors = FALSE,
-      check.names = FALSE
-    ),
-    error = function(e) NULL
-  )
-} else {
-  NULL
-}
-reference_resource_verified <- reference_resource_verified &&
-  is.data.frame(reference_resource) &&
-  identical(
-    names(reference_resource), c("metric", "value", "limit", "pass")
-  ) &&
-  nrow(reference_resource) == 6L &&
-  setequal(
-    reference_resource$metric,
-    c(
-      "process_tree_peak_processes", "process_tree_peak_threads",
-      "process_tree_peak_rss_kib", "hard_timeout_triggered",
-      "resource_limit_triggered", "runner_exit_status"
-    )
-  ) &&
-  all(toupper(as.character(reference_resource$pass)) == "TRUE")
-if (!isTRUE(config$bounded_dynamic_execution_authorized) ||
-    !identical(
-      confirmation, "I_CONFIRM_24_BOUNDED_RQR_DLM_FITS"
-    ) ||
-    !identical(reviewed_commit, expected_commit) ||
-    !reference_manifest_verified ||
-    !reference_resource_verified ||
-    !isTRUE(base_manifest$process_tree_monitor_active)) {
-  write_manifest(list(
-    status = "blocked_by_execution_contract",
-    fixture_construction_passed = TRUE,
-    reference_gates_executed = FALSE,
-    bounded_dynamic_execution_authorized = FALSE
-  ))
-  stop(
-    paste(
-      "execute-bounded is disabled. It requires a reviewed commit, the",
-      "exact confirmation phrase, a hash-verified passing reference-only",
-      "manifest and monitor summary from the same run directory, an active",
-      "process-tree monitor, and",
-      "bounded_dynamic_execution_authorized=TRUE in the reviewed config."
-    ),
-    call. = FALSE
-  )
-}
-
-chain_estimands <- function(fit) {
-  lower <- pmin(fit$samp.eta_root1, fit$samp.eta_root2)
-  upper <- pmax(fit$samp.eta_root1, fit$samp.eta_root2)
-  observed <- !is.na(fit$y)
-  alpha <- fit$model_spec$coverage_level
-  loss <- vapply(seq_len(ncol(lower)), function(draw) {
-    sum(rqrgibbs::rqr_check_loss(
-      rqrgibbs::rqr_residual_product(
-        fit$y[observed],
-        fit$samp.eta_root1[observed, draw],
-        fit$samp.eta_root2[observed, draw]
-      ),
-      alpha
-    ))
-  }, numeric(1L))
-  terminal_midpoint <- 0.5 * (
-    fit$samp.theta_terminal_root1 +
-      fit$samp.theta_terminal_root2
-  )
-  terminal_difference <- abs(
-    fit$samp.theta_terminal_root1 -
-      fit$samp.theta_terminal_root2
-  )
-  values <- cbind(
-    mean_lower = colMeans(lower),
-    mean_upper = colMeans(upper),
-    mean_width = colMeans(upper - lower),
-    mean_midpoint = colMeans(0.5 * (lower + upper)),
-    observed_loss = loss,
-    t(terminal_midpoint),
-    t(terminal_difference)
-  )
-  midpoint_columns <- seq_len(nrow(terminal_midpoint)) + 5L
-  difference_columns <- seq_len(nrow(terminal_difference)) +
-    5L + nrow(terminal_midpoint)
-  colnames(values)[midpoint_columns] <- paste0(
-    "terminal_midpoint_", seq_len(nrow(terminal_midpoint))
-  )
-  colnames(values)[difference_columns] <- paste0(
-    "terminal_abs_difference_", seq_len(nrow(terminal_difference))
-  )
-  if (fit$model_spec$learning_rate_mode == "fixed_rate") {
-    expected <- fit$model_spec$fixed_learning_rate *
-      fit$model_spec$loss_reference_scale
-    if (!all(fit$samp.lambda == expected)) {
-      stop("Fixed-rate lambda failed its exact-identity gate.", call. = FALSE)
-    }
-  } else {
-    values <- cbind(values, log_lambda = log(fit$samp.lambda))
-  }
-  if (!is.null(fit$samp.evolution_scale) &&
-      ncol(fit$samp.evolution_scale) > 0L) {
-    q_values <- log(fit$samp.evolution_scale)
-    colnames(q_values) <- paste0(
-      "log_component_scale_", seq_len(ncol(q_values))
-    )
-    values <- cbind(values, q_values)
-  }
-  values
-}
-
-fit_grid <- expand.grid(
-  fixture_id = names(constructed),
-  learning_rate_mode = config$learning_rate_modes,
-  chain = seq_len(config$mcmc$chains),
-  stringsAsFactors = FALSE
-)
-fit_grid$fit_id <- sprintf(
-  "%s__%s__chain%02d",
-  fit_grid$fixture_id, fit_grid$learning_rate_mode, fit_grid$chain
-)
-chains <- vector("list", nrow(fit_grid))
-fit_audit <- vector("list", nrow(fit_grid))
-fit_root <- file.path(output_dir, "full_chains_ignored")
-dir.create(fit_root, recursive = TRUE)
-for (index in seq_len(nrow(fit_grid))) {
-  row <- fit_grid[index, ]
-  fit_arguments <- rqr_bounded_fit_arguments(
-    constructed[[row$fixture_id]], config,
-    row$learning_rate_mode, row$chain,
-    provenance_control
-  )
-  fit <- do.call(rqrgibbs::rqr_dlm_fit, fit_arguments)
-  if (!isTRUE(fit$model_spec$exact_joint_target) ||
-      !isTRUE(fit$model_spec$target_numerical_eligible) ||
-      fit$model_spec$numerical_repair_count != 0L ||
-      !isTRUE(fit$provenance$primary_runtime_source_match) ||
-      !isTRUE(fit$provenance$reproducibility_eligible)) {
-    stop("A bounded fit failed its target or provenance gate.", call. = FALSE)
-  }
-  future <- constructed[[row$fixture_id]]$future
-  mode_index <- match(
-    row$learning_rate_mode, config$learning_rate_modes
-  )
-  forecast_seed <- unname(
-    config$seeds$forecast_by_fixture[[row$fixture_id]]
-  ) + 100L * (mode_index - 1L) + row$chain
-  forecast_arguments <- list(
-    object = fit,
-    FF_future = future$FF,
-    GG_future = future$GG,
-    nd = ncol(fit$samp.eta_root1),
-    seed = forecast_seed,
-    numerical_policy = "fail"
-  )
-  if (is.null(future$component_templates)) {
-    forecast_arguments$W_future <- future$W
-  } else {
-    forecast_arguments$component_templates_future <-
-      future$component_templates
-  }
-  forecast <- do.call(
-    rqrgibbs::rqr_forecast_roots, forecast_arguments
-  )
-  if (forecast$diagnostics$repair_count != 0L ||
-      nrow(forecast$lower_draws) != future$H ||
-      any(!is.finite(forecast$lower_draws)) ||
-      any(!is.finite(forecast$upper_draws)) ||
-      !grepl("no response simulation", forecast$interpretation)) {
-    stop("A bounded future root-state gate failed.", call. = FALSE)
-  }
-  chains[[index]] <- chain_estimands(fit)
-  saveRDS(
-    fit, file.path(fit_root, paste0(row$fit_id, ".rds")),
-    version = 3, compress = "xz"
-  )
-  fit_audit[[index]] <- data.frame(
-    fit_id = row$fit_id,
-    fixture_id = row$fixture_id,
-    learning_rate_mode = row$learning_rate_mode,
-    chain = row$chain,
-    seed = config$mcmc$seeds[row$chain],
-    forecast_seed = forecast_seed,
-    forecast_repair_count = forecast$diagnostics$repair_count,
-    forecast_horizon = future$H,
-    numerical_repair_count = fit$model_spec$numerical_repair_count,
-    exact_joint_target = fit$model_spec$exact_joint_target,
-    target_numerical_eligible =
-      fit$model_spec$target_numerical_eligible,
-    reproducibility_eligible =
-      fit$provenance$reproducibility_eligible,
-    promotion_eligible = fit$model_spec$promotion_eligible,
-    checkpoint_digest = fit$checkpoint_digest,
-    history_digest = fit$continuation_history_digest,
-    root_swap_count = sum(fit$diagnostics$root_swap_trace),
-    stringsAsFactors = FALSE
-  )
-}
-fit_audit <- do.call(rbind, fit_audit)
-utils::write.csv(
-  fit_audit, file.path(output_dir, "fit_audit.csv"),
-  row.names = FALSE
-)
-
-diagnostics <- list()
-for (fixture_id in names(constructed)) {
-  for (learning_rate_mode in config$learning_rate_modes) {
-    rows <- fit_grid$fixture_id == fixture_id &
-      fit_grid$learning_rate_mode == learning_rate_mode
-    selected <- chains[rows]
-    variables <- Reduce(intersect, lapply(selected, colnames))
-    for (variable in variables) {
-      matrix_values <- do.call(cbind, lapply(
-        selected, function(values) values[, variable]
-      ))
-      draws <- posterior::as_draws_array(array(
-        as.numeric(matrix_values),
-        dim = c(nrow(matrix_values), ncol(matrix_values), 1L),
-        dimnames = list(
-          iteration = NULL,
-          chain = paste0("chain", seq_len(ncol(matrix_values))),
-          variable = variable
-        )
-      ))
-      diagnostics[[length(diagnostics) + 1L]] <- data.frame(
-        fixture_id = fixture_id,
-        learning_rate_mode = learning_rate_mode,
-        estimand = variable,
-        rhat = unname(posterior::rhat(draws)),
-        ess_bulk = unname(posterior::ess_bulk(draws)),
-        ess_tail = unname(posterior::ess_tail(draws)),
-        mcse_mean = unname(posterior::mcse_mean(draws)),
-        stringsAsFactors = FALSE
-      )
-    }
-  }
-}
-diagnostics <- do.call(rbind, diagnostics)
-diagnostics$pass <- with(
-  diagnostics,
-  is.finite(rhat) & is.finite(ess_bulk) & is.finite(ess_tail) &
-    is.finite(mcse_mean) &
-    rhat <= config$gates$maximum_rank_normalized_rhat &
-    ess_bulk >= config$gates$minimum_bulk_ess &
-    ess_tail >= config$gates$minimum_tail_ess
-)
-utils::write.csv(
-  diagnostics, file.path(output_dir, "chain_diagnostics.csv"),
-  row.names = FALSE
-)
-all_pass <- all(diagnostics$pass) &&
-  all(fit_audit$numerical_repair_count == 0L) &&
-  all(fit_audit$exact_joint_target) &&
-  all(fit_audit$target_numerical_eligible) &&
-  all(fit_audit$reproducibility_eligible)
-write_manifest(list(
-  status = if (all_pass) "passed" else "failed",
-  fixture_construction_passed = TRUE,
-  reference_gates_executed = FALSE,
-  bounded_dynamic_execution_authorized = TRUE,
-  bounded_fit_count = nrow(fit_audit),
-  diagnostic_count = nrow(diagnostics),
-  diagnostic_pass_count = sum(diagnostics$pass)
-))
-if (!all_pass) {
-  stop("The bounded dynamic fit gates did not all pass.", call. = FALSE)
-}
-cat("Bounded RQR-DLM dynamic execution passed.\n")
-cat("  fits:", nrow(fit_audit), "\n")
-cat("  this was not the matched or production simulation\n")
+stop("The bounded cell stage returned without a terminal status.", call. = FALSE)

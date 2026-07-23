@@ -360,45 +360,66 @@ rqr_source_package_lineage <- function(
     source$package_root, recursive = TRUE, all.files = TRUE,
     include.dirs = FALSE, no.. = TRUE
   )
-  critical <- grepl("^(R/|src/|NAMESPACE$)", source_relative)
-  critical <- critical & !grepl(
+  standard_excluded <- source_relative == ".Rbuildignore" |
+    grepl("(^|/)\\.[^/]+($|/)", source_relative) |
+    grepl(
     "\\.(o|so|dll|dylib|a|sl|gch)$|(^|/)symbols\\.rds$",
     source_relative, ignore.case = TRUE
   )
-  critical <- critical & !grepl("(^|/)\\.", source_relative)
+  build_ignored <- rep(FALSE, length(source_relative))
   buildignore_path <- file.path(source$package_root, ".Rbuildignore")
   if (file.exists(buildignore_path)) {
     patterns <- trimws(readLines(buildignore_path, warn = FALSE))
     patterns <- patterns[nzchar(patterns) & !startsWith(patterns, "#")]
     if (length(patterns)) {
-      ignored <- vapply(source_relative, function(path) {
+      build_ignored <- vapply(source_relative, function(path) {
+        components <- strsplit(path, "/", fixed = TRUE)[[1L]]
+        candidates <- vapply(
+          seq_along(components),
+          function(index) {
+            paste(components[seq_len(index)], collapse = "/")
+          },
+          character(1L)
+        )
         any(vapply(patterns, function(pattern) {
           tryCatch(
-            grepl(pattern, path, perl = TRUE, ignore.case = TRUE),
+            any(grepl(
+              pattern, candidates, perl = TRUE, ignore.case = TRUE
+            )),
             error = function(e) {
               stop("Invalid .Rbuildignore expression.", call. = FALSE)
             }
           )
         }, logical(1L)))
       }, logical(1L))
-      critical <- critical & !ignored
     }
   }
-  missing_critical <- setdiff(
-    source_relative[critical], built_relative
-  )
+  expected_relative <- sort(source_relative[
+    !standard_excluded & !build_ignored
+  ])
+  missing_expected <- setdiff(expected_relative, built_relative)
+  unexpected_built <- setdiff(built_relative, expected_relative)
   built_manifest_digest <- rqr_directory_digest(built$package_root)
   list(
     match = description_match &&
       !length(missing_source) &&
       !length(changed_source) &&
       !length(changed_mode) &&
-      !length(missing_critical),
+      !length(missing_expected) &&
+      !length(unexpected_built),
     description_match = description_match,
     missing_source_entries = sort(missing_source),
     changed_source_entries = sort(changed_source),
     changed_mode_entries = sort(changed_mode),
-    missing_critical_entries = sort(missing_critical),
+    missing_expected_entries = sort(missing_expected),
+    unexpected_built_entries = sort(unexpected_built),
+    expected_source_manifest_digest = digest::digest(
+      paste(expected_relative, collapse = "\n"),
+      algo = "sha256", serialize = FALSE
+    ),
+    expected_source_manifest_entries = length(expected_relative),
+    source_input_tree_digest =
+      rqr_directory_digest(source$package_root),
     built_source_manifest_digest = built_manifest_digest,
     built_source_manifest_entries = length(built_files),
     built_package = if (is.null(built_description)) {
@@ -415,9 +436,30 @@ rqr_source_package_lineage <- function(
 }
 
 rqr_write_command_receipt <- function(
-    path, executable, arguments, working_directory, input_path,
-    input_sha256) {
+    path, phase, executable, arguments, working_directory,
+    input_path, input_sha256, output_path, output_sha256,
+    stdout_path, stderr_path, exit_status, started_at, ended_at,
+    library_path = NA_character_) {
+  input_path <- normalizePath(
+    input_path, winslash = "/", mustWork = TRUE
+  )
+  output_path <- normalizePath(
+    output_path, winslash = "/", mustWork = exit_status == 0L
+  )
+  stdout_path <- normalizePath(
+    stdout_path, winslash = "/", mustWork = TRUE
+  )
+  stderr_path <- normalizePath(
+    stderr_path, winslash = "/", mustWork = TRUE
+  )
+  library_path <- if (is.na(library_path)) {
+    NA_character_
+  } else {
+    normalizePath(library_path, winslash = "/", mustWork = TRUE)
+  }
   receipt <- list(
+    schema_version = "rqrgibbs_command_receipt/2.0.0",
+    phase = as.character(phase)[1L],
     executable = normalizePath(
       executable, winslash = "/", mustWork = TRUE
     ),
@@ -425,10 +467,19 @@ rqr_write_command_receipt <- function(
     working_directory = normalizePath(
       working_directory, winslash = "/", mustWork = TRUE
     ),
-    input_path = normalizePath(
-      input_path, winslash = "/", mustWork = TRUE
-    ),
-    input_sha256 = tolower(as.character(input_sha256)[1L])
+    input_paths = input_path,
+    input_sha256 = tolower(as.character(input_sha256)[1L]),
+    output_path = output_path,
+    output_sha256 = tolower(as.character(output_sha256)[1L]),
+    library_path = library_path,
+    stdout_path = stdout_path,
+    stdout_sha256 = rqr_file_sha256(stdout_path),
+    stderr_path = stderr_path,
+    stderr_sha256 = rqr_file_sha256(stderr_path),
+    exit_status = as.integer(exit_status),
+    started_at = as.numeric(started_at),
+    ended_at = as.numeric(ended_at),
+    elapsed_seconds = as.numeric(ended_at) - as.numeric(started_at)
   )
   saveRDS(receipt, path, version = 3)
   list(
@@ -440,20 +491,23 @@ rqr_write_command_receipt <- function(
 
 rqr_runtime_lineage_marker <- function(
     package, package_version, source_package_sha256,
-    built_source_manifest_digest, install_command_receipt_sha256) {
+    built_source_manifest_digest, install_command_receipt_sha256,
+    installed_tree_pre_marker_digest) {
   list(
-    schema_version = "rqrgibbs_runtime_lineage_marker/1.0.0",
+    schema_version = "rqrgibbs_runtime_lineage_marker/2.0.0",
     package = package,
     package_version = package_version,
     source_package_sha256 = source_package_sha256,
     built_source_manifest_digest = built_source_manifest_digest,
-    install_command_receipt_sha256 = install_command_receipt_sha256
+    install_command_receipt_sha256 = install_command_receipt_sha256,
+    installed_tree_pre_marker_digest = installed_tree_pre_marker_digest
   )
 }
 
 rqr_runtime_install_receipt <- function(
     source_archive_sha256, source_package_sha256,
-    built_source_manifest_digest, runtime_package_tree_digest,
+    built_source_manifest_digest, runtime_pre_marker_tree_digest,
+    runtime_package_tree_digest,
     build_stdout_sha256, build_stderr_sha256,
     install_stdout_sha256, install_stderr_sha256,
     build_command_receipt_sha256, install_command_receipt_sha256,
@@ -462,6 +516,7 @@ rqr_runtime_install_receipt <- function(
     source_archive_sha256 = source_archive_sha256,
     source_package_sha256 = source_package_sha256,
     built_source_manifest_digest = built_source_manifest_digest,
+    runtime_pre_marker_tree_digest = runtime_pre_marker_tree_digest,
     runtime_package_tree_digest = runtime_package_tree_digest,
     build_stdout_sha256 = build_stdout_sha256,
     build_stderr_sha256 = build_stderr_sha256,

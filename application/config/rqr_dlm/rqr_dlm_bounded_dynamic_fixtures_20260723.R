@@ -3,7 +3,7 @@
 # protocol and does not authorize a production launch.
 
 rqr_dlm_bounded_dynamic_fixtures <- list(
-  schema_version = "rqrgibbs_dlm_bounded_fixtures/3.0.0",
+  schema_version = "rqrgibbs_dlm_bounded_fixtures/4.0.0",
   config_id = "rqr_dlm_bounded_dynamic_fixtures_20260723",
   scope = "bounded_dynamic_target_and_mixing_validation",
   generalized_bayes = TRUE,
@@ -11,7 +11,11 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
   response_prediction_contract = FALSE,
   production_simulation_authorized = FALSE,
   bounded_dynamic_execution_authorized = FALSE,
-  runner_modes = c("preflight", "reference-only", "execute-bounded"),
+  benchmark_one_cell_authorized = TRUE,
+  runner_modes = c(
+    "preflight", "reference-only", "benchmark-one-cell",
+    "execute-bounded"
+  ),
   coverage_level = 0.80,
   learning_rate_modes = c(
     "fixed_rate",
@@ -61,7 +65,8 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
       fixed_W_local_level = 84311L,
       frozen_trend_seasonal_discount = 84312L,
       shared_component_scale_trend_regression = 84313L
-    )
+    ),
+    benchmark = 84321L
   ),
   continuation = list(
     history_segments = 3L,
@@ -74,11 +79,20 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
   resources = list(
     sequential_execution = TRUE,
     hard_timeout_minutes = 45L,
-    maximum_process_tree_rss_gib = 4,
+    maximum_sampled_process_group_rss_gib = 4,
     maximum_process_tree_threads = 4L,
     maximum_process_tree_processes = 3L,
     monitor_interval_seconds = 0.20,
-    require_active_process_tree_monitor = TRUE
+    require_active_process_tree_monitor = TRUE,
+    monitor_kind = "pgid_sampled_fallback",
+    kernel_hard_memory_ceiling = FALSE
+  ),
+  benchmark = list(
+    fixture_id = "shared_component_scale_trend_regression",
+    learning_rate_mode = "learned_pseudoresidual_normalized",
+    chains = 4L,
+    use_full_mcmc_schedule = TRUE,
+    purpose = "representative_full_cell_timing_and_storage_only"
   ),
   gates = list(
     maximum_rank_normalized_rhat = 1.01,

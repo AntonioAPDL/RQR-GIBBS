@@ -114,16 +114,18 @@ config <- config_environment$rqr_dlm_bounded_dynamic_fixtures
 required_top_level <- c(
   "schema_version", "config_id", "scope", "generalized_bayes",
   "response_likelihood", "response_prediction_contract",
-  "production_simulation_authorized",
-  "bounded_dynamic_execution_authorized", "runner_modes", "mcmc",
-  "seeds", "continuation", "resources", "gates", "fixtures"
+    "production_simulation_authorized",
+    "bounded_dynamic_execution_authorized",
+    "benchmark_one_cell_authorized", "runner_modes", "mcmc",
+    "seeds", "continuation", "resources", "benchmark", "gates",
+    "fixtures"
 )
 if (!is.list(config) || !all(required_top_level %in% names(config))) {
   stop("The bounded-fixture configuration is incomplete.", call. = FALSE)
 }
 if (!identical(
       config$schema_version,
-      "rqrgibbs_dlm_bounded_fixtures/3.0.0"
+      "rqrgibbs_dlm_bounded_fixtures/4.0.0"
     ) ||
     !isTRUE(config$generalized_bayes) ||
     isTRUE(config$response_likelihood) ||
@@ -132,7 +134,10 @@ if (!identical(
     isTRUE(config$bounded_dynamic_execution_authorized) ||
     !identical(
       config$runner_modes,
-      c("preflight", "reference-only", "execute-bounded")
+      c(
+        "preflight", "reference-only", "benchmark-one-cell",
+        "execute-bounded"
+      )
     )) {
   stop("The bounded-fixture interpretation contract is invalid.", call. = FALSE)
 }
@@ -184,9 +189,15 @@ if (!identical(config$continuation$history_segments, 3L) ||
     !isTRUE(config$resources$sequential_execution) ||
     !isTRUE(config$resources$require_active_process_tree_monitor) ||
     config$resources$hard_timeout_minutes <= 0 ||
-    config$resources$maximum_process_tree_rss_gib <= 0 ||
+    config$resources$maximum_sampled_process_group_rss_gib <= 0 ||
     config$resources$maximum_process_tree_threads < 1L ||
-    config$resources$maximum_process_tree_processes < 1L) {
+    config$resources$maximum_process_tree_processes < 1L ||
+    !identical(
+      config$resources$monitor_kind, "pgid_sampled_fallback"
+    ) ||
+    !identical(
+      config$resources$kernel_hard_memory_ceiling, FALSE
+    )) {
   stop("The bounded-fixture diagnostic contract is invalid.", call. = FALSE)
 }
 exact_modes <- vapply(
@@ -288,6 +299,8 @@ manifest <- list(
   production_simulation_authorized = FALSE,
   bounded_dynamic_execution_authorized =
     config$bounded_dynamic_execution_authorized,
+  benchmark_one_cell_authorized =
+    config$benchmark_one_cell_authorized,
   recorded_at = format(Sys.time(), tz = "UTC", usetz = TRUE)
 )
 output_path <- file.path(

@@ -484,10 +484,11 @@ versioned schema. Promotion requires clean detected checkouts matching every
 exact commit declared in the run manifest. If an external package contributes
 executed code, promotion additionally requires an isolated-runtime
 attestation. The verifier reconstructs the Git and extracted-archive
-mode--blob--path manifests, verifies the built source-package and installed
-runtime digests, rehashes the command receipts and build and installation logs,
-checks the source-package contents against the verified archive, and requires
-a source-package lineage marker inside the executing runtime; direct
+mode--blob--path manifests, compares the complete expected and built
+source-package file sets, rehashes post-command receipts and build and
+installation logs, requires one successful full-package installation, and
+checks both the pre-marker and final installed-runtime digests. A
+source-package lineage marker is required inside the executing runtime; direct
 source-tree execution is ineligible. This is a controlled local-build
 integrity contract, not a claim of bit-for-bit reproducible compilation across
 platforms or a cryptographic signature. The primary \texttt{rqrgibbs}

@@ -363,6 +363,18 @@ rqr_dlm_fit <- function(
   q_draws <- if (component_mode) {
     matrix(NA_real_, n_keep, length(q_evolution), dimnames = list(NULL, evolution$component_names))
   } else NULL
+  q_shape_draws <- if (component_mode) {
+    matrix(
+      NA_real_, n_keep, length(q_evolution),
+      dimnames = list(NULL, evolution$component_names)
+    )
+  } else NULL
+  q_rate_draws <- if (component_mode) {
+    matrix(
+      NA_real_, n_keep, length(q_evolution),
+      dimnames = list(NULL, evolution$component_names)
+    )
+  } else NULL
   theta01_draws <- theta02_draws <- if (component_mode) matrix(NA_real_, p, n_keep) else NULL
 
   total_iter <- n_burn + n_keep * thin
@@ -482,6 +494,8 @@ rqr_dlm_fit <- function(
       if (store_latent_draws) v_draws[, save_idx] <- v
       if (component_mode) {
         q_draws[save_idx, ] <- q_evolution
+        q_shape_draws[save_idx, ] <- q_update$posterior$shape
+        q_rate_draws[save_idx, ] <- q_update$posterior$rate
         theta01_draws[, save_idx] <- theta01
         theta02_draws[, save_idx] <- theta02
       }
@@ -498,19 +512,28 @@ rqr_dlm_fit <- function(
   template_repairs <- if (continued_from_checkpoint) {
     0L
   } else {
-    as.integer(evolution$construction_audit$repair_count %||% 0L)
+    .rqr_history_count(
+      evolution$construction_audit$repair_count %||% 0L,
+      "evolution construction repair count"
+    )
   }
-  mcmc_repairs <- if (is.null(repair_records)) 0L else nrow(repair_records)
-  segment_repairs <- template_repairs + mcmc_repairs
-  numerical_exact <- segment_repairs == 0L
-  parent_cumulative_repairs <- as.integer(
-    init$parent_cumulative_numerical_repair_count %||% 0L
+  mcmc_repairs <- .rqr_history_count(
+    if (is.null(repair_records)) 0L else nrow(repair_records),
+    "MCMC repair count"
   )
-  if (length(parent_cumulative_repairs) != 1L ||
-      is.na(parent_cumulative_repairs) || parent_cumulative_repairs < 0L) {
-    stop("Parent cumulative repair count is invalid.", call. = FALSE)
-  }
-  cumulative_repairs <- parent_cumulative_repairs + segment_repairs
+  segment_repairs <- .rqr_history_count(
+    as.double(template_repairs) + as.double(mcmc_repairs),
+    "segment repair count"
+  )
+  numerical_exact <- segment_repairs == 0L
+  parent_cumulative_repairs <- .rqr_history_count(
+    init$parent_cumulative_numerical_repair_count %||% 0L,
+    "parent cumulative repair count"
+  )
+  cumulative_repairs <- .rqr_history_count(
+    as.double(parent_cumulative_repairs) + as.double(segment_repairs),
+    "cumulative repair count"
+  )
   parent_chain_numerically_exact <- isTRUE(
     init$parent_chain_history_numerically_exact %||% TRUE
   )
@@ -523,7 +546,14 @@ rqr_dlm_fit <- function(
   }
   mathematical_exact <- isTRUE(evolution$exact_joint_target)
   rng_state <- .rqr_rng_state()
-  completed_offset <- as.integer(init$completed_iterations %||% 0L)
+  completed_offset <- .rqr_history_count(
+    init$completed_iterations %||% 0L,
+    "completed_iterations"
+  )
+  completed_iterations <- .rqr_history_count(
+    as.double(completed_offset) + as.double(total_iter),
+    "cumulative completed_iterations"
+  )
   target_contract <- .rqr_dlm_target_contract(
     coverage_level = constants$alpha,
     learning_rate_mode = learning_rate_mode,
@@ -557,7 +587,7 @@ rqr_dlm_fit <- function(
     chain_history_numerically_exact
   checkpoint <- list(
     schema_version = provenance$schema_version,
-    completed_iterations = completed_offset + total_iter,
+    completed_iterations = completed_iterations,
     theta_root1 = theta1,
     theta_root2 = theta2,
     theta0_root1 = theta01,
@@ -623,6 +653,8 @@ rqr_dlm_fit <- function(
     samp.lambda = lambda_draws,
     samp.latent_v = v_draws,
     samp.evolution_scale = q_draws,
+    samp.evolution_scale_shape = q_shape_draws,
+    samp.evolution_scale_rate = q_rate_draws,
     summary = .rqr_dlm_coverage_summary(y, observed, lower, upper),
     diagnostics = list(
       loss_trace = loss_trace,
@@ -695,6 +727,10 @@ rqr_dlm_fit <- function(
       call. = FALSE
     )
   }
+  .rqr_history_count(
+    object$checkpoint_state$completed_iterations,
+    "checkpoint_state$completed_iterations"
+  )
   continuation_history <- .rqr_validate_continuation_history(object)
   stored_checkpoint_digest <- object$checkpoint_digest %||% NA_character_
   if (!.rqr_nonmissing_text(stored_checkpoint_digest) ||
@@ -934,8 +970,9 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
   parent_promotion_eligible <- isTRUE(
     validation$continuation_history$promotion_eligible
   )
-  parent_cumulative_repairs <- as.integer(
-    validation$continuation_history$cumulative_numerical_repair_count
+  parent_cumulative_repairs <- .rqr_history_count(
+    validation$continuation_history$cumulative_numerical_repair_count,
+    "parent cumulative repair count"
   )
   same_resolved_backend <- identical(
     object$provenance$backend_resolved %||% object$provenance$backend,

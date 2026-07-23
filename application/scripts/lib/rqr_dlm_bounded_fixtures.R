@@ -11,15 +11,16 @@ rqr_validate_bounded_dlm_config <- function(config) {
     "schema_version", "config_id", "scope", "generalized_bayes",
     "response_likelihood", "response_prediction_contract",
     "production_simulation_authorized",
-    "bounded_dynamic_execution_authorized", "runner_modes",
+    "bounded_dynamic_execution_authorized",
+    "benchmark_one_cell_authorized", "runner_modes",
     "coverage_level", "learning_rate_modes", "fixed_learning_rate",
     "loss_reference_scale", "lambda_prior", "mcmc", "seeds",
-    "continuation", "resources", "gates", "fixtures"
+    "continuation", "resources", "benchmark", "gates", "fixtures"
   )
   if (!is.list(config) || !all(required %in% names(config)) ||
       !identical(
         config$schema_version,
-        "rqrgibbs_dlm_bounded_fixtures/3.0.0"
+        "rqrgibbs_dlm_bounded_fixtures/4.0.0"
       ) ||
       !isTRUE(config$generalized_bayes) ||
       isTRUE(config$response_likelihood) ||
@@ -27,7 +28,10 @@ rqr_validate_bounded_dlm_config <- function(config) {
       isTRUE(config$production_simulation_authorized) ||
       !identical(
         config$runner_modes,
-        c("preflight", "reference-only", "execute-bounded")
+        c(
+          "preflight", "reference-only", "benchmark-one-cell",
+          "execute-bounded"
+        )
       )) {
     stop("The bounded configuration interpretation is invalid.", call. = FALSE)
   }
@@ -110,12 +114,35 @@ rqr_validate_bounded_dlm_config <- function(config) {
   if (!is.list(resources) ||
       !isTRUE(resources$sequential_execution) ||
       !scalar_integer(resources$hard_timeout_minutes, 1L) ||
-      !scalar_positive(resources$maximum_process_tree_rss_gib) ||
+      !scalar_positive(
+        resources$maximum_sampled_process_group_rss_gib
+      ) ||
       !scalar_integer(resources$maximum_process_tree_threads, 1L) ||
       !scalar_integer(resources$maximum_process_tree_processes, 1L) ||
       !scalar_positive(resources$monitor_interval_seconds) ||
-      !isTRUE(resources$require_active_process_tree_monitor)) {
+      !isTRUE(resources$require_active_process_tree_monitor) ||
+      !identical(resources$monitor_kind, "pgid_sampled_fallback") ||
+      !identical(resources$kernel_hard_memory_ceiling, FALSE)) {
     stop("The bounded resource contract is invalid.", call. = FALSE)
+  }
+  benchmark <- config$benchmark
+  if (!is.list(benchmark) ||
+      !isTRUE(config$benchmark_one_cell_authorized) ||
+      !identical(
+        benchmark$fixture_id,
+        "shared_component_scale_trend_regression"
+      ) ||
+      !identical(
+        benchmark$learning_rate_mode,
+        "learned_pseudoresidual_normalized"
+      ) ||
+      !identical(benchmark$chains, 4L) ||
+      !isTRUE(benchmark$use_full_mcmc_schedule) ||
+      !identical(
+        benchmark$purpose,
+        "representative_full_cell_timing_and_storage_only"
+      )) {
+    stop("The bounded one-cell benchmark contract is invalid.", call. = FALSE)
   }
   gates <- config$gates
   if (!is.list(gates) ||

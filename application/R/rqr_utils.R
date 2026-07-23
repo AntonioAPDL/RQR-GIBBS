@@ -204,7 +204,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 }
 
 .rqr_scalar_integer <- function(x, name, minimum = 0L, maximum = .Machine$integer.max) {
-  if (length(x) != 1L || is.na(x) || !is.finite(x) || x != floor(x) ||
+  if (!is.numeric(x) || length(x) != 1L || is.na(x) ||
+      !is.finite(x) || x != floor(x) ||
       x < minimum || x > maximum) {
     stop(
       sprintf("%s must be one finite integer in [%d, %d].", name, minimum, maximum),
@@ -212,6 +213,12 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     )
   }
   as.integer(x)
+}
+
+.rqr_history_count <- function(x, name) {
+  .rqr_scalar_integer(
+    x, name = name, minimum = 0L, maximum = .Machine$integer.max
+  )
 }
 
 .rqr_positive_integer_vector <- function(x, name) {
@@ -241,10 +248,10 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
-.rqr_schema_version <- function() "rqrgibbs_fit/1.6.0"
+.rqr_schema_version <- function() "rqrgibbs_fit/1.7.0"
 
 .rqr_continuation_history_schema <- function() {
-  "rqrgibbs_continuation_history/3.0.0"
+  "rqrgibbs_continuation_history/4.0.0"
 }
 
 .rqr_make_continuation_history <- function(
@@ -259,17 +266,10 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   if (!grepl("^[0-9a-f]{64}$", checkpoint_digest)) {
     stop("checkpoint_digest must be a complete SHA-256 digest.", call. = FALSE)
   }
-  segment_numerical_repair_count <- as.integer(
-    segment_numerical_repair_count
+  segment_numerical_repair_count <- .rqr_history_count(
+    segment_numerical_repair_count,
+    "segment_numerical_repair_count"
   )
-  if (length(segment_numerical_repair_count) != 1L ||
-      is.na(segment_numerical_repair_count) ||
-      segment_numerical_repair_count < 0L) {
-    stop(
-      "segment_numerical_repair_count must be one nonnegative integer.",
-      call. = FALSE
-    )
-  }
   environment_mismatches <- sort(unique(as.character(
     environment_mismatches
   )))
@@ -296,7 +296,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
         )) {
       stop("parent must be a validated continuation-history contract.", call. = FALSE)
     }
-    generation <- as.integer(parent$generation) + 1L
+    generation <- .rqr_history_count(
+      parent$generation, "parent$generation"
+    ) + 1L
     segments <- parent$segments
     expected_parent_checkpoint <- utils::tail(segments, 1L)[[1L]]$
       checkpoint_digest
@@ -309,8 +311,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
         call. = FALSE
       )
     }
-    parent_cumulative_repairs <- as.integer(
-      parent$cumulative_numerical_repair_count
+    parent_cumulative_repairs <- .rqr_history_count(
+      parent$cumulative_numerical_repair_count,
+      "parent$cumulative_numerical_repair_count"
     )
     parent_chain_exact <- isTRUE(
       parent$chain_history_numerically_exact
@@ -549,9 +552,26 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     } else {
       identical(segment$parent_checkpoint_digest, prior_checkpoint)
     }
-    segment_repairs <- as.integer(segment$segment_numerical_repair_count)
+    segment_repairs <- tryCatch(
+      .rqr_history_count(
+        segment$segment_numerical_repair_count,
+        "segment_numerical_repair_count"
+      ),
+      error = function(e) NA_integer_
+    )
     valid_repairs <- length(segment_repairs) == 1L &&
-      !is.na(segment_repairs) && segment_repairs >= 0L
+      !is.na(segment_repairs)
+    segment_generation <- tryCatch(
+      .rqr_history_count(segment$generation, "segment$generation"),
+      error = function(e) NA_integer_
+    )
+    segment_cumulative_repairs <- tryCatch(
+      .rqr_history_count(
+        segment$cumulative_numerical_repair_count,
+        "segment$cumulative_numerical_repair_count"
+      ),
+      error = function(e) NA_integer_
+    )
     valid_logical_scalar <- function(value) {
       is.logical(value) && length(value) == 1L && !is.na(value)
     }
@@ -588,7 +608,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
           segments[[index - 1L]]$backend_resolved
         )
     }
-    if (!identical(as.integer(segment$generation), expected_generation) ||
+    if (!identical(segment_generation, expected_generation) ||
         !valid_checkpoint || !valid_target_digest ||
         !valid_parent_link || !valid_mismatches ||
         !valid_repairs || !valid_logicals || !valid_parent_backends ||
@@ -664,7 +684,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       environment_override
     recursive_checks <- c(
       identical(
-        as.integer(segment$cumulative_numerical_repair_count),
+        segment_cumulative_repairs,
         cumulative_repairs
       ),
       identical(
@@ -714,13 +734,31 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     )
   }
   last_segment <- utils::tail(segments, 1L)[[1L]]
+  contract_generation <- tryCatch(
+    .rqr_history_count(contract$generation, "contract$generation"),
+    error = function(e) NA_integer_
+  )
+  contract_cumulative_repairs <- tryCatch(
+    .rqr_history_count(
+      contract$cumulative_numerical_repair_count,
+      "contract$cumulative_numerical_repair_count"
+    ),
+    error = function(e) NA_integer_
+  )
+  model_cumulative_repairs <- tryCatch(
+    .rqr_history_count(
+      object$model_spec$cumulative_numerical_repair_count,
+      "model_spec$cumulative_numerical_repair_count"
+    ),
+    error = function(e) NA_integer_
+  )
   checks <- list(
     generation = identical(
-      as.integer(contract$generation),
+      contract_generation,
       as.integer(length(segments) - 1L)
     ),
     cumulative_numerical_repair_count = identical(
-      as.integer(contract$cumulative_numerical_repair_count),
+      contract_cumulative_repairs,
       cumulative_repairs
     ),
     chain_history_numerically_exact = identical(
@@ -745,7 +783,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     ),
     redundant_cumulative_repairs = identical(
       cumulative_repairs,
-      as.integer(object$model_spec$cumulative_numerical_repair_count)
+      model_cumulative_repairs
     ),
     redundant_chain_exact = identical(
       chain_exact,
@@ -1082,7 +1120,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   control
 }
 
-.rqr_directory_digest <- function(path) {
+.rqr_directory_digest <- function(path, exclude_relative = character(0)) {
   path <- normalizePath(path, winslash = "/", mustWork = TRUE)
   files <- list.files(
     path, recursive = TRUE, all.files = TRUE, full.names = TRUE,
@@ -1090,6 +1128,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   )
   files <- sort(files)
   relative <- substring(files, nchar(path) + 2L)
+  keep <- !relative %in% as.character(exclude_relative)
+  files <- files[keep]
+  relative <- relative[keep]
   info <- file.info(files)
   links <- Sys.readlink(files)
   if (anyNA(info$mode) || anyDuplicated(relative)) {
@@ -1376,42 +1417,65 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     source$package_root, recursive = TRUE, all.files = TRUE,
     include.dirs = FALSE, no.. = TRUE
   )
-  critical <- grepl("^(R/|src/|NAMESPACE$)", source_relative) &
-    !grepl(
+  standard_excluded <- source_relative == ".Rbuildignore" |
+    grepl("(^|/)\\.[^/]+($|/)", source_relative) |
+    grepl(
       "\\.(o|so|dll|dylib|a|sl|gch)$|(^|/)symbols\\.rds$",
       source_relative, ignore.case = TRUE
-    ) &
-    !grepl("(^|/)\\.", source_relative)
+    )
+  build_ignored <- rep(FALSE, length(source_relative))
   buildignore_path <- file.path(source$package_root, ".Rbuildignore")
   if (file.exists(buildignore_path)) {
     patterns <- trimws(readLines(buildignore_path, warn = FALSE))
     patterns <- patterns[nzchar(patterns) & !startsWith(patterns, "#")]
     if (length(patterns)) {
-      ignored <- vapply(source_relative, function(path) {
+      build_ignored <- vapply(source_relative, function(path) {
+        components <- strsplit(path, "/", fixed = TRUE)[[1L]]
+        candidates <- vapply(
+          seq_along(components),
+          function(index) {
+            paste(components[seq_len(index)], collapse = "/")
+          },
+          character(1L)
+        )
         any(vapply(patterns, function(pattern) {
           tryCatch(
-            grepl(pattern, path, perl = TRUE, ignore.case = TRUE),
+            any(grepl(
+              pattern, candidates, perl = TRUE, ignore.case = TRUE
+            )),
             error = function(e) {
               stop("Invalid .Rbuildignore expression.", call. = FALSE)
             }
           )
         }, logical(1L)))
       }, logical(1L))
-      critical <- critical & !ignored
     }
   }
-  missing_critical <- setdiff(source_relative[critical], built_relative)
+  expected_relative <- sort(source_relative[
+    !standard_excluded & !build_ignored
+  ])
+  missing_expected <- setdiff(expected_relative, built_relative)
+  unexpected_built <- setdiff(built_relative, expected_relative)
   list(
     match = description_match &&
       !length(missing_source) &&
       !length(changed_source) &&
       !length(changed_mode) &&
-      !length(missing_critical),
+      !length(missing_expected) &&
+      !length(unexpected_built),
     description_match = description_match,
     missing_source_entries = sort(missing_source),
     changed_source_entries = sort(changed_source),
     changed_mode_entries = sort(changed_mode),
-    missing_critical_entries = sort(missing_critical),
+    missing_expected_entries = sort(missing_expected),
+    unexpected_built_entries = sort(unexpected_built),
+    expected_source_manifest_digest = digest::digest(
+      paste(expected_relative, collapse = "\n"),
+      algo = "sha256", serialize = FALSE
+    ),
+    expected_source_manifest_entries = length(expected_relative),
+    source_input_tree_digest =
+      .rqr_directory_digest(source$package_root),
     built_source_manifest_digest =
       .rqr_directory_digest(built$package_root),
     built_source_manifest_entries = length(built_files)
@@ -1419,7 +1483,10 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 }
 
 .rqr_command_receipt_verified <- function(
-    path, recorded_sha256, expected_input_path, expected_input_sha256) {
+    path, recorded_sha256, expected_phase,
+    expected_input_path, expected_input_sha256,
+    expected_output_path, expected_output_sha256,
+    expected_library_path = NA_character_) {
   if (!file.exists(path) ||
       !grepl("^[0-9a-f]{64}$", recorded_sha256) ||
       !identical(
@@ -1429,15 +1496,46 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     return(FALSE)
   }
   receipt <- tryCatch(readRDS(path), error = function(e) NULL)
-  is.list(receipt) &&
+  valid_time <- is.list(receipt) &&
+    is.numeric(receipt$started_at) && length(receipt$started_at) == 1L &&
+    is.finite(receipt$started_at) &&
+    is.numeric(receipt$ended_at) && length(receipt$ended_at) == 1L &&
+    is.finite(receipt$ended_at) &&
+    receipt$ended_at >= receipt$started_at &&
+    is.numeric(receipt$elapsed_seconds) &&
+    length(receipt$elapsed_seconds) == 1L &&
+    is.finite(receipt$elapsed_seconds) &&
+    abs(
+      receipt$elapsed_seconds -
+        (receipt$ended_at - receipt$started_at)
+    ) <= 1e-8
+  expected_library <- if (is.na(expected_library_path)) {
+    NA_character_
+  } else {
+    normalizePath(
+      expected_library_path, winslash = "/", mustWork = FALSE
+    )
+  }
+  is.list(receipt) && valid_time &&
+    identical(
+      receipt$schema_version,
+      "rqrgibbs_command_receipt/2.0.0"
+    ) &&
+    identical(receipt$phase, expected_phase) &&
     .rqr_nonmissing_text(c(
       receipt$executable, receipt$working_directory,
-      receipt$input_path, receipt$input_sha256
+      receipt$input_paths, receipt$input_sha256,
+      receipt$output_path, receipt$output_sha256,
+      receipt$stdout_path, receipt$stdout_sha256,
+      receipt$stderr_path, receipt$stderr_sha256
     )) &&
     is.character(receipt$arguments) &&
+    is.character(receipt$input_paths) &&
+    length(receipt$input_paths) == 1L &&
+    identical(receipt$exit_status, 0L) &&
     identical(
       normalizePath(
-        receipt$input_path, winslash = "/", mustWork = FALSE
+        receipt$input_paths, winslash = "/", mustWork = FALSE
       ),
       normalizePath(
         expected_input_path, winslash = "/", mustWork = FALSE
@@ -1446,12 +1544,96 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     identical(
       tolower(as.character(receipt$input_sha256)),
       tolower(as.character(expected_input_sha256))
+    ) &&
+    identical(
+      normalizePath(
+        receipt$output_path, winslash = "/", mustWork = FALSE
+      ),
+      normalizePath(
+        expected_output_path, winslash = "/", mustWork = FALSE
+      )
+    ) &&
+    identical(
+      tolower(as.character(receipt$output_sha256)),
+      tolower(as.character(expected_output_sha256))
+    ) &&
+    identical(
+      if (is.null(receipt$library_path) ||
+          length(receipt$library_path) != 1L ||
+          is.na(receipt$library_path)) {
+        NA_character_
+      } else {
+        normalizePath(
+          receipt$library_path, winslash = "/", mustWork = FALSE
+        )
+      },
+      expected_library
+    ) &&
+    file.exists(receipt$stdout_path) &&
+    file.exists(receipt$stderr_path) &&
+    identical(
+      digest::digest(
+        file = receipt$stdout_path,
+        algo = "sha256", serialize = FALSE
+      ),
+      receipt$stdout_sha256
+    ) &&
+    identical(
+      digest::digest(
+        file = receipt$stderr_path,
+        algo = "sha256", serialize = FALSE
+      ),
+      receipt$stderr_sha256
+    )
+}
+
+.rqr_command_shape_verified <- function(
+    phase, arguments, input_path, library_path = NA_character_) {
+  phase <- as.character(phase)[1L]
+  arguments <- as.character(arguments)
+  strip_quotes <- function(value) {
+    sub("^(['\"])(.*)\\1$", "\\2", as.character(value), perl = TRUE)
+  }
+  if (identical(phase, "build")) {
+    return(
+      length(arguments) == 5L &&
+        identical(
+          arguments[1:4],
+          c("CMD", "build", "--no-manual", "--no-build-vignettes")
+        ) &&
+        identical(strip_quotes(arguments[5L]), basename(input_path))
+    )
+  }
+  if (!identical(phase, "install") ||
+      is.na(library_path) || !nzchar(library_path)) {
+    return(FALSE)
+  }
+  length(arguments) == 6L &&
+    identical(
+      arguments[1:4],
+      c("CMD", "INSTALL", "--preclean", "--clean")
+    ) &&
+    startsWith(arguments[5L], "--library=") &&
+    identical(
+      normalizePath(
+        strip_quotes(sub("^--library=", "", arguments[5L])),
+        winslash = "/", mustWork = FALSE
+      ),
+      normalizePath(library_path, winslash = "/", mustWork = FALSE)
+    ) &&
+    identical(
+      normalizePath(
+        strip_quotes(arguments[6L]),
+        winslash = "/", mustWork = FALSE
+      ),
+      normalizePath(input_path, winslash = "/", mustWork = FALSE)
     )
 }
 
 .rqr_runtime_install_receipt_digest <- function(
     source_archive_sha256, source_package_sha256,
-    built_source_manifest_digest, runtime_package_tree_digest,
+    built_source_manifest_digest, runtime_pre_marker_tree_digest,
+    runtime_package_tree_digest,
     build_stdout_sha256, build_stderr_sha256,
     install_stdout_sha256, install_stderr_sha256,
     build_command_receipt_sha256, install_command_receipt_sha256,
@@ -1460,6 +1642,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     source_archive_sha256 = source_archive_sha256,
     source_package_sha256 = source_package_sha256,
     built_source_manifest_digest = built_source_manifest_digest,
+    runtime_pre_marker_tree_digest = runtime_pre_marker_tree_digest,
     runtime_package_tree_digest = runtime_package_tree_digest,
     build_stdout_sha256 = build_stdout_sha256,
     build_stderr_sha256 = build_stderr_sha256,
@@ -1619,6 +1802,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       "source_archive_manifest_digest", "source_archive_tree_match",
       "source_archive_isolated_from_source", "source_package_path",
       "source_package_sha256", "source_package_archive_match",
+      "expected_source_manifest_digest",
+      "expected_source_manifest_entries", "build_input_tree_digest",
       "built_source_manifest_digest", "built_source_manifest_entries",
       "build_stdout_path", "build_stdout_sha256",
       "build_stderr_path", "build_stderr_sha256",
@@ -1630,8 +1815,10 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       "install_command_receipt_path", "install_command_receipt_sha256",
       "install_executable", "install_arguments",
       "install_working_directory", "install_input_path",
+      "install_library_path",
       "runtime_package_path", "runtime_install_receipt_digest",
       "runtime_lineage_marker_path", "runtime_lineage_marker_sha256",
+      "runtime_pre_marker_tree_digest",
       "runtime_package_tree_digest", "runtime_isolated_from_source",
       "R_version", "platform"
     )
@@ -1702,6 +1889,20 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     } else {
       NULL
     }
+    attested_built_entries <- tryCatch(
+      .rqr_history_count(
+        attestation$built_source_manifest_entries,
+        "attestation$built_source_manifest_entries"
+      ),
+      error = function(e) NA_integer_
+    )
+    attested_expected_entries <- tryCatch(
+      .rqr_history_count(
+        attestation$expected_source_manifest_entries,
+        "attestation$expected_source_manifest_entries"
+      ),
+      error = function(e) NA_integer_
+    )
     source_package_archive_match <-
       is.list(source_package_lineage) &&
       isTRUE(source_package_lineage$match) &&
@@ -1713,7 +1914,24 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       ) &&
       identical(
         as.integer(source_package_lineage$built_source_manifest_entries),
-        as.integer(attestation$built_source_manifest_entries)
+        attested_built_entries
+      ) &&
+      identical(
+        source_package_lineage$expected_source_manifest_digest,
+        tolower(as.character(
+          attestation$expected_source_manifest_digest %||%
+            NA_character_
+        )[1L])
+      ) &&
+      identical(
+        as.integer(source_package_lineage$expected_source_manifest_entries),
+        attested_expected_entries
+      ) &&
+      identical(
+        source_package_lineage$source_input_tree_digest,
+        tolower(as.character(
+          attestation$build_input_tree_digest %||% NA_character_
+        )[1L])
       ) &&
       isTRUE(attestation$source_package_archive_match)
     git_manifest_payload <- archive_manifest_payload <- NULL
@@ -1805,12 +2023,40 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
         attestation[[paste0(field, "_input_path")]] %||% NA_character_
       )[1L]
       input_digest <- if (identical(field, "build")) {
-        recorded_archive_digest
+        tolower(as.character(
+          attestation$build_input_tree_digest %||% NA_character_
+        )[1L])
       } else {
         recorded_source_package_digest
       }
+      output_path <- if (identical(field, "build")) {
+        source_package_path
+      } else {
+        runtime_path
+      }
+      output_digest <- if (identical(field, "build")) {
+        recorded_source_package_digest
+      } else {
+        tolower(as.character(
+          attestation$runtime_pre_marker_tree_digest %||% NA_character_
+        )[1L])
+      }
+      library_path <- if (identical(field, "install")) {
+        as.character(
+          attestation$install_library_path %||% NA_character_
+        )[1L]
+      } else {
+        NA_character_
+      }
       verified <- .rqr_command_receipt_verified(
-        path, digest_value, input_path, input_digest
+        path = path,
+        recorded_sha256 = digest_value,
+        expected_phase = field,
+        expected_input_path = input_path,
+        expected_input_sha256 = input_digest,
+        expected_output_path = output_path,
+        expected_output_sha256 = output_digest,
+        expected_library_path = library_path
       )
       receipt <- if (verified) {
         tryCatch(readRDS(path), error = function(e) NULL)
@@ -1831,30 +2077,12 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
         )[1L],
         winslash = "/", mustWork = FALSE
       )
-      command_arguments_unquoted <- if (is.list(receipt)) {
-        gsub("[\"']", "", receipt$arguments)
-      } else {
-        character(0)
-      }
-      input_candidates <- c(
-        normalizePath(input_path, winslash = "/", mustWork = FALSE),
-        basename(input_path)
+      command_shape <- .rqr_command_shape_verified(
+        phase = field,
+        arguments = expected_arguments,
+        input_path = input_path,
+        library_path = library_path
       )
-      input_candidates <- unique(input_candidates[
-        !is.na(input_candidates) & nzchar(input_candidates)
-      ])
-      input_appears_in_command <- is.list(receipt) &&
-        length(input_candidates) > 0L &&
-        any(vapply(input_candidates, function(candidate) {
-          any(grepl(candidate, command_arguments_unquoted, fixed = TRUE))
-        }, logical(1L)))
-      command_shape <- if (identical(field, "build")) {
-        length(expected_arguments) >= 4L &&
-          identical(expected_arguments[1:2], c("CMD", "build"))
-      } else {
-        length(expected_arguments) >= 4L &&
-          identical(expected_arguments[1:2], c("CMD", "INSTALL"))
-      }
       list(
         verified = verified && is.list(receipt) &&
           identical(
@@ -1880,7 +2108,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
             ),
             expected_workdir
           ) &&
-          command_shape && input_appears_in_command,
+          command_shape,
         receipt = receipt,
         sha256 = digest_value
       )
@@ -1905,6 +2133,21 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     } else {
       NULL
     }
+    runtime_pre_marker_actual <- if (!is.na(runtime_path) &&
+        dir.exists(runtime_path)) {
+      tryCatch(
+        .rqr_directory_digest(
+          runtime_path,
+          exclude_relative = "RQR-RUNTIME-LINEAGE.rds"
+        ),
+        error = function(e) NA_character_
+      )
+    } else {
+      NA_character_
+    }
+    recorded_runtime_pre_marker <- tolower(as.character(
+      attestation$runtime_pre_marker_tree_digest %||% NA_character_
+    )[1L])
     runtime_lineage_marker_match <- marker_verified &&
       is.list(marker) &&
       identical(
@@ -1913,7 +2156,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       ) &&
       identical(
         marker$schema_version,
-        "rqrgibbs_runtime_lineage_marker/1.0.0"
+        "rqrgibbs_runtime_lineage_marker/2.0.0"
       ) &&
       identical(as.character(marker$package), package) &&
       identical(as.character(marker$package_version), runtime_version) &&
@@ -1932,6 +2175,16 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
           marker$install_command_receipt_sha256
         )),
         install_command$sha256
+      ) &&
+      identical(
+        tolower(as.character(
+          marker$installed_tree_pre_marker_digest
+        )),
+        recorded_runtime_pre_marker
+      ) &&
+      identical(
+        runtime_pre_marker_actual,
+        recorded_runtime_pre_marker
       )
     receipt_digest <- if (is.list(attestation)) {
       tryCatch(
@@ -1941,6 +2194,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
           built_source_manifest_digest = tolower(as.character(
             attestation$built_source_manifest_digest %||% NA_character_
           )[1L]),
+          runtime_pre_marker_tree_digest =
+            recorded_runtime_pre_marker,
           runtime_package_tree_digest = tolower(as.character(
             attestation$runtime_package_tree_digest %||% NA_character_
           )[1L]),
@@ -2010,7 +2265,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       all(required %in% names(attestation)) &&
       identical(
         attestation$schema_version,
-        "rqrgibbs_runtime_attestation/4.0.0"
+        "rqrgibbs_runtime_attestation/5.0.0"
       ) &&
       identical(as.character(attestation$package), package) &&
       identical(as.character(attestation$package_version), runtime_version) &&

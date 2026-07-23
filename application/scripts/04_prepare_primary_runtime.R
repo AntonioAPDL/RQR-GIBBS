@@ -146,35 +146,55 @@ build_arguments <- c(
   "CMD", "build", "--no-manual", "--no-build-vignettes",
   "rqrgibbs"
 )
-build_command <- rqr_write_command_receipt(
-  path = file.path(commit_root, "build.command.rds"),
-  executable = r_bin,
-  arguments = build_arguments,
-  working_directory = staging,
-  input_path = file.path(staging, "rqrgibbs"),
-  input_sha256 = source_archive_sha256
+build_input_path <- file.path(staging, "rqrgibbs")
+build_input_digest <- rqr_directory_digest(build_input_path)
+built_archive <- file.path(
+  staging, paste0("rqrgibbs_", source_version, ".tar.gz")
 )
+package_archive <- file.path(commit_root, basename(built_archive))
+if (file.exists(package_archive)) unlink(package_archive)
 old_workdir <- setwd(staging)
 on.exit(setwd(old_workdir), add = TRUE)
+build_started_at <- as.numeric(Sys.time())
 build_status <- system2(
   r_bin,
   build_arguments,
   stdout = build_stdout, stderr = build_stderr
 )
+build_ended_at <- as.numeric(Sys.time())
+if (identical(as.integer(build_status), 0L) &&
+    file.exists(built_archive)) {
+  if (!file.copy(built_archive, package_archive, overwrite = TRUE)) {
+    stop("Could not preserve the primary source package.", call. = FALSE)
+  }
+}
+build_output_digest <- if (file.exists(package_archive)) {
+  rqr_file_sha256(package_archive)
+} else {
+  NA_character_
+}
+build_command <- rqr_write_command_receipt(
+  path = file.path(commit_root, "build.command.rds"),
+  phase = "build",
+  executable = r_bin,
+  arguments = build_arguments,
+  working_directory = staging,
+  input_path = build_input_path,
+  input_sha256 = build_input_digest,
+  output_path = package_archive,
+  output_sha256 = build_output_digest,
+  stdout_path = build_stdout,
+  stderr_path = build_stderr,
+  exit_status = build_status,
+  started_at = build_started_at,
+  ended_at = build_ended_at
+)
 if (!identical(as.integer(build_status), 0L)) {
   cat(tail(readLines(build_stderr, warn = FALSE), 40L), sep = "\n")
   stop("R CMD build failed for the primary Git archive.", call. = FALSE)
 }
-built_archive <- file.path(
-  staging, paste0("rqrgibbs_", source_version, ".tar.gz")
-)
-if (!file.exists(built_archive)) {
+if (!file.exists(package_archive)) {
   stop("R CMD build did not create the expected source package.", call. = FALSE)
-}
-package_archive <- file.path(commit_root, basename(built_archive))
-if (file.exists(package_archive)) unlink(package_archive)
-if (!file.copy(built_archive, package_archive, overwrite = TRUE)) {
-  stop("Could not preserve the primary source package.", call. = FALSE)
 }
 source_package_sha256 <- rqr_file_sha256(package_archive)
 source_package_lineage <- rqr_source_package_lineage(
@@ -197,25 +217,51 @@ install_arguments <- c(
   paste0("--library=", shQuote(library_root)),
   shQuote(package_archive)
 )
-install_command <- rqr_write_command_receipt(
-  path = file.path(commit_root, "install.command.rds"),
-  executable = r_bin,
-  arguments = install_arguments,
-  working_directory = commit_root,
-  input_path = package_archive,
-  input_sha256 = source_package_sha256
-)
+runtime_candidate <- file.path(library_root, "rqrgibbs")
+if (file.exists(runtime_candidate) || dir.exists(runtime_candidate)) {
+  unlink(runtime_candidate, recursive = TRUE, force = TRUE)
+}
+if (file.exists(runtime_candidate) || dir.exists(runtime_candidate)) {
+  stop("Could not remove the pre-existing primary runtime.", call. = FALSE)
+}
+install_started_at <- as.numeric(Sys.time())
 install_status <- system2(
   r_bin,
   install_arguments,
   stdout = install_stdout, stderr = install_stderr
 )
+install_ended_at <- as.numeric(Sys.time())
+runtime_pre_marker_tree_digest <- if (
+    dir.exists(runtime_candidate) &&
+      !file.exists(file.path(runtime_candidate, "RQR-RUNTIME-LINEAGE.rds"))) {
+  rqr_directory_digest(runtime_candidate)
+} else {
+  NA_character_
+}
+install_command <- rqr_write_command_receipt(
+  path = file.path(commit_root, "install.command.rds"),
+  phase = "install",
+  executable = r_bin,
+  arguments = install_arguments,
+  working_directory = commit_root,
+  input_path = package_archive,
+  input_sha256 = source_package_sha256,
+  output_path = runtime_candidate,
+  output_sha256 = runtime_pre_marker_tree_digest,
+  stdout_path = install_stdout,
+  stderr_path = install_stderr,
+  exit_status = install_status,
+  started_at = install_started_at,
+  ended_at = install_ended_at,
+  library_path = library_root
+)
 if (!identical(as.integer(install_status), 0L)) {
   cat(tail(readLines(install_stderr, warn = FALSE), 40L), sep = "\n")
+  unlink(runtime_candidate, recursive = TRUE, force = TRUE)
   stop("R CMD INSTALL failed for the primary source package.", call. = FALSE)
 }
 runtime_path <- normalizePath(
-  file.path(library_root, "rqrgibbs"), winslash = "/", mustWork = TRUE
+  runtime_candidate, winslash = "/", mustWork = TRUE
 )
 runtime_version <- read.dcf(
   file.path(runtime_path, "DESCRIPTION"), fields = "Version"
@@ -233,7 +279,9 @@ saveRDS(
     source_package_sha256 = source_package_sha256,
     built_source_manifest_digest =
       source_package_lineage$built_source_manifest_digest,
-    install_command_receipt_sha256 = install_command$sha256
+    install_command_receipt_sha256 = install_command$sha256,
+    installed_tree_pre_marker_digest =
+      runtime_pre_marker_tree_digest
   ),
   runtime_lineage_marker_path,
   version = 3
@@ -258,7 +306,7 @@ runtime_lineage_marker_sha256 <- rqr_file_sha256(
   runtime_lineage_marker_path
 )
 attestation <- list(
-  schema_version = "rqrgibbs_runtime_attestation/4.0.0",
+  schema_version = "rqrgibbs_runtime_attestation/5.0.0",
   package = "rqrgibbs",
   package_version = source_version,
   source_commit = expected_commit,
@@ -287,6 +335,11 @@ attestation <- list(
   ),
   source_package_sha256 = source_package_sha256,
   source_package_archive_match = source_package_lineage$match,
+  expected_source_manifest_digest =
+    source_package_lineage$expected_source_manifest_digest,
+  expected_source_manifest_entries =
+    source_package_lineage$expected_source_manifest_entries,
+  build_input_tree_digest = build_input_digest,
   built_source_manifest_digest =
     source_package_lineage$built_source_manifest_digest,
   built_source_manifest_entries =
@@ -317,7 +370,7 @@ attestation <- list(
     staging, winslash = "/", mustWork = TRUE
   ),
   build_input_path = normalizePath(
-    file.path(staging, "rqrgibbs"), winslash = "/", mustWork = TRUE
+    build_input_path, winslash = "/", mustWork = TRUE
   ),
   install_command_receipt_path = install_command$path,
   install_command_receipt_sha256 = install_command$sha256,
@@ -331,11 +384,16 @@ attestation <- list(
   install_input_path = normalizePath(
     package_archive, winslash = "/", mustWork = TRUE
   ),
+  install_library_path = normalizePath(
+    library_root, winslash = "/", mustWork = TRUE
+  ),
   runtime_package_path = runtime_path,
   runtime_lineage_marker_path = normalizePath(
     runtime_lineage_marker_path, winslash = "/", mustWork = TRUE
   ),
   runtime_lineage_marker_sha256 = runtime_lineage_marker_sha256,
+  runtime_pre_marker_tree_digest =
+    runtime_pre_marker_tree_digest,
   runtime_package_tree_digest = runtime_tree_digest,
   runtime_isolated_from_source = TRUE,
   runtime_install_receipt_digest = rqr_runtime_install_receipt(
@@ -343,6 +401,8 @@ attestation <- list(
     source_package_sha256 = source_package_sha256,
     built_source_manifest_digest =
       source_package_lineage$built_source_manifest_digest,
+    runtime_pre_marker_tree_digest =
+      runtime_pre_marker_tree_digest,
     runtime_package_tree_digest = runtime_tree_digest,
     build_stdout_sha256 = build_stdout_sha256,
     build_stderr_sha256 = build_stderr_sha256,

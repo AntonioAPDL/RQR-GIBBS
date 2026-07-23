@@ -65,11 +65,12 @@ RQR-DESN and RHS promotion also requires the executing exdqlm namespace to
 match an isolated-library attestation for the clean pinned source. A direct
 source-tree namespace is intentionally ineligible. Run `make
 prepare-primary-runtime` and `make prepare-exdqlm-runtime` with the reviewed
-primary commit in `RQR_EXPECTED_PRIMARY_COMMIT`. Version-4 attestations
+primary commit in `RQR_EXPECTED_PRIMARY_COMMIT`. Version-5 attestations
 reconstruct and compare each archive entry's Git mode, blob identifier, and
-path with the declared commit tree, compare the built source-package contents
-with that archive, rehash the actual build/install command receipts and logs,
-and require a source-package marker in the installed runtime. The
+path with the declared commit tree, compare the complete expected and built
+source-package file sets, rehash post-command build and installation receipts
+and logs, require one successful full-package installation, and bind both
+pre-marker and final installed-runtime digests. The
 protected exdqlm checkout remains read-only and is checked for any source-state
 change.
 
@@ -81,12 +82,13 @@ The next exact-mode dynamic validation config is
 uses the same canonical constructor as its tests and instantiates every model,
 missing-response vector, evolution object, and future contract. It remains
 non-production and excludes the adaptive working recursion.
-The three-mode runner
+The four-mode runner
 `scripts/08_run_rqr_dlm_bounded_validation.sh` provides construction
-preflight, deterministic/reference-only validation, and a separately gated
-execution path. The committed config keeps the execution path disabled; no 24
-fit launch is authorized by the repository state alone. Any future execution
-authorization must bind both the passing reference-only manifest and the
-six-row process-tree resource summary from the same monitored run by SHA-256.
-The monitor terminates the process group on timeout or a declared
-process/thread/RSS ceiling breach.
+preflight, expanded reference-only validation, a representative full
+four-chain one-cell benchmark, and a separately gated execution path. The
+committed config keeps the 24-fit path disabled. Any future authorization must
+bind the complete recursive artifact manifest from a passing reference run and
+the identical isolated runtime and toolchain. The monitor uses PGID sampling,
+signal traps, a fault-injection test, and a final group sweep. It terminates on
+timeout or an observed process/thread/RSS limit; the sampled maxima are
+telemetry, not kernel-hard peaks.
