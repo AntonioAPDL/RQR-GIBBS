@@ -605,6 +605,9 @@ main <- function() {
   if (!requireNamespace("rqrgibbs", quietly = TRUE)) {
     stop("The isolated rqrgibbs runtime could not be loaded.", call. = FALSE)
   }
+  suppressPackageStartupMessages(
+    library("rqrgibbs", character.only = TRUE)
+  )
   primary_runtime_state <- rqrgibbs:::.rqr_repository_provenance(list(
     repo_root = repo_root,
     expected_git_commit = expected_primary_commit,
