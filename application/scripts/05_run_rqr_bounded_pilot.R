@@ -212,6 +212,7 @@ rank_split_rhat <- function(x) {
 
 ess_core <- function(x) {
   x <- as.matrix(x)
+  storage.mode(x) <- "double"
   n <- nrow(x)
   m <- ncol(x)
   total <- n * m
