@@ -176,6 +176,24 @@ setsid Rscript \
 root_pid=$!
 pgid=$root_pid
 
+# The background child can exist briefly before `setsid` has created its new
+# process group. Entering the monitor loop before that transition would record
+# no samples and then merely wait for the unmonitored child.
+group_ready=FALSE
+for _ in {1..50}; do
+  if group_exists "$pgid"; then
+    group_ready=TRUE
+    break
+  fi
+  if ! kill -0 "$root_pid" 2>/dev/null; then
+    break
+  fi
+  sleep 0.1
+done
+if [[ "$group_ready" != TRUE ]]; then
+  monitor_error=TRUE
+fi
+
 while group_exists "$pgid"; do
   now_epoch="$(date +%s)"
   elapsed=$((now_epoch - start_epoch))
