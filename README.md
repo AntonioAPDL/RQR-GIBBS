@@ -57,10 +57,16 @@ future component templates.
 
 The pinned exdqlm branch remains the read-only implementation reference for
 RQR-DESN and RHS-family compatibility. Promotion of either path additionally
-requires the executing exdqlm namespace to be bound to the clean checkout at
-the exact pinned commit. `make prepare-exdqlm-runtime` builds an isolated local
-library from a Git archive of that commit and writes a verified runtime
-attestation under the ignored `application/cache/` tree.
+requires the executing exdqlm namespace to come from an isolated, attested
+runtime of the exact pinned commit. Direct source-tree loading is prohibited.
+`make prepare-exdqlm-runtime` uses read-only Git access to create an archive,
+then builds entirely under the ignored `application/cache/` tree. Its
+versioned attestation binds the source commit and tree, archive checksum,
+installed package digest, and disjoint archive/runtime paths while recording
+that the full external checkout—including ignored files—was unchanged. The
+RQR adapters also refuse a namespace whose package path contains Git checkout
+metadata. The reference smoke tests are extracted from the attested archive
+and never execute from the exdqlm checkout.
 
 The first frozen learned-scale bounded pilot passed at commit
 `6429b4698d04da43ef9c76f3ab534351e0fdae50`: four production collapsed chains,
@@ -92,12 +98,14 @@ PDF inventory and checksums.
     make pdf
     make supplement
     make package-install
-    make prepare-exdqlm-runtime
     make test-native
+    make prepare-exdqlm-runtime
     make test-exdqlm-rqr
     make literature-manifest
     RQR_BOUNDED_PILOT_CONFIRM=YES make bounded-pilot
 
 No production simulation should be launched until its matched protocol is
 frozen and explicitly approved. The bounded pilot does not provide that
-approval.
+approval. `make test-exdqlm-rqr` and `make bounded-pilot` prepare the isolated
+runtime automatically; neither target compiles or writes inside an exdqlm
+repository.

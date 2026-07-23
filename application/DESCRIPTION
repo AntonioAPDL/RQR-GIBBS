@@ -1,7 +1,7 @@
 Package: rqrgibbs
 Type: Package
 Title: Generalized Bayes Interval-Root Regression with Gibbs Sampling
-Version: 0.1.0.9004
+Version: 0.1.0.9005
 Authors@R: c(
     person("Antonio", "De Leon", role = c("aut", "cre"),
            email = "jaguir26@ucsc.edu"),

@@ -4,6 +4,13 @@ repo_root <- normalizePath(getwd(), winslash = "/", mustWork = TRUE)
 if (!file.exists(file.path(repo_root, "application", "DESCRIPTION"))) {
   stop("Run this script from the RQR-GIBBS repository root.", call. = FALSE)
 }
+sys.source(
+  file.path(
+    repo_root, "application", "scripts", "lib",
+    "pinned_exdqlm_runtime.R"
+  ),
+  envir = environment()
+)
 
 pinned_commit <- "dffb71ee70b597d6a716ee74be1cbc99731cd453"
 pinned_branch <- "feature/rqr-desn-readout-20260716"
@@ -12,62 +19,49 @@ exdqlm_repo <- Sys.getenv(
   unset = file.path(dirname(repo_root), "exdqlm__wt__qdesn_0p4p0_integration")
 )
 exdqlm_repo <- normalizePath(exdqlm_repo, winslash = "/", mustWork = TRUE)
-cache_root <- normalizePath(
-  Sys.getenv(
-    "RQR_EXDQLM_RUNTIME_ROOT",
-    unset = file.path(repo_root, "application", "cache", "exdqlm_runtime")
-  ),
-  winslash = "/", mustWork = FALSE
+layout <- rqr_exdqlm_runtime_layout(
+  repo_root = repo_root,
+  exdqlm_repo = exdqlm_repo,
+  pinned_commit = pinned_commit
 )
-library_root <- file.path(cache_root, "library")
-git_archive <- file.path(
-  cache_root, paste0("exdqlm_git_", substr(pinned_commit, 1L, 12L), ".tar.gz")
-)
-attestation_path <- file.path(
-  cache_root, "attestations",
-  paste0("exdqlm_", substr(pinned_commit, 1L, 12L), ".rds")
-)
+cache_root <- layout$cache_root
+library_root <- layout$library_root
+git_archive <- layout$git_archive
+attestation_path <- layout$attestation_path
 dir.create(library_root, recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(attestation_path), recursive = TRUE, showWarnings = FALSE)
 
-git_value <- function(args) {
-  out <- system2(
-    "git", c("-C", shQuote(exdqlm_repo), args),
-    stdout = TRUE, stderr = TRUE
-  )
-  status <- attr(out, "status") %||% 0L
-  if (!identical(as.integer(status), 0L)) {
-    stop("Git command failed: ", paste(args, collapse = " "), call. = FALSE)
+source_before <- rqr_capture_external_checkout(exdqlm_repo)
+guard_pending <- TRUE
+on.exit({
+  if (isTRUE(guard_pending)) {
+    rqr_assert_external_checkout_unchanged(source_before)
   }
-  trimws(paste(out, collapse = "\n"))
-}
-`%||%` <- function(x, y) if (is.null(x)) y else x
+}, add = TRUE)
 
-actual_commit <- tolower(git_value(c("rev-parse", "HEAD")))
-actual_branch <- git_value(c("rev-parse", "--abbrev-ref", "HEAD"))
-status <- git_value(c("status", "--porcelain", "--untracked-files=all"))
-if (!identical(actual_commit, pinned_commit)) {
+if (!identical(source_before$commit, pinned_commit)) {
   stop("exdqlm is not at the pinned commit ", pinned_commit, ".", call. = FALSE)
 }
-if (!identical(actual_branch, pinned_branch)) {
+if (!identical(source_before$branch, pinned_branch)) {
   stop("exdqlm is not on the pinned branch ", pinned_branch, ".", call. = FALSE)
 }
-if (nzchar(status)) {
-  stop("The pinned exdqlm checkout is dirty: ", status, call. = FALSE)
+if (nzchar(source_before$status)) {
+  stop(
+    "The pinned exdqlm checkout is dirty: ",
+    source_before$status,
+    call. = FALSE
+  )
 }
-source_tree <- tolower(git_value(c("rev-parse", "HEAD^{tree}")))
-source_version <- read.dcf(
-  file.path(exdqlm_repo, "DESCRIPTION"), fields = "Version"
-)[1L, 1L]
-package_archive <- file.path(cache_root, paste0("exdqlm_", source_version, ".tar.gz"))
+source_tree <- source_before$tree
 
 if (file.exists(git_archive)) unlink(git_archive)
 archive_status <- system2(
-  "git",
+  Sys.which("git"),
   c(
     "-C", shQuote(exdqlm_repo), "archive", "--format=tar.gz",
     "--prefix=exdqlm/", "-o", shQuote(git_archive), pinned_commit
-  )
+  ),
+  env = c("GIT_OPTIONAL_LOCKS=0", "GIT_TERMINAL_PROMPT=0")
 )
 if (!identical(as.integer(archive_status), 0L) || !file.exists(git_archive)) {
   stop("Could not archive the pinned exdqlm commit.", call. = FALSE)
@@ -76,7 +70,14 @@ if (!identical(as.integer(archive_status), 0L) || !file.exists(git_archive)) {
 r_bin <- file.path(R.home("bin"), "R")
 staging <- tempfile("exdqlm-build-", tmpdir = cache_root)
 dir.create(staging)
+on.exit(unlink(staging, recursive = TRUE, force = TRUE), add = TRUE)
 utils::untar(git_archive, exdir = staging)
+source_version <- read.dcf(
+  file.path(staging, "exdqlm", "DESCRIPTION"), fields = "Version"
+)[1L, 1L]
+package_archive <- file.path(
+  cache_root, paste0("exdqlm_", source_version, ".tar.gz")
+)
 old_workdir <- setwd(staging)
 on.exit(setwd(old_workdir), add = TRUE)
 build_stdout <- file.path(cache_root, "build.stdout.log")
@@ -125,9 +126,6 @@ runtime_version <- read.dcf(
 if (!identical(runtime_version, source_version)) {
   stop("Installed exdqlm version does not match the pinned source.", call. = FALSE)
 }
-if (!requireNamespace("digest", quietly = TRUE)) {
-  stop("Package 'digest' is required to create the runtime attestation.", call. = FALSE)
-}
 directory_digest <- function(path) {
   files <- list.files(
     path, recursive = TRUE, all.files = TRUE, full.names = TRUE,
@@ -145,18 +143,35 @@ directory_digest <- function(path) {
     algo = "sha256", serialize = FALSE
   )
 }
+source_after <- rqr_assert_external_checkout_unchanged(source_before)
+guard_pending <- FALSE
+if (rqr_path_within(runtime_path, exdqlm_repo)) {
+  stop("The installed runtime must not reside in the exdqlm checkout.", call. = FALSE)
+}
 attestation <- list(
-  schema_version = "rqrgibbs_runtime_attestation/1.0.0",
+  schema_version = "rqrgibbs_runtime_attestation/2.0.0",
   package = "exdqlm",
   package_version = source_version,
   source_commit = pinned_commit,
   source_tree_digest = source_tree,
+  source_repo_root = exdqlm_repo,
+  source_access_mode = "git_archive_read_only",
+  source_checkout_snapshot_before = source_before$guard_digest,
+  source_checkout_snapshot_after = source_after$guard_digest,
+  source_checkout_unchanged =
+    identical(source_before$guard_digest, source_after$guard_digest),
+  source_archive_path = normalizePath(
+    git_archive, winslash = "/", mustWork = TRUE
+  ),
   source_archive_sha256 = digest::digest(
     file = git_archive, algo = "sha256", serialize = FALSE
   ),
-  source_repo_root = exdqlm_repo,
+  source_archive_isolated_from_source =
+    !rqr_path_within(git_archive, exdqlm_repo) &&
+    !rqr_path_within(exdqlm_repo, git_archive),
   runtime_package_path = runtime_path,
   runtime_package_tree_digest = directory_digest(runtime_path),
+  runtime_isolated_from_source = !rqr_path_within(runtime_path, exdqlm_repo),
   R_version = R.version.string,
   platform = R.version$platform,
   created_at = format(Sys.time(), tz = "UTC", usetz = TRUE)
@@ -170,4 +185,5 @@ cat("  package version:", source_version, "\n")
 cat("  library:", library_root, "\n")
 cat("  runtime path:", runtime_path, "\n")
 cat("  attestation:", attestation_path, "\n")
+cat("  source access: immutable Git archive; checkout unchanged\n")
 cat("Set R_LIBS_USER to the library path before starting a promotion run.\n")

@@ -56,6 +56,11 @@ mutated.
 
 ### D1: executing exdqlm code was not bound to the attested checkout
 
+> Superseded on 2026-07-22 by
+> `docs/audits/exdqlm_repository_separation_20260722.md`. The direct
+> source-tree contract described below is retained as historical context but is
+> no longer eligible; only an isolated archive-attested runtime is accepted.
+
 The bypass was real. Loading an installed exdqlm namespace from a different
 library while presenting a separate clean pinned checkout could previously
 leave repository provenance complete and promotion eligible. Package version

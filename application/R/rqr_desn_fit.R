@@ -22,9 +22,9 @@
 #'   [rqr_mcmc_fit()].
 #' @param numerical_policy Numerical factorization policy for MCMC.
 #' @param provenance_control Provenance gate passed to [rqr_mcmc_fit()]. For
-#'   MCMC, the executing exdqlm namespace must be bound to the exact pinned
-#'   checkout, directly or through a verified runtime attestation, because
-#'   exdqlm constructs the DESN design.
+#'   MCMC, the executing exdqlm namespace must come from an isolated runtime
+#'   attestation for the exact pinned checkout because exdqlm constructs the
+#'   DESN design. Direct source-tree loading is ineligible.
 #' @param mcmc_args Named list for [rqr_mcmc_fit()].
 #' @param vb_args Named list for [rqr_vb_fit()].
 #' @param fit_readout If `FALSE`, return the design shell before fitting RQR.

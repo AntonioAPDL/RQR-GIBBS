@@ -22,6 +22,11 @@ Protected scope:
 
 - This repo may use the Q-DESN article and exdqlm RQR branch as references, but
   it should not mutate those repositories as a side effect.
+- Never compile, install, or load a package namespace directly from an exdqlm
+  source checkout. Materialize the pinned commit with `git archive`, then build,
+  install, and test it only under the ignored `application/cache/` tree.
+- Run Git provenance reads against external repositories with optional locks
+  disabled, and require the before/after checkout guard to include ignored
+  files so compiler artifacts cannot change silently.
 - If Q-DESN article cleanup is needed, do it in the Q-DESN article repo as a
   separate scoped commit.
-

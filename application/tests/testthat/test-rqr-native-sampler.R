@@ -687,40 +687,93 @@ test_that("runtime package provenance binds code to source or an attestation", {
     winslash = "/", mustWork = TRUE
   )
   attestation_path <- tempfile(fileext = ".rds")
+  source_archive_path <- tempfile(fileext = ".tar.gz")
+  writeBin(charToRaw("archive fixture"), source_archive_path)
+  checkout_snapshot <- paste(rep("b", 64), collapse = "")
   attestation <- list(
-    schema_version = "rqrgibbs_runtime_attestation/1.0.0",
+    schema_version = "rqrgibbs_runtime_attestation/2.0.0",
     package = "rqrgibbs",
     package_version = as.character(utils::packageVersion("rqrgibbs")),
     source_commit = commit,
     source_tree_digest = tree,
-    source_archive_sha256 = paste(rep("a", 64), collapse = ""),
+    source_repo_root = normalizePath(source, winslash = "/", mustWork = TRUE),
+    source_access_mode = "git_archive_read_only",
+    source_checkout_snapshot_before = checkout_snapshot,
+    source_checkout_snapshot_after = checkout_snapshot,
+    source_checkout_unchanged = TRUE,
+    source_archive_path = source_archive_path,
+    source_archive_sha256 = digest::digest(
+      file = source_archive_path, algo = "sha256", serialize = FALSE
+    ),
+    source_archive_isolated_from_source = TRUE,
     runtime_package_path = runtime_path,
     runtime_package_tree_digest =
-      rqrgibbs:::.rqr_directory_digest(runtime_path)
+      rqrgibbs:::.rqr_directory_digest(runtime_path),
+    runtime_isolated_from_source = TRUE
   )
   saveRDS(attestation, attestation_path)
   matched <- rqrgibbs:::.rqr_repository_provenance(list(
     repo_root = source,
     expected_git_commit = commit,
     runtime_package = "rqrgibbs",
-    runtime_attestation = attestation_path
+    runtime_attestation = attestation_path,
+    require_isolated_runtime = TRUE
   ))
   expect_true(matched$runtime_attestation_available)
   expect_true(matched$runtime_attestation_match)
+  expect_identical(
+    matched$runtime_attestation_schema,
+    "rqrgibbs_runtime_attestation/2.0.0"
+  )
+  expect_identical(matched$source_access_mode, "git_archive_read_only")
+  expect_true(matched$source_archive_verified)
+  expect_true(matched$source_archive_isolated_from_source)
+  expect_true(matched$source_checkout_unchanged)
+  expect_true(matched$runtime_isolated_from_source)
+  expect_true(matched$require_isolated_runtime)
   expect_true(matched$runtime_source_match)
   expect_true(matched$reproducibility_eligible)
 
+  writeBin(charToRaw("tampered archive fixture"), source_archive_path)
+  archive_tampered <- rqrgibbs:::.rqr_repository_provenance(list(
+    repo_root = source,
+    expected_git_commit = commit,
+    runtime_package = "rqrgibbs",
+    runtime_attestation = attestation_path,
+    require_isolated_runtime = TRUE
+  ))
+  expect_false(archive_tampered$source_archive_verified)
+  expect_false(archive_tampered$runtime_attestation_match)
+  expect_false(archive_tampered$runtime_source_match)
+  expect_false(archive_tampered$reproducibility_eligible)
+
+  writeBin(charToRaw("archive fixture"), source_archive_path)
   attestation$runtime_package_tree_digest <- paste(rep("0", 64), collapse = "")
   saveRDS(attestation, attestation_path)
   tampered <- rqrgibbs:::.rqr_repository_provenance(list(
     repo_root = source,
     expected_git_commit = commit,
     runtime_package = "rqrgibbs",
-    runtime_attestation = attestation_path
+    runtime_attestation = attestation_path,
+    require_isolated_runtime = TRUE
   ))
   expect_false(tampered$runtime_attestation_match)
   expect_false(tampered$runtime_source_match)
   expect_false(tampered$reproducibility_eligible)
+})
+
+test_that("runtime-backed external adapters require isolated attestation", {
+  control <- rqrgibbs:::.rqr_require_external_repository(
+    list(), "exdqlm", rqrgibbs:::.rqr_pinned_exdqlm_commit(),
+    runtime_package = "exdqlm"
+  )
+  expect_true(
+    control$external_repositories$exdqlm$require_isolated_runtime
+  )
+  expect_identical(
+    control$external_repositories$exdqlm$runtime_package,
+    "exdqlm"
+  )
 })
 
 test_that("DESN forecast horizon rejects fractional values", {

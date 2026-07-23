@@ -33,7 +33,7 @@ smoke:
 package-install:
 	R CMD INSTALL --preclean application
 
-prepare-exdqlm-runtime: package-install
+prepare-exdqlm-runtime:
 	$(R) application/scripts/04_prepare_pinned_exdqlm_runtime.R
 
 test-native: package-install
@@ -41,12 +41,12 @@ test-native: package-install
 
 package-check:
 	R CMD build application
-	R CMD check --no-manual rqrgibbs_0.1.0.9004.tar.gz
+	R CMD check --no-manual rqrgibbs_0.1.0.9005.tar.gz
 
-test-exdqlm-rqr:
+test-exdqlm-rqr: package-install prepare-exdqlm-runtime
 	$(R) application/scripts/02_smoke_rqr_exdqlm_branch.R
 
-bounded-pilot: package-install
+bounded-pilot: package-install prepare-exdqlm-runtime
 	$(R) application/scripts/05_run_rqr_bounded_pilot.R
 
 literature-manifest:

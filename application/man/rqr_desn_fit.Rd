@@ -48,9 +48,9 @@ alter fixed `learning_rate`; learned modes use `lambda/s_L`. Passed to
 \item{numerical_policy}{Numerical factorization policy for MCMC.}
 
 \item{provenance_control}{Provenance gate passed to [rqr_mcmc_fit()]. For
-MCMC, the executing exdqlm namespace must be bound to the exact pinned
-checkout, directly or through a verified runtime attestation, because
-exdqlm constructs the DESN design.}
+MCMC, the executing exdqlm namespace must come from an isolated runtime
+attestation for the exact pinned checkout because exdqlm constructs the
+DESN design. Direct source-tree loading is ineligible.}
 
 \item{mcmc_args}{Named list for [rqr_mcmc_fit()].}
 

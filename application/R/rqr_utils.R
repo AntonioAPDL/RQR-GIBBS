@@ -264,7 +264,13 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     return(list(available = FALSE, value = NA_character_))
   }
   out <- suppressWarnings(tryCatch(
-    system2(git, c("-C", shQuote(repo_root), args), stdout = TRUE, stderr = TRUE),
+    system2(
+      git,
+      c("-C", shQuote(repo_root), args),
+      stdout = TRUE,
+      stderr = TRUE,
+      env = c("GIT_OPTIONAL_LOCKS=0", "GIT_TERMINAL_PROMPT=0")
+    ),
     error = function(e) structure(character(0), status = 1L)
   ))
   status <- attr(out, "status") %||% 0L
@@ -348,11 +354,27 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       runtime_attestation, winslash = "/", mustWork = FALSE
     )
   }
+  require_isolated_runtime <- spec$require_isolated_runtime %||% FALSE
+  if (length(require_isolated_runtime) != 1L ||
+      is.na(require_isolated_runtime) ||
+      !is.logical(require_isolated_runtime)) {
+    stop(
+      sprintf(
+        paste0(
+          "provenance_control$external_repositories$%s$",
+          "require_isolated_runtime must be TRUE or FALSE."
+        ),
+        name
+      ),
+      call. = FALSE
+    )
+  }
   list(
     repo_root = repo_root,
     expected_git_commit = expected,
     runtime_package = runtime_package,
-    runtime_attestation = runtime_attestation
+    runtime_attestation = runtime_attestation,
+    require_isolated_runtime = require_isolated_runtime
   )
 }
 
@@ -427,7 +449,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   }
   spec <- control$external_repositories[[name]] %||% list(
     repo_root = NULL, expected_git_commit = NULL,
-    runtime_package = NULL, runtime_attestation = NULL
+    runtime_package = NULL, runtime_attestation = NULL,
+    require_isolated_runtime = FALSE
   )
   if (!is.null(spec$expected_git_commit) &&
       !identical(spec$expected_git_commit, expected_git_commit)) {
@@ -456,6 +479,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       )
     }
     spec$runtime_package <- runtime_package
+    spec$require_isolated_runtime <- TRUE
   }
   control$external_repositories[[name]] <- spec
   control$required_external_repositories <- unique(c(
@@ -493,6 +517,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 
 .rqr_runtime_package_provenance <- function(
     package, repository_state, runtime_attestation = NULL) {
+  require_isolated_runtime <- isTRUE(
+    repository_state$require_isolated_runtime
+  )
   empty <- list(
     runtime_package = package %||% NA_character_,
     runtime_package_available = FALSE,
@@ -505,6 +532,13 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     runtime_attestation = runtime_attestation %||% NA_character_,
     runtime_attestation_available = FALSE,
     runtime_attestation_match = FALSE,
+    runtime_attestation_schema = NA_character_,
+    source_access_mode = NA_character_,
+    source_archive_verified = FALSE,
+    source_archive_isolated_from_source = FALSE,
+    source_checkout_unchanged = FALSE,
+    runtime_isolated_from_source = FALSE,
+    require_isolated_runtime = require_isolated_runtime,
     runtime_source_match = FALSE,
     runtime_provenance_complete = FALSE
   )
@@ -555,26 +589,118 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   attestation_available <- !is.null(runtime_attestation) &&
     file.exists(runtime_attestation)
   attestation_match <- FALSE
+  attestation_schema <- NA_character_
+  source_access_mode <- NA_character_
+  source_archive_verified <- FALSE
+  source_archive_isolated_from_source <- FALSE
+  source_checkout_unchanged <- FALSE
+  source_root <- normalizePath(
+    repository_state$repo_root, winslash = "/", mustWork = FALSE
+  )
+  path_within <- function(path, root) {
+    identical(path, root) || startsWith(path, paste0(root, "/"))
+  }
+  runtime_isolated_from_source <- !is.na(runtime_path) &&
+    !is.na(source_root) &&
+    !path_within(runtime_path, source_root) &&
+    !path_within(source_root, runtime_path)
   if (attestation_available) {
     attestation <- tryCatch(readRDS(runtime_attestation), error = function(e) NULL)
     required <- c(
       "schema_version", "package", "package_version", "source_commit",
-      "source_tree_digest", "source_archive_sha256", "runtime_package_path",
-      "runtime_package_tree_digest"
+      "source_tree_digest", "source_repo_root", "source_access_mode",
+      "source_checkout_snapshot_before", "source_checkout_snapshot_after",
+      "source_checkout_unchanged", "source_archive_path",
+      "source_archive_sha256", "source_archive_isolated_from_source",
+      "runtime_package_path",
+      "runtime_package_tree_digest", "runtime_isolated_from_source"
     )
+    attestation_schema <- if (is.list(attestation)) {
+      as.character(attestation$schema_version %||% NA_character_)[1L]
+    } else {
+      NA_character_
+    }
+    source_access_mode <- if (is.list(attestation)) {
+      as.character(attestation$source_access_mode %||% NA_character_)[1L]
+    } else {
+      NA_character_
+    }
+    archive_path <- if (is.list(attestation)) {
+      as.character(attestation$source_archive_path %||% NA_character_)[1L]
+    } else {
+      NA_character_
+    }
+    recorded_archive_digest <- if (is.list(attestation)) {
+      tolower(as.character(
+        attestation$source_archive_sha256 %||% NA_character_
+      )[1L])
+    } else {
+      NA_character_
+    }
+    source_archive_verified <- !is.na(archive_path) &&
+      nzchar(archive_path) &&
+      file.exists(archive_path) &&
+      grepl("^[0-9a-f]{64}$", recorded_archive_digest) &&
+      identical(
+        digest::digest(
+          file = archive_path, algo = "sha256", serialize = FALSE
+        ),
+        recorded_archive_digest
+      )
+    archive_path_normalized <- if (!is.na(archive_path) &&
+        nzchar(archive_path)) {
+      normalizePath(archive_path, winslash = "/", mustWork = FALSE)
+    } else {
+      NA_character_
+    }
+    source_archive_isolated_from_source <-
+      !is.na(archive_path_normalized) &&
+      !is.na(source_root) &&
+      !path_within(archive_path_normalized, source_root) &&
+      !path_within(source_root, archive_path_normalized)
+    source_checkout_unchanged <- is.list(attestation) &&
+      isTRUE(attestation$source_checkout_unchanged) &&
+      grepl(
+        "^[0-9a-f]{64}$",
+        tolower(as.character(
+          attestation$source_checkout_snapshot_before %||% NA_character_
+        )[1L])
+      ) &&
+      identical(
+        tolower(as.character(
+          attestation$source_checkout_snapshot_before
+        )[1L]),
+        tolower(as.character(
+          attestation$source_checkout_snapshot_after
+        )[1L])
+      )
     attestation_match <- is.list(attestation) &&
       all(required %in% names(attestation)) &&
-      identical(attestation$schema_version, "rqrgibbs_runtime_attestation/1.0.0") &&
+      identical(
+        attestation$schema_version,
+        "rqrgibbs_runtime_attestation/2.0.0"
+      ) &&
       identical(as.character(attestation$package), package) &&
       identical(as.character(attestation$package_version), runtime_version) &&
       identical(tolower(as.character(attestation$source_commit)),
                 repository_state$git_commit) &&
       identical(tolower(as.character(attestation$source_tree_digest)),
                 source_tree) &&
-      grepl(
-        "^[0-9a-f]{64}$",
-        tolower(as.character(attestation$source_archive_sha256))
+      identical(
+        normalizePath(
+          as.character(attestation$source_repo_root),
+          winslash = "/", mustWork = FALSE
+        ),
+        normalizePath(
+          repository_state$repo_root,
+          winslash = "/", mustWork = FALSE
+        )
       ) &&
+      identical(source_access_mode, "git_archive_read_only") &&
+      source_archive_verified &&
+      isTRUE(attestation$source_archive_isolated_from_source) &&
+      source_archive_isolated_from_source &&
+      source_checkout_unchanged &&
       identical(
         normalizePath(
           as.character(attestation$runtime_package_path),
@@ -585,15 +711,22 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       identical(
         tolower(as.character(attestation$runtime_package_tree_digest)),
         runtime_digest
-      )
+      ) &&
+      isTRUE(attestation$runtime_isolated_from_source) &&
+      runtime_isolated_from_source
   }
   version_match <- .rqr_nonmissing_text(source_version) &&
     identical(runtime_version, source_version)
   repository_eligible <- isTRUE(repository_state$provenance_complete) &&
     identical(repository_state$git_dirty, FALSE) &&
     isTRUE(repository_state$expected_git_commit_match)
+  accepted_binding <- if (require_isolated_runtime) {
+    attestation_match
+  } else {
+    direct_path_match || attestation_match
+  }
   runtime_source_match <- repository_eligible && version_match &&
-    (direct_path_match || attestation_match)
+    accepted_binding
   runtime_complete <- .rqr_nonmissing_text(c(
     runtime_path, runtime_version, source_version, source_tree, runtime_digest
   ))
@@ -607,6 +740,14 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     runtime_direct_source_path_match = direct_path_match,
     runtime_attestation_available = attestation_available,
     runtime_attestation_match = attestation_match,
+    runtime_attestation_schema = attestation_schema,
+    source_access_mode = source_access_mode,
+    source_archive_verified = source_archive_verified,
+    source_archive_isolated_from_source =
+      source_archive_isolated_from_source,
+    source_checkout_unchanged = source_checkout_unchanged,
+    runtime_isolated_from_source = runtime_isolated_from_source,
+    require_isolated_runtime = require_isolated_runtime,
     runtime_source_match = runtime_source_match,
     runtime_provenance_complete = runtime_complete
   ))
@@ -666,6 +807,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     git_dirty = git_dirty,
     expected_git_commit = expected,
     expected_git_commit_match = commit_match,
+    require_isolated_runtime = isTRUE(spec$require_isolated_runtime),
     provenance_complete = metadata_complete
   )
   runtime <- .rqr_runtime_package_provenance(

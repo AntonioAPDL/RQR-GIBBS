@@ -56,9 +56,13 @@ the returned segment and removes reproducibility and promotion eligibility.
 Numerical-repair counts and promotion eligibility are cumulative across
 segments, and `backend="auto"` records both the requested and resolved backend.
 RQR-DESN and RHS promotion also requires the executing exdqlm namespace to
-match the clean pinned source directly or through an isolated-library
-attestation. Run `make prepare-exdqlm-runtime` to create that ignored local
-runtime and attestation.
+match an isolated-library attestation for the clean pinned source. A direct
+source-tree namespace is intentionally ineligible. Run
+`make prepare-exdqlm-runtime` to create the ignored local runtime from a Git
+archive. Preparation and reference testing use read-only Git operations,
+execute only from RQR-owned cache paths, verify the archive and installed-tree
+digests, and fail if any tracked, untracked, or ignored file in the external
+checkout changes.
 
 The heavy directories **data_local**, **cache**, **runs**, **logs**, and
 **outputs** are ignored by git.

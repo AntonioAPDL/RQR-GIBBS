@@ -482,8 +482,9 @@ record data, complete model/target/evolution, and checkpoint digests; RNG state;
 compiler and BLAS/LAPACK provenance; required external-repository states; and a
 versioned schema. Promotion requires clean detected checkouts matching every
 exact commit declared in the run manifest. If an external package contributes
-executed code, promotion also requires a direct source-path match or a verified
-installed-tree attestation linking its namespace to that checkout. Exact
+executed code, promotion additionally requires an archive-verified,
+installed-tree attestation that links an isolated namespace to that checkout;
+direct source-tree execution is ineligible. Exact
 continuation stops on schema, checkpoint, data, model, target, or evolution
 mismatch and, by default, on package, R, numerical-library, dependency, or
 source-commit mismatch. An explicit portability override is persisted and

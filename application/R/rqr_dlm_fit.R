@@ -850,7 +850,8 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
             NULL
           } else {
             x$runtime_attestation
-          }
+          },
+          require_isolated_runtime = isTRUE(x$require_isolated_runtime)
         )
       ),
       required_external_repositories =

@@ -347,16 +347,40 @@ beta_prior <- function(type = c("ridge", "rhs", "rhs_ns"), ridge = list(), rhs =
     if (!is.finite(tau2) || tau2 <= 0) stop("ridge$tau2 must be positive.", call. = FALSE)
     return(list(type = "ridge", hypers = list(tau2 = tau2)))
   }
-  if (!requireNamespace("exdqlm", quietly = TRUE)) {
-    stop("RHS-family construction requires the pinned exdqlm reference package.", call. = FALSE)
-  }
+  .rqr_installed_namespace("exdqlm", "RHS-family construction")
   getExportedValue("exdqlm", "beta_prior")(type = type, ridge = ridge, rhs = rhs)
 }
 
-.rqr_exdqlm_internal <- function(name) {
-  if (!requireNamespace("exdqlm", quietly = TRUE)) {
-    stop(sprintf("The '%s' compatibility adapter requires exdqlm.", name), call. = FALSE)
+.rqr_installed_namespace <- function(package, context) {
+  if (!requireNamespace(package, quietly = TRUE)) {
+    stop(
+      sprintf("%s requires the isolated %s runtime.", context, package),
+      call. = FALSE
+    )
   }
+  namespace <- asNamespace(package)
+  runtime_path <- normalizePath(
+    getNamespaceInfo(namespace, "path"), winslash = "/", mustWork = TRUE
+  )
+  if (file.exists(file.path(runtime_path, ".git"))) {
+    stop(
+      sprintf(
+        paste0(
+          "%s refuses a namespace loaded from the %s source checkout. ",
+          "Use the isolated archive-attested runtime."
+        ),
+        context, package
+      ),
+      call. = FALSE
+    )
+  }
+  namespace
+}
+
+.rqr_exdqlm_internal <- function(name) {
+  .rqr_installed_namespace(
+    "exdqlm", sprintf("The '%s' compatibility adapter", name)
+  )
   utils::getFromNamespace(name, "exdqlm")
 }
 
@@ -374,8 +398,6 @@ beta_prior <- function(type = c("ridge", "rhs", "rhs_ns"), ridge = list(), rhs =
 }
 
 qdesn_fit_vb <- function(...) {
-  if (!requireNamespace("exdqlm", quietly = TRUE)) {
-    stop("RQR-DESN design construction requires exdqlm.", call. = FALSE)
-  }
+  .rqr_installed_namespace("exdqlm", "RQR-DESN design construction")
   getExportedValue("exdqlm", "qdesn_fit_vb")(...)
 }
