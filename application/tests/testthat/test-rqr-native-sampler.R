@@ -405,6 +405,14 @@ test_that("continuation inherits numerical and source history cumulatively", {
     rqr_dlm_continue(altered_source, n_mcmc = 1),
     "environment differs"
   )
+  portable_source <- suppressWarnings(
+    rqr_dlm_continue(
+      altered_source, n_mcmc = 1, allow_environment_mismatch = TRUE
+    )
+  )
+  expect_false(portable_source$continuation_contract$bitwise_continuation_claim)
+  expect_false(portable_source$provenance$reproducibility_eligible)
+  expect_false(portable_source$model_spec$promotion_eligible)
 
   altered_backend <- fit
   altered_backend$provenance$backend_resolved <- "R"

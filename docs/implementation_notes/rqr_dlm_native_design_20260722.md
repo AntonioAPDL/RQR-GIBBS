@@ -276,6 +276,9 @@ advertised simple kernels. The exact shared `component_scale` mode implements
 the recommended coherent alternative. Output-5 closes the remaining
 continuation, runtime-source, and matrix-scale gaps through cumulative repair
 history, resolved-backend checks, direct or attested exdqlm namespace binding,
-and relative symmetry/definiteness validation. A bounded pilot remains gated
-on the complete validation matrix and frozen manifest rather than on additional
-production-scale implementation.
+and relative symmetry/definiteness validation. The frozen learned-scale bounded
+pilot passed at commit `6429b4698d04da43ef9c76f3ab534351e0fdae50`, including
+collapsed-versus-augmented-versus-quadrature agreement, multi-chain
+diagnostics, zero repairs, and exact runtime-source binding. This closes the
+bounded implementation gate but does not authorize a production simulation;
+the matched RQR-DLM simulation protocol remains to be frozen and approved.

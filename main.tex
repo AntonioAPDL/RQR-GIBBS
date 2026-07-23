@@ -408,6 +408,15 @@ merely accompanied by a separate clean checkout. Terminal states and
 component-scale draws are retained for root forecasting with explicit future
 covariance templates.
 
+A bounded intercept-only learned-scale fixture cross-checks the production
+partially collapsed scan against a separately coded fully augmented scan and
+adaptive root quadrature after analytically integrating the loss scale. Four
+chains per scan satisfy the predeclared rank-normalized convergence and
+effective-sample-size gates, all mean and CDF comparisons satisfy their
+Monte Carlo error bounds, and no numerical repair is used. This verifies the
+implemented small-fixture target; it does not establish frequentist coverage
+calibration or authorize the production simulation.
+
 \section{Discussion}
 \label{sec:discussion}
 
@@ -419,9 +428,9 @@ levels. The native fixed-design and state-space paths now share the same loss,
 scale, and root-ordering contracts. Adaptive discounting has been resolved as a
 working rather than exact conditional recursion, while the shared
 component-scale construction provides a coherent alternative. Production
-evidence remains gated on bounded pilot validation and a frozen matched
-simulation protocol; no response-predictive interpretation follows from the
-loss update.
+evidence remains gated on a frozen matched simulation protocol and explicit
+run approval; no response-predictive interpretation follows from the loss
+update.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}

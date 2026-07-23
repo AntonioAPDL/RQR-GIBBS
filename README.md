@@ -62,6 +62,15 @@ the exact pinned commit. `make prepare-exdqlm-runtime` builds an isolated local
 library from a Git archive of that commit and writes a verified runtime
 attestation under the ignored `application/cache/` tree.
 
+The first frozen learned-scale bounded pilot passed at commit
+`6429b4698d04da43ef9c76f3ab534351e0fdae50`: four production collapsed chains,
+four independently coded fully augmented chains, and adaptive root quadrature
+agreed under the predeclared MCSE gates, with all R-hat/ESS gates satisfied and
+zero numerical repairs. This is a computational target check, not evidence of
+empirical coverage calibration. Exact results and the one pre-scientific
+diagnostic-infrastructure failure are recorded in
+`docs/audits/chatgpt_pro_output5_audit_20260722.md`.
+
 ## Pinned external reference
 
 Expected exdqlm RQR branch:
@@ -83,9 +92,12 @@ PDF inventory and checksums.
     make pdf
     make supplement
     make package-install
+    make prepare-exdqlm-runtime
     make test-native
     make test-exdqlm-rqr
     make literature-manifest
+    RQR_BOUNDED_PILOT_CONFIRM=YES make bounded-pilot
 
-No heavy simulation should be launched until the mathematical, native-package,
-and frozen-protocol gates pass.
+No production simulation should be launched until its matched protocol is
+frozen and explicitly approved. The bounded pilot does not provide that
+approval.
