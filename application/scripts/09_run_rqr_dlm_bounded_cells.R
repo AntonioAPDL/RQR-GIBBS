@@ -253,10 +253,24 @@ append_matrix_estimands <- function(
   matrix_value <- as.matrix(matrix_value)
   block <- t(matrix_value)
   colnames(block) <- sprintf(
-    "%s_%s%03d", prefix, time_label, seq_len(ncol(matrix_value))
+    "%s_%s%03d", prefix, time_label, seq_len(nrow(matrix_value))
   )
   cbind(values, block)
 }
+
+estimand_orientation_probe <- append_matrix_estimands(
+  matrix(numeric(0), nrow = 5L, ncol = 0L),
+  matrix(seq_len(15L), nrow = 3L, ncol = 5L),
+  "orientation_probe"
+)
+if (!identical(dim(estimand_orientation_probe), c(5L, 3L)) ||
+    !identical(
+      colnames(estimand_orientation_probe),
+      sprintf("orientation_probe_t%03d", seq_len(3L))
+    )) {
+  stop("The estimand orientation self-check failed.", call. = FALSE)
+}
+rm(estimand_orientation_probe)
 
 chain_estimands <- function(fit, forecast) {
   lower <- pmin(fit$samp.eta_root1, fit$samp.eta_root2)
