@@ -226,3 +226,53 @@ test_that("fail policy rejects eigenvalue projection in R and C++", {
   expect_identical(psd_r$info$clamped_eigenvalues, 0L)
   expect_identical(psd_cpp$info$clamped_eigenvalues, 0L)
 })
+
+test_that("exported FFBS boundary rejects invalid initial and transition inputs", {
+  base <- list(
+    z = c(0, 1), H = matrix(1, 1, 2), V = c(1, 1),
+    GG = matrix(1, 1, 1), m0 = 0, C0 = matrix(1, 1, 1),
+    evolution = list(mode = "fixed_W", W = matrix(0.1, 1, 1))
+  )
+  asymmetric <- utils::modifyList(base, list(
+    H = rbind(c(1, 1), c(0, 0)),
+    GG = diag(2), m0 = c(0, 0),
+    C0 = matrix(c(1, 0.1, 0, 1), 2, 2),
+    evolution = list(mode = "fixed_W", W = diag(2) * 0.1)
+  ))
+  for (backend in c("R", "cpp")) {
+    expect_error(
+      do.call(rqr_ffbs_smooth, c(asymmetric, list(backend = backend))),
+      "C0 is not symmetric"
+    )
+    nonfinite_m0 <- utils::modifyList(base, list(m0 = Inf))
+    expect_error(
+      do.call(rqr_ffbs_smooth, c(nonfinite_m0, list(backend = backend))),
+      "m0 must"
+    )
+    nonfinite_GG <- utils::modifyList(base, list(GG = matrix(Inf, 1, 1)))
+    expect_error(
+      do.call(rqr_ffbs_smooth, c(nonfinite_GG, list(backend = backend))),
+      "GG must"
+    )
+  }
+})
+
+test_that("symmetrization is overflow safe and jitter underflow is explicit", {
+  near_limit <- matrix(.Machine$double.xmax, 2, 2)
+  expect_true(all(is.finite(rqrgibbs:::.rqr_symmetrize(near_limit))))
+
+  subnormal_indefinite <- diag(c(1e-310, -1e-310))
+  expect_error(
+    rqrgibbs:::.rqr_chol_with_jitter(
+      subnormal_indefinite, c(0, 1e-20)
+    ),
+    "underflowed to zero"
+  )
+  expect_error(
+    rqrgibbs:::rqr_mvn_draw_cpp(
+      c(0, 0), subnormal_indefinite, c(0, 1e-20),
+      allow_repair = TRUE
+    ),
+    "underflowed to zero"
+  )
+})

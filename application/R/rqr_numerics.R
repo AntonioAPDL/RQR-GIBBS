@@ -2,7 +2,9 @@
 
 .rqr_symmetrize <- function(x) {
   x <- as.matrix(x)
-  0.5 * (x + t(x))
+  # Halve before adding so two finite entries near .Machine$double.xmax do not
+  # overflow merely because a symmetric representation is requested.
+  0.5 * x + 0.5 * t(x)
 }
 
 .rqr_numerical_policy <- function(policy = c("fail", "record_repair")) {
@@ -100,14 +102,24 @@
   ladder <- ladder[is.finite(ladder) & ladder >= 0]
   min_eigenvalue <- NA_real_
   for (jj in ladder) {
-    candidate <- if (jj == 0) x else x + diag(jj * jitter_scale, nrow(x))
+    applied_jitter <- jj * jitter_scale
+    if (jj > 0 && applied_jitter == 0) {
+      stop(
+        paste(
+          "Relative Cholesky jitter underflowed to zero at the matrix scale;",
+          "rescale the state or declare an explicit absolute covariance."
+        ),
+        call. = FALSE
+      )
+    }
+    candidate <- if (jj == 0) x else x + diag(applied_jitter, nrow(x))
     ans <- tryCatch(chol(candidate), error = function(e) NULL)
     if (!is.null(ans)) {
       if (jj > 0 && is.na(min_eigenvalue)) {
         min_eigenvalue <- min(eigen(x, symmetric = TRUE, only.values = TRUE)$values)
       }
       return(list(
-        chol = ans, matrix = candidate, jitter = jj * jitter_scale,
+        chol = ans, matrix = candidate, jitter = applied_jitter,
         relative_jitter = if (absolute_fallback && jj > 0) NA_real_ else jj,
         min_eigenvalue = min_eigenvalue,
         matrix_scale = matrix_scale,

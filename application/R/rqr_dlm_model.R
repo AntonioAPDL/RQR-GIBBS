@@ -304,6 +304,8 @@ rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
         relative_jitter = fac$relative_jitter,
         min_eigenvalue = fac$min_eigenvalue,
         matrix_scale = fac$matrix_scale,
+        jitter_scale = fac$jitter_scale,
+        absolute_jitter_fallback = fac$absolute_jitter_fallback,
         clamped_eigenvalues = 0L
       )
     )

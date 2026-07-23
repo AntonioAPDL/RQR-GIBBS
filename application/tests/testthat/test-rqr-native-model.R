@@ -68,6 +68,8 @@ test_that("discount-template repairs use the complete FFBS ledger schema", {
   expect_true(all(is.finite(records$relative_jitter)))
   expect_true(all(is.finite(records$min_eigenvalue)))
   expect_true(all(is.finite(records$matrix_scale)))
+  expect_true(all(is.finite(records$jitter_scale)))
+  expect_true(all(!is.na(records$absolute_jitter_fallback)))
   expect_true(all(records$clamped_eigenvalues == 0L))
   expect_error(
     rqr_freeze_discount_template(

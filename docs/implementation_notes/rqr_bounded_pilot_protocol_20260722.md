@@ -12,15 +12,19 @@ The launcher is `application/scripts/05_run_rqr_bounded_pilot.R`. It refuses to
 run unless:
 
 - `RQR_BOUNDED_PILOT_CONFIRM=YES`;
+- `RQR_EXPECTED_PRIMARY_COMMIT` is a separately supplied complete Git SHA;
 - the primary, pinned exdqlm, and Q-DESN reference repositories are at their
   declared branches and commits and are clean;
 - the isolated exdqlm runtime and its local attestation match the pinned
   checkout; and
+- the executing `rqrgibbs` namespace is bound to
+  `RQR-GIBBS/application` at the expected clean primary commit; and
 - the native deterministic test suite passes.
 
 All artifacts are written under the ignored `application/outputs/` tree. The
-run uses at most one R worker, has a declared 90-minute wall-time budget, and
-does not read an application dataset.
+launcher fixes the common BLAS/OpenMP thread controls at one, records one R
+worker, reads the Linux process high-water resident-memory mark, enforces four
+GiB and 90-minute limits, and does not read an application dataset.
 
 ## Fixed learned-scale fixture
 
@@ -63,7 +67,8 @@ The comparison contains:
 The quadrature uses probability-scale coordinates and splits both axes at every
 observed response value. This keeps the sign pattern of the residual-product
 loss fixed inside each integration cell. Its requested relative tolerance is
-`1e-10`, stricter than the `1e-9` gate.
+`1e-10`, stricter than the `1e-9` gate. The reported `pracma::integral2()`
+quantity is an estimated relative numerical error, not a rigorous bound.
 
 The collapsed seeds are `73201:73204`; the augmented seeds are
 `73301:73304`. Every chain uses 5,000 burn-in iterations and retains 20,000
@@ -81,7 +86,10 @@ For every mean, collapsed and augmented estimates must differ by no more than
 four combined Monte Carlo standard errors. Each sampler mean must also be
 within four of its own Monte Carlo standard errors of the quadrature reference.
 The following five CDF comparisons are fixed in advance and use the analogous
-combined Monte Carlo error rule:
+combined Monte Carlo error rule. Both samplers must also be within four of
+their own Monte Carlo standard errors of the independently supplied
+quadrature CDF values tracked in
+`application/inst/extdata/output6_independent_references.csv`.
 
 | Estimand | Threshold |
 |---|---:|
@@ -92,12 +100,28 @@ combined Monte Carlo error rule:
 | midpoint | 0.5 |
 
 The deterministic matrix contains the exact checks requested in the Output-5
-audit: scale-relative covariance validation, cumulative continuation
-eligibility, resolved backend behavior, runtime-source binding, dense-Gaussian
-FFBS moments, component-scale forecast moments, missing and zero
-pseudo-observations, and PSD/indefinite covariance behavior.
+and Output-6 audits: scale-relative covariance validation, an
+integrity-digested cumulative continuation-history contract, resolved backend
+behavior, primary and exdqlm runtime-source binding, dense-Gaussian FFBS
+moments, component-scale forecast moments, missing and zero
+pseudo-observations, public initial-state validation, overflow-safe
+symmetrization, explicit subnormal-jitter failure, and PSD/indefinite
+covariance behavior. The custom rank-normalized diagnostics are cross-checked
+against `coda`.
 
 Any failed gate makes the pilot a no-go. It does not authorize a production
 simulation. A passing pilot authorizes design work for the matched simulation
 study while retaining a separate production manifest and explicit user
 approval.
+
+## Next bounded dynamic fixtures
+
+The next three exact-mode fixtures are frozen in
+`application/config/rqr_dlm/rqr_dlm_bounded_dynamic_fixtures_20260722.R`.
+They cover fixed `W` with missing and future times, a frozen trend--seasonal
+component-discount template, and shared component scales for
+trend--regression states. The config fixes four chains, two continuation
+generations, zero-repair numerics, rank-normalized diagnostics, root-swap
+activity, and primary runtime binding. It excludes `adaptive_discount`, marks
+itself non-production, and does not authorize execution. Use
+`make preflight-dlm-bounded` only after supplying the reviewed primary commit.

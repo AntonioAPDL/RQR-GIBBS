@@ -1,0 +1,108 @@
+# Frozen configuration for the first bounded multicomponent RQR-DLM fixtures.
+# This file declares validation work only. It is not a matched simulation
+# protocol and does not authorize a production launch.
+
+rqr_dlm_bounded_dynamic_fixtures <- list(
+  schema_version = "rqrgibbs_dlm_bounded_fixtures/1.0.0",
+  config_id = "rqr_dlm_bounded_dynamic_fixtures_20260722",
+  scope = "bounded_dynamic_target_and_mixing_validation",
+  generalized_bayes = TRUE,
+  response_likelihood = FALSE,
+  response_prediction_contract = FALSE,
+  production_simulation_authorized = FALSE,
+  coverage_level = 0.80,
+  learning_rate_modes = c(
+    "fixed_rate",
+    "learned_pseudoresidual_normalized"
+  ),
+  fixed_learning_rate = 1,
+  loss_reference_scale = 1,
+  lambda_prior = list(shape = 4, rate = 4),
+  mcmc = list(
+    chains = 4L,
+    burn_in = 2000L,
+    retained_per_chain = 4000L,
+    thin = 1L,
+    seeds = c(84201L, 84202L, 84203L, 84204L),
+    backend = "cpp",
+    numerical_policy = "fail"
+  ),
+  continuation = list(
+    generations = 2L,
+    retained_per_generation = 2L,
+    require_checkpoint_digest = TRUE,
+    require_history_digest = TRUE
+  ),
+  gates = list(
+    maximum_rank_normalized_rhat = 1.01,
+    minimum_bulk_ess = 1000,
+    minimum_tail_ess = 1000,
+    maximum_numerical_repairs = 0L,
+    require_primary_runtime_source_match = TRUE,
+    require_exact_joint_target = TRUE,
+    require_root_swap_activity = TRUE,
+    require_two_generation_continuation = TRUE
+  ),
+  fixtures = list(
+    fixed_W_local_level = list(
+      evolution_mode = "fixed_W",
+      state_components = list(
+        list(type = "polytrend", order = 1L, name = "level", C0 = 4)
+      ),
+      n_time = 24L,
+      y = as.numeric(0.04 * seq_len(24L) + sin(seq_len(24L) / 3)),
+      missing_indices = c(6L, 17L),
+      W = 0.04,
+      future_horizon = 4L,
+      future_W = 0.04,
+      reference_gate = "dense_Gaussian_conditional_FFBS_moments"
+    ),
+    frozen_trend_seasonal_discount = list(
+      evolution_mode = "discount_template",
+      state_components = list(
+        list(type = "polytrend", order = 2L, name = "trend", C0 = c(4, 1)),
+        list(
+          type = "seasonal", period = 4L, harmonics = c(1L, 2L),
+          name = "seasonal", C0 = c(2, 2, 2)
+        )
+      ),
+      n_time = 36L,
+      y = as.numeric(
+        0.025 * seq_len(36L) +
+          0.8 * sin(2 * pi * seq_len(36L) / 4)
+      ),
+      missing_indices = integer(0),
+      df = c(0.96, 0.92),
+      dim_df = c(2L, 3L),
+      reference_variance = 1,
+      future_horizon = 4L,
+      reference_gate = "frozen_template_reconstruction_and_FFBS_parity"
+    ),
+    shared_component_scale_trend_regression = list(
+      evolution_mode = "component_scale",
+      state_components = list(
+        list(type = "polytrend", order = 2L, name = "trend", C0 = c(4, 1)),
+        list(
+          type = "regression", name = "regression", C0 = 2,
+          X = matrix(
+            seq(-1, 1, length.out = 30L), ncol = 1L,
+            dimnames = list(NULL, "x")
+          )
+        )
+      ),
+      n_time = 30L,
+      y = as.numeric(
+        0.03 * seq_len(30L) +
+          0.6 * seq(-1, 1, length.out = 30L)
+      ),
+      missing_indices = c(11L),
+      component_templates = list(diag(2), matrix(1, 1, 1)),
+      component_scale_prior = list(
+        shape = c(3, 3), rate = c(0.1, 0.1)
+      ),
+      component_scale_initial = c(0.05, 0.05),
+      future_horizon = 3L,
+      reference_gate = "analytic_shared_inverse_Gamma_component_conditionals"
+    )
+  )
+)

@@ -188,18 +188,48 @@
                                numerical_policy = c("fail", "record_repair")) {
   backend <- match.arg(backend, c("cpp", "R", "auto"))
   resolved_backend <- .rqr_resolve_ffbs_backend(backend)
+  z <- as.numeric(z)
+  if (!length(z)) {
+    stop("z must be nonempty.", call. = FALSE)
+  }
+  if (any(is.nan(z))) {
+    stop("z may contain finite values or NA only; NaN is invalid.", call. = FALSE)
+  }
+  if (any(is.infinite(z))) {
+    stop("z may contain finite values or NA only; Inf is invalid.", call. = FALSE)
+  }
+  m0 <- as.numeric(m0)
+  if (!length(m0) || any(!is.finite(m0))) {
+    stop("m0 must be a nonempty finite state vector.", call. = FALSE)
+  }
   p <- length(m0)
   n_time <- length(z)
   H <- .rqr_expand_columns(H, n_time, "H")
+  V <- as.numeric(V)
+  if (length(V) != n_time || any(!is.finite(V)) || any(V <= 0)) {
+    stop("V must be finite, positive, and length(z).", call. = FALSE)
+  }
+  GG <- .rqr_expand_cube(GG, n_time, p, "GG")
+  if (any(!is.finite(GG))) {
+    stop("GG must contain only finite values.", call. = FALSE)
+  }
+  C0 <- .rqr_validate_symmetric_matrix(C0, "C0")
+  if (!all(dim(C0) == c(p, p))) {
+    stop("C0 dimensions must match length(m0).", call. = FALSE)
+  }
+  # C0 is a prior covariance, not a repairable working matrix. Requiring a
+  # direct factorization at the exported boundary prevents silent target
+  # changes in either backend.
+  .rqr_chol_with_jitter(C0, jitter_ladder = 0)
   evo <- .rqr_prepare_evolution(evolution, p, n_time)
   numerical_policy <- .rqr_numerical_policy(numerical_policy)
   jitter_ladder <- .rqr_jitter_ladder(numerical_policy, jitter_ladder)
   use_cpp <- identical(resolved_backend, "cpp")
   if (use_cpp) {
     out <- rqr_ffbs_cpp(
-      z = as.numeric(z), H = H, V = as.numeric(V),
-      GG = .rqr_expand_cube(GG, n_time, p, "GG"),
-      m0 = as.numeric(m0), C0 = as.matrix(C0),
+      z = z, H = H, V = V,
+      GG = GG,
+      m0 = m0, C0 = C0,
       evolution_mode = evo$mode_code, W = evo$W, D = evo$D,
       sample_path = isTRUE(sample), jitter_ladder = as.numeric(jitter_ladder),
       evolution_label = evo$mode,

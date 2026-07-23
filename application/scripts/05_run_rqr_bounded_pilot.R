@@ -1,6 +1,13 @@
 #!/usr/bin/env Rscript
 
 options(warn = 1)
+Sys.setenv(
+  OMP_NUM_THREADS = "1",
+  OPENBLAS_NUM_THREADS = "1",
+  MKL_NUM_THREADS = "1",
+  VECLIB_MAXIMUM_THREADS = "1",
+  NUMEXPR_NUM_THREADS = "1"
+)
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
@@ -18,7 +25,9 @@ if (!identical(Sys.getenv("RQR_BOUNDED_PILOT_CONFIRM"), "YES")) {
   )
 }
 
-required_packages <- c("digest", "jsonlite", "pkgload", "pracma", "testthat")
+required_packages <- c(
+  "coda", "digest", "jsonlite", "pkgload", "pracma", "testthat"
+)
 missing_packages <- required_packages[!vapply(
   required_packages, requireNamespace, quietly = TRUE, FUN.VALUE = logical(1L)
 )]
@@ -68,6 +77,18 @@ repository_state <- function(name, root, expected_branch, expected_commit = NULL
   )
 }
 
+expected_primary_commit <- tolower(Sys.getenv(
+  "RQR_EXPECTED_PRIMARY_COMMIT", unset = ""
+))
+if (!grepl("^[0-9a-f]{40}$", expected_primary_commit)) {
+  stop(
+    paste(
+      "Set RQR_EXPECTED_PRIMARY_COMMIT to the reviewed, complete 40-character",
+      "RQR-GIBBS commit before launching the bounded pilot."
+    ),
+    call. = FALSE
+  )
+}
 primary_commit <- tolower(git_value(repo_root, c("rev-parse", "HEAD")))
 exdqlm_commit <- "dffb71ee70b597d6a716ee74be1cbc99731cd453"
 qdesn_commit <- "f9f22804eff3871bb5350c8add04b7c9f4d4957b"
@@ -86,7 +107,9 @@ qdesn_root <- normalizePath(
   winslash = "/", mustWork = TRUE
 )
 source_state <- rbind(
-  repository_state("RQR-GIBBS", repo_root, "main", primary_commit),
+  repository_state(
+    "RQR-GIBBS", repo_root, "main", expected_primary_commit
+  ),
   repository_state(
     "exdqlm", exdqlm_root, "feature/rqr-desn-readout-20260716",
     exdqlm_commit
@@ -266,6 +289,33 @@ chain_diagnostics <- function(chains, sampler) {
   }))
 }
 
+maintained_diagnostic_crosscheck <- function(chains, sampler) {
+  estimands <- dimnames(chains)[[2L]]
+  do.call(rbind, lapply(estimands, function(estimand) {
+    x <- chains[, estimand, , drop = TRUE]
+    chain_list <- coda::mcmc.list(lapply(
+      seq_len(ncol(x)), function(index) coda::mcmc(x[, index])
+    ))
+    classic_rhat <- unname(
+      coda::gelman.diag(
+        chain_list, autoburnin = FALSE, multivariate = FALSE
+      )$psrf[1L, "Point est."]
+    )
+    classic_ess <- unname(coda::effectiveSize(chain_list)[1L])
+    data.frame(
+      sampler = sampler,
+      estimand = estimand,
+      maintained_package = "coda",
+      classic_rhat = classic_rhat,
+      classic_ess = classic_ess,
+      finite = is.finite(classic_rhat) && is.finite(classic_ess),
+      pass = is.finite(classic_rhat) && classic_rhat <= 1.05 &&
+        is.finite(classic_ess) && classic_ess >= 1000,
+      stringsAsFactors = FALSE
+    )
+  }))
+}
+
 estimands_from_roots <- function(beta1, beta2, lambda, y, alpha, s_L) {
   lower <- pmin(beta1, beta2)
   upper <- pmax(beta1, beta2)
@@ -436,16 +486,16 @@ quadrature_reference <- function(
   )
   results <- do.call(rbind, lapply(quantities, function(quantity) {
     numerator <- integrate_quantity(quantity)
-    relative_error_bound <- numerator["error"] /
+    estimated_relative_error <- numerator["error"] /
       max(abs(numerator["value"]), .Machine$double.xmin) +
       denominator["error"] / denominator["value"]
     data.frame(
       estimand = quantity,
       mean = unname(numerator["value"] / denominator["value"]),
-      relative_error_bound = unname(relative_error_bound),
+      estimated_relative_error = unname(estimated_relative_error),
       requested_relative_tolerance = relative_tolerance,
-      pass = is.finite(relative_error_bound) &&
-        relative_error_bound <= 1e-9,
+      pass = is.finite(estimated_relative_error) &&
+        estimated_relative_error <= 1e-9,
       stringsAsFactors = FALSE
     )
   }))
@@ -481,6 +531,17 @@ main <- function() {
     stop("exdqlm was loaded before the isolated library was selected.", call. = FALSE)
   }
   pkgload::load_all(file.path(repo_root, "application"), quiet = TRUE)
+  primary_runtime_state <- rqrgibbs:::.rqr_repository_provenance(list(
+    repo_root = repo_root,
+    expected_git_commit = expected_primary_commit,
+    runtime_package = "rqrgibbs",
+    source_subdir = "application"
+  ))
+  if (!isTRUE(primary_runtime_state$runtime_direct_source_path_match) ||
+      !isTRUE(primary_runtime_state$runtime_source_match) ||
+      !isTRUE(primary_runtime_state$reproducibility_eligible)) {
+    stop("The primary rqrgibbs runtime-source gate failed.", call. = FALSE)
+  }
   runtime_state <- rqrgibbs:::.rqr_repository_provenance(list(
     repo_root = exdqlm_root,
     expected_git_commit = exdqlm_commit,
@@ -493,16 +554,45 @@ main <- function() {
     stop("The isolated exdqlm runtime-source gate failed.", call. = FALSE)
   }
   runtime_table <- data.frame(
-    package = runtime_state$runtime_package,
-    runtime_package_path = runtime_state$runtime_package_path,
-    runtime_package_version = runtime_state$runtime_package_version,
-    source_commit = runtime_state$git_commit,
-    source_tree_digest = runtime_state$source_tree_digest,
-    runtime_package_tree_digest = runtime_state$runtime_package_tree_digest,
-    runtime_attestation = runtime_state$runtime_attestation,
-    runtime_attestation_match = runtime_state$runtime_attestation_match,
-    runtime_source_match = runtime_state$runtime_source_match,
-    reproducibility_eligible = runtime_state$reproducibility_eligible,
+    package = c(
+      primary_runtime_state$runtime_package,
+      runtime_state$runtime_package
+    ),
+    runtime_package_path = c(
+      primary_runtime_state$runtime_package_path,
+      runtime_state$runtime_package_path
+    ),
+    runtime_package_version = c(
+      primary_runtime_state$runtime_package_version,
+      runtime_state$runtime_package_version
+    ),
+    source_commit = c(
+      primary_runtime_state$git_commit, runtime_state$git_commit
+    ),
+    source_tree_digest = c(
+      primary_runtime_state$source_tree_digest,
+      runtime_state$source_tree_digest
+    ),
+    runtime_package_tree_digest = c(
+      primary_runtime_state$runtime_package_tree_digest,
+      runtime_state$runtime_package_tree_digest
+    ),
+    runtime_attestation = c(
+      primary_runtime_state$runtime_attestation,
+      runtime_state$runtime_attestation
+    ),
+    runtime_attestation_match = c(
+      primary_runtime_state$runtime_attestation_match,
+      runtime_state$runtime_attestation_match
+    ),
+    runtime_source_match = c(
+      primary_runtime_state$runtime_source_match,
+      runtime_state$runtime_source_match
+    ),
+    reproducibility_eligible = c(
+      primary_runtime_state$reproducibility_eligible,
+      runtime_state$reproducibility_eligible
+    ),
     stringsAsFactors = FALSE
   )
   write.csv(
@@ -590,6 +680,7 @@ main <- function() {
     response_likelihood = FALSE,
     production_simulation_authorized = FALSE,
     primary_commit = primary_commit,
+    expected_primary_commit = expected_primary_commit,
     exdqlm_commit = exdqlm_commit,
     qdesn_reference_commit = qdesn_commit,
     isolated_R_library = runtime_library,
@@ -614,7 +705,7 @@ main <- function() {
     gates = list(
       rhat_max = 1.01, bulk_ess_min = 2000, tail_ess_min = 2000,
       mean_mcse_multiplier = 4, quadrature_relative_tolerance = 1e-10,
-      maximum_wall_minutes = 90, maximum_workers = 2,
+      maximum_wall_minutes = 90, maximum_workers = 1,
       maximum_resident_memory_gb = 4, maximum_artifact_mb = 250
     ),
     cdf_thresholds = list(
@@ -640,6 +731,8 @@ main <- function() {
   )
   collapsed_repairs <- integer(length(collapsed_seeds))
   collapsed_promotion <- logical(length(collapsed_seeds))
+  collapsed_reproducibility <- logical(length(collapsed_seeds))
+  collapsed_primary_runtime_match <- logical(length(collapsed_seeds))
   for (chain in seq_along(collapsed_seeds)) {
     fit <- rqr_mcmc_fit(
       y = y, X = X, coverage_level = alpha,
@@ -649,7 +742,8 @@ main <- function() {
       beta_prior_obj = beta_prior("ridge", ridge = list(tau2 = tau2)),
       numerical_policy = "fail",
       provenance_control = list(
-        repo_root = repo_root, expected_git_commit = primary_commit
+        repo_root = repo_root,
+        expected_git_commit = expected_primary_commit
       ),
       mcmc_control = list(
         n_burn = n_burn, n_mcmc = n_keep, thin = 1L,
@@ -664,6 +758,12 @@ main <- function() {
     )
     collapsed_repairs[chain] <- fit$model_spec$numerical_repair_count
     collapsed_promotion[chain] <- isTRUE(fit$model_spec$promotion_eligible)
+    collapsed_reproducibility[chain] <- isTRUE(
+      fit$provenance$reproducibility_eligible
+    )
+    collapsed_primary_runtime_match[chain] <- isTRUE(
+      fit$provenance$primary_runtime_source_match
+    )
   }
 
   current_stage <<- "fully augmented chains"
@@ -685,6 +785,15 @@ main <- function() {
   diagnostics <- rbind(
     chain_diagnostics(collapsed, "collapsed"),
     chain_diagnostics(augmented, "fully_augmented")
+  )
+  maintained_diagnostics <- rbind(
+    maintained_diagnostic_crosscheck(collapsed, "collapsed"),
+    maintained_diagnostic_crosscheck(augmented, "fully_augmented")
+  )
+  write.csv(
+    maintained_diagnostics,
+    file.path(output_dir, "maintained_diagnostic_crosscheck.csv"),
+    row.names = FALSE
   )
   diagnostics$pass <- with(
     diagnostics,
@@ -767,6 +876,21 @@ main <- function() {
     lambda = 1.0, lower_root = -1.5, upper_root = 2.5,
     width = 4.0, midpoint = 0.5
   )
+  independent_references <- utils::read.csv(
+    file.path(
+      repo_root, "application", "inst", "extdata",
+      "output6_independent_references.csv"
+    ),
+    stringsAsFactors = FALSE
+  )
+  independent_cdf <- independent_references[
+    independent_references$comparison_type == "cdf", , drop = FALSE
+  ]
+  if (nrow(independent_cdf) != length(thresholds) ||
+      !setequal(independent_cdf$estimand, names(thresholds)) ||
+      any(!is.finite(independent_cdf$reference_value))) {
+    stop("The tracked independent CDF reference contract is incomplete.", call. = FALSE)
+  }
   cdf_rows <- do.call(rbind, lapply(names(thresholds), function(estimand) {
     threshold <- thresholds[[estimand]]
     collapsed_indicator <- collapsed[, estimand, ] <= threshold
@@ -782,21 +906,29 @@ main <- function() {
       augmented_probability * (1 - augmented_probability) / augmented_ess
     )
     tolerance <- 4 * sqrt(collapsed_mcse^2 + augmented_mcse^2)
+    quadrature_probability <- independent_references$reference_value[
+      independent_references$comparison_type == "cdf" &
+        independent_references$estimand == estimand
+    ]
     data.frame(
       comparison_type = "cdf",
       estimand = estimand,
       threshold = threshold,
       collapsed = collapsed_probability,
       fully_augmented = augmented_probability,
-      quadrature = NA_real_,
+      quadrature = quadrature_probability,
       collapsed_mcse = collapsed_mcse,
       fully_augmented_mcse = augmented_mcse,
       difference = abs(collapsed_probability - augmented_probability),
       tolerance = tolerance,
       collapsed_vs_augmented_pass =
         abs(collapsed_probability - augmented_probability) <= tolerance,
-      collapsed_vs_quadrature_pass = NA,
-      augmented_vs_quadrature_pass = NA,
+      collapsed_vs_quadrature_pass =
+        abs(collapsed_probability - quadrature_probability) <=
+          4 * collapsed_mcse,
+      augmented_vs_quadrature_pass =
+        abs(augmented_probability - quadrature_probability) <=
+          4 * augmented_mcse,
       stringsAsFactors = FALSE
     )
   }))
@@ -817,7 +949,8 @@ main <- function() {
     ),
     pass = c(
       TRUE,
-      all(collapsed_promotion),
+      all(collapsed_reproducibility) &&
+        all(collapsed_primary_runtime_match),
       all(collapsed_promotion),
       isTRUE(runtime_state$runtime_source_match),
       all(
@@ -843,6 +976,27 @@ main <- function() {
   artifact_bytes_before_hashes <- sum(
     file.info(list.files(output_dir, full.names = TRUE))$size
   )
+  proc_status <- if (file.exists("/proc/self/status")) {
+    readLines("/proc/self/status", warn = FALSE)
+  } else {
+    character(0)
+  }
+  peak_line <- proc_status[startsWith(proc_status, "VmHWM:")]
+  peak_resident_kb <- if (length(peak_line) == 1L) {
+    as.numeric(gsub("[^0-9]", "", peak_line))
+  } else {
+    NA_real_
+  }
+  resource_usage <- data.frame(
+    workers_used = 1L,
+    peak_resident_kb = peak_resident_kb,
+    peak_resident_gb = peak_resident_kb / 1024^2,
+    stringsAsFactors = FALSE
+  )
+  write.csv(
+    resource_usage, file.path(output_dir, "resource_usage.csv"),
+    row.names = FALSE
+  )
   gates <- c(
     diagnostics = all(diagnostics$pass),
     repairs = all(repair_records$pass),
@@ -852,9 +1006,17 @@ main <- function() {
         mean_rows$collapsed_vs_quadrature_pass &
         mean_rows$augmented_vs_quadrature_pass
     ),
-    cdf_comparisons = all(cdf_rows$collapsed_vs_augmented_pass),
+    cdf_comparisons = all(
+      cdf_rows$collapsed_vs_augmented_pass &
+        cdf_rows$collapsed_vs_quadrature_pass &
+        cdf_rows$augmented_vs_quadrature_pass
+    ),
+    maintained_diagnostics = all(maintained_diagnostics$pass),
     continuation_and_provenance = all(continuation_checks$pass),
     wall_time = elapsed_minutes <= 90,
+    workers = resource_usage$workers_used <= 1L,
+    resident_memory = is.finite(resource_usage$peak_resident_gb) &&
+      resource_usage$peak_resident_gb <= 4,
     artifact_size = artifact_bytes_before_hashes <= 250 * 1024^2
   )
   passed <- all(gates)

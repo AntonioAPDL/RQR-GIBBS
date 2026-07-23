@@ -53,8 +53,11 @@ complete model/target/evolution digests, package, R, compiler, BLAS/LAPACK,
 dependencies, RNG kind, and source commits before claiming exact
 same-environment continuation. Any explicit environment override is stored in
 the returned segment and removes reproducibility and promotion eligibility.
-Numerical-repair counts and promotion eligibility are cumulative across
-segments, and `backend="auto"` records both the requested and resolved backend.
+Numerical-repair counts, environment mismatch/override history, and promotion
+eligibility are stored in a separately digested cumulative continuation
+contract, and `backend="auto"` records both the requested and resolved backend.
+Promotion also requires the executing `rqrgibbs` namespace to match the clean
+primary package source or a verified isolated-runtime attestation.
 RQR-DESN and RHS promotion also requires the executing exdqlm namespace to
 match an isolated-library attestation for the clean pinned source. A direct
 source-tree namespace is intentionally ineligible. Run
@@ -66,3 +69,8 @@ checkout changes.
 
 The heavy directories **data_local**, **cache**, **runs**, **logs**, and
 **outputs** are ignored by git.
+
+The next exact-mode dynamic validation config is
+`config/rqr_dlm/rqr_dlm_bounded_dynamic_fixtures_20260722.R`. It is
+preflighted by `scripts/06_preflight_rqr_dlm_bounded_fixtures.R`, remains
+non-production, and excludes the adaptive working recursion.

@@ -305,7 +305,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.3.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.4.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
@@ -381,23 +381,25 @@ test_that("continuation inherits numerical and source history cumulatively", {
       n_burn = 0, n_mcmc = 2, seed = 1220, backend = "auto"
     )
   )
-  expect_true(fit$model_spec$promotion_eligible)
+  expect_false(fit$model_spec$promotion_eligible)
   expect_identical(fit$provenance$backend_requested, "auto")
   expect_identical(fit$provenance$backend_resolved, "cpp")
 
-  repaired_parent <- fit
-  repaired_parent$model_spec$target_numerical_eligible <- FALSE
-  repaired_parent$model_spec$numerically_exact_transition <- FALSE
-  repaired_parent$model_spec$chain_history_numerically_exact <- FALSE
-  repaired_parent$model_spec$promotion_eligible <- FALSE
-  repaired_parent$model_spec$numerical_repair_count <- 1L
-  repaired_parent$model_spec$cumulative_numerical_repair_count <- 1L
-  child <- rqr_dlm_continue(repaired_parent, n_mcmc = 1)
-  expect_false(child$model_spec$chain_history_numerically_exact)
-  expect_false(child$model_spec$target_numerical_eligible)
-  expect_false(child$model_spec$promotion_eligible)
-  expect_equal(child$model_spec$cumulative_numerical_repair_count, 1L)
-  expect_false(child$continuation_contract$parent_promotion_eligible)
+  altered_history <- fit
+  altered_history$model_spec$cumulative_numerical_repair_count <- 1L
+  expect_error(
+    rqr_dlm_continue(altered_history, n_mcmc = 1),
+    "history contract"
+  )
+
+  child <- rqr_dlm_continue(fit, n_mcmc = 1)
+  grandchild <- rqr_dlm_continue(child, n_mcmc = 1)
+  expect_identical(grandchild$continuation_history_contract$generation, 2L)
+  expect_length(grandchild$continuation_history_contract$segments, 3L)
+  expect_identical(
+    grandchild$continuation_history_digest,
+    rqrgibbs:::.rqr_digest(grandchild$continuation_history_contract)
+  )
 
   altered_source <- fit
   altered_source$provenance$git_status_available <- FALSE
@@ -418,7 +420,7 @@ test_that("continuation inherits numerical and source history cumulatively", {
   altered_backend$provenance$backend_resolved <- "R"
   expect_error(
     rqr_dlm_continue(altered_backend, n_mcmc = 1),
-    "backend_resolved"
+    "history contract"
   )
 })
 
@@ -528,6 +530,38 @@ test_that("DLM continuation rejects every target and checkpoint mutation", {
     expect_error(
       rqr_dlm_continue(altered, 1),
       "checkpoint digest",
+      info = name
+    )
+  }
+
+  history_mutations <- list(
+    cumulative_repairs = function(x) {
+      x$continuation_history_contract$
+        cumulative_numerical_repair_count <- 99L
+      x
+    },
+    promotion = function(x) {
+      x$continuation_history_contract$promotion_eligible <-
+        !x$continuation_history_contract$promotion_eligible
+      x
+    },
+    mismatch_ledger = function(x) {
+      x$continuation_history_contract$
+        cumulative_environment_mismatch_ledger <- list(list(
+          generation = 0L, environment_mismatches = "fabricated"
+        ))
+      x
+    },
+    stored_digest = function(x) {
+      x$continuation_history_digest <- paste(rep("0", 64), collapse = "")
+      x
+    }
+  )
+  for (name in names(history_mutations)) {
+    altered <- history_mutations[[name]](fit)
+    expect_error(
+      rqr_dlm_continue(altered, 1),
+      "history contract or digest",
       info = name
     )
   }
@@ -709,7 +743,9 @@ test_that("runtime package provenance binds code to source or an attestation", {
     runtime_package_path = runtime_path,
     runtime_package_tree_digest =
       rqrgibbs:::.rqr_directory_digest(runtime_path),
-    runtime_isolated_from_source = TRUE
+    runtime_isolated_from_source = TRUE,
+    R_version = R.version.string,
+    platform = R.version$platform
   )
   saveRDS(attestation, attestation_path)
   matched <- rqrgibbs:::.rqr_repository_provenance(list(

@@ -50,8 +50,11 @@ objects retain terminal state draws, integrity-digested RNG checkpoints, a
 versioned schema, Git/R/compiler/BLAS provenance, and complete
 data/model/target/evolution digests; full paths are opt-in. A portability
 override is durable and removes reproducibility and promotion eligibility.
-Continuation also inherits the complete numerical-repair history and compares
-the requested and resolved FFBS backends before making a bitwise claim.
+Continuation also carries a separately digested cumulative history contract,
+including every mismatch/override generation, and compares the requested and
+resolved FFBS backends before making a bitwise claim. Promotion binds the
+executing `rqrgibbs` namespace to the clean primary checkout (or a verified
+isolated-runtime attestation), not merely to an installed version string.
 Component-scale forecasts can combine saved evolution-scale draws with fixed
 future component templates.
 
@@ -102,7 +105,10 @@ PDF inventory and checksums.
     make prepare-exdqlm-runtime
     make test-exdqlm-rqr
     make literature-manifest
-    RQR_BOUNDED_PILOT_CONFIRM=YES make bounded-pilot
+    RQR_EXPECTED_PRIMARY_COMMIT=<reviewed-full-sha> \
+      RQR_BOUNDED_PILOT_CONFIRM=YES make bounded-pilot
+    RQR_EXPECTED_PRIMARY_COMMIT=<reviewed-full-sha> \
+      make preflight-dlm-bounded
 
 No production simulation should be launched until its matched protocol is
 frozen and explicitly approved. The bounded pilot does not provide that

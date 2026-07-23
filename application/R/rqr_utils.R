@@ -241,7 +241,106 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
-.rqr_schema_version <- function() "rqrgibbs_fit/1.3.0"
+.rqr_schema_version <- function() "rqrgibbs_fit/1.4.0"
+
+.rqr_continuation_history_schema <- function() {
+  "rqrgibbs_continuation_history/1.0.0"
+}
+
+.rqr_make_continuation_history <- function(
+    checkpoint_digest, cumulative_numerical_repair_count,
+    chain_history_numerically_exact, promotion_eligible,
+    reproducibility_eligible, backend_requested, backend_resolved,
+    parent = NULL, environment_mismatches = character(0),
+    environment_override_used = FALSE) {
+  if (is.null(parent)) {
+    generation <- 0L
+    segments <- list()
+  } else {
+    generation <- as.integer(parent$generation) + 1L
+    segments <- parent$segments
+  }
+  segment <- list(
+    generation = generation,
+    checkpoint_digest = as.character(checkpoint_digest)[1L],
+    environment_mismatches = sort(unique(as.character(environment_mismatches))),
+    environment_override_used = isTRUE(environment_override_used),
+    backend_requested = as.character(backend_requested)[1L],
+    backend_resolved = as.character(backend_resolved)[1L]
+  )
+  list(
+    schema_version = .rqr_continuation_history_schema(),
+    generation = generation,
+    cumulative_numerical_repair_count =
+      as.integer(cumulative_numerical_repair_count),
+    chain_history_numerically_exact =
+      isTRUE(chain_history_numerically_exact),
+    promotion_eligible = isTRUE(promotion_eligible),
+    reproducibility_eligible = isTRUE(reproducibility_eligible),
+    cumulative_environment_override_used =
+      isTRUE(environment_override_used) ||
+        isTRUE(parent$cumulative_environment_override_used %||% FALSE),
+    cumulative_environment_mismatch_ledger = c(
+      parent$cumulative_environment_mismatch_ledger %||% list(),
+      if (length(segment$environment_mismatches)) list(segment) else list()
+    ),
+    segments = c(segments, list(segment))
+  )
+}
+
+.rqr_validate_continuation_history <- function(object) {
+  contract <- object$continuation_history_contract
+  stored_digest <- object$continuation_history_digest %||% NA_character_
+  if (!is.list(contract) ||
+      !identical(
+        contract$schema_version %||% NA_character_,
+        .rqr_continuation_history_schema()
+      ) ||
+      !.rqr_nonmissing_text(stored_digest) ||
+      !identical(.rqr_digest(contract), stored_digest)) {
+    stop(
+      "Continuation history contract or digest does not match the fitted object.",
+      call. = FALSE
+    )
+  }
+  checks <- list(
+    cumulative_numerical_repair_count = identical(
+      as.integer(contract$cumulative_numerical_repair_count),
+      as.integer(object$model_spec$cumulative_numerical_repair_count)
+    ),
+    chain_history_numerically_exact = identical(
+      isTRUE(contract$chain_history_numerically_exact),
+      isTRUE(object$model_spec$chain_history_numerically_exact)
+    ),
+    promotion_eligible = identical(
+      isTRUE(contract$promotion_eligible),
+      isTRUE(object$model_spec$promotion_eligible)
+    ),
+    reproducibility_eligible = identical(
+      isTRUE(contract$reproducibility_eligible),
+      isTRUE(object$provenance$reproducibility_eligible)
+    ),
+    checkpoint_digest = identical(
+      utils::tail(contract$segments, 1L)[[1L]]$checkpoint_digest,
+      object$checkpoint_digest
+    ),
+    backend_requested = identical(
+      utils::tail(contract$segments, 1L)[[1L]]$backend_requested,
+      object$provenance$backend_requested
+    ),
+    backend_resolved = identical(
+      utils::tail(contract$segments, 1L)[[1L]]$backend_resolved,
+      object$provenance$backend_resolved
+    )
+  )
+  if (!all(unlist(checks, use.names = FALSE))) {
+    stop(
+      "Continuation history contract conflicts with redundant fit metadata.",
+      call. = FALSE
+    )
+  }
+  contract
+}
 
 .rqr_pinned_exdqlm_commit <- function() {
   "dffb71ee70b597d6a716ee74be1cbc99731cd453"
@@ -369,12 +468,25 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       call. = FALSE
     )
   }
+  source_subdir <- as.character(spec$source_subdir %||% ".")[1L]
+  if (is.na(source_subdir) || !nzchar(source_subdir) ||
+      grepl("(^|/)\\.\\.(/|$)", source_subdir) ||
+      startsWith(source_subdir, "/")) {
+    stop(
+      sprintf(
+        "provenance_control$external_repositories$%s$source_subdir must be a safe relative path.",
+        name
+      ),
+      call. = FALSE
+    )
+  }
   list(
     repo_root = repo_root,
     expected_git_commit = expected,
     runtime_package = runtime_package,
     runtime_attestation = runtime_attestation,
-    require_isolated_runtime = require_isolated_runtime
+    require_isolated_runtime = require_isolated_runtime,
+    source_subdir = source_subdir
   )
 }
 
@@ -427,9 +539,24 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       call. = FALSE
     )
   }
+  primary_runtime_attestation <- control$primary_runtime_attestation %||% NULL
+  if (!is.null(primary_runtime_attestation)) {
+    primary_runtime_attestation <- as.character(primary_runtime_attestation)[1L]
+    if (is.na(primary_runtime_attestation) ||
+        !nzchar(primary_runtime_attestation)) {
+      stop(
+        "provenance_control$primary_runtime_attestation must be one nonempty path.",
+        call. = FALSE
+      )
+    }
+    primary_runtime_attestation <- normalizePath(
+      primary_runtime_attestation, winslash = "/", mustWork = FALSE
+    )
+  }
   list(
     repo_root = repo_root,
     expected_git_commit = expected,
+    primary_runtime_attestation = primary_runtime_attestation,
     external_repositories = external,
     required_external_repositories = required_external
   )
@@ -505,8 +632,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(payload, algo = "sha256", serialize = FALSE)
 }
 
-.rqr_description_version <- function(repo_root) {
-  description <- file.path(repo_root, "DESCRIPTION")
+.rqr_description_version <- function(repo_root, source_subdir = ".") {
+  description <- file.path(repo_root, source_subdir, "DESCRIPTION")
   if (!file.exists(description)) return(NA_character_)
   value <- suppressWarnings(tryCatch(
     read.dcf(description, fields = "Version")[1L, 1L],
@@ -526,7 +653,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     runtime_package_path = NA_character_,
     runtime_package_version = NA_character_,
     source_description_version = NA_character_,
+    source_package_path = NA_character_,
     source_tree_digest = NA_character_,
+    source_worktree_digest = NA_character_,
     runtime_package_tree_digest = NA_character_,
     runtime_direct_source_path_match = FALSE,
     runtime_attestation = runtime_attestation %||% NA_character_,
@@ -546,9 +675,21 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       is.na(package) || !nzchar(as.character(package))) return(empty)
   package <- as.character(package)[1L]
   empty$runtime_package <- package
-  source_version <- .rqr_description_version(repository_state$repo_root)
+  source_subdir <- repository_state$source_subdir %||% "."
+  source_path <- normalizePath(
+    file.path(repository_state$repo_root, source_subdir),
+    winslash = "/", mustWork = FALSE
+  )
+  source_version <- .rqr_description_version(
+    repository_state$repo_root, source_subdir
+  )
+  tree_spec <- if (identical(source_subdir, ".")) {
+    "HEAD^{tree}"
+  } else {
+    paste0("HEAD:", source_subdir)
+  }
   tree_result <- .rqr_git_result(
-    repository_state$repo_root, c("rev-parse", "HEAD^{tree}")
+    repository_state$repo_root, c("rev-parse", tree_spec)
   )
   source_tree <- if (tree_result$available) {
     tolower(tree_result$value)
@@ -556,7 +697,13 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     NA_character_
   }
   empty$source_description_version <- source_version
+  empty$source_package_path <- source_path
   empty$source_tree_digest <- source_tree
+  empty$source_worktree_digest <- if (dir.exists(source_path)) {
+    tryCatch(.rqr_directory_digest(source_path), error = function(e) NA_character_)
+  } else {
+    NA_character_
+  }
   if (!requireNamespace(package, quietly = TRUE)) return(empty)
 
   namespace <- asNamespace(package)
@@ -571,16 +718,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     error = function(e) NA_character_
   )
   direct_path_match <- !is.na(runtime_path) &&
-    !is.na(repository_state$repo_root) &&
-    identical(
-      runtime_path,
-      normalizePath(
-        repository_state$repo_root, winslash = "/", mustWork = FALSE
-      )
-    )
-  runtime_digest <- if (direct_path_match) {
-    source_tree
-  } else if (!is.na(runtime_path)) {
+    !is.na(source_path) &&
+    identical(runtime_path, source_path)
+  runtime_digest <- if (!is.na(runtime_path)) {
     tryCatch(.rqr_directory_digest(runtime_path), error = function(e) NA_character_)
   } else {
     NA_character_
@@ -613,7 +753,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       "source_checkout_unchanged", "source_archive_path",
       "source_archive_sha256", "source_archive_isolated_from_source",
       "runtime_package_path",
-      "runtime_package_tree_digest", "runtime_isolated_from_source"
+      "runtime_package_tree_digest", "runtime_isolated_from_source",
+      "R_version", "platform"
     )
     attestation_schema <- if (is.list(attestation)) {
       as.character(attestation$schema_version %||% NA_character_)[1L]
@@ -712,6 +853,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
         tolower(as.character(attestation$runtime_package_tree_digest)),
         runtime_digest
       ) &&
+      identical(as.character(attestation$R_version), R.version.string) &&
+      identical(as.character(attestation$platform), R.version$platform) &&
       isTRUE(attestation$runtime_isolated_from_source) &&
       runtime_isolated_from_source
   }
@@ -735,7 +878,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     runtime_package_path = runtime_path,
     runtime_package_version = runtime_version,
     source_description_version = source_version,
+    source_package_path = source_path,
     source_tree_digest = source_tree,
+    source_worktree_digest = empty$source_worktree_digest,
     runtime_package_tree_digest = runtime_digest,
     runtime_direct_source_path_match = direct_path_match,
     runtime_attestation_available = attestation_available,
@@ -776,7 +921,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 .rqr_repository_provenance <- function(spec) {
   spec <- spec %||% list(
     repo_root = NULL, expected_git_commit = NULL,
-    runtime_package = NULL, runtime_attestation = NULL
+    runtime_package = NULL, runtime_attestation = NULL, source_subdir = "."
   )
   commit_result <- .rqr_git_result(spec$repo_root, c("rev-parse", "HEAD"))
   status_result <- .rqr_git_result(spec$repo_root, c("status", "--porcelain"))
@@ -808,6 +953,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     expected_git_commit = expected,
     expected_git_commit_match = commit_match,
     require_isolated_runtime = isTRUE(spec$require_isolated_runtime),
+    source_subdir = spec$source_subdir %||% ".",
     provenance_complete = metadata_complete
   )
   runtime <- .rqr_runtime_package_provenance(
@@ -836,7 +982,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
                             backend_requested = backend,
                             backend_resolved = backend,
                             objects = list(), external_repositories = list(),
-                            required_external_repositories = character(0)) {
+                            required_external_repositories = character(0),
+                            primary_runtime_attestation = NULL) {
   if (is.null(repo_root)) repo_root <- .rqr_find_repo_root()
   pkg_version <- tryCatch(as.character(utils::packageVersion("rqrgibbs")), error = function(e) NA_character_)
   required_external_repositories <- as.character(required_external_repositories)
@@ -872,6 +1019,18 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   matrix_digests <- lapply(matrices, .rqr_digest)
   object_digests <- lapply(objects, .rqr_digest)
   data_digest <- .rqr_digest(data)
+  primary_state <- .rqr_repository_provenance(list(
+    repo_root = repo_root,
+    expected_git_commit = if (is.na(expected_git_commit)) {
+      NULL
+    } else {
+      expected_git_commit
+    },
+    runtime_package = "rqrgibbs",
+    runtime_attestation = primary_runtime_attestation,
+    require_isolated_runtime = FALSE,
+    source_subdir = "application"
+  ))
   external_names <- unique(c(
     names(external_repositories) %||% character(0),
     required_external_repositories
@@ -899,6 +1058,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     nzchar(data_digest) &&
     all(vapply(matrix_digests, nzchar, logical(1L))) &&
     all(vapply(object_digests, nzchar, logical(1L))) &&
+    isTRUE(primary_state$runtime_provenance_complete) &&
     required_external_complete
   provenance_complete <- basic_provenance_complete &&
     .rqr_nonmissing_text(compiler) &&
@@ -910,6 +1070,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   git_dirty <- if (status_result$available) nzchar(dirty) else NA
   reproducibility_eligible <- provenance_complete &&
     !is.na(git_dirty) && !git_dirty && isTRUE(commit_match) &&
+    isTRUE(primary_state$runtime_source_match) &&
     required_external_eligible
   list(
     schema_version = .rqr_schema_version(),
@@ -936,6 +1097,14 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     data_digest = data_digest,
     matrix_digests = matrix_digests,
     object_digests = object_digests,
+    primary_repository = primary_state,
+    primary_runtime_package_path = primary_state$runtime_package_path,
+    primary_source_commit = primary_state$git_commit,
+    primary_source_tree_digest = primary_state$source_tree_digest,
+    primary_runtime_tree_digest = primary_state$runtime_package_tree_digest,
+    primary_runtime_source_match = primary_state$runtime_source_match,
+    primary_runtime_attestation =
+      primary_state$runtime_attestation,
     external_repositories = external_states,
     required_external_repositories = required_external_repositories,
     basic_provenance_complete = basic_provenance_complete,

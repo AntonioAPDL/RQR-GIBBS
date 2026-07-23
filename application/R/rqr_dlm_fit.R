@@ -548,7 +548,9 @@ rqr_dlm_fit <- function(
     ),
     external_repositories = provenance_control$external_repositories,
     required_external_repositories =
-      provenance_control$required_external_repositories
+      provenance_control$required_external_repositories,
+    primary_runtime_attestation =
+      provenance_control$primary_runtime_attestation
   )
   segment_target_numerical_eligible <- mathematical_exact && numerical_exact
   target_numerical_eligible <- mathematical_exact &&
@@ -655,6 +657,20 @@ rqr_dlm_fit <- function(
       )
     )
   )
+  out$continuation_history_contract <- .rqr_make_continuation_history(
+    checkpoint_digest = checkpoint_digest,
+    cumulative_numerical_repair_count =
+      out$model_spec$cumulative_numerical_repair_count,
+    chain_history_numerically_exact =
+      out$model_spec$chain_history_numerically_exact,
+    promotion_eligible = out$model_spec$promotion_eligible,
+    reproducibility_eligible = out$provenance$reproducibility_eligible,
+    backend_requested = out$provenance$backend_requested,
+    backend_resolved = out$provenance$backend_resolved
+  )
+  out$continuation_history_digest <- .rqr_digest(
+    out$continuation_history_contract
+  )
   class(out) <- c("rqr_dlm_mcmc", "rqr_fit")
   out
 }
@@ -677,6 +693,7 @@ rqr_dlm_fit <- function(
       call. = FALSE
     )
   }
+  continuation_history <- .rqr_validate_continuation_history(object)
   stored_checkpoint_digest <- object$checkpoint_digest %||% NA_character_
   if (!.rqr_nonmissing_text(stored_checkpoint_digest) ||
       !identical(.rqr_digest(object$checkpoint_state), stored_checkpoint_digest)) {
@@ -738,13 +755,20 @@ rqr_dlm_fit <- function(
     ),
     external_repositories = object$provenance$external_repositories,
     required_external_repositories =
-      object$provenance$required_external_repositories
+      object$provenance$required_external_repositories,
+    primary_runtime_attestation = {
+      value <- object$provenance$primary_runtime_attestation %||% NA_character_
+      if (is.na(value)) NULL else value
+    }
   )
   compare_fields <- c(
     "package_version", "R_version", "platform", "compiler", "BLAS", "LAPACK",
     "git_commit", "git_commit_available", "git_status_available", "git_dirty",
     "expected_git_commit", "expected_git_commit_match",
     "basic_provenance_complete", "provenance_complete",
+    "primary_runtime_source_match", "primary_runtime_package_path",
+    "primary_source_commit", "primary_source_tree_digest",
+    "primary_runtime_tree_digest",
     "backend_requested", "backend_resolved", "RNGkind"
   )
   mismatches <- compare_fields[!vapply(compare_fields, function(field) {
@@ -778,7 +802,8 @@ rqr_dlm_fit <- function(
     current_provenance = current,
     environment_mismatches = unique(mismatches),
     checkpoint_digest = stored_checkpoint_digest,
-    object_digests = current_object_digests
+    object_digests = current_object_digests,
+    continuation_history = continuation_history
   ))
 }
 
@@ -832,6 +857,11 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
       } else {
         object$provenance$expected_git_commit
       },
+      primary_runtime_attestation = {
+        value <- object$provenance$primary_runtime_attestation %||%
+          NA_character_
+        if (is.na(value)) NULL else value
+      },
       external_repositories = lapply(
         object$provenance$external_repositories %||% list(),
         function(x) list(
@@ -852,6 +882,8 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
             x$runtime_attestation
           },
           require_isolated_runtime = isTRUE(x$require_isolated_runtime)
+          ,
+          source_subdir = x$source_subdir %||% "."
         )
       ),
       required_external_repositories =
@@ -876,18 +908,18 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
       completed_iterations = checkpoint$completed_iterations,
       continued_from_checkpoint = TRUE,
       parent_cumulative_numerical_repair_count =
-        object$model_spec$cumulative_numerical_repair_count %||%
-          object$model_spec$numerical_repair_count %||% 0L,
+        validation$continuation_history$
+          cumulative_numerical_repair_count,
       parent_chain_history_numerically_exact =
-        object$model_spec$chain_history_numerically_exact %||%
-          object$model_spec$numerically_exact_transition %||% FALSE,
+        validation$continuation_history$
+          chain_history_numerically_exact,
       parent_promotion_eligible =
-        object$model_spec$promotion_eligible %||% FALSE
+        validation$continuation_history$promotion_eligible
     )
   )
   environment_override_used <- length(validation$environment_mismatches) > 0L
   parent_reproducibility_eligible <- isTRUE(
-    object$provenance$reproducibility_eligible
+    validation$continuation_history$reproducibility_eligible
   )
   current_environment_eligible <- isTRUE(
     segment$provenance$reproducibility_eligible
@@ -895,13 +927,13 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
   inherited_reproducibility_eligible <- current_environment_eligible &&
     parent_reproducibility_eligible && !environment_override_used
   parent_chain_history_numerically_exact <- isTRUE(
-    object$model_spec$chain_history_numerically_exact %||%
-      object$model_spec$numerically_exact_transition
+    validation$continuation_history$chain_history_numerically_exact
   )
-  parent_promotion_eligible <- isTRUE(object$model_spec$promotion_eligible)
+  parent_promotion_eligible <- isTRUE(
+    validation$continuation_history$promotion_eligible
+  )
   parent_cumulative_repairs <- as.integer(
-    object$model_spec$cumulative_numerical_repair_count %||%
-      object$model_spec$numerical_repair_count %||% 0L
+    validation$continuation_history$cumulative_numerical_repair_count
   )
   same_resolved_backend <- identical(
     object$provenance$backend_resolved %||% object$provenance$backend,
@@ -953,6 +985,24 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
     isTRUE(segment$model_spec$target_numerical_eligible) &&
     parent_promotion_eligible &&
     inherited_reproducibility_eligible
+  segment$continuation_history_contract <- .rqr_make_continuation_history(
+    checkpoint_digest = segment$checkpoint_digest,
+    cumulative_numerical_repair_count =
+      segment$model_spec$cumulative_numerical_repair_count,
+    chain_history_numerically_exact =
+      segment$model_spec$chain_history_numerically_exact,
+    promotion_eligible = segment$model_spec$promotion_eligible,
+    reproducibility_eligible =
+      segment$provenance$reproducibility_eligible,
+    backend_requested = segment$provenance$backend_requested,
+    backend_resolved = segment$provenance$backend_resolved,
+    parent = validation$continuation_history,
+    environment_mismatches = validation$environment_mismatches,
+    environment_override_used = environment_override_used
+  )
+  segment$continuation_history_digest <- .rqr_digest(
+    segment$continuation_history_contract
+  )
   segment
 }
 

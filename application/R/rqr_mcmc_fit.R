@@ -297,7 +297,9 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     ),
     external_repositories = provenance_control$external_repositories,
     required_external_repositories =
-      provenance_control$required_external_repositories
+      provenance_control$required_external_repositories,
+    primary_runtime_attestation =
+      provenance_control$primary_runtime_attestation
   )
   target_numerical_eligible <- numerically_exact
   out <- list(

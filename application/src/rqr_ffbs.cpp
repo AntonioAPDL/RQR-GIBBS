@@ -32,7 +32,7 @@ struct DrawResult {
 };
 
 arma::mat symm(const arma::mat& x) {
-  return 0.5 * (x + x.t());
+  return 0.5 * x + 0.5 * x.t();
 }
 
 SpdResult spd_factor(const arma::mat& input, const arma::vec& ladder) {
@@ -54,11 +54,18 @@ SpdResult spd_factor(const arma::mat& input, const arma::vec& ladder) {
   for (arma::uword j = 0; j < ladder.n_elem; ++j) {
     const double relative = ladder(j);
     if (!std::isfinite(relative) || relative <= 0.0) continue;
+    const double applied_jitter = relative * jitter_scale;
+    if (applied_jitter == 0.0) {
+      Rcpp::stop(
+        "Relative Cholesky jitter underflowed to zero at the matrix scale; "
+        "rescale the state or declare an explicit absolute covariance."
+      );
+    }
     arma::mat candidate = base;
-    candidate.diag() += relative * jitter_scale;
+    candidate.diag() += applied_jitter;
     if (arma::chol(L, candidate, "lower")) {
       return SpdResult{
-        candidate, L, relative * jitter_scale,
+        candidate, L, applied_jitter,
         absolute_fallback ? NA_REAL : relative,
         min_eigenvalue, matrix_scale, jitter_scale, absolute_fallback
       };
