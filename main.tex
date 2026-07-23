@@ -401,16 +401,19 @@ numerical policy, RNG state, and a complete continuation checkpoint under a
 versioned schema. Continuation verifies schema, data and model digests, and the
 recorded numerical environment before claiming bitwise equivalence. Full state
 paths are opt-in. Repair counts and numerical eligibility are inherited across
-all continuation segments, and requested and resolved FFBS backends are
-recorded separately. When an external package constructs the design or prior,
-its executing namespace must be bound to the pinned source tree rather than
-merely accompanied by a separate clean checkout. Terminal states and
-component-scale draws are retained for root forecasting with explicit future
-covariance templates.
+all continuation segments. Each generation records its parent checkpoint,
+segment and cumulative repair counts, exactness, reproducibility, promotion
+status, mismatch ledger, and requested and resolved FFBS backends; validation
+reconstructs these recursions before continuation. Promotion-grade primary and
+external namespaces are built in isolated libraries from Git archives whose
+file modes, blob identifiers, and paths match the declared commit trees.
+Terminal states and component-scale draws are retained for root forecasting
+with explicit future covariance templates.
 
 A bounded intercept-only learned-scale fixture cross-checks the production
 partially collapsed scan against a separately coded fully augmented scan and
-adaptive root quadrature after analytically integrating the loss scale. Four
+event-boundary-aware root quadrature after analytically integrating the loss
+scale. Four
 chains per scan satisfy the predeclared rank-normalized convergence and
 effective-sample-size gates, all mean and CDF comparisons satisfy their
 Monte Carlo error bounds, and no numerical repair is used. This verifies the

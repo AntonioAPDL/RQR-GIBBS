@@ -11,6 +11,13 @@ sys.source(
   ),
   envir = environment()
 )
+sys.source(
+  file.path(
+    repo_root, "application", "scripts", "lib",
+    "isolated_runtime_lineage.R"
+  ),
+  envir = environment()
+)
 
 pinned_commit <- "dffb71ee70b597d6a716ee74be1cbc99731cd453"
 pinned_branch <- "feature/rqr-desn-readout-20260716"
@@ -66,6 +73,19 @@ archive_status <- system2(
 if (!identical(as.integer(archive_status), 0L) || !file.exists(git_archive)) {
   stop("Could not archive the pinned exdqlm commit.", call. = FALSE)
 }
+archive_lineage <- rqr_verify_archive_matches_git(
+  archive_path = git_archive,
+  archive_prefix = "exdqlm",
+  repo_root = exdqlm_repo,
+  commit = pinned_commit,
+  source_subdir = "."
+)
+if (!isTRUE(archive_lineage$match)) {
+  stop(
+    "The exdqlm source archive does not match the pinned Git tree.",
+    call. = FALSE
+  )
+}
 
 r_bin <- file.path(R.home("bin"), "R")
 staging <- tempfile("exdqlm-build-", tmpdir = cache_root)
@@ -99,6 +119,7 @@ if (file.exists(package_archive)) unlink(package_archive)
 if (!file.copy(built_archive, package_archive, overwrite = TRUE)) {
   stop("Could not preserve the built exdqlm source package.", call. = FALSE)
 }
+source_package_sha256 <- rqr_file_sha256(package_archive)
 setwd(old_workdir)
 install_stdout <- file.path(cache_root, "install.stdout.log")
 install_stderr <- file.path(cache_root, "install.stderr.log")
@@ -148,14 +169,41 @@ guard_pending <- FALSE
 if (rqr_path_within(runtime_path, exdqlm_repo)) {
   stop("The installed runtime must not reside in the exdqlm checkout.", call. = FALSE)
 }
+source_archive_sha256 <- rqr_file_sha256(git_archive)
+runtime_tree_digest <- directory_digest(runtime_path)
+build_log_sha256 <- digest::digest(
+  paste(
+    rqr_file_sha256(build_stdout), rqr_file_sha256(build_stderr),
+    sep = "\n"
+  ),
+  algo = "sha256", serialize = FALSE
+)
+install_log_sha256 <- digest::digest(
+  paste(
+    rqr_file_sha256(install_stdout), rqr_file_sha256(install_stderr),
+    sep = "\n"
+  ),
+  algo = "sha256", serialize = FALSE
+)
+install_receipt_digest <- rqr_runtime_install_receipt(
+  source_archive_sha256 = source_archive_sha256,
+  source_package_sha256 = source_package_sha256,
+  runtime_package_tree_digest = runtime_tree_digest,
+  build_log_sha256 = build_log_sha256,
+  install_log_sha256 = install_log_sha256,
+  R_version = R.version.string,
+  platform = R.version$platform
+)
 attestation <- list(
-  schema_version = "rqrgibbs_runtime_attestation/2.0.0",
+  schema_version = "rqrgibbs_runtime_attestation/3.0.0",
   package = "exdqlm",
   package_version = source_version,
   source_commit = pinned_commit,
   source_tree_digest = source_tree,
   source_repo_root = exdqlm_repo,
+  source_subdir = ".",
   source_access_mode = "git_archive_read_only",
+  source_archive_prefix = "exdqlm",
   source_checkout_snapshot_before = source_before$guard_digest,
   source_checkout_snapshot_after = source_after$guard_digest,
   source_checkout_unchanged =
@@ -163,15 +211,26 @@ attestation <- list(
   source_archive_path = normalizePath(
     git_archive, winslash = "/", mustWork = TRUE
   ),
-  source_archive_sha256 = digest::digest(
-    file = git_archive, algo = "sha256", serialize = FALSE
-  ),
+  source_archive_sha256 = source_archive_sha256,
+  source_git_manifest_digest =
+    archive_lineage$source_git_manifest_digest,
+  source_archive_manifest_digest =
+    archive_lineage$source_archive_manifest_digest,
+  source_archive_tree_match = archive_lineage$match,
+  source_manifest_entries = archive_lineage$entries,
   source_archive_isolated_from_source =
     !rqr_path_within(git_archive, exdqlm_repo) &&
     !rqr_path_within(exdqlm_repo, git_archive),
+  source_package_path = normalizePath(
+    package_archive, winslash = "/", mustWork = TRUE
+  ),
+  source_package_sha256 = source_package_sha256,
+  build_log_sha256 = build_log_sha256,
+  install_log_sha256 = install_log_sha256,
   runtime_package_path = runtime_path,
-  runtime_package_tree_digest = directory_digest(runtime_path),
+  runtime_package_tree_digest = runtime_tree_digest,
   runtime_isolated_from_source = !rqr_path_within(runtime_path, exdqlm_repo),
+  runtime_install_receipt_digest = install_receipt_digest,
   R_version = R.version.string,
   platform = R.version$platform,
   created_at = format(Sys.time(), tz = "UTC", usetz = TRUE)

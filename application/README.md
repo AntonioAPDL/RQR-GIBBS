@@ -54,23 +54,29 @@ dependencies, RNG kind, and source commits before claiming exact
 same-environment continuation. Any explicit environment override is stored in
 the returned segment and removes reproducibility and promotion eligibility.
 Numerical-repair counts, environment mismatch/override history, and promotion
-eligibility are stored in a separately digested cumulative continuation
-contract, and `backend="auto"` records both the requested and resolved backend.
-Promotion also requires the executing `rqrgibbs` namespace to match the clean
-primary package source or a verified isolated-runtime attestation.
+eligibility are stored per generation in a separately digested cumulative
+continuation contract. Its validator reconstructs parent-checkpoint links,
+repair totals, exactness, reproducibility, promotion, and the mismatch ledger
+across every generation. `backend="auto"` records both the requested and
+resolved backend. Promotion requires the executing `rqrgibbs` namespace to
+come from a verified isolated-runtime attestation; direct `pkgload` execution
+is exploratory or test-only.
 RQR-DESN and RHS promotion also requires the executing exdqlm namespace to
 match an isolated-library attestation for the clean pinned source. A direct
-source-tree namespace is intentionally ineligible. Run
-`make prepare-exdqlm-runtime` to create the ignored local runtime from a Git
-archive. Preparation and reference testing use read-only Git operations,
-execute only from RQR-owned cache paths, verify the archive and installed-tree
-digests, and fail if any tracked, untracked, or ignored file in the external
-checkout changes.
+source-tree namespace is intentionally ineligible. Run `make
+prepare-primary-runtime` and `make prepare-exdqlm-runtime` with the reviewed
+primary commit in `RQR_EXPECTED_PRIMARY_COMMIT`. Version-3 attestations
+reconstruct and compare each archive entry's Git mode, blob identifier, and
+path with the declared commit tree, verify the built source-package and
+installed-runtime digests, and bind them in an installation receipt. The
+protected exdqlm checkout remains read-only and is checked for any source-state
+change.
 
 The heavy directories **data_local**, **cache**, **runs**, **logs**, and
 **outputs** are ignored by git.
 
 The next exact-mode dynamic validation config is
-`config/rqr_dlm/rqr_dlm_bounded_dynamic_fixtures_20260722.R`. It is
-preflighted by `scripts/06_preflight_rqr_dlm_bounded_fixtures.R`, remains
-non-production, and excludes the adaptive working recursion.
+`config/rqr_dlm/rqr_dlm_bounded_dynamic_fixtures_20260723.R`. Its preflight
+uses the same canonical constructor as its tests and instantiates every model,
+missing-response vector, evolution object, and future contract. It remains
+non-production and excludes the adaptive working recursion.

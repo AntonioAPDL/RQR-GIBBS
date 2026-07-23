@@ -305,7 +305,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.4.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.5.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
@@ -382,6 +382,8 @@ test_that("continuation inherits numerical and source history cumulatively", {
     )
   )
   expect_false(fit$model_spec$promotion_eligible)
+  expect_true(fit$provenance$primary_repository$require_isolated_runtime)
+  expect_false(fit$provenance$primary_runtime_source_match)
   expect_identical(fit$provenance$backend_requested, "auto")
   expect_identical(fit$provenance$backend_resolved, "cpp")
 
@@ -399,6 +401,26 @@ test_that("continuation inherits numerical and source history cumulatively", {
   expect_identical(
     grandchild$continuation_history_digest,
     rqrgibbs:::.rqr_digest(grandchild$continuation_history_contract)
+  )
+  altered_generation0 <- grandchild
+  altered_generation0$continuation_history_contract$segments[[1L]]$
+    cumulative_numerical_repair_count <- 1L
+  altered_generation0$continuation_history_digest <- rqrgibbs:::.rqr_digest(
+    altered_generation0$continuation_history_contract
+  )
+  expect_error(
+    rqr_dlm_continue(altered_generation0, n_mcmc = 1),
+    "violates cumulative recursion"
+  )
+  altered_generation1 <- grandchild
+  altered_generation1$continuation_history_contract$segments[[2L]]$
+    parent_checkpoint_digest <- paste(rep("0", 64), collapse = "")
+  altered_generation1$continuation_history_digest <- rqrgibbs:::.rqr_digest(
+    altered_generation1$continuation_history_contract
+  )
+  expect_error(
+    rqr_dlm_continue(altered_generation1, n_mcmc = 1),
+    "structurally invalid"
   )
 
   altered_source <- fit
@@ -722,28 +744,73 @@ test_that("runtime package provenance binds code to source or an attestation", {
   )
   attestation_path <- tempfile(fileext = ".rds")
   source_archive_path <- tempfile(fileext = ".tar.gz")
-  writeBin(charToRaw("archive fixture"), source_archive_path)
+  source_package_path <- tempfile(fileext = ".tar.gz")
+  archive_status <- system2(
+    "git",
+    c(
+      "-C", source, "archive", "--format=tar.gz",
+      "--prefix=fixture/", "-o", source_archive_path, commit
+    )
+  )
+  expect_identical(archive_status, 0L)
+  expect_true(file.copy(source_archive_path, source_package_path))
   checkout_snapshot <- paste(rep("b", 64), collapse = "")
+  git_manifest <- rqrgibbs:::.rqr_git_manifest_payload(
+    source, commit, "."
+  )
+  archive_manifest <- rqrgibbs:::.rqr_archive_manifest_payload(
+    source_archive_path, "fixture"
+  )
+  expect_identical(git_manifest, archive_manifest)
+  source_archive_sha256 <- digest::digest(
+    file = source_archive_path, algo = "sha256", serialize = FALSE
+  )
+  source_package_sha256 <- digest::digest(
+    file = source_package_path, algo = "sha256", serialize = FALSE
+  )
+  runtime_tree_digest <- rqrgibbs:::.rqr_directory_digest(runtime_path)
+  build_log_sha256 <- paste(rep("c", 64), collapse = "")
+  install_log_sha256 <- paste(rep("d", 64), collapse = "")
   attestation <- list(
-    schema_version = "rqrgibbs_runtime_attestation/2.0.0",
+    schema_version = "rqrgibbs_runtime_attestation/3.0.0",
     package = "rqrgibbs",
     package_version = as.character(utils::packageVersion("rqrgibbs")),
     source_commit = commit,
     source_tree_digest = tree,
     source_repo_root = normalizePath(source, winslash = "/", mustWork = TRUE),
+    source_subdir = ".",
     source_access_mode = "git_archive_read_only",
+    source_archive_prefix = "fixture",
     source_checkout_snapshot_before = checkout_snapshot,
     source_checkout_snapshot_after = checkout_snapshot,
     source_checkout_unchanged = TRUE,
     source_archive_path = source_archive_path,
-    source_archive_sha256 = digest::digest(
-      file = source_archive_path, algo = "sha256", serialize = FALSE
+    source_archive_sha256 = source_archive_sha256,
+    source_git_manifest_digest = digest::digest(
+      git_manifest, algo = "sha256", serialize = FALSE
     ),
+    source_archive_manifest_digest = digest::digest(
+      archive_manifest, algo = "sha256", serialize = FALSE
+    ),
+    source_archive_tree_match = TRUE,
     source_archive_isolated_from_source = TRUE,
+    source_package_path = source_package_path,
+    source_package_sha256 = source_package_sha256,
+    build_log_sha256 = build_log_sha256,
+    install_log_sha256 = install_log_sha256,
     runtime_package_path = runtime_path,
-    runtime_package_tree_digest =
-      rqrgibbs:::.rqr_directory_digest(runtime_path),
+    runtime_package_tree_digest = runtime_tree_digest,
     runtime_isolated_from_source = TRUE,
+    runtime_install_receipt_digest =
+      rqrgibbs:::.rqr_runtime_install_receipt_digest(
+        source_archive_sha256,
+        source_package_sha256,
+        runtime_tree_digest,
+        build_log_sha256,
+        install_log_sha256,
+        R.version.string,
+        R.version$platform
+      ),
     R_version = R.version.string,
     platform = R.version$platform
   )
@@ -759,10 +826,13 @@ test_that("runtime package provenance binds code to source or an attestation", {
   expect_true(matched$runtime_attestation_match)
   expect_identical(
     matched$runtime_attestation_schema,
-    "rqrgibbs_runtime_attestation/2.0.0"
+    "rqrgibbs_runtime_attestation/3.0.0"
   )
   expect_identical(matched$source_access_mode, "git_archive_read_only")
   expect_true(matched$source_archive_verified)
+  expect_true(matched$source_archive_tree_match)
+  expect_true(matched$source_package_verified)
+  expect_true(matched$runtime_install_receipt_match)
   expect_true(matched$source_archive_isolated_from_source)
   expect_true(matched$source_checkout_unchanged)
   expect_true(matched$runtime_isolated_from_source)
@@ -770,7 +840,7 @@ test_that("runtime package provenance binds code to source or an attestation", {
   expect_true(matched$runtime_source_match)
   expect_true(matched$reproducibility_eligible)
 
-  writeBin(charToRaw("tampered archive fixture"), source_archive_path)
+  writeBin(charToRaw("arbitrary archive fixture"), source_archive_path)
   archive_tampered <- rqrgibbs:::.rqr_repository_provenance(list(
     repo_root = source,
     expected_git_commit = commit,
@@ -779,12 +849,30 @@ test_that("runtime package provenance binds code to source or an attestation", {
     require_isolated_runtime = TRUE
   ))
   expect_false(archive_tampered$source_archive_verified)
+  expect_false(archive_tampered$source_archive_tree_match)
   expect_false(archive_tampered$runtime_attestation_match)
   expect_false(archive_tampered$runtime_source_match)
   expect_false(archive_tampered$reproducibility_eligible)
 
-  writeBin(charToRaw("archive fixture"), source_archive_path)
+  archive_status <- system2(
+    "git",
+    c(
+      "-C", source, "archive", "--format=tar.gz",
+      "--prefix=fixture/", "-o", source_archive_path, commit
+    )
+  )
+  expect_identical(archive_status, 0L)
   attestation$runtime_package_tree_digest <- paste(rep("0", 64), collapse = "")
+  attestation$runtime_install_receipt_digest <-
+    rqrgibbs:::.rqr_runtime_install_receipt_digest(
+      source_archive_sha256,
+      source_package_sha256,
+      attestation$runtime_package_tree_digest,
+      build_log_sha256,
+      install_log_sha256,
+      R.version.string,
+      R.version$platform
+    )
   saveRDS(attestation, attestation_path)
   tampered <- rqrgibbs:::.rqr_repository_provenance(list(
     repo_root = source,

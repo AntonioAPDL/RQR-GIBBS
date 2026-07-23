@@ -482,23 +482,30 @@ record data, complete model/target/evolution, and checkpoint digests; RNG state;
 compiler and BLAS/LAPACK provenance; required external-repository states; and a
 versioned schema. Promotion requires clean detected checkouts matching every
 exact commit declared in the run manifest. If an external package contributes
-executed code, promotion additionally requires an archive-verified,
-installed-tree attestation that links an isolated namespace to that checkout;
-direct source-tree execution is ineligible. Exact
+executed code, promotion additionally requires an isolated-runtime
+attestation. The verifier reconstructs the Git and extracted-archive
+mode--blob--path manifests, verifies the built source-package and installed
+runtime digests, and checks their installation receipt; direct source-tree
+execution is ineligible. The primary \texttt{rqrgibbs} namespace is subject to
+the same isolated-runtime rule. Exact
 continuation stops on schema, checkpoint, data, model, target, or evolution
 mismatch and, by default, on package, R, numerical-library, dependency, or
 source-commit mismatch. An explicit portability override is persisted and
 removes reproducibility and promotion eligibility. Repair counts, numerical
-exactness, and parent promotion status are cumulative across continuation
-segments; requested and resolved FFBS backends are compared separately. Heavy
+exactness, reproducibility, and promotion status are recorded per generation.
+Validation reconstructs parent-checkpoint links, the mismatch ledger, and every
+cumulative recursion; requested and resolved FFBS backends are compared
+separately. Heavy
 state draws and fitted objects remain in ignored local output directories.
 
 The first bounded normalized learned-scale fixture uses four production
 partially collapsed chains, four independently coded fully augmented chains,
-and adaptive two-dimensional root quadrature with the Gamma loss-scale
-conditional integrated analytically. The predeclared rank-normalized
-convergence, effective-sample-size, Monte Carlo error, quadrature-accuracy, and
-zero-repair gates all pass. This is a target-implementation check on a
+and event-boundary-aware two-dimensional root quadrature with the Gamma
+loss-scale conditional integrated analytically. The maintained
+\texttt{posterior} implementation supplies rank-normalized \(\widehat R\) and
+bulk and tail effective sample sizes. The predeclared convergence, Monte Carlo
+error, quadrature-accuracy, and zero-repair gates all pass. This is a
+target-implementation check on a
 deterministic intercept-only fixture, not a calibration result.
 
 Held-out RQR loss, empirical coverage error, and width at comparable coverage

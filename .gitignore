@@ -65,3 +65,5 @@ docs/implementation_notes/chatgpt_pro_output6_followup_prompt.md
 Chatgpt_output*
 /chatgpt_pro_output*_audit_*.md
 /output*_independent_quadrature_check.csv
+/output*_corrected_cdf_gate_check*
+/output*_corrected_independent_cdf_references.csv

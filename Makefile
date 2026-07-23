@@ -3,7 +3,7 @@ PDFLATEX ?= pdflatex
 BIBTEX ?= bibtex
 LATEXMK ?= latexmk
 
-.PHONY: pdf supplement all-pdf smoke package-install prepare-exdqlm-runtime test-native package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf smoke package-install prepare-primary-runtime prepare-exdqlm-runtime test-native package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded literature-manifest clean-tex
 
 pdf:
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
@@ -36,20 +36,25 @@ package-install:
 prepare-exdqlm-runtime:
 	$(R) application/scripts/04_prepare_pinned_exdqlm_runtime.R
 
+prepare-primary-runtime:
+	$(R) application/scripts/04_prepare_primary_runtime.R
+
 test-native: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "native", reporter = "summary")'
 
 package-check:
 	R CMD build application
-	R CMD check --no-manual rqrgibbs_0.1.0.9006.tar.gz
+	R CMD check --no-manual rqrgibbs_0.1.0.9007.tar.gz
 
 test-exdqlm-rqr: package-install prepare-exdqlm-runtime
 	$(R) application/scripts/02_smoke_rqr_exdqlm_branch.R
 
-bounded-pilot: package-install prepare-exdqlm-runtime
+bounded-pilot: prepare-primary-runtime prepare-exdqlm-runtime
+	OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+	VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 \
 	$(R) application/scripts/05_run_rqr_bounded_pilot.R
 
-preflight-dlm-bounded:
+preflight-dlm-bounded: prepare-primary-runtime
 	$(R) application/scripts/06_preflight_rqr_dlm_bounded_fixtures.R
 
 literature-manifest:

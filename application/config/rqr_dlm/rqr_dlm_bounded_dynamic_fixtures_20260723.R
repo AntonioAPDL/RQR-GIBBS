@@ -3,8 +3,8 @@
 # protocol and does not authorize a production launch.
 
 rqr_dlm_bounded_dynamic_fixtures <- list(
-  schema_version = "rqrgibbs_dlm_bounded_fixtures/1.0.0",
-  config_id = "rqr_dlm_bounded_dynamic_fixtures_20260722",
+  schema_version = "rqrgibbs_dlm_bounded_fixtures/2.0.0",
+  config_id = "rqr_dlm_bounded_dynamic_fixtures_20260723",
   scope = "bounded_dynamic_target_and_mixing_validation",
   generalized_bayes = TRUE,
   response_likelihood = FALSE,
@@ -40,7 +40,10 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
     maximum_numerical_repairs = 0L,
     require_primary_runtime_source_match = TRUE,
     require_exact_joint_target = TRUE,
-    require_root_swap_activity = TRUE,
+    root_swap_activity_role = "sidecar_only",
+    primary_diagnostics = "posterior_rank_normalized_rhat_bulk_tail_ess",
+    custom_diagnostics_role = "reproduction_crosscheck",
+    coda_diagnostics_role = "classical_sidecar",
     require_two_generation_continuation = TRUE
   ),
   fixtures = list(
@@ -54,16 +57,19 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
       missing_indices = c(6L, 17L),
       W = 0.04,
       future_horizon = 4L,
-      future_W = 0.04,
+      future_W = array(0.04, dim = c(1L, 1L, 4L)),
       reference_gate = "dense_Gaussian_conditional_FFBS_moments"
     ),
     frozen_trend_seasonal_discount = list(
       evolution_mode = "discount_template",
       state_components = list(
-        list(type = "polytrend", order = 2L, name = "trend", C0 = c(4, 1)),
+        list(
+          type = "polytrend", order = 2L, name = "trend",
+          C0 = diag(c(4, 1))
+        ),
         list(
           type = "seasonal", period = 4L, harmonics = c(1L, 2L),
-          name = "seasonal", C0 = c(2, 2, 2)
+          name = "seasonal", C0 = diag(c(2, 2, 2))
         )
       ),
       n_time = 36L,
@@ -76,14 +82,19 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
       dim_df = c(2L, 3L),
       reference_variance = 1,
       future_horizon = 4L,
+      future_template_rule = "extend_reference_recursion_T_plus_H",
       reference_gate = "frozen_template_reconstruction_and_FFBS_parity"
     ),
     shared_component_scale_trend_regression = list(
       evolution_mode = "component_scale",
       state_components = list(
-        list(type = "polytrend", order = 2L, name = "trend", C0 = c(4, 1)),
         list(
-          type = "regression", name = "regression", C0 = 2,
+          type = "polytrend", order = 2L, name = "trend",
+          C0 = diag(c(4, 1))
+        ),
+        list(
+          type = "regression", name = "regression",
+          C0 = matrix(2, 1L, 1L),
           X = matrix(
             seq(-1, 1, length.out = 30L), ncol = 1L,
             dimnames = list(NULL, "x")
@@ -102,6 +113,14 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
       ),
       component_scale_initial = c(0.05, 0.05),
       future_horizon = 3L,
+      future_X = matrix(
+        seq(1 + 2 / 29, 1 + 6 / 29, length.out = 3L),
+        ncol = 1L, dimnames = list(NULL, "x")
+      ),
+      component_templates_future = list(
+        array(rep(diag(2), 3L), dim = c(2L, 2L, 3L)),
+        array(1, dim = c(1L, 1L, 3L))
+      ),
       reference_gate = "analytic_shared_inverse_Gamma_component_conditionals"
     )
   )

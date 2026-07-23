@@ -241,50 +241,158 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
-.rqr_schema_version <- function() "rqrgibbs_fit/1.4.0"
+.rqr_schema_version <- function() "rqrgibbs_fit/1.5.0"
 
 .rqr_continuation_history_schema <- function() {
-  "rqrgibbs_continuation_history/1.0.0"
+  "rqrgibbs_continuation_history/2.0.0"
 }
 
 .rqr_make_continuation_history <- function(
-    checkpoint_digest, cumulative_numerical_repair_count,
-    chain_history_numerically_exact, promotion_eligible,
-    reproducibility_eligible, backend_requested, backend_resolved,
-    parent = NULL, environment_mismatches = character(0),
+    checkpoint_digest, segment_numerical_repair_count,
+    segment_numerically_exact, segment_target_numerical_eligible,
+    segment_environment_reproducibility_eligible,
+    backend_requested, backend_resolved, parent = NULL,
+    parent_checkpoint_digest = NULL,
+    environment_mismatches = character(0),
     environment_override_used = FALSE) {
+  checkpoint_digest <- tolower(as.character(checkpoint_digest)[1L])
+  if (!grepl("^[0-9a-f]{64}$", checkpoint_digest)) {
+    stop("checkpoint_digest must be a complete SHA-256 digest.", call. = FALSE)
+  }
+  segment_numerical_repair_count <- as.integer(
+    segment_numerical_repair_count
+  )
+  if (length(segment_numerical_repair_count) != 1L ||
+      is.na(segment_numerical_repair_count) ||
+      segment_numerical_repair_count < 0L) {
+    stop(
+      "segment_numerical_repair_count must be one nonnegative integer.",
+      call. = FALSE
+    )
+  }
+  environment_mismatches <- sort(unique(as.character(
+    environment_mismatches
+  )))
+  if (anyNA(environment_mismatches) ||
+      any(!nzchar(environment_mismatches))) {
+    stop("environment_mismatches must contain nonempty text.", call. = FALSE)
+  }
   if (is.null(parent)) {
     generation <- 0L
     segments <- list()
+    expected_parent_checkpoint <- NA_character_
+    parent_cumulative_repairs <- 0L
+    parent_chain_exact <- TRUE
+    parent_target_eligible <- TRUE
+    parent_reproducibility_eligible <- TRUE
+    parent_promotion_eligible <- TRUE
+    parent_override_used <- FALSE
   } else {
+    if (!is.list(parent) ||
+        !identical(
+          parent$schema_version %||% NA_character_,
+          .rqr_continuation_history_schema()
+        )) {
+      stop("parent must be a validated continuation-history contract.", call. = FALSE)
+    }
     generation <- as.integer(parent$generation) + 1L
     segments <- parent$segments
+    expected_parent_checkpoint <- utils::tail(segments, 1L)[[1L]]$
+      checkpoint_digest
+    supplied_parent_checkpoint <- tolower(as.character(
+      parent_checkpoint_digest %||% NA_character_
+    )[1L])
+    if (!identical(supplied_parent_checkpoint, expected_parent_checkpoint)) {
+      stop(
+        "parent_checkpoint_digest does not link to the parent history.",
+        call. = FALSE
+      )
+    }
+    parent_cumulative_repairs <- as.integer(
+      parent$cumulative_numerical_repair_count
+    )
+    parent_chain_exact <- isTRUE(
+      parent$chain_history_numerically_exact
+    )
+    parent_target_eligible <- isTRUE(parent$target_numerical_eligible)
+    parent_reproducibility_eligible <- isTRUE(
+      parent$reproducibility_eligible
+    )
+    parent_promotion_eligible <- isTRUE(parent$promotion_eligible)
+    parent_override_used <- isTRUE(
+      parent$cumulative_environment_override_used
+    )
   }
+  segment_numerically_exact <- isTRUE(segment_numerically_exact)
+  segment_target_numerical_eligible <- isTRUE(
+    segment_target_numerical_eligible
+  )
+  segment_environment_reproducibility_eligible <- isTRUE(
+    segment_environment_reproducibility_eligible
+  )
+  environment_override_used <- isTRUE(environment_override_used)
+  cumulative_repairs <- parent_cumulative_repairs +
+    segment_numerical_repair_count
+  chain_exact <- parent_chain_exact && segment_numerically_exact
+  target_eligible <- parent_target_eligible &&
+    segment_target_numerical_eligible
+  reproducibility_eligible <- parent_reproducibility_eligible &&
+    segment_environment_reproducibility_eligible &&
+    !environment_override_used
+  promotion_eligible <- parent_promotion_eligible &&
+    target_eligible && reproducibility_eligible
+  cumulative_override <- parent_override_used ||
+    environment_override_used
   segment <- list(
     generation = generation,
-    checkpoint_digest = as.character(checkpoint_digest)[1L],
-    environment_mismatches = sort(unique(as.character(environment_mismatches))),
-    environment_override_used = isTRUE(environment_override_used),
+    parent_checkpoint_digest = expected_parent_checkpoint,
+    checkpoint_digest = checkpoint_digest,
+    segment_numerical_repair_count = segment_numerical_repair_count,
+    cumulative_numerical_repair_count = cumulative_repairs,
+    segment_numerically_exact = segment_numerically_exact,
+    chain_history_numerically_exact = chain_exact,
+    segment_target_numerical_eligible =
+      segment_target_numerical_eligible,
+    target_numerical_eligible = target_eligible,
+    segment_environment_reproducibility_eligible =
+      segment_environment_reproducibility_eligible,
+    reproducibility_eligible = reproducibility_eligible,
+    promotion_eligible = promotion_eligible,
+    environment_mismatches = environment_mismatches,
+    environment_override_used = environment_override_used,
+    cumulative_environment_override_used = cumulative_override,
     backend_requested = as.character(backend_requested)[1L],
     backend_resolved = as.character(backend_resolved)[1L]
+  )
+  all_segments <- c(segments, list(segment))
+  mismatch_ledger <- lapply(
+    Filter(
+      function(item) {
+        length(item$environment_mismatches) > 0L ||
+          isTRUE(item$environment_override_used)
+      },
+      all_segments
+    ),
+    function(item) {
+      list(
+        generation = item$generation,
+        checkpoint_digest = item$checkpoint_digest,
+        environment_mismatches = item$environment_mismatches,
+        environment_override_used = item$environment_override_used
+      )
+    }
   )
   list(
     schema_version = .rqr_continuation_history_schema(),
     generation = generation,
-    cumulative_numerical_repair_count =
-      as.integer(cumulative_numerical_repair_count),
-    chain_history_numerically_exact =
-      isTRUE(chain_history_numerically_exact),
-    promotion_eligible = isTRUE(promotion_eligible),
-    reproducibility_eligible = isTRUE(reproducibility_eligible),
-    cumulative_environment_override_used =
-      isTRUE(environment_override_used) ||
-        isTRUE(parent$cumulative_environment_override_used %||% FALSE),
-    cumulative_environment_mismatch_ledger = c(
-      parent$cumulative_environment_mismatch_ledger %||% list(),
-      if (length(segment$environment_mismatches)) list(segment) else list()
-    ),
-    segments = c(segments, list(segment))
+    cumulative_numerical_repair_count = cumulative_repairs,
+    chain_history_numerically_exact = chain_exact,
+    target_numerical_eligible = target_eligible,
+    promotion_eligible = promotion_eligible,
+    reproducibility_eligible = reproducibility_eligible,
+    cumulative_environment_override_used = cumulative_override,
+    cumulative_environment_mismatch_ledger = mismatch_ledger,
+    segments = all_segments
   )
 }
 
@@ -303,33 +411,197 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       call. = FALSE
     )
   }
+  segments <- contract$segments
+  required_segment_fields <- c(
+    "generation", "parent_checkpoint_digest", "checkpoint_digest",
+    "segment_numerical_repair_count",
+    "cumulative_numerical_repair_count",
+    "segment_numerically_exact",
+    "chain_history_numerically_exact",
+    "segment_target_numerical_eligible",
+    "target_numerical_eligible",
+    "segment_environment_reproducibility_eligible",
+    "reproducibility_eligible", "promotion_eligible",
+    "environment_mismatches", "environment_override_used",
+    "cumulative_environment_override_used",
+    "backend_requested", "backend_resolved"
+  )
+  if (!is.list(segments) || !length(segments) ||
+      any(!vapply(
+        segments,
+        function(segment) {
+          is.list(segment) &&
+            all(required_segment_fields %in% names(segment))
+        },
+        logical(1L)
+      ))) {
+    stop("Continuation history segments are incomplete.", call. = FALSE)
+  }
+  cumulative_repairs <- 0L
+  chain_exact <- TRUE
+  target_eligible <- TRUE
+  reproducibility_eligible <- TRUE
+  promotion_eligible <- TRUE
+  cumulative_override <- FALSE
+  prior_checkpoint <- NA_character_
+  reconstructed_ledger <- list()
+  for (index in seq_along(segments)) {
+    segment <- segments[[index]]
+    expected_generation <- as.integer(index - 1L)
+    mismatches <- segment$environment_mismatches
+    valid_mismatches <- is.character(mismatches) &&
+      !anyNA(mismatches) && all(nzchar(mismatches)) &&
+      identical(mismatches, sort(unique(mismatches)))
+    valid_checkpoint <- is.character(segment$checkpoint_digest) &&
+      length(segment$checkpoint_digest) == 1L &&
+      grepl("^[0-9a-f]{64}$", segment$checkpoint_digest)
+    valid_parent_link <- if (index == 1L) {
+      is.character(segment$parent_checkpoint_digest) &&
+        length(segment$parent_checkpoint_digest) == 1L &&
+        is.na(segment$parent_checkpoint_digest)
+    } else {
+      identical(segment$parent_checkpoint_digest, prior_checkpoint)
+    }
+    segment_repairs <- as.integer(segment$segment_numerical_repair_count)
+    valid_repairs <- length(segment_repairs) == 1L &&
+      !is.na(segment_repairs) && segment_repairs >= 0L
+    if (!identical(as.integer(segment$generation), expected_generation) ||
+        !valid_checkpoint || !valid_parent_link || !valid_mismatches ||
+        !valid_repairs ||
+        !.rqr_nonmissing_text(c(
+          segment$backend_requested, segment$backend_resolved
+        ))) {
+      stop(
+        sprintf(
+          "Continuation history segment %d is structurally invalid.",
+          expected_generation
+        ),
+        call. = FALSE
+      )
+    }
+    cumulative_repairs <- cumulative_repairs + segment_repairs
+    chain_exact <- chain_exact &&
+      isTRUE(segment$segment_numerically_exact)
+    target_eligible <- target_eligible &&
+      isTRUE(segment$segment_target_numerical_eligible)
+    reproducibility_eligible <- reproducibility_eligible &&
+      isTRUE(segment$segment_environment_reproducibility_eligible) &&
+      !isTRUE(segment$environment_override_used)
+    promotion_eligible <- promotion_eligible &&
+      target_eligible && reproducibility_eligible
+    cumulative_override <- cumulative_override ||
+      isTRUE(segment$environment_override_used)
+    recursive_checks <- c(
+      identical(
+        as.integer(segment$cumulative_numerical_repair_count),
+        cumulative_repairs
+      ),
+      identical(
+        isTRUE(segment$chain_history_numerically_exact), chain_exact
+      ),
+      identical(
+        isTRUE(segment$target_numerical_eligible), target_eligible
+      ),
+      identical(
+        isTRUE(segment$reproducibility_eligible),
+        reproducibility_eligible
+      ),
+      identical(
+        isTRUE(segment$promotion_eligible), promotion_eligible
+      ),
+      identical(
+        isTRUE(segment$cumulative_environment_override_used),
+        cumulative_override
+      )
+    )
+    if (!all(recursive_checks)) {
+      stop(
+        sprintf(
+          "Continuation history segment %d violates cumulative recursion.",
+          expected_generation
+        ),
+        call. = FALSE
+      )
+    }
+    if (length(mismatches) || isTRUE(segment$environment_override_used)) {
+      reconstructed_ledger[[length(reconstructed_ledger) + 1L]] <- list(
+        generation = segment$generation,
+        checkpoint_digest = segment$checkpoint_digest,
+        environment_mismatches = mismatches,
+        environment_override_used = segment$environment_override_used
+      )
+    }
+    prior_checkpoint <- segment$checkpoint_digest
+  }
+  if (!identical(
+        contract$cumulative_environment_mismatch_ledger,
+        reconstructed_ledger
+      )) {
+    stop(
+      "Continuation history mismatch ledger is not reconstructible.",
+      call. = FALSE
+    )
+  }
+  last_segment <- utils::tail(segments, 1L)[[1L]]
   checks <- list(
+    generation = identical(
+      as.integer(contract$generation),
+      as.integer(length(segments) - 1L)
+    ),
     cumulative_numerical_repair_count = identical(
       as.integer(contract$cumulative_numerical_repair_count),
-      as.integer(object$model_spec$cumulative_numerical_repair_count)
+      cumulative_repairs
     ),
     chain_history_numerically_exact = identical(
       isTRUE(contract$chain_history_numerically_exact),
-      isTRUE(object$model_spec$chain_history_numerically_exact)
+      chain_exact
+    ),
+    target_numerical_eligible = identical(
+      isTRUE(contract$target_numerical_eligible),
+      target_eligible
     ),
     promotion_eligible = identical(
       isTRUE(contract$promotion_eligible),
-      isTRUE(object$model_spec$promotion_eligible)
+      promotion_eligible
     ),
     reproducibility_eligible = identical(
       isTRUE(contract$reproducibility_eligible),
+      reproducibility_eligible
+    ),
+    cumulative_environment_override_used = identical(
+      isTRUE(contract$cumulative_environment_override_used),
+      cumulative_override
+    ),
+    redundant_cumulative_repairs = identical(
+      cumulative_repairs,
+      as.integer(object$model_spec$cumulative_numerical_repair_count)
+    ),
+    redundant_chain_exact = identical(
+      chain_exact,
+      isTRUE(object$model_spec$chain_history_numerically_exact)
+    ),
+    redundant_target_eligible = identical(
+      target_eligible,
+      isTRUE(object$model_spec$target_numerical_eligible)
+    ),
+    redundant_promotion = identical(
+      promotion_eligible,
+      isTRUE(object$model_spec$promotion_eligible)
+    ),
+    redundant_reproducibility = identical(
+      reproducibility_eligible,
       isTRUE(object$provenance$reproducibility_eligible)
     ),
     checkpoint_digest = identical(
-      utils::tail(contract$segments, 1L)[[1L]]$checkpoint_digest,
+      last_segment$checkpoint_digest,
       object$checkpoint_digest
     ),
     backend_requested = identical(
-      utils::tail(contract$segments, 1L)[[1L]]$backend_requested,
+      last_segment$backend_requested,
       object$provenance$backend_requested
     ),
     backend_resolved = identical(
-      utils::tail(contract$segments, 1L)[[1L]]$backend_resolved,
+      last_segment$backend_resolved,
       object$provenance$backend_resolved
     )
   )
@@ -632,6 +904,154 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(payload, algo = "sha256", serialize = FALSE)
 }
 
+.rqr_git_manifest_payload <- function(
+    repo_root, commit, source_subdir = ".") {
+  treeish <- if (identical(source_subdir, ".")) {
+    commit
+  } else {
+    paste0(commit, ":", source_subdir)
+  }
+  result <- .rqr_git_result(
+    repo_root, c("ls-tree", "-r", "--full-tree", treeish)
+  )
+  if (!isTRUE(result$available)) {
+    stop("Could not read the declared Git tree manifest.", call. = FALSE)
+  }
+  lines <- if (nzchar(result$value)) {
+    strsplit(result$value, "\n", fixed = TRUE)[[1L]]
+  } else {
+    character(0)
+  }
+  pattern <- "^([0-9]{6}) ([^ ]+) ([0-9a-f]{40,64})\\t(.*)$"
+  fields <- regmatches(lines, regexec(pattern, lines))
+  if (!length(fields) || any(lengths(fields) != 5L)) {
+    stop("Could not parse the declared Git tree manifest.", call. = FALSE)
+  }
+  manifest <- data.frame(
+    mode = vapply(fields, `[[`, character(1L), 2L),
+    type = vapply(fields, `[[`, character(1L), 3L),
+    object = tolower(vapply(fields, `[[`, character(1L), 4L)),
+    path = vapply(fields, `[[`, character(1L), 5L),
+    stringsAsFactors = FALSE
+  )
+  if (anyDuplicated(manifest$path) || any(manifest$type != "blob")) {
+    stop("The declared package tree is not a unique blob set.", call. = FALSE)
+  }
+  manifest <- manifest[order(manifest$path), , drop = FALSE]
+  paste(
+    manifest$mode, manifest$type, manifest$object, manifest$path,
+    sep = "\t", collapse = "\n"
+  )
+}
+
+.rqr_hash_archive_blob <- function(path, link_target = NULL) {
+  git <- Sys.which("git")
+  if (!nzchar(git)) stop("Git is required.", call. = FALSE)
+  hash_path <- path
+  temporary <- NULL
+  if (!is.null(link_target)) {
+    temporary <- tempfile("rqr-attested-link-")
+    con <- file(temporary, open = "wb")
+    writeBin(charToRaw(link_target), con)
+    close(con)
+    hash_path <- temporary
+    on.exit(unlink(temporary), add = TRUE)
+  }
+  out <- suppressWarnings(system2(
+    git, c("hash-object", "--no-filters", shQuote(hash_path)),
+    stdout = TRUE, stderr = TRUE,
+    env = c("GIT_OPTIONAL_LOCKS=0", "GIT_TERMINAL_PROMPT=0")
+  ))
+  status <- attr(out, "status") %||% 0L
+  value <- trimws(paste(out, collapse = "\n"))
+  if (!identical(as.integer(status), 0L) ||
+      !grepl("^[0-9a-f]{40,64}$", value)) {
+    stop("Could not hash an archived source entry.", call. = FALSE)
+  }
+  tolower(value)
+}
+
+.rqr_archive_manifest_payload <- function(archive_path, archive_prefix) {
+  archive_prefix <- sub("/+$", "", as.character(archive_prefix)[1L])
+  if (is.na(archive_prefix) || !nzchar(archive_prefix) ||
+      grepl("(^|/)\\.\\.(/|$)", archive_prefix) ||
+      startsWith(archive_prefix, "/")) {
+    stop("Attested archive prefix is unsafe.", call. = FALSE)
+  }
+  entries <- utils::untar(archive_path, list = TRUE)
+  entries <- sub("^\\./", "", entries)
+  prefix_with_slash <- paste0(archive_prefix, "/")
+  if (!length(entries) || anyNA(entries) || any(!nzchar(entries)) ||
+      anyDuplicated(entries) || any(startsWith(entries, "/")) ||
+      any(grepl("(^|/)\\.\\.(/|$)", entries)) ||
+      any(entries != archive_prefix &
+            !startsWith(entries, prefix_with_slash))) {
+    stop("Attested source archive paths are invalid.", call. = FALSE)
+  }
+  extraction_root <- tempfile("rqr-attested-archive-")
+  dir.create(extraction_root)
+  on.exit(unlink(extraction_root, recursive = TRUE, force = TRUE), add = TRUE)
+  utils::untar(archive_path, exdir = extraction_root)
+  source_root <- file.path(extraction_root, archive_prefix)
+  if (!dir.exists(source_root)) {
+    stop("Attested source archive root is missing.", call. = FALSE)
+  }
+  paths <- sort(list.files(
+    source_root, recursive = TRUE, all.files = TRUE, full.names = TRUE,
+    include.dirs = FALSE, no.. = TRUE
+  ))
+  relative <- substring(paths, nchar(source_root) + 2L)
+  info <- file.info(paths)
+  links <- Sys.readlink(paths)
+  if (!length(paths) || anyNA(info$isdir) || any(info$isdir) ||
+      anyDuplicated(relative)) {
+    stop("Attested archive is not a unique file set.", call. = FALSE)
+  }
+  modes <- vapply(seq_along(paths), function(index) {
+    if (nzchar(links[index])) return("120000")
+    if (bitwAnd(as.integer(info$mode[index]), 73L) != 0L) {
+      "100755"
+    } else {
+      "100644"
+    }
+  }, character(1L))
+  objects <- vapply(seq_along(paths), function(index) {
+    if (nzchar(links[index])) {
+      .rqr_hash_archive_blob(paths[index], links[index])
+    } else {
+      .rqr_hash_archive_blob(paths[index])
+    }
+  }, character(1L))
+  manifest <- data.frame(
+    mode = modes, type = "blob", object = objects, path = relative,
+    stringsAsFactors = FALSE
+  )
+  manifest <- manifest[order(manifest$path), , drop = FALSE]
+  paste(
+    manifest$mode, manifest$type, manifest$object, manifest$path,
+    sep = "\t", collapse = "\n"
+  )
+}
+
+.rqr_runtime_install_receipt_digest <- function(
+    source_archive_sha256, source_package_sha256,
+    runtime_package_tree_digest, build_log_sha256,
+    install_log_sha256, R_version, platform) {
+  fields <- c(
+    source_archive_sha256 = source_archive_sha256,
+    source_package_sha256 = source_package_sha256,
+    runtime_package_tree_digest = runtime_package_tree_digest,
+    build_log_sha256 = build_log_sha256,
+    install_log_sha256 = install_log_sha256,
+    R_version = R_version,
+    platform = platform
+  )
+  digest::digest(
+    paste(names(fields), fields, sep = "=", collapse = "\n"),
+    algo = "sha256", serialize = FALSE
+  )
+}
+
 .rqr_description_version <- function(repo_root, source_subdir = ".") {
   description <- file.path(repo_root, source_subdir, "DESCRIPTION")
   if (!file.exists(description)) return(NA_character_)
@@ -664,6 +1084,11 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     runtime_attestation_schema = NA_character_,
     source_access_mode = NA_character_,
     source_archive_verified = FALSE,
+    source_archive_tree_match = FALSE,
+    source_git_manifest_digest = NA_character_,
+    source_archive_manifest_digest = NA_character_,
+    source_package_verified = FALSE,
+    runtime_install_receipt_match = FALSE,
     source_archive_isolated_from_source = FALSE,
     source_checkout_unchanged = FALSE,
     runtime_isolated_from_source = FALSE,
@@ -732,6 +1157,11 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   attestation_schema <- NA_character_
   source_access_mode <- NA_character_
   source_archive_verified <- FALSE
+  source_archive_tree_match <- FALSE
+  source_git_manifest_digest <- NA_character_
+  source_archive_manifest_digest <- NA_character_
+  source_package_verified <- FALSE
+  runtime_install_receipt_match <- FALSE
   source_archive_isolated_from_source <- FALSE
   source_checkout_unchanged <- FALSE
   source_root <- normalizePath(
@@ -748,11 +1178,15 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     attestation <- tryCatch(readRDS(runtime_attestation), error = function(e) NULL)
     required <- c(
       "schema_version", "package", "package_version", "source_commit",
-      "source_tree_digest", "source_repo_root", "source_access_mode",
+      "source_tree_digest", "source_repo_root", "source_subdir",
+      "source_access_mode", "source_archive_prefix",
       "source_checkout_snapshot_before", "source_checkout_snapshot_after",
       "source_checkout_unchanged", "source_archive_path",
-      "source_archive_sha256", "source_archive_isolated_from_source",
-      "runtime_package_path",
+      "source_archive_sha256", "source_git_manifest_digest",
+      "source_archive_manifest_digest", "source_archive_tree_match",
+      "source_archive_isolated_from_source", "source_package_path",
+      "source_package_sha256", "build_log_sha256", "install_log_sha256",
+      "runtime_package_path", "runtime_install_receipt_digest",
       "runtime_package_tree_digest", "runtime_isolated_from_source",
       "R_version", "platform"
     )
@@ -788,6 +1222,114 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
         ),
         recorded_archive_digest
       )
+    source_package_path <- if (is.list(attestation)) {
+      as.character(attestation$source_package_path %||% NA_character_)[1L]
+    } else {
+      NA_character_
+    }
+    recorded_source_package_digest <- if (is.list(attestation)) {
+      tolower(as.character(
+        attestation$source_package_sha256 %||% NA_character_
+      )[1L])
+    } else {
+      NA_character_
+    }
+    source_package_verified <- !is.na(source_package_path) &&
+      nzchar(source_package_path) && file.exists(source_package_path) &&
+      grepl("^[0-9a-f]{64}$", recorded_source_package_digest) &&
+      identical(
+        digest::digest(
+          file = source_package_path, algo = "sha256", serialize = FALSE
+        ),
+        recorded_source_package_digest
+      )
+    git_manifest_payload <- archive_manifest_payload <- NULL
+    if (source_archive_verified && is.list(attestation)) {
+      git_manifest_payload <- tryCatch(
+        .rqr_git_manifest_payload(
+          repository_state$repo_root,
+          repository_state$git_commit,
+          source_subdir = source_subdir
+        ),
+        error = function(e) NULL
+      )
+      archive_manifest_payload <- tryCatch(
+        .rqr_archive_manifest_payload(
+          archive_path,
+          as.character(
+            attestation$source_archive_prefix %||% NA_character_
+          )[1L]
+        ),
+        error = function(e) NULL
+      )
+    }
+    source_git_manifest_digest <- if (is.character(git_manifest_payload)) {
+      digest::digest(
+        git_manifest_payload, algo = "sha256", serialize = FALSE
+      )
+    } else {
+      NA_character_
+    }
+    source_archive_manifest_digest <- if (is.character(
+        archive_manifest_payload
+      )) {
+      digest::digest(
+        archive_manifest_payload, algo = "sha256", serialize = FALSE
+      )
+    } else {
+      NA_character_
+    }
+    source_archive_tree_match <-
+      is.character(git_manifest_payload) &&
+      is.character(archive_manifest_payload) &&
+      identical(git_manifest_payload, archive_manifest_payload) &&
+      identical(
+        source_git_manifest_digest,
+        tolower(as.character(
+          attestation$source_git_manifest_digest %||% NA_character_
+        )[1L])
+      ) &&
+      identical(
+        source_archive_manifest_digest,
+        tolower(as.character(
+          attestation$source_archive_manifest_digest %||% NA_character_
+        )[1L])
+      ) &&
+      isTRUE(attestation$source_archive_tree_match)
+    receipt_digest <- if (is.list(attestation)) {
+      tryCatch(
+        .rqr_runtime_install_receipt_digest(
+          source_archive_sha256 = recorded_archive_digest,
+          source_package_sha256 = recorded_source_package_digest,
+          runtime_package_tree_digest = tolower(as.character(
+            attestation$runtime_package_tree_digest %||% NA_character_
+          )[1L]),
+          build_log_sha256 = tolower(as.character(
+            attestation$build_log_sha256 %||% NA_character_
+          )[1L]),
+          install_log_sha256 = tolower(as.character(
+            attestation$install_log_sha256 %||% NA_character_
+          )[1L]),
+          R_version = as.character(
+            attestation$R_version %||% NA_character_
+          )[1L],
+          platform = as.character(
+            attestation$platform %||% NA_character_
+          )[1L]
+        ),
+        error = function(e) NA_character_
+      )
+    } else {
+      NA_character_
+    }
+    runtime_install_receipt_match <-
+      grepl("^[0-9a-f]{64}$", receipt_digest) &&
+      identical(
+        receipt_digest,
+        tolower(as.character(
+          attestation$runtime_install_receipt_digest %||% NA_character_
+        )[1L])
+      )
     archive_path_normalized <- if (!is.na(archive_path) &&
         nzchar(archive_path)) {
       normalizePath(archive_path, winslash = "/", mustWork = FALSE)
@@ -819,7 +1361,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       all(required %in% names(attestation)) &&
       identical(
         attestation$schema_version,
-        "rqrgibbs_runtime_attestation/2.0.0"
+        "rqrgibbs_runtime_attestation/3.0.0"
       ) &&
       identical(as.character(attestation$package), package) &&
       identical(as.character(attestation$package_version), runtime_version) &&
@@ -837,8 +1379,12 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
           winslash = "/", mustWork = FALSE
         )
       ) &&
+      identical(as.character(attestation$source_subdir), source_subdir) &&
       identical(source_access_mode, "git_archive_read_only") &&
       source_archive_verified &&
+      source_archive_tree_match &&
+      source_package_verified &&
+      runtime_install_receipt_match &&
       isTRUE(attestation$source_archive_isolated_from_source) &&
       source_archive_isolated_from_source &&
       source_checkout_unchanged &&
@@ -888,6 +1434,11 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     runtime_attestation_schema = attestation_schema,
     source_access_mode = source_access_mode,
     source_archive_verified = source_archive_verified,
+    source_archive_tree_match = source_archive_tree_match,
+    source_git_manifest_digest = source_git_manifest_digest,
+    source_archive_manifest_digest = source_archive_manifest_digest,
+    source_package_verified = source_package_verified,
+    runtime_install_receipt_match = runtime_install_receipt_match,
     source_archive_isolated_from_source =
       source_archive_isolated_from_source,
     source_checkout_unchanged = source_checkout_unchanged,
@@ -1028,7 +1579,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     },
     runtime_package = "rqrgibbs",
     runtime_attestation = primary_runtime_attestation,
-    require_isolated_runtime = FALSE,
+    require_isolated_runtime = !is.na(expected_git_commit),
     source_subdir = "application"
   ))
   external_names <- unique(c(

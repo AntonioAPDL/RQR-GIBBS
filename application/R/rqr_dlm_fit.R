@@ -659,12 +659,14 @@ rqr_dlm_fit <- function(
   )
   out$continuation_history_contract <- .rqr_make_continuation_history(
     checkpoint_digest = checkpoint_digest,
-    cumulative_numerical_repair_count =
-      out$model_spec$cumulative_numerical_repair_count,
-    chain_history_numerically_exact =
-      out$model_spec$chain_history_numerically_exact,
-    promotion_eligible = out$model_spec$promotion_eligible,
-    reproducibility_eligible = out$provenance$reproducibility_eligible,
+    segment_numerical_repair_count =
+      out$model_spec$numerical_repair_count,
+    segment_numerically_exact =
+      out$model_spec$numerically_exact_transition,
+    segment_target_numerical_eligible =
+      out$model_spec$segment_target_numerical_eligible,
+    segment_environment_reproducibility_eligible =
+      out$provenance$reproducibility_eligible,
     backend_requested = out$provenance$backend_requested,
     backend_resolved = out$provenance$backend_resolved
   )
@@ -987,16 +989,18 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
     inherited_reproducibility_eligible
   segment$continuation_history_contract <- .rqr_make_continuation_history(
     checkpoint_digest = segment$checkpoint_digest,
-    cumulative_numerical_repair_count =
-      segment$model_spec$cumulative_numerical_repair_count,
-    chain_history_numerically_exact =
-      segment$model_spec$chain_history_numerically_exact,
-    promotion_eligible = segment$model_spec$promotion_eligible,
-    reproducibility_eligible =
-      segment$provenance$reproducibility_eligible,
+    segment_numerical_repair_count =
+      segment$model_spec$numerical_repair_count,
+    segment_numerically_exact =
+      segment$model_spec$numerically_exact_transition,
+    segment_target_numerical_eligible =
+      segment$model_spec$segment_target_numerical_eligible,
+    segment_environment_reproducibility_eligible =
+      current_environment_eligible,
     backend_requested = segment$provenance$backend_requested,
     backend_resolved = segment$provenance$backend_resolved,
     parent = validation$continuation_history,
+    parent_checkpoint_digest = validation$checkpoint_digest,
     environment_mismatches = validation$environment_mismatches,
     environment_override_used = environment_override_used
   )

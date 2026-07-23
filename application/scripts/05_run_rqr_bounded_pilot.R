@@ -1,13 +1,20 @@
 #!/usr/bin/env Rscript
 
 options(warn = 1)
-Sys.setenv(
-  OMP_NUM_THREADS = "1",
-  OPENBLAS_NUM_THREADS = "1",
-  MKL_NUM_THREADS = "1",
-  VECLIB_MAXIMUM_THREADS = "1",
-  NUMEXPR_NUM_THREADS = "1"
+thread_environment_names <- c(
+  "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
+  "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS"
 )
+thread_environment <- Sys.getenv(thread_environment_names, unset = "")
+if (any(thread_environment != "1")) {
+  stop(
+    paste(
+      "Set all declared BLAS/OpenMP thread limits to one before R starts:",
+      paste(thread_environment_names, collapse = ", ")
+    ),
+    call. = FALSE
+  )
+}
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
@@ -26,7 +33,7 @@ if (!identical(Sys.getenv("RQR_BOUNDED_PILOT_CONFIRM"), "YES")) {
 }
 
 required_packages <- c(
-  "coda", "digest", "jsonlite", "pkgload", "pracma", "testthat"
+  "coda", "digest", "jsonlite", "posterior", "pracma", "testthat"
 )
 missing_packages <- required_packages[!vapply(
   required_packages, requireNamespace, quietly = TRUE, FUN.VALUE = logical(1L)
@@ -265,7 +272,7 @@ ess_core <- function(x) {
   min(total, total / tau)
 }
 
-chain_diagnostics <- function(chains, sampler) {
+custom_chain_diagnostics <- function(chains, sampler) {
   estimands <- dimnames(chains)[[2L]]
   do.call(rbind, lapply(estimands, function(estimand) {
     x <- chains[, estimand, , drop = TRUE]
@@ -284,6 +291,40 @@ chain_diagnostics <- function(chains, sampler) {
       bulk_ess = bulk,
       tail_ess = tail,
       finite = all(is.finite(x)),
+      stringsAsFactors = FALSE
+    )
+  }))
+}
+
+posterior_chain_diagnostics <- function(chains, sampler) {
+  estimands <- dimnames(chains)[[2L]]
+  do.call(rbind, lapply(estimands, function(estimand) {
+    x <- chains[, estimand, , drop = TRUE]
+    draws_array <- array(
+      x,
+      dim = c(nrow(x), ncol(x), 1L),
+      dimnames = list(
+        iteration = NULL,
+        chain = paste0("chain", seq_len(ncol(x))),
+        variable = estimand
+      )
+    )
+    draws <- posterior::as_draws_array(draws_array)
+    rhat <- unname(posterior::rhat(draws))
+    bulk <- unname(posterior::ess_bulk(draws))
+    tail <- unname(posterior::ess_tail(draws))
+    data.frame(
+      sampler = sampler,
+      estimand = estimand,
+      diagnostic_package = "posterior",
+      diagnostic_package_version = as.character(
+        utils::packageVersion("posterior")
+      ),
+      rhat = rhat,
+      bulk_ess = bulk,
+      tail_ess = tail,
+      finite = all(is.finite(x)) &&
+        all(is.finite(c(rhat, bulk, tail))),
       stringsAsFactors = FALSE
     )
   }))
@@ -526,18 +567,53 @@ main <- function() {
     ),
     winslash = "/", mustWork = TRUE
   )
-  .libPaths(c(runtime_library, .libPaths()))
+  primary_runtime_root <- normalizePath(
+    Sys.getenv(
+      "RQR_PRIMARY_RUNTIME_ROOT",
+      unset = file.path(dirname(repo_root), ".rqr_gibbs_primary_runtime")
+    ),
+    winslash = "/", mustWork = TRUE
+  )
+  primary_commit_root <- file.path(
+    primary_runtime_root, substr(expected_primary_commit, 1L, 12L)
+  )
+  primary_runtime_library <- normalizePath(
+    file.path(primary_commit_root, "library"),
+    winslash = "/", mustWork = TRUE
+  )
+  primary_runtime_attestation <- normalizePath(
+    file.path(
+      primary_commit_root, "attestations",
+      paste0(
+        "rqrgibbs_", substr(expected_primary_commit, 1L, 12L), ".rds"
+      )
+    ),
+    winslash = "/", mustWork = TRUE
+  )
+  .libPaths(c(
+    primary_runtime_library, runtime_library, .libPaths()
+  ))
+  if ("rqrgibbs" %in% loadedNamespaces()) {
+    stop(
+      "rqrgibbs was loaded before the isolated library was selected.",
+      call. = FALSE
+    )
+  }
   if ("exdqlm" %in% loadedNamespaces()) {
     stop("exdqlm was loaded before the isolated library was selected.", call. = FALSE)
   }
-  pkgload::load_all(file.path(repo_root, "application"), quiet = TRUE)
+  if (!requireNamespace("rqrgibbs", quietly = TRUE)) {
+    stop("The isolated rqrgibbs runtime could not be loaded.", call. = FALSE)
+  }
   primary_runtime_state <- rqrgibbs:::.rqr_repository_provenance(list(
     repo_root = repo_root,
     expected_git_commit = expected_primary_commit,
     runtime_package = "rqrgibbs",
+    runtime_attestation = primary_runtime_attestation,
+    require_isolated_runtime = TRUE,
     source_subdir = "application"
   ))
-  if (!isTRUE(primary_runtime_state$runtime_direct_source_path_match) ||
+  if (!isTRUE(primary_runtime_state$runtime_attestation_match) ||
       !isTRUE(primary_runtime_state$runtime_source_match) ||
       !isTRUE(primary_runtime_state$reproducibility_eligible)) {
     stop("The primary rqrgibbs runtime-source gate failed.", call. = FALSE)
@@ -607,6 +683,11 @@ main <- function() {
   current_stage <<- "deterministic native tests"
   test_log <- file.path(output_dir, "native_test_log.txt")
   test_expression <- paste0(
+    ".libPaths(c(",
+    deparse(primary_runtime_library),
+    ",",
+    deparse(runtime_library),
+    ",.libPaths()));",
     "library(rqrgibbs);",
     "testthat::test_dir(",
     shQuote(file.path(repo_root, "application", "tests", "testthat")),
@@ -683,7 +764,9 @@ main <- function() {
     expected_primary_commit = expected_primary_commit,
     exdqlm_commit = exdqlm_commit,
     qdesn_reference_commit = qdesn_commit,
-    isolated_R_library = runtime_library,
+    isolated_primary_R_library = primary_runtime_library,
+    isolated_exdqlm_R_library = runtime_library,
+    primary_runtime_attestation = primary_runtime_attestation,
     rqrgibbs_namespace_path = getNamespaceInfo(
       asNamespace("rqrgibbs"), "path"
     ),
@@ -691,6 +774,12 @@ main <- function() {
     exdqlm_source_tree_digest = runtime_state$source_tree_digest,
     exdqlm_runtime_tree_digest = runtime_state$runtime_package_tree_digest,
     resolved_backend = rqrgibbs:::.rqr_resolve_ffbs_backend("auto"),
+    primary_diagnostic_package = "posterior",
+    primary_diagnostic_package_version = as.character(
+      utils::packageVersion("posterior")
+    ),
+    custom_diagnostic_role = "reproduction_crosscheck",
+    coda_diagnostic_role = "classical_sidecar",
     RNGkind = RNGkind(),
     fixture = list(
       y = y, X = unclass(X), coverage_level = alpha,
@@ -705,8 +794,9 @@ main <- function() {
     gates = list(
       rhat_max = 1.01, bulk_ess_min = 2000, tail_ess_min = 2000,
       mean_mcse_multiplier = 4, quadrature_relative_tolerance = 1e-10,
-      maximum_wall_minutes = 90, maximum_workers = 1,
-      maximum_resident_memory_gb = 4, maximum_artifact_mb = 250
+      maximum_wall_minutes = 90,
+      thread_environment_contract = as.list(thread_environment),
+      maximum_artifact_mb = 250
     ),
     cdf_thresholds = list(
       lambda = 1.0, lower_root = -1.5, upper_root = 2.5,
@@ -743,7 +833,8 @@ main <- function() {
       numerical_policy = "fail",
       provenance_control = list(
         repo_root = repo_root,
-        expected_git_commit = expected_primary_commit
+        expected_git_commit = expected_primary_commit,
+        primary_runtime_attestation = primary_runtime_attestation
       ),
       mcmc_control = list(
         n_burn = n_burn, n_mcmc = n_keep, thin = 1L,
@@ -783,8 +874,12 @@ main <- function() {
 
   current_stage <<- "chain diagnostics"
   diagnostics <- rbind(
-    chain_diagnostics(collapsed, "collapsed"),
-    chain_diagnostics(augmented, "fully_augmented")
+    posterior_chain_diagnostics(collapsed, "collapsed"),
+    posterior_chain_diagnostics(augmented, "fully_augmented")
+  )
+  custom_diagnostics <- rbind(
+    custom_chain_diagnostics(collapsed, "collapsed"),
+    custom_chain_diagnostics(augmented, "fully_augmented")
   )
   maintained_diagnostics <- rbind(
     maintained_diagnostic_crosscheck(collapsed, "collapsed"),
@@ -793,6 +888,28 @@ main <- function() {
   write.csv(
     maintained_diagnostics,
     file.path(output_dir, "maintained_diagnostic_crosscheck.csv"),
+    row.names = FALSE
+  )
+  diagnostic_crosscheck <- merge(
+    diagnostics[, c(
+      "sampler", "estimand", "rhat", "bulk_ess", "tail_ess"
+    )],
+    custom_diagnostics,
+    by = c("sampler", "estimand"),
+    suffixes = c("_posterior", "_custom"),
+    sort = FALSE
+  )
+  diagnostic_crosscheck$pass <- with(
+    diagnostic_crosscheck,
+    abs(rhat_posterior - rhat_custom) <= 0.01 &
+      bulk_ess_custom >= 0.5 * bulk_ess_posterior &
+      bulk_ess_custom <= 2 * bulk_ess_posterior &
+      tail_ess_custom >= 0.5 * tail_ess_posterior &
+      tail_ess_custom <= 2 * tail_ess_posterior
+  )
+  write.csv(
+    diagnostic_crosscheck,
+    file.path(output_dir, "custom_diagnostic_crosscheck.csv"),
     row.names = FALSE
   )
   diagnostics$pass <- with(
@@ -876,11 +993,12 @@ main <- function() {
     lambda = 1.0, lower_root = -1.5, upper_root = 2.5,
     width = 4.0, midpoint = 0.5
   )
+  independent_reference_path <- file.path(
+    repo_root, "application", "inst", "extdata",
+    "output7_corrected_cdf_references.csv"
+  )
   independent_references <- utils::read.csv(
-    file.path(
-      repo_root, "application", "inst", "extdata",
-      "output6_independent_references.csv"
-    ),
+    independent_reference_path,
     stringsAsFactors = FALSE
   )
   independent_cdf <- independent_references[
@@ -888,7 +1006,29 @@ main <- function() {
   ]
   if (nrow(independent_cdf) != length(thresholds) ||
       !setequal(independent_cdf$estimand, names(thresholds)) ||
-      any(!is.finite(independent_cdf$reference_value))) {
+      any(!is.finite(independent_cdf$reference_value)) ||
+      any(independent_cdf$reference_schema !=
+            "rqrgibbs_intercept_cdf_reference/2.0.0") ||
+      any(independent_cdf$order_convergence_difference > 5e-10) ||
+      any(vapply(names(thresholds), function(estimand) {
+        !identical(
+          independent_cdf$threshold[
+            independent_cdf$estimand == estimand
+          ],
+          thresholds[[estimand]]
+        )
+      }, logical(1L))) ||
+      length(unique(independent_cdf$generator)) != 1L ||
+      length(unique(independent_cdf$generator_sha256)) != 1L ||
+      !identical(
+        unique(independent_cdf$generator_sha256),
+        digest::digest(
+          file = file.path(
+            repo_root, unique(independent_cdf$generator)
+          ),
+          algo = "sha256", serialize = FALSE
+        )
+      )) {
     stop("The tracked independent CDF reference contract is incomplete.", call. = FALSE)
   }
   cdf_rows <- do.call(rbind, lapply(names(thresholds), function(estimand) {
@@ -987,10 +1127,28 @@ main <- function() {
   } else {
     NA_real_
   }
+  thread_line <- proc_status[startsWith(proc_status, "Threads:")]
+  measured_threads_at_closeout <- if (length(thread_line) == 1L) {
+    as.integer(gsub("[^0-9]", "", thread_line))
+  } else {
+    NA_integer_
+  }
   resource_usage <- data.frame(
-    workers_used = 1L,
-    peak_resident_kb = peak_resident_kb,
-    peak_resident_gb = peak_resident_kb / 1024^2,
+    metric = c(
+      thread_environment_names,
+      "main_R_threads_at_closeout",
+      "main_R_VmHWM_kb"
+    ),
+    value = c(
+      thread_environment,
+      as.character(measured_threads_at_closeout),
+      as.character(peak_resident_kb)
+    ),
+    scope = c(
+      rep("configured_before_R_start", length(thread_environment_names)),
+      "main_R_process_closeout_snapshot",
+      "main_R_process_peak_only"
+    ),
     stringsAsFactors = FALSE
   )
   write.csv(
@@ -1012,11 +1170,10 @@ main <- function() {
         cdf_rows$augmented_vs_quadrature_pass
     ),
     maintained_diagnostics = all(maintained_diagnostics$pass),
+    custom_diagnostic_crosscheck = all(diagnostic_crosscheck$pass),
     continuation_and_provenance = all(continuation_checks$pass),
     wall_time = elapsed_minutes <= 90,
-    workers = resource_usage$workers_used <= 1L,
-    resident_memory = is.finite(resource_usage$peak_resident_gb) &&
-      resource_usage$peak_resident_gb <= 4,
+    thread_environment = all(thread_environment == "1"),
     artifact_size = artifact_bytes_before_hashes <= 250 * 1024^2
   )
   passed <- all(gates)
@@ -1038,7 +1195,9 @@ main <- function() {
     "",
     "This was a bounded generalized-Bayes validation fixture. It did not run a",
     "production simulation and did not create posterior-predictive response",
-    "draws. A pass does not by itself establish empirical interval calibration."
+    "draws. A pass does not by itself establish empirical interval calibration.",
+    "VmHWM is retained as a main-process sidecar and is not represented as",
+    "whole-process-tree peak memory."
   )
   writeLines(closeout, file.path(output_dir, "closeout.md"))
   write_artifact_hashes()
