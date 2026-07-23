@@ -65,10 +65,11 @@ RQR-DESN and RHS promotion also requires the executing exdqlm namespace to
 match an isolated-library attestation for the clean pinned source. A direct
 source-tree namespace is intentionally ineligible. Run `make
 prepare-primary-runtime` and `make prepare-exdqlm-runtime` with the reviewed
-primary commit in `RQR_EXPECTED_PRIMARY_COMMIT`. Version-3 attestations
+primary commit in `RQR_EXPECTED_PRIMARY_COMMIT`. Version-4 attestations
 reconstruct and compare each archive entry's Git mode, blob identifier, and
-path with the declared commit tree, verify the built source-package and
-installed-runtime digests, and bind them in an installation receipt. The
+path with the declared commit tree, compare the built source-package contents
+with that archive, rehash the actual build/install command receipts and logs,
+and require a source-package marker in the installed runtime. The
 protected exdqlm checkout remains read-only and is checked for any source-state
 change.
 
@@ -80,3 +81,12 @@ The next exact-mode dynamic validation config is
 uses the same canonical constructor as its tests and instantiates every model,
 missing-response vector, evolution object, and future contract. It remains
 non-production and excludes the adaptive working recursion.
+The three-mode runner
+`scripts/08_run_rqr_dlm_bounded_validation.sh` provides construction
+preflight, deterministic/reference-only validation, and a separately gated
+execution path. The committed config keeps the execution path disabled; no 24
+fit launch is authorized by the repository state alone. Any future execution
+authorization must bind both the passing reference-only manifest and the
+six-row process-tree resource summary from the same monitored run by SHA-256.
+The monitor terminates the process group on timeout or a declared
+process/thread/RSS ceiling breach.

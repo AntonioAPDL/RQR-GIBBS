@@ -55,6 +55,11 @@ including every mismatch/override generation, and compares the requested and
 resolved FFBS backends before making a bitwise claim. Promotion binds the
 executing `rqrgibbs` namespace to the clean primary checkout (or a verified
 isolated-runtime attestation), not merely to an installed version string.
+The version-4 attestation links the exact Git archive to the built source
+package, rehashes the actual command receipts and logs, and requires a lineage
+marker in the executing installed runtime. Continuation history derives
+per-segment exactness, target eligibility, mismatch/override effects, and
+promotion status from raw facts under a versioned target digest.
 Component-scale forecasts can combine saved evolution-scale draws with fixed
 future component templates.
 
@@ -71,8 +76,8 @@ RQR adapters also refuse a namespace whose package path contains Git checkout
 metadata. The reference smoke tests are extracted from the attested archive
 and never execute from the exdqlm checkout.
 
-The first frozen learned-scale bounded pilot passed at commit
-`6429b4698d04da43ef9c76f3ab534351e0fdae50`: four production collapsed chains,
+The corrected frozen learned-scale bounded pilot passed at source commit
+`3a37c5ee42973fd0ba1fa4792f609d1a48bcc98f`: four production collapsed chains,
 four independently coded fully augmented chains, and adaptive root quadrature
 agreed under the predeclared MCSE gates, with all R-hat/ESS gates satisfied and
 zero numerical repairs. This is a computational target check, not evidence of
@@ -109,9 +114,12 @@ PDF inventory and checksums.
       RQR_BOUNDED_PILOT_CONFIRM=YES make bounded-pilot
     RQR_EXPECTED_PRIMARY_COMMIT=<reviewed-full-sha> \
       make preflight-dlm-bounded
+    RQR_EXPECTED_PRIMARY_COMMIT=<reviewed-full-sha> \
+      make reference-dlm-bounded
 
 No production simulation should be launched until its matched protocol is
 frozen and explicitly approved. The bounded pilot does not provide that
-approval. `make test-exdqlm-rqr` and `make bounded-pilot` prepare the isolated
+approval, and the committed bounded-dynamic execution flag is false.
+`make test-exdqlm-rqr` and `make bounded-pilot` prepare the isolated
 runtime automatically; neither target compiles or writes inside an exdqlm
 repository.

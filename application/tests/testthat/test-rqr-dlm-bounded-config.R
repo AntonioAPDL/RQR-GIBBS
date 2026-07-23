@@ -8,17 +8,33 @@ test_that("bounded dynamic fixture configuration is exact and non-production", {
   config <- environment$rqr_dlm_bounded_dynamic_fixtures
 
   expect_identical(
-    config$schema_version, "rqrgibbs_dlm_bounded_fixtures/2.0.0"
+    config$schema_version, "rqrgibbs_dlm_bounded_fixtures/3.0.0"
   )
   expect_true(config$generalized_bayes)
   expect_false(config$response_likelihood)
   expect_false(config$response_prediction_contract)
   expect_false(config$production_simulation_authorized)
+  expect_false(config$bounded_dynamic_execution_authorized)
+  expect_identical(
+    config$runner_modes,
+    c("preflight", "reference-only", "execute-bounded")
+  )
   expect_identical(config$mcmc$chains, 4L)
   expect_identical(config$mcmc$burn_in, 2000L)
   expect_identical(config$mcmc$retained_per_chain, 4000L)
   expect_length(unique(config$mcmc$seeds), 4L)
-  expect_identical(config$continuation$generations, 2L)
+  expect_true(config$mcmc$store_state_draws)
+  expect_false(config$mcmc$store_latent_draws)
+  expect_length(config$mcmc$initialization_profiles, 4L)
+  expect_identical(config$continuation$history_segments, 3L)
+  expect_identical(config$continuation$generation_indices, 0:2)
+  expect_identical(
+    config$continuation$retained_by_segment, c(2L, 2L, 2L)
+  )
+  expect_identical(config$continuation$uninterrupted_retained, 6L)
+  expect_true(config$resources$sequential_execution)
+  expect_true(config$resources$require_active_process_tree_monitor)
+  expect_identical(config$gates$mcse_provider, "posterior_mcse_mean")
   expect_setequal(
     vapply(
       config$fixtures, function(fixture) fixture$evolution_mode,
@@ -64,6 +80,9 @@ test_that("bounded dynamic fixture configuration is exact and non-production", {
   )
   helper_environment <- new.env(parent = globalenv())
   sys.source(helper_path, envir = helper_environment)
+  expect_invisible(
+    helper_environment$rqr_validate_bounded_dlm_config(config)
+  )
   constructed <- helper_environment$rqr_build_all_bounded_dlm_fixtures(
     config
   )
@@ -84,6 +103,32 @@ test_that("bounded dynamic fixture configuration is exact and non-production", {
     ),
     c(2L, 2L, 3L)
   )
+  initializations <- lapply(
+    config$mcmc$initialization_profiles,
+    function(profile) {
+      helper_environment$rqr_bounded_initialization(
+        constructed$fixed_W_local_level,
+        profile,
+        config$coverage_level
+      )
+    }
+  )
+  expect_length(unique(vapply(
+    initializations,
+    function(initial) digest::digest(
+      initial, algo = "sha256", serialize = TRUE
+    ),
+    character(1L)
+  )), 4L)
+  expect_true(all(vapply(
+    initializations,
+    function(initial) {
+      all(is.finite(initial$state_root1)) &&
+        all(is.finite(initial$state_root2)) &&
+        initial$lambda > 0
+    },
+    logical(1L)
+  )))
 })
 
 test_that("intercept CDF references are versioned and generator-bound", {

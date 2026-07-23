@@ -98,13 +98,25 @@ source_version <- read.dcf(
 package_archive <- file.path(
   cache_root, paste0("exdqlm_", source_version, ".tar.gz")
 )
+source_archive_sha256 <- rqr_file_sha256(git_archive)
 old_workdir <- setwd(staging)
 on.exit(setwd(old_workdir), add = TRUE)
 build_stdout <- file.path(cache_root, "build.stdout.log")
 build_stderr <- file.path(cache_root, "build.stderr.log")
+build_arguments <- c(
+  "CMD", "build", "--no-manual", "--no-build-vignettes", "exdqlm"
+)
+build_command <- rqr_write_command_receipt(
+  path = file.path(cache_root, "build.command.rds"),
+  executable = r_bin,
+  arguments = build_arguments,
+  working_directory = staging,
+  input_path = file.path(staging, "exdqlm"),
+  input_sha256 = source_archive_sha256
+)
 build_status <- system2(
   r_bin,
-  c("CMD", "build", "--no-manual", "--no-build-vignettes", "exdqlm"),
+  build_arguments,
   stdout = build_stdout, stderr = build_stderr
 )
 if (!identical(as.integer(build_status), 0L)) {
@@ -120,16 +132,36 @@ if (!file.copy(built_archive, package_archive, overwrite = TRUE)) {
   stop("Could not preserve the built exdqlm source package.", call. = FALSE)
 }
 source_package_sha256 <- rqr_file_sha256(package_archive)
+source_package_lineage <- rqr_source_package_lineage(
+  source_archive_path = git_archive,
+  source_archive_prefix = "exdqlm",
+  source_package_path = package_archive
+)
+if (!isTRUE(source_package_lineage$match)) {
+  stop(
+    "The built exdqlm source package is not traceable to the Git archive.",
+    call. = FALSE
+  )
+}
 setwd(old_workdir)
 install_stdout <- file.path(cache_root, "install.stdout.log")
 install_stderr <- file.path(cache_root, "install.stderr.log")
+install_arguments <- c(
+  "CMD", "INSTALL", "--preclean", "--clean",
+  paste0("--library=", shQuote(library_root)),
+  shQuote(package_archive)
+)
+install_command <- rqr_write_command_receipt(
+  path = file.path(cache_root, "install.command.rds"),
+  executable = r_bin,
+  arguments = install_arguments,
+  working_directory = cache_root,
+  input_path = package_archive,
+  input_sha256 = source_package_sha256
+)
 install_status <- system2(
   r_bin,
-  c(
-    "CMD", "INSTALL", "--preclean", "--clean",
-    paste0("--library=", shQuote(library_root)),
-    shQuote(package_archive)
-  ),
+  install_arguments,
   stdout = install_stdout, stderr = install_stderr
 )
 if (!identical(as.integer(install_status), 0L)) {
@@ -147,55 +179,52 @@ runtime_version <- read.dcf(
 if (!identical(runtime_version, source_version)) {
   stop("Installed exdqlm version does not match the pinned source.", call. = FALSE)
 }
-directory_digest <- function(path) {
-  files <- list.files(
-    path, recursive = TRUE, all.files = TRUE, full.names = TRUE,
-    include.dirs = FALSE, no.. = TRUE
-  )
-  files <- sort(normalizePath(files, winslash = "/", mustWork = TRUE))
-  relative <- substring(files, nchar(path) + 2L)
-  hashes <- vapply(
-    files,
-    function(file) digest::digest(file = file, algo = "sha256", serialize = FALSE),
-    character(1L)
-  )
-  digest::digest(
-    paste(relative, hashes, sep = "\t", collapse = "\n"),
-    algo = "sha256", serialize = FALSE
-  )
-}
+runtime_lineage_marker_path <- file.path(
+  runtime_path, "RQR-RUNTIME-LINEAGE.rds"
+)
+saveRDS(
+  rqr_runtime_lineage_marker(
+    package = "exdqlm",
+    package_version = source_version,
+    source_package_sha256 = source_package_sha256,
+    built_source_manifest_digest =
+      source_package_lineage$built_source_manifest_digest,
+    install_command_receipt_sha256 = install_command$sha256
+  ),
+  runtime_lineage_marker_path,
+  version = 3
+)
 source_after <- rqr_assert_external_checkout_unchanged(source_before)
 guard_pending <- FALSE
 if (rqr_path_within(runtime_path, exdqlm_repo)) {
   stop("The installed runtime must not reside in the exdqlm checkout.", call. = FALSE)
 }
-source_archive_sha256 <- rqr_file_sha256(git_archive)
-runtime_tree_digest <- directory_digest(runtime_path)
-build_log_sha256 <- digest::digest(
-  paste(
-    rqr_file_sha256(build_stdout), rqr_file_sha256(build_stderr),
-    sep = "\n"
-  ),
-  algo = "sha256", serialize = FALSE
-)
-install_log_sha256 <- digest::digest(
-  paste(
-    rqr_file_sha256(install_stdout), rqr_file_sha256(install_stderr),
-    sep = "\n"
-  ),
-  algo = "sha256", serialize = FALSE
+runtime_tree_digest <- rqr_directory_digest(runtime_path)
+build_stdout_sha256 <- rqr_file_sha256(build_stdout)
+build_stderr_sha256 <- rqr_file_sha256(build_stderr)
+install_stdout_sha256 <- rqr_file_sha256(install_stdout)
+install_stderr_sha256 <- rqr_file_sha256(install_stderr)
+runtime_lineage_marker_sha256 <- rqr_file_sha256(
+  runtime_lineage_marker_path
 )
 install_receipt_digest <- rqr_runtime_install_receipt(
   source_archive_sha256 = source_archive_sha256,
   source_package_sha256 = source_package_sha256,
+  built_source_manifest_digest =
+    source_package_lineage$built_source_manifest_digest,
   runtime_package_tree_digest = runtime_tree_digest,
-  build_log_sha256 = build_log_sha256,
-  install_log_sha256 = install_log_sha256,
+  build_stdout_sha256 = build_stdout_sha256,
+  build_stderr_sha256 = build_stderr_sha256,
+  install_stdout_sha256 = install_stdout_sha256,
+  install_stderr_sha256 = install_stderr_sha256,
+  build_command_receipt_sha256 = build_command$sha256,
+  install_command_receipt_sha256 = install_command$sha256,
+  runtime_lineage_marker_sha256 = runtime_lineage_marker_sha256,
   R_version = R.version.string,
   platform = R.version$platform
 )
 attestation <- list(
-  schema_version = "rqrgibbs_runtime_attestation/3.0.0",
+  schema_version = "rqrgibbs_runtime_attestation/4.0.0",
   package = "exdqlm",
   package_version = source_version,
   source_commit = pinned_commit,
@@ -225,9 +254,56 @@ attestation <- list(
     package_archive, winslash = "/", mustWork = TRUE
   ),
   source_package_sha256 = source_package_sha256,
-  build_log_sha256 = build_log_sha256,
-  install_log_sha256 = install_log_sha256,
+  source_package_archive_match = source_package_lineage$match,
+  built_source_manifest_digest =
+    source_package_lineage$built_source_manifest_digest,
+  built_source_manifest_entries =
+    source_package_lineage$built_source_manifest_entries,
+  build_stdout_path = normalizePath(
+    build_stdout, winslash = "/", mustWork = TRUE
+  ),
+  build_stdout_sha256 = build_stdout_sha256,
+  build_stderr_path = normalizePath(
+    build_stderr, winslash = "/", mustWork = TRUE
+  ),
+  build_stderr_sha256 = build_stderr_sha256,
+  install_stdout_path = normalizePath(
+    install_stdout, winslash = "/", mustWork = TRUE
+  ),
+  install_stdout_sha256 = install_stdout_sha256,
+  install_stderr_path = normalizePath(
+    install_stderr, winslash = "/", mustWork = TRUE
+  ),
+  install_stderr_sha256 = install_stderr_sha256,
+  build_command_receipt_path = build_command$path,
+  build_command_receipt_sha256 = build_command$sha256,
+  build_executable = normalizePath(
+    r_bin, winslash = "/", mustWork = TRUE
+  ),
+  build_arguments = build_arguments,
+  build_working_directory = normalizePath(
+    staging, winslash = "/", mustWork = FALSE
+  ),
+  build_input_path = normalizePath(
+    file.path(staging, "exdqlm"), winslash = "/", mustWork = FALSE
+  ),
+  install_command_receipt_path = install_command$path,
+  install_command_receipt_sha256 = install_command$sha256,
+  install_executable = normalizePath(
+    r_bin, winslash = "/", mustWork = TRUE
+  ),
+  install_arguments = install_arguments,
+  install_working_directory = normalizePath(
+    cache_root, winslash = "/", mustWork = TRUE
+  ),
+  install_input_path = normalizePath(
+    package_archive, winslash = "/", mustWork = TRUE
+  ),
   runtime_package_path = runtime_path,
+  runtime_lineage_marker_path = normalizePath(
+    runtime_lineage_marker_path, winslash = "/", mustWork = TRUE
+  ),
+  runtime_lineage_marker_sha256 = runtime_lineage_marker_sha256,
   runtime_package_tree_digest = runtime_tree_digest,
   runtime_isolated_from_source = !rqr_path_within(runtime_path, exdqlm_repo),
   runtime_install_receipt_digest = install_receipt_digest,

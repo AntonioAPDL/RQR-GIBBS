@@ -305,7 +305,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.5.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.6.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
@@ -421,6 +421,89 @@ test_that("continuation inherits numerical and source history cumulatively", {
   expect_error(
     rqr_dlm_continue(altered_generation1, n_mcmc = 1),
     "structurally invalid"
+  )
+
+  impossible_repairs <- grandchild
+  impossible_repairs$continuation_history_contract$segments[[1L]]$
+    segment_numerical_repair_count <- 1L
+  for (index in seq_along(
+      impossible_repairs$continuation_history_contract$segments
+    )) {
+    impossible_repairs$continuation_history_contract$segments[[index]]$
+      cumulative_numerical_repair_count <- 1L
+  }
+  impossible_repairs$continuation_history_contract$
+    cumulative_numerical_repair_count <- 1L
+  impossible_repairs$model_spec$cumulative_numerical_repair_count <- 1L
+  impossible_repairs$continuation_history_digest <- rqrgibbs:::.rqr_digest(
+    impossible_repairs$continuation_history_contract
+  )
+  expect_error(
+    rqr_dlm_continue(impossible_repairs, n_mcmc = 1),
+    "derived-status semantics"
+  )
+
+  impossible_mismatch <- grandchild
+  impossible_mismatch$continuation_history_contract$segments[[1L]]$
+    environment_mismatches <- "package_version"
+  impossible_mismatch$continuation_history_contract$
+    cumulative_environment_mismatch_ledger <- list(list(
+      generation = 0L,
+      checkpoint_digest =
+        impossible_mismatch$continuation_history_contract$
+          segments[[1L]]$checkpoint_digest,
+      environment_mismatches = "package_version",
+      environment_override_used = FALSE
+    ))
+  impossible_mismatch$continuation_history_digest <- rqrgibbs:::.rqr_digest(
+    impossible_mismatch$continuation_history_contract
+  )
+  expect_error(
+    rqr_dlm_continue(impossible_mismatch, n_mcmc = 1),
+    "derived-status semantics"
+  )
+
+  impossible_backend <- grandchild
+  impossible_backend$continuation_history_contract$segments[[2L]]$
+    backend_resolved <- "R"
+  impossible_backend$continuation_history_contract$segments[[2L]]$
+    backend_changed <- TRUE
+  impossible_backend$continuation_history_contract$segments[[3L]]$
+    parent_backend_resolved <- "R"
+  impossible_backend$continuation_history_contract$segments[[3L]]$
+    backend_changed <- TRUE
+  impossible_backend$continuation_history_digest <- rqrgibbs:::.rqr_digest(
+    impossible_backend$continuation_history_contract
+  )
+  expect_error(
+    rqr_dlm_continue(impossible_backend, n_mcmc = 1),
+    "derived-status semantics"
+  )
+
+  impossible_target <- grandchild
+  impossible_target$continuation_history_contract$segments[[1L]]$
+    segment_exact_joint_target <- FALSE
+  impossible_target$continuation_history_contract$segments[[1L]]$
+    segment_target_numerical_eligible <- FALSE
+  for (index in seq_along(
+      impossible_target$continuation_history_contract$segments
+    )) {
+    impossible_target$continuation_history_contract$segments[[index]]$
+      target_numerical_eligible <- FALSE
+    impossible_target$continuation_history_contract$segments[[index]]$
+      promotion_eligible <- FALSE
+  }
+  impossible_target$continuation_history_contract$
+    target_numerical_eligible <- FALSE
+  impossible_target$continuation_history_contract$promotion_eligible <- FALSE
+  impossible_target$model_spec$target_numerical_eligible <- FALSE
+  impossible_target$model_spec$promotion_eligible <- FALSE
+  impossible_target$continuation_history_digest <- rqrgibbs:::.rqr_digest(
+    impossible_target$continuation_history_contract
+  )
+  expect_error(
+    rqr_dlm_continue(impossible_target, n_mcmc = 1),
+    "conflicts with redundant fit metadata"
   )
 
   altered_source <- fit
@@ -705,87 +788,187 @@ test_that("strict provenance includes toolchain and required external repositori
   )
 })
 
-test_that("runtime package provenance binds code to source or an attestation", {
+test_that("runtime lineage binds a real build and rejects mixed artifacts", {
   skip_if(Sys.which("git") == "", "git is required for provenance fixtures")
+  skip_if(Sys.which("R") == "", "R is required for package-build fixtures")
+  package <- "rqrlineagefixture"
   source <- tempfile("runtime-source-")
-  dir.create(source)
+  artifacts <- tempfile("runtime-artifacts-")
+  staging <- file.path(artifacts, "staging")
+  library <- file.path(artifacts, "library")
+  dir.create(file.path(source, "R"), recursive = TRUE)
+  dir.create(staging, recursive = TRUE)
+  dir.create(library, recursive = TRUE)
   writeLines(
     c(
-      "Package: rqrgibbs",
-      paste0("Version: ", as.character(utils::packageVersion("rqrgibbs")))
+      paste0("Package: ", package),
+      "Type: Package",
+      "Title: Runtime Lineage Fixture",
+      "Version: 0.0.1",
+      "Authors@R: person('RQR', 'Test', role=c('aut','cre'), email='test@example.org')",
+      "Description: A minimal package used to verify the runtime lineage contract.",
+      "License: MIT",
+      "Encoding: UTF-8"
     ),
     file.path(source, "DESCRIPTION")
   )
-  system2("git", c("-C", source, "init", "--quiet"))
-  system2("git", c("-C", source, "config", "user.email", "test@example.org"))
-  system2("git", c("-C", source, "config", "user.name", "RQR Test"))
-  system2("git", c("-C", source, "add", "DESCRIPTION"))
-  system2("git", c("-C", source, "commit", "--quiet", "-m", "fixture"))
-  commit <- tolower(trimws(system2(
-    "git", c("-C", source, "rev-parse", "HEAD"), stdout = TRUE
-  )[1L]))
-  tree <- tolower(trimws(system2(
-    "git", c("-C", source, "rev-parse", "HEAD^{tree}"), stdout = TRUE
-  )[1L]))
-
-  mismatch <- rqrgibbs:::.rqr_repository_provenance(list(
-    repo_root = source,
-    expected_git_commit = commit,
-    runtime_package = "rqrgibbs"
-  ))
-  expect_true(mismatch$provenance_complete)
-  expect_false(mismatch$runtime_direct_source_path_match)
-  expect_false(mismatch$runtime_source_match)
-  expect_false(mismatch$reproducibility_eligible)
-
-  runtime_path <- normalizePath(
-    getNamespaceInfo(asNamespace("rqrgibbs"), "path"),
-    winslash = "/", mustWork = TRUE
+  writeLines("export(lineage_value)", file.path(source, "NAMESPACE"))
+  writeLines(
+    "lineage_value <- function() 'archive-A'",
+    file.path(source, "R", "lineage.R")
   )
-  attestation_path <- tempfile(fileext = ".rds")
-  source_archive_path <- tempfile(fileext = ".tar.gz")
-  source_package_path <- tempfile(fileext = ".tar.gz")
-  archive_status <- system2(
-    "git",
-    c(
-      "-C", source, "archive", "--format=tar.gz",
-      "--prefix=fixture/", "-o", source_archive_path, commit
+  git <- function(args, stdout = FALSE) {
+    system2(
+      "git", c("-C", source, args),
+      stdout = stdout,
+      env = c("GIT_OPTIONAL_LOCKS=0", "GIT_TERMINAL_PROMPT=0")
     )
+  }
+  git(c("init", "--quiet"))
+  git(c("config", "user.email", "test@example.org"))
+  git(c("config", "user.name", "RQR Test"))
+  git(c("add", "."))
+  git(c("commit", "--quiet", "-m", "fixture"))
+  commit <- tolower(trimws(git(c("rev-parse", "HEAD"), TRUE)[1L]))
+  tree <- tolower(trimws(git(c("rev-parse", "HEAD^{tree}"), TRUE)[1L]))
+  snapshot <- digest::digest(
+    paste(
+      git(c("rev-parse", "HEAD"), TRUE),
+      git(c("status", "--porcelain=v2", "--untracked-files=all"), TRUE),
+      git(c("show-ref", "--head", "--dereference"), TRUE),
+      collapse = "\n"
+    ),
+    algo = "sha256", serialize = FALSE
   )
-  expect_identical(archive_status, 0L)
-  expect_true(file.copy(source_archive_path, source_package_path))
-  checkout_snapshot <- paste(rep("b", 64), collapse = "")
+
+  source_archive <- file.path(artifacts, "source-A.tar.gz")
+  expect_identical(
+    git(c(
+      "archive", "--format=tar.gz",
+      paste0("--prefix=", package, "/"),
+      "-o", source_archive, commit
+    )),
+    0L
+  )
+  utils::untar(source_archive, exdir = staging)
+  source_archive_sha <- digest::digest(
+    file = source_archive, algo = "sha256", serialize = FALSE
+  )
+  r_bin <- file.path(R.home("bin"), "R")
+  command_receipt <- function(path, executable, arguments, workdir,
+                              input_path, input_sha) {
+    receipt <- list(
+      executable = normalizePath(executable, winslash = "/", mustWork = TRUE),
+      arguments = arguments,
+      working_directory = normalizePath(
+        workdir, winslash = "/", mustWork = TRUE
+      ),
+      input_path = normalizePath(
+        input_path, winslash = "/", mustWork = TRUE
+      ),
+      input_sha256 = input_sha
+    )
+    saveRDS(receipt, path, version = 3)
+    list(
+      path = normalizePath(path, winslash = "/", mustWork = TRUE),
+      sha256 = digest::digest(
+        file = path, algo = "sha256", serialize = FALSE
+      ),
+      receipt = receipt
+    )
+  }
+  build_stdout <- file.path(artifacts, "build.stdout.log")
+  build_stderr <- file.path(artifacts, "build.stderr.log")
+  build_arguments <- c(
+    "CMD", "build", "--no-manual", "--no-build-vignettes", package
+  )
+  build_receipt <- command_receipt(
+    file.path(artifacts, "build.command.rds"), r_bin, build_arguments,
+    staging, file.path(staging, package), source_archive_sha
+  )
+  old <- setwd(staging)
+  on.exit(setwd(old), add = TRUE)
+  expect_identical(
+    system2(
+      r_bin, build_arguments,
+      stdout = build_stdout, stderr = build_stderr
+    ),
+    0L
+  )
+  setwd(old)
+  source_package <- file.path(
+    staging, paste0(package, "_0.0.1.tar.gz")
+  )
+  source_package_sha <- digest::digest(
+    file = source_package, algo = "sha256", serialize = FALSE
+  )
+  source_lineage <- rqrgibbs:::.rqr_source_package_lineage(
+    source_archive, package, source_package
+  )
+  expect_true(source_lineage$match)
+  install_stdout <- file.path(artifacts, "install.stdout.log")
+  install_stderr <- file.path(artifacts, "install.stderr.log")
+  install_arguments <- c(
+    "CMD", "INSTALL", "--preclean", "--clean",
+    paste0("--library=", shQuote(library)), shQuote(source_package)
+  )
+  install_receipt <- command_receipt(
+    file.path(artifacts, "install.command.rds"), r_bin,
+    install_arguments, artifacts, source_package, source_package_sha
+  )
+  expect_identical(
+    system2(
+      r_bin, install_arguments,
+      stdout = install_stdout, stderr = install_stderr
+    ),
+    0L
+  )
+  runtime_path <- normalizePath(
+    file.path(library, package), winslash = "/", mustWork = TRUE
+  )
+  marker_path <- file.path(runtime_path, "RQR-RUNTIME-LINEAGE.rds")
+  marker <- list(
+    schema_version = "rqrgibbs_runtime_lineage_marker/1.0.0",
+    package = package,
+    package_version = "0.0.1",
+    source_package_sha256 = source_package_sha,
+    built_source_manifest_digest =
+      source_lineage$built_source_manifest_digest,
+    install_command_receipt_sha256 = install_receipt$sha256
+  )
+  saveRDS(marker, marker_path, version = 3)
+  marker_sha <- digest::digest(
+    file = marker_path, algo = "sha256", serialize = FALSE
+  )
+  runtime_digest <- rqrgibbs:::.rqr_directory_digest(runtime_path)
+  loadNamespace(package, lib.loc = library)
+  on.exit({
+    if (package %in% loadedNamespaces()) unloadNamespace(package)
+  }, add = TRUE)
+  file_sha <- function(path) digest::digest(
+    file = path, algo = "sha256", serialize = FALSE
+  )
   git_manifest <- rqrgibbs:::.rqr_git_manifest_payload(
     source, commit, "."
   )
   archive_manifest <- rqrgibbs:::.rqr_archive_manifest_payload(
-    source_archive_path, "fixture"
+    source_archive, package
   )
-  expect_identical(git_manifest, archive_manifest)
-  source_archive_sha256 <- digest::digest(
-    file = source_archive_path, algo = "sha256", serialize = FALSE
-  )
-  source_package_sha256 <- digest::digest(
-    file = source_package_path, algo = "sha256", serialize = FALSE
-  )
-  runtime_tree_digest <- rqrgibbs:::.rqr_directory_digest(runtime_path)
-  build_log_sha256 <- paste(rep("c", 64), collapse = "")
-  install_log_sha256 <- paste(rep("d", 64), collapse = "")
   attestation <- list(
-    schema_version = "rqrgibbs_runtime_attestation/3.0.0",
-    package = "rqrgibbs",
-    package_version = as.character(utils::packageVersion("rqrgibbs")),
+    schema_version = "rqrgibbs_runtime_attestation/4.0.0",
+    package = package,
+    package_version = "0.0.1",
     source_commit = commit,
     source_tree_digest = tree,
     source_repo_root = normalizePath(source, winslash = "/", mustWork = TRUE),
     source_subdir = ".",
     source_access_mode = "git_archive_read_only",
-    source_archive_prefix = "fixture",
-    source_checkout_snapshot_before = checkout_snapshot,
-    source_checkout_snapshot_after = checkout_snapshot,
+    source_archive_prefix = package,
+    source_checkout_snapshot_before = snapshot,
+    source_checkout_snapshot_after = snapshot,
     source_checkout_unchanged = TRUE,
-    source_archive_path = source_archive_path,
-    source_archive_sha256 = source_archive_sha256,
+    source_archive_path = source_archive,
+    source_archive_sha256 = source_archive_sha,
     source_git_manifest_digest = digest::digest(
       git_manifest, algo = "sha256", serialize = FALSE
     ),
@@ -794,96 +977,137 @@ test_that("runtime package provenance binds code to source or an attestation", {
     ),
     source_archive_tree_match = TRUE,
     source_archive_isolated_from_source = TRUE,
-    source_package_path = source_package_path,
-    source_package_sha256 = source_package_sha256,
-    build_log_sha256 = build_log_sha256,
-    install_log_sha256 = install_log_sha256,
+    source_package_path = source_package,
+    source_package_sha256 = source_package_sha,
+    source_package_archive_match = TRUE,
+    built_source_manifest_digest =
+      source_lineage$built_source_manifest_digest,
+    built_source_manifest_entries =
+      source_lineage$built_source_manifest_entries,
+    build_stdout_path = build_stdout,
+    build_stdout_sha256 = file_sha(build_stdout),
+    build_stderr_path = build_stderr,
+    build_stderr_sha256 = file_sha(build_stderr),
+    install_stdout_path = install_stdout,
+    install_stdout_sha256 = file_sha(install_stdout),
+    install_stderr_path = install_stderr,
+    install_stderr_sha256 = file_sha(install_stderr),
+    build_command_receipt_path = build_receipt$path,
+    build_command_receipt_sha256 = build_receipt$sha256,
+    build_executable = normalizePath(r_bin, winslash = "/", mustWork = TRUE),
+    build_arguments = build_arguments,
+    build_working_directory = normalizePath(
+      staging, winslash = "/", mustWork = TRUE
+    ),
+    build_input_path = normalizePath(
+      file.path(staging, package), winslash = "/", mustWork = TRUE
+    ),
+    install_command_receipt_path = install_receipt$path,
+    install_command_receipt_sha256 = install_receipt$sha256,
+    install_executable = normalizePath(r_bin, winslash = "/", mustWork = TRUE),
+    install_arguments = install_arguments,
+    install_working_directory = normalizePath(
+      artifacts, winslash = "/", mustWork = TRUE
+    ),
+    install_input_path = normalizePath(
+      source_package, winslash = "/", mustWork = TRUE
+    ),
     runtime_package_path = runtime_path,
-    runtime_package_tree_digest = runtime_tree_digest,
+    runtime_lineage_marker_path = marker_path,
+    runtime_lineage_marker_sha256 = marker_sha,
+    runtime_package_tree_digest = runtime_digest,
     runtime_isolated_from_source = TRUE,
-    runtime_install_receipt_digest =
-      rqrgibbs:::.rqr_runtime_install_receipt_digest(
-        source_archive_sha256,
-        source_package_sha256,
-        runtime_tree_digest,
-        build_log_sha256,
-        install_log_sha256,
-        R.version.string,
-        R.version$platform
-      ),
     R_version = R.version.string,
     platform = R.version$platform
   )
-  saveRDS(attestation, attestation_path)
+  receipt_args <- list(
+    source_archive_sha256 = source_archive_sha,
+    source_package_sha256 = source_package_sha,
+    built_source_manifest_digest =
+      source_lineage$built_source_manifest_digest,
+    runtime_package_tree_digest = runtime_digest,
+    build_stdout_sha256 = file_sha(build_stdout),
+    build_stderr_sha256 = file_sha(build_stderr),
+    install_stdout_sha256 = file_sha(install_stdout),
+    install_stderr_sha256 = file_sha(install_stderr),
+    build_command_receipt_sha256 = build_receipt$sha256,
+    install_command_receipt_sha256 = install_receipt$sha256,
+    runtime_lineage_marker_sha256 = marker_sha,
+    R_version = R.version.string,
+    platform = R.version$platform
+  )
+  attestation$runtime_install_receipt_digest <- do.call(
+    rqrgibbs:::.rqr_runtime_install_receipt_digest, receipt_args
+  )
+  attestation_path <- file.path(artifacts, "attestation.rds")
+  saveRDS(attestation, attestation_path, version = 3)
   matched <- rqrgibbs:::.rqr_repository_provenance(list(
     repo_root = source,
     expected_git_commit = commit,
-    runtime_package = "rqrgibbs",
+    runtime_package = package,
     runtime_attestation = attestation_path,
     require_isolated_runtime = TRUE
   ))
-  expect_true(matched$runtime_attestation_available)
   expect_true(matched$runtime_attestation_match)
-  expect_identical(
-    matched$runtime_attestation_schema,
-    "rqrgibbs_runtime_attestation/3.0.0"
-  )
-  expect_identical(matched$source_access_mode, "git_archive_read_only")
-  expect_true(matched$source_archive_verified)
-  expect_true(matched$source_archive_tree_match)
-  expect_true(matched$source_package_verified)
-  expect_true(matched$runtime_install_receipt_match)
-  expect_true(matched$source_archive_isolated_from_source)
-  expect_true(matched$source_checkout_unchanged)
-  expect_true(matched$runtime_isolated_from_source)
-  expect_true(matched$require_isolated_runtime)
+  expect_true(matched$source_package_archive_match)
+  expect_true(matched$build_evidence_verified)
+  expect_true(matched$install_evidence_verified)
+  expect_true(matched$runtime_lineage_marker_match)
   expect_true(matched$runtime_source_match)
   expect_true(matched$reproducibility_eligible)
 
-  writeBin(charToRaw("arbitrary archive fixture"), source_archive_path)
-  archive_tampered <- rqrgibbs:::.rqr_repository_provenance(list(
-    repo_root = source,
-    expected_git_commit = commit,
-    runtime_package = "rqrgibbs",
-    runtime_attestation = attestation_path,
-    require_isolated_runtime = TRUE
-  ))
-  expect_false(archive_tampered$source_archive_verified)
-  expect_false(archive_tampered$source_archive_tree_match)
-  expect_false(archive_tampered$runtime_attestation_match)
-  expect_false(archive_tampered$runtime_source_match)
-  expect_false(archive_tampered$reproducibility_eligible)
-
-  archive_status <- system2(
-    "git",
-    c(
-      "-C", source, "archive", "--format=tar.gz",
-      "--prefix=fixture/", "-o", source_archive_path, commit
-    )
+  mixed_root <- file.path(artifacts, "mixed")
+  dir.create(mixed_root)
+  utils::untar(source_package, exdir = mixed_root)
+  writeLines(
+    "lineage_value <- function() 'source-package-B'",
+    file.path(mixed_root, package, "R", "lineage.R")
   )
-  expect_identical(archive_status, 0L)
-  attestation$runtime_package_tree_digest <- paste(rep("0", 64), collapse = "")
-  attestation$runtime_install_receipt_digest <-
-    rqrgibbs:::.rqr_runtime_install_receipt_digest(
-      source_archive_sha256,
-      source_package_sha256,
-      attestation$runtime_package_tree_digest,
-      build_log_sha256,
-      install_log_sha256,
-      R.version.string,
-      R.version$platform
-    )
-  saveRDS(attestation, attestation_path)
-  tampered <- rqrgibbs:::.rqr_repository_provenance(list(
+  mixed_package <- file.path(artifacts, "source-B.tar.gz")
+  expect_identical(
+    system2(
+      "tar",
+      c("-czf", mixed_package, "-C", mixed_root, package)
+    ),
+    0L
+  )
+  mixed <- attestation
+  mixed$source_package_path <- mixed_package
+  mixed$source_package_sha256 <- file_sha(mixed_package)
+  mixed$install_input_path <- mixed_package
+  mixed_install_receipt <- command_receipt(
+    file.path(artifacts, "mixed-install.command.rds"), r_bin,
+    c(
+      "CMD", "INSTALL", "--preclean", "--clean",
+      paste0("--library=", shQuote(library)), shQuote(mixed_package)
+    ),
+    artifacts, mixed_package, mixed$source_package_sha256
+  )
+  mixed$install_arguments <- mixed_install_receipt$receipt$arguments
+  mixed$install_command_receipt_path <- mixed_install_receipt$path
+  mixed$install_command_receipt_sha256 <- mixed_install_receipt$sha256
+  mixed_receipt_args <- receipt_args
+  mixed_receipt_args$source_package_sha256 <- mixed$source_package_sha256
+  mixed_receipt_args$install_command_receipt_sha256 <-
+    mixed_install_receipt$sha256
+  mixed$runtime_install_receipt_digest <- do.call(
+    rqrgibbs:::.rqr_runtime_install_receipt_digest,
+    mixed_receipt_args
+  )
+  saveRDS(mixed, attestation_path, version = 3)
+  rejected <- rqrgibbs:::.rqr_repository_provenance(list(
     repo_root = source,
     expected_git_commit = commit,
-    runtime_package = "rqrgibbs",
+    runtime_package = package,
     runtime_attestation = attestation_path,
     require_isolated_runtime = TRUE
   ))
-  expect_false(tampered$runtime_attestation_match)
-  expect_false(tampered$runtime_source_match)
-  expect_false(tampered$reproducibility_eligible)
+  expect_true(rejected$source_package_verified)
+  expect_false(rejected$source_package_archive_match)
+  expect_false(rejected$runtime_lineage_marker_match)
+  expect_false(rejected$runtime_attestation_match)
+  expect_false(rejected$runtime_source_match)
+  expect_false(rejected$reproducibility_eligible)
 })
 
 test_that("runtime-backed external adapters require isolated attestation", {

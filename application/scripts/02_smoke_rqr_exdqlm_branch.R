@@ -100,6 +100,10 @@ if (isTRUE(runtime_state$runtime_direct_source_path_match) ||
     !isTRUE(runtime_state$runtime_isolated_from_source) ||
     !isTRUE(runtime_state$source_archive_verified) ||
     !isTRUE(runtime_state$source_archive_isolated_from_source) ||
+    !isTRUE(runtime_state$source_package_archive_match) ||
+    !isTRUE(runtime_state$build_evidence_verified) ||
+    !isTRUE(runtime_state$install_evidence_verified) ||
+    !isTRUE(runtime_state$runtime_lineage_marker_match) ||
     !isTRUE(runtime_state$runtime_attestation_match) ||
     !isTRUE(runtime_state$runtime_source_match) ||
     !isTRUE(runtime_state$reproducibility_eligible)) {

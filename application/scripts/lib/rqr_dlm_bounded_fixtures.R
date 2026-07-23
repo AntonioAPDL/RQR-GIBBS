@@ -6,6 +6,157 @@
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
+rqr_validate_bounded_dlm_config <- function(config) {
+  required <- c(
+    "schema_version", "config_id", "scope", "generalized_bayes",
+    "response_likelihood", "response_prediction_contract",
+    "production_simulation_authorized",
+    "bounded_dynamic_execution_authorized", "runner_modes",
+    "coverage_level", "learning_rate_modes", "fixed_learning_rate",
+    "loss_reference_scale", "lambda_prior", "mcmc", "seeds",
+    "continuation", "resources", "gates", "fixtures"
+  )
+  if (!is.list(config) || !all(required %in% names(config)) ||
+      !identical(
+        config$schema_version,
+        "rqrgibbs_dlm_bounded_fixtures/3.0.0"
+      ) ||
+      !isTRUE(config$generalized_bayes) ||
+      isTRUE(config$response_likelihood) ||
+      isTRUE(config$response_prediction_contract) ||
+      isTRUE(config$production_simulation_authorized) ||
+      !identical(
+        config$runner_modes,
+        c("preflight", "reference-only", "execute-bounded")
+      )) {
+    stop("The bounded configuration interpretation is invalid.", call. = FALSE)
+  }
+  scalar_positive <- function(value) {
+    is.numeric(value) && length(value) == 1L &&
+      !is.na(value) && is.finite(value) && value > 0
+  }
+  scalar_integer <- function(value, minimum = 0L) {
+    is.numeric(value) && length(value) == 1L &&
+      !is.na(value) && is.finite(value) &&
+      value == as.integer(value) && value >= minimum
+  }
+  if (!scalar_positive(config$coverage_level) ||
+      config$coverage_level >= 1 ||
+      !identical(
+        config$learning_rate_modes,
+        c("fixed_rate", "learned_pseudoresidual_normalized")
+      ) ||
+      !scalar_positive(config$fixed_learning_rate) ||
+      !scalar_positive(config$loss_reference_scale) ||
+      !is.list(config$lambda_prior) ||
+      !scalar_positive(config$lambda_prior$shape) ||
+      !scalar_positive(config$lambda_prior$rate)) {
+    stop("The bounded target configuration is invalid.", call. = FALSE)
+  }
+  mcmc <- config$mcmc
+  mcmc_required <- c(
+    "chains", "burn_in", "retained_per_chain", "thin", "seeds",
+    "backend", "numerical_policy", "store_state_draws",
+    "store_latent_draws", "initialization_profiles"
+  )
+  if (!is.list(mcmc) || !all(mcmc_required %in% names(mcmc)) ||
+      !identical(mcmc$chains, 4L) ||
+      !scalar_integer(mcmc$burn_in) ||
+      !scalar_integer(mcmc$retained_per_chain, 1L) ||
+      !scalar_integer(mcmc$thin, 1L) ||
+      length(mcmc$seeds) != mcmc$chains ||
+      anyNA(mcmc$seeds) ||
+      any(mcmc$seeds != as.integer(mcmc$seeds)) ||
+      anyDuplicated(mcmc$seeds) ||
+      !identical(mcmc$backend, "cpp") ||
+      !identical(mcmc$numerical_policy, "fail") ||
+      !isTRUE(mcmc$store_state_draws) ||
+      isTRUE(mcmc$store_latent_draws) ||
+      length(mcmc$initialization_profiles) != mcmc$chains) {
+    stop("The bounded MCMC configuration is invalid.", call. = FALSE)
+  }
+  profile_names <- c(
+    "lower_root_shift", "upper_root_shift", "lambda_initial",
+    "component_scale_multiplier"
+  )
+  profile_valid <- vapply(mcmc$initialization_profiles, function(profile) {
+    is.list(profile) &&
+      identical(sort(names(profile)), sort(profile_names)) &&
+      all(is.finite(unlist(profile, use.names = FALSE))) &&
+      profile$lower_root_shift < profile$upper_root_shift &&
+      profile$lambda_initial > 0 &&
+      profile$component_scale_multiplier > 0
+  }, logical(1L))
+  seed_values <- unlist(config$seeds, use.names = FALSE)
+  if (!all(profile_valid) || !length(seed_values) ||
+      anyNA(seed_values) || any(!is.finite(seed_values)) ||
+      any(seed_values != as.integer(seed_values)) ||
+      any(seed_values <= 0) || anyDuplicated(seed_values)) {
+    stop("The bounded initialization or seed contract is invalid.", call. = FALSE)
+  }
+  continuation <- config$continuation
+  if (!is.list(continuation) ||
+      !identical(continuation$history_segments, 3L) ||
+      !identical(continuation$generation_indices, 0:2) ||
+      !identical(
+        continuation$retained_by_segment, c(2L, 2L, 2L)
+      ) ||
+      !identical(continuation$uninterrupted_retained, 6L) ||
+      !isTRUE(continuation$require_checkpoint_digest) ||
+      !isTRUE(continuation$require_history_digest)) {
+    stop("The bounded continuation contract is invalid.", call. = FALSE)
+  }
+  resources <- config$resources
+  if (!is.list(resources) ||
+      !isTRUE(resources$sequential_execution) ||
+      !scalar_integer(resources$hard_timeout_minutes, 1L) ||
+      !scalar_positive(resources$maximum_process_tree_rss_gib) ||
+      !scalar_integer(resources$maximum_process_tree_threads, 1L) ||
+      !scalar_integer(resources$maximum_process_tree_processes, 1L) ||
+      !scalar_positive(resources$monitor_interval_seconds) ||
+      !isTRUE(resources$require_active_process_tree_monitor)) {
+    stop("The bounded resource contract is invalid.", call. = FALSE)
+  }
+  gates <- config$gates
+  if (!is.list(gates) ||
+      !scalar_positive(gates$maximum_rank_normalized_rhat) ||
+      gates$maximum_rank_normalized_rhat > 1.01 ||
+      !scalar_integer(gates$minimum_bulk_ess, 1L) ||
+      !scalar_integer(gates$minimum_tail_ess, 1L) ||
+      !identical(gates$maximum_numerical_repairs, 0L) ||
+      !isTRUE(gates$require_primary_runtime_source_match) ||
+      !isTRUE(gates$require_exact_joint_target) ||
+      !identical(gates$root_swap_activity_role, "sidecar_only") ||
+      !identical(
+        gates$primary_diagnostics,
+        "posterior_rank_normalized_rhat_bulk_tail_ess"
+      ) ||
+      !identical(gates$mcse_provider, "posterior_mcse_mean") ||
+      !identical(gates$fixed_rate_lambda_gate, "exact_identity") ||
+      !isTRUE(gates$require_three_segment_continuation)) {
+    stop("The bounded diagnostic gate contract is invalid.", call. = FALSE)
+  }
+  modes <- vapply(
+    config$fixtures,
+    function(fixture) as.character(fixture$evolution_mode)[1L],
+    character(1L)
+  )
+  if (length(config$fixtures) != 3L ||
+      !setequal(
+        modes, c("fixed_W", "discount_template", "component_scale")
+      ) ||
+      any(modes == "adaptive_discount") ||
+      any(!vapply(config$fixtures, function(fixture) {
+        scalar_integer(fixture$n_time, 2L) &&
+          scalar_integer(fixture$future_horizon, 1L) &&
+          length(fixture$y) == fixture$n_time &&
+          all(is.finite(fixture$y))
+      }, logical(1L)))) {
+    stop("The bounded fixture declarations are invalid.", call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
 rqr_bounded_component <- function(spec, X_override = NULL) {
   if (!is.list(spec) || is.null(spec$type)) {
     stop("Each state component must be a typed list.", call. = FALSE)
@@ -267,4 +418,88 @@ rqr_build_all_bounded_dlm_fixtures <- function(config) {
   })
   names(out) <- fixture_ids
   out
+}
+
+rqr_bounded_initialization <- function(
+    constructed_fixture, profile, coverage_level) {
+  if (!is.list(constructed_fixture) || !is.list(profile)) {
+    stop("A constructed fixture and initialization profile are required.", call. = FALSE)
+  }
+  expanded <- constructed_fixture$expanded_model
+  paths <- rqrgibbs:::.rqr_init_state_paths(
+    constructed_fixture$y,
+    expanded$FF,
+    expanded$m0,
+    coverage_level,
+    init = list()
+  )
+  shift_path <- function(path, amount) {
+    for (time in seq_len(ncol(path))) {
+      direction <- expanded$FF[, time]
+      norm2 <- sum(direction^2)
+      if (!is.finite(norm2) || norm2 <= 0) {
+        stop("A fixture has a zero observation direction.", call. = FALSE)
+      }
+      path[, time] <- path[, time] + direction * amount / norm2
+    }
+    path
+  }
+  initial <- list(
+    state_root1 = shift_path(
+      paths$theta1, as.numeric(profile$lower_root_shift)
+    ),
+    state_root2 = shift_path(
+      paths$theta2, as.numeric(profile$upper_root_shift)
+    ),
+    lambda = as.numeric(profile$lambda_initial)
+  )
+  first_direction <- expanded$FF[, 1L]
+  first_norm2 <- sum(first_direction^2)
+  initial$theta0_root1 <- expanded$m0 +
+    first_direction * profile$lower_root_shift / first_norm2
+  initial$theta0_root2 <- expanded$m0 +
+    first_direction * profile$upper_root_shift / first_norm2
+  if (identical(constructed_fixture$evolution$mode, "component_scale")) {
+    initial$evolution_scale <-
+      constructed_fixture$evolution$initial *
+      as.numeric(profile$component_scale_multiplier)
+  }
+  initial
+}
+
+rqr_bounded_fit_arguments <- function(
+    constructed_fixture, config, learning_rate_mode, chain_index,
+    provenance_control, n_burn = config$mcmc$burn_in,
+    n_mcmc = config$mcmc$retained_per_chain) {
+  chain_index <- as.integer(chain_index)
+  if (length(chain_index) != 1L || is.na(chain_index) ||
+      chain_index < 1L || chain_index > config$mcmc$chains) {
+    stop("chain_index is outside the frozen chain contract.", call. = FALSE)
+  }
+  profile <- config$mcmc$initialization_profiles[[chain_index]]
+  list(
+    y = constructed_fixture$y,
+    model = constructed_fixture$model,
+    coverage_level = config$coverage_level,
+    evolution_spec = constructed_fixture$evolution,
+    learning_rate = config$fixed_learning_rate,
+    lambda_initial = profile$lambda_initial,
+    loss_reference_scale = config$loss_reference_scale,
+    learning_rate_mode = learning_rate_mode,
+    lambda_prior = config$lambda_prior,
+    numerical_policy = config$mcmc$numerical_policy,
+    provenance_control = provenance_control,
+    mcmc_control = list(
+      n_burn = as.integer(n_burn),
+      n_mcmc = as.integer(n_mcmc),
+      thin = config$mcmc$thin,
+      seed = config$mcmc$seeds[chain_index],
+      backend = config$mcmc$backend,
+      store_state_draws = config$mcmc$store_state_draws,
+      store_latent_draws = config$mcmc$store_latent_draws
+    ),
+    init = rqr_bounded_initialization(
+      constructed_fixture, profile, config$coverage_level
+    )
+  )
 }

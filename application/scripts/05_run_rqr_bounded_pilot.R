@@ -330,6 +330,20 @@ posterior_chain_diagnostics <- function(chains, sampler) {
   }))
 }
 
+posterior_mcse_mean <- function(values, estimand) {
+  values <- as.matrix(values)
+  draws <- posterior::as_draws_array(array(
+    as.numeric(values),
+    dim = c(nrow(values), ncol(values), 1L),
+    dimnames = list(
+      iteration = NULL,
+      chain = paste0("chain", seq_len(ncol(values))),
+      variable = estimand
+    )
+  ))
+  unname(posterior::mcse_mean(draws))
+}
+
 maintained_diagnostic_crosscheck <- function(chains, sampler) {
   estimands <- dimnames(chains)[[2L]]
   do.call(rbind, lapply(estimands, function(estimand) {
@@ -575,7 +589,7 @@ main <- function() {
     winslash = "/", mustWork = TRUE
   )
   primary_commit_root <- file.path(
-    primary_runtime_root, substr(expected_primary_commit, 1L, 12L)
+    primary_runtime_root, expected_primary_commit
   )
   primary_runtime_library <- normalizePath(
     file.path(primary_commit_root, "library"),
@@ -584,9 +598,7 @@ main <- function() {
   primary_runtime_attestation <- normalizePath(
     file.path(
       primary_commit_root, "attestations",
-      paste0(
-        "rqrgibbs_", substr(expected_primary_commit, 1L, 12L), ".rds"
-      )
+      paste0("rqrgibbs_", expected_primary_commit, ".rds")
     ),
     winslash = "/", mustWork = TRUE
   )
@@ -617,6 +629,10 @@ main <- function() {
     source_subdir = "application"
   ))
   if (!isTRUE(primary_runtime_state$runtime_attestation_match) ||
+      !isTRUE(primary_runtime_state$source_package_archive_match) ||
+      !isTRUE(primary_runtime_state$build_evidence_verified) ||
+      !isTRUE(primary_runtime_state$install_evidence_verified) ||
+      !isTRUE(primary_runtime_state$runtime_lineage_marker_match) ||
       !isTRUE(primary_runtime_state$runtime_source_match) ||
       !isTRUE(primary_runtime_state$reproducibility_eligible)) {
     stop("The primary rqrgibbs runtime-source gate failed.", call. = FALSE)
@@ -628,6 +644,10 @@ main <- function() {
     runtime_attestation = runtime_attestation
   ))
   if (!isTRUE(runtime_state$runtime_attestation_match) ||
+      !isTRUE(runtime_state$source_package_archive_match) ||
+      !isTRUE(runtime_state$build_evidence_verified) ||
+      !isTRUE(runtime_state$install_evidence_verified) ||
+      !isTRUE(runtime_state$runtime_lineage_marker_match) ||
       !isTRUE(runtime_state$runtime_source_match) ||
       !isTRUE(runtime_state$reproducibility_eligible)) {
     stop("The isolated exdqlm runtime-source gate failed.", call. = FALSE)
@@ -663,6 +683,22 @@ main <- function() {
     runtime_attestation_match = c(
       primary_runtime_state$runtime_attestation_match,
       runtime_state$runtime_attestation_match
+    ),
+    source_package_archive_match = c(
+      primary_runtime_state$source_package_archive_match,
+      runtime_state$source_package_archive_match
+    ),
+    build_evidence_verified = c(
+      primary_runtime_state$build_evidence_verified,
+      runtime_state$build_evidence_verified
+    ),
+    install_evidence_verified = c(
+      primary_runtime_state$install_evidence_verified,
+      runtime_state$install_evidence_verified
+    ),
+    runtime_lineage_marker_match = c(
+      primary_runtime_state$runtime_lineage_marker_match,
+      runtime_state$runtime_lineage_marker_match
     ),
     runtime_source_match = c(
       primary_runtime_state$runtime_source_match,
@@ -958,14 +994,16 @@ main <- function() {
     ]
   }
   mean_rows <- do.call(rbind, lapply(estimand_names, function(estimand) {
-    collapsed_values <- as.numeric(collapsed[, estimand, ])
-    augmented_values <- as.numeric(augmented[, estimand, ])
-    collapsed_diag <- diagnostic_lookup("collapsed", estimand)
-    augmented_diag <- diagnostic_lookup("fully_augmented", estimand)
-    collapsed_mcse <- stats::sd(collapsed_values) /
-      sqrt(collapsed_diag$bulk_ess)
-    augmented_mcse <- stats::sd(augmented_values) /
-      sqrt(augmented_diag$bulk_ess)
+    collapsed_matrix <- collapsed[, estimand, , drop = TRUE]
+    augmented_matrix <- augmented[, estimand, , drop = TRUE]
+    collapsed_values <- as.numeric(collapsed_matrix)
+    augmented_values <- as.numeric(augmented_matrix)
+    collapsed_mcse <- posterior_mcse_mean(
+      collapsed_matrix, paste0(estimand, "_mean")
+    )
+    augmented_mcse <- posterior_mcse_mean(
+      augmented_matrix, paste0(estimand, "_mean")
+    )
     collapsed_mean <- mean(collapsed_values)
     augmented_mean <- mean(augmented_values)
     quadrature_mean <- quadrature$reference$mean[
@@ -1040,13 +1078,11 @@ main <- function() {
     augmented_indicator <- augmented[, estimand, ] <= threshold
     collapsed_probability <- mean(collapsed_indicator)
     augmented_probability <- mean(augmented_indicator)
-    collapsed_ess <- ess_core(split_chains(collapsed_indicator))
-    augmented_ess <- ess_core(split_chains(augmented_indicator))
-    collapsed_mcse <- sqrt(
-      collapsed_probability * (1 - collapsed_probability) / collapsed_ess
+    collapsed_mcse <- posterior_mcse_mean(
+      collapsed_indicator, paste0(estimand, "_cdf_indicator")
     )
-    augmented_mcse <- sqrt(
-      augmented_probability * (1 - augmented_probability) / augmented_ess
+    augmented_mcse <- posterior_mcse_mean(
+      augmented_indicator, paste0(estimand, "_cdf_indicator")
     )
     tolerance <- 4 * sqrt(collapsed_mcse^2 + augmented_mcse^2)
     quadrature_probability <- independent_references$reference_value[

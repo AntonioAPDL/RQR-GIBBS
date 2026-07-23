@@ -22,9 +22,12 @@ run unless:
 - the native deterministic test suite passes.
 
 All artifacts are written under the ignored `application/outputs/` tree. The
-launcher fixes the common BLAS/OpenMP thread controls at one, records one R
-worker, reads the Linux process high-water resident-memory mark, enforces four
-GiB and 90-minute limits, and does not read an application dataset.
+launcher fixes the common BLAS/OpenMP thread controls at one before fitting.
+Its Linux `VmHWM` value is explicitly a main-R-process sidecar, not a
+whole-process-tree memory measurement. The intercept-only pilot enforces its
+wall-time and artifact-size gates and does not read an application dataset.
+The dynamic runner uses a separate process-group monitor to record peak summed
+RSS, process count, and thread count and to enforce a hard timeout.
 
 ## Fixed learned-scale fixture
 
@@ -125,13 +128,18 @@ The next three exact-mode fixtures are frozen in
 `application/config/rqr_dlm/rqr_dlm_bounded_dynamic_fixtures_20260723.R`.
 They cover fixed `W` with missing and future times, a frozen trend--seasonal
 component-discount template, and shared component scales for
-trend--regression states. The config fixes four chains, two continuation
-generations, zero-repair numerics, maintained rank-normalized diagnostics, and
-isolated primary runtime binding. Root-swap activity is a sidecar because the
+trend--regression states. The config fixes four overdispersed initialization
+profiles, four chains, and a six-draw continuation check split into three
+history segments with generation indices 0, 1, and 2. It also fixes
+zero-repair numerics, maintained rank-normalized diagnostics and mean MCSE,
+state-path storage for validation, latent-scale non-storage, and isolated
+primary runtime binding. Root-swap activity is a sidecar because the
 algorithm deliberately proposes a global label swap; ordered endpoints,
 widths, midpoints, loss, learning rate, and component scales are the primary
 mixing targets. The discount fixture extends its frozen recursion through
 `T+H` and verifies exact reproduction of its first `T` slices. Future
 component templates are explicit. The config excludes `adaptive_discount`,
 marks itself non-production, and does not authorize execution. Use
-`make preflight-dlm-bounded` only after supplying the reviewed primary commit.
+`make preflight-dlm-bounded` and then `make reference-dlm-bounded` only after
+supplying the reviewed primary commit. The committed execution flag remains
+false, so the 24 fits cannot be launched from this protocol revision.

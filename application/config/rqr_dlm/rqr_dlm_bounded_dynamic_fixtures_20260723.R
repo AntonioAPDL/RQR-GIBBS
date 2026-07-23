@@ -3,13 +3,15 @@
 # protocol and does not authorize a production launch.
 
 rqr_dlm_bounded_dynamic_fixtures <- list(
-  schema_version = "rqrgibbs_dlm_bounded_fixtures/2.0.0",
+  schema_version = "rqrgibbs_dlm_bounded_fixtures/3.0.0",
   config_id = "rqr_dlm_bounded_dynamic_fixtures_20260723",
   scope = "bounded_dynamic_target_and_mixing_validation",
   generalized_bayes = TRUE,
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   production_simulation_authorized = FALSE,
+  bounded_dynamic_execution_authorized = FALSE,
+  runner_modes = c("preflight", "reference-only", "execute-bounded"),
   coverage_level = 0.80,
   learning_rate_modes = c(
     "fixed_rate",
@@ -25,13 +27,58 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
     thin = 1L,
     seeds = c(84201L, 84202L, 84203L, 84204L),
     backend = "cpp",
-    numerical_policy = "fail"
+    numerical_policy = "fail",
+    store_state_draws = TRUE,
+    store_latent_draws = FALSE,
+    initialization_profiles = list(
+      low_wide = list(
+        lower_root_shift = -3, upper_root_shift = 3,
+        lambda_initial = 0.50, component_scale_multiplier = 0.50
+      ),
+      high_wide = list(
+        lower_root_shift = -1, upper_root_shift = 5,
+        lambda_initial = 2.00, component_scale_multiplier = 2.00
+      ),
+      low_narrow = list(
+        lower_root_shift = -2, upper_root_shift = 0.5,
+        lambda_initial = 4.00, component_scale_multiplier = 4.00
+      ),
+      high_narrow = list(
+        lower_root_shift = 0.5, upper_root_shift = 3,
+        lambda_initial = 1.00, component_scale_multiplier = 1.00
+      )
+    )
+  ),
+  seeds = list(
+    conditional_reference = 84301L,
+    ffbs_parity = 84302L,
+    missing_measurement = 84303L,
+    future_state = 84304L,
+    component_scale = 84305L,
+    continuation = 84306L,
+    initialization = 84307L,
+    forecast_by_fixture = c(
+      fixed_W_local_level = 84311L,
+      frozen_trend_seasonal_discount = 84312L,
+      shared_component_scale_trend_regression = 84313L
+    )
   ),
   continuation = list(
-    generations = 2L,
-    retained_per_generation = 2L,
+    history_segments = 3L,
+    generation_indices = 0:2,
+    retained_by_segment = c(2L, 2L, 2L),
+    uninterrupted_retained = 6L,
     require_checkpoint_digest = TRUE,
     require_history_digest = TRUE
+  ),
+  resources = list(
+    sequential_execution = TRUE,
+    hard_timeout_minutes = 45L,
+    maximum_process_tree_rss_gib = 4,
+    maximum_process_tree_threads = 4L,
+    maximum_process_tree_processes = 3L,
+    monitor_interval_seconds = 0.20,
+    require_active_process_tree_monitor = TRUE
   ),
   gates = list(
     maximum_rank_normalized_rhat = 1.01,
@@ -44,7 +91,9 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
     primary_diagnostics = "posterior_rank_normalized_rhat_bulk_tail_ess",
     custom_diagnostics_role = "reproduction_crosscheck",
     coda_diagnostics_role = "classical_sidecar",
-    require_two_generation_continuation = TRUE
+    mcse_provider = "posterior_mcse_mean",
+    fixed_rate_lambda_gate = "exact_identity",
+    require_three_segment_continuation = TRUE
   ),
   fixtures = list(
     fixed_W_local_level = list(

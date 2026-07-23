@@ -55,7 +55,7 @@ primary_runtime_root <- normalizePath(
   winslash = "/", mustWork = TRUE
 )
 primary_commit_root <- file.path(
-  primary_runtime_root, substr(expected_commit, 1L, 12L)
+  primary_runtime_root, expected_commit
 )
 primary_library <- normalizePath(
   file.path(primary_commit_root, "library"),
@@ -64,7 +64,7 @@ primary_library <- normalizePath(
 primary_attestation <- normalizePath(
   file.path(
     primary_commit_root, "attestations",
-    paste0("rqrgibbs_", substr(expected_commit, 1L, 12L), ".rds")
+    paste0("rqrgibbs_", expected_commit, ".rds")
   ),
   winslash = "/", mustWork = TRUE
 )
@@ -98,6 +98,10 @@ runtime_state <- rqrgibbs:::.rqr_repository_provenance(list(
 if (!isTRUE(runtime_state$runtime_attestation_match) ||
     !isTRUE(runtime_state$source_archive_tree_match) ||
     !isTRUE(runtime_state$source_package_verified) ||
+    !isTRUE(runtime_state$source_package_archive_match) ||
+    !isTRUE(runtime_state$build_evidence_verified) ||
+    !isTRUE(runtime_state$install_evidence_verified) ||
+    !isTRUE(runtime_state$runtime_lineage_marker_match) ||
     !isTRUE(runtime_state$runtime_install_receipt_match) ||
     !isTRUE(runtime_state$runtime_source_match) ||
     !isTRUE(runtime_state$reproducibility_eligible)) {
@@ -109,33 +113,80 @@ sys.source(config_path, envir = config_environment)
 config <- config_environment$rqr_dlm_bounded_dynamic_fixtures
 required_top_level <- c(
   "schema_version", "config_id", "scope", "generalized_bayes",
-  "response_likelihood", "production_simulation_authorized", "mcmc",
-  "continuation", "gates", "fixtures"
+  "response_likelihood", "response_prediction_contract",
+  "production_simulation_authorized",
+  "bounded_dynamic_execution_authorized", "runner_modes", "mcmc",
+  "seeds", "continuation", "resources", "gates", "fixtures"
 )
 if (!is.list(config) || !all(required_top_level %in% names(config))) {
   stop("The bounded-fixture configuration is incomplete.", call. = FALSE)
 }
 if (!identical(
       config$schema_version,
-      "rqrgibbs_dlm_bounded_fixtures/2.0.0"
+      "rqrgibbs_dlm_bounded_fixtures/3.0.0"
     ) ||
     !isTRUE(config$generalized_bayes) ||
     isTRUE(config$response_likelihood) ||
-    isTRUE(config$production_simulation_authorized)) {
+    isTRUE(config$response_prediction_contract) ||
+    isTRUE(config$production_simulation_authorized) ||
+    isTRUE(config$bounded_dynamic_execution_authorized) ||
+    !identical(
+      config$runner_modes,
+      c("preflight", "reference-only", "execute-bounded")
+    )) {
   stop("The bounded-fixture interpretation contract is invalid.", call. = FALSE)
 }
 if (!identical(config$mcmc$chains, 4L) ||
     length(config$mcmc$seeds) != config$mcmc$chains ||
     anyDuplicated(config$mcmc$seeds) ||
-    !identical(config$mcmc$numerical_policy, "fail")) {
+    !identical(config$mcmc$backend, "cpp") ||
+    !identical(config$mcmc$numerical_policy, "fail") ||
+    !isTRUE(config$mcmc$store_state_draws) ||
+    isTRUE(config$mcmc$store_latent_draws) ||
+    length(config$mcmc$initialization_profiles) != 4L) {
   stop("The bounded-fixture chain and seed contract is invalid.", call. = FALSE)
 }
-if (!identical(config$continuation$generations, 2L) ||
+initialization_valid <- vapply(
+  config$mcmc$initialization_profiles,
+  function(profile) {
+    is.list(profile) &&
+      identical(
+        sort(names(profile)),
+        sort(c(
+          "lower_root_shift", "upper_root_shift", "lambda_initial",
+          "component_scale_multiplier"
+        ))
+      ) &&
+      all(is.finite(unlist(profile, use.names = FALSE))) &&
+      profile$lower_root_shift < profile$upper_root_shift &&
+      profile$lambda_initial > 0 &&
+      profile$component_scale_multiplier > 0
+  },
+  logical(1L)
+)
+seed_values <- unlist(config$seeds, use.names = FALSE)
+if (!all(initialization_valid) ||
+    anyNA(seed_values) || any(seed_values <= 0) ||
+    any(seed_values != as.integer(seed_values)) ||
+    anyDuplicated(seed_values)) {
+  stop("The initialization or auxiliary seed contract is invalid.", call. = FALSE)
+}
+if (!identical(config$continuation$history_segments, 3L) ||
+    !identical(config$continuation$generation_indices, 0:2) ||
+    !identical(config$continuation$retained_by_segment, c(2L, 2L, 2L)) ||
+    !identical(config$continuation$uninterrupted_retained, 6L) ||
     !identical(
       config$gates$primary_diagnostics,
       "posterior_rank_normalized_rhat_bulk_tail_ess"
     ) ||
-    !identical(config$gates$root_swap_activity_role, "sidecar_only")) {
+    !identical(config$gates$mcse_provider, "posterior_mcse_mean") ||
+    !identical(config$gates$root_swap_activity_role, "sidecar_only") ||
+    !isTRUE(config$resources$sequential_execution) ||
+    !isTRUE(config$resources$require_active_process_tree_monitor) ||
+    config$resources$hard_timeout_minutes <= 0 ||
+    config$resources$maximum_process_tree_rss_gib <= 0 ||
+    config$resources$maximum_process_tree_threads < 1L ||
+    config$resources$maximum_process_tree_processes < 1L) {
   stop("The bounded-fixture diagnostic contract is invalid.", call. = FALSE)
 }
 exact_modes <- vapply(
@@ -156,6 +207,7 @@ sys.source(
   ),
   envir = environment()
 )
+rqr_validate_bounded_dlm_config(config)
 constructed <- rqr_build_all_bounded_dlm_fixtures(config)
 audits <- do.call(rbind, lapply(constructed, function(item) {
   audit <- item$construction_audit
@@ -212,6 +264,12 @@ manifest <- list(
   primary_runtime_source_match = runtime_state$runtime_source_match,
   source_archive_tree_match = runtime_state$source_archive_tree_match,
   source_package_verified = runtime_state$source_package_verified,
+  source_package_archive_match =
+    runtime_state$source_package_archive_match,
+  build_evidence_verified = runtime_state$build_evidence_verified,
+  install_evidence_verified = runtime_state$install_evidence_verified,
+  runtime_lineage_marker_match =
+    runtime_state$runtime_lineage_marker_match,
   runtime_install_receipt_match =
     runtime_state$runtime_install_receipt_match,
   fixture_ids = names(config$fixtures),
@@ -228,7 +286,8 @@ manifest <- list(
   ),
   fixture_construction = audits,
   production_simulation_authorized = FALSE,
-  bounded_dynamic_execution_authorized = FALSE,
+  bounded_dynamic_execution_authorized =
+    config$bounded_dynamic_execution_authorized,
   recorded_at = format(Sys.time(), tz = "UTC", usetz = TRUE)
 )
 output_path <- file.path(

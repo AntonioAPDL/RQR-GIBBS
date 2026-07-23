@@ -661,12 +661,12 @@ rqr_dlm_fit <- function(
     checkpoint_digest = checkpoint_digest,
     segment_numerical_repair_count =
       out$model_spec$numerical_repair_count,
-    segment_numerically_exact =
-      out$model_spec$numerically_exact_transition,
-    segment_target_numerical_eligible =
-      out$model_spec$segment_target_numerical_eligible,
-    segment_environment_reproducibility_eligible =
+    segment_exact_joint_target =
+      out$model_spec$exact_joint_target,
+    segment_environment_base_eligible =
       out$provenance$reproducibility_eligible,
+    segment_target_contract_digest =
+      out$provenance$object_digests$target,
     backend_requested = out$provenance$backend_requested,
     backend_resolved = out$provenance$backend_resolved
   )
@@ -991,12 +991,12 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
     checkpoint_digest = segment$checkpoint_digest,
     segment_numerical_repair_count =
       segment$model_spec$numerical_repair_count,
-    segment_numerically_exact =
-      segment$model_spec$numerically_exact_transition,
-    segment_target_numerical_eligible =
-      segment$model_spec$segment_target_numerical_eligible,
-    segment_environment_reproducibility_eligible =
+    segment_exact_joint_target =
+      segment$model_spec$exact_joint_target,
+    segment_environment_base_eligible =
       current_environment_eligible,
+    segment_target_contract_digest =
+      segment$provenance$object_digests$target,
     backend_requested = segment$provenance$backend_requested,
     backend_resolved = segment$provenance$backend_resolved,
     parent = validation$continuation_history,
