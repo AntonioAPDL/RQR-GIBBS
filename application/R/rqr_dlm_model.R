@@ -249,7 +249,9 @@ rqr_discount_matrix <- function(df, dim.df, p = sum(dim.df)) {
 #' @param reference_variance Positive scalar or length-`n_time` vector.
 #' @param reference_design Optional `p x n_time` pseudo-design; defaults to FF.
 #' @param numerical_policy Either `"fail"` or `"record_repair"`.
-#' @param jitter_ladder Relative jitter ladder used only under record-repair.
+#' @param jitter_ladder Matrix-relative jitter ladder used only under
+#'   record-repair. An exactly zero matrix uses a separately recorded absolute
+#'   fallback.
 #' @return An evolution specification containing a fixed `W` cube and a
 #'   construction audit.
 #' @export

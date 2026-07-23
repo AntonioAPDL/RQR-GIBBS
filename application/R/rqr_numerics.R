@@ -24,6 +24,7 @@
     stage = character(0), time = integer(0), strategy = character(0),
     jitter = numeric(0), relative_jitter = numeric(0),
     min_eigenvalue = numeric(0), matrix_scale = numeric(0),
+    jitter_scale = numeric(0), absolute_jitter_fallback = logical(0),
     clamped_eigenvalues = integer(0),
     stringsAsFactors = FALSE
   )
@@ -42,6 +43,8 @@
     relative_jitter = as.numeric(info$relative_jitter %||% NA_real_),
     min_eigenvalue = as.numeric(info$min_eigenvalue %||% NA_real_),
     matrix_scale = as.numeric(info$matrix_scale %||% NA_real_),
+    jitter_scale = as.numeric(info$jitter_scale %||% info$matrix_scale %||% NA_real_),
+    absolute_jitter_fallback = isTRUE(info$absolute_jitter_fallback %||% FALSE),
     clamped_eigenvalues = clamped,
     stringsAsFactors = FALSE
   ))
@@ -53,8 +56,12 @@
   if (nrow(x) != ncol(x) || any(!is.finite(x))) {
     stop(sprintf("%s must be a finite square matrix.", name), call. = FALSE)
   }
-  scale <- max(1, max(abs(x)))
-  if (max(abs(x - t(x))) > tolerance * scale) {
+  scale <- max(abs(x))
+  asymmetry <- max(abs(x - t(x)))
+  if (scale > 0 && asymmetry / scale > tolerance) {
+    stop(sprintf("%s is not symmetric.", name), call. = FALSE)
+  }
+  if (scale == 0 && asymmetry > 0) {
     stop(sprintf("%s is not symmetric.", name), call. = FALSE)
   }
   .rqr_symmetrize(x)
@@ -70,9 +77,10 @@
       sprintf("%s slice %d", name, tt),
       tolerance
     )
-    scale <- max(1, max(abs(current)))
-    minimum <- min(eigen(current, symmetric = TRUE, only.values = TRUE)$values)
-    if (minimum < -tolerance * scale) {
+    eigenvalues <- eigen(current, symmetric = TRUE, only.values = TRUE)$values
+    eigen_scale <- max(abs(eigenvalues))
+    minimum <- min(eigenvalues)
+    if (eigen_scale > 0 && minimum / eigen_scale < -tolerance) {
       stop(sprintf("%s slice %d is materially indefinite.", name, tt), call. = FALSE)
     }
     x[, , tt] <- current
@@ -85,21 +93,26 @@
   if (nrow(x) != ncol(x) || any(!is.finite(x))) {
     stop("Matrix must be finite and square.", call. = FALSE)
   }
-  scale <- max(1, max(abs(diag(x))))
+  matrix_scale <- max(abs(x))
+  absolute_fallback <- matrix_scale == 0
+  jitter_scale <- if (absolute_fallback) 1 else matrix_scale
   ladder <- unique(as.numeric(jitter_ladder))
   ladder <- ladder[is.finite(ladder) & ladder >= 0]
   min_eigenvalue <- NA_real_
   for (jj in ladder) {
-    candidate <- if (jj == 0) x else x + diag(jj * scale, nrow(x))
+    candidate <- if (jj == 0) x else x + diag(jj * jitter_scale, nrow(x))
     ans <- tryCatch(chol(candidate), error = function(e) NULL)
     if (!is.null(ans)) {
       if (jj > 0 && is.na(min_eigenvalue)) {
         min_eigenvalue <- min(eigen(x, symmetric = TRUE, only.values = TRUE)$values)
       }
       return(list(
-        chol = ans, matrix = candidate, jitter = jj * scale,
-        relative_jitter = jj, min_eigenvalue = min_eigenvalue,
-        matrix_scale = scale
+        chol = ans, matrix = candidate, jitter = jj * jitter_scale,
+        relative_jitter = if (absolute_fallback && jj > 0) NA_real_ else jj,
+        min_eigenvalue = min_eigenvalue,
+        matrix_scale = matrix_scale,
+        jitter_scale = jitter_scale,
+        absolute_jitter_fallback = absolute_fallback && jj > 0
       ))
     }
   }
@@ -122,7 +135,9 @@
     relative_jitter = fac$relative_jitter,
     min_eigenvalue = fac$min_eigenvalue,
     clamped_eigenvalues = 0L,
-    matrix_scale = fac$matrix_scale
+    matrix_scale = fac$matrix_scale,
+    jitter_scale = fac$jitter_scale,
+    absolute_jitter_fallback = fac$absolute_jitter_fallback
   ))
 }
 
@@ -142,14 +157,17 @@
       info = list(
         strategy = "cholesky", jitter = 0, relative_jitter = 0,
         min_eigenvalue = NA_real_, clamped_eigenvalues = 0L,
-        matrix_scale = max(1, max(abs(covariance)))
+        matrix_scale = max(abs(covariance)),
+        jitter_scale = max(abs(covariance)),
+        absolute_jitter_fallback = FALSE
       )
     ))
   }
   numerical_policy <- .rqr_numerical_policy(numerical_policy)
   ee <- eigen(covariance, symmetric = TRUE)
-  scale <- max(1, max(abs(ee$values)))
-  if (min(ee$values) >= -1e-10 * scale) {
+  scale <- max(abs(ee$values))
+  near_psd <- scale == 0 || min(ee$values) / scale >= -1e-10
+  if (near_psd) {
     if (identical(numerical_policy, "fail") && any(ee$values < 0)) {
       stop(
         paste(
@@ -167,7 +185,9 @@
         jitter = 0, relative_jitter = 0,
         min_eigenvalue = min(ee$values),
         clamped_eigenvalues = sum(ee$values < 0),
-        matrix_scale = scale
+        matrix_scale = max(abs(covariance)),
+        jitter_scale = max(abs(covariance)),
+        absolute_jitter_fallback = FALSE
       )
     ))
   }
@@ -188,7 +208,9 @@
       relative_jitter = fac$relative_jitter,
       min_eigenvalue = fac$min_eigenvalue,
       clamped_eigenvalues = 0L,
-      matrix_scale = fac$matrix_scale
+      matrix_scale = fac$matrix_scale,
+      jitter_scale = fac$jitter_scale,
+      absolute_jitter_fallback = fac$absolute_jitter_fallback
     )
   )
 }

@@ -261,7 +261,8 @@ layer from silently redefining the statistical target.
 8. Fit objects distinguish unavailable Git state from a clean checkout and
    record schema, Git/package/R/compiler/BLAS/LAPACK provenance, RNG state,
    complete data/model/target/evolution and checkpoint digests, required
-   external-repository states, and numerical-repair status.
+   external-repository states, runtime-package source attestations, requested
+   and resolved backends, and cumulative numerical-repair status.
 9. Promotion-grade fixtures use the fail-fast numerical policy, record zero
    repairs, and match clean primary and required external checkouts to the
    exact commits declared in the run manifest. An environment override is
@@ -272,8 +273,9 @@ layer from silently redefining the statistical target.
 
 The adaptive conditional-discount question is resolved negatively for the
 advertised simple kernels. The exact shared `component_scale` mode implements
-the recommended coherent alternative. Output-4 continuation and provenance
-gaps are closed through complete contract digests, external exdqlm enforcement,
-strict checkpoint integrity, and durable portability metadata. A bounded pilot
-remains gated on the complete validation matrix and frozen manifest rather than
-on additional production-scale implementation.
+the recommended coherent alternative. Output-5 closes the remaining
+continuation, runtime-source, and matrix-scale gaps through cumulative repair
+history, resolved-backend checks, direct or attested exdqlm namespace binding,
+and relative symmetry/definiteness validation. A bounded pilot remains gated
+on the complete validation matrix and frozen manifest rather than on additional
+production-scale implementation.

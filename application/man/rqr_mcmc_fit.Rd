@@ -55,8 +55,9 @@ precision factorizations.}
 
 \item{provenance_control}{Optional primary-repository provenance plus named
 `external_repositories`. Each repository specification contains
-`repo_root` and a complete 40-character `expected_git_commit`. RHS fits
-require the pinned exdqlm repository for promotion eligibility.}
+`repo_root`, a complete 40-character `expected_git_commit`, and optional
+runtime-package attestation metadata. RHS fits require the executing
+exdqlm namespace to match the pinned source for promotion eligibility.}
 
 \item{mcmc_control}{Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
 `verbose`, `progress_every`, `precision_beta`, and `store_latent_draws`.}

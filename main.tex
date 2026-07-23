@@ -371,8 +371,11 @@ have a declared joint target, but they are target-and-numerical eligible only
 when every Gaussian factorization succeeds without repair. The default policy
 rejects jitter and negative-eigenvalue projection. An audit policy may instead
 record the matrix role, time, root and iteration where applicable, jitter, and
-eigenvalue diagnostics for every repair. Promotion additionally requires a
-clean checkout at an explicitly expected repository commit.
+eigenvalue diagnostics for every repair. Symmetry and definiteness tolerances
+are relative to the actual matrix scale; an exactly zero matrix uses a
+separately recorded absolute jitter fallback only under the audit policy.
+Promotion additionally requires a clean checkout at an explicitly expected
+repository commit.
 
 \section{Validation Plan}
 \label{sec:validation}
@@ -397,8 +400,13 @@ status separately, together with package provenance, data and matrix digests,
 numerical policy, RNG state, and a complete continuation checkpoint under a
 versioned schema. Continuation verifies schema, data and model digests, and the
 recorded numerical environment before claiming bitwise equivalence. Full state
-paths are opt-in; terminal states and component-scale draws are retained for
-root forecasting with explicit future covariance templates.
+paths are opt-in. Repair counts and numerical eligibility are inherited across
+all continuation segments, and requested and resolved FFBS backends are
+recorded separately. When an external package constructs the design or prior,
+its executing namespace must be bound to the pinned source tree rather than
+merely accompanied by a separate clean checkout. Terminal states and
+component-scale draws are retained for root forecasting with explicit future
+covariance templates.
 
 \section{Discussion}
 \label{sec:discussion}

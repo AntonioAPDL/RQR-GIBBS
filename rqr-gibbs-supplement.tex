@@ -345,6 +345,10 @@ alteration. When a backward prior
 covariance is repaired, the repaired matrix is used consistently in the gain,
 smoothing covariance, and path-draw covariance. Fixed-target fits with nonzero
 repair counts are not eligible for promotion-grade exact-target analyses.
+Symmetry and eigenvalue materiality are evaluated relative to the actual
+matrix scale, including for matrices with entries below one. Jitter is likewise
+matrix-relative except for an exactly zero matrix, for which use of the
+declared ladder is recorded as an absolute fallback.
 
 \section{Component-Specific Discount Factors}
 
@@ -477,12 +481,16 @@ configurations, seeds, package versions, and repository commits. Fit objects
 record data, complete model/target/evolution, and checkpoint digests; RNG state;
 compiler and BLAS/LAPACK provenance; required external-repository states; and a
 versioned schema. Promotion requires clean detected checkouts matching every
-exact commit declared in the run manifest. Exact continuation stops on schema,
-checkpoint, data, model, target, or evolution mismatch and, by default, on
-package, R, numerical-library, dependency, or source-commit mismatch. An
-explicit portability override is persisted and removes reproducibility and
-promotion eligibility. Heavy state draws and fitted objects remain in ignored
-local output directories.
+exact commit declared in the run manifest. If an external package contributes
+executed code, promotion also requires a direct source-path match or a verified
+installed-tree attestation linking its namespace to that checkout. Exact
+continuation stops on schema, checkpoint, data, model, target, or evolution
+mismatch and, by default, on package, R, numerical-library, dependency, or
+source-commit mismatch. An explicit portability override is persisted and
+removes reproducibility and promotion eligibility. Repair counts, numerical
+exactness, and parent promotion status are cumulative across continuation
+segments; requested and resolved FFBS backends are compared separately. Heavy
+state draws and fitted objects remain in ignored local output directories.
 
 Held-out RQR loss, empirical coverage error, and width at comparable coverage
 are primary. Oracle endpoint recovery is primary when the population RQR roots

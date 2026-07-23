@@ -26,8 +26,9 @@
 #'   precision factorizations.
 #' @param provenance_control Optional primary-repository provenance plus named
 #'   `external_repositories`. Each repository specification contains
-#'   `repo_root` and a complete 40-character `expected_git_commit`. RHS fits
-#'   require the pinned exdqlm repository for promotion eligibility.
+#'   `repo_root`, a complete 40-character `expected_git_commit`, and optional
+#'   runtime-package attestation metadata. RHS fits require the executing
+#'   exdqlm namespace to match the pinned source for promotion eligibility.
 #' @param mcmc_control Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
 #'   `verbose`, `progress_every`, `precision_beta`, and `store_latent_draws`.
 #' @param init Optional initial values.
@@ -85,7 +86,8 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   if (identical(beta_prior_type, "rhs_ns")) {
     .qdesn_assert_rhs_prior_obj_intercept_policy(beta_prior_obj, context = "rqr_mcmc_fit")
     provenance_control <- .rqr_require_external_repository(
-      provenance_control, "exdqlm", .rqr_pinned_exdqlm_commit()
+      provenance_control, "exdqlm", .rqr_pinned_exdqlm_commit(),
+      runtime_package = "exdqlm"
     )
   }
 

@@ -15,6 +15,8 @@ struct SpdResult {
   double relative_jitter;
   double min_eigenvalue;
   double matrix_scale;
+  double jitter_scale;
+  bool absolute_jitter_fallback;
 };
 
 struct DrawResult {
@@ -25,6 +27,8 @@ struct DrawResult {
   int clamped_eigenvalues;
   double min_eigenvalue;
   double matrix_scale;
+  double jitter_scale;
+  bool absolute_jitter_fallback;
 };
 
 arma::mat symm(const arma::mat& x) {
@@ -33,10 +37,14 @@ arma::mat symm(const arma::mat& x) {
 
 SpdResult spd_factor(const arma::mat& input, const arma::vec& ladder) {
   arma::mat base = symm(input);
-  const double scale = std::max(1.0, arma::abs(base.diag()).max());
+  const double matrix_scale = arma::abs(base).max();
+  const bool absolute_fallback = matrix_scale == 0.0;
+  const double jitter_scale = absolute_fallback ? 1.0 : matrix_scale;
   arma::mat L;
   if (arma::chol(L, base, "lower")) {
-    return SpdResult{base, L, 0.0, 0.0, NA_REAL, scale};
+    return SpdResult{
+      base, L, 0.0, 0.0, NA_REAL, matrix_scale, jitter_scale, false
+    };
   }
   arma::vec eigenvalues;
   if (!arma::eig_sym(eigenvalues, base)) {
@@ -47,9 +55,13 @@ SpdResult spd_factor(const arma::mat& input, const arma::vec& ladder) {
     const double relative = ladder(j);
     if (!std::isfinite(relative) || relative <= 0.0) continue;
     arma::mat candidate = base;
-    candidate.diag() += relative * scale;
+    candidate.diag() += relative * jitter_scale;
     if (arma::chol(L, candidate, "lower")) {
-      return SpdResult{candidate, L, relative * scale, relative, min_eigenvalue, scale};
+      return SpdResult{
+        candidate, L, relative * jitter_scale,
+        absolute_fallback ? NA_REAL : relative,
+        min_eigenvalue, matrix_scale, jitter_scale, absolute_fallback
+      };
     }
   }
   Rcpp::stop("Positive-definite Cholesky factorization failed after the declared jitter ladder.");
@@ -64,12 +76,12 @@ arma::mat inv_from_lower(const arma::mat& L) {
 DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
                     const arma::vec& ladder, const bool allow_repair) {
   arma::mat cov = symm(covariance);
-  const double matrix_scale = std::max(1.0, arma::abs(cov).max());
+  const double matrix_scale = arma::abs(cov).max();
   arma::mat L;
   if (arma::chol(L, cov, "lower")) {
     return DrawResult{
       mean + L * arma::randn<arma::vec>(mean.n_elem), 0.0, 0.0,
-      false, 0, NA_REAL, matrix_scale
+      false, 0, NA_REAL, matrix_scale, matrix_scale, false
     };
   }
   arma::vec values;
@@ -77,8 +89,9 @@ DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
   if (!arma::eig_sym(values, vectors, cov)) {
     Rcpp::stop("Symmetric eigendecomposition failed for a Gaussian covariance.");
   }
-  const double scale = std::max(1.0, arma::abs(values).max());
-  if (values.min() >= -1e-10 * scale) {
+  const double scale = arma::abs(values).max();
+  const bool near_psd = scale == 0.0 || values.min() / scale >= -1e-10;
+  if (near_psd) {
     const double min_eigenvalue = values.min();
     if (!allow_repair && arma::any(values < 0.0)) {
       Rcpp::stop(
@@ -92,7 +105,8 @@ DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
     }
     return DrawResult{
       mean + vectors * (arma::sqrt(values) % arma::randn<arma::vec>(mean.n_elem)),
-      0.0, 0.0, true, clamped, min_eigenvalue, matrix_scale
+      0.0, 0.0, true, clamped, min_eigenvalue, matrix_scale,
+      matrix_scale, false
     };
   }
   if (!allow_repair) {
@@ -104,7 +118,8 @@ DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
   SpdResult fac = spd_factor(cov, ladder);
   return DrawResult{
     mean + fac.chol_lower * arma::randn<arma::vec>(mean.n_elem),
-    fac.jitter, fac.relative_jitter, false, 0, fac.min_eigenvalue, fac.matrix_scale
+    fac.jitter, fac.relative_jitter, false, 0, fac.min_eigenvalue,
+    fac.matrix_scale, fac.jitter_scale, fac.absolute_jitter_fallback
   };
 }
 
@@ -129,6 +144,9 @@ Rcpp::List rqr_mvn_draw_cpp(const arma::vec& mean,
       Rcpp::Named("relative_jitter") = result.relative_jitter,
       Rcpp::Named("min_eigenvalue") = result.min_eigenvalue,
       Rcpp::Named("matrix_scale") = result.matrix_scale,
+      Rcpp::Named("jitter_scale") = result.jitter_scale,
+      Rcpp::Named("absolute_jitter_fallback") =
+        result.absolute_jitter_fallback,
       Rcpp::Named("clamped_eigenvalues") = result.clamped_eigenvalues
     )
   );
@@ -181,11 +199,15 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
   std::vector<double> repair_relative_jitter;
   std::vector<double> repair_min_eigenvalue;
   std::vector<double> repair_matrix_scale;
+  std::vector<double> repair_jitter_scale;
+  std::vector<bool> repair_absolute_jitter_fallback;
   std::vector<int> repair_clamped;
   auto record_repair = [&](const std::string& stage, const int time,
                            const std::string& strategy, const double jitter,
                            const double relative_jitter, const double min_eigenvalue,
-                           const double matrix_scale, const int clamped) {
+                           const double matrix_scale, const double jitter_scale,
+                           const bool absolute_jitter_fallback,
+                           const int clamped) {
     if (jitter <= 0.0 && clamped <= 0) return;
     repair_stage.push_back(stage);
     repair_time.push_back(time);
@@ -194,6 +216,8 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
     repair_relative_jitter.push_back(relative_jitter);
     repair_min_eigenvalue.push_back(min_eigenvalue);
     repair_matrix_scale.push_back(matrix_scale);
+    repair_jitter_scale.push_back(jitter_scale);
+    repair_absolute_jitter_fallback.push_back(absolute_jitter_fallback);
     repair_clamped.push_back(clamped);
   };
 
@@ -223,7 +247,8 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
     if (cf.jitter > 0.0) {
       ++jitter_count; max_jitter = std::max(max_jitter, cf.jitter);
       record_repair("filter_covariance", t + 1, "cholesky_jitter", cf.jitter,
-                    cf.relative_jitter, cf.min_eigenvalue, cf.matrix_scale, 0);
+                    cf.relative_jitter, cf.min_eigenvalue, cf.matrix_scale,
+                    cf.jitter_scale, cf.absolute_jitter_fallback, 0);
     }
     mprev = m.col(t);
     Cprev = C.slice(t);
@@ -239,7 +264,8 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
         ++jitter_count; max_jitter = std::max(max_jitter, rf.jitter);
         record_repair("backward_smoothing_prior_covariance", t + 2,
                       "cholesky_jitter", rf.jitter, rf.relative_jitter,
-                      rf.min_eigenvalue, rf.matrix_scale, 0);
+                      rf.min_eigenvalue, rf.matrix_scale, rf.jitter_scale,
+                      rf.absolute_jitter_fallback, 0);
       }
       arma::mat B = C.slice(t) * GG.slice(t + 1).t() * inv_from_lower(rf.chol_lower);
       sm.col(t) = m.col(t) + B * (sm.col(t + 1) - a.col(t + 1));
@@ -260,6 +286,7 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
                   terminal.jitter > 0.0 ? "cholesky_jitter" : "eigen_clamp",
                   terminal.jitter, terminal.relative_jitter,
                   terminal.min_eigenvalue, terminal.matrix_scale,
+                  terminal.jitter_scale, terminal.absolute_jitter_fallback,
                   terminal.clamped_eigenvalues);
     if (T > 1) {
       for (arma::sword ti = static_cast<arma::sword>(T) - 2; ti >= 0; --ti) {
@@ -269,7 +296,8 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
           ++jitter_count; max_jitter = std::max(max_jitter, rf.jitter);
           record_repair("backward_sampling_prior_covariance", t + 2,
                         "cholesky_jitter", rf.jitter, rf.relative_jitter,
-                        rf.min_eigenvalue, rf.matrix_scale, 0);
+                        rf.min_eigenvalue, rf.matrix_scale, rf.jitter_scale,
+                        rf.absolute_jitter_fallback, 0);
         }
         arma::mat B = C.slice(t) * GG.slice(t + 1).t() * inv_from_lower(rf.chol_lower);
         arma::vec h = m.col(t) + B * (path.col(t + 1) - a.col(t + 1));
@@ -282,6 +310,7 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
                       state.jitter > 0.0 ? "cholesky_jitter" : "eigen_clamp",
                       state.jitter, state.relative_jitter,
                       state.min_eigenvalue, state.matrix_scale,
+                      state.jitter_scale, state.absolute_jitter_fallback,
                       state.clamped_eigenvalues);
       }
     }
@@ -317,6 +346,9 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
         Rcpp::Named("relative_jitter") = repair_relative_jitter,
         Rcpp::Named("min_eigenvalue") = repair_min_eigenvalue,
         Rcpp::Named("matrix_scale") = repair_matrix_scale,
+        Rcpp::Named("jitter_scale") = repair_jitter_scale,
+        Rcpp::Named("absolute_jitter_fallback") =
+          repair_absolute_jitter_fallback,
         Rcpp::Named("clamped_eigenvalues") = repair_clamped,
         Rcpp::Named("stringsAsFactors") = false
       ),

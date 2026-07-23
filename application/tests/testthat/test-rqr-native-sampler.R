@@ -305,7 +305,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.2.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.3.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
@@ -321,7 +321,9 @@ test_that("DLM checkpoints continue with the same RNG stream", {
   expect_equal(first$provenance$initial_seed, 1205L)
   expect_identical(first$model_spec$loss_name, "rqr_residual_product_check_loss")
   expect_true(second$continuation_contract$continued_from_checkpoint)
-  expect_true(second$continuation_contract$bitwise_continuation_claim)
+  expect_false(second$continuation_contract$bitwise_continuation_claim)
+  expect_identical(second$provenance$backend_requested, "cpp")
+  expect_identical(second$provenance$backend_resolved, "cpp")
   expect_false(second$continuation_contract$environment_override_used)
   expect_identical(
     second$continuation_contract$parent_checkpoint_digest,
@@ -349,6 +351,67 @@ test_that("DLM checkpoints continue with the same RNG stream", {
                 portable$continuation_contract$environment_mismatches)
   expect_false(portable$model_spec$reproducibility_eligible)
   expect_false(portable$model_spec$promotion_eligible)
+})
+
+test_that("continuation inherits numerical and source history cumulatively", {
+  skip_if(Sys.which("git") == "", "git is required for provenance fixtures")
+  primary <- tempfile("rqr-primary-")
+  dir.create(primary)
+  system2("git", c("-C", primary, "init", "--quiet"))
+  system2("git", c("-C", primary, "config", "user.email", "test@example.org"))
+  system2("git", c("-C", primary, "config", "user.name", "RQR Test"))
+  writeLines("fixture", file.path(primary, "fixture.txt"))
+  system2("git", c("-C", primary, "add", "fixture.txt"))
+  system2("git", c("-C", primary, "commit", "--quiet", "-m", "fixture"))
+  commit <- trimws(system2(
+    "git", c("-C", primary, "rev-parse", "HEAD"), stdout = TRUE
+  )[1L])
+
+  fit <- rqr_dlm_fit(
+    y = c(-1, -0.5, 0, 0.5, 1),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "fixed_W",
+    W = 0.05,
+    numerical_policy = "fail",
+    provenance_control = list(
+      repo_root = primary, expected_git_commit = commit
+    ),
+    mcmc_control = list(
+      n_burn = 0, n_mcmc = 2, seed = 1220, backend = "auto"
+    )
+  )
+  expect_true(fit$model_spec$promotion_eligible)
+  expect_identical(fit$provenance$backend_requested, "auto")
+  expect_identical(fit$provenance$backend_resolved, "cpp")
+
+  repaired_parent <- fit
+  repaired_parent$model_spec$target_numerical_eligible <- FALSE
+  repaired_parent$model_spec$numerically_exact_transition <- FALSE
+  repaired_parent$model_spec$chain_history_numerically_exact <- FALSE
+  repaired_parent$model_spec$promotion_eligible <- FALSE
+  repaired_parent$model_spec$numerical_repair_count <- 1L
+  repaired_parent$model_spec$cumulative_numerical_repair_count <- 1L
+  child <- rqr_dlm_continue(repaired_parent, n_mcmc = 1)
+  expect_false(child$model_spec$chain_history_numerically_exact)
+  expect_false(child$model_spec$target_numerical_eligible)
+  expect_false(child$model_spec$promotion_eligible)
+  expect_equal(child$model_spec$cumulative_numerical_repair_count, 1L)
+  expect_false(child$continuation_contract$parent_promotion_eligible)
+
+  altered_source <- fit
+  altered_source$provenance$git_status_available <- FALSE
+  expect_error(
+    rqr_dlm_continue(altered_source, n_mcmc = 1),
+    "environment differs"
+  )
+
+  altered_backend <- fit
+  altered_backend$provenance$backend_resolved <- "R"
+  expect_error(
+    rqr_dlm_continue(altered_backend, n_mcmc = 1),
+    "backend_resolved"
+  )
 })
 
 test_that("DLM continuation rejects every target and checkpoint mutation", {
@@ -576,6 +639,80 @@ test_that("strict provenance includes toolchain and required external repositori
     ),
     "pinned commit"
   )
+})
+
+test_that("runtime package provenance binds code to source or an attestation", {
+  skip_if(Sys.which("git") == "", "git is required for provenance fixtures")
+  source <- tempfile("runtime-source-")
+  dir.create(source)
+  writeLines(
+    c(
+      "Package: rqrgibbs",
+      paste0("Version: ", as.character(utils::packageVersion("rqrgibbs")))
+    ),
+    file.path(source, "DESCRIPTION")
+  )
+  system2("git", c("-C", source, "init", "--quiet"))
+  system2("git", c("-C", source, "config", "user.email", "test@example.org"))
+  system2("git", c("-C", source, "config", "user.name", "RQR Test"))
+  system2("git", c("-C", source, "add", "DESCRIPTION"))
+  system2("git", c("-C", source, "commit", "--quiet", "-m", "fixture"))
+  commit <- tolower(trimws(system2(
+    "git", c("-C", source, "rev-parse", "HEAD"), stdout = TRUE
+  )[1L]))
+  tree <- tolower(trimws(system2(
+    "git", c("-C", source, "rev-parse", "HEAD^{tree}"), stdout = TRUE
+  )[1L]))
+
+  mismatch <- rqrgibbs:::.rqr_repository_provenance(list(
+    repo_root = source,
+    expected_git_commit = commit,
+    runtime_package = "rqrgibbs"
+  ))
+  expect_true(mismatch$provenance_complete)
+  expect_false(mismatch$runtime_direct_source_path_match)
+  expect_false(mismatch$runtime_source_match)
+  expect_false(mismatch$reproducibility_eligible)
+
+  runtime_path <- normalizePath(
+    getNamespaceInfo(asNamespace("rqrgibbs"), "path"),
+    winslash = "/", mustWork = TRUE
+  )
+  attestation_path <- tempfile(fileext = ".rds")
+  attestation <- list(
+    schema_version = "rqrgibbs_runtime_attestation/1.0.0",
+    package = "rqrgibbs",
+    package_version = as.character(utils::packageVersion("rqrgibbs")),
+    source_commit = commit,
+    source_tree_digest = tree,
+    source_archive_sha256 = paste(rep("a", 64), collapse = ""),
+    runtime_package_path = runtime_path,
+    runtime_package_tree_digest =
+      rqrgibbs:::.rqr_directory_digest(runtime_path)
+  )
+  saveRDS(attestation, attestation_path)
+  matched <- rqrgibbs:::.rqr_repository_provenance(list(
+    repo_root = source,
+    expected_git_commit = commit,
+    runtime_package = "rqrgibbs",
+    runtime_attestation = attestation_path
+  ))
+  expect_true(matched$runtime_attestation_available)
+  expect_true(matched$runtime_attestation_match)
+  expect_true(matched$runtime_source_match)
+  expect_true(matched$reproducibility_eligible)
+
+  attestation$runtime_package_tree_digest <- paste(rep("0", 64), collapse = "")
+  saveRDS(attestation, attestation_path)
+  tampered <- rqrgibbs:::.rqr_repository_provenance(list(
+    repo_root = source,
+    expected_git_commit = commit,
+    runtime_package = "rqrgibbs",
+    runtime_attestation = attestation_path
+  ))
+  expect_false(tampered$runtime_attestation_match)
+  expect_false(tampered$runtime_source_match)
+  expect_false(tampered$reproducibility_eligible)
 })
 
 test_that("DESN forecast horizon rejects fractional values", {

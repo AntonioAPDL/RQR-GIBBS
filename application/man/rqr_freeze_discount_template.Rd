@@ -28,7 +28,9 @@ rqr_freeze_discount_template(
 
 \item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
 
-\item{jitter_ladder}{Relative jitter ladder used only under record-repair.}
+\item{jitter_ladder}{Matrix-relative jitter ladder used only under
+record-repair. An exactly zero matrix uses a separately recorded absolute
+fallback.}
 }
 \value{
 An evolution specification containing a fixed `W` cube and a

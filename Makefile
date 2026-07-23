@@ -3,7 +3,7 @@ PDFLATEX ?= pdflatex
 BIBTEX ?= bibtex
 LATEXMK ?= latexmk
 
-.PHONY: pdf supplement all-pdf smoke package-install test-native package-check test-exdqlm-rqr literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf smoke package-install prepare-exdqlm-runtime test-native package-check test-exdqlm-rqr bounded-pilot literature-manifest clean-tex
 
 pdf:
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
@@ -33,15 +33,21 @@ smoke:
 package-install:
 	R CMD INSTALL --preclean application
 
+prepare-exdqlm-runtime: package-install
+	$(R) application/scripts/04_prepare_pinned_exdqlm_runtime.R
+
 test-native: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "native", reporter = "summary")'
 
 package-check:
 	R CMD build application
-	R CMD check --no-manual rqrgibbs_0.1.0.9003.tar.gz
+	R CMD check --no-manual rqrgibbs_0.1.0.9004.tar.gz
 
 test-exdqlm-rqr:
 	$(R) application/scripts/02_smoke_rqr_exdqlm_branch.R
+
+bounded-pilot: package-install
+	$(R) application/scripts/05_run_rqr_bounded_pilot.R
 
 literature-manifest:
 	$(R) application/scripts/01_build_literature_manifest.R

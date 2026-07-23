@@ -32,7 +32,8 @@ rqr_ffbs_sample(
 
 \item{backend}{One of `"cpp"`, `"R"`, or `"auto"`.}
 
-\item{jitter_ladder}{Declared relative Cholesky jitter ladder.}
+\item{jitter_ladder}{Declared matrix-relative Cholesky jitter ladder. An
+exactly zero matrix uses a separately recorded absolute fallback.}
 
 \item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
 }

@@ -108,7 +108,8 @@
   current$root <- as.character(root)
   current <- current[, c(
     "iteration", "root", "stage", "time", "strategy", "jitter",
-    "relative_jitter", "min_eigenvalue", "matrix_scale", "clamped_eigenvalues"
+    "relative_jitter", "min_eigenvalue", "matrix_scale", "jitter_scale",
+    "absolute_jitter_fallback", "clamped_eigenvalues"
   )]
   if (is.null(records)) current else rbind(records, current)
 }
@@ -224,8 +225,9 @@
 #' @param lambda_prior Gamma shape--rate prior without a custom power field.
 #' @param numerical_policy Either `"fail"` or `"record_repair"`.
 #' @param provenance_control Optional primary-repository provenance plus named
-#'   `external_repositories`. Repository specifications contain `repo_root` and
-#'   a complete 40-character `expected_git_commit`.
+#'   `external_repositories`. Repository specifications contain `repo_root`, a
+#'   complete 40-character `expected_git_commit`, and optional runtime package
+#'   and attestation fields.
 #' @param mcmc_control Iteration, seed, storage, backend, progress, and jitter
 #'   controls.
 #' @param init Optional initial states, latent scales, lambda, evolution scales,
@@ -315,7 +317,10 @@ rqr_dlm_fit <- function(
   } else {
     .rqr_restore_rng(init$rng_state %||% NULL)
   }
-  backend <- match.arg(mcmc_control$backend %||% "cpp", c("cpp", "R", "auto"))
+  backend_requested <- match.arg(
+    mcmc_control$backend %||% "cpp", c("cpp", "R", "auto")
+  )
+  backend_resolved <- .rqr_resolve_ffbs_backend(backend_requested)
   store_state_draws <- isTRUE(mcmc_control$store_state_draws %||% FALSE)
   store_latent_draws <- isTRUE(mcmc_control$store_latent_draws %||% FALSE)
   verbose <- isTRUE(mcmc_control$verbose %||% FALSE)
@@ -400,7 +405,7 @@ rqr_dlm_fit <- function(
     z1[!observed] <- NA_real_
     draw1 <- rqr_ffbs_sample(
       z1, H1, obs_variance, expanded$GG, expanded$m0, expanded$C0,
-      evolution_iter, backend = backend, jitter_ladder = jitter_ladder,
+      evolution_iter, backend = backend_resolved, jitter_ladder = jitter_ladder,
       numerical_policy = numerical_policy
     )
     theta1 <- draw1$path
@@ -418,7 +423,7 @@ rqr_dlm_fit <- function(
     z2[!observed] <- NA_real_
     draw2 <- rqr_ffbs_sample(
       z2, H2, obs_variance, expanded$GG, expanded$m0, expanded$C0,
-      evolution_iter, backend = backend, jitter_ladder = jitter_ladder,
+      evolution_iter, backend = backend_resolved, jitter_ladder = jitter_ladder,
       numerical_policy = numerical_policy
     )
     theta2 <- draw2$path
@@ -489,10 +494,33 @@ rqr_dlm_fit <- function(
   lower <- pmin(eta1_draws, eta2_draws)
   upper <- pmax(eta1_draws, eta2_draws)
   lambda_summary <- .rqr_lambda_summary(lambda_draws)
-  template_repairs <- as.integer(evolution$construction_audit$repair_count %||% 0L)
+  continued_from_checkpoint <- isTRUE(init$continued_from_checkpoint %||% FALSE)
+  template_repairs <- if (continued_from_checkpoint) {
+    0L
+  } else {
+    as.integer(evolution$construction_audit$repair_count %||% 0L)
+  }
   mcmc_repairs <- if (is.null(repair_records)) 0L else nrow(repair_records)
-  total_repairs <- template_repairs + mcmc_repairs
-  numerical_exact <- total_repairs == 0L
+  segment_repairs <- template_repairs + mcmc_repairs
+  numerical_exact <- segment_repairs == 0L
+  parent_cumulative_repairs <- as.integer(
+    init$parent_cumulative_numerical_repair_count %||% 0L
+  )
+  if (length(parent_cumulative_repairs) != 1L ||
+      is.na(parent_cumulative_repairs) || parent_cumulative_repairs < 0L) {
+    stop("Parent cumulative repair count is invalid.", call. = FALSE)
+  }
+  cumulative_repairs <- parent_cumulative_repairs + segment_repairs
+  parent_chain_numerically_exact <- isTRUE(
+    init$parent_chain_history_numerically_exact %||% TRUE
+  )
+  chain_history_numerically_exact <-
+    parent_chain_numerically_exact && numerical_exact
+  parent_promotion_eligible <- if (continued_from_checkpoint) {
+    isTRUE(init$parent_promotion_eligible)
+  } else {
+    TRUE
+  }
   mathematical_exact <- isTRUE(evolution$exact_joint_target)
   rng_state <- .rqr_rng_state()
   completed_offset <- as.integer(init$completed_iterations %||% 0L)
@@ -512,7 +540,9 @@ rqr_dlm_fit <- function(
     initial_seed = seed,
     repo_root = provenance_control$repo_root,
     expected_git_commit = provenance_control$expected_git_commit,
-    backend = backend,
+    backend = backend_resolved,
+    backend_requested = backend_requested,
+    backend_resolved = backend_resolved,
     objects = .rqr_dlm_provenance_objects(
       expanded, evolution, target_contract
     ),
@@ -520,7 +550,9 @@ rqr_dlm_fit <- function(
     required_external_repositories =
       provenance_control$required_external_repositories
   )
-  target_numerical_eligible <- mathematical_exact && numerical_exact
+  segment_target_numerical_eligible <- mathematical_exact && numerical_exact
+  target_numerical_eligible <- mathematical_exact &&
+    chain_history_numerically_exact
   checkpoint <- list(
     schema_version = provenance$schema_version,
     completed_iterations = completed_offset + total_iter,
@@ -562,11 +594,19 @@ rqr_dlm_fit <- function(
       target_contract = if (mathematical_exact) "fixed_joint_exact" else "working_sequential",
       exact_joint_target = mathematical_exact,
       numerical_policy = numerical_policy,
-      numerical_repair_count = total_repairs,
+      numerical_repair_count = segment_repairs,
+      cumulative_numerical_repair_count = cumulative_repairs,
       numerically_exact_transition = numerical_exact,
+      chain_history_numerically_exact = chain_history_numerically_exact,
+      parent_chain_history_numerically_exact =
+        parent_chain_numerically_exact,
+      segment_target_numerical_eligible =
+        segment_target_numerical_eligible,
       target_numerical_eligible = target_numerical_eligible,
       reproducibility_eligible = provenance$reproducibility_eligible,
-      promotion_eligible = target_numerical_eligible && provenance$reproducibility_eligible,
+      parent_promotion_eligible = parent_promotion_eligible,
+      promotion_eligible = target_numerical_eligible &&
+        parent_promotion_eligible && provenance$reproducibility_eligible,
       root_priors_exchangeable = TRUE,
       root_swap_move = TRUE
     ),
@@ -604,7 +644,10 @@ rqr_dlm_fit <- function(
     last = checkpoint,
     misc = list(
       n_burn = n_burn, n_mcmc = n_keep, thin = thin, seed = seed,
-      backend = backend, observed = observed, store_state_draws = store_state_draws,
+      backend = backend_resolved,
+      backend_requested = backend_requested,
+      backend_resolved = backend_resolved,
+      observed = observed, store_state_draws = store_state_draws,
       store_latent_draws = store_latent_draws, jitter_ladder = jitter_ladder,
       note = paste(
         "Root trajectory draws arise from a generalized-Bayes loss update;",
@@ -679,13 +722,17 @@ rqr_dlm_fit <- function(
   }
 
   stored_expected <- object$provenance$expected_git_commit %||% NA_character_
+  backend_requested <- object$misc$backend_requested %||% object$misc$backend
+  backend_resolved <- .rqr_resolve_ffbs_backend(backend_requested)
   current <- .rqr_provenance(
     data = list(y = as.numeric(object$y)),
     matrices = .rqr_dlm_provenance_matrices(expanded, object$evolution),
     numerical_policy = object$model_spec$numerical_policy,
     repo_root = object$provenance$repo_root %||% NA_character_,
     expected_git_commit = if (is.na(stored_expected)) NULL else stored_expected,
-    backend = object$misc$backend,
+    backend = backend_resolved,
+    backend_requested = backend_requested,
+    backend_resolved = backend_resolved,
     objects = .rqr_dlm_provenance_objects(
       expanded, object$evolution, current_target_contract
     ),
@@ -695,7 +742,10 @@ rqr_dlm_fit <- function(
   )
   compare_fields <- c(
     "package_version", "R_version", "platform", "compiler", "BLAS", "LAPACK",
-    "git_commit", "backend", "RNGkind"
+    "git_commit", "git_commit_available", "git_status_available", "git_dirty",
+    "expected_git_commit", "expected_git_commit_match",
+    "basic_provenance_complete", "provenance_complete",
+    "backend_requested", "backend_resolved", "RNGkind"
   )
   mismatches <- compare_fields[!vapply(compare_fields, function(field) {
     identical(object$provenance[[field]], current[[field]])
@@ -735,7 +785,9 @@ rqr_dlm_fit <- function(
 #' Continue an RQR-DLM chain from its exact checkpoint
 #'
 #' Continuation restores the full RNG state and every Markov state required by
-#' the native sampler. It returns only the newly requested draws.
+#' the native sampler. Numerical repair and promotion eligibility are inherited
+#' cumulatively, and the requested and resolved FFBS backends are checked
+#' separately. The function returns only the newly requested draws.
 #'
 #' @param object An `rqr_dlm_mcmc` fit.
 #' @param n_mcmc Positive number of additional retained draws.
@@ -788,6 +840,16 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
             NULL
           } else {
             x$expected_git_commit
+          },
+          runtime_package = if (is.na(x$runtime_package)) {
+            NULL
+          } else {
+            x$runtime_package
+          },
+          runtime_attestation = if (is.na(x$runtime_attestation)) {
+            NULL
+          } else {
+            x$runtime_attestation
           }
         )
       ),
@@ -796,7 +858,7 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
     ),
     mcmc_control = list(
       n_burn = 0L, n_mcmc = n_mcmc, thin = thin, seed = NULL,
-      backend = object$misc$backend,
+      backend = object$misc$backend_requested %||% object$misc$backend,
       store_state_draws = isTRUE(store_state_draws),
       store_latent_draws = isTRUE(store_latent_draws),
       jitter_ladder = object$misc$jitter_ladder
@@ -810,7 +872,16 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
       lambda = checkpoint$lambda,
       evolution_scale = checkpoint$evolution_scale,
       rng_state = checkpoint$rng_state,
-      completed_iterations = checkpoint$completed_iterations
+      completed_iterations = checkpoint$completed_iterations,
+      continued_from_checkpoint = TRUE,
+      parent_cumulative_numerical_repair_count =
+        object$model_spec$cumulative_numerical_repair_count %||%
+          object$model_spec$numerical_repair_count %||% 0L,
+      parent_chain_history_numerically_exact =
+        object$model_spec$chain_history_numerically_exact %||%
+          object$model_spec$numerically_exact_transition %||% FALSE,
+      parent_promotion_eligible =
+        object$model_spec$promotion_eligible %||% FALSE
     )
   )
   environment_override_used <- length(validation$environment_mismatches) > 0L
@@ -822,6 +893,25 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
   )
   inherited_reproducibility_eligible <- current_environment_eligible &&
     parent_reproducibility_eligible && !environment_override_used
+  parent_chain_history_numerically_exact <- isTRUE(
+    object$model_spec$chain_history_numerically_exact %||%
+      object$model_spec$numerically_exact_transition
+  )
+  parent_promotion_eligible <- isTRUE(object$model_spec$promotion_eligible)
+  parent_cumulative_repairs <- as.integer(
+    object$model_spec$cumulative_numerical_repair_count %||%
+      object$model_spec$numerical_repair_count %||% 0L
+  )
+  same_resolved_backend <- identical(
+    object$provenance$backend_resolved %||% object$provenance$backend,
+    validation$current_provenance$backend_resolved %||%
+      validation$current_provenance$backend
+  )
+  bitwise_continuation_claim <- !environment_override_used &&
+    !length(validation$environment_mismatches) &&
+    parent_reproducibility_eligible &&
+    current_environment_eligible &&
+    same_resolved_backend
   segment$continuation_contract <- list(
     continued_from_checkpoint = TRUE,
     parent_checkpoint_digest = validation$checkpoint_digest,
@@ -829,8 +919,25 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
     model_target_evolution_digests = validation$object_digests,
     environment_mismatches = validation$environment_mismatches,
     environment_override_used = environment_override_used,
-    bitwise_continuation_claim = !environment_override_used,
+    bitwise_continuation_claim = bitwise_continuation_claim,
     parent_reproducibility_eligible = parent_reproducibility_eligible,
+    parent_target_numerical_eligible =
+      isTRUE(object$model_spec$target_numerical_eligible),
+    parent_promotion_eligible = parent_promotion_eligible,
+    parent_chain_history_numerically_exact =
+      parent_chain_history_numerically_exact,
+    parent_cumulative_numerical_repair_count =
+      parent_cumulative_repairs,
+    chain_history_numerically_exact =
+      isTRUE(segment$model_spec$chain_history_numerically_exact),
+    cumulative_numerical_repair_count =
+      segment$model_spec$cumulative_numerical_repair_count,
+    backend_requested =
+      segment$provenance$backend_requested,
+    parent_backend_resolved =
+      object$provenance$backend_resolved %||% object$provenance$backend,
+    current_backend_resolved =
+      segment$provenance$backend_resolved %||% segment$provenance$backend,
     current_environment_reproducibility_eligible =
       current_environment_eligible
   )
@@ -843,6 +950,7 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
     inherited_reproducibility_eligible
   segment$model_spec$promotion_eligible <-
     isTRUE(segment$model_spec$target_numerical_eligible) &&
+    parent_promotion_eligible &&
     inherited_reproducibility_eligible
   segment
 }
@@ -893,7 +1001,8 @@ predict_interval.rqr_dlm_mcmc <- function(object, nd = NULL, draws = NULL, seed 
 #' @param nd Number of saved MCMC draws to use.
 #' @param seed Optional seed.
 #' @param numerical_policy Either `"fail"` or `"record_repair"`.
-#' @param jitter_ladder Relative jitter ladder for record-repair mode.
+#' @param jitter_ladder Matrix-relative jitter ladder for record-repair mode.
+#'   An exactly zero matrix uses a separately recorded absolute fallback.
 #' @return Future root and ordered endpoint draws with repair diagnostics.
 #' @export
 rqr_forecast_roots <- function(

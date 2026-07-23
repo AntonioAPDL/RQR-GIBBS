@@ -1,7 +1,7 @@
 Package: rqrgibbs
 Type: Package
 Title: Generalized Bayes Interval-Root Regression with Gibbs Sampling
-Version: 0.1.0.9003
+Version: 0.1.0.9004
 Authors@R: c(
     person("Antonio", "De Leon", role = c("aut", "cre"),
            email = "jaguir26@ucsc.edu"),
@@ -25,6 +25,7 @@ LinkingTo:
     RcppArmadillo
 Suggests:
     exdqlm,
+    pracma,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 SystemRequirements: C++17

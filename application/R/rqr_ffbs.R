@@ -10,21 +10,30 @@
     if (is.null(evolution$W)) stop("fixed evolution requires W.", call. = FALSE)
     W <- .rqr_expand_cube(evolution$W, n_time, p, "evolution$W")
     W <- .rqr_validate_covariance_cube(W, "evolution$W")
-    for (tt in seq_len(n_time)) {
-      W[, , tt] <- .rqr_symmetrize(W[, , tt])
-      ev <- eigen(W[, , tt], symmetric = TRUE, only.values = TRUE)$values
-      if (min(ev) < -1e-10 * max(1, max(abs(ev)))) {
-        stop(sprintf("W is materially indefinite at time %d.", tt), call. = FALSE)
-      }
-    }
     return(list(mode = mode, mode_code = 0L, W = W, D = matrix(0, p, p)))
   }
   D <- as.matrix(evolution$D)
   if (!all(dim(D) == c(p, p)) || any(!is.finite(D))) stop("adaptive evolution requires finite p x p D.", call. = FALSE)
-  D <- .rqr_symmetrize(D)
+  D <- .rqr_validate_symmetric_matrix(D, "evolution$D")
   dev <- eigen(D, symmetric = TRUE, only.values = TRUE)$values
-  if (min(dev) < -1e-10 * max(1, max(abs(dev)))) stop("D must be positive semidefinite.", call. = FALSE)
+  dev_scale <- max(abs(dev))
+  if (dev_scale > 0 && min(dev) / dev_scale < -100 * .Machine$double.eps) {
+    stop("D must be positive semidefinite.", call. = FALSE)
+  }
   list(mode = mode, mode_code = 1L, W = array(0, c(p, p, n_time)), D = D)
+}
+
+.rqr_resolve_ffbs_backend <- function(backend = c("cpp", "R", "auto")) {
+  backend <- match.arg(backend)
+  cpp_available <- exists("rqr_ffbs_cpp", mode = "function")
+  if (identical(backend, "cpp") && !cpp_available) {
+    stop("Compiled FFBS backend is unavailable.", call. = FALSE)
+  }
+  if (identical(backend, "auto")) {
+    if (cpp_available) "cpp" else "R"
+  } else {
+    backend
+  }
 }
 
 .rqr_ffbs_r <- function(z, H, V, GG, m0, C0, evolution, sample = FALSE,
@@ -80,6 +89,8 @@
         strategy = "cholesky_jitter", jitter = fac$jitter,
         relative_jitter = fac$relative_jitter,
         min_eigenvalue = fac$min_eigenvalue, matrix_scale = fac$matrix_scale,
+        jitter_scale = fac$jitter_scale,
+        absolute_jitter_fallback = fac$absolute_jitter_fallback,
         clamped_eigenvalues = 0L
       )
     )
@@ -101,6 +112,8 @@
           strategy = "cholesky_jitter", jitter = facR$jitter,
           relative_jitter = facR$relative_jitter,
           min_eigenvalue = facR$min_eigenvalue, matrix_scale = facR$matrix_scale,
+          jitter_scale = facR$jitter_scale,
+          absolute_jitter_fallback = facR$absolute_jitter_fallback,
           clamped_eigenvalues = 0L
         )
       )
@@ -133,6 +146,8 @@
             strategy = "cholesky_jitter", jitter = facR$jitter,
             relative_jitter = facR$relative_jitter,
             min_eigenvalue = facR$min_eigenvalue, matrix_scale = facR$matrix_scale,
+            jitter_scale = facR$jitter_scale,
+            absolute_jitter_fallback = facR$absolute_jitter_fallback,
             clamped_eigenvalues = 0L
           )
         )
@@ -172,14 +187,14 @@
                                sample, backend, jitter_ladder,
                                numerical_policy = c("fail", "record_repair")) {
   backend <- match.arg(backend, c("cpp", "R", "auto"))
+  resolved_backend <- .rqr_resolve_ffbs_backend(backend)
   p <- length(m0)
   n_time <- length(z)
   H <- .rqr_expand_columns(H, n_time, "H")
   evo <- .rqr_prepare_evolution(evolution, p, n_time)
   numerical_policy <- .rqr_numerical_policy(numerical_policy)
   jitter_ladder <- .rqr_jitter_ladder(numerical_policy, jitter_ladder)
-  use_cpp <- backend != "R" && exists("rqr_ffbs_cpp", mode = "function")
-  if (backend == "cpp" && !use_cpp) stop("Compiled FFBS backend is unavailable.", call. = FALSE)
+  use_cpp <- identical(resolved_backend, "cpp")
   if (use_cpp) {
     out <- rqr_ffbs_cpp(
       z = as.numeric(z), H = H, V = as.numeric(V),
@@ -210,7 +225,8 @@
 #' @param m0,C0 Initial state prior.
 #' @param evolution Evolution specification.
 #' @param backend One of `"cpp"`, `"R"`, or `"auto"`.
-#' @param jitter_ladder Declared relative Cholesky jitter ladder.
+#' @param jitter_ladder Declared matrix-relative Cholesky jitter ladder. An
+#'   exactly zero matrix uses a separately recorded absolute fallback.
 #' @param numerical_policy Either `"fail"` or `"record_repair"`.
 #' @return Filtering and smoothing moments with numerical diagnostics.
 #' @export

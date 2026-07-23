@@ -36,7 +36,8 @@ test_that("discount templates are deterministic and frozen", {
     names(a$construction_audit$repair_records),
     c(
       "stage", "time", "strategy", "jitter", "relative_jitter",
-      "min_eigenvalue", "matrix_scale", "clamped_eigenvalues"
+      "min_eigenvalue", "matrix_scale", "jitter_scale",
+      "absolute_jitter_fallback", "clamped_eigenvalues"
     )
   )
   for (tt in seq_len(dim(a$W)[3L])) {
@@ -154,6 +155,67 @@ test_that("material covariance asymmetry is rejected rather than silently change
     C0 = machine_noise
   ))
   expect_equal(model$C0, t(model$C0), tolerance = 0)
+})
+
+test_that("symmetry and covariance checks are relative at small and large scales", {
+  scales <- 10^c(-300, -150, -20, 0, 20, 150, 300)
+  for (scale in scales) {
+    roundoff <- diag(rep(scale, 2))
+    roundoff[1, 2] <- scale * .Machine$double.eps
+    accepted <- rqrgibbs:::.rqr_validate_symmetric_matrix(
+      roundoff, sprintf("roundoff_%g", scale)
+    )
+    expect_identical(accepted, t(accepted), info = paste("scale", scale))
+
+    material <- diag(rep(scale, 2))
+    material[1, 2] <- scale * 1e-10
+    expect_error(
+      rqrgibbs:::.rqr_validate_symmetric_matrix(
+        material, sprintf("material_%g", scale)
+      ),
+      "not symmetric",
+      info = paste("scale", scale)
+    )
+  }
+
+  zero <- array(matrix(0, 2, 2), c(2, 2, 1))
+  expect_equal(
+    rqrgibbs:::.rqr_validate_covariance_cube(zero, "zero"),
+    zero
+  )
+  tiny_spd <- array(diag(c(1e-20, 2e-20)), c(2, 2, 1))
+  expect_equal(
+    rqrgibbs:::.rqr_validate_covariance_cube(tiny_spd, "tiny_spd"),
+    tiny_spd
+  )
+
+  tiny_asymmetric <- matrix(
+    c(2e-15, 0.99e-15, 1e-15, 2e-15), 2, 2
+  )
+  expect_error(
+    rqr_as_dlm_model(list(
+      FF = matrix(c(1, 0), 2, 1), GG = diag(2),
+      m0 = c(0, 0), C0 = tiny_asymmetric
+    )),
+    "C0 is not symmetric"
+  )
+  expect_error(
+    rqr_evolution_component_scale(
+      templates = list(tiny_asymmetric), component_dims = 2
+    ),
+    "not symmetric"
+  )
+
+  tiny_indefinite <- diag(c(1e-20, -1e-15))
+  expect_error(
+    rqr_ffbs_smooth(
+      z = 0, H = matrix(c(1, 0), 2, 1), V = 1, GG = diag(2),
+      m0 = c(0, 0), C0 = diag(2),
+      evolution = list(mode = "fixed_W", W = tiny_indefinite),
+      backend = "R"
+    ),
+    "materially indefinite"
+  )
 })
 
 test_that("component-scale evolution validates SPD templates and model blocks", {

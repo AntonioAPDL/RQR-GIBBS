@@ -50,13 +50,17 @@ objects retain terminal state draws, integrity-digested RNG checkpoints, a
 versioned schema, Git/R/compiler/BLAS provenance, and complete
 data/model/target/evolution digests; full paths are opt-in. A portability
 override is durable and removes reproducibility and promotion eligibility.
+Continuation also inherits the complete numerical-repair history and compares
+the requested and resolved FFBS backends before making a bitwise claim.
 Component-scale forecasts can combine saved evolution-scale draws with fixed
 future component templates.
 
 The pinned exdqlm branch remains the read-only implementation reference for
 RQR-DESN and RHS-family compatibility. Promotion of either path additionally
-requires the detected exdqlm package version and a clean checkout at the exact
-pinned exdqlm commit.
+requires the executing exdqlm namespace to be bound to the clean checkout at
+the exact pinned commit. `make prepare-exdqlm-runtime` builds an isolated local
+library from a Git archive of that commit and writes a verified runtime
+attestation under the ignored `application/cache/` tree.
 
 ## Pinned external reference
 

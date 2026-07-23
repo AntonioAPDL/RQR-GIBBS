@@ -33,5 +33,7 @@ A new `rqr_dlm_mcmc` segment beginning at the checkpoint.
 }
 \description{
 Continuation restores the full RNG state and every Markov state required by
-the native sampler. It returns only the newly requested draws.
+the native sampler. Numerical repair and promotion eligibility are inherited
+cumulatively, and the requested and resolved FFBS backends are checked
+separately. The function returns only the newly requested draws.
 }

@@ -64,6 +64,27 @@ if (!requireNamespace("testthat", quietly = TRUE)) {
 }
 
 pkgload::load_all(exdqlm_repo, quiet = TRUE)
+pkgload::load_all(file.path(repo_root, "application"), quiet = TRUE)
+runtime_state <- rqrgibbs:::.rqr_repository_provenance(list(
+  repo_root = exdqlm_repo,
+  expected_git_commit = expected_commit,
+  runtime_package = "exdqlm",
+  runtime_attestation = NULL
+))
+if (!isTRUE(runtime_state$runtime_direct_source_path_match) ||
+    !isTRUE(runtime_state$runtime_source_match) ||
+    !isTRUE(runtime_state$reproducibility_eligible)) {
+  stop(
+    paste(
+      "The executing exdqlm namespace is not bound to the clean pinned",
+      "checkout used for provenance."
+    ),
+    call. = FALSE
+  )
+}
+cat("runtime package path:", runtime_state$runtime_package_path, "\n")
+cat("runtime package version:", runtime_state$runtime_package_version, "\n")
+cat("runtime source tree:", runtime_state$source_tree_digest, "\n")
 focused <- c(
   "test-rqr-algebra.R",
   "test-rqr-mcmc-fixed-design.R",

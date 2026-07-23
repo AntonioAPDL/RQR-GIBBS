@@ -53,8 +53,12 @@ complete model/target/evolution digests, package, R, compiler, BLAS/LAPACK,
 dependencies, RNG kind, and source commits before claiming exact
 same-environment continuation. Any explicit environment override is stored in
 the returned segment and removes reproducibility and promotion eligibility.
-RQR-DESN and RHS promotion also requires the installed exdqlm version and a
-clean detected checkout at the pinned exdqlm commit.
+Numerical-repair counts and promotion eligibility are cumulative across
+segments, and `backend="auto"` records both the requested and resolved backend.
+RQR-DESN and RHS promotion also requires the executing exdqlm namespace to
+match the clean pinned source directly or through an isolated-library
+attestation. Run `make prepare-exdqlm-runtime` to create that ignored local
+runtime and attestation.
 
 The heavy directories **data_local**, **cache**, **runs**, **logs**, and
 **outputs** are ignored by git.

@@ -36,7 +36,8 @@ evolution multipliers.}
 
 \item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
 
-\item{jitter_ladder}{Relative jitter ladder for record-repair mode.}
+\item{jitter_ladder}{Matrix-relative jitter ladder for record-repair mode.
+An exactly zero matrix uses a separately recorded absolute fallback.}
 }
 \value{
 Future root and ordered endpoint draws with repair diagnostics.
