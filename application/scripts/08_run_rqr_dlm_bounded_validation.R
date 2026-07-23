@@ -350,13 +350,20 @@ dependency_versions <- vapply(
   character(1L)
 )
 external_software <- extSoftVersion()
+session_runtime <- utils::sessionInfo()
+external_or_session <- function(name, fallback) {
+  if (name %in% names(external_software)) {
+    return(unname(external_software[[name]]))
+  }
+  unname(fallback)
+}
 runtime_contract <- list(
   schema_version = "rqrgibbs_runtime_toolchain/1.0.0",
   R_version = R.version.string,
   platform = R.version$platform,
   compiler = R.version$compiler,
-  BLAS = unname(external_software[["BLAS"]]),
-  LAPACK = unname(external_software[["LAPACK"]]),
+  BLAS = external_or_session("BLAS", session_runtime$BLAS),
+  LAPACK = external_or_session("LAPACK", session_runtime$LAPACK),
   dependency_versions = as.list(dependency_versions),
   primary_runtime_tree_digest =
     runtime_state$runtime_package_tree_digest,
