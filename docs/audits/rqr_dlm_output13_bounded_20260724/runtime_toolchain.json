@@ -1,0 +1,17 @@
+{
+  "schema_version": "rqrgibbs_runtime_toolchain/1.0.0",
+  "R_version": "R version 4.5.3 (2026-03-11)",
+  "platform": "x86_64-redhat-linux-gnu",
+  "compiler": null,
+  "BLAS": "/usr/lib64/libopenblaso-r0.3.15.so",
+  "LAPACK": "/usr/lib64/libopenblaso-r0.3.15.so",
+  "dependency_versions": {
+    "digest": "0.6.39",
+    "jsonlite": "2.0.0",
+    "posterior": "1.7.0",
+    "rqrgibbs": "0.1.0.9012"
+  },
+  "primary_runtime_tree_digest": "d028a74fb593650d2809fb2152927c74d00505e71652bf63054ae7fed385dba9",
+  "primary_runtime_attestation_sha256": "584f94c5c6a8622ca9a4929a38e4a83d5c67a6ac1e60d39508aa3a8079360542",
+  "digest": "f324fc2b9d8ca15c955ca6f4c74d499e0266730b381044d8f51db28f667667b1"
+}

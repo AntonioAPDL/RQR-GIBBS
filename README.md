@@ -109,6 +109,18 @@ references. Fresh exact-source validation passed 43 of 43 reference gates and
 `docs/audits/chatgpt_pro_output12_bounded_failure_reconciliation_20260724.md`
 and `external_reviews/chatgpt_pro_output12_20260724/`.
 
+Output-13 independently accepted the correction. A new exact-source launch at
+`afc9c5fed14c66317b684fc9b9f6d01079c307cd` then completed all 24 bounded
+RQR-DLM fits. All 897 predeclared R-hat and bulk/tail ESS diagnostics passed,
+all fits used exact fixed-joint modes, and the run recorded zero numerical or
+forecast repairs. This completes bounded target-mechanics and mixing
+validation; it does not establish empirical coverage or comparative forecast
+performance. The execution flag is again false. Compact evidence and the
+closeout are in `docs/audits/rqr_dlm_output13_bounded_20260724/` and
+`docs/audits/rqr_dlm_output13_bounded_closeout_20260724.md`. A fail-closed
+ADEMP-style draft for the first matched RQR-DLM simulation is in
+`docs/implementation_notes/rqr_dlm_main_simulation_preliminary_spec_20260724.md`.
+
 ## Pinned external reference
 
 Expected exdqlm RQR branch:

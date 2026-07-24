@@ -1,0 +1,6 @@
+metric,value,expected,pass
+leader_exit_status,17,17,TRUE
+descendant_seen_after_leader_exit,TRUE,TRUE,TRUE
+pgid_drain_completed,TRUE,TRUE,TRUE
+kill_escalation_used,TRUE,TRUE,TRUE
+final_pgid_empty,TRUE,TRUE,TRUE

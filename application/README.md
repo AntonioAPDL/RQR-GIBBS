@@ -90,13 +90,15 @@ The four-mode runner
 `scripts/08_run_rqr_dlm_bounded_validation.sh` provides construction
 preflight, expanded reference-only validation, a representative full
 four-chain one-cell benchmark, and a separately gated execution path. The
-committed config again keeps the 24-fit path disabled after the first launch
-failed closed on a fixed-W time-zero estimand-schema mismatch. The corrected
-reference suite now applies the same estimand extractor to all six
+first launch failed closed on a fixed-W time-zero estimand-schema mismatch.
+After correction and independent review, a fresh exact-source launch completed
+all 24 fits and passed all 897 diagnostics with zero numerical repairs. The
+committed config is again disabled; the successful evidence remains tied to
+its one-time launch commit. The shared estimand extractor applies to all six
 fixture/mode continuation cells and requires complete retained time-zero
-states. Any future authorization must bind the complete recursive artifact
-manifest from a passing reference run and the identical isolated runtime and
-toolchain. The monitor uses PGID sampling, an idempotent signal/error
+states. Any authorization must bind the complete recursive artifact manifest
+from a passing reference run and the identical isolated runtime and toolchain.
+The monitor uses PGID sampling, an idempotent signal/error
 finalizer, fault-injection tests, and a final group sweep. It terminates on
 timeout or an observed process/thread/RSS limit and still writes a structured
 failure ledger, closeout, resource summary, and recursive hash manifest. The
@@ -112,3 +114,9 @@ draws are retained as a sidecar and do not imply a response-simulation
 contract. Local chain RDS files are read back and checked for class, exact
 object identity, checkpoint digest, continuation history, byte count, and
 SHA-256 before their atomic publication.
+
+`scripts/11_promote_rqr_dlm_bounded_evidence.R` independently verifies a
+completed ignored run, reopens every fit object, and promotes only compact
+evidence. The preliminary matched-simulation config is
+`config/rqr_dlm/rqr_dlm_main_simulation_preliminary_20260724.R`; both of its
+execution authorizations are false.

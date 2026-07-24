@@ -1,0 +1,13 @@
+field,value
+schema_version,rqrgibbs_dlm_wrapper_closeout/2.1.0
+mode,execute-bounded
+expected_primary_commit,afc9c5fed14c66317b684fc9b9f6d01079c307cd
+process_group_id,230287
+runner_exit_status,0
+resource_pass,TRUE
+monitor_kind,pgid_sampled_fallback
+kernel_hard_memory_ceiling,FALSE
+signal_received,NONE
+final_pgid_empty,TRUE
+finalizer_error,FALSE
+completed_at,2026-07-24T09:50:08Z
