@@ -410,6 +410,19 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     rqrgibbs:::.rqr_restore_rng(c(10403, Inf)),
     "complete integer"
   )
+  truncated_rng <- first$checkpoint_state$rng_state[
+    -length(first$checkpoint_state$rng_state)
+  ]
+  expect_error(
+    rqrgibbs:::.rqr_restore_rng(truncated_rng),
+    "complete integer"
+  )
+  unknown_rng <- first$checkpoint_state$rng_state
+  unknown_rng[1L] <- 10499L
+  expect_error(
+    rqrgibbs:::.rqr_restore_rng(unknown_rng),
+    "complete integer"
+  )
   expect_equal(first$provenance$initial_seed, 1205L)
   expect_identical(first$model_spec$loss_name, "rqr_residual_product_check_loss")
   expect_true(second$continuation_contract$continued_from_checkpoint)

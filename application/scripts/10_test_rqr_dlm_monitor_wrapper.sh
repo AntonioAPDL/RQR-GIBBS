@@ -73,6 +73,7 @@ verify_artifacts() {
     echo "$scenario retained live PGID members." >&2
     return 1
   fi
+  verify_manifest_file_set "$scenario" "$output_dir" 7
   while IFS=, read -r sha bytes relative; do
     [[ "$sha" == sha256 ]] && continue
     relative="${relative#\"}"
@@ -89,6 +90,77 @@ verify_artifacts() {
       return 1
     fi
   done <"$output_dir/artifact_hashes.csv"
+}
+
+verify_manifest_file_set() {
+  local scenario="$1"
+  local output_dir="$2"
+  local minimum_rows="$3"
+  local require_resource="${4:-TRUE}"
+  local actual_paths manifest_paths row_count required
+  actual_paths="$(mktemp "$test_root/${scenario}.actual.XXXXXX")"
+  manifest_paths="$(mktemp "$test_root/${scenario}.manifest.XXXXXX")"
+  find "$output_dir" -type f \
+    ! -name artifact_hashes.csv -printf '%P\n' |
+    LC_ALL=C sort >"$actual_paths"
+  awk -F, 'NR > 1 {
+    path = $3
+    sub(/^"/, "", path)
+    sub(/"$/, "", path)
+    print path
+  }' "$output_dir/artifact_hashes.csv" |
+    LC_ALL=C sort >"$manifest_paths"
+  if ! cmp -s "$actual_paths" "$manifest_paths"; then
+    echo "$scenario artifact manifest does not equal the actual file set." >&2
+    return 1
+  fi
+  row_count="$(wc -l <"$manifest_paths")"
+  if [[ "$row_count" -lt "$minimum_rows" ]]; then
+    echo "$scenario artifact manifest is unexpectedly sparse." >&2
+    return 1
+  fi
+  for required in \
+      wrapper_closeout.csv failure_log.csv \
+      monitor_fault_test.csv process_group_monitor.csv runner.stdout.log \
+      runner.stderr.log; do
+    if ! grep -Fxq -- "$required" "$manifest_paths"; then
+      echo "$scenario manifest omitted required file $required." >&2
+      return 1
+    fi
+  done
+  if [[ "$require_resource" == TRUE ]] &&
+      ! grep -Fxq -- resource_summary.csv "$manifest_paths"; then
+    echo "$scenario manifest omitted required file resource_summary.csv." >&2
+    return 1
+  fi
+}
+
+verify_finalizer_failure() {
+  local scenario="$1"
+  local output_dir="$2"
+  local expected_detail="$3"
+  for required in \
+      wrapper_closeout.csv failure_log.csv monitor_fault_test.csv \
+      process_group_monitor.csv runner.stdout.log runner.stderr.log; do
+    if [[ ! -f "$output_dir/$required" ]]; then
+      echo "$scenario omitted $required." >&2
+      return 1
+    fi
+  done
+  if ! awk -F, '
+      $1 == "finalizer_error" {
+        found = 1
+        if ($2 != "TRUE") exit 1
+      }
+      END { if (!found) exit 1 }
+    ' "$output_dir/wrapper_closeout.csv"; then
+    echo "$scenario did not record finalizer_error=TRUE." >&2
+    return 1
+  fi
+  if ! grep -Fq -- "$expected_detail" "$output_dir/failure_log.csv"; then
+    echo "$scenario omitted its structured evidence failure." >&2
+    return 1
+  fi
 }
 
 run_failure_scenario() {
@@ -161,10 +233,65 @@ run_signal_scenario() {
   verify_artifacts "$scenario" "$output_dir" TERM
 }
 
+run_artifact_fault_scenario() {
+  local fault="$1"
+  local output_dir="$test_root/artifact-$fault"
+  local invocation_log="$test_root/artifact-${fault}.invocation.log"
+  local status
+  mkdir -p "$output_dir"
+  set +e
+  env \
+    RQR_EXPECTED_PRIMARY_COMMIT="$expected_commit" \
+    RQR_DLM_OUTPUT_DIR="$output_dir" \
+    RQR_MONITOR_TEST_SCENARIO=zero-sample-startup \
+    RQR_MONITOR_TEST_ARTIFACT_FAULT="$fault" \
+    RQR_MONITOR_TEST_CONFIRM=I_CONFIRM_RQR_MONITOR_FAULT_TEST \
+    "$wrapper" preflight >"$invocation_log" 2>&1
+  status=$?
+  set -e
+  if [[ "$status" -eq 0 ]]; then
+    echo "$fault artifact fault unexpectedly succeeded." >&2
+    return 1
+  fi
+  if grep -q "syntax error\\|invalid arithmetic" "$invocation_log"; then
+    echo "$fault artifact fault emitted a shell syntax/runtime error." >&2
+    return 1
+  fi
+  verify_finalizer_failure \
+    "artifact-$fault" "$output_dir" "Final evidence publication failed"
+  case "$fault" in
+    enumeration-failure|hash-failure-after-first)
+      if [[ -e "$output_dir/artifact_hashes.csv" ||
+            -L "$output_dir/artifact_hashes.csv" ]]; then
+        echo "$fault published an artifact manifest after injected failure." >&2
+        return 1
+      fi
+      if [[ ! -f "$output_dir/resource_summary.csv" ]]; then
+        echo "$fault omitted its resource summary." >&2
+        return 1
+      fi
+      ;;
+    canonical-target-directory)
+      if [[ ! -d "$output_dir/resource_summary.csv" ]]; then
+        echo "$fault did not retain the injected canonical collision." >&2
+        return 1
+      fi
+      if [[ ! -f "$output_dir/artifact_hashes.csv" ]]; then
+        echo "$fault omitted the manifest for its remaining regular files." >&2
+        return 1
+      fi
+      verify_manifest_file_set "artifact-$fault" "$output_dir" 6 FALSE
+      ;;
+  esac
+}
+
 run_signal_scenario long-running
 run_failure_scenario monitor-error
 run_failure_scenario leader-exits-first
 run_signal_scenario term-resistant-child
 run_failure_scenario zero-sample-startup
+run_artifact_fault_scenario enumeration-failure
+run_artifact_fault_scenario hash-failure-after-first
+run_artifact_fault_scenario canonical-target-directory
 
-echo "RQR-DLM monitor fault suite passed: 5/5 scenarios."
+echo "RQR-DLM monitor fault suite passed: 8/8 scenarios."

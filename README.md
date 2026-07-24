@@ -88,15 +88,16 @@ empirical coverage calibration. Exact results and the one pre-scientific
 diagnostic-infrastructure failure are recorded in
 `docs/audits/chatgpt_pro_output5_audit_20260722.md`.
 
-The expanded bounded RQR-DLM reference suite passed 40 of 40 gates at
-implementation commit
-`2e7840388d5612f5ebe9234c80f28c650c145b9c`. A representative four-chain
-component-scale/learned-rate benchmark completed with zero numerical repairs
-and exact runtime provenance. Of 150 descriptive diagnostics, 148 met the
-prospective gates; two regression component-scale quantities had bulk ESS
-near, but below, 1,000. The 24-fit execution flag therefore remains false
-pending independent review. See
-`docs/audits/chatgpt_pro_output9_audit_20260723.md`.
+At implementation commit
+`e24feb411b2e30586d1bfdc18bf6acb1fb568c70`, the expanded bounded RQR-DLM
+reference suite passed 43 of 43 gates and the frozen 6,000-retained
+component-scale/learned-rate benchmark passed all 150 diagnostics with zero
+numerical repairs and exact runtime provenance. The independent Output-11
+review accepted those target and mixing results but identified two narrow
+artifact-publication boundaries requiring correction and exact-source
+revalidation. The 24-fit execution flag remains false. See
+`docs/audits/chatgpt_pro_output10_reconciliation_20260723.md` and
+`external_reviews/chatgpt_pro_output11_20260723/`.
 
 ## Pinned external reference
 

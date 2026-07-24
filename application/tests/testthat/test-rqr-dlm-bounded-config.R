@@ -368,6 +368,26 @@ test_that("bounded future means preserve draw identity and RDS publication valid
     "checkpoint-digest"
   )
   expect_false(file.exists(invalid_path))
+
+  rollback_dir <- file.path(output_dir, "rollback")
+  dir.create(rollback_dir)
+  rollback_path <- file.path(rollback_dir, "post-rename-failure.rds")
+  expect_error(
+    helper_environment$rqr_bounded_publish_fit_rds(
+      fit,
+      rollback_path,
+      post_rename_hook = function(path) {
+        expect_true(file.exists(path))
+        stop("injected post-rename integrity failure", call. = FALSE)
+      }
+    ),
+    "injected post-rename integrity failure"
+  )
+  expect_false(file.exists(rollback_path))
+  expect_length(
+    list.files(rollback_dir, all.files = TRUE, no.. = TRUE),
+    0L
+  )
 })
 
 test_that("intercept CDF references are versioned and generator-bound", {

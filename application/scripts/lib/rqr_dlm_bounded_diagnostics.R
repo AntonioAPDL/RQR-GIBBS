@@ -143,7 +143,8 @@ rqr_bounded_future_conditional_mean_roots <- function(fit, future) {
 }
 
 rqr_bounded_publish_fit_rds <- function(
-    fit, path, compress = "xz", save_function = saveRDS) {
+    fit, path, compress = "xz", save_function = saveRDS,
+    post_rename_hook = NULL) {
   if (!inherits(fit, "rqr_dlm_mcmc")) {
     stop("Only an rqr_dlm_mcmc fit can be published.", call. = FALSE)
   }
@@ -154,11 +155,19 @@ rqr_bounded_publish_fit_rds <- function(
   if (file.exists(path)) {
     stop("Refusing to overwrite an existing bounded chain.", call. = FALSE)
   }
+  if (!is.null(post_rename_hook) && !is.function(post_rename_hook)) {
+    stop("post_rename_hook must be NULL or a function.", call. = FALSE)
+  }
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   temporary <- tempfile(
     paste0(".", basename(path), "-"), tmpdir = dirname(path)
   )
-  on.exit(unlink(temporary), add = TRUE)
+  renamed <- FALSE
+  committed <- FALSE
+  on.exit({
+    unlink(temporary)
+    if (renamed && !committed) unlink(path)
+  }, add = TRUE)
   save_function(
     fit, temporary, version = 3, compress = compress
   )
@@ -193,6 +202,9 @@ rqr_bounded_publish_fit_rds <- function(
     )
   }
   rqrgibbs:::.rqr_validate_continuation_history(restored)
+  continuation_history_digest <-
+    restored$continuation_history_digest
+  object_digest <- rqrgibbs:::.rqr_digest(restored)
   temporary_sha256 <- digest::digest(
     file = temporary, algo = "sha256", serialize = FALSE
   )
@@ -200,6 +212,8 @@ rqr_bounded_publish_fit_rds <- function(
   if (!file.rename(temporary, path)) {
     stop("Could not atomically publish the bounded chain.", call. = FALSE)
   }
+  renamed <- TRUE
+  if (!is.null(post_rename_hook)) post_rename_hook(path)
   final_sha256 <- digest::digest(
     file = path, algo = "sha256", serialize = FALSE
   )
@@ -212,13 +226,14 @@ rqr_bounded_publish_fit_rds <- function(
       call. = FALSE
     )
   }
-  list(
+  evidence <- list(
     path = path,
     bytes = final_bytes,
     sha256 = final_sha256,
     checkpoint_digest = checkpoint_digest,
-    continuation_history_digest =
-      restored$continuation_history_digest,
-    object_digest = rqrgibbs:::.rqr_digest(restored)
+    continuation_history_digest = continuation_history_digest,
+    object_digest = object_digest
   )
+  committed <- TRUE
+  evidence
 }

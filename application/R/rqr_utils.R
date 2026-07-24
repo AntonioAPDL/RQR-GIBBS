@@ -242,6 +242,19 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       any(state > .Machine$integer.max)) {
     stop("init$rng_state must be a complete integer .Random.seed vector.", call. = FALSE)
   }
+  rng_kind_code <- state[1L] %% 100L
+  expected_lengths <- c(
+    `0` = 4L, `1` = 3L, `2` = 3L, `3` = 626L,
+    `4` = 102L, `6` = 102L, `7` = 7L
+  )
+  if (!rng_kind_code %in% 0:7 ||
+      (rng_kind_code != 5L &&
+        !identical(
+          length(state),
+          unname(expected_lengths[as.character(rng_kind_code)])
+        ))) {
+    stop("init$rng_state must be a complete integer .Random.seed vector.", call. = FALSE)
+  }
   state <- as.integer(state)
   assign(".Random.seed", state, envir = .GlobalEnv)
   invisible(TRUE)
