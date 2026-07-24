@@ -5,9 +5,12 @@
 # component-scale conditional rows remain in the ignored run directory.
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 2L) {
+if (length(args) != 3L) {
   stop(
-    "Usage: 11_promote_rqr_dlm_bounded_evidence.R <run_dir> <evidence_dir>",
+    paste(
+      "Usage: 11_promote_rqr_dlm_bounded_evidence.R",
+      "<run_dir> <evidence_dir> <expected_bundle.json>"
+    ),
     call. = FALSE
   )
 }
@@ -16,6 +19,23 @@ run_dir <- normalizePath(args[[1L]], mustWork = TRUE)
 evidence_dir <- normalizePath(
   args[[2L]], mustWork = FALSE
 )
+expected_bundle_path <- normalizePath(args[[3L]], mustWork = TRUE)
+file_argument <- grep(
+  "^--file=", commandArgs(trailingOnly = FALSE), value = TRUE
+)
+script_file <- if (length(file_argument)) {
+  sub("^--file=", "", file_argument[[1L]])
+} else {
+  "application/scripts/11_promote_rqr_dlm_bounded_evidence.R"
+}
+script_path <- normalizePath(
+  file.path(
+    dirname(script_file),
+    "lib", "rqr_dlm_evidence_promotion.R"
+  ),
+  mustWork = TRUE
+)
+sys.source(script_path, envir = environment())
 
 if (dir.exists(evidence_dir) &&
     length(list.files(evidence_dir, all.files = TRUE, no.. = TRUE)) > 0L) {
@@ -72,6 +92,15 @@ stopifnot(
 run_manifest <- jsonlite::read_json(
   file.path(run_dir, "run_manifest.json"), simplifyVector = TRUE
 )
+runtime_toolchain <- jsonlite::read_json(
+  file.path(run_dir, "runtime_toolchain.json"), simplifyVector = TRUE
+)
+expected_bundle <- jsonlite::read_json(
+  expected_bundle_path, simplifyVector = TRUE
+)
+rqr_bounded_validate_expected_bundle(
+  run_manifest, runtime_toolchain, expected_bundle
+)
 stopifnot(
   identical(run_manifest$schema_version, "rqrgibbs_dlm_bounded_run/3.0.0"),
   identical(run_manifest$mode, "execute-bounded"),
@@ -97,6 +126,20 @@ run_status <- read_csv("run_status.csv")
 resource <- read_csv("resource_summary.csv")
 local_hashes <- read_csv("local_chain_hashes.csv")
 component_conditionals <- read_csv("component_scale_conditionals.csv")
+fit_plan <- read_csv("fit_plan.csv")
+
+expected_fit_ids <- rqr_bounded_expected_fit_ids(fit_plan)
+rqr_bounded_require_exact_fit_id_sets(
+  expected_fit_ids,
+  list(
+    fit_audit = fit_audit,
+    run_status = run_status,
+    checkpoint_manifest = checkpoints,
+    local_chain_hashes = local_hashes,
+    missing_future_checks = future_checks,
+    provenance_checks = provenance
+  )
+)
 
 stopifnot(
   nrow(diagnostics) == 897L,
@@ -160,28 +203,10 @@ for (index in seq_len(nrow(local_hashes))) {
   checkpoint_index <- match(
     local_hashes$fit_id[[index]], checkpoints$fit_id
   )
-  stopifnot(
-    inherits(fit, "rqr_dlm_mcmc"),
-    identical(
-      fit$checkpoint_digest,
-      local_hashes$checkpoint_digest[[index]]
-    ),
-    identical(
-      fit$continuation_history_digest,
-      local_hashes$history_digest[[index]]
-    ),
-    identical(
-      local_hashes$checkpoint_digest[[index]],
-      checkpoints$checkpoint_digest[[checkpoint_index]]
-    ),
-    identical(
-      local_hashes$history_digest[[index]],
-      checkpoints$history_digest[[checkpoint_index]]
-    ),
-    identical(
-      digest::digest(fit, algo = "sha256", serialize = TRUE),
-      checkpoints$published_object_digest[[checkpoint_index]]
-    )
+  rqr_bounded_validate_reopened_fit(
+    fit = fit,
+    checkpoint_row = checkpoints[checkpoint_index, , drop = FALSE],
+    local_hash_row = local_hashes[index, , drop = FALSE]
   )
   rm(fit)
 }

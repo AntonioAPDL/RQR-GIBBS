@@ -25,8 +25,11 @@ package under **application/**:
   model builders, pure-R FFBS, exact component-scale evolution, the RQR-DLM
   sampler, restart helpers, and DESN adapters.
 - **application/src/** contains the C++17/RcppArmadillo FFBS kernel.
-- **application/tests/** contains native package gates and copied exdqlm
-  reference tests.
+- **application/tests/** contains native package gates, standalone workflow
+  contracts, and copied exdqlm reference tests. The copied tests and
+  repository-level workflow tests remain available to dedicated Make targets
+  but are excluded from the package source where appropriate; `R CMD check`
+  runs the native package contract.
 - **docs/implementation_notes/rqr_dlm_native_design_20260722.md** freezes the
   exact and experimental evolution-mode contracts.
 
@@ -121,6 +124,23 @@ closeout are in `docs/audits/rqr_dlm_output13_bounded_20260724/` and
 ADEMP-style draft for the first matched RQR-DLM simulation is in
 `docs/implementation_notes/rqr_dlm_main_simulation_preliminary_spec_20260724.md`.
 
+Output-14 accepted the completed bounded validation with nonblocking promoter
+corrections. Evidence reuse now requires an externally frozen
+source/runtime/reference bundle, recomputed checkpoint-state and
+continuation-history digests for every reopened fit, successful continuation
+validation, and exact 24-fit set equality across the relevant compact
+manifests. These checks do not require another bounded run.
+
+The matched main-simulation contract is now schema version 0.2.0. It adds a
+matched Gaussian trend-seasonal control, a common-evolution ablation,
+target-aligned endpoint errors, a 2% coverage-equivalence rule, distinct
+realized and conditional-mean root forecasts, and frozen Monte Carlo/MCMC
+stop rules. The reduced-AL DQLM MCMC and static quantile-regression
+comparators are built from exact CRAN `exdqlm` 1.1.0 and `quantreg` 6.1
+tarballs in ignored isolated runtimes. Preflight, oracle reference, a
+two-replication byte-reproduction fixture, and diagnostic-pilot preflight are
+implemented; diagnostic-pilot and confirmatory execution remain disabled.
+
 ## Pinned external reference
 
 Expected exdqlm RQR branch:
@@ -143,6 +163,7 @@ PDF inventory and checksums.
     make supplement
     make package-install
     make test-native
+    make test-standalone-contracts
     make prepare-exdqlm-runtime
     make test-exdqlm-rqr
     make literature-manifest

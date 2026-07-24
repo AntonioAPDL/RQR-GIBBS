@@ -1,358 +1,365 @@
 # Preliminary matched RQR-DLM simulation specification
 
 Date: 2026-07-24
-Status: draft for independent review; pilot and production execution disabled
+Schema: `rqrgibbs_dlm_main_simulation_preliminary/0.2.0`
+Status: design revision and reference implementation; diagnostic-pilot and
+confirmatory execution disabled
 
-## Scope
+## Statistical scope
 
-The first matched study should evaluate the MCMC RQR-DLM before adding
-RQR-DESN or a variational approximation. The statistical target is a pair of
-interval-root functions under the RQR loss. The study will not evaluate a
-response density because the generalized posterior and its pseudo-AL
-augmentation do not define one.
+The first matched study evaluates MCMC inference for the RQR-DLM before adding
+RQR-DESN or a variational approximation. Its inferential object is a pair of
+interval-root functions under the RQR loss. The generalized posterior and the
+pseudo-AL augmentation do not define a response likelihood or a
+posterior-predictive response distribution.
 
-The plan follows the ADEMP organization recommended for statistical
-simulation studies: aims, data-generating mechanisms, estimands, methods, and
-performance measures. Replication uncertainty will be reported through Monte
-Carlo standard errors rather than hidden behind a nominal replication count
-\citep{MorrisWhiteCrowther2019Simulation}. Proper scoring-rule principles
-motivate the secondary use of the central interval score, but that score does
-not share the RQR endpoint target under asymmetry
+The design follows the ADEMP organization for statistical simulation studies:
+aims, data-generating mechanisms, estimands, methods, and performance
+measures. Replication uncertainty is reported using Monte Carlo standard
+errors \citep{MorrisWhiteCrowther2019Simulation}. The central interval score
+is secondary because its canonical endpoints are equal-tailed quantiles,
+which generally differ from population RQR roots under asymmetry
 \citep{GneitingRaftery2007}.
 
-The machine-readable draft is
-`application/config/rqr_dlm/rqr_dlm_main_simulation_preliminary_20260724.R`.
-Its pilot and production authorization fields are false.
+The machine-readable sources are:
+
+```text
+application/config/rqr_dlm/
+  rqr_dlm_main_simulation_preliminary_20260724.R
+  rqr_dlm_main_simulation_preliminary_scenarios_20260724.csv
+  rqr_dlm_main_simulation_preliminary_methods_20260724.csv
+```
+
+Only `preflight`, `oracle-reference`, `tiny-end-to-end`, and
+`diagnostic-pilot-preflight` are implemented. The latter constructs a plan;
+it does not run a pilot. Both execution flags remain false.
 
 ## Aims
 
-The confirmatory study should answer six questions.
+The confirmatory study, if later authorized, will address six questions.
 
-1. Does RQR-DLM recover population RQR roots and nominal coverage in repeated
-   samples when root functions evolve over time?
-2. Under asymmetric conditional distributions, does direct root estimation
-   reduce held-out RQR loss or width at comparable coverage relative to
-   preassigned equal-tailed quantile endpoints?
-3. Under a symmetric Gaussian negative control, is RQR-DLM competitive without
-   an artificial asymmetry advantage?
-4. Do dynamic roots improve over fixed-design RQR when the interval functions
-   change over time?
-5. Do component-specific evolution scales or frozen component discounts help
-   when trend, seasonal, and regression blocks evolve at different rates?
-6. How sensitive are point summaries, mixing, and computation to the fixed
-   versus normalized learned generalized-Bayes rate?
+1. How accurately do RQR methods estimate population RQR roots, and how
+   accurately do quantile methods estimate population equal-tailed
+   quantiles?
+2. How do the methods compare in held-out RQR loss, repeated-sampling response
+   coverage, interval width, and the central interval score?
+3. Does a dynamic root model improve on fixed-design RQR when the target roots
+   evolve?
+4. Does the trend-seasonal comparison change when only the standardized error
+   law changes from Gaussian to skewed?
+5. Does component-specific evolution improve on a common-evolution RQR-DLM
+   when trend and regression components have unequal innovation scales?
+6. What numerical, MCMC, computational, and infrastructure failures occur
+   when all intended fits remain in the reporting denominator?
 
-The study is not designed to establish that the learned rate calibrates
-coverage, that RQR roots are posterior-predictive response intervals, or that
-one method dominates outside the declared mechanisms.
+The structural-break heavy-tail mechanism is a composite stress test. Its
+results cannot identify separate break robustness and tail robustness.
+Learned generalized-Bayes scale remains a sensitivity, not automatic coverage
+calibration or response variance.
+
+## Population oracle
+
+Let
+
+\[
+Y_t=\mu_t+s_tZ_t,\qquad s_t>0,
+\]
+
+where \(Z_t\) follows a declared standardized continuous law. For coverage
+\(c\), an ordered candidate interval can be parameterized by
+
+\[
+a(u)=F_Z^{-1}(u),\qquad
+b(u)=F_Z^{-1}(u+c),\qquad 0\le u\le 1-c.
+\]
+
+The population RQR risk is
+
+\[
+\mathcal R_c(a,b)
+=
+\mathbb E\!\left[
+  \rho_c\{(Z-a)(Z-b)\}
+\right].
+\]
+
+The implementation searches the one-dimensional coverage profile on a
+deterministic grid, identifies and refines every detected minimum basin, and
+independently minimizes the unrestricted two-dimensional objective using a
+midpoint and log-width parameterization with multiple starts. Each reference
+records:
+
+- the distribution and solver digests;
+- both endpoint pairs and objective values;
+- the coverage and truncated-first-moment residuals;
+- the objective gap between the searches;
+- endpoint separation and local profile curvature;
+- all detected profile minima;
+- a uniqueness or minimizer-set declaration; and
+- an estimated quadrature error, explicitly not a rigorous error bound.
+
+The location-scale relation is
+
+\[
+L_{t,c}=\mu_t+s_ta_c,\qquad
+U_{t,c}=\mu_t+s_tb_c,
+\]
+
+and positive homogeneity of the check loss gives
+
+\[
+\mathcal R_{Y,c}(L_{t,c},U_{t,c})
+=s_t^2\mathcal R_{Z,c}(a_c,b_c).
+\]
+
+If the global minimizer is unresolved or nonunique, endpoint RMSE against a
+single pair is removed for that cell. Excess population RQR risk and distance
+to the minimizer set replace it.
 
 ## Data-generating mechanisms
 
-### Common location-scale construction
+All numerical values are frozen in the scenario CSV rather than embedded
+only in prose. Each row records the initial-state law, predictor law,
+innovation covariance, seasonal structure, positive scale rule and floor,
+break specification, mixture parameters, training and future transitions,
+reference coverage, minimum root separation, and claim scope.
 
-Let \(Z\) have a declared continuous standardized distribution, and let
-\(Y_t=\mu_t+s_t Z_t\), where \(s_t>0\). For coverage \(c\), define
-\((a_c,b_c)\) as a population stationary RQR pair for \(Z\):
+The core mechanisms are:
 
-\[
-\Pr(a_c<Z<b_c)=c,\qquad
-\mathbb E\{Z\,\mathbb I(a_c<Z<b_c)\}
-=c\,\mathbb E(Z).
-\]
+1. static Gaussian negative control;
+2. local-level Gaussian dynamic control;
+3. matched local-level skewed mechanism;
+4. trend-seasonal Gaussian multicomponent control;
+5. matched trend-seasonal skewed mechanism;
+6. trend-regression mechanism with unequal component evolution; and
+7. structural-break and heavy-tail composite stress.
 
-Then the population RQR roots for \(Y_t\), conditional on the generated
-location and scale paths, are
+The two trend-seasonal mechanisms have the same location path, scale path,
+state components, innovation variances, seasonal period, amplitude, phase,
+training horizon, forecast horizon, and state seed. Only the standardized
+error law differs. The unequal trend-regression mechanism includes a
+competitive common-evolution RQR-DLM ablation; a true-\(W\) oracle alone
+cannot identify the benefit of component-specific evolution.
 
-\[
-L_{t,c}=\mu_t+s_t a_c,\qquad
-U_{t,c}=\mu_t+s_t b_c.
-\]
-
-This construction gives oracle endpoints without pretending that RQR targets
-equal-tailed quantiles. Each standardized root pair will be computed by
-global minimization of the population RQR loss over \(a<b\), using multiple
-starts and event-boundary-aware numerical integration. The two displayed
-moment equations are necessary stationary conditions, not by themselves a
-global-minimum or uniqueness proof. An independent solver will verify the
-objective value, stationarity, endpoint order, and local curvature at tighter
-tolerances. A mechanism with unresolved multiple global minimizers will not
-use endpoint RMSE as a primary measure. The equal-tailed quantiles of \(Z\)
-will be stored separately as comparator truth.
-
-Training-only centering and scaling will be applied to every fitted method and
-inverted before evaluation. This is important because the RQR loss has squared
-response units and the generalized-Bayes rate consequently has inverse-squared
-units.
-
-### Core mechanisms
-
-| ID | Statistical role | Location and scale | Error distribution | Main contrast |
-|---|---|---|---|---|
-| static Gaussian | negative control | static linear location, constant scale | standard normal | RQR and central equal-tailed roots coincide by symmetry |
-| local-level Gaussian | dynamic negative control | Gaussian local level, constant scale | standard normal | dynamic tracking without an asymmetry advantage |
-| local-level skewed | primary RQR signal | same local level, constant scale | centered and standardized log-normal | direct roots versus preassigned quantiles |
-| trend and seasonal skewed | multicomponent signal | local linear trend with seasonal location and positive seasonal scale | centered and standardized log-normal | component dynamics with asymmetric intervals |
-| trend and regression with unequal evolution | component-scale signal | slowly evolving trend and faster dynamic regression coefficient | centered and standardized log-normal | component-specific versus common evolution |
-| structural-break heavy-tail stress | misspecification | one predeclared level or coefficient break | centered, standardized skewed heavy-tail mixture | failure and recovery under an abrupt change |
-
-Preliminary state scales are deliberately visible rather than hidden in code:
-a local-level innovation variance near 0.02; trend and seasonal block scales
-near 0.005 and 0.002; and trend and regression scales near 0.005 and 0.05.
-The break is provisionally placed at 70% of the training path with magnitude
-1.5 training-standard-deviation units. These values are not frozen. The
-diagnostic pilot must confirm that the paths neither degenerate nor make the
-comparison trivial, after which they may be changed only before confirmatory
-seeds are opened.
-
-The skewed heavy-tail law is provisionally a centered and variance-standardized
-mixture with 90% standard-normal mass and 10% shifted \(t_3\) mass. The
-log-normal law is centered and divided by its population standard deviation.
-All laws have finite second moments, as required by the population
-characterization used in the article.
-
-Two sensitivities are proposed:
-
-- a known heteroscedastic scale covariate with standardized \(t_5\) errors; and
-- a single-coverage mechanism generated from two nearly noncrossing independent
-  root-state paths, which checks prior-path alignment separately from the
-  location-scale construction.
-
-Core training and forecast horizons are \(T=200\) and \(H=20\), with results
-at horizons 1, 5, 10, and 20. Sample-size sensitivity uses \(T=100\) and
-\(T=400\) on a reduced set of mechanisms. Coverage levels are 0.80 and 0.90.
-A 0.95 level is deferred unless the Monte Carlo budget can estimate its tail
-coverage with adequate precision.
-
-Future state innovations are part of the generated mechanism. Oracle endpoint
-recovery is evaluated against the realized conditional root path. Empirical
-coverage evaluates the point interval formed by posterior means of the
-ordered future root functions. This is an operating-characteristic check of
-the endpoint forecast; it is not posterior-predictive response coverage.
-
-## Estimands
-
-For every replication, method, coverage level, and horizon, retain:
-
-- the population RQR lower and upper roots;
-- the estimated lower and upper roots, defined as posterior means of ordered
-  root functions for Bayesian RQR methods;
-- root midpoint and width;
-- the interval-membership indicator for the generated response;
-- the held-out RQR loss;
-- the population equal-tailed endpoints; and
-- failure, elapsed-time, memory, and diagnostic indicators.
-
-The replication, not an individual horizon, is the independent Monte Carlo
-unit. Horizon-level observations remain clustered within replication.
-
-## Methods
-
-### Primary comparison
-
-1. **RQR-DLM with component-specific scales and fixed learning rate.** This is
-   the primary proposed method. Component templates are fixed, their positive
-   scales have the implemented inverse-Gamma updates, and the two roots share
-   each component scale. The standardized-scale primary rate is one.
-2. **Matched dynamic equal-tailed quantile interval.** Fit dynamic quantile
-   models at \((1-c)/2\) and \((1+c)/2\) using the same state components,
-   covariates, training window, and forecast origins. The implementation must
-   be independently validated. If CRAN exdqlm 1.1.0 is used, its source
-   tarball and SHA-256 must be pinned and built outside every protected source
-   checkout.
-
-The dynamic quantile comparator targets different endpoints under asymmetry.
-That difference is intentional and must be visible in the results.
-
-### Ablations and simple baselines
-
-- RQR-DLM with a frozen component-discount template;
-- fixed-design RQR with the same observed covariates;
-- static equal-tailed quantile regression; and
-- a rolling empirical equal-tailed interval.
-
-A true-\(W\) RQR-DLM on selected mechanisms is an oracle evolution reference,
-not a competitor. It cannot enter method rankings.
-
-### Sensitivity-only methods
-
-- the normalized learned-rate RQR-DLM;
-- fixed rates 0.5, 1, and 2 on the standardized scale;
-- a Gaussian DLM response interval, clearly labeled as a different
-  response-likelihood object; and
-- a time-series-valid conformal interval if its dependence assumptions and
-  tuning protocol are approved.
-
-Ordinary split conformalized quantile regression assumes exchangeability and
-is not automatically valid for the dynamic mechanisms
-\citep{RomanoPattersonCandes2019CQR}. EnbPI or a weighted method designed for
-nonexchangeable data is a more plausible sensitivity comparator, but its
-assumptions must be checked rather than inferred from the word “conformal”
-\citep{XuXie2021EnbPI,BarberCandesRamdasTibshirani2023BeyondExchangeability}.
-
-The adaptive conditional-discount RQR recursion is excluded because it is a
-working update rather than exact Gibbs for a declared fixed joint target.
-RQR-DESN and CAVI are also excluded from this first study.
-
-## Tuning and fairness
-
-All transformations, priors, windows, discount grids, and stopping rules use
-training data only. The held-out responses cannot select a method,
-hyperparameter, chain length, or rescue action.
-
-The preliminary discount grid is
-\(\{0.90,0.95,0.98,0.99\}\). Independent component discounts may be selected
-by a predeclared blockwise training-validation rule. Before implementation,
-the Pro review should decide whether this rule is sufficiently fair relative
-to the learned component-scale model or whether a single literature-standard
-discount should be frozen.
-
-The primary fixed generalized-Bayes rate is one after training-only response
-standardization. The learned normalized rate is a sensitivity. Its posterior
-must not be interpreted as response variance or automatic coverage
-calibration.
-
-## Performance measures
-
-### Primary
-
-- mean held-out RQR loss;
-- empirical coverage, signed coverage error, and absolute coverage error;
-- mean width under the coverage-comparability rule;
-- lower-root RMSE; and
-- upper-root RMSE.
-
-Coverage and width will always be shown together. A width claim is permitted
-only when both methods satisfy
+Two sensitivity mechanisms cover a known heteroscedastic scale covariate and
+prior alignment with two root paths. A root pair alone does not define a
+response process. For the latter mechanism, reference-coverage paths
+\((L_t,U_t)\) determine
 
 \[
-|\widehat C-c|\le 0.01+1.96\,\operatorname{MCSE}(\widehat C).
+s_t=\frac{U_t-L_t}{b_{\mathrm{ref}}-a_{\mathrm{ref}}},
+\qquad
+\mu_t=
+\frac{b_{\mathrm{ref}}L_t-a_{\mathrm{ref}}U_t}
+     {b_{\mathrm{ref}}-a_{\mathrm{ref}}}.
 \]
 
-Otherwise width is descriptive and the pair is placed on a coverage-width
-plot without a “sharper” conclusion. This preliminary one-percentage-point
-equivalence margin requires external review.
+The response is then generated as \(Y_t=\mu_t+s_tZ_t\). Roots for 0.80 and
+0.90 coverage are derived from this same response law; changing coverage does
+not generate a new dataset.
 
-### Secondary
+Every generated path must pass DGP-only finite-value, scale-floor, endpoint
+separation, moment, and nondegeneracy gates. DGP parameters cannot be changed
+because of comparative method rankings.
 
-- midpoint and width RMSE;
-- coverage by horizon and by predeclared true-scale or state-change strata;
-- the central interval score, with an explicit equal-tailed-target caveat;
-- state-component recovery on aligned mechanisms;
-- fit and numerical-failure rates;
-- elapsed time and sampled memory; and
-- R-hat, bulk ESS, tail ESS, MCSE, and ESS per second on the multichain
-  diagnostic subset.
+## Target-aligned estimands
 
-RQR will not receive a response log score, CRPS from an invented response
-distribution, or posterior-predictive-density metric.
+Endpoint error is target specific:
 
-All method contrasts are paired by replication through common generated data.
-Tables will include Monte Carlo standard errors and confidence intervals for
-the simulation summaries. Failed fits remain in the intention-to-run
-denominator; conditional-on-success summaries are secondary.
+```text
+RQR methods:
+  endpoint error relative to population RQR roots
 
-## Replications and Monte Carlo precision
+quantile methods:
+  endpoint error relative to population equal-tailed quantiles
 
-A 25-replication pilot per core cell is proposed for runtime, variability, and
-diagnostic planning only. It cannot be used to select the favorable method or
-remove an unfavorable mechanism.
+all methods:
+  held-out RQR loss
+  empirical response coverage
+  interval width
+  central interval score
+  failure and computation
+```
 
-The confirmatory study starts with 500 independent replications per core cell
-and adds predeclared batches of 250, up to 2,500. Stopping depends only on
-Monte Carlo precision:
+A quantile interval may additionally be compared with the RQR roots, but the
+result is labeled a cross-target distance rather than quantile-estimator
+bias. Held-out RQR loss is the RQR home-target measure, not a target-neutral
+score. The central interval score is secondary and equal-tailed-targeted.
+RQR is not assigned a response log score, CRPS from an invented response
+distribution, or a posterior-predictive-density score.
 
-- coverage MCSE at most 0.01;
-- root-error and width MCSE at most 2% of the mechanism's oracle width or
-  training response scale; and
-- reported MCSE for every primary paired contrast.
+## Coverage and width
 
-If a cell reaches 2,500 replications without meeting its precision target, it
-stops at the cap and reports the remaining uncertainty. No stopping rule uses
-the sign, ranking, or statistical significance of a performance difference.
-The pilot must estimate cluster-level variance before these thresholds are
-frozen.
+Coverage and width are always displayed jointly. The primary practical
+coverage margin is
 
-## MCMC validation within a many-replication study
+\[
+\Delta_C=0.02.
+\]
 
-Four chains for every method and replication may be unnecessarily expensive
-after the bounded validation, but one unexamined chain per fit would be too
-weak. The preliminary compromise is:
+A method is coverage qualified only when its 90% two-one-sided-test interval
+for the coverage error lies wholly inside
+\([-\Delta_C,\Delta_C]\). A narrower-width statement additionally requires
+both methods to be coverage qualified and a paired width-difference interval
+that supports the stated direction. Coverage-width frontiers are mandatory.
+No method may use test responses for post hoc width calibration.
 
-1. a four-chain diagnostic pilot on every core mechanism and both coverage
-   levels;
-2. a frozen schedule chosen from the hardest pilot cells using diagnostics,
-   not performance rankings;
-3. one chain per confirmatory fit; and
-4. four chains for a preselected 5% sentinel set of replications, chosen by
-   seed before results are observed.
+At exact nominal coverage, the chosen margin requires approximately 1,083
+replications for \(c=0.80\) and 609 for \(c=0.90\). A one-percentage-point
+margin would require approximately 4,330 and 2,436, respectively, and is
+incompatible with the present 2,500-replication cap at 0.80 coverage.
 
-The sentinel set uses maintained rank-normalized R-hat and bulk and tail ESS.
-Every fit uses the C++ backend and fail numerical policy. A failed fit is not
-reseeded or silently extended. This compromise remains an open review item;
-the independent audit may require two or four chains more broadly.
+## Methods and matching
 
-## Reproducibility and execution contract
+The primary RQR method uses component-specific inverse-Gamma evolution scales
+and fixed generalized-Bayes rate one after training-only response
+standardization. Its main dynamic comparator comprises separate lower and
+upper reduced-AL DQLM MCMC fits at
+\((1-c)/2\) and \((1+c)/2\).
 
-The future runner should expose:
+The dynamic quantile comparator is frozen to CRAN `exdqlm` 1.1.0:
+
+```text
+source:
+  https://cran.r-project.org/src/contrib/exdqlm_1.1.0.tar.gz
+
+SHA-256:
+  51bc968f617721c9ab1dcfc6ec14857d30827fcd36659f3de45337cc3c82bd14
+
+allowed engine:
+  reduced AL/DQLM MCMC at fixed quantiles
+
+excluded:
+  exAL skewness learning
+  LDVB
+  loading, compiling, or installing from an exdqlm checkout
+```
+
+The source tarball is installed in a fresh isolated library under
+`application/cache/`. The state components, covariates, priors or discounts,
+forecast origins, and horizons must match their RQR counterparts or have a
+recorded justification. Raw lower and upper quantile forecasts are retained;
+ordering is applied separately for interval metrics.
+
+Static quantile regression is frozen to `quantreg::rq` from CRAN `quantreg`
+6.1, source tarball SHA-256
+`f42292c5ab25a15f39295b93391deafef192fe09eefde563399a64eba7e0169a`.
+It uses a separate ignored isolated runtime and retains the raw endpoint fits;
+ordering occurs only for interval scoring. The previous “frequentist or
+Bayesian” ambiguity has been removed. Ordinary iid split CQR
+is omitted from the dependent core and the first diagnostic pilot. A
+time-series conformal sensitivity can be reconsidered only after its
+dependence assumptions and tuning contract have been verified
+\citep{RomanoPattersonCandes2019CQR,XuXie2021EnbPI,BarberCandesRamdasTibshirani2023BeyondExchangeability}.
+
+## Training-only tuning
+
+The config freezes rolling validation origins, validation horizon, common and
+block-specific discount grids, a maximum of 16 candidates, target-native
+criteria, deterministic ties, failed-candidate treatment, full-training
+refitting, and equal search budgets. RQR methods use validation RQR loss;
+quantile methods use validation check loss. This is target-specific tuning,
+not a common response score. Test coverage cannot tune a generalized-Bayes
+rate or any interval width.
+
+## Monte Carlo precision
+
+The confirmatory plan retains a minimum of 500 replications, increments of
+250, and a maximum of 2,500. Stopping can depend only on the frozen precision
+criteria:
+
+```text
+coverage:
+  MCSE <= 0.01
+
+endpoint and midpoint errors:
+  MCSE <= 0.02 * training-response SD
+
+mean width and paired width difference:
+  MCSE <= 0.02 * mean oracle RQR width
+
+standardized held-out RQR loss:
+  MCSE <= 0.01
+```
+
+The replication is the independent Monte Carlo unit. Coverage MCSE 0.01
+requires approximately 1,600 replications at 0.80 and 900 at 0.90. A
+near-zero oracle width is a failed DGP rather than a reason to change the
+denominator. A cell that reaches the cap reports its remaining uncertainty.
+Stopping never uses rank, sign, significance, or a favorable result.
+
+## MCMC evidence
+
+The diagnostic pilot will use four dispersed chains for at least two
+preselected replications per mechanism, coverage, and MCMC method. The final
+schedule can depend on the worst predeclared diagnostic summaries, but not on
+comparative performance.
+
+A future one-chain confirmatory fit must pass finite-state, zero-repair,
+exact-provenance, and within-chain bulk and tail ESS gates for predeclared
+functionals. Four-chain sentinels are selected before data generation within
+mechanism, coverage, method, and 250-replication-batch strata. The sentinel
+rate is 5% with at least two sentinels per stratum. A failure invokes the
+predeclared cell stop; it does not cause reseeding or outcome-driven
+extension.
+
+## Forecast objects
+
+Two future root objects are stored:
+
+```text
+realized_root_path:
+  roots after generated future state innovations
+
+oracle_conditional_mean_root:
+  expected roots conditional on information at the forecast origin and the
+  DGP parameters
+```
+
+Bias and RMSE of a posterior-mean root forecast use the conditional-mean
+oracle. Realized forecast error uses the realized path. For a local-level
+root \(L_{T+1}=L_T+\epsilon_{T+1}\), a perfect conditional-mean forecast
+equals \(L_T\) but has RMSE \(\sqrt{\operatorname{Var}(\epsilon_{T+1})}\)
+against the realized root. That innovation error is not estimator bias.
+
+Empirical coverage of a point interval against generated future responses is
+a repeated-sampling operating characteristic. It is not
+posterior-predictive response coverage.
+
+## Reproducibility stages
+
+This implementation pass contains four fail-closed stages:
 
 ```text
 preflight
 oracle-reference
-diagnostic-pilot
-execute-confirmatory
-collect
-audit
+tiny-end-to-end
+diagnostic-pilot-preflight
 ```
 
-Both pilot and confirmatory modes must fail closed behind separate
-configuration and environment confirmations. Each replication receives:
+The stages validate versioned schemas, deterministic independent seed
+streams, oracle references, DGP construction, a two-replication compact
+byte-reproduction fixture, atomic publication, recursive hashes, and the
+isolated CRAN comparator runtime. Large fits remain ignored. Compact outputs
+must retain target, response, numerical, MCMC, infrastructure, and provenance
+failure classifications.
 
-- a deterministic data seed keyed by scenario and replication;
-- separate deterministic method seeds;
-- a configuration and DGP digest;
-- exact source and isolated-runtime identities;
-- atomic compact output;
-- a structured failure record; and
-- recursive artifact hashes.
+The diagnostic-pilot preflight writes an explicit plan with
+`execution_authorized=FALSE`. There is no diagnostic-pilot or confirmatory
+execution branch. Another independent review is required before either can be
+enabled.
 
-Large fit objects remain ignored. Compact per-replication endpoints, losses,
-coverage indicators, diagnostics, failures, timings, and provenance are
-tracked. Jobs parallelize only across independent replications, with one
-BLAS/OpenMP thread per process and worker counts set from a measured memory
-benchmark.
+## Work deliberately deferred
 
-The simulation implementation cannot load or compile from an exdqlm checkout.
-Any exdqlm comparator must use a pinned archive or CRAN source tarball and an
-isolated runtime. The Q-DESN article repository remains read only.
+- diagnostic-pilot execution;
+- confirmatory simulation;
+- simulation-result manuscript prose;
+- CAVI and ELBO derivation;
+- RQR-DESN implementation or comparison; and
+- response-distribution scores for RQR.
 
-## Gates before any main run
-
-1. Independent verification of the global objective, stationary equations,
-   uniqueness status, and numerical error for every standardized RQR oracle.
-2. Unit tests showing location-scale transformation of the root equations.
-3. DGP moment, positivity, nondegeneracy, and path-crossing checks.
-4. Matched-design tests for every competitor.
-5. A frozen training-only tuning rule.
-6. A small end-to-end two-replication fixture with exact seed reproduction.
-7. A four-chain diagnostic pilot with no outcome-driven retuning.
-8. A reviewed replication-precision calculation and compute budget.
-9. A fail-closed production flag and exact-source runtime attestation.
-10. An independent review of the runner and compact artifact schemas.
-
-The next authorized action after review is to implement these gates and the
-diagnostic pilot. The confirmatory simulation remains unauthorized.
-
-## Primary references
-
-- Morris, White, and Crowther (2019), “Using Simulation Studies to Evaluate
-  Statistical Methods,” DOI `10.1002/sim.8086`.
-- Pouplin et al. (2024), “Relaxed Quantile Regression: Prediction Intervals
-  for Asymmetric Noise,” PMLR 235.
-- Gonçalves, Migon, and Bastos (2020), “Dynamic Quantile Linear Models: A
-  Bayesian Approach,” DOI `10.1214/19-BA1156`.
-- Gneiting and Raftery (2007), “Strictly Proper Scoring Rules, Prediction, and
-  Estimation,” DOI `10.1198/016214506000001437`.
-- Romano, Patterson, and Candès (2019), “Conformalized Quantile Regression.”
-- Xu and Xie (2021), “Conformal Prediction Interval for Dynamic Time-Series.”
-- Barber et al. (2023), “Conformal Prediction Beyond Exchangeability,” DOI
-  `10.1214/23-AOS2276`.
+The accepted bounded 24-fit validation is not rerun. Its promoter is hardened
+separately by binding an externally frozen source/runtime/reference bundle,
+recomputing internal fit digests after reopening, invoking the continuation
+validator, and requiring exact 24-fit set equality across every relevant
+compact manifest.

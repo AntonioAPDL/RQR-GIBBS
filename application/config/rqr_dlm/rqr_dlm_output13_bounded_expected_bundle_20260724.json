@@ -1,0 +1,15 @@
+{
+  "schema_version": "rqrgibbs_dlm_bounded_expected_bundle/1.0.0",
+  "evidence_id": "rqr_dlm_output13_bounded_20260724",
+  "expected": {
+    "primary_commit": "afc9c5fed14c66317b684fc9b9f6d01079c307cd",
+    "primary_application_tree": "77553d928c88053229a294d0aaea99659859966e",
+    "config_digest": "333d10aabf4195d03627301d97b641d11eacfeabc7a278cd5eeb5f1fc5a620fd",
+    "reference_artifact_manifest_sha256": "c5ca9a6b2701ad2c3caa032d29effd3a7c543d8bf05fa41ca5887a389386ff46",
+    "primary_runtime_tree_digest": "d028a74fb593650d2809fb2152927c74d00505e71652bf63054ae7fed385dba9",
+    "primary_runtime_attestation_schema": "rqrgibbs_runtime_attestation/5.0.0",
+    "primary_runtime_attestation_sha256": "584f94c5c6a8622ca9a4929a38e4a83d5c67a6ac1e60d39508aa3a8079360542",
+    "runtime_toolchain_digest": "f324fc2b9d8ca15c955ca6f4c74d499e0266730b381044d8f51db28f667667b1"
+  },
+  "interpretation": "Externally frozen identity for the accepted bounded generalized-Bayes interval-root validation; it is not a response-prediction contract."
+}
