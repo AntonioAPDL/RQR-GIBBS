@@ -323,3 +323,9 @@ Return:
 10. a copy-paste-ready next Pro prompt.
 
 Do not run a standalone pilot or any confirmatory replication. Do not authorize CAVI/ELBO or RQR-DESN.
+
+## Incidence-matrix codebook
+
+The 208-row CSV is compact but exact. Scenario codes: `S01` static Gaussian T200 c80; `S02` static Gaussian T200 c90; `S03/S04` local-level Gaussian T200 c80/c90; `S05/S06` local-level skewed T200 c80/c90; `S07` trend-seasonal Gaussian T200 c80; `S08/S09` trend-seasonal skewed T200 c80/c90; `S10/S11` unequal trend-regression T200 c80/c90; `S12` break/heavy-tail T200 c80; `S13` known heteroscedastic scale T200 c80; `S14` root alignment T200 c80; `S15/S16` local-level skewed T100/T400 c80.
+
+Method codes: `M01` component-scale fixed-rate RQR-DLM; `M02` dynamic equal-tailed quantile pair; `M03` fixed-design RQR; `M04` static equal-tailed quantile regression; `M05` rolling empirical interval; `M06` frozen-discount RQR-DLM; `M07` common-evolution RQR-DLM; `M08` true-W oracle; `M09/M10` rates .5/2; `M11` learned normalized rate; `M12` Gaussian response-DLM sensitivity; `M13` time-series conformal sensitivity. Roles `C/A/B/S/T/O` are core/ablation/baseline/sensitivity/oracle/omitted. Replication `C/S/F/0` means core batches/sensitivity batches/fixed first 200/omitted. `h` means horizons 1,5,10,20. Omission codes are `o1` redundant, `o2` unequal-evolution c80 only, `o3` selected true-W c80 only, `o4` selected rate cells only, `o5` deferred, and `o6` targeted c80 only.
