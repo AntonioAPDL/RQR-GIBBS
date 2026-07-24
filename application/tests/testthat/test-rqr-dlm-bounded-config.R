@@ -14,7 +14,7 @@ test_that("bounded dynamic fixture configuration is exact and non-production", {
   expect_false(config$response_likelihood)
   expect_false(config$response_prediction_contract)
   expect_false(config$production_simulation_authorized)
-  expect_true(config$bounded_dynamic_execution_authorized)
+  expect_false(config$bounded_dynamic_execution_authorized)
   expect_identical(
     config$runner_modes,
     c(
