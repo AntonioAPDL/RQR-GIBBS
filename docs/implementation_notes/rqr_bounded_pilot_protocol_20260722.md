@@ -147,20 +147,33 @@ mixing targets. The discount fixture extends its frozen recursion through
 component templates are explicit. The config excludes `adaptive_discount`,
 marks itself non-production, and does not authorize the 24-fit execution.
 
-The schema-4 runner has four modes. `preflight` constructs the canonical
+The schema-5 runner has four modes. `preflight` constructs the canonical
 objects. `reference-only` adds full cross-time Gaussian FFBS covariance,
 canonical missing-index invariance, public future-root moments for every
-fixture, retained two-component inverse-Gamma conditionals, and bitwise
+fixture—including a varying component-scale draw-orientation check—retained
+two-component inverse-Gamma conditionals, and bitwise
 `6=2+2+2` continuation for all six fixture/mode cells. It also rejects
-digest-consistent fractional and otherwise invalid history counts.
+digest-consistent fractional and otherwise invalid history counts, nonlogical
+aggregate statuses, and invalid RNG checkpoint values before coercion.
 `benchmark-one-cell` runs the full four-chain schedule only for the
 component-scale learned-rate cell and records timing and storage; its
 diagnostics are descriptive rather than promotion gates. `execute-bounded`
 requires an independently reviewed full commit, the complete hashed reference
 bundle from the identical runtime and toolchain, an explicit confirmation, and
 a separately enabled configuration flag. It diagnoses every training-time and
-future interval-root functional and stops after any failing four-chain cell.
-All chain files are written atomically below ignored output roots, while compact
-summaries, failure records, checkpoint and provenance manifests, and recursive
-artifact hashes are retained as review evidence. The execution flag remains
-false, so the 24 fits cannot be launched from this protocol revision.
+future conditional-mean interval-root functional against an independently
+constructed ordered schema and stops after any failing four-chain cell.
+Stochastic future state paths are a separate sidecar and preserve the saved
+MCMC draw order. Chain files are read back and checked for exact identity,
+checkpoint and history integrity, size, and hash before atomic publication
+below ignored output roots. Compact summaries, failure records, checkpoint and
+provenance manifests, and recursive artifact hashes are retained as review
+evidence even on signal/error exits.
+
+The frozen prospective schedule is 2,000 burn-in plus 6,000 retained draws per
+chain, thinning one, with the same four seeds and initialization profiles as
+the diagnostic benchmark. The whole-grid monitor ceiling is 240 minutes. This
+change responds to two predeclared bulk-ESS failures at 4,000 retained draws;
+the ESS threshold remains 1,000 and no retry, seed change, or post hoc retuning
+is allowed. The execution flag remains false, so the 24 fits cannot be
+launched from this protocol revision.

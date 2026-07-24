@@ -3,7 +3,7 @@
 # protocol and does not authorize a production launch.
 
 rqr_dlm_bounded_dynamic_fixtures <- list(
-  schema_version = "rqrgibbs_dlm_bounded_fixtures/4.0.0",
+  schema_version = "rqrgibbs_dlm_bounded_fixtures/5.0.0",
   config_id = "rqr_dlm_bounded_dynamic_fixtures_20260723",
   scope = "bounded_dynamic_target_and_mixing_validation",
   generalized_bayes = TRUE,
@@ -27,7 +27,7 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
   mcmc = list(
     chains = 4L,
     burn_in = 2000L,
-    retained_per_chain = 4000L,
+    retained_per_chain = 6000L,
     thin = 1L,
     seeds = c(84201L, 84202L, 84203L, 84204L),
     backend = "cpp",
@@ -61,6 +61,7 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
     component_scale = 84305L,
     continuation = 84306L,
     initialization = 84307L,
+    component_scale_future = 84308L,
     forecast_by_fixture = c(
       fixed_W_local_level = 84311L,
       frozen_trend_seasonal_discount = 84312L,
@@ -78,7 +79,7 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
   ),
   resources = list(
     sequential_execution = TRUE,
-    hard_timeout_minutes = 45L,
+    hard_timeout_minutes = 240L,
     maximum_sampled_process_group_rss_gib = 4,
     maximum_process_tree_threads = 4L,
     maximum_process_tree_processes = 3L,

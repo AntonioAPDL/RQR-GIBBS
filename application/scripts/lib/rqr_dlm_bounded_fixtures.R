@@ -20,7 +20,7 @@ rqr_validate_bounded_dlm_config <- function(config) {
   if (!is.list(config) || !all(required %in% names(config)) ||
       !identical(
         config$schema_version,
-        "rqrgibbs_dlm_bounded_fixtures/4.0.0"
+        "rqrgibbs_dlm_bounded_fixtures/5.0.0"
       ) ||
       !isTRUE(config$generalized_bayes) ||
       isTRUE(config$response_likelihood) ||
@@ -74,6 +74,9 @@ rqr_validate_bounded_dlm_config <- function(config) {
       anyDuplicated(mcmc$seeds) ||
       !identical(mcmc$backend, "cpp") ||
       !identical(mcmc$numerical_policy, "fail") ||
+      !identical(mcmc$burn_in, 2000L) ||
+      !identical(mcmc$retained_per_chain, 6000L) ||
+      !identical(mcmc$thin, 1L) ||
       !isTRUE(mcmc$store_state_draws) ||
       isTRUE(mcmc$store_latent_draws) ||
       length(mcmc$initialization_profiles) != mcmc$chains) {
@@ -114,6 +117,7 @@ rqr_validate_bounded_dlm_config <- function(config) {
   if (!is.list(resources) ||
       !isTRUE(resources$sequential_execution) ||
       !scalar_integer(resources$hard_timeout_minutes, 1L) ||
+      !identical(resources$hard_timeout_minutes, 240L) ||
       !scalar_positive(
         resources$maximum_sampled_process_group_rss_gib
       ) ||

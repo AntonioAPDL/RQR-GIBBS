@@ -236,10 +236,13 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 
 .rqr_restore_rng <- function(state) {
   if (is.null(state)) return(invisible(FALSE))
-  state <- as.integer(state)
-  if (length(state) < 2L || anyNA(state)) {
+  if (!is.numeric(state) || length(state) < 2L || anyNA(state) ||
+      any(!is.finite(state)) || any(state != floor(state)) ||
+      any(state < -.Machine$integer.max) ||
+      any(state > .Machine$integer.max)) {
     stop("init$rng_state must be a complete integer .Random.seed vector.", call. = FALSE)
   }
+  state <- as.integer(state)
   assign(".Random.seed", state, envir = .GlobalEnv)
   invisible(TRUE)
 }
@@ -248,10 +251,10 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
-.rqr_schema_version <- function() "rqrgibbs_fit/1.7.0"
+.rqr_schema_version <- function() "rqrgibbs_fit/1.8.0"
 
 .rqr_continuation_history_schema <- function() {
-  "rqrgibbs_continuation_history/4.0.0"
+  "rqrgibbs_continuation_history/4.1.0"
 }
 
 .rqr_make_continuation_history <- function(
@@ -730,6 +733,23 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       )) {
     stop(
       "Continuation history mismatch ledger is not reconstructible.",
+      call. = FALSE
+    )
+  }
+  valid_contract_logical <- function(field) {
+    value <- contract[[field]]
+    is.logical(value) && length(value) == 1L && !is.na(value)
+  }
+  contract_logical_fields <- c(
+    "chain_history_numerically_exact", "target_numerical_eligible",
+    "promotion_eligible", "reproducibility_eligible",
+    "cumulative_environment_override_used"
+  )
+  if (!all(vapply(
+        contract_logical_fields, valid_contract_logical, logical(1L)
+      ))) {
+    stop(
+      "Continuation history aggregate statuses must be logical scalars.",
       call. = FALSE
     )
   }

@@ -52,14 +52,17 @@ data/model/target/evolution digests; full paths are opt-in. A portability
 override is durable and removes reproducibility and promotion eligibility.
 Continuation also carries a separately digested cumulative history contract,
 including every mismatch/override generation, and compares the requested and
-resolved FFBS backends before making a bitwise claim. Promotion binds the
-executing `rqrgibbs` namespace to the clean primary checkout (or a verified
-isolated-runtime attestation), not merely to an installed version string.
-The version-4 attestation links the exact Git archive to the built source
+resolved FFBS backends before making a bitwise claim. When an expected commit
+is declared, promotion binds the executing `rqrgibbs` namespace to a verified
+isolated-runtime attestation of that exact commit, not merely to a clean
+checkout path or installed version string. Direct source loading remains
+exploratory/test-only.
+The version-5 attestation links the exact Git archive to the built source
 package, rehashes the actual command receipts and logs, and requires a lineage
 marker in the executing installed runtime. Continuation history derives
 per-segment exactness, target eligibility, mismatch/override effects, and
-promotion status from raw facts under a versioned target digest.
+promotion status from raw facts under a versioned target digest. Aggregate
+history statuses and saved RNG state are validated before any coercion.
 Component-scale forecasts can combine saved evolution-scale draws with fixed
 future component templates.
 

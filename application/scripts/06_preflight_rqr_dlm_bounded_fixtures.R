@@ -125,7 +125,7 @@ if (!is.list(config) || !all(required_top_level %in% names(config))) {
 }
 if (!identical(
       config$schema_version,
-      "rqrgibbs_dlm_bounded_fixtures/4.0.0"
+      "rqrgibbs_dlm_bounded_fixtures/5.0.0"
     ) ||
     !isTRUE(config$generalized_bayes) ||
     isTRUE(config$response_likelihood) ||
@@ -142,6 +142,9 @@ if (!identical(
   stop("The bounded-fixture interpretation contract is invalid.", call. = FALSE)
 }
 if (!identical(config$mcmc$chains, 4L) ||
+    !identical(config$mcmc$burn_in, 2000L) ||
+    !identical(config$mcmc$retained_per_chain, 6000L) ||
+    !identical(config$mcmc$thin, 1L) ||
     length(config$mcmc$seeds) != config$mcmc$chains ||
     anyDuplicated(config$mcmc$seeds) ||
     !identical(config$mcmc$backend, "cpp") ||
@@ -188,7 +191,7 @@ if (!identical(config$continuation$history_segments, 3L) ||
     !identical(config$gates$root_swap_activity_role, "sidecar_only") ||
     !isTRUE(config$resources$sequential_execution) ||
     !isTRUE(config$resources$require_active_process_tree_monitor) ||
-    config$resources$hard_timeout_minutes <= 0 ||
+    !identical(config$resources$hard_timeout_minutes, 240L) ||
     config$resources$maximum_sampled_process_group_rss_gib <= 0 ||
     config$resources$maximum_process_tree_threads < 1L ||
     config$resources$maximum_process_tree_processes < 1L ||
@@ -259,7 +262,7 @@ if (nrow(audits) != 3L ||
 }
 
 manifest <- list(
-  schema_version = "rqrgibbs_dlm_bounded_preflight/2.0.0",
+  schema_version = "rqrgibbs_dlm_bounded_preflight/3.0.0",
   config_id = config$config_id,
   config_digest = digest::digest(
     config, algo = "sha256", serialize = TRUE

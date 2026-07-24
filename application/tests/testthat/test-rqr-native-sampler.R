@@ -179,6 +179,7 @@ test_that("future root forecasting is explicit and does not simulate responses",
   expect_true(all(fc$upper_draws >= fc$lower_draws))
   expect_match(fc$interpretation, "no response simulation")
   expect_equal(fc$diagnostics$repair_count, 0L)
+  expect_identical(fc$draw_index, seq_len(ncol(fit$samp.eta_root1)))
   expect_error(
     rqr_forecast_roots(
       fit, FF_future = matrix(1, 1, 2), GG_future = 1,
@@ -319,6 +320,54 @@ test_that("component-scale root forecasts match analytic state moments", {
   expect_equal(forecast$diagnostics$repair_count, 0L)
 })
 
+test_that("all-draw component forecasts preserve varying saved scale rows", {
+  n_save <- 2000L
+  q <- rep(c(0.1, 0.9), each = n_save / 2L)
+  fixture <- structure(list(
+    samp.theta_terminal_root1 = matrix(0, 1L, n_save),
+    samp.theta_terminal_root2 = matrix(0, 1L, n_save),
+    samp.evolution_scale = matrix(
+      q, n_save, 1L, dimnames = list(NULL, "level")
+    ),
+    evolution = rqr_evolution_component_scale(
+      templates = list(matrix(1, 1, 1)),
+      component_dims = 1L,
+      prior = list(shape = 2, rate = 1),
+      initial = 1,
+      component_names = "level"
+    ),
+    model_spec = list(
+      evolution_mode = "component_scale",
+      numerical_policy = "fail"
+    ),
+    misc = list(jitter_ladder = 0)
+  ), class = c("rqr_dlm_mcmc", "rqr_fit"))
+  forecast <- rqr_forecast_roots(
+    fixture,
+    FF_future = matrix(1, 1L, 1L),
+    GG_future = 1,
+    component_templates_future = list(matrix(1, 1, 1)),
+    nd = NULL,
+    seed = 1212
+  )
+  expect_identical(forecast$draw_index, seq_len(n_save))
+  expect_identical(
+    unname(forecast$diagnostics$component_scale_draws[, 1L]),
+    q
+  )
+  for (value in unique(q)) {
+    draws <- forecast$eta_root1[, q == value, drop = FALSE]
+    empirical_variance <- stats::var(as.numeric(draws))
+    variance_mcse <- sqrt(
+      2 * value^2 / (length(draws) - 1L)
+    )
+    expect_lte(
+      abs(empirical_variance - value) / variance_mcse,
+      6
+    )
+  }
+})
+
 test_that("DLM checkpoints continue with the same RNG stream", {
   y <- sin(seq_len(9) / 3)
   model <- rqr_polytrend(1L, C0 = 2)
@@ -340,7 +389,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.7.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.8.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
@@ -352,6 +401,14 @@ test_that("DLM checkpoints continue with the same RNG stream", {
   expect_identical(
     first$checkpoint_digest,
     rqrgibbs:::.rqr_digest(first$checkpoint_state)
+  )
+  expect_error(
+    rqrgibbs:::.rqr_restore_rng(c(10403.5, 1)),
+    "complete integer"
+  )
+  expect_error(
+    rqrgibbs:::.rqr_restore_rng(c(10403, Inf)),
+    "complete integer"
   )
   expect_equal(first$provenance$initial_seed, 1205L)
   expect_identical(first$model_spec$loss_name, "rqr_residual_product_check_loss")
@@ -457,6 +514,27 @@ test_that("continuation inherits numerical and source history cumulatively", {
     rqr_dlm_continue(altered_generation1, n_mcmc = 1),
     "structurally invalid"
   )
+  aggregate_fields <- c(
+    "chain_history_numerically_exact", "target_numerical_eligible",
+    "promotion_eligible", "reproducibility_eligible",
+    "cumulative_environment_override_used"
+  )
+  invalid_aggregate_values <- list(1, NA, c(TRUE, FALSE))
+  for (field in aggregate_fields) {
+    for (value in invalid_aggregate_values) {
+      invalid_aggregate <- grandchild
+      invalid_aggregate$continuation_history_contract[[field]] <- value
+      invalid_aggregate$continuation_history_digest <-
+        rqrgibbs:::.rqr_digest(
+          invalid_aggregate$continuation_history_contract
+        )
+      expect_error(
+        rqr_dlm_continue(invalid_aggregate, n_mcmc = 1),
+        "aggregate statuses",
+        info = field
+      )
+    }
+  }
 
   impossible_repairs <- grandchild
   impossible_repairs$continuation_history_contract$segments[[1L]]$

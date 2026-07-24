@@ -150,7 +150,7 @@ verify_reference_bundle <- function() {
     all(required_resource_metrics %in% resource$metric) &&
     all(toupper(as.character(resource$pass)) == "TRUE")
   verified <- is.list(manifest) &&
-    identical(manifest$schema_version, "rqrgibbs_dlm_bounded_run/2.0.0") &&
+    identical(manifest$schema_version, "rqrgibbs_dlm_bounded_run/3.0.0") &&
     identical(manifest$mode, "reference-only") &&
     identical(manifest$status, "passed") &&
     identical(tolower(manifest$primary_commit), expected_commit) &&
@@ -167,6 +167,14 @@ verify_reference_bundle <- function() {
       manifest$runtime_toolchain_digest, runtime_contract$digest
     ) &&
     identical(
+      manifest$estimand_schema_version,
+      rqr_bounded_estimand_schema_version()
+    ) &&
+    identical(
+      manifest$future_primary_estimands,
+      "deterministic_conditional_mean_interval_roots"
+    ) &&
+    identical(
       manifest$reference_gates_sha256,
       file_sha256(file.path(reference_dir, "reference_gates.csv"))
     ) &&
@@ -176,7 +184,7 @@ verify_reference_bundle <- function() {
     ) &&
     is.list(bundle) &&
     identical(
-      bundle$schema_version, "rqrgibbs_reference_bundle/1.0.0"
+      bundle$schema_version, "rqrgibbs_reference_bundle/2.0.0"
     ) &&
     identical(tolower(bundle$primary_commit), expected_commit) &&
     identical(bundle$config_digest, base_manifest$config_digest) &&
@@ -189,6 +197,10 @@ verify_reference_bundle <- function() {
       runtime_contract$primary_runtime_attestation_sha256
     ) &&
     identical(bundle$runtime_toolchain_digest, runtime_contract$digest) &&
+    identical(
+      bundle$estimand_schema_version,
+      rqr_bounded_estimand_schema_version()
+    ) &&
     is.list(toolchain) &&
     identical(toolchain$digest, runtime_contract$digest) &&
     bundle_file_match && gate_pass && resource_pass
@@ -272,7 +284,7 @@ if (!identical(dim(estimand_orientation_probe), c(5L, 3L)) ||
 }
 rm(estimand_orientation_probe)
 
-chain_estimands <- function(fit, forecast) {
+chain_estimands <- function(fit, future_functionals) {
   lower <- pmin(fit$samp.eta_root1, fit$samp.eta_root2)
   upper <- pmax(fit$samp.eta_root1, fit$samp.eta_root2)
   midpoint <- 0.5 * (lower + upper)
@@ -339,16 +351,20 @@ chain_estimands <- function(fit, forecast) {
     values <- cbind(values, theta0_block)
   }
   values <- append_matrix_estimands(
-    values, forecast$lower_draws, "future_lower"
+    values, future_functionals$lower_draws,
+    "future_conditional_mean_lower"
   )
   values <- append_matrix_estimands(
-    values, forecast$upper_draws, "future_upper"
+    values, future_functionals$upper_draws,
+    "future_conditional_mean_upper"
   )
   values <- append_matrix_estimands(
-    values, forecast$midpoint_draws, "future_midpoint"
+    values, future_functionals$midpoint_draws,
+    "future_conditional_mean_midpoint"
   )
   values <- append_matrix_estimands(
-    values, forecast$width_draws, "future_width"
+    values, future_functionals$width_draws,
+    "future_conditional_mean_width"
   )
   if (identical(
         fit$model_spec$learning_rate_mode, "fixed_rate"
@@ -384,17 +400,20 @@ chain_estimands <- function(fit, forecast) {
 }
 
 diagnose_cell <- function(
-    cell_chains, fixture_id, learning_rate_mode) {
-  schemas <- lapply(cell_chains, colnames)
-  if (!all(vapply(
-        schemas[-1L], identical, logical(1L), schemas[[1L]]
-      ))) {
+    cell_chains, fixture, fixture_id, learning_rate_mode) {
+  if (!identical(length(cell_chains), config$mcmc$chains) ||
+      any(vapply(
+        cell_chains, nrow, integer(1L)
+      ) != config$mcmc$retained_per_chain)) {
     stop(
-      "A required estimand disappeared or changed order across chains.",
+      "The four-chain retained-draw contract is incomplete.",
       call. = FALSE
     )
   }
-  rows <- lapply(schemas[[1L]], function(variable) {
+  schema <- rqr_bounded_validate_estimand_schemas(
+    cell_chains, fixture, learning_rate_mode
+  )
+  rows <- lapply(schema, function(variable) {
     matrix_values <- do.call(cbind, lapply(
       cell_chains, function(values) values[, variable]
     ))
@@ -536,6 +555,7 @@ atomic_write_csv(run_status, file.path(output_dir, "run_status.csv"))
 fit_audit_rows <- posterior_summary_rows <- future_summary_rows <- list()
 conditional_rows <- swap_rows <- provenance_rows <- checkpoint_rows <- list()
 chain_hash_rows <- diagnostic_rows <- missing_future_rows <- list()
+estimand_schema_rows <- list()
 fit_root <- file.path(output_dir, "full_chains_ignored")
 dir.create(fit_root, recursive = TRUE, showWarnings = FALSE)
 
@@ -585,7 +605,7 @@ for (fixture_id in fixture_ids) {
           object = fit,
           FF_future = future$FF,
           GG_future = future$GG,
-          nd = ncol(fit$samp.eta_root1),
+          nd = NULL,
           seed = forecast_seed,
           numerical_policy = "fail"
         )
@@ -598,7 +618,16 @@ for (fixture_id in fixture_ids) {
         forecast <- do.call(
           rqrgibbs::rqr_forecast_roots, forecast_arguments
         )
+        expected_draw_index <- seq_len(ncol(fit$samp.eta_root1))
         if (forecast$diagnostics$repair_count != 0L ||
+            !identical(forecast$draw_index, expected_draw_index) ||
+            (!is.null(fit$samp.evolution_scale) &&
+              !identical(
+                unname(
+                  forecast$diagnostics$component_scale_draws
+                ),
+                unname(fit$samp.evolution_scale)
+              )) ||
             any(!is.finite(forecast$lower_draws)) ||
             any(!is.finite(forecast$upper_draws)) ||
             !grepl(
@@ -606,13 +635,32 @@ for (fixture_id in fixture_ids) {
             )) {
           stop("The future interval-root gate failed.")
         }
-        estimands <- chain_estimands(fit, forecast)
+        future_functionals <-
+          rqr_bounded_future_conditional_mean_roots(fit, future)
+        if (!identical(
+              future_functionals$draw_index, expected_draw_index
+            )) {
+          stop("The future conditional-mean draw order changed.")
+        }
+        estimands <- chain_estimands(fit, future_functionals)
+        if (!identical(
+              nrow(estimands), config$mcmc$retained_per_chain
+            )) {
+          stop("The retained estimand draw count is incomplete.")
+        }
+        rqr_bounded_validate_estimand_schemas(
+          list(estimands), fixture, learning_rate_mode
+        )
         chain_path <- file.path(
           fit_root, paste0(row$fit_id, ".rds")
         )
-        atomic_save_rds(fit, chain_path, compress = "xz")
+        publication <- rqr_bounded_publish_fit_rds(
+          fit, chain_path, compress = "xz"
+        )
         list(
-          fit = fit, forecast = forecast, estimands = estimands,
+          fit = fit, forecast = forecast,
+          future_functionals = future_functionals,
+          estimands = estimands, publication = publication,
           forecast_seed = forecast_seed, chain_path = chain_path
         )
       }, error = function(error) {
@@ -650,7 +698,7 @@ for (fixture_id in fixture_ids) {
         seed = row$seed,
         forecast_seed = result$forecast_seed,
         elapsed_seconds = ended - started,
-        chain_bytes = file.info(result$chain_path)$size,
+        chain_bytes = result$publication$bytes,
         forecast_repair_count = forecast$diagnostics$repair_count,
         numerical_repair_count =
           fit$model_spec$numerical_repair_count,
@@ -671,10 +719,28 @@ for (fixture_id in fixture_ids) {
         data.frame(
           fit_id = row$fit_id,
           horizon = seq_len(nrow(forecast$lower_draws)),
-          lower_mean = rowMeans(forecast$lower_draws),
-          upper_mean = rowMeans(forecast$upper_draws),
-          midpoint_mean = rowMeans(forecast$midpoint_draws),
-          width_mean = rowMeans(forecast$width_draws),
+          conditional_mean_lower = rowMeans(
+            result$future_functionals$lower_draws
+          ),
+          conditional_mean_upper = rowMeans(
+            result$future_functionals$upper_draws
+          ),
+          conditional_mean_midpoint = rowMeans(
+            result$future_functionals$midpoint_draws
+          ),
+          conditional_mean_width = rowMeans(
+            result$future_functionals$width_draws
+          ),
+          stochastic_lower_mean = rowMeans(forecast$lower_draws),
+          stochastic_upper_mean = rowMeans(forecast$upper_draws),
+          stochastic_midpoint_mean = rowMeans(
+            forecast$midpoint_draws
+          ),
+          stochastic_width_mean = rowMeans(forecast$width_draws),
+          draw_index_sequential = identical(
+            forecast$draw_index,
+            seq_len(ncol(fit$samp.eta_root1))
+          ),
           interpretation = forecast$interpretation,
           stringsAsFactors = FALSE
         )
@@ -694,7 +760,17 @@ for (fixture_id in fixture_ids) {
           future_horizon = nrow(forecast$lower_draws),
           future_values_finite =
             all(is.finite(forecast$lower_draws)) &&
-              all(is.finite(forecast$upper_draws)),
+              all(is.finite(forecast$upper_draws)) &&
+              all(is.finite(
+                result$future_functionals$lower_draws
+              )) &&
+              all(is.finite(
+                result$future_functionals$upper_draws
+              )),
+          future_draw_index_sequential = identical(
+            forecast$draw_index,
+            seq_len(ncol(fit$samp.eta_root1))
+          ),
           future_repair_count =
             forecast$diagnostics$repair_count,
           response_simulation_contract = FALSE,
@@ -746,6 +822,7 @@ for (fixture_id in fixture_ids) {
         fit_id = row$fit_id,
         checkpoint_digest = fit$checkpoint_digest,
         history_digest = fit$continuation_history_digest,
+        published_object_digest = result$publication$object_digest,
         completed_iterations =
           fit$checkpoint_state$completed_iterations,
         stringsAsFactors = FALSE
@@ -755,14 +832,31 @@ for (fixture_id in fixture_ids) {
         relative_path = file.path(
           "full_chains_ignored", basename(result$chain_path)
         ),
-        bytes = file.info(result$chain_path)$size,
-        sha256 = file_sha256(result$chain_path),
+        bytes = result$publication$bytes,
+        sha256 = result$publication$sha256,
+        checkpoint_digest =
+          result$publication$checkpoint_digest,
+        history_digest =
+          result$publication$continuation_history_digest,
         stringsAsFactors = FALSE
       )
     }
     cell_diagnostics <- diagnose_cell(
-      cell_chains, fixture_id, learning_rate_mode
+      cell_chains, constructed[[fixture_id]], fixture_id,
+      learning_rate_mode
     )
+    schema <- rqr_bounded_expected_estimand_names(
+      constructed[[fixture_id]], learning_rate_mode
+    )
+    estimand_schema_rows[[length(estimand_schema_rows) + 1L]] <-
+      data.frame(
+        schema_version = rqr_bounded_estimand_schema_version(),
+        fixture_id = fixture_id,
+        learning_rate_mode = learning_rate_mode,
+        position = seq_along(schema),
+        estimand = schema,
+        stringsAsFactors = FALSE
+      )
     diagnostic_rows[[length(diagnostic_rows) + 1L]] <-
       cell_diagnostics
     atomic_write_csv(
@@ -816,6 +910,10 @@ atomic_write_csv(
 atomic_write_csv(
   do.call(rbind, chain_hash_rows),
   file.path(output_dir, "local_chain_hashes.csv")
+)
+atomic_write_csv(
+  do.call(rbind, estimand_schema_rows),
+  file.path(output_dir, "estimand_schema.csv")
 )
 if (length(conditional_rows)) {
   atomic_write_csv(

@@ -35,7 +35,12 @@ helper_path <- file.path(
   repo_root, "application", "scripts", "lib",
   "rqr_dlm_bounded_fixtures.R"
 )
-if (!file.exists(config_path) || !file.exists(helper_path)) {
+diagnostics_helper_path <- file.path(
+  repo_root, "application", "scripts", "lib",
+  "rqr_dlm_bounded_diagnostics.R"
+)
+if (!file.exists(config_path) || !file.exists(helper_path) ||
+    !file.exists(diagnostics_helper_path)) {
   stop("Run this script from the RQR-GIBBS repository root.", call. = FALSE)
 }
 
@@ -155,11 +160,14 @@ config <- config_environment$rqr_dlm_bounded_dynamic_fixtures
 if (!is.list(config) ||
     !identical(
       config$schema_version,
-      "rqrgibbs_dlm_bounded_fixtures/4.0.0"
+      "rqrgibbs_dlm_bounded_fixtures/5.0.0"
     ) ||
     !identical(config$mcmc$backend, "cpp") ||
     !identical(config$mcmc$numerical_policy, "fail") ||
     !identical(config$mcmc$chains, 4L) ||
+    !identical(config$mcmc$burn_in, 2000L) ||
+    !identical(config$mcmc$retained_per_chain, 6000L) ||
+    !identical(config$mcmc$thin, 1L) ||
     length(config$mcmc$initialization_profiles) != 4L ||
     !isTRUE(config$mcmc$store_state_draws) ||
     isTRUE(config$mcmc$store_latent_draws) ||
@@ -171,6 +179,7 @@ if (!is.list(config) ||
   stop("The frozen bounded-runner configuration is invalid.", call. = FALSE)
 }
 sys.source(helper_path, envir = environment())
+sys.source(diagnostics_helper_path, envir = environment())
 rqr_validate_bounded_dlm_config(config)
 monitor_contract <- c(
   timeout_seconds = as.numeric(Sys.getenv(
@@ -383,7 +392,7 @@ atomic_write_lines(
 )
 
 base_manifest <- list(
-  schema_version = "rqrgibbs_dlm_bounded_run/2.0.0",
+  schema_version = "rqrgibbs_dlm_bounded_run/3.0.0",
   mode = mode,
   config_id = config$config_id,
   config_digest = digest::digest(
@@ -405,6 +414,17 @@ base_manifest <- list(
     length(constructed) *
     length(config$learning_rate_modes) *
     config$mcmc$chains,
+  mcmc_schedule = list(
+    chains = config$mcmc$chains,
+    burn_in = config$mcmc$burn_in,
+    retained_per_chain = config$mcmc$retained_per_chain,
+    thin = config$mcmc$thin
+  ),
+  estimand_schema_version =
+    rqr_bounded_estimand_schema_version(),
+  future_primary_estimands =
+    "deterministic_conditional_mean_interval_roots",
+  stochastic_future_draws_role = "sidecar_only",
   full_chain_files_ignored = TRUE,
   generalized_bayes = TRUE,
   response_likelihood = FALSE,
@@ -795,10 +815,105 @@ run_public_future_references <- function() {
     )
   })
   table <- do.call(rbind, rows)
+  component_fixture <-
+    constructed$shared_component_scale_trend_regression
+  component_draws <- 4000L
+  component_groups <- rep(1:2, each = component_draws / 2L)
+  scale_profiles <- rbind(
+    0.5 * component_fixture$evolution$initial,
+    2.0 * component_fixture$evolution$initial
+  )
+  scale_draws <- scale_profiles[component_groups, , drop = FALSE]
+  p <- component_fixture$expanded_model$p
+  H <- component_fixture$future$H
+  terminal <- seq_len(p) / 10
+  varying_fit <- structure(list(
+    samp.theta_terminal_root1 =
+      matrix(terminal, p, component_draws),
+    samp.theta_terminal_root2 =
+      matrix(terminal, p, component_draws),
+    samp.evolution_scale = scale_draws,
+    evolution = component_fixture$evolution,
+    model_spec = list(
+      evolution_mode = "component_scale",
+      numerical_policy = "fail"
+    ),
+    misc = list(jitter_ladder = 0)
+  ), class = c("rqr_dlm_mcmc", "rqr_fit"))
+  varying_forecast <- rqrgibbs::rqr_forecast_roots(
+    varying_fit,
+    FF_future = component_fixture$future$FF,
+    GG_future = component_fixture$future$GG,
+    component_templates_future =
+      component_fixture$future$component_templates,
+    nd = NULL,
+    seed = config$seeds$component_scale_future,
+    numerical_policy = "fail",
+    jitter_ladder = 0
+  )
+  future_evolution <- rqrgibbs::rqr_evolution_component_scale(
+    templates = component_fixture$future$component_templates,
+    component_dims = component_fixture$evolution$component_dims,
+    prior = component_fixture$evolution$prior,
+    initial = component_fixture$evolution$initial,
+    component_names = component_fixture$evolution$component_names
+  )
+  GG <- rqrgibbs:::.rqr_expand_cube(
+    component_fixture$future$GG, H, p, "GG_future"
+  )
+  varying_rows <- lapply(1:2, function(group) {
+    q <- scale_profiles[group, ]
+    W <- rqrgibbs:::.rqr_materialize_component_evolution(
+      future_evolution, q, H, p
+    )$W
+    state_mean <- terminal
+    state_covariance <- matrix(0, p, p)
+    eta_mean <- eta_variance <- numeric(H)
+    for (time in seq_len(H)) {
+      transition <- matrix(GG[, , time], p, p)
+      state_mean <- drop(transition %*% state_mean)
+      state_covariance <-
+        transition %*% state_covariance %*%
+          t(transition) + W[, , time]
+      direction <- component_fixture$future$FF[, time]
+      eta_mean[time] <- drop(crossprod(direction, state_mean))
+      eta_variance[time] <- drop(
+        crossprod(direction, state_covariance %*% direction)
+      )
+    }
+    draws <- varying_forecast$eta_root1[
+      , component_groups == group, drop = FALSE
+    ]
+    group_n <- ncol(draws)
+    data.frame(
+      scale_profile = group,
+      scale_values = paste(format(q, digits = 17), collapse = ","),
+      mean_standardized_error = max(
+        abs(rowMeans(draws) - eta_mean) /
+          sqrt(eta_variance / group_n)
+      ),
+      variance_standardized_error = max(
+        abs(apply(draws, 1L, stats::var) - eta_variance) /
+          sqrt(2 * eta_variance^2 / (group_n - 1L))
+      ),
+      stringsAsFactors = FALSE
+    )
+  })
+  varying_table <- do.call(rbind, varying_rows)
+  varying_orientation_pass <-
+    identical(varying_forecast$draw_index, seq_len(component_draws)) &&
+    identical(
+      unname(varying_forecast$diagnostics$component_scale_draws),
+      unname(scale_draws)
+    )
   atomic_write_csv(
     table, file.path(output_dir, "public_future_root_checks.csv")
   )
-  do.call(rbind, lapply(seq_len(nrow(table)), function(index) {
+  atomic_write_csv(
+    varying_table,
+    file.path(output_dir, "varying_component_scale_future_checks.csv")
+  )
+  base_gates <- do.call(rbind, lapply(seq_len(nrow(table)), function(index) {
     rbind(
       reference_gate(
         paste0(
@@ -817,6 +932,26 @@ run_public_future_references <- function() {
       )
     )
   }))
+  rbind(
+    base_gates,
+    reference_gate(
+      "varying_component_scale_future_mean",
+      max(varying_table$mean_standardized_error) <= 5,
+      max(varying_table$mean_standardized_error), 5,
+      "two saved component-scale profiles; sequential draw identity"
+    ),
+    reference_gate(
+      "varying_component_scale_future_variance",
+      max(varying_table$variance_standardized_error) <= 6,
+      max(varying_table$variance_standardized_error), 6,
+      "draw-specific component-scale state propagation"
+    ),
+    reference_gate(
+      "varying_component_scale_future_orientation",
+      varying_orientation_pass,
+      detail = "all saved scale rows preserved without resampling"
+    )
+  )
 }
 
 run_component_scale_reference <- function() {
@@ -1196,6 +1331,7 @@ if (identical(mode, "reference-only")) {
     "session_info.txt", "failure_log.csv", "reference_gates.csv",
     "dense_ffbs_reference.rds", "canonical_missing_checks.csv",
     "public_future_root_checks.csv",
+    "varying_component_scale_future_checks.csv",
     "component_scale_conditionals.csv", "continuation_cells.csv",
     "continuation_history_mutations.csv",
     "continuation_reference_digests.rds"
@@ -1211,7 +1347,7 @@ if (identical(mode, "reference-only")) {
     )
   }
   reference_bundle <- list(
-    schema_version = "rqrgibbs_reference_bundle/1.0.0",
+    schema_version = "rqrgibbs_reference_bundle/2.0.0",
     primary_commit = actual_commit,
     config_digest = base_manifest$config_digest,
     runtime_tree_digest =
@@ -1219,6 +1355,8 @@ if (identical(mode, "reference-only")) {
     runtime_attestation_sha256 =
       runtime_contract$primary_runtime_attestation_sha256,
     runtime_toolchain_digest = runtime_contract$digest,
+    estimand_schema_version =
+      rqr_bounded_estimand_schema_version(),
     files = as.list(stats::setNames(
       vapply(reference_bundle_files, function(file) {
         digest::digest(

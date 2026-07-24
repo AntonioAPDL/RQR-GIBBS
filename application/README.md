@@ -89,6 +89,18 @@ four-chain one-cell benchmark, and a separately gated execution path. The
 committed config keeps the 24-fit path disabled. Any future authorization must
 bind the complete recursive artifact manifest from a passing reference run and
 the identical isolated runtime and toolchain. The monitor uses PGID sampling,
-signal traps, a fault-injection test, and a final group sweep. It terminates on
-timeout or an observed process/thread/RSS limit; the sampled maxima are
-telemetry, not kernel-hard peaks.
+an idempotent signal/error finalizer, fault-injection tests, and a final group
+sweep. It terminates on timeout or an observed process/thread/RSS limit and
+still writes a structured failure ledger, closeout, resource summary, and
+recursive hash manifest. The sampled maxima are telemetry, not kernel-hard
+peaks. `make test-dlm-monitor` exercises five failure modes.
+
+The frozen execution schedule is four chains with 2,000 burn-in and 6,000
+retained draws per chain, thinning one, and a 240-minute whole-grid ceiling.
+Every chain must match an independently constructed ordered estimand schema.
+Primary future mixing targets are deterministic conditional-mean root
+functionals that preserve retained-draw identity. Stochastic future root-state
+draws are retained as a sidecar and do not imply a response-simulation
+contract. Local chain RDS files are read back and checked for class, exact
+object identity, checkpoint digest, continuation history, byte count, and
+SHA-256 before their atomic publication.
