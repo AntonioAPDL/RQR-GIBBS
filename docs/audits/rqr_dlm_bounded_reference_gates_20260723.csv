@@ -1,15 +1,41 @@
-gate,pass,value,tolerance,detail
-dense_conditional_mean,TRUE,1.11022302462516e-15,1e-10,NA measurement omitted from the dense observation operator
-dense_conditional_covariance,TRUE,7.7715611723761e-16,1e-10,
-R_cpp_smoother_parity,TRUE,0,1e-12,
-cpp_sampled_mean,TRUE,0.935116491047179,5,1500 conditional FFBS paths
-missing_measurement_omission,TRUE,,,missing observation contributes no measurement update
-analytic_future_state_mean,TRUE,0.759658743317014,5,unconditional Gaussian root-state propagation
-analytic_future_state_covariance,TRUE,2.1731245034665,6,
-component_scale_inverse_gamma_shape,TRUE,6,6,
-component_scale_inverse_gamma_rate,TRUE,0,1e-14,
-six_vs_2_plus_2_plus_2_draws,TRUE,,,three history segments with generation indices 0 1 2
-six_vs_2_plus_2_plus_2_checkpoint,TRUE,,,
-three_segment_history_shape,TRUE,,,
-rehashed_early_history_mutations,TRUE,5,5,
-active_process_tree_monitor,TRUE,,,runner launched through the monitored shell wrapper
+"gate","pass","value","tolerance","detail"
+"dense_conditional_mean",TRUE,1.11022302462516e-15,1e-10,"NA measurement omitted from the dense observation operator"
+"dense_conditional_covariance",TRUE,7.7715611723761e-16,1e-10,""
+"R_cpp_smoother_parity",TRUE,0,1e-12,""
+"cpp_sampled_mean",TRUE,0.935116491047179,5,"1500 conditional FFBS paths"
+"cpp_sampled_full_cross_time_covariance",TRUE,1.95429241210286,6,"Gaussian sample-covariance standard errors; all state-time pairs"
+"cpp_sampled_adjacent_time_covariance",TRUE,1.79973634464427,6,"selected adjacent-time state covariance blocks"
+"missing_measurement_omission",TRUE,NA,NA,"missing observation contributes no measurement update"
+"canonical_missing_placeholder_invariance__fixed_W_local_level",TRUE,0,0,"missing indices 6,17"
+"canonical_missing_placeholder_invariance__shared_component_scale_trend_regression",TRUE,0,0,"missing indices 11"
+"public_future_mean__fixed_W_local_level",TRUE,1.25726069573,5,""
+"public_future_variance__fixed_W_local_level",TRUE,1.34462471162595,6,"exact Gaussian sample-variance standard error"
+"public_future_mean__frozen_trend_seasonal_discount",TRUE,1.40356484826861,5,""
+"public_future_variance__frozen_trend_seasonal_discount",TRUE,1.32832517728866,6,"exact Gaussian sample-variance standard error"
+"public_future_mean__shared_component_scale_trend_regression",TRUE,1.91871082218034,5,""
+"public_future_variance__shared_component_scale_trend_regression",TRUE,2.19995406956431,6,"exact Gaussian sample-variance standard error"
+"component_scale_inverse_gamma_shape",TRUE,6,6,""
+"component_scale_inverse_gamma_rate",TRUE,0,1e-14,""
+"canonical_component_scale_shape",TRUE,0,1e-14,"two components with dimensions 2 and 1"
+"canonical_component_scale_rate",TRUE,6.66133814775094e-16,1e-12,"retained-iteration conditionals recomputed from saved paths"
+"canonical_component_scale_orientation",TRUE,NA,NA,"retained draws by named component"
+"all_saved_fields_6_vs_2_plus_2_plus_2__fixed_W_local_level__fixed_rate",TRUE,NA,NA,"root ordinates, full and terminal states, time-zero states, lambda, component scales, and retained conditional parameters"
+"checkpoint_6_vs_2_plus_2_plus_2__fixed_W_local_level__fixed_rate",TRUE,NA,NA,""
+"history_shape_2_plus_2_plus_2__fixed_W_local_level__fixed_rate",TRUE,NA,NA,""
+"all_saved_fields_6_vs_2_plus_2_plus_2__fixed_W_local_level__learned_pseudoresidual_normalized",TRUE,NA,NA,"root ordinates, full and terminal states, time-zero states, lambda, component scales, and retained conditional parameters"
+"checkpoint_6_vs_2_plus_2_plus_2__fixed_W_local_level__learned_pseudoresidual_normalized",TRUE,NA,NA,""
+"history_shape_2_plus_2_plus_2__fixed_W_local_level__learned_pseudoresidual_normalized",TRUE,NA,NA,""
+"all_saved_fields_6_vs_2_plus_2_plus_2__frozen_trend_seasonal_discount__fixed_rate",TRUE,NA,NA,"root ordinates, full and terminal states, time-zero states, lambda, component scales, and retained conditional parameters"
+"checkpoint_6_vs_2_plus_2_plus_2__frozen_trend_seasonal_discount__fixed_rate",TRUE,NA,NA,""
+"history_shape_2_plus_2_plus_2__frozen_trend_seasonal_discount__fixed_rate",TRUE,NA,NA,""
+"all_saved_fields_6_vs_2_plus_2_plus_2__frozen_trend_seasonal_discount__learned_pseudoresidual_normalized",TRUE,NA,NA,"root ordinates, full and terminal states, time-zero states, lambda, component scales, and retained conditional parameters"
+"checkpoint_6_vs_2_plus_2_plus_2__frozen_trend_seasonal_discount__learned_pseudoresidual_normalized",TRUE,NA,NA,""
+"history_shape_2_plus_2_plus_2__frozen_trend_seasonal_discount__learned_pseudoresidual_normalized",TRUE,NA,NA,""
+"all_saved_fields_6_vs_2_plus_2_plus_2__shared_component_scale_trend_regression__fixed_rate",TRUE,NA,NA,"root ordinates, full and terminal states, time-zero states, lambda, component scales, and retained conditional parameters"
+"checkpoint_6_vs_2_plus_2_plus_2__shared_component_scale_trend_regression__fixed_rate",TRUE,NA,NA,""
+"history_shape_2_plus_2_plus_2__shared_component_scale_trend_regression__fixed_rate",TRUE,NA,NA,""
+"all_saved_fields_6_vs_2_plus_2_plus_2__shared_component_scale_trend_regression__learned_pseudoresidual_normalized",TRUE,NA,NA,"root ordinates, full and terminal states, time-zero states, lambda, component scales, and retained conditional parameters"
+"checkpoint_6_vs_2_plus_2_plus_2__shared_component_scale_trend_regression__learned_pseudoresidual_normalized",TRUE,NA,NA,""
+"history_shape_2_plus_2_plus_2__shared_component_scale_trend_regression__learned_pseudoresidual_normalized",TRUE,NA,NA,""
+"rehashed_early_history_raw_and_semantic_mutations",TRUE,27,27,""
+"active_process_tree_monitor",TRUE,NA,NA,"PGID sampling fallback with traps and a final sweep; sampled RSS is telemetry, not a kernel-hard peak"
