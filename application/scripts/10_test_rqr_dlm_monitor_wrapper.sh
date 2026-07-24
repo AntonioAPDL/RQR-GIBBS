@@ -109,6 +109,10 @@ run_failure_scenario() {
     echo "$scenario unexpectedly succeeded." >&2
     return 1
   fi
+  if grep -q "syntax error\\|invalid arithmetic" "$invocation_log"; then
+    echo "$scenario emitted a shell syntax/runtime error." >&2
+    return 1
+  fi
   verify_artifacts "$scenario" "$output_dir" NONE
 }
 
@@ -148,6 +152,10 @@ run_signal_scenario() {
   set -e
   if [[ "$status" -ne 143 ]]; then
     echo "$scenario returned $status instead of 143." >&2
+    return 1
+  fi
+  if grep -q "syntax error\\|invalid arithmetic" "$invocation_log"; then
+    echo "$scenario emitted a shell syntax/runtime error." >&2
     return 1
   fi
   verify_artifacts "$scenario" "$output_dir" TERM

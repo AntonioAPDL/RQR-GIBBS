@@ -109,9 +109,9 @@ terminate_group() {
 drain_group() {
   local group_id="$1"
   local term_rounds="${2:-25}"
-  local _=""
+  local drain_index
   terminate_group "$group_id" TERM
-  for ((_=0; _<term_rounds; _++)); do
+  for ((drain_index=0; drain_index<term_rounds; drain_index++)); do
     if ! group_exists "$group_id"; then
       return 0
     fi
@@ -119,7 +119,7 @@ drain_group() {
   done
   main_kill_escalated=TRUE
   terminate_group "$group_id" KILL
-  for ((_=0; _<25; _++)); do
+  for ((drain_index=0; drain_index<25; drain_index++)); do
     if ! group_exists "$group_id"; then
       return 0
     fi
