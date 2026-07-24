@@ -93,10 +93,12 @@ At implementation commit
 reference suite passed 43 of 43 gates and the frozen 6,000-retained
 component-scale/learned-rate benchmark passed all 150 diagnostics with zero
 numerical repairs and exact runtime provenance. The independent Output-11
-review accepted those target and mixing results but identified two narrow
-artifact-publication boundaries requiring correction and exact-source
-revalidation. The 24-fit execution flag remains false. See
-`docs/audits/chatgpt_pro_output10_reconciliation_20260723.md` and
+review accepted those target and mixing results and identified two narrow
+artifact-publication boundaries. They were corrected at
+`53dc71d873ef12ebba91cbc3d6813682e0987960`; fresh exact-source validation
+again passed all 43 reference gates and 150 benchmark diagnostics. The 24-fit
+execution flag remains false pending the next independent review. See
+`docs/audits/chatgpt_pro_output11_reconciliation_20260724.md` and
 `external_reviews/chatgpt_pro_output11_20260723/`.
 
 ## Pinned external reference
