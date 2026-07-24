@@ -1,0 +1,7 @@
+"gate","pass"
+"contract_valid",TRUE
+"oracle_reference_required",TRUE
+"tiny_end_to_end_required",TRUE
+"external_comparators_attested",TRUE
+"diagnostic_pilot_authorization_false",TRUE
+"confirmatory_authorization_false",TRUE

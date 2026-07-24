@@ -1,0 +1,10 @@
+"gate","pass"
+"contract_schema",TRUE
+"execution_flags_false",TRUE
+"scenario_IDs",TRUE
+"method_IDs",TRUE
+"positive_scale_and_separation",TRUE
+"matched_trend_seasonal_pair",TRUE
+"common_evolution_ablation",TRUE
+"pinned_exdqlm_source",TRUE
+"independent_seed_streams",TRUE

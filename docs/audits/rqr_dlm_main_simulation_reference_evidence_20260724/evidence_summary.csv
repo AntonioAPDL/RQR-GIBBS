@@ -1,0 +1,5 @@
+"stage","status","artifact_count","primary_commit","primary_runtime_tree_digest","execution_authorized"
+"preflight","passed",6,"6ba47d1d686e7f47d90bf3110fbbe77f8da96fee","9b21f4cde66058aea8885cd9feab01836f76096e042c39f204916bf2c164f458",FALSE
+"oracle-reference","passed",3,"6ba47d1d686e7f47d90bf3110fbbe77f8da96fee","9b21f4cde66058aea8885cd9feab01836f76096e042c39f204916bf2c164f458",FALSE
+"tiny-end-to-end","passed",4,"6ba47d1d686e7f47d90bf3110fbbe77f8da96fee","9b21f4cde66058aea8885cd9feab01836f76096e042c39f204916bf2c164f458",FALSE
+"diagnostic-pilot-preflight","passed",6,"6ba47d1d686e7f47d90bf3110fbbe77f8da96fee","9b21f4cde66058aea8885cd9feab01836f76096e042c39f204916bf2c164f458",FALSE

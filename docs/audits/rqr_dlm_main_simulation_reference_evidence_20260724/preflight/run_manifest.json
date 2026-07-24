@@ -1,0 +1,24 @@
+{
+  "schema_version": "rqrgibbs_dlm_main_simulation_reference_run/1.0.0",
+  "mode": "preflight",
+  "config_schema_version": "rqrgibbs_dlm_main_simulation_preliminary/0.2.0",
+  "diagnostic_pilot_execution_authorized": false,
+  "confirmatory_execution_authorized": false,
+  "primary_runtime_binding_verified": true,
+  "primary_runtime_binding": {
+    "expected_commit": "6ba47d1d686e7f47d90bf3110fbbe77f8da96fee",
+    "application_tree": "be1d908103c1d4e32b3fec6275a9dcd732d58b13",
+    "runtime_path": "/data/muscat_data/jaguir26/.rqr_gibbs_primary_runtime/6ba47d1d686e7f47d90bf3110fbbe77f8da96fee/library/rqrgibbs",
+    "runtime_tree_digest": "9b21f4cde66058aea8885cd9feab01836f76096e042c39f204916bf2c164f458",
+    "runtime_attestation_schema": "rqrgibbs_runtime_attestation/5.0.0",
+    "runtime_attestation_sha256": "98ce2e30810c054b99fa0247f56a2ae06e9085d6a83a0911d145be1a2fddc3ac",
+    "package_version": "0.1.0.9013",
+    "R_version": "R version 4.5.3 (2026-03-11)",
+    "platform": "x86_64-redhat-linux-gnu",
+    "match": true
+  },
+  "generalized_bayes": true,
+  "response_likelihood": false,
+  "response_prediction_contract": false,
+  "status": "passed"
+}

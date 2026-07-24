@@ -1,0 +1,3 @@
+"package","version","fitting_function","method","raw_quantiles_retained","ordering_applied_only_for_interval_scoring","response_predictive_draws_used","adapter_pass"
+"exdqlm","1.1.0","exdqlmMCMC","dqlm.ind=TRUE;init.from.vb=FALSE",TRUE,TRUE,FALSE,TRUE
+"quantreg","6.1","rq","br",TRUE,TRUE,FALSE,TRUE

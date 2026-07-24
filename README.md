@@ -139,7 +139,10 @@ stop rules. The reduced-AL DQLM MCMC and static quantile-regression
 comparators are built from exact CRAN `exdqlm` 1.1.0 and `quantreg` 6.1
 tarballs in ignored isolated runtimes. Preflight, oracle reference, a
 two-replication byte-reproduction fixture, and diagnostic-pilot preflight are
-implemented; diagnostic-pilot and confirmatory execution remain disabled.
+implemented and pass from the exact isolated source runtime at
+`6ba47d1d686e7f47d90bf3110fbbe77f8da96fee`. Their compact evidence is under
+`docs/audits/rqr_dlm_main_simulation_reference_evidence_20260724/`.
+Diagnostic-pilot and confirmatory execution remain disabled.
 
 ## Pinned external reference
 
