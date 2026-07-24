@@ -142,7 +142,10 @@ two-replication byte-reproduction fixture, and diagnostic-pilot preflight are
 implemented and pass from the exact isolated source runtime at
 `6ba47d1d686e7f47d90bf3110fbbe77f8da96fee`. Their compact evidence is under
 `docs/audits/rqr_dlm_main_simulation_reference_evidence_20260724/`.
-Diagnostic-pilot and confirmatory execution remain disabled.
+Diagnostic-pilot and confirmatory execution remain disabled. The subsequent
+user decision is to omit a standalone pilot and move next to a reviewed main
+simulation runner with predeclared sentinel and cell-level gates embedded in
+the final run.
 
 ## Pinned external reference
 

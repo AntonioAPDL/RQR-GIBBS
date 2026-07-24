@@ -20,9 +20,9 @@ compact evidence and reconciliation:
   a5a08811912d7175bbbcec98e8f8af254fd51f51
 ```
 
-The latest `main` may contain only this follow-up prompt after the evidence
-commit. Review the implementation at `6ba47d1...` and the evidence packet at
-`a5a0881...`; report any later prompt-only commit separately.
+The latest `main` may contain only post-evidence direction documents after the
+evidence commit. Review the implementation at `6ba47d1...` and the evidence
+packet at `a5a0881...`; report the later direction-only commit separately.
 
 Protected read-only references:
 
@@ -79,6 +79,37 @@ Output-14 accepted the completed 24-fit bounded RQR-DLM validation with three
 nonblocking corrections to the reusable promoter. It rated the preliminary
 simulation design `B`, requiring revisions before implementation. It did not
 authorize a diagnostic pilot or confirmatory simulation.
+
+## User decision after Output-14
+
+The user does **not** want a separate diagnostic pilot. Do not propose or
+authorize a standalone pilot grid.
+
+The requested path is:
+
+```text
+independent review of the frozen design and reference evidence
+  -> implement the confirmatory main-simulation runner
+  -> independent source/preflight review
+  -> separate false-to-true main-run authorization commit
+  -> execute the main simulation with embedded safeguards
+```
+
+The main run may begin with a predeclared sentinel batch and cell-level stop
+gates, but that batch must be part of the frozen confirmatory run:
+
+- its replications are selected before execution;
+- they use the final methods, seeds, schedules, estimands, and output schemas;
+- passing sentinel replications remain in the final analysis;
+- no tuning or design change may be made after inspecting them;
+- a failed gate stops the run and precludes confirmatory claims; and
+- restarting after a correction requires a new source commit, authorization,
+  and complete run rather than silently continuing a changed design.
+
+The tracked `diagnostic-pilot-preflight` artifact is therefore historical
+planning evidence only. Its 672 rows are neither an authorized execution plan
+nor the final main-run plan. Audit its useful seed, comparator, and
+fail-closed machinery, but do not ask Codex to execute it.
 
 The accepted bounded result remains:
 
@@ -159,7 +190,7 @@ required at this stage:
 - paired width comparisons only after coverage qualification;
 - Monte Carlo replication and MCSE rules;
 - training-only frozen tuning and equal search budgets;
-- diagnostic-pilot four-chain subset;
+- embedded confirmatory multichain sentinel subset;
 - confirmatory within-chain and preselected sentinel rules; and
 - fail-closed execution flags.
 
@@ -237,9 +268,9 @@ exdqlm reduced-AL/DQLM MCMC argument contract, combined component orientation,
 forecast horizon orientation, and raw quantile retention. Audit the
 `quantreg::rq(method="br")` endpoint orientation fixture and crossing policy.
 
-Decide whether these attestations are sufficient for a bounded diagnostic
-pilot. Do not require a claim of bit-for-bit reproducible compilation across
-machines unless that claim is actually made.
+Decide whether these attestations are sufficient for the confirmatory main
+simulation. Do not require a claim of bit-for-bit reproducible compilation
+across machines unless that claim is actually made.
 
 ### 5. DGP, seeds, atomic artifacts, and runner modes
 
@@ -269,7 +300,8 @@ Verify:
 
 Try to defeat the promoter with an omitted/extra artifact, altered stage
 manifest, mixed primary runtime, comparator substitution, false authorization
-flag, failed oracle row, nonzero repair, or executable pilot plan.
+flag, failed oracle row, nonzero repair, or a historical preflight plan
+incorrectly treated as an authorized main-run plan.
 
 ### 6. Tracked compact evidence
 
@@ -341,9 +373,12 @@ Give explicit verdicts for:
 6. exdqlm and quantreg isolation/adapters;
 7. seed, atomic-write, and artifact-promotion contracts;
 8. the four exact-runtime reference-stage results;
-9. whether Codex may now implement a diagnostic-pilot runner;
-10. whether Codex may execute that pilot after another source review;
-11. confirmatory main simulation; and
+9. whether Codex may now implement the confirmatory main-simulation runner
+   without a separate pilot;
+10. whether the frozen main run may execute after another source/preflight
+    review and a separate authorization commit;
+11. whether the embedded sentinel and cell-level stop design adequately
+    replaces a standalone pilot; and
 12. continued deferral of CAVI/ELBO and RQR-DESN.
 
 Use this decision vocabulary:
@@ -352,18 +387,21 @@ Use this decision vocabulary:
 PASS
 PASS WITH NONBLOCKING CORRECTIONS
 REVISION REQUIRED
-GO TO IMPLEMENT DIAGNOSTIC-PILOT RUNNER
-CONDITIONAL GO TO EXECUTE DIAGNOSTIC PILOT
+GO TO IMPLEMENT CONFIRMATORY MAIN-SIMULATION RUNNER
+CONDITIONAL GO TO EXECUTE CONFIRMATORY MAIN SIMULATION
 NO-GO
 DEFER
 ```
 
 If you authorize implementation, provide the smallest exact runner contract:
-cells, chains, burn-in, retained draws, initialization, tuning subset,
+full scenario/method/coverage/replication cells, embedded sentinel order,
+chains, burn-in, retained draws, initialization, training-only tuning,
 diagnostic estimands, R-hat/ESS/MCSE thresholds, cell-level stop rules,
-resource monitoring, atomic artifact schemas, failure behavior, and the
-separate false-to-true authorization step. Do not authorize confirmatory
-execution merely because reference stages passed.
+Monte Carlo precision stop rules, resource monitoring, atomic artifact
+schemas, failure behavior, restart prohibition after design changes, and the
+separate false-to-true authorization step. The main-run runner must remain
+unexecutable until that implementation and its exact preflight bundle receive
+another review.
 
 ## Required remote deliverables
 

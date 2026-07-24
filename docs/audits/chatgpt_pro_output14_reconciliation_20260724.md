@@ -240,13 +240,20 @@ immediate manuscript patch.
 
 ## Remaining decision
 
-The next independent review should decide whether the schema-0.2 design,
-oracle certificates, tiny fixture, comparator isolation, seed plan, and
-fail-closed evidence contract are sufficient to implement and execute a
-small diagnostic pilot.
+After this evidence was produced, the user declined a separate diagnostic
+pilot and requested the confirmatory main simulation directly. The tracked
+672-row diagnostic-pilot preflight is therefore historical, non-executable
+planning evidence.
 
-It should not authorize the confirmatory simulation merely because these
-reference stages passed. A diagnostic-pilot implementation still needs its
-full fit schedule, monitored resource envelope, compact diagnostic schemas,
-cell-level stop rules, failure artifacts, and separate authorization commit.
-CAVI/ELBO and RQR-DESN remain deferred.
+The next independent review should decide whether the schema-0.2 design,
+oracle certificates, tiny fixture, comparator isolation, seed machinery, and
+fail-closed evidence contract are sufficient to implement the confirmatory
+main-simulation runner. A predeclared multichain sentinel batch may be embedded
+in the main run, provided it uses the final design and its passing
+replications remain in the confirmatory analysis. A failure must stop the run;
+it cannot become an informal opportunity to retune and continue.
+
+Before execution, the main runner still needs its complete fit schedule,
+monitored resource envelope, compact diagnostic schemas, cell-level stop
+rules, failure artifacts, and a separate authorization commit. CAVI/ELBO and
+RQR-DESN remain deferred.
