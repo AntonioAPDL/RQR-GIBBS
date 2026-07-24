@@ -1,0 +1,85 @@
+section,item,unit,initial,central,maximum,assumption
+design,scenario_coverage_cells,rows,16,16,16,frozen 16x13 matrix
+design,scenario_coverage_method_rows,rows,208,208,208,frozen 16x13 matrix
+design,included_incidence_rows,rows,89,89,89,frozen 16x13 matrix
+simulation,independent_DGP_replications,replications,1800,3600,5400,paired DGP reps; 20 future paths x H20
+simulation,future_state_response_paths,paths,36000,72000,108000,paired DGP reps; 20 future paths x H20
+simulation,future_response_observations,scalar observations,720000,1.44e+06,2.16e+06,paired DGP reps; 20 future paths x H20
+fits,method_interval_evaluations,interval evaluations,15800,29800,43800,included rows only; quantile endpoints separate
+fits,logical_endpoint_or_model_fits,logical fits,17600,33400,49200,included rows only; quantile endpoints separate
+fits,software_fit_calls,software calls,15800,29800,43800,included rows only; quantile endpoints separate
+fits,standard_MCMC_chain_executions,chains,14000,26200,38400,included rows only; quantile endpoints separate
+fits,lower_quantile_logical_fits,endpoint fits,4600,9200,13800,included rows only; quantile endpoints separate
+fits,upper_quantile_logical_fits,endpoint fits,4600,9200,13800,included rows only; quantile endpoints separate
+fits,training_validation_candidate_fits,candidate fits,0,0,0,included rows only; quantile endpoints separate
+mcmc,extra_preselected_sentinel_chains,chains,882,1710,2538,1 chain standard; +3 per sentinel task
+mcmc,total_MCMC_chain_executions,chains,14882,27910,40938,1 chain standard; +3 per sentinel task
+mcmc,sentinel_model_replication_tasks,tasks,294,570,846,1 chain standard; +3 per sentinel task
+forecast,forecast_model_calls,calls,15800,29800,43800,one interval vector/method eval
+forecast,future_path_interval_comparisons,comparisons,316000,596000,876000,one interval vector/method eval
+forecast,scalar_horizon_coverage_evaluations,comparisons,6.32e+06,1.192e+07,1.752e+07,one interval vector/method eval
+artifacts,compact_replication_files,files,5430,10830,16230,atomic compact; sentinel RDS ignored
+artifacts,ignored_sentinel_chain_RDS_files,files,1176,2280,3384,atomic compact; sentinel RDS ignored
+artifacts,tracked_evidence_packet_maximum,MiB,250,250,250,atomic compact; sentinel RDS ignored
+storage,compact_local_storage,GiB,0.3,0.7,1.5,planning envelope
+storage,ignored_sentinel_storage,GiB,5,12,30,planning envelope
+storage,free_space_required_before_start,GiB,50,50,50,planning envelope
+compute,CPU_hours_optimistic,CPU hours,947,1731,2514,bounded timings scaled; one thread/worker
+compute,CPU_hours_central,CPU hours,1458,2663,3868,bounded timings scaled; one thread/worker
+compute,CPU_hours_conservative,CPU hours,2551,4660,6768,bounded timings scaled; one thread/worker
+compute,wall_hours_optimistic_48_workers,wall hours,24,44,63,bounded timings scaled; one thread/worker
+compute,wall_hours_central_32_workers,wall hours,53,96,140,bounded timings scaled; one thread/worker
+compute,wall_hours_conservative_16_workers,wall hours,184,335,487,bounded timings scaled; one thread/worker
+compute,per_worker_peak_RSS_planning,GiB,0.75,0.75,0.75,bounded timings scaled; one thread/worker
+method_interval_evaluations,rqr_dlm_component_scale_fixed_rate,interval evaluations,2800,5600,8400,incidence-derived
+method_logical_fits,rqr_dlm_component_scale_fixed_rate,logical endpoint/model fits,2800,5600,8400,incidence-derived
+method_standard_MCMC_chains,rqr_dlm_component_scale_fixed_rate,chains,2800,5600,8400,incidence-derived
+method_extra_sentinel_chains,rqr_dlm_component_scale_fixed_rate,chains,192,384,576,incidence-derived
+method_interval_evaluations,dynamic_equal_tailed_quantile_interval,interval evaluations,2800,5600,8400,incidence-derived
+method_logical_fits,dynamic_equal_tailed_quantile_interval,logical endpoint/model fits,5600,11200,16800,incidence-derived
+method_standard_MCMC_chains,dynamic_equal_tailed_quantile_interval,chains,5600,11200,16800,incidence-derived
+method_extra_sentinel_chains,dynamic_equal_tailed_quantile_interval,chains,384,768,1152,incidence-derived
+method_interval_evaluations,fixed_design_rqr,interval evaluations,1800,3600,5400,incidence-derived
+method_logical_fits,fixed_design_rqr,logical endpoint/model fits,1800,3600,5400,incidence-derived
+method_standard_MCMC_chains,fixed_design_rqr,chains,1800,3600,5400,incidence-derived
+method_extra_sentinel_chains,fixed_design_rqr,chains,132,264,396,incidence-derived
+method_interval_evaluations,static_equal_tailed_quantile_regression,interval evaluations,1800,3600,5400,incidence-derived
+method_logical_fits,static_equal_tailed_quantile_regression,logical endpoint/model fits,3600,7200,10800,incidence-derived
+method_standard_MCMC_chains,static_equal_tailed_quantile_regression,chains,0,0,0,incidence-derived
+method_extra_sentinel_chains,static_equal_tailed_quantile_regression,chains,0,0,0,incidence-derived
+method_interval_evaluations,rolling_empirical_equal_tailed_interval,interval evaluations,2800,5600,8400,incidence-derived
+method_logical_fits,rolling_empirical_equal_tailed_interval,logical endpoint/model fits,0,0,0,incidence-derived
+method_standard_MCMC_chains,rolling_empirical_equal_tailed_interval,chains,0,0,0,incidence-derived
+method_extra_sentinel_chains,rolling_empirical_equal_tailed_interval,chains,0,0,0,incidence-derived
+method_interval_evaluations,rqr_dlm_frozen_component_discount,interval evaluations,1800,3600,5400,incidence-derived
+method_logical_fits,rqr_dlm_frozen_component_discount,logical endpoint/model fits,1800,3600,5400,incidence-derived
+method_standard_MCMC_chains,rqr_dlm_frozen_component_discount,chains,1800,3600,5400,incidence-derived
+method_extra_sentinel_chains,rqr_dlm_frozen_component_discount,chains,108,216,324,incidence-derived
+method_interval_evaluations,rqr_dlm_common_evolution_ablation,interval evaluations,200,400,600,incidence-derived
+method_logical_fits,rqr_dlm_common_evolution_ablation,logical endpoint/model fits,200,400,600,incidence-derived
+method_standard_MCMC_chains,rqr_dlm_common_evolution_ablation,chains,200,400,600,incidence-derived
+method_extra_sentinel_chains,rqr_dlm_common_evolution_ablation,chains,12,24,36,incidence-derived
+method_interval_evaluations,rqr_dlm_true_fixed_W_selected_cells,interval evaluations,600,600,600,incidence-derived
+method_logical_fits,rqr_dlm_true_fixed_W_selected_cells,logical endpoint/model fits,600,600,600,incidence-derived
+method_standard_MCMC_chains,rqr_dlm_true_fixed_W_selected_cells,chains,600,600,600,incidence-derived
+method_extra_sentinel_chains,rqr_dlm_true_fixed_W_selected_cells,chains,18,18,18,incidence-derived
+method_interval_evaluations,rqr_dlm_fixed_rate_0p5,interval evaluations,400,400,400,incidence-derived
+method_logical_fits,rqr_dlm_fixed_rate_0p5,logical endpoint/model fits,400,400,400,incidence-derived
+method_standard_MCMC_chains,rqr_dlm_fixed_rate_0p5,chains,400,400,400,incidence-derived
+method_extra_sentinel_chains,rqr_dlm_fixed_rate_0p5,chains,12,12,12,incidence-derived
+method_interval_evaluations,rqr_dlm_fixed_rate_2,interval evaluations,400,400,400,incidence-derived
+method_logical_fits,rqr_dlm_fixed_rate_2,logical endpoint/model fits,400,400,400,incidence-derived
+method_standard_MCMC_chains,rqr_dlm_fixed_rate_2,chains,400,400,400,incidence-derived
+method_extra_sentinel_chains,rqr_dlm_fixed_rate_2,chains,12,12,12,incidence-derived
+method_interval_evaluations,rqr_dlm_component_scale_learned_rate,interval evaluations,400,400,400,incidence-derived
+method_logical_fits,rqr_dlm_component_scale_learned_rate,logical endpoint/model fits,400,400,400,incidence-derived
+method_standard_MCMC_chains,rqr_dlm_component_scale_learned_rate,chains,400,400,400,incidence-derived
+method_extra_sentinel_chains,rqr_dlm_component_scale_learned_rate,chains,12,12,12,incidence-derived
+method_interval_evaluations,gaussian_dlm_response_interval,interval evaluations,0,0,0,incidence-derived
+method_logical_fits,gaussian_dlm_response_interval,logical endpoint/model fits,0,0,0,incidence-derived
+method_standard_MCMC_chains,gaussian_dlm_response_interval,chains,0,0,0,incidence-derived
+method_extra_sentinel_chains,gaussian_dlm_response_interval,chains,0,0,0,incidence-derived
+method_interval_evaluations,time_series_valid_conformal_interval,interval evaluations,0,0,0,incidence-derived
+method_logical_fits,time_series_valid_conformal_interval,logical endpoint/model fits,0,0,0,incidence-derived
+method_standard_MCMC_chains,time_series_valid_conformal_interval,chains,0,0,0,incidence-derived
+method_extra_sentinel_chains,time_series_valid_conformal_interval,chains,0,0,0,incidence-derived
