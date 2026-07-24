@@ -1,0 +1,5 @@
+"fit_id","fixture_id","learning_rate_mode","chain","seed","forecast_seed","elapsed_seconds","chain_bytes","forecast_repair_count","numerical_repair_count","exact_joint_target","target_numerical_eligible","reproducibility_eligible","promotion_eligible"
+"shared_component_scale_trend_regression__learned_pseudoresidual_normalized__chain01","shared_component_scale_trend_regression","learned_pseudoresidual_normalized",1,84201,84414,177.763,11329688,0,0,TRUE,TRUE,TRUE,TRUE
+"shared_component_scale_trend_regression__learned_pseudoresidual_normalized__chain02","shared_component_scale_trend_regression","learned_pseudoresidual_normalized",2,84202,84415,181.072,11328128,0,0,TRUE,TRUE,TRUE,TRUE
+"shared_component_scale_trend_regression__learned_pseudoresidual_normalized__chain03","shared_component_scale_trend_regression","learned_pseudoresidual_normalized",3,84203,84416,181.447,11322132,0,0,TRUE,TRUE,TRUE,TRUE
+"shared_component_scale_trend_regression__learned_pseudoresidual_normalized__chain04","shared_component_scale_trend_regression","learned_pseudoresidual_normalized",4,84204,84417,178.637,11325028,0,0,TRUE,TRUE,TRUE,TRUE

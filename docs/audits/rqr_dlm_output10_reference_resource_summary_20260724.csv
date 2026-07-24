@@ -1,0 +1,15 @@
+metric,value,limit,pass
+sampled_process_group_peak_processes,3,3,TRUE
+sampled_process_group_peak_threads,4,4,TRUE
+sampled_process_group_peak_rss_kib,189252,4194304,TRUE
+hard_timeout_triggered,FALSE,FALSE,TRUE
+sampled_limit_triggered,FALSE,FALSE,TRUE
+monitor_error,FALSE,FALSE,TRUE
+pgid_query_error,FALSE,FALSE,TRUE
+finalizer_error,FALSE,FALSE,TRUE
+signal_received,NONE,NONE,TRUE
+final_pgid_empty,TRUE,TRUE,TRUE
+runner_exit_status,0,0,TRUE
+monitor_fault_test_pass,TRUE,TRUE,TRUE
+pgid_kill_escalation_used,FALSE,FALSE,TRUE
+kernel_hard_memory_ceiling,FALSE,FALSE,TRUE

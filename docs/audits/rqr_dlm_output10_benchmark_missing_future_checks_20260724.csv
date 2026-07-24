@@ -1,0 +1,5 @@
+"fit_id","missing_indices","missing_ordinates_finite","future_horizon","future_values_finite","future_draw_index_sequential","future_repair_count","response_simulation_contract"
+"shared_component_scale_trend_regression__learned_pseudoresidual_normalized__chain01","11",TRUE,3,TRUE,TRUE,0,FALSE
+"shared_component_scale_trend_regression__learned_pseudoresidual_normalized__chain02","11",TRUE,3,TRUE,TRUE,0,FALSE
+"shared_component_scale_trend_regression__learned_pseudoresidual_normalized__chain03","11",TRUE,3,TRUE,TRUE,0,FALSE
+"shared_component_scale_trend_regression__learned_pseudoresidual_normalized__chain04","11",TRUE,3,TRUE,TRUE,0,FALSE
