@@ -1,0 +1,3 @@
+"recorded_at","mode","stage","fixture_id","learning_rate_mode","chain","message"
+"2026-07-24 06:08:02 UTC","execute-bounded","fit_and_forecast","fixed_W_local_level","fixed_rate","1","Bounded estimand schema mismatch in chain(s) 1; expected schema rqrgibbs_dlm_bounded_estimands/1.0.0 with 117 ordered estimands."
+"2026-07-24T06:08:02Z","execute-bounded","wrapper_finalization",,,,"signal=NONE runner_status=1 incoming_status=1 timed_out=FALSE sampled_limit=FALSE monitor_error=FALSE pgid_query_error=FALSE final_pgid_empty=TRUE"

@@ -90,14 +90,18 @@ The four-mode runner
 `scripts/08_run_rqr_dlm_bounded_validation.sh` provides construction
 preflight, expanded reference-only validation, a representative full
 four-chain one-cell benchmark, and a separately gated execution path. The
-committed config keeps the 24-fit path disabled. Any future authorization must
-bind the complete recursive artifact manifest from a passing reference run and
-the identical isolated runtime and toolchain. The monitor uses PGID sampling,
-an idempotent signal/error finalizer, fault-injection tests, and a final group
-sweep. It terminates on timeout or an observed process/thread/RSS limit and
-still writes a structured failure ledger, closeout, resource summary, and
-recursive hash manifest. The sampled maxima are telemetry, not kernel-hard
-peaks. `make test-dlm-monitor` exercises five failure modes.
+committed config again keeps the 24-fit path disabled after the first launch
+failed closed on a fixed-W time-zero estimand-schema mismatch. The corrected
+reference suite now applies the same estimand extractor to all six
+fixture/mode continuation cells and requires complete retained time-zero
+states. Any future authorization must bind the complete recursive artifact
+manifest from a passing reference run and the identical isolated runtime and
+toolchain. The monitor uses PGID sampling, an idempotent signal/error
+finalizer, fault-injection tests, and a final group sweep. It terminates on
+timeout or an observed process/thread/RSS limit and still writes a structured
+failure ledger, closeout, resource summary, and recursive hash manifest. The
+sampled maxima are telemetry, not kernel-hard peaks. `make test-dlm-monitor`
+exercises eight failure modes.
 
 The frozen execution schedule is four chains with 2,000 burn-in and 6,000
 retained draws per chain, thinning one, and a 240-minute whole-grid ceiling.

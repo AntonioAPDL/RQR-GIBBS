@@ -96,10 +96,18 @@ numerical repairs and exact runtime provenance. The independent Output-11
 review accepted those target and mixing results and identified two narrow
 artifact-publication boundaries. They were corrected at
 `53dc71d873ef12ebba91cbc3d6813682e0987960`; fresh exact-source validation
-again passed all 43 reference gates and 150 benchmark diagnostics. The 24-fit
-execution flag remains false pending the next independent review. See
-`docs/audits/chatgpt_pro_output11_reconciliation_20260724.md` and
-`external_reviews/chatgpt_pro_output11_20260723/`.
+again passed all 43 reference gates and 150 benchmark diagnostics. Output-12
+then approved a separately gated bounded launch. That launch failed closed in
+its first fixed-W chain because the runner required time-zero state estimands
+that fixed-W fits did not yet retain; no chain file or later fit was produced.
+The correction at `da4d265af6d8c6d6f9be06bfe2a91bfae88501d8` completes exact
+fixed-W and frozen-template paths at time zero, shares one estimand extractor
+between reference and execution modes, and strengthens all six continuation
+references. Fresh exact-source validation passed 43 of 43 reference gates and
+150 of 150 benchmark diagnostics. The execution flag was revoked at
+`0d64331732fe4118e7234f6f23a851f5d98e6614` pending independent review. See
+`docs/audits/chatgpt_pro_output12_bounded_failure_reconciliation_20260724.md`
+and `external_reviews/chatgpt_pro_output12_20260724/`.
 
 ## Pinned external reference
 
