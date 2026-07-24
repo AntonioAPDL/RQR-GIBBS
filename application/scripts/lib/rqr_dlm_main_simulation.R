@@ -616,14 +616,20 @@ rqr_main_validate_quantreg_adapter <- function(attestation) {
   if (!all(c("formula", "tau", "data", "method") %in% names(formals(rq)))) {
     stop("The pinned quantreg rq interface is incomplete.", call. = FALSE)
   }
-  fixture <- data.frame(x = -2:2)
-  fixture$y <- 1 + 2 * fixture$x
+  fixture <- data.frame(
+    x = -4:4,
+    y = c(-7.8, -5.1, -3.2, -0.7, 1.3, 2.8, 5.4, 6.6, 9.5)
+  )
   fit <- rq(y ~ x, tau = c(0.1, 0.9), data = fixture, method = "br")
   prediction <- as.matrix(stats::predict(
     fit, newdata = data.frame(x = c(-1, 1))
   ))
   if (!identical(dim(prediction), c(2L, 2L)) ||
-      max(abs(prediction - matrix(c(-1, 3, -1, 3), 2L, 2L))) >
+      max(abs(
+        prediction -
+          matrix(c(-1.62857142857143, 2.48571428571429, -0.7, 3.38),
+                 2L, 2L)
+      )) >
         1e-8) {
     stop("The quantreg endpoint adapter has the wrong orientation.",
          call. = FALSE)
