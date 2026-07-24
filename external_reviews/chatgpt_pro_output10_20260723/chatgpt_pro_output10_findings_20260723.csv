@@ -1,0 +1,13 @@
+finding_id,area,verdict,severity,blocks_24_fits,finding,exact_action
+F1,Runtime lineage v5,PASS,none,False,Complete expected source package and exact successful one-input build/install chain are reverified.,No launch patch.
+F2,Continuation history v4,PASS,hardening,False,Raw count validation precedes coercion and promotion state is reconstructed.,Harden aggregate logical and RNG types.
+F3,Expanded 40-gate suite,PASS,none,False,All declared calculations and six continuation cells are source-consistent.,Rerun after source/config change.
+F4,PGID signal/error finalization,PARTIAL,blocker,True,Signals and unexpected shell exits bypass final compact evidence.,Add idempotent always-run finalizer and fault tests.
+F5,Required estimand schema,FAIL,blocker,True,Only cross-chain equality is checked; required blocks can vanish from all chains.,Construct independent exact names/counts and fail on mismatch.
+F6,Future diagnostic draw order,FAIL,blocker,True,nd=n_save randomly permutes draw indices and diagnostics ignore draw_index.,"Use nd=NULL, assert sequential indices, and test alignment."
+F7,Future mixing target,PARTIAL,hardening,False,Fresh evolution noise can inflate ESS.,Use deterministic conditional-mean roots for primary mixing.
+F8,Atomic RDS evidence,PARTIAL,hardening,False,No read-back/checkpoint validation before rename.,"Read back, validate, hash, then rename."
+F9,One-cell fit/resources,PASS,none,False,Four exact eligible chains finished with zero repairs and bounded resources.,Retain frozen starts/seeds/backend.
+F10,Current 4000-retained schedule,FAIL,blocker,True,Bulk ESS 962.08 and 971.87 miss the frozen 1000 gate.,Freeze 2000 burn-in plus 6000 retained and rerun.
+F11,Whole-grid timeout,FAIL,blocker,True,Six equal-cost cells already project above 45 minutes.,Freeze a 240-minute bounded timeout.
+F12,Scientific interpretation,PASS,none,False,Loss/likelihood and root/response distinctions remain correct.,No target change.
