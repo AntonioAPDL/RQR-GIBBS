@@ -1,9 +1,32 @@
 # ChatGPT Pro Output-15 follow-up prompt
 
-You are performing an independent, adversarial-but-constructive review of the
-standalone RQR-GIBBS repository after Codex reconciled your Output-14 audit.
-Treat every Codex statement and tracked closeout as a claim to verify from
-source and compact evidence.
+You are the independent senior Bayesian computation and statistical
+simulation reviewer for the standalone RQR-GIBBS project. Codex reconciled
+your Output-14 audit; your task is now to convert the revised design into the
+smallest scientifically strong, computationally feasible, implementation-ready
+confirmatory simulation contract.
+
+This is a decision-oriented launch review, not an invitation to begin another
+open-ended audit cycle. Treat every Codex statement and tracked closeout as a
+claim to verify, but distinguish:
+
+- a concrete defect that can change the scientific conclusion, target,
+  execution safety, or reproducibility;
+- a correction required before the main run;
+- a useful nonblocking refinement; and
+- an aspirational hardening idea that does not justify delaying the study.
+
+A launch blocker must have a reachable counterexample or a clear scientific
+consequence. Do not move the acceptance boundary because a theoretically
+stronger provenance or numerical system could be imagined. Conversely, do
+not approve an underspecified or computationally infeasible design merely
+because the bounded sampler validation passed.
+
+Your successful output is one unambiguous recommended main-study design,
+including an exact scenario-by-method incidence matrix, MCMC schedule,
+replication/Monte Carlo precision rule, computational budget, embedded
+sentinel order, artifact contract, stop rules, and explicit go/no-go decision.
+Codex should be able to implement it without guessing.
 
 ## Repositories and exact scope
 
@@ -111,6 +134,79 @@ planning evidence only. Its 672 rows are neither an authorized execution plan
 nor the final main-run plan. Audit its useful seed, comparator, and
 fail-closed machinery, but do not ask Codex to execute it.
 
+### Why this is a defensible choice
+
+The separate pilot is being omitted for substantive reasons:
+
+1. The 24-fit bounded validation already exercised all three declared dynamic
+   evolution structures, both learning-rate modes, four chains per cell,
+   missing observations, future states, continuation, C++ FFBS, exact-runtime
+   provenance, and modern MCMC diagnostics.
+2. The exact-runtime oracle and tiny end-to-end stages independently check the
+   new main-study DGP, seed, output, and comparator plumbing.
+3. A small performance pilot would be too imprecise to answer the study's
+   coverage and width questions and could encourage outcome-driven redesign.
+4. Predeclared sentinel replications inside the final run provide the needed
+   scaling and convergence protection without discarding valid simulations or
+   creating a second, differently configured experiment.
+
+Audit whether those premises are true. If an essential risk is not covered,
+specify the narrowest embedded sentinel or preflight gate that closes it.
+Do not relabel that safeguard as a standalone pilot.
+
+## Scientific questions the simulation must answer
+
+The final study should be no larger than needed to answer these questions:
+
+1. Does dynamic RQR-DLM recover and forecast population RQR interval roots
+   under static, locally evolving, multicomponent, asymmetric, and stressed
+   mechanisms?
+2. When component evolution genuinely differs, what is gained by
+   component-specific evolution relative to a common-evolution RQR-DLM?
+3. What is gained by dynamic roots relative to fixed-design RQR and frozen
+   discount evolution?
+4. How do RQR-targeted intervals compare with dynamic and static
+   equal-tailed quantile intervals in repeated-sampling coverage, width, loss,
+   endpoint recovery relative to each method's own target, failures, and
+   computation?
+5. Which conclusions are robust to learning-rate choice, training length,
+   heteroscedasticity, and a composite break/heavy-tail stress mechanism?
+
+The study must not claim that:
+
+- RQR roots are equal-tailed quantiles under asymmetry;
+- generalized-Bayes root draws are response-predictive draws;
+- learned lambda is coverage calibration or a response variance;
+- one composite stress DGP separately identifies every kind of
+  misspecification; or
+- a method is globally superior outside the simulated operating regimes.
+
+## Literature grounding
+
+Use the repository bibliography and the project's supplied primary sources
+where they materially affect the design:
+
+```text
+refs.bib
+Bissiri--Holmes--Walker on generalized Bayes
+Yu--Moyeed and Kozumi--Kobayashi on Bayesian quantile regression/AL augmentation
+Goncalves--Migon--Bastos on dynamic quantile linear models
+Gneiting--Raftery on proper scoring rules
+the supplied RQR/calibration papers
+standard ADEMP and Monte Carlo simulation-study guidance
+```
+
+Check current package/API facts against the pinned source and official
+documentation. Cite primary methodological sources for recommendations on
+simulation design, Monte Carlo error, equivalence/qualification, MCMC
+diagnostics, and interval scoring. Keep the literature review targeted: a
+source should change or justify a design choice, not merely lengthen the
+report.
+
+If common practice does not uniquely determine a choice, state the tradeoff
+and recommend one frozen value. Do not leave Codex with a menu of equally
+possible designs.
+
 The accepted bounded result remains:
 
 ```text
@@ -207,6 +303,80 @@ error, transparent qualification, and fair tuning) without making it
 needlessly large. Recommend reductions only if they preserve the main
 scientific contrasts.
 
+### Required design optimization
+
+Do not assume that every method belongs in every DGP or that every sensitivity
+requires the same replication count as the core comparison. Construct an
+explicit incidence matrix and classify each cell as:
+
+```text
+core confirmatory
+targeted ablation
+targeted sensitivity
+noncompetitive oracle/reference
+omit, with reason
+```
+
+At minimum, determine:
+
+- which DGPs are essential, redundant, or sensitivity-only;
+- which methods are scientifically meaningful for each DGP;
+- whether both coverage levels are needed in every sensitivity;
+- where the true-\(W\) oracle is informative;
+- where the common-evolution ablation identifies a real contrast;
+- where the Gaussian response-model sensitivity is appropriate;
+- whether fixed-design and rolling empirical baselines need every dynamic
+  mechanism;
+- whether learning-rate sensitivities can be restricted to representative
+  mechanisms without weakening the conclusions; and
+- whether training-length sensitivities should use one representative
+  coverage level and a smaller targeted method set.
+
+Use paired common random numbers wherever valid and base primary comparisons
+on paired replication-level contrasts. Preserve failed fits in denominators.
+No method may receive test-data tuning, a larger tuning budget, favorable
+retries, outcome-driven chain extensions, or different response draws.
+
+Compute the exact number of:
+
+- DGP replications;
+- method fits;
+- separate lower/upper quantile fits;
+- MCMC chains;
+- training-validation candidate fits;
+- forecast evaluations; and
+- expected compact and ignored artifacts.
+
+Use the bounded elapsed-time evidence as a lower-level benchmark, while
+acknowledging that \(T=200\), tuning, and comparator fits can cost more.
+Provide optimistic, central, and conservative wall-time and storage estimates
+under realistic Jerez concurrency. If the current design is impractical,
+return a scientifically justified reduced design rather than merely saying it
+is too large.
+
+### Replication and Monte Carlo precision
+
+Assess whether the present 500-minimum, 250-batch, 2,500-maximum rule is
+appropriate for each estimand and stratum. The stopping rule may use only
+predeclared Monte Carlo precision—not performance ranking, favorable signs,
+significance, or coverage qualification.
+
+Specify:
+
+- the initial confirmatory replication count;
+- batch size and maximum;
+- formulas for MCSE of coverage, means, failure rates, and paired contrasts;
+- how MCSE is aggregated across horizons;
+- which primary summaries must meet precision before stopping;
+- what happens when only some strata meet precision;
+- how TOST is reported if precision is insufficient at the maximum; and
+- whether the existing nominal 1,083/609 and approximate 1,600/900 counts
+  should be replaced or reconciled.
+
+Do not confuse the 90% TOST interval inside \([-0.02,0.02]\) with proof of
+exact nominal coverage. Explain what the qualification supports and how width
+comparisons are conditioned on it.
+
 ### 3. Oracle implementation and certificates
 
 Inspect:
@@ -271,6 +441,12 @@ forecast horizon orientation, and raw quantile retention. Audit the
 Decide whether these attestations are sufficient for the confirmatory main
 simulation. Do not require a claim of bit-for-bit reproducible compilation
 across machines unless that claim is actually made.
+
+Include the full computational cost of the dynamic quantile comparator:
+separate lower and upper MCMC fits, training-only tuning, and forecast
+generation. Check that the proposed comparison gives it matched state
+components, covariates, origins, horizons, and a fair tuning budget without
+pretending its equal-tailed target equals the RQR target.
 
 ### 5. DGP, seeds, atomic artifacts, and runner modes
 
@@ -344,6 +520,112 @@ confirmatory execution authorized: false
 Confirm that no stage is mislabeled as a simulation result and that no
 response-predictive claim appears.
 
+## Exact main-run contract you must return
+
+Whether your verdict is go or revise, return a concrete recommended contract
+with the following sections.
+
+### A. Frozen ADEMP table
+
+State the final aims, DGPs, estimands, methods, and performance measures.
+Label every primary, secondary, diagnostic, sensitivity, and
+noncompetitive-oracle item.
+
+### B. Scenario-by-method incidence matrix
+
+Give one row per DGP × coverage × method family, with:
+
+```text
+cell_id
+DGP
+coverage
+method
+role
+replication_rule
+chains_per_replication
+tuning_rule
+forecast_horizons
+primary_estimands
+paired_contrast_group
+include_or_omit_reason
+```
+
+This matrix must determine the run size exactly.
+
+### C. MCMC and initialization schedule
+
+Freeze burn-in, retained draws, thinning, chains, initialization,
+within-chain diagnostics, multichain sentinels, continuation policy, fixed
+lambda handling, component-scale handling, and failure behavior. Justify any
+departure from the schedule that passed bounded validation.
+
+One-chain main fits are acceptable only if you justify maintained
+within-chain ESS/MCSE gates and preselected multichain sentinels. Sentinel
+selection must be seed-derived before data generation. A sentinel failure must
+stop its declared cell before later batches run.
+
+### D. Ordered execution plan
+
+Specify a deterministic order such as:
+
+```text
+exact-runtime preflight
+embedded sentinel replications
+core batch 1
+cell diagnostics and integrity gates
+additional precision-only batches
+targeted ablations
+targeted sensitivities
+closeout and promotion
+```
+
+Passing sentinels are final-study observations. No post-sentinel retuning is
+allowed. A source or design correction invalidates the incomplete run and
+requires a new complete run from a new authorization commit.
+
+### E. Resource and failure envelope
+
+Specify concurrency, BLAS/OpenMP limits, wall-time ceilings, process-group or
+cgroup monitoring, sampled RSS interpretation, free-space checks, maximum
+artifact size, atomic writes, checkpoint frequency, failure ledger, retry
+policy, and emergency stop behavior. Distinguish a failed method fit retained
+for operating-characteristic analysis from infrastructure failure that
+invalidates a replication.
+
+### F. Analysis and reporting plan
+
+Freeze:
+
+- target-aligned endpoint errors;
+- cross-target distances labeled as such;
+- conditional-mean and realized-future root errors;
+- empirical coverage and width;
+- held-out RQR loss;
+- secondary central interval score;
+- TOST coverage qualification;
+- paired width and loss contrasts;
+- failure probability;
+- elapsed time and memory;
+- horizon-specific and aggregated summaries;
+- MCSE and uncertainty intervals; and
+- multiplicity or hierarchy language for any inferential comparisons.
+
+Recommend figures and tables that communicate the main scientific findings
+without cherry-picking.
+
+### G. Launch checklist
+
+Give a binary checklist whose every row can be evaluated automatically before
+the authorization commit. Separate:
+
+```text
+must pass before implementation is accepted
+must pass before execution is authorized
+must pass batch by batch during the main run
+must pass before evidence promotion
+nonblocking future hardening
+```
+
 ## Validation claims to assess
 
 Codex reports:
@@ -381,6 +663,15 @@ Give explicit verdicts for:
     replaces a standalone pilot; and
 12. continued deferral of CAVI/ELBO and RQR-DESN.
 
+Also provide:
+
+13. a letter grade for the current schema-0.2 design;
+14. a letter grade for your recommended optimized design;
+15. exact total fit/chain/tuning counts for the recommended design;
+16. central and conservative Jerez time/storage estimates; and
+17. the three most important scientific messages the final design can
+    legitimately support.
+
 Use this decision vocabulary:
 
 ```text
@@ -403,6 +694,11 @@ separate false-to-true authorization step. The main-run runner must remain
 unexecutable until that implementation and its exact preflight bundle receive
 another review.
 
+If you require revision, do not stop at criticism. Supply exact replacement
+values, rows, thresholds, or algorithms for every blocking item so Codex can
+implement the correction in one pass. Mark optional preferences explicitly as
+nonblocking.
+
 ## Required remote deliverables
 
 Do not return downloadable sandbox links as the primary handoff. Create a new
@@ -413,13 +709,16 @@ branch in `AntonioAPDL/RQR-GIBBS` based exactly on evidence commit
 chatgpt-pro/output15-audit-20260724
 ```
 
-Add exactly these four files:
+Add exactly these seven files:
 
 ```text
 external_reviews/chatgpt_pro_output15_20260724/
   chatgpt_pro_output15_audit_20260724.md
   chatgpt_pro_output15_codex_handoff_20260724.md
   chatgpt_pro_output15_findings_20260724.csv
+  chatgpt_pro_output15_final_design_matrix_20260724.csv
+  chatgpt_pro_output15_run_budget_20260724.csv
+  chatgpt_pro_output15_launch_gates_20260724.csv
   chatgpt_pro_output15_artifact_hashes.csv
 ```
 
@@ -430,7 +729,13 @@ Requirements:
   next actions.
 - The findings CSV has stable finding IDs, area, verdict, severity,
   required stage, launch-blocker status, evidence, and disposition.
-- The artifact-hash CSV records SHA-256 and byte count for the other three
+- The final design matrix is the exact recommended scenario × coverage ×
+  method incidence matrix and contains no prose-only placeholders.
+- The run-budget CSV reconciles DGP replications, fits, chains, tuning fits,
+  lower/upper comparator fits, expected wall time, concurrency, and storage.
+- The launch-gates CSV has machine-evaluable gate IDs, stages, thresholds,
+  failure actions, and blocking status.
+- The artifact-hash CSV records SHA-256 and byte count for the other six
   deliverables.
 - Commit and push the branch.
 - Do not modify `main`.
