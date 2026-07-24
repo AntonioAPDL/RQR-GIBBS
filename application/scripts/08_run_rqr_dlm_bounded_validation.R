@@ -1127,7 +1127,43 @@ run_continuation_reference <- function() {
         second, n_mcmc = 2L, store_state_draws = TRUE
       )
       segments <- list(first, second, third)
-      saved_equal <- all(c(
+      time0_objects <- list(full, first, second, third)
+      time0_expected_draws <- c(6L, 2L, 2L, 2L)
+      time0_draws_complete <- all(vapply(
+        seq_along(time0_objects),
+        function(index) {
+          object <- time0_objects[[index]]
+          expected_draws <- time0_expected_draws[index]
+          identical(
+            dim(object$samp.theta0_root1),
+            c(fixture$expanded_model$p, expected_draws)
+          ) &&
+            identical(
+              dim(object$samp.theta0_root2),
+              c(fixture$expanded_model$p, expected_draws)
+            ) &&
+            all(is.finite(object$samp.theta0_root1)) &&
+            all(is.finite(object$samp.theta0_root2))
+        },
+        logical(1L)
+      ))
+      estimand_schema_complete <- isTRUE(tryCatch({
+        future_functionals <-
+          rqr_bounded_future_conditional_mean_roots(
+            full, fixture$future
+          )
+        estimands <- rqr_bounded_chain_estimands(
+          full, future_functionals
+        )
+        identical(
+          rqr_bounded_validate_estimand_schemas(
+            list(estimands), fixture, learning_rate_mode
+          ),
+          colnames(estimands)
+        )
+      }, error = function(error) FALSE))
+      saved_equal <- time0_draws_complete &&
+        estimand_schema_complete && all(c(
         vapply(column_fields, function(field) {
           identical(
             full[[field]], bind_field(segments, field, "columns")
@@ -1164,6 +1200,8 @@ run_continuation_reference <- function() {
         learning_rate_mode = learning_rate_mode,
         seed = arguments$mcmc_control$seed,
         all_saved_stochastic_fields_bitwise = saved_equal,
+        time0_draws_complete = time0_draws_complete,
+        estimand_schema_complete = estimand_schema_complete,
         final_checkpoint_bitwise = checkpoint_equal,
         three_segment_history = history_shape,
         full_checkpoint_digest = full$checkpoint_digest,
@@ -1176,8 +1214,9 @@ run_continuation_reference <- function() {
         paste0("all_saved_fields_6_vs_2_plus_2_plus_2__", cell_id),
         saved_equal,
         detail = paste(
-          "root ordinates, full and terminal states, time-zero states,",
-          "lambda, component scales, and retained conditional parameters"
+          "complete exact estimand schema; root ordinates, full and",
+          "terminal states, time-zero states, lambda, component scales,",
+          "and retained conditional parameters"
         )
       )
       gates[[length(gates) + 1L]] <- reference_gate(

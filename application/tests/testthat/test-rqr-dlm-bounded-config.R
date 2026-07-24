@@ -341,6 +341,26 @@ test_that("bounded future means preserve draw identity and RDS publication valid
       backend = "cpp", store_state_draws = TRUE
     )
   )
+  expect_identical(dim(fit$samp.theta0_root1), c(1L, 1L))
+  expect_identical(dim(fit$samp.theta0_root2), c(1L, 1L))
+  fit_future <-
+    helper_environment$rqr_bounded_future_conditional_mean_roots(
+      fit, future
+    )
+  fit_estimands <- helper_environment$rqr_bounded_chain_estimands(
+    fit, fit_future
+  )
+  fit_fixture <- list(
+    expanded_model = fit$expanded_model,
+    future = future,
+    evolution = fit$evolution
+  )
+  expect_identical(
+    helper_environment$rqr_bounded_validate_estimand_schemas(
+      list(fit_estimands), fit_fixture, "fixed_rate"
+    ),
+    colnames(fit_estimands)
+  )
   output_dir <- tempfile("bounded-chain-publication-")
   dir.create(output_dir)
   path <- file.path(output_dir, "valid.rds")

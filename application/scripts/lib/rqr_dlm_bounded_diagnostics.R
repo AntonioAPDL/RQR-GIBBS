@@ -61,6 +61,150 @@ rqr_bounded_expected_estimand_names <- function(
   names
 }
 
+rqr_bounded_append_matrix_estimands <- function(
+    values, matrix_value, prefix, time_label = "t") {
+  matrix_value <- as.matrix(matrix_value)
+  block <- t(matrix_value)
+  colnames(block) <- sprintf(
+    "%s_%s%03d", prefix, time_label, seq_len(nrow(matrix_value))
+  )
+  cbind(values, block)
+}
+
+rqr_bounded_chain_estimands <- function(fit, future_functionals) {
+  if (!inherits(fit, "rqr_dlm_mcmc")) {
+    stop("A fitted RQR-DLM object is required.", call. = FALSE)
+  }
+  lower <- pmin(fit$samp.eta_root1, fit$samp.eta_root2)
+  upper <- pmax(fit$samp.eta_root1, fit$samp.eta_root2)
+  midpoint <- 0.5 * (lower + upper)
+  width <- upper - lower
+  n_save <- ncol(lower)
+  values <- matrix(numeric(0), n_save, 0L)
+  values <- rqr_bounded_append_matrix_estimands(
+    values, lower, "train_lower"
+  )
+  values <- rqr_bounded_append_matrix_estimands(
+    values, upper, "train_upper"
+  )
+  values <- rqr_bounded_append_matrix_estimands(
+    values, midpoint, "train_midpoint"
+  )
+  values <- rqr_bounded_append_matrix_estimands(
+    values, width, "train_width"
+  )
+  observed <- !is.na(fit$y)
+  loss <- vapply(seq_len(n_save), function(draw) {
+    sum(rqrgibbs::rqr_check_loss(
+      rqrgibbs::rqr_residual_product(
+        fit$y[observed],
+        fit$samp.eta_root1[observed, draw],
+        fit$samp.eta_root2[observed, draw]
+      ),
+      fit$model_spec$coverage_level
+    ))
+  }, numeric(1L))
+  values <- cbind(values, observed_loss = loss)
+  terminal_midpoint <- 0.5 * (
+    fit$samp.theta_terminal_root1 +
+      fit$samp.theta_terminal_root2
+  )
+  terminal_separation <- abs(
+    fit$samp.theta_terminal_root1 -
+      fit$samp.theta_terminal_root2
+  )
+  terminal_block <- cbind(
+    t(terminal_midpoint), t(terminal_separation)
+  )
+  colnames(terminal_block) <- c(
+    paste0(
+      "terminal_state_midpoint_",
+      seq_len(nrow(terminal_midpoint))
+    ),
+    paste0(
+      "terminal_state_abs_separation_",
+      seq_len(nrow(terminal_separation))
+    )
+  )
+  values <- cbind(values, terminal_block)
+  if (is.null(fit$samp.theta0_root1) ||
+      is.null(fit$samp.theta0_root2)) {
+    stop(
+      "Stored time-zero root-state draws are required by the bounded schema.",
+      call. = FALSE
+    )
+  }
+  theta0_midpoint <- 0.5 * (
+    fit$samp.theta0_root1 + fit$samp.theta0_root2
+  )
+  theta0_separation <- abs(
+    fit$samp.theta0_root1 - fit$samp.theta0_root2
+  )
+  theta0_block <- cbind(
+    t(theta0_midpoint), t(theta0_separation)
+  )
+  colnames(theta0_block) <- c(
+    paste0(
+      "time0_state_midpoint_", seq_len(nrow(theta0_midpoint))
+    ),
+    paste0(
+      "time0_state_abs_separation_",
+      seq_len(nrow(theta0_separation))
+    )
+  )
+  values <- cbind(values, theta0_block)
+  values <- rqr_bounded_append_matrix_estimands(
+    values, future_functionals$lower_draws,
+    "future_conditional_mean_lower"
+  )
+  values <- rqr_bounded_append_matrix_estimands(
+    values, future_functionals$upper_draws,
+    "future_conditional_mean_upper"
+  )
+  values <- rqr_bounded_append_matrix_estimands(
+    values, future_functionals$midpoint_draws,
+    "future_conditional_mean_midpoint"
+  )
+  values <- rqr_bounded_append_matrix_estimands(
+    values, future_functionals$width_draws,
+    "future_conditional_mean_width"
+  )
+  if (identical(
+        fit$model_spec$learning_rate_mode, "fixed_rate"
+      )) {
+    expected_lambda <- fit$model_spec$fixed_learning_rate *
+      fit$model_spec$loss_reference_scale
+    if (!all(fit$samp.lambda == expected_lambda)) {
+      stop("Fixed-rate lambda failed exact identity.", call. = FALSE)
+    }
+  } else {
+    values <- cbind(values, log_lambda = log(fit$samp.lambda))
+  }
+  if (!is.null(fit$samp.evolution_scale)) {
+    q <- log(fit$samp.evolution_scale)
+    colnames(q) <- paste0(
+      "log_component_scale_", fit$evolution$component_names
+    )
+    energy <- 2 * sweep(
+      fit$samp.evolution_scale_rate, 2L,
+      fit$evolution$prior$rate, `-`
+    )
+    colnames(energy) <- paste0(
+      "component_innovation_energy_",
+      fit$evolution$component_names
+    )
+    values <- cbind(values, q, energy)
+  }
+  if (anyDuplicated(colnames(values)) ||
+      any(!is.finite(values))) {
+    stop(
+      "The explicit estimand schema is duplicated or nonfinite.",
+      call. = FALSE
+    )
+  }
+  values
+}
+
 rqr_bounded_validate_estimand_schemas <- function(
     cell_chains, fixture, learning_rate_mode) {
   if (!is.list(cell_chains) || !length(cell_chains)) {

@@ -45,6 +45,10 @@ repair, including a negative-eigenvalue projection. The optional audit policy
 records each repair. Mathematical/numerical eligibility is separate from
 reproducibility eligibility; promotion additionally requires a clean checkout
 at an explicitly expected commit. Full state-path storage defaults to off;
+when it is enabled, exact fixed-W and frozen-template fits complete each
+retained path with a draw from the Gaussian time-zero conditional. Component-
+scale fits retain the same time-zero states because their innovation-scale
+update conditions on them.
 terminal state draws remain available to `rqr_forecast_roots()`, which can use
 either explicit future covariances or saved component-scale draws with fixed
 future templates. Fit objects include a versioned provenance and RNG

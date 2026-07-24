@@ -166,11 +166,103 @@ rqr_evolution_component_scale <- function(
 }
 
 .rqr_draw_initial_state <- function(theta1, G1, m0, C0, W1) {
-  C0_inv <- chol2inv(chol(.rqr_symmetrize(C0)))
-  W1_inv <- chol2inv(chol(.rqr_symmetrize(W1)))
-  precision <- C0_inv + t(G1) %*% W1_inv %*% G1
-  rhs <- drop(C0_inv %*% m0 + t(G1) %*% W1_inv %*% theta1)
-  .rqr_sample_mvnorm_precision(rhs, precision, jitter_ladder = 0)$draw
+  theta1 <- as.numeric(theta1)
+  m0 <- as.numeric(m0)
+  p <- length(m0)
+  G1 <- as.matrix(G1)
+  C0 <- .rqr_validate_symmetric_matrix(C0, "C0")
+  W1 <- .rqr_validate_symmetric_matrix(W1, "W1")
+  if (length(theta1) != p ||
+      !identical(dim(G1), c(p, p)) ||
+      !identical(dim(C0), c(p, p)) ||
+      !identical(dim(W1), c(p, p))) {
+    stop(
+      "The time-zero conditional inputs have incompatible dimensions.",
+      call. = FALSE
+    )
+  }
+  forecast_covariance <- .rqr_symmetrize(
+    G1 %*% C0 %*% t(G1) + W1
+  )
+  forecast_factor <- tryCatch(
+    chol(forecast_covariance), error = function(error) NULL
+  )
+  if (is.null(forecast_factor)) {
+    forecast_eigen <- eigen(forecast_covariance, symmetric = TRUE)
+    forecast_scale <- max(abs(forecast_eigen$values))
+    if (forecast_scale > 0 &&
+        min(forecast_eigen$values) / forecast_scale < -1e-10) {
+      stop(
+        "The time-zero forecast covariance is materially indefinite.",
+        call. = FALSE
+      )
+    }
+    rank_tolerance <- 100 * .Machine$double.eps *
+      max(1, p) * forecast_scale
+    positive <- forecast_eigen$values > rank_tolerance
+    forecast_inverse <- if (any(positive)) {
+      forecast_eigen$vectors[, positive, drop = FALSE] %*%
+        (t(forecast_eigen$vectors[, positive, drop = FALSE]) /
+          forecast_eigen$values[positive])
+    } else {
+      matrix(0, p, p)
+    }
+    solve_forecast <- function(value) forecast_inverse %*% value
+  } else {
+    solve_forecast <- function(value) {
+      backsolve(
+        forecast_factor,
+        forwardsolve(t(forecast_factor), value)
+      )
+    }
+  }
+  gain <- C0 %*% t(G1)
+  innovation <- theta1 - drop(G1 %*% m0)
+  if (is.null(forecast_factor)) {
+    range_residual <- innovation -
+      drop(forecast_covariance %*% solve_forecast(innovation))
+    residual_scale <- max(
+      abs(innovation), sqrt(forecast_scale), .Machine$double.xmin
+    )
+    if (max(abs(range_residual)) / residual_scale > 1e-8) {
+      stop(
+        "The time-one state is outside the singular forecast support.",
+        call. = FALSE
+      )
+    }
+  }
+  conditional_mean <- m0 + drop(
+    gain %*% solve_forecast(innovation)
+  )
+  conditional_covariance <- .rqr_symmetrize(
+    C0 - gain %*% solve_forecast(G1 %*% C0)
+  )
+  conditional_factor <- tryCatch(
+    chol(conditional_covariance), error = function(error) NULL
+  )
+  if (!is.null(conditional_factor)) {
+    return(as.numeric(
+      conditional_mean +
+        t(conditional_factor) %*% stats::rnorm(p)
+    ))
+  }
+  conditional_eigen <- eigen(
+    conditional_covariance, symmetric = TRUE
+  )
+  conditional_scale <- max(abs(conditional_eigen$values))
+  if (conditional_scale > 0 &&
+      min(conditional_eigen$values) / conditional_scale < -1e-10) {
+    stop(
+      "The time-zero conditional covariance is materially indefinite.",
+      call. = FALSE
+    )
+  }
+  as.numeric(
+    conditional_mean +
+      conditional_eigen$vectors %*%
+        (sqrt(pmax(conditional_eigen$values, 0)) *
+          stats::rnorm(p))
+  )
 }
 
 .rqr_component_scale_posterior <- function(

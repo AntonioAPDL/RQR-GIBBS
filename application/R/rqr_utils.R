@@ -264,7 +264,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
-.rqr_schema_version <- function() "rqrgibbs_fit/1.8.0"
+.rqr_schema_version <- function() "rqrgibbs_fit/1.9.0"
 
 .rqr_continuation_history_schema <- function() {
   "rqrgibbs_continuation_history/4.1.0"

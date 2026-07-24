@@ -337,6 +337,11 @@ rqr_dlm_fit <- function(
   }
   v <- rep_len(v_initial, T)
   component_mode <- identical(evolution_mode, "component_scale")
+  time0_completion_mode <- component_mode ||
+    (
+      store_state_draws &&
+        evolution_mode %in% c("fixed_W", "discount_template")
+    )
   q_evolution <- if (component_mode) {
     as.numeric(init$evolution_scale %||% evolution$initial)
   } else {
@@ -375,7 +380,13 @@ rqr_dlm_fit <- function(
       dimnames = list(NULL, evolution$component_names)
     )
   } else NULL
-  theta01_draws <- theta02_draws <- if (component_mode) matrix(NA_real_, p, n_keep) else NULL
+  theta01_draws <- theta02_draws <- if (
+      time0_completion_mode
+    ) {
+    matrix(NA_real_, p, n_keep)
+  } else {
+    NULL
+  }
 
   total_iter <- n_burn + n_keep * thin
   loss_trace <- lambda_trace <- effective_rate_trace <- numeric(total_iter)
@@ -448,6 +459,19 @@ rqr_dlm_fit <- function(
         theta1, theta2, theta01, theta02, expanded$GG, evolution
       )
       q_evolution <- q_update$draw
+    } else if (time0_completion_mode) {
+      # Fixed-W and frozen-template FFBS integrate theta_0 out through
+      # (m0, C0). Complete each root path with an exact draw from
+      # p(theta_0 | theta_1) so stored full-state summaries have the same
+      # time-zero contract as component-scale fits.
+      theta01 <- .rqr_draw_initial_state(
+        theta1[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
+        evolution_iter$W[, , 1L]
+      )
+      theta02 <- .rqr_draw_initial_state(
+        theta2[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
+        evolution_iter$W[, , 1L]
+      )
     }
 
     if (stats::runif(1L) < 0.5) {
@@ -491,13 +515,15 @@ rqr_dlm_fit <- function(
         theta1_draws[, , save_idx] <- theta1
         theta2_draws[, , save_idx] <- theta2
       }
+      if (!is.null(theta01_draws)) {
+        theta01_draws[, save_idx] <- theta01
+        theta02_draws[, save_idx] <- theta02
+      }
       if (store_latent_draws) v_draws[, save_idx] <- v
       if (component_mode) {
         q_draws[save_idx, ] <- q_evolution
         q_shape_draws[save_idx, ] <- q_update$posterior$shape
         q_rate_draws[save_idx, ] <- q_update$posterior$rate
-        theta01_draws[, save_idx] <- theta01
-        theta02_draws[, save_idx] <- theta02
       }
     }
     if (verbose && (iter %% progress_every == 0L || iter == total_iter)) {
@@ -668,8 +694,16 @@ rqr_dlm_fit <- function(
       numerical_repairs = repair_records %||% data.frame(),
       template_construction_audit = evolution$construction_audit %||% NULL,
       partial_collapse_order = c(
-        "lambda_collapsed", "latent_v_refresh", "root1_ffbs", "root2_ffbs",
-        if (component_mode) "component_scale_update" else NULL, "global_root_swap"
+        "lambda_collapsed", "latent_v_refresh", "root1_ffbs",
+        if (component_mode) "root1_time0" else NULL,
+        "root2_ffbs",
+        if (component_mode) {
+          "root2_time0"
+        } else if (time0_completion_mode) {
+          "fixed_evolution_time0_completion"
+        } else NULL,
+        if (component_mode) "component_scale_update" else NULL,
+        "global_root_swap"
       )
     ),
     provenance = provenance,

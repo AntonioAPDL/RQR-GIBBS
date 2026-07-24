@@ -273,6 +273,38 @@ test_that("exact component scales use the analytic shared inverse-Gamma conditio
   )
 })
 
+test_that("fixed-W state storage completes retained paths at time zero", {
+  fit <- rqr_dlm_fit(
+    y = c(-1, -0.2, 0.5, 1.1),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "fixed_W",
+    W = 0.05,
+    numerical_policy = "fail",
+    mcmc_control = list(
+      n_burn = 1, n_mcmc = 4, seed = 1208,
+      backend = "cpp", store_state_draws = TRUE
+    )
+  )
+  expect_identical(dim(fit$samp.theta0_root1), c(1L, 4L))
+  expect_identical(dim(fit$samp.theta0_root2), c(1L, 4L))
+  expect_true(all(is.finite(fit$samp.theta0_root1)))
+  expect_true(all(is.finite(fit$samp.theta0_root2)))
+})
+
+test_that("time-zero completion supports an exact singular transition", {
+  set.seed(1209)
+  draw <- rqrgibbs:::.rqr_draw_initial_state(
+    theta1 = c(1, 0),
+    G1 = diag(c(1, 0)),
+    m0 = c(0, 0),
+    C0 = diag(2),
+    W1 = matrix(0, 2, 2)
+  )
+  expect_equal(draw[1L], 1, tolerance = 1e-12)
+  expect_true(all(is.finite(draw)))
+})
+
 test_that("component-scale root forecasts match analytic state moments", {
   n_save <- 1L
   q <- 0.4
@@ -389,7 +421,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.8.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.9.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
