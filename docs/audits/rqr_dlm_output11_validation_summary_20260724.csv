@@ -1,0 +1,54 @@
+area,metric,value,limit_or_expected,pass
+source,implementation_commit,53dc71d873ef12ebba91cbc3d6813682e0987960,exact full SHA,TRUE
+source,package_version,0.1.0.9011,0.1.0.9011,TRUE
+source,execution_authorized,FALSE,FALSE,TRUE
+monitor,fault_scenarios_passed,8,8,TRUE
+monitor,manifest_actual_file_set_equality,TRUE,TRUE,TRUE
+monitor,enumeration_failure_rejected,TRUE,TRUE,TRUE
+monitor,row_processing_failure_rejected,TRUE,TRUE,TRUE
+monitor,canonical_target_directory_rejected,TRUE,TRUE,TRUE
+rds,post_rename_failure_rolls_back_temporary,TRUE,TRUE,TRUE
+rds,post_rename_failure_rolls_back_final,TRUE,TRUE,TRUE
+rng,supported_kind_exact_length_validation,TRUE,TRUE,TRUE
+runtime,attestation_schema,rqrgibbs_runtime_attestation/5.0.0,rqrgibbs_runtime_attestation/5.0.0,TRUE
+runtime,source_tree_digest,6ac932d6a8f6e96322e827204cb0df0696d0407d,exact application tree,TRUE
+runtime,runtime_tree_digest,b34d95fdc87f195e101d5e32490d7a9cec92bee59db4222a1886da1cc4a11490,exact isolated runtime,TRUE
+runtime,attestation_sha256,ffc1fcd43971e1f06f34de9ed4c45547978ded084cdd8d2457bb9d20f24bf6de,exact attestation,TRUE
+preflight,prospective_fit_count,24,24,TRUE
+preflight,executed_fit_count,0,0,TRUE
+reference,gate_pass_count,43,43,TRUE
+reference,failure_count,0,0,TRUE
+reference,peak_processes,3,3,TRUE
+reference,peak_threads,4,4,TRUE
+reference,peak_rss_kib,193144,4194304,TRUE
+reference,final_pgid_empty,TRUE,TRUE,TRUE
+benchmark,fit_count,4,4,TRUE
+benchmark,burn_in_per_chain,2000,2000,TRUE
+benchmark,retained_per_chain,6000,6000,TRUE
+benchmark,diagnostic_pass_count,150,150,TRUE
+benchmark,maximum_rhat,1.00491399373516,1.01,TRUE
+benchmark,minimum_bulk_ess,1456.57476438759,1000,TRUE
+benchmark,minimum_tail_ess,2107.19279393563,1000,TRUE
+benchmark,numerical_repair_count,0,0,TRUE
+benchmark,forecast_repair_count,0,0,TRUE
+benchmark,failure_count,0,0,TRUE
+benchmark,peak_processes,3,3,TRUE
+benchmark,peak_threads,4,4,TRUE
+benchmark,peak_rss_kib,399956,4194304,TRUE
+benchmark,final_pgid_empty,TRUE,TRUE,TRUE
+execute_negative,reference_binding_verified,TRUE,TRUE,TRUE
+execute_negative,confirmation_phrase_supplied,TRUE,TRUE,TRUE
+execute_negative,wrapper_status,1,nonzero,TRUE
+execute_negative,authorization_flag,FALSE,FALSE,TRUE
+execute_negative,chain_count,0,0,TRUE
+package,R_CMD_check_status,OK,OK,TRUE
+package,native_assertions,396,396,TRUE
+document,main_pdf_pages,9,9,TRUE
+document,supplement_pdf_pages,10,10,TRUE
+literature,local_pdf_count,18,18,TRUE
+protected,exdqlm_commit,dffb71ee70b597d6a716ee74be1cbc99731cd453,pinned full SHA,TRUE
+protected,exdqlm_before_after_guard,TRUE,TRUE,TRUE
+protected,qdesn_commit,f9f22804eff3871bb5350c8add04b7c9f4d4957b,pinned full SHA,TRUE
+protected,qdesn_before_after_guard,TRUE,TRUE,TRUE
+scope,bounded_24_fit_grid_executed,FALSE,FALSE,TRUE
+scope,matched_simulation_executed,FALSE,FALSE,TRUE
