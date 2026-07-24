@@ -177,11 +177,17 @@ rqr_oracle_risk <- function(
 #' @export
 rqr_oracle_certificate <- function(
     family, coverage_level, params = list(), tol = 1e-8,
-    grid_size = 801L) {
+    grid_size = 1601L) {
   family <- tolower(gsub("-", "_", as.character(family)[1L]))
   c0 <- rqr_constants(coverage_level)$alpha
-  grid_size <- as.integer(grid_size)[1L]
-  if (!is.finite(grid_size) || grid_size < 101L ||
+  if (!is.numeric(grid_size) || length(grid_size) != 1L ||
+      is.na(grid_size) || !is.finite(grid_size) ||
+      grid_size != floor(grid_size) ||
+      grid_size > .Machine$integer.max) {
+    stop("grid_size must be one finite whole number.", call. = FALSE)
+  }
+  grid_size <- as.integer(grid_size)
+  if (grid_size < 101L ||
       grid_size %% 2L != 1L) {
     stop("grid_size must be an odd integer of at least 101.", call. = FALSE)
   }

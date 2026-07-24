@@ -1,6 +1,7 @@
 ^README\.md$
 ^R/README\.md$
 ^cache$
+^config$
 ^configs$
 ^data_local$
 ^logs$

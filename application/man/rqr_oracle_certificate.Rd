@@ -7,7 +7,7 @@ rqr_oracle_certificate(
   coverage_level,
   params = list(),
   tol = 1e-08,
-  grid_size = 801L
+  grid_size = 1601L
 )
 }
 \arguments{

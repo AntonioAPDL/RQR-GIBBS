@@ -3,7 +3,7 @@ PDFLATEX ?= pdflatex
 BIBTEX ?= bibtex
 LATEXMK ?= latexmk
 
-.PHONY: pdf supplement all-pdf smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory failclosed-dlm-confirmatory test-dlm-confirmatory-monitor literature-manifest clean-tex
 
 pdf:
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
@@ -43,11 +43,11 @@ test-native: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "native", reporter = "summary")'
 
 test-standalone-contracts: package-install
-	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "dlm-bounded|dlm-main", reporter = "summary")'
+	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "dlm-bounded|dlm-main|dlm-confirmatory", reporter = "summary")'
 
 package-check:
 	R CMD build application
-	R CMD check --no-manual rqrgibbs_0.1.0.9013.tar.gz
+	R CMD check --no-manual rqrgibbs_0.1.0.9014.tar.gz
 
 test-exdqlm-rqr: package-install prepare-exdqlm-runtime
 	$(R) application/scripts/02_smoke_rqr_exdqlm_branch.R
@@ -89,6 +89,18 @@ tiny-end-to-end-dlm-main: package-install
 
 diagnostic-pilot-preflight-dlm-main: package-install prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime
 	$(R) application/scripts/13_run_rqr_dlm_main_simulation_references.R diagnostic-pilot-preflight
+
+preflight-dlm-confirmatory:
+	application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh preflight application/outputs/rqr_dlm_main_simulation_20260724/preflight
+
+oracle-reference-dlm-confirmatory:
+	application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh oracle-reference application/outputs/rqr_dlm_main_simulation_20260724/oracle-reference
+
+failclosed-dlm-confirmatory:
+	@! $(R) application/scripts/15_run_rqr_dlm_confirmatory_simulation.R execute-confirmatory application/outputs/rqr_dlm_main_simulation_20260724/forbidden-execution
+
+test-dlm-confirmatory-monitor:
+	application/scripts/16_test_rqr_dlm_confirmatory_monitor.sh
 
 literature-manifest:
 	$(R) application/scripts/01_build_literature_manifest.R
