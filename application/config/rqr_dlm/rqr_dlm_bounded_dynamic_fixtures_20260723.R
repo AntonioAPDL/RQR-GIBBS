@@ -10,7 +10,7 @@ rqr_dlm_bounded_dynamic_fixtures <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   production_simulation_authorized = FALSE,
-  bounded_dynamic_execution_authorized = FALSE,
+  bounded_dynamic_execution_authorized = TRUE,
   benchmark_one_cell_authorized = TRUE,
   runner_modes = c(
     "preflight", "reference-only", "benchmark-one-cell",
