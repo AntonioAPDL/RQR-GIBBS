@@ -1,0 +1,21 @@
+finding_id,area,verdict,severity,launch_blocker,evidence,disposition
+F01,commit ancestry and scope,PASS,none,FALSE,"Authorization, launch, correction, revocation, and evidence form the declared descendant sequence.",No correction.
+F02,outer reconciliation rehash,PASS,none,FALSE,All 13 listed byte counts and SHA-256 values match exact-commit GitHub content.,No correction.
+F03,launch configuration,PASS,none,FALSE,3 fixtures x 2 modes x 4 chains; 2000 burn-in; 6000 retained; thin 1; cpp; fail; authorization TRUE.,No correction.
+F04,failed row authentication,PASS,none,FALSE,fixed_W_local_level/fixed_rate/chain1/seed84201 failed after 127.383 seconds on expected 117 estimands.,No correction.
+F05,publication ordering,PASS,none,FALSE,Strict schema validation is executed before rqr_bounded_publish_fit_rds().,No correction.
+F06,cell-level stop,PASS,none,FALSE,"Error is recorded, status becomes failed, and stop(result) exits before chain2 or later cells.",No correction.
+F07,117 versus 115 diagnosis,PASS,none,FALSE,96 training + 1 loss + 2 terminal + 2 time-zero + 16 future = 117; old conditional omission yielded 115.,No correction.
+F08,Gaussian conditional derivation,PASS,none,FALSE,Joint Gaussian block conditioning gives the implemented h0 and H0 with R1 inverse/pseudoinverse.,No correction.
+F09,positive-definite numerical branch,PASS,none,FALSE,Upper-Cholesky forward/back solves implement R1^-1 and t(chol(H0)) gives covariance H0.,No correction.
+F10,singular PSD numerical branch,PASS,none,FALSE,"Eigen pseudoinverse, support projection, material-indefiniteness rejection, and PSD draw are mathematically coherent.",Optional direct outside-support and moment tests.
+F11,bounded reachability of singular branch,PASS,none,FALSE,The bounded fixed-W and frozen-template first-slice forecast/conditional covariances are positive definite.,No correction.
+F12,statistical target scope,PASS,none,FALSE,Fixed/frozen theta0 draws are ancillary completions; component scale role is unchanged; adaptive discount excluded.,No correction.
+F13,RNG and fit schema,PASS,none,FALSE,Additional completion draws alter RNG consumption; fit schema 1.9.0 and fresh validation are appropriate.,No correction.
+F14,"checkpoint, swap, and continuation",PASS,none,FALSE,Both theta0 states are checkpointed/restored/swapped and all six 6-vs-2+2+2 cells are bitwise complete.,No correction.
+F15,storage-dependent RNG observation,NONBLOCKING,low,FALSE,Changing store_state_draws can change RNG consumption in general API continuation; bounded protocol freezes TRUE.,Freeze or downgrade general bitwise claim when storage policy changes.
+F16,shared estimand boundary,PASS,none,FALSE,"Reference and execution use one strict extractor; exact ordered names, no omission/intersection/duplicates/nonfinite values.",No correction.
+F17,corrected reference evidence,PASS_AS_TRACKED,none,FALSE,43/43 gates and 6/6 continuation/schema rows pass at exact corrected commit.,No correction.
+F18,corrected benchmark evidence,PASS_AS_TRACKED,none,FALSE,150/150 diagnostics; max R-hat 1.004908; min bulk 1411.395; min tail 2041.284; zero repairs/failures.,Do not generalize beyond one representative cell.
+F19,current authorization and protected scope,PASS,none,FALSE,Flag is FALSE at revocation/evidence; protected repos remain read-only/archive-only references.,No correction.
+F20,required decision,DECISION_C,none,FALSE,No reachable bounded-launch blocker remains.,Create a fresh separate authorization commit and rebuild exact evidence before retry.
