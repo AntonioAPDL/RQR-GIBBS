@@ -28,11 +28,13 @@ branch: codex/output15-reconciliation-20260725
 Resolve and report the exact tip of that review branch before using it.
 
 GitHub access is read-only for this review. Use the connected GitHub app when
-it is available. If the app is unavailable, use the exact Codex-prepared Git
-archive attached to the chat together with its reported SHA-256. State which
-access path you used. The archive fallback changes only transport: it does not
-relax any source inspection, mathematical verification, or decision
-requirement below.
+it is available. If the app is unavailable, use ordinary web access to fetch
+the immutable public GitHub archive URL for the exact reconciliation commit
+supplied in the user's message. An attached Codex-prepared archive with a
+reported SHA-256 is only a last-resort fallback when public web retrieval also
+fails. State which access path you used. The access route changes only
+transport: it does not relax any source inspection, mathematical verification,
+or decision requirement below.
 
 Protected read-only references:
 
