@@ -506,10 +506,15 @@ if (mode == "oracle-reference") {
         params = oracle_spec$params,
         tol = contract$config$oracle$primary_tolerance
       )
+      base_roots <- rqr_oracle_roots(
+        oracle_spec$family, coverage,
+        params = oracle_spec$params,
+        tol = contract$config$oracle$primary_tolerance
+      )
       expected_lower <-
-        mu + scale * oracle_rows$lower_root[[index]]
+        mu + scale * base_roots$lower_root
       expected_upper <-
-        mu + scale * oracle_rows$upper_root[[index]]
+        mu + scale * base_roots$upper_root
       data.frame(
         family = family, coverage = coverage,
         case = seq_along(mu), location = mu, scale = scale,
