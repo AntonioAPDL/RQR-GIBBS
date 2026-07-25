@@ -131,21 +131,26 @@ continuation-history digests for every reopened fit, successful continuation
 validation, and exact 24-fit set equality across the relevant compact
 manifests. These checks do not require another bounded run.
 
-The matched main-simulation contract is now schema version 0.2.0. It adds a
-matched Gaussian trend-seasonal control, a common-evolution ablation,
-target-aligned endpoint errors, a 2% coverage-equivalence rule, distinct
-realized and conditional-mean root forecasts, and frozen Monte Carlo/MCMC
-stop rules. The reduced-AL DQLM MCMC and static quantile-regression
-comparators are built from exact CRAN `exdqlm` 1.1.0 and `quantreg` 6.1
-tarballs in ignored isolated runtimes. Preflight, oracle reference, a
-two-replication byte-reproduction fixture, and diagnostic-pilot preflight are
-implemented and pass from the exact isolated source runtime at
-`6ba47d1d686e7f47d90bf3110fbbe77f8da96fee`. Their compact evidence is under
-`docs/audits/rqr_dlm_main_simulation_reference_evidence_20260724/`.
-Diagnostic-pilot and confirmatory execution remain disabled. The subsequent
-user decision is to omit a standalone pilot and move next to a reviewed main
-simulation runner with predeclared sentinel and cell-level gates embedded in
-the final run.
+Output-15 replaced the preliminary schema with the frozen
+`rqrgibbs_dlm_main_simulation/1.0.0` ADEMP contract. The implementation imports
+the exact 208-row incidence matrix (89 included and 119 explicitly omitted
+cells), reproduces its initial/central/maximum budgets, uses collision-checked
+full L'Ecuyer-CMRG states, and separates conditional-mean roots, realized
+future roots, and generated future responses. The reduced-AL DQLM MCMC and
+static quantile-regression comparators come only from exact isolated CRAN
+`exdqlm` 1.1.0 and `quantreg` 6.1 runtimes; the protected exdqlm checkout is
+never an execution source.
+
+The confirmatory runner now has preflight, oracle-reference,
+embedded-sentinel, execution, collection, and audit modes. A deterministic
+wave plan assigns the embedded sentinel phase to at most eight workers and
+standard phases to at most 32 one-thread workers. Collection requires the
+authorization-bound task plan, verifies every recursive artifact manifest,
+rejects duplicate or missing worker shards and replication IDs, and requires a
+common source/runtime/seed bundle before analysis. Failed fits remain in the
+intention-to-run denominator. Confirmatory execution remains false pending a
+new independent review and a separate flag-only authorization commit; no
+standalone performance pilot is planned.
 
 ## Pinned external reference
 

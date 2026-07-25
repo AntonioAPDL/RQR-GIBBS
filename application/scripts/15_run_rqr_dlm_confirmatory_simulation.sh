@@ -39,7 +39,7 @@ export VECLIB_MAXIMUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export RCPP_PARALLEL_NUM_THREADS=1
 
-monitor_root="$repo_root/application/logs/rqr_dlm_confirmatory_monitor"
+monitor_root="${RQR_CONFIRMATORY_MONITOR_ROOT:-$repo_root/application/logs/rqr_dlm_confirmatory_monitor}"
 mkdir -p "$monitor_root"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 monitor_file="$monitor_root/${mode}-${stamp}-$$.csv"

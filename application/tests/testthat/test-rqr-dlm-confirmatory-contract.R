@@ -177,6 +177,40 @@ test_that("all Output-15 budgets and sentinel counts are reproduced", {
   }
 })
 
+test_that("wave assignments are canonical and respect frozen worker limits", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  tasks <- environment$rqr_confirm_replication_plan(contract, "maximum")
+  waves <- environment$rqr_confirm_wave_plan(contract, "maximum")
+  expect_identical(
+    sort(waves$replication_task_id),
+    sort(tasks$replication_task_id)
+  )
+  expect_true(all(waves$worker_slot >= 1L))
+  expect_true(all(waves$worker_slot <= waves$worker_limit))
+  expect_true(all(
+    waves$mode[waves$phase == "sentinel"] == "sentinel-core"
+  ))
+  expect_true(all(
+    waves$mode[waves$phase == "standard"] == "execute-confirmatory"
+  ))
+  expect_true(all(
+    waves$worker_limit[waves$phase == "sentinel"] ==
+      contract$config$resources$sentinel_workers
+  ))
+  expect_true(all(
+    waves$worker_limit[waves$phase == "standard"] ==
+      contract$config$resources$workers
+  ))
+  by_wave <- split(waves, waves$wave_id)
+  expect_true(all(vapply(by_wave, function(value) {
+    length(unique(value$batch_group)) == 1L &&
+      length(unique(value$batch_target)) == 1L &&
+      length(unique(value$phase)) == 1L &&
+      length(unique(value$mode)) == 1L
+  }, logical(1L))))
+})
+
 test_that("integer validation occurs before coercion", {
   environment <- load_confirmatory_helpers()
   expect_identical(
@@ -506,6 +540,209 @@ test_that("analysis keeps failures in denominators and freezes contrasts", {
   expect_equal(failure$mean, 1 / 3)
 })
 
+test_that("precision batches require exact contiguous paired replications", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  scenarios <- c("S01", "S02")
+  incidence <- contract$incidence[
+    contract$incidence$DGP %in% scenarios &
+      contract$incidence$include_or_omit_reason == "i",
+    ,
+    drop = FALSE
+  ]
+  schema <- environment$rqr_confirm_artifact_schemas()$replication_results
+  rows <- vector("list", nrow(incidence) * 200L)
+  index <- 0L
+  for (cell_index in seq_len(nrow(incidence))) {
+    for (replication in seq_len(200L)) {
+      index <- index + 1L
+      row <- as.list(setNames(rep(1, length(schema)), schema))
+      row$run_id <- "batch-fixture"
+      row$cell_id <- incidence$cell_id[[cell_index]]
+      row$replication <- replication
+      row$method <- incidence$method[[cell_index]]
+      row$status <- "completed"
+      row$failure_class <- ""
+      row$aggregate_coverage <-
+        contract$config$scenarios[[incidence$DGP[[cell_index]]]]$coverage +
+        (replication - 100.5) / 1e6
+      row$cross_target_distance <- if (
+          incidence$method[[cell_index]] %in% c("M02", "M04")) {
+        0.1
+      } else {
+        NA_real_
+      }
+      row$training_response_sd <- 1
+      row$mean_oracle_width <- 1
+      rows[[index]] <- as.data.frame(
+        row, stringsAsFactors = FALSE, check.names = FALSE
+      )
+    }
+  }
+  results <- do.call(rbind, rows)
+  summaries <- environment$rqr_confirm_summarize_results(results, contract)
+  contrasts <- environment$rqr_confirm_paired_contrasts(results, contract)
+  decisions <- environment$rqr_confirm_batch_decisions(
+    results, summaries$precision, contrasts, contract
+  )
+  decision <- decisions[
+    decisions$batch_group == "static_gaussian_T200", , drop = FALSE
+  ]
+  expect_identical(nrow(decision), 1L)
+  expect_true(decision$paired_batch_complete)
+  incomplete <- results[!(
+    results$cell_id == incidence$cell_id[[1L]] &
+      results$replication == 100L
+  ), , drop = FALSE]
+  incomplete_summaries <- environment$rqr_confirm_summarize_results(
+    incomplete, contract
+  )
+  incomplete_contrasts <- environment$rqr_confirm_paired_contrasts(
+    incomplete, contract
+  )
+  incomplete_decision <- environment$rqr_confirm_batch_decisions(
+    incomplete, incomplete_summaries$precision,
+    incomplete_contrasts, contract
+  )
+  incomplete_decision <- incomplete_decision[
+    incomplete_decision$batch_group == "static_gaussian_T200",
+    ,
+    drop = FALSE
+  ]
+  expect_false(incomplete_decision$paired_batch_complete)
+  expect_false(incomplete_decision$precision_pass)
+})
+
+test_that("collection verifies exact tasks, artifacts, and fit IDs", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  plan <- environment$rqr_confirm_replication_plan(contract, "maximum")
+  plan <- plan[1L, , drop = FALSE]
+  root <- tempfile("rqr-confirm-collection-")
+  stage <- file.path(root, "wave", "worker-01")
+  replication_dir <- file.path(
+    stage, "replications", plan$DGP[[1L]],
+    sprintf("rep%04d", plan$replication[[1L]])
+  )
+  dir.create(replication_dir, recursive = TRUE)
+  on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+
+  result_schema <- environment$rqr_confirm_artifact_schemas()$
+    replication_results
+  methods <- strsplit(plan$methods[[1L]], "|", fixed = TRUE)[[1L]]
+  result <- do.call(rbind, lapply(methods, function(method) {
+    row <- as.list(setNames(rep(1, length(result_schema)), result_schema))
+    row$run_id <- "worker-01"
+    row$cell_id <- contract$incidence$cell_id[
+      contract$incidence$DGP == plan$DGP[[1L]] &
+        contract$incidence$method == method
+    ]
+    row$replication <- plan$replication[[1L]]
+    row$method <- method
+    row$status <- "completed"
+    row$failure_class <- ""
+    row$cross_target_distance <- if (method %in% c("M02", "M04")) {
+      0.1
+    } else {
+      NA_real_
+    }
+    as.data.frame(row, stringsAsFactors = FALSE, check.names = FALSE)
+  }))
+  utils::write.csv(
+    result, file.path(replication_dir, "replication_results.csv"),
+    row.names = FALSE, quote = TRUE
+  )
+  replication_manifest <- list(
+    schema_version = "rqrgibbs_dlm_replication/1.0.0",
+    source_commit = paste(rep("a", 40L), collapse = ""),
+    config_digest = paste(rep("b", 64L), collapse = ""),
+    incidence_digest = paste(rep("c", 64L), collapse = ""),
+    seed_ledger_digest = paste(rep("d", 64L), collapse = ""),
+    runtime_digest = paste(rep("e", 64L), collapse = ""),
+    DGP = plan$DGP[[1L]], replication = plan$replication[[1L]],
+    embedded_sentinel = plan$embedded_sentinel[[1L]],
+    no_retry = TRUE, generalized_bayes = TRUE,
+    response_likelihood = FALSE, response_prediction_contract = FALSE
+  )
+  jsonlite::write_json(
+    replication_manifest,
+    file.path(replication_dir, "replication_manifest.json"),
+    auto_unbox = TRUE, pretty = TRUE
+  )
+  replication_hashes <- environment$rqr_confirm_recursive_manifest(
+    replication_dir
+  )
+  utils::write.csv(
+    replication_hashes,
+    file.path(replication_dir, "replication_artifact_hashes.csv"),
+    row.names = FALSE, quote = TRUE
+  )
+
+  status <- transform(
+    plan, status = "completed", started_at = "fixture",
+    ended_at = "fixture", message = ""
+  )
+  utils::write.csv(
+    status, file.path(stage, "run_status.csv"),
+    row.names = FALSE, quote = TRUE
+  )
+  jsonlite::write_json(
+    list(
+      schema_version = "rqrgibbs_dlm_confirmatory_stage/1.0.0",
+      mode = if (plan$embedded_sentinel[[1L]]) {
+        "sentinel-core"
+      } else {
+        "execute-confirmatory"
+      },
+      source_commit = paste(rep("a", 40L), collapse = ""),
+      primary_runtime_binding = list(
+        runtime_tree_digest = paste(rep("e", 64L), collapse = "")
+      ),
+      generalized_bayes = TRUE, response_likelihood = FALSE,
+      response_prediction_contract = FALSE, status = "passed"
+    ),
+    file.path(stage, "run_manifest.json"),
+    auto_unbox = TRUE, pretty = TRUE
+  )
+  stage_hashes <- environment$rqr_confirm_recursive_manifest(stage)
+  utils::write.csv(
+    stage_hashes, file.path(stage, "artifact_hashes.csv"),
+    row.names = FALSE, quote = TRUE
+  )
+  jsonlite::write_json(
+    list(
+      schema_version = "rqrgibbs_dlm_wave/1.0.0",
+      wave_id = "fixture", mode = if (plan$embedded_sentinel[[1L]]) {
+        "sentinel-core"
+      } else {
+        "execute-confirmatory"
+      },
+      worker_limit = 1L, workers_used = 1L, task_count = 1L,
+      all_workers_passed = TRUE, no_retry = TRUE, no_reseed = TRUE,
+      source_commit = paste(rep("a", 40L), collapse = "")
+    ),
+    file.path(root, "wave_manifest.json"),
+    auto_unbox = TRUE, pretty = TRUE
+  )
+  wave_hashes <- environment$rqr_confirm_recursive_manifest(root)
+  utils::write.csv(
+    wave_hashes, file.path(root, "wave_artifact_hashes.csv"),
+    row.names = FALSE, quote = TRUE
+  )
+  collected <- environment$rqr_confirm_collect_outputs(
+    root, plan, contract
+  )
+  expect_true(collected$analysis_complete)
+  expect_identical(nrow(collected$results), length(methods))
+  expect_true(all(collected$replications$exact_method_set))
+
+  write("tamper", file.path(replication_dir, "replication_results.csv"))
+  expect_error(
+    environment$rqr_confirm_collect_outputs(root, plan, contract),
+    "byte verification"
+  )
+})
+
 test_that("atomic publication rolls back and refuses overwrite", {
   environment <- load_confirmatory_helpers()
   directory <- tempfile("rqr-confirm-atomic-")
@@ -527,6 +764,90 @@ test_that("atomic publication rolls back and refuses overwrite", {
       data.frame(value = 2), path
     ),
     "refused"
+  )
+})
+
+test_that("wave plans and task subsets preserve the frozen execution order", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  plan <- environment$rqr_confirm_wave_plan(contract, "maximum")
+  tasks <- environment$rqr_confirm_replication_plan(contract, "maximum")
+  expect_identical(
+    sort(plan$replication_task_id, method = "radix"),
+    sort(tasks$replication_task_id, method = "radix")
+  )
+  expect_identical(plan$execution_order, seq_len(nrow(plan)))
+  expect_true(all(plan$worker_slot >= 1L))
+  expect_true(all(plan$worker_slot <= plan$worker_limit))
+  for (wave_id in unique(plan$wave_id)) {
+    block <- plan[plan$wave_id == wave_id, , drop = FALSE]
+    expect_identical(length(unique(block$phase)), 1L)
+    expect_identical(length(unique(block$mode)), 1L)
+    expect_identical(length(unique(block$worker_limit)), 1L)
+  }
+  subset <- tasks[c(1L, 7L, 13L), , drop = FALSE]
+  expect_identical(
+    environment$rqr_confirm_validate_task_subset(subset, contract),
+    subset
+  )
+  bad <- subset
+  bad$replication[[1L]] <- bad$replication[[1L]] + 1L
+  expect_error(
+    environment$rqr_confirm_validate_task_subset(bad, contract),
+    "not an exact canonical subset"
+  )
+  expect_error(
+    environment$rqr_confirm_validate_task_subset(
+      rbind(subset, subset[1L, , drop = FALSE]), contract
+    ),
+    "invalid schema or task IDs"
+  )
+})
+
+test_that("recursive manifests reject altered bytes, file sets, and symlinks", {
+  environment <- load_confirmatory_helpers()
+  directory <- tempfile("rqr-confirm-manifest-")
+  dir.create(directory)
+  on.exit(unlink(directory, recursive = TRUE, force = TRUE), add = TRUE)
+  writeLines("one", file.path(directory, "one.txt"))
+  manifest <- environment$rqr_confirm_recursive_manifest(directory)
+  environment$rqr_confirm_atomic_write_csv(
+    manifest, file.path(directory, "artifact_hashes.csv")
+  )
+  expect_identical(
+    environment$rqr_confirm_verify_recursive_manifest(directory),
+    manifest
+  )
+  writeLines("changed", file.path(directory, "one.txt"))
+  expect_error(
+    environment$rqr_confirm_verify_recursive_manifest(directory),
+    "byte verification"
+  )
+  unlink(file.path(directory, "artifact_hashes.csv"))
+  writeLines("one", file.path(directory, "one.txt"))
+  manifest <- environment$rqr_confirm_recursive_manifest(directory)
+  environment$rqr_confirm_atomic_write_csv(
+    manifest, file.path(directory, "artifact_hashes.csv")
+  )
+  writeLines("extra", file.path(directory, "extra.txt"))
+  expect_error(
+    environment$rqr_confirm_verify_recursive_manifest(directory),
+    "wrong exact file set"
+  )
+  unlink(c(
+    file.path(directory, "artifact_hashes.csv"),
+    file.path(directory, "extra.txt")
+  ))
+  unlink(file.path(directory, "one.txt"))
+  writeLines("target", file.path(directory, "target.txt"))
+  file.symlink("target.txt", file.path(directory, "one.txt"))
+  manifest <- environment$rqr_confirm_recursive_manifest(directory)
+  environment$rqr_confirm_atomic_write_csv(
+    manifest, file.path(directory, "artifact_hashes.csv")
+  )
+  expect_error(
+    environment$rqr_confirm_verify_recursive_manifest(directory),
+    "byte verification"
   )
 })
 

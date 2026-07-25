@@ -149,6 +149,13 @@ if (mode == "preflight") {
   replication_plan <- rqr_confirm_replication_plan(
     contract, planning = "maximum"
   )
+  initial_replication_plan <- rqr_confirm_replication_plan(
+    contract, planning = "initial"
+  )
+  central_replication_plan <- rqr_confirm_replication_plan(
+    contract, planning = "central"
+  )
+  wave_plan <- rqr_confirm_wave_plan(contract, planning = "maximum")
   sentinel_plan <- replication_plan[
     replication_plan$embedded_sentinel, , drop = FALSE
   ]
@@ -279,7 +286,8 @@ if (mode == "preflight") {
       "one_thread_per_worker", "artifact_schemas_frozen",
       "primary_runtime_binding_when_requested",
       "replication_task_ids_unique", "sentinel_tasks_preselected",
-      "sentinel_selection_states_bound"
+      "sentinel_selection_states_bound", "wave_tasks_exact",
+      "wave_worker_limits"
     ),
     value = c(
       TRUE, nrow(contract$incidence) == 208L,
@@ -298,7 +306,21 @@ if (mode == "preflight") {
       !anyDuplicated(replication_plan$replication_task_id),
       nrow(sentinel_plan) > 0L &&
         all(sentinel_plan$embedded_sentinel),
-      sentinel_states_bound
+      sentinel_states_bound,
+      identical(
+        sort(wave_plan$replication_task_id, method = "radix"),
+        sort(replication_plan$replication_task_id, method = "radix")
+      ),
+      all(wave_plan$worker_slot >= 1L) &&
+        all(wave_plan$worker_slot <= wave_plan$worker_limit) &&
+        all(
+          wave_plan$worker_limit[wave_plan$phase == "sentinel"] ==
+            contract$config$resources$sentinel_workers
+        ) &&
+        all(
+          wave_plan$worker_limit[wave_plan$phase == "standard"] ==
+            contract$config$resources$workers
+        )
     ),
     stringsAsFactors = FALSE
   )
@@ -372,6 +394,9 @@ if (mode == "preflight") {
   write_csv(contract$incidence, "incidence_matrix.csv")
   write_csv(fit_plan, "fit_plan_maximum.csv")
   write_csv(replication_plan, "replication_plan_maximum.csv")
+  write_csv(initial_replication_plan, "replication_plan_initial.csv")
+  write_csv(central_replication_plan, "replication_plan_central.csv")
+  write_csv(wave_plan, "execution_wave_plan_maximum.csv")
   write_csv(sentinel_plan, "sentinel_task_plan_maximum.csv")
   write_csv(sentinels, "sentinel_ledger_maximum.csv")
   write_csv(budget_rows, "recomputed_budget.csv")
@@ -901,6 +926,7 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
   tasks <- utils::read.csv(
     task_path, stringsAsFactors = FALSE, check.names = FALSE
   )
+  tasks <- rqr_confirm_validate_task_subset(tasks, contract)
   canonical_tasks <- rqr_confirm_replication_plan(
     contract, planning = "maximum"
   )
@@ -913,25 +939,6 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
       "The authorization-bound task plan is not the complete canonical plan.",
       call. = FALSE
     )
-  }
-  required_task_fields <- names(canonical_tasks)
-  if (!identical(names(tasks), required_task_fields) ||
-      anyDuplicated(tasks$replication_task_id)) {
-    stop("The execution task file has the wrong schema or duplicate IDs.",
-         call. = FALSE)
-  }
-  matched <- match(
-    tasks$replication_task_id,
-    canonical_tasks$replication_task_id
-  )
-  task_compare <- tasks[required_task_fields]
-  canonical_compare <-
-    canonical_tasks[matched, required_task_fields, drop = FALSE]
-  rownames(task_compare) <- rownames(canonical_compare) <- NULL
-  if (anyNA(matched) ||
-      !identical(task_compare, canonical_compare)) {
-    stop("The execution task file is not an exact canonical subset.",
-         call. = FALSE)
   }
   if (mode == "sentinel-core" &&
       any(!tasks$embedded_sentinel)) {
@@ -992,9 +999,48 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
     run_status$started_at[[task_index]] <- format(
       Sys.time(), tz = "UTC", usetz = TRUE
     )
-    generated <- rqr_confirm_generate_dgp(
-      contract, task$DGP[[1L]], task$replication[[1L]], ledger
+    generation_failure <- NULL
+    generated <- tryCatch(
+      rqr_confirm_generate_dgp(
+        contract, task$DGP[[1L]], task$replication[[1L]], ledger
+      ),
+      error = function(error) {
+        generation_failure <<- error
+        NULL
+      }
     )
+    if (!is.null(generation_failure)) {
+      failure_index <- failure_index + 1L
+      failure_rows[[failure_index]] <- data.frame(
+        run_id = basename(output_dir),
+        cell_id = paste0(task$DGP[[1L]], "__DATA"),
+        replication = task$replication[[1L]],
+        method = "DGP",
+        failure_class = class(generation_failure)[[1L]],
+        message_digest = digest::digest(
+          conditionMessage(generation_failure),
+          algo = "sha256", serialize = FALSE
+        ),
+        intention_to_run_denominator = TRUE,
+        retry_count = 0L,
+        stringsAsFactors = FALSE
+      )
+      run_status$status[[task_index]] <- "infrastructure_invalid"
+      run_status$message[[task_index]] <-
+        failure_rows[[failure_index]]$message_digest
+      run_status$ended_at[[task_index]] <- format(
+        Sys.time(), tz = "UTC", usetz = TRUE
+      )
+      if (task_index < nrow(run_status)) {
+        remaining <- seq.int(task_index + 1L, nrow(run_status))
+        run_status$status[remaining] <- "not_run_global_stop"
+        run_status$message[remaining] <-
+          failure_rows[[failure_index]]$message_digest
+      }
+      stage_status <- "failed_global_stop"
+      stage_exit_status <- 1L
+      break
+    }
     methods <- strsplit(task$methods[[1L]], "|", fixed = TRUE)[[1L]]
     replication_results <- list()
     replication_diagnostics <- list()
@@ -1099,7 +1145,11 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
         }
         failure_message <- conditionMessage(failure)
         global_stop <- grepl(
-          "provenance|runtime|numerical|exact joint target|repair",
+          "provenance|runtime|source|seed|artifact|exact joint target",
+          failure_message, ignore.case = TRUE
+        )
+        nonfinite_cell_stop <- grepl(
+          "nonfinite primary outputs|unordered interval",
           failure_message, ignore.case = TRUE
         )
         if (isTRUE(global_stop)) {
@@ -1111,6 +1161,18 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
             )
           )
           stage_status <- "failed_global_stop"
+          stage_exit_status <- 1L
+          break
+        }
+        if (isTRUE(nonfinite_cell_stop)) {
+          cell_stop <- TRUE
+          cell_stop_message <- paste(
+            "nonfinite cell failure:", method,
+            digest::digest(
+              failure_message, algo = "sha256", serialize = FALSE
+            )
+          )
+          stage_status <- "failed_cell_stop"
           stage_exit_status <- 1L
           break
         }
@@ -1374,7 +1436,19 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
   }
   run_status$message <- as.character(run_status$message)
   write_csv(run_status, "run_status.csv")
-  write_csv(do.call(rbind, all_result_rows), "replication_results.csv")
+  combined_result_rows <- if (length(all_result_rows)) {
+    do.call(rbind, all_result_rows)
+  } else {
+    value <- as.data.frame(
+      matrix(
+        nrow = 0L,
+        ncol = length(rqr_confirm_artifact_schemas()$replication_results)
+      )
+    )
+    names(value) <- rqr_confirm_artifact_schemas()$replication_results
+    value
+  }
+  write_csv(combined_result_rows, "replication_results.csv")
   if (length(all_diagnostic_rows)) {
     write_csv(
       do.call(rbind, all_diagnostic_rows), "fit_diagnostics.csv"
@@ -1398,9 +1472,20 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
 
 if (mode %in% c("collect", "audit")) {
   run_root <- Sys.getenv("RQR_CONFIRMATORY_RUN_ROOT", unset = "")
-  if (!nzchar(run_root) || !dir.exists(run_root)) {
+  collection_task_path <- Sys.getenv(
+    "RQR_CONFIRMATORY_COLLECTION_TASK_PLAN", unset = ""
+  )
+  if (!nzchar(run_root) || !dir.exists(run_root) ||
+      !nzchar(collection_task_path) ||
+      !file.exists(collection_task_path)) {
     stop(
-      sprintf("%s requires an existing RQR_CONFIRMATORY_RUN_ROOT.", mode),
+      sprintf(
+        paste(
+          "%s requires an existing RQR_CONFIRMATORY_RUN_ROOT and",
+          "RQR_CONFIRMATORY_COLLECTION_TASK_PLAN."
+        ),
+        mode
+      ),
       call. = FALSE
     )
   }
@@ -1410,20 +1495,30 @@ if (mode %in% c("collect", "audit")) {
          call. = FALSE)
   }
   write_csv(manifest, paste0(mode, "_recursive_manifest.csv"))
-  result_paths <- list.files(
-    run_root, pattern = "^replication_results\\.csv$",
-    recursive = TRUE, full.names = TRUE
+  collection_tasks <- utils::read.csv(
+    collection_task_path, stringsAsFactors = FALSE, check.names = FALSE
   )
-  result_paths <- result_paths[
-    grepl("/replications/", result_paths, fixed = TRUE)
-  ]
-  if (length(result_paths)) {
-    results <- do.call(rbind, lapply(result_paths, function(path) {
-      utils::read.csv(
-        path, stringsAsFactors = FALSE, check.names = FALSE
-      )
-    }))
-    rownames(results) <- NULL
+  collected <- rqr_confirm_collect_outputs(
+    run_root, collection_tasks, contract
+  )
+  write_csv(collected$statuses, "collected_run_status.csv")
+  write_csv(collected$stages, "collected_worker_stages.csv")
+  write_csv(
+    data.frame(
+      wave_directory = collected$wave_directories,
+      artifact_bundle_verified = TRUE,
+      stringsAsFactors = FALSE
+    ),
+    "collected_wave_inventory.csv"
+  )
+  write_csv(collected$replications, "collected_replication_integrity.csv")
+  write_csv(collected$failures, "collected_failure_log.csv")
+  if (nrow(collected$diagnostics)) {
+    write_csv(collected$diagnostics, "collected_fit_diagnostics.csv")
+  }
+  results <- collected$results
+  write_csv(results, "collected_replication_results.csv")
+  if (isTRUE(collected$analysis_complete)) {
     summaries <- rqr_confirm_summarize_results(results, contract)
     contrasts <- rqr_confirm_paired_contrasts(results, contract)
     decisions <- if (nrow(summaries$precision)) {
@@ -1433,7 +1528,6 @@ if (mode %in% c("collect", "audit")) {
     } else {
       data.frame()
     }
-    write_csv(results, "collected_replication_results.csv")
     write_csv(summaries$summary, "analysis_summary.csv")
     if (nrow(summaries$precision)) {
       write_csv(summaries$precision, "precision_summary.csv")
@@ -1456,12 +1550,23 @@ if (mode %in% c("collect", "audit")) {
       }
       write_csv(decisions, "batch_decisions.csv")
     }
+  } else {
+    stage_status <- "integrity_verified_run_incomplete"
+    stage_exit_status <- 1L
   }
   write_json(
     list(
       mode = mode, source_commit = source_commit,
       response_prediction_contract = FALSE,
-      status = "integrity_inventory_only"
+      collection_task_plan_sha256 =
+        rqr_confirm_sha256(collection_task_path),
+      exact_task_set_verified = TRUE,
+      analysis_complete = collected$analysis_complete,
+      status = if (collected$analysis_complete) {
+        "integrity_and_analysis_complete"
+      } else {
+        "integrity_verified_run_incomplete"
+      }
     ),
     paste0(mode, "_manifest.json")
   )

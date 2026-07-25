@@ -120,3 +120,14 @@ completed ignored run, reopens every fit object, and promotes only compact
 evidence. The preliminary matched-simulation config is
 `config/rqr_dlm/rqr_dlm_main_simulation_preliminary_20260724.R`; both of its
 execution authorizations are false.
+
+The reviewed confirmatory contract is
+`config/rqr_dlm/rqr_dlm_main_simulation_20260724.R`. Its runner
+`scripts/15_run_rqr_dlm_confirmatory_simulation.R` implements fail-closed
+preflight, oracle-reference, embedded-sentinel, confirmatory, collection, and
+audit modes. `scripts/17_launch_rqr_dlm_confirmatory_wave.R` partitions one
+canonical precision-batch wave across the frozen worker slots; every worker
+still passes through the process-group monitor and the commit-bound
+authorization boundary. The collector verifies exact task sets, recursive
+artifact hashes, and a common source/runtime/seed bundle before producing an
+analysis. Both execution flags remain false pending independent review.

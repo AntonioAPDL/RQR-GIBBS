@@ -1475,7 +1475,10 @@ rqr_confirm_recursive_manifest <- function(directory) {
   data.frame(
     path = relative,
     bytes = as.numeric(file.info(paths)$size),
-    sha256 = vapply(paths, rqr_confirm_sha256, character(1L)),
+    sha256 = unname(vapply(
+      paths, rqr_confirm_sha256, character(1L)
+    )),
+    row.names = NULL,
     stringsAsFactors = FALSE
   )
 }
@@ -1512,6 +1515,483 @@ rqr_confirm_directory_digest <- function(directory) {
   )
   digest::digest(
     payload, algo = "sha256", serialize = FALSE
+  )
+}
+
+rqr_confirm_verify_recursive_manifest <- function(
+    directory, manifest_name = "artifact_hashes.csv") {
+  directory <- normalizePath(directory, winslash = "/", mustWork = TRUE)
+  manifest_path <- file.path(directory, manifest_name)
+  if (!file.exists(manifest_path)) {
+    stop(sprintf("Missing recursive manifest: %s.", manifest_name),
+         call. = FALSE)
+  }
+  listed <- utils::read.csv(
+    manifest_path, stringsAsFactors = FALSE, check.names = FALSE
+  )
+  listed$path <- as.character(listed$path)
+  listed$bytes <- as.numeric(listed$bytes)
+  listed$sha256 <- as.character(listed$sha256)
+  rownames(listed) <- NULL
+  if (!identical(names(listed), c("path", "bytes", "sha256")) ||
+      anyNA(listed[c("sha256", "bytes", "path")]) ||
+      anyDuplicated(listed$path) ||
+      any(!grepl("^[0-9a-f]{64}$", listed$sha256)) ||
+      any(grepl("(^|/)\\.\\.?(/|$)", listed$path)) ||
+      any(grepl("^/", listed$path))) {
+    stop("A recursive artifact manifest has an invalid schema.",
+         call. = FALSE)
+  }
+  actual <- list.files(
+    directory, recursive = TRUE, all.files = TRUE, no.. = TRUE,
+    include.dirs = FALSE, full.names = FALSE
+  )
+  actual <- sort(
+    setdiff(gsub("\\\\", "/", actual), manifest_name),
+    method = "radix"
+  )
+  if (!identical(sort(listed$path, method = "radix"), actual)) {
+    stop("A recursive artifact manifest has the wrong exact file set.",
+         call. = FALSE)
+  }
+  for (index in seq_len(nrow(listed))) {
+    path <- file.path(directory, listed$path[[index]])
+    if (!file.exists(path) || nzchar(Sys.readlink(path)) ||
+        !identical(rqr_confirm_sha256(path), listed$sha256[[index]]) ||
+        !identical(
+          as.numeric(file.info(path)$size),
+          as.numeric(listed$bytes[[index]])
+        )) {
+      stop("A recursive artifact failed byte verification.",
+           call. = FALSE)
+    }
+  }
+  listed
+}
+
+rqr_confirm_validate_task_subset <- function(tasks, contract) {
+  canonical <- rqr_confirm_replication_plan(contract, planning = "maximum")
+  required <- names(canonical)
+  if (!is.data.frame(tasks) || !nrow(tasks) ||
+      !identical(names(tasks), required) ||
+      anyNA(tasks[c("replication_task_id", "DGP", "replication")]) ||
+      anyDuplicated(tasks$replication_task_id)) {
+    stop("An execution task plan has an invalid schema or task IDs.",
+         call. = FALSE)
+  }
+  matched <- match(tasks$replication_task_id, canonical$replication_task_id)
+  if (anyNA(matched)) {
+    stop("An execution task plan contains a noncanonical task.",
+         call. = FALSE)
+  }
+  expected <- canonical[matched, required, drop = FALSE]
+  observed <- tasks[required]
+  rownames(expected) <- rownames(observed) <- NULL
+  if (!identical(observed, expected)) {
+    stop("An execution task plan is not an exact canonical subset.",
+         call. = FALSE)
+  }
+  tasks
+}
+
+rqr_confirm_collect_outputs <- function(run_root, planned_tasks, contract) {
+  run_root <- normalizePath(run_root, winslash = "/", mustWork = TRUE)
+  planned_tasks <- rqr_confirm_validate_task_subset(planned_tasks, contract)
+  status_paths <- list.files(
+    run_root, pattern = "^run_status\\.csv$", recursive = TRUE,
+    full.names = TRUE
+  )
+  if (!length(status_paths)) {
+    stop("The run root contains no worker run-status artifacts.",
+         call. = FALSE)
+  }
+  wave_hash_paths <- list.files(
+    run_root, pattern = "^wave_artifact_hashes\\.csv$",
+    recursive = TRUE, full.names = TRUE
+  )
+  if (!length(wave_hash_paths)) {
+    stop("The run root contains no monitored wave artifact bundle.",
+         call. = FALSE)
+  }
+  wave_directories <- vapply(
+    wave_hash_paths,
+    function(path) normalizePath(dirname(path), winslash = "/"),
+    character(1L)
+  )
+  for (wave_directory in wave_directories) {
+    rqr_confirm_verify_recursive_manifest(
+      wave_directory, "wave_artifact_hashes.csv"
+    )
+    wave_manifest_path <- file.path(wave_directory, "wave_manifest.json")
+    if (!file.exists(wave_manifest_path)) {
+      stop("A monitored wave omitted its wave manifest.", call. = FALSE)
+    }
+    wave_manifest <- jsonlite::read_json(
+      wave_manifest_path, simplifyVector = TRUE
+    )
+    if (!identical(
+        wave_manifest$schema_version, "rqrgibbs_dlm_wave/1.0.0"
+      ) ||
+      !isTRUE(wave_manifest$all_workers_passed) ||
+      !isTRUE(wave_manifest$no_retry) ||
+      !isTRUE(wave_manifest$no_reseed)) {
+      stop("A monitored wave did not pass its frozen contract.",
+           call. = FALSE)
+    }
+  }
+  status_rows <- vector("list", length(status_paths))
+  stage_rows <- vector("list", length(status_paths))
+  task_fields <- names(planned_tasks)
+  status_fields <- c(
+    task_fields, "status", "started_at", "ended_at", "message"
+  )
+  for (index in seq_along(status_paths)) {
+    stage_dir <- dirname(status_paths[[index]])
+    rqr_confirm_verify_recursive_manifest(stage_dir)
+    status <- utils::read.csv(
+      status_paths[[index]], stringsAsFactors = FALSE, check.names = FALSE
+    )
+    if (!identical(names(status), status_fields) ||
+        anyDuplicated(status$replication_task_id)) {
+      stop("A worker run-status artifact violates its frozen schema.",
+           call. = FALSE)
+    }
+    manifest_path <- file.path(stage_dir, "run_manifest.json")
+    if (!file.exists(manifest_path)) {
+      stop("A worker stage omitted its run manifest.", call. = FALSE)
+    }
+    manifest <- jsonlite::read_json(
+      manifest_path, simplifyVector = TRUE
+    )
+    if (!manifest$mode %in% c("sentinel-core", "execute-confirmatory") ||
+        !manifest$status %in% c(
+          "passed", "completed_with_fit_failures",
+          "failed_cell_stop", "failed_global_stop"
+        ) ||
+        !isTRUE(manifest$generalized_bayes) ||
+        isTRUE(manifest$response_likelihood) ||
+        isTRUE(manifest$response_prediction_contract) ||
+        !grepl("^[0-9a-f]{40}$", manifest$source_commit) ||
+        !grepl(
+          "^[0-9a-f]{64}$",
+          manifest$primary_runtime_binding$runtime_tree_digest %||% ""
+        )) {
+      stop("A worker run manifest is not a valid confirmatory stage.",
+           call. = FALSE)
+    }
+    status_rows[[index]] <- status
+    stage_rows[[index]] <- data.frame(
+      stage_directory = normalizePath(stage_dir, winslash = "/"),
+      mode = manifest$mode, status = manifest$status,
+      source_commit = manifest$source_commit,
+      runtime_tree_digest =
+        manifest$primary_runtime_binding$runtime_tree_digest %||% "",
+      stringsAsFactors = FALSE
+    )
+  }
+  statuses <- do.call(rbind, status_rows)
+  rownames(statuses) <- NULL
+  if (anyDuplicated(statuses$replication_task_id) ||
+      !setequal(
+        statuses$replication_task_id,
+        planned_tasks$replication_task_id
+      )) {
+    stop("Worker statuses do not equal the authorization-bound task set.",
+         call. = FALSE)
+  }
+  matched <- match(
+    statuses$replication_task_id, planned_tasks$replication_task_id
+  )
+  observed_tasks <- statuses[task_fields]
+  expected_tasks <- planned_tasks[matched, task_fields, drop = FALSE]
+  rownames(observed_tasks) <- rownames(expected_tasks) <- NULL
+  if (!identical(observed_tasks, expected_tasks)) {
+    stop("Worker statuses changed an authorization-bound task.",
+         call. = FALSE)
+  }
+  allowed_status <- c(
+    "completed", "completed_with_fit_failure", "cell_stop_failure",
+    "global_stop_failure", "infrastructure_invalid",
+    "not_run_cell_stop", "not_run_global_stop"
+  )
+  if (any(!statuses$status %in% allowed_status)) {
+    stop("Collection found an unfinished or unknown worker status.",
+         call. = FALSE)
+  }
+
+  result_paths <- list.files(
+    run_root, pattern = "^replication_results\\.csv$",
+    recursive = TRUE, full.names = TRUE
+  )
+  result_paths <- result_paths[
+    grepl("/replications/", result_paths, fixed = TRUE)
+  ]
+  published_status <- statuses$status %in% c(
+    "completed", "completed_with_fit_failure",
+    "cell_stop_failure", "global_stop_failure"
+  )
+  if (length(result_paths) != sum(published_status)) {
+    stop("Published replication directories do not match worker statuses.",
+         call. = FALSE)
+  }
+  result_rows <- vector("list", length(result_paths))
+  diagnostic_rows <- list()
+  failure_rows <- list()
+  replication_rows <- vector("list", length(result_paths))
+  status_stage_directories <- vapply(
+    status_paths,
+    function(path) normalizePath(dirname(path), winslash = "/"),
+    character(1L)
+  )
+  stage_wave_owner <- vapply(
+    status_stage_directories,
+    function(stage_directory) {
+      owners <- wave_directories[vapply(
+        wave_directories,
+        function(wave_directory) {
+          startsWith(
+            paste0(stage_directory, "/"),
+            paste0(wave_directory, "/")
+          )
+        },
+        logical(1L)
+      )]
+      if (length(owners) != 1L) {
+        stop("A worker stage has no unique monitored-wave owner.",
+             call. = FALSE)
+      }
+      owners[[1L]]
+    },
+    character(1L)
+  )
+  for (index in seq_along(result_paths)) {
+    replication_dir <- dirname(result_paths[[index]])
+    stage_dir <- sub(
+      "/replications/.*$", "",
+      normalizePath(replication_dir, winslash = "/")
+    )
+    stage_index <- match(stage_dir, status_stage_directories)
+    if (is.na(stage_index)) {
+      stop("A replication directory has no owning worker stage.",
+           call. = FALSE)
+    }
+    rqr_confirm_verify_recursive_manifest(
+      replication_dir, "replication_artifact_hashes.csv"
+    )
+    replication_manifest_path <- file.path(
+      replication_dir, "replication_manifest.json"
+    )
+    if (!file.exists(replication_manifest_path)) {
+      stop("A replication directory omitted its manifest.",
+           call. = FALSE)
+    }
+    replication_manifest <- jsonlite::read_json(
+      replication_manifest_path, simplifyVector = TRUE
+    )
+    if (!identical(
+        names(replication_manifest),
+        rqr_confirm_artifact_schemas()$replication_manifest
+      ) ||
+      !identical(
+        replication_manifest$schema_version,
+        "rqrgibbs_dlm_replication/1.0.0"
+      ) ||
+      !isTRUE(replication_manifest$generalized_bayes) ||
+      isTRUE(replication_manifest$response_likelihood) ||
+      isTRUE(replication_manifest$response_prediction_contract) ||
+      !isTRUE(replication_manifest$no_retry)) {
+      stop("A replication manifest violates its frozen contract.",
+           call. = FALSE)
+    }
+    stage_manifest <- jsonlite::read_json(
+      file.path(stage_dir, "run_manifest.json"), simplifyVector = TRUE
+    )
+    if (!identical(
+        replication_manifest$source_commit,
+        stage_manifest$source_commit
+      ) ||
+      !identical(
+        replication_manifest$runtime_digest,
+        stage_manifest$primary_runtime_binding$runtime_tree_digest
+      )) {
+      stop("A replication is not bound to its worker source/runtime.",
+           call. = FALSE)
+    }
+    task_id <- sprintf(
+      "%s__rep%04d",
+      replication_manifest$DGP,
+      rqr_confirm_strict_integer(
+        replication_manifest$replication, "replication", 1L
+      )
+    )
+    task_row <- match(task_id, planned_tasks$replication_task_id)
+    status_row <- match(task_id, statuses$replication_task_id)
+    if (is.na(task_row) || is.na(status_row) || !published_status[[status_row]]) {
+      stop("A published replication is absent from its task/status plan.",
+           call. = FALSE)
+    }
+    result <- utils::read.csv(
+      result_paths[[index]], stringsAsFactors = FALSE, check.names = FALSE
+    )
+    if (!identical(
+        names(result),
+        rqr_confirm_artifact_schemas()$replication_results
+      ) ||
+      any(result$cell_id == "") ||
+      anyDuplicated(result[c("cell_id", "replication")]) ||
+      any(result$replication != planned_tasks$replication[[task_row]])) {
+      stop("A compact replication result violates its frozen schema.",
+           call. = FALSE)
+    }
+    expected_methods <- strsplit(
+      planned_tasks$methods[[task_row]], "|", fixed = TRUE
+    )[[1L]]
+    exact_method_set <- setequal(result$method, expected_methods)
+    complete_status <- statuses$status[[status_row]] %in%
+      c("completed", "completed_with_fit_failure")
+    if ((complete_status && !exact_method_set) ||
+        any(!result$method %in% expected_methods)) {
+      stop("A completed replication has a missing or extra method.",
+           call. = FALSE)
+    }
+    result_rows[[index]] <- result
+    diagnostic_path <- file.path(replication_dir, "fit_diagnostics.csv")
+    if (file.exists(diagnostic_path)) {
+      diagnostic <- utils::read.csv(
+        diagnostic_path, stringsAsFactors = FALSE, check.names = FALSE
+      )
+      if (!identical(
+          names(diagnostic),
+          rqr_confirm_artifact_schemas()$fit_diagnostics
+        )) {
+        stop("A fit-diagnostic artifact violates its frozen schema.",
+             call. = FALSE)
+      }
+      diagnostic_rows[[length(diagnostic_rows) + 1L]] <- diagnostic
+    }
+    failure_path <- file.path(replication_dir, "failure_log.csv")
+    if (file.exists(failure_path)) {
+      failure <- utils::read.csv(
+        failure_path, stringsAsFactors = FALSE, check.names = FALSE
+      )
+      if (!identical(
+          names(failure),
+          rqr_confirm_artifact_schemas()$failure_ledger
+        ) ||
+        any(!failure$intention_to_run_denominator) ||
+        any(failure$retry_count != 0L)) {
+        stop("A replication failure ledger violates its frozen schema.",
+             call. = FALSE)
+      }
+      failure_rows[[length(failure_rows) + 1L]] <- failure
+    }
+    replication_rows[[index]] <- data.frame(
+      replication_task_id = task_id,
+      exact_method_set = exact_method_set,
+      result_rows = nrow(result),
+      artifact_manifest_verified = TRUE,
+      source_commit = replication_manifest$source_commit,
+      config_digest = replication_manifest$config_digest,
+      incidence_digest = replication_manifest$incidence_digest,
+      seed_ledger_digest = replication_manifest$seed_ledger_digest,
+      runtime_digest = replication_manifest$runtime_digest,
+      stringsAsFactors = FALSE
+    )
+  }
+  results <- if (length(result_rows)) {
+    do.call(rbind, result_rows)
+  } else {
+    value <- as.data.frame(
+      matrix(
+        nrow = 0L,
+        ncol = length(rqr_confirm_artifact_schemas()$replication_results)
+      )
+    )
+    names(value) <- rqr_confirm_artifact_schemas()$replication_results
+    value
+  }
+  rownames(results) <- NULL
+  if (anyDuplicated(results[c("cell_id", "replication")])) {
+    stop("Collected compact results contain duplicate fit IDs.",
+         call. = FALSE)
+  }
+  failures <- if (length(failure_rows)) {
+    do.call(rbind, failure_rows)
+  } else {
+    data.frame(
+      run_id = character(), cell_id = character(),
+      replication = integer(), method = character(),
+      failure_class = character(), message_digest = character(),
+      intention_to_run_denominator = logical(), retry_count = integer(),
+      stringsAsFactors = FALSE
+    )
+  }
+  noncompleted <- results[results$status != "completed", , drop = FALSE]
+  failure_ids <- paste(failures$cell_id, failures$replication, sep = "|")
+  noncompleted_ids <- paste(
+    noncompleted$cell_id, noncompleted$replication, sep = "|"
+  )
+  if (anyDuplicated(failure_ids) ||
+      !setequal(failure_ids, noncompleted_ids)) {
+    stop("Failure records do not equal noncompleted compact fit results.",
+         call. = FALSE)
+  }
+  stages <- do.call(rbind, stage_rows)
+  if (length(unique(stages$source_commit)) != 1L ||
+      length(unique(stages$runtime_tree_digest)) != 1L ||
+      !nzchar(stages$runtime_tree_digest[[1L]])) {
+    stop("Worker stages do not share one source and primary runtime.",
+         call. = FALSE)
+  }
+  replications <- if (length(replication_rows)) {
+    do.call(rbind, replication_rows)
+  } else {
+    data.frame(
+      replication_task_id = character(),
+      exact_method_set = logical(), result_rows = integer(),
+      artifact_manifest_verified = logical(),
+      source_commit = character(), config_digest = character(),
+      incidence_digest = character(), seed_ledger_digest = character(),
+      runtime_digest = character(), stringsAsFactors = FALSE
+    )
+  }
+  digest_fields <- c(
+    "source_commit", "config_digest", "incidence_digest",
+    "seed_ledger_digest", "runtime_digest"
+  )
+  if (nrow(replications) &&
+      (any(vapply(
+        replications[digest_fields],
+        function(value) length(unique(value)) != 1L,
+        logical(1L)
+      )) ||
+       !identical(
+         unique(replications$source_commit), unique(stages$source_commit)
+       ) ||
+       !identical(
+         unique(replications$runtime_digest),
+         unique(stages$runtime_tree_digest)
+       ))) {
+    stop("Replication artifacts do not share the worker source/runtime bundle.",
+         call. = FALSE)
+  }
+  list(
+    results = results,
+    diagnostics = if (length(diagnostic_rows)) {
+      do.call(rbind, diagnostic_rows)
+    } else {
+      data.frame()
+    },
+    failures = failures,
+    statuses = statuses,
+    stages = stages,
+    wave_directories = unique(stage_wave_owner),
+    replications = replications,
+    analysis_complete = all(statuses$status %in% c(
+      "completed", "completed_with_fit_failure"
+    )) && all(vapply(
+      replication_rows, `[[`, logical(1L), "exact_method_set"
+    ))
   )
 }
 
@@ -2675,7 +3155,40 @@ rqr_confirm_execute_method <- function(
   } else {
     "rqr"
   }
+  endpoint_values <- c(
+    result$training_lower, result$training_upper,
+    result$future_lower, result$future_upper
+  )
+  if (length(result$training_lower) != generated$T ||
+      length(result$training_upper) != generated$T ||
+      length(result$future_lower) != generated$H ||
+      length(result$future_upper) != generated$H ||
+      any(!is.finite(endpoint_values)) ||
+      any(result$training_upper < result$training_lower) ||
+      any(result$future_upper < result$future_lower)) {
+    stop(
+      "Nonfinite primary outputs or unordered interval endpoints.",
+      call. = FALSE
+    )
+  }
+  if (!is.null(result$diagnostics$promotion_eligible) &&
+      !isTRUE(result$diagnostics$promotion_eligible)) {
+    stop("A fitted method failed runtime provenance eligibility.",
+         call. = FALSE)
+  }
   result$metrics <- rqr_confirm_replication_metrics(generated, result)
+  required_metrics <- setdiff(
+    names(result$metrics), "cross_target_distance"
+  )
+  if (any(!is.finite(unlist(
+      result$metrics[required_metrics], use.names = FALSE
+    ))) ||
+      (identical(result$endpoint_target, "quantile") &&
+        !is.finite(result$metrics$cross_target_distance)) ||
+      (identical(result$endpoint_target, "rqr") &&
+        !is.na(result$metrics$cross_target_distance))) {
+    stop("Nonfinite primary outputs were produced.", call. = FALSE)
+  }
   result
 }
 
@@ -2700,7 +3213,7 @@ rqr_confirm_replication_plan <- function(contract, planning = "maximum") {
     batch_size <- switch(rule, C = 100L, S = 50L, F = 200L)
     for (replication in seq_len(maximum)) {
       index <- index + 1L
-      batch <- ceiling(replication / batch_size)
+      batch <- as.integer(ceiling(replication / batch_size))
       rows[[index]] <- data.frame(
         replication_task_id = sprintf(
           "%s__rep%04d", scenario_id, replication
@@ -2733,6 +3246,96 @@ rqr_confirm_replication_plan <- function(contract, planning = "maximum") {
   ), , drop = FALSE]
   rownames(output) <- NULL
   output
+}
+
+rqr_confirm_wave_plan <- function(contract, planning = "maximum") {
+  planning <- match.arg(planning, c("initial", "central", "maximum"))
+  tasks <- rqr_confirm_replication_plan(contract, planning)
+  scenario_order <- names(contract$config$scenarios)
+  tasks$batch_group <- vapply(
+    contract$config$scenarios[tasks$DGP],
+    `[[`, character(1L), "batch_group"
+  )
+  batch_target <- function(replication, rule) {
+    batch <- switch(
+      rule,
+      C = contract$config$batching$core,
+      S = contract$config$batching$sensitivity,
+      F = contract$config$batching$frozen,
+      stop("A wave task has an unknown replication rule.",
+           call. = FALSE)
+    )
+    if (replication <= batch$initial || batch$increment == 0L) {
+      return(as.integer(batch$initial))
+    }
+    as.integer(
+      batch$initial +
+        ceiling((replication - batch$initial) / batch$increment) *
+          batch$increment
+    )
+  }
+  tasks$batch_target <- mapply(
+    batch_target, tasks$replication, tasks$replication_rule,
+    USE.NAMES = FALSE
+  )
+  tasks$study_stage <- ifelse(
+    tasks$replication_rule == "S", "sensitivity", "core"
+  )
+  tasks$batch_sequence <- mapply(
+    function(target, rule) {
+      batch <- switch(
+        rule,
+        C = contract$config$batching$core,
+        S = contract$config$batching$sensitivity,
+        F = contract$config$batching$frozen
+      )
+      if (batch$increment == 0L) {
+        0L
+      } else {
+        as.integer((target - batch$initial) / batch$increment)
+      }
+    },
+    tasks$batch_target, tasks$replication_rule,
+    USE.NAMES = FALSE
+  )
+  tasks$phase <- ifelse(
+    tasks$embedded_sentinel, "sentinel", "standard"
+  )
+  tasks$mode <- ifelse(
+    tasks$embedded_sentinel, "sentinel-core", "execute-confirmatory"
+  )
+  tasks$wave_id <- sprintf(
+    "%s__target%04d__%s",
+    tasks$batch_group, tasks$batch_target, tasks$phase
+  )
+  tasks$worker_limit <- ifelse(
+    tasks$embedded_sentinel,
+    contract$config$resources$sentinel_workers,
+    contract$config$resources$workers
+  )
+  tasks$worker_slot <- NA_integer_
+  for (wave_id in unique(tasks$wave_id)) {
+    indices <- which(tasks$wave_id == wave_id)
+    indices <- indices[order(
+      match(tasks$DGP[indices], scenario_order),
+      tasks$replication[indices], method = "radix"
+    )]
+    tasks$worker_slot[indices] <-
+      (seq_along(indices) - 1L) %% tasks$worker_limit[indices] + 1L
+  }
+  execution_order <- order(
+    tasks$batch_sequence,
+    match(tasks$study_stage, c("core", "sensitivity")),
+    match(tasks$phase, c("sentinel", "standard")),
+    match(tasks$batch_group, unique(tasks$batch_group)),
+    tasks$worker_slot,
+    tasks$replication,
+    method = "radix"
+  )
+  tasks <- tasks[execution_order, , drop = FALSE]
+  tasks$execution_order <- seq_len(nrow(tasks))
+  rownames(tasks) <- NULL
+  tasks
 }
 
 rqr_confirm_scalar_draws <- function(result, generated) {
