@@ -27,6 +27,13 @@ branch: codex/output15-reconciliation-20260725
 
 Resolve and report the exact tip of that review branch before using it.
 
+GitHub access is read-only for this review. Use the connected GitHub app when
+it is available. If the app is unavailable, use the exact Codex-prepared Git
+archive attached to the chat together with its reported SHA-256. State which
+access path you used. The archive fallback changes only transport: it does not
+relax any source inspection, mathematical verification, or decision
+requirement below.
+
 Protected read-only references:
 
 ```text
@@ -372,16 +379,22 @@ Separate blockers from nonblocking improvements. Do not expand scope into
 CAVI/ELBO or RQR-DESN. Those remain deferred until the RQR-DLM confirmatory
 simulation is complete.
 
-## Review deliverables and remote handoff
+## Review deliverables and Codex handoff
 
-Push your review-only deliverables to:
+The standard ChatGPT GitHub app is read-only. Do not attempt to create a
+branch, commit, push, open a pull request, or modify any repository. Codex will
+perform all Git writes after verifying your returned bytes.
+
+Create one downloadable ZIP named:
 
 ```text
-branch:
-  chatgpt-pro/output16-audit-20260725
+chatgpt_pro_output16_review_bundle_20260725.zip
+```
 
-directory:
-  external_reviews/chatgpt_pro_output16_20260725/
+Place the review files directly under this directory inside the ZIP:
+
+```text
+external_reviews/chatgpt_pro_output16_20260725/
 ```
 
 Permitted deliverables:
@@ -398,17 +411,23 @@ You may omit the JSON only if the same machine-evaluable fields are included
 in the findings CSV. Do not change source, config, manuscript, tests, or prior
 review files.
 
-Create the artifact-hash manifest from the final remote bytes, commit it last,
-verify the branch differs from main commit
-`7b7c47204801032e5eb4fe6c9fd332aaaedead43` by exactly the permitted review
-files, and push the branch yourself.
+Create the artifact-hash manifest after the other deliverables are final. It
+must list the relative path, byte count, and SHA-256 of every permitted
+deliverable except the hash manifest itself. Build the ZIP from exactly those
+final files. Compute the ZIP SHA-256 after the ZIP is final.
 
-After pushing, return only:
+Return:
 
 ```text
-chatgpt-pro/output16-audit-20260725
-<exact 40-character branch-tip SHA>
+access path used: GitHub app / attached exact archive
+reviewed main commit: 7b7c47204801032e5eb4fe6c9fd332aaaedead43
+reviewed reconciliation branch tip: <exact 40-character SHA>
+bundle: chatgpt_pro_output16_review_bundle_20260725.zip
+bundle SHA-256: <exact 64-character SHA-256>
 ```
 
-Codex will fetch and verify those bytes directly. Do not ask the user to
-download, rename, copy, paste, or compute SHA-256 files manually.
+Attach the single ZIP to the response. Do not ask the user to download,
+rename, copy, paste, or compute individual files or SHA-256 values. The user
+will attach this one ZIP to Codex; Codex will verify the member paths, file
+set, byte counts, component hashes, and bundle hash, then create and push the
+review-only branch.
