@@ -56,13 +56,16 @@ if [[ -z "$summary" || ! -f "$summary" ]]; then
 fi
 
 IFS=, read -r mode runner_status elapsed peak_processes peak_rss \
-  peak_threads ceiling_reason telemetry_role < <(tail -n 1 "$summary")
+  peak_threads ceiling_reason telemetry_role numerical_threads \
+  sampled_thread_ceiling max_rss max_seconds < <(tail -n 1 "$summary")
 if [[ "$mode" != "preflight" ||
       "$runner_status" -eq 0 ||
       "$peak_processes" -lt 1 ||
       "$peak_threads" -lt 1 ||
       "$ceiling_reason" != "process_group_threads" ||
-      "$telemetry_role" != "sampled_process_group_telemetry" ]]; then
+      "$telemetry_role" != "sampled_process_group_telemetry" ||
+      "$numerical_threads" -ne 1 ||
+      "$sampled_thread_ceiling" -ne 0 ]]; then
   echo "The process-monitor fault summary failed its contract." >&2
   exit 1
 fi

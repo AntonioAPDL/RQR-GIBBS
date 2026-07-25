@@ -126,6 +126,10 @@ run_worker <- function(worker_slot) {
       sprintf(
         "RQR_CONFIRMATORY_MONITOR_ROOT=%s",
         worker_monitor_root
+      ),
+      sprintf(
+        "RQR_MAX_PROCESS_GROUP_THREADS=%d",
+        contract$config$resources$sampled_process_group_thread_ceiling
       )
     ),
     wait = TRUE

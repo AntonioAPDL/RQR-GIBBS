@@ -94,6 +94,14 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !isTRUE(
         config$authorization_contract$
           explicit_user_confirmation_required
+      ) ||
+      !identical(config$resources$threads_per_worker, 1L) ||
+      !identical(
+        config$resources$sampled_process_group_thread_ceiling, 2L
+      ) ||
+      !identical(
+        config$resources$sampled_thread_ceiling_role,
+        "hard_OS_thread_envelope_not_compute_parallelism"
       )) {
     stop("The confirmatory configuration is invalid.", call. = FALSE)
   }

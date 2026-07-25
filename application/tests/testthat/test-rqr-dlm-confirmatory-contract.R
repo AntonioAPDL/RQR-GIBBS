@@ -89,6 +89,14 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   )
   expect_false(contract$config$diagnostic_pilot_execution_authorized)
   expect_false(contract$config$confirmatory_execution_authorized)
+  expect_identical(contract$config$resources$threads_per_worker, 1L)
+  expect_identical(
+    contract$config$resources$sampled_process_group_thread_ceiling, 2L
+  )
+  expect_identical(
+    contract$config$resources$sampled_thread_ceiling_role,
+    "hard_OS_thread_envelope_not_compute_parallelism"
+  )
   expect_identical(nrow(contract$incidence), 208L)
   included <- environment$rqr_confirm_included(contract$incidence)
   expect_identical(sum(included), 89L)

@@ -144,7 +144,11 @@ never an execution source.
 The confirmatory runner now has preflight, oracle-reference,
 embedded-sentinel, execution, collection, and audit modes. A deterministic
 wave plan assigns the embedded sentinel phase to at most eight workers and
-standard phases to at most 32 one-thread workers. Collection requires the
+standard phases to at most 32 one-compute-thread workers. BLAS, OpenMP, and
+related numerical-library settings are fixed at one; the sampled process
+monitor separately permits at most two operating-system threads per worker so
+that a transient runtime/comparator helper thread is recorded rather than
+misclassified as numerical parallelism. Collection requires the
 authorization-bound task plan, verifies every recursive artifact manifest,
 rejects duplicate or missing worker shards and replication IDs, and requires a
 common source/runtime/seed bundle before analysis. Failed fits remain in the

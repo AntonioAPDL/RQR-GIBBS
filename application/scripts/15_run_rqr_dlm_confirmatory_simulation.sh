@@ -50,7 +50,12 @@ stderr_file="$monitor_root/${mode}-${stamp}-$$.stderr.log"
 
 max_seconds="${RQR_MAX_PROCESS_WAVE_SECONDS:-1209600}"
 max_rss_kib="${RQR_MAX_PROCESS_GROUP_RSS_KIB:-1572864}"
-max_threads="${RQR_MAX_PROCESS_GROUP_THREADS:-1}"
+# BLAS/OpenMP and other numerical libraries remain fixed at one compute
+# thread above.  NLWP counts every OS thread, including a transient helper
+# created while loading or running a comparator.  The reviewed resource
+# contract therefore gives that sampled process-group telemetry a distinct,
+# still fail-closed ceiling of two.
+max_threads="${RQR_MAX_PROCESS_GROUP_THREADS:-2}"
 poll_seconds="${RQR_MONITOR_POLL_SECONDS:-0.2}"
 
 if ! [[ "$max_seconds" =~ ^[0-9]+$ ]] ||
@@ -193,11 +198,12 @@ fi
 ended_epoch="$(date +%s)"
 elapsed=$((ended_epoch - started_epoch))
 {
-  echo "mode,runner_status,elapsed_seconds,peak_processes,peak_rss_kib,peak_threads,ceiling_reason,telemetry_role"
-  printf '%s,%d,%d,%d,%d,%d,%s,%s\n' \
+  echo "mode,runner_status,elapsed_seconds,peak_processes,peak_rss_kib,peak_threads,ceiling_reason,telemetry_role,numerical_threads_per_worker,sampled_process_group_thread_ceiling,max_process_group_rss_kib,max_wave_seconds"
+  printf '%s,%d,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d\n' \
     "$mode" "$runner_status" "$elapsed" "$peak_processes" \
     "$peak_rss" "$peak_threads" "${ceiling_reason:-none}" \
-    "sampled_process_group_telemetry"
+    "sampled_process_group_telemetry" 1 "$max_threads" \
+    "$max_rss_kib" "$max_seconds"
 } >"$temporary_summary"
 mv "$temporary_summary" "$summary_file"
 

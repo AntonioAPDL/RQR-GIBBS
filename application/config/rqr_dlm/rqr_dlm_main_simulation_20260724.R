@@ -311,6 +311,9 @@ rqr_dlm_main_simulation <- list(
   ),
   resources = list(
     workers = 32L, sentinel_workers = 8L, threads_per_worker = 1L,
+    sampled_process_group_thread_ceiling = 2L,
+    sampled_thread_ceiling_role =
+      "hard_OS_thread_envelope_not_compute_parallelism",
     per_worker_memory_GiB = 1.5, free_space_required_GiB = 50,
     free_space_recommended_GiB = 100,
     process_wave_ceiling_hours = 14 * 24,
