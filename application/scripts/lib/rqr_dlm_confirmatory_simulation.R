@@ -1641,12 +1641,37 @@ rqr_confirm_collect_outputs <- function(run_root, planned_tasks, contract) {
     wave_manifest <- jsonlite::read_json(
       wave_manifest_path, simplifyVector = TRUE
     )
-    if (!identical(
-        wave_manifest$schema_version, "rqrgibbs_dlm_wave/1.0.0"
+    required_wave_fields <- c(
+      "schema_version", "canonical_wave_index", "wave_id", "mode",
+      "phase", "batch_group", "batch_target", "binding_digest",
+      "start_sha256", "same_batch_sentinel_pass",
+      "prior_batch_decision_sha256", "worker_limit",
+      "workers_used", "task_count", "all_workers_passed",
+      "no_retry", "no_reseed", "source_commit",
+      "runtime_tree_digest"
+    )
+    if (!all(required_wave_fields %in% names(wave_manifest)) ||
+      !identical(
+        wave_manifest$schema_version, "rqrgibbs_dlm_wave/2.0.0"
       ) ||
       !isTRUE(wave_manifest$all_workers_passed) ||
       !isTRUE(wave_manifest$no_retry) ||
-      !isTRUE(wave_manifest$no_reseed)) {
+      !isTRUE(wave_manifest$no_reseed) ||
+      !grepl(
+        "^[0-9a-f]{40}$", as.character(wave_manifest$source_commit)
+      ) ||
+      !grepl(
+        "^[0-9a-f]{64}$",
+        as.character(wave_manifest$runtime_tree_digest)
+      ) ||
+      !grepl(
+        "^[0-9a-f]{64}$",
+        as.character(wave_manifest$binding_digest)
+      ) ||
+      !grepl(
+        "^[0-9a-f]{64}$",
+        as.character(wave_manifest$start_sha256)
+      )) {
       stop("A monitored wave did not pass its frozen contract.",
            call. = FALSE)
     }
@@ -2728,7 +2753,7 @@ rqr_confirm_dynamic_fit <- function(
       GG_future = model_bundle$future$GG,
       W_future = forecast_W,
       component_templates_future = forecast_templates,
-      nd = schedule$retain, seed = NULL,
+      nd = NULL, seed = NULL,
       numerical_policy = "fail"
     )
   )
@@ -3350,42 +3375,1124 @@ rqr_confirm_wave_plan <- function(contract, planning = "maximum") {
   tasks
 }
 
-rqr_confirm_scalar_draws <- function(result, generated) {
+rqr_confirm_wave_catalog <- function(contract, planning = "maximum") {
+  plan <- rqr_confirm_wave_plan(contract, planning)
+  wave_ids <- unique(plan$wave_id)
+  rows <- lapply(seq_along(wave_ids), function(index) {
+    block <- plan[plan$wave_id == wave_ids[[index]], , drop = FALSE]
+    scalar <- function(field) {
+      values <- unique(block[[field]])
+      if (length(values) != 1L) {
+        stop("A canonical wave has inconsistent metadata.",
+             call. = FALSE)
+      }
+      values[[1L]]
+    }
+    batch_group <- scalar("batch_group")
+    batch_target <- as.integer(scalar("batch_target"))
+    phase <- scalar("phase")
+    same_batch_sentinel <- sprintf(
+      "%s__target%04d__sentinel", batch_group, batch_target
+    )
+    earlier_group_targets <- unique(plan$batch_target[
+      plan$batch_group == batch_group &
+        plan$phase == "standard" &
+        plan$batch_target < batch_target
+    ])
+    prior_batch_target <- if (length(earlier_group_targets)) {
+      max(earlier_group_targets)
+    } else {
+      NA_integer_
+    }
+    data.frame(
+      canonical_wave_index = as.integer(index),
+      wave_id = wave_ids[[index]],
+      mode = scalar("mode"),
+      phase = phase,
+      batch_group = batch_group,
+      batch_target = batch_target,
+      batch_sequence = as.integer(scalar("batch_sequence")),
+      study_stage = scalar("study_stage"),
+      worker_limit = as.integer(scalar("worker_limit")),
+      task_count = nrow(block),
+      same_batch_sentinel_wave_id = if (
+          identical(phase, "standard")) {
+        same_batch_sentinel
+      } else {
+        ""
+      },
+      prior_batch_target = prior_batch_target,
+      required_predecessor_wave_ids = paste(
+        wave_ids[seq_len(index - 1L)], collapse = "|"
+      ),
+      stringsAsFactors = FALSE
+    )
+  })
+  output <- do.call(rbind, rows)
+  rownames(output) <- NULL
+  output
+}
+
+rqr_confirm_wave_binding <- function(
+    run_id, expected_commit, authorization, config_sha256,
+    incidence_sha256, seed_ledger_sha256, task_plan_sha256,
+    wave_plan_sha256) {
+  scalar_text <- function(value, name, pattern = NULL) {
+    if (!is.character(value) || length(value) != 1L ||
+        is.na(value) || !nzchar(value) ||
+        (!is.null(pattern) && !grepl(pattern, tolower(value)))) {
+      stop(sprintf("Invalid wave-state binding field: %s.", name),
+           call. = FALSE)
+    }
+    tolower(value)
+  }
+  required_authorization <- c(
+    "reviewed_implementation_commit", "authorization_commit",
+    "primary_runtime_tree_digest"
+  )
+  if (is.null(authorization) ||
+      !all(required_authorization %in% names(authorization))) {
+    stop("The wave-state authorization bundle is incomplete.",
+         call. = FALSE)
+  }
+  binding <- list(
+    schema_version = "rqrgibbs_dlm_wave_run/1.0.0",
+    run_id = scalar_text(
+      run_id, "run_id", "^[a-z0-9][a-z0-9._-]{0,127}$"
+    ),
+    authorization_commit = scalar_text(
+      authorization$authorization_commit,
+      "authorization_commit", "^[0-9a-f]{40}$"
+    ),
+    reviewed_implementation_commit = scalar_text(
+      authorization$reviewed_implementation_commit,
+      "reviewed_implementation_commit", "^[0-9a-f]{40}$"
+    ),
+    runtime_tree_digest = scalar_text(
+      authorization$primary_runtime_tree_digest,
+      "runtime_tree_digest", "^[0-9a-f]{64}$"
+    ),
+    config_sha256 = scalar_text(
+      config_sha256, "config_sha256", "^[0-9a-f]{64}$"
+    ),
+    incidence_sha256 = scalar_text(
+      incidence_sha256, "incidence_sha256", "^[0-9a-f]{64}$"
+    ),
+    seed_ledger_sha256 = scalar_text(
+      seed_ledger_sha256, "seed_ledger_sha256", "^[0-9a-f]{64}$"
+    ),
+    task_plan_sha256 = scalar_text(
+      task_plan_sha256, "task_plan_sha256", "^[0-9a-f]{64}$"
+    ),
+    wave_plan_sha256 = scalar_text(
+      wave_plan_sha256, "wave_plan_sha256", "^[0-9a-f]{64}$"
+    )
+  )
+  expected_commit <- scalar_text(
+    expected_commit, "expected_commit", "^[0-9a-f]{40}$"
+  )
+  if (!identical(binding$authorization_commit, expected_commit) ||
+      !identical(
+        binding$task_plan_sha256,
+        tolower(authorization$task_plan_sha256 %||% "")
+      ) ||
+      !identical(
+        binding$seed_ledger_sha256,
+        tolower(authorization$seed_ledger_sha256 %||% "")
+      )) {
+    stop("The wave-state binding differs from the authorization bundle.",
+         call. = FALSE)
+  }
+  binding$binding_digest <- digest::digest(
+    binding, algo = "sha256", serialize = TRUE
+  )
+  binding
+}
+
+rqr_confirm_wave_state_transition <- function(
+    catalog, completions, requested_wave_id, binding_digest,
+    prior_batch_decision = NULL) {
+  required_completion_fields <- c(
+    "canonical_wave_index", "wave_id", "binding_digest",
+    "decision", "completion_sha256", "artifact_manifest_sha256"
+  )
+  if (!is.data.frame(catalog) || !nrow(catalog) ||
+      anyDuplicated(catalog$wave_id) ||
+      !identical(
+        catalog$canonical_wave_index,
+        seq_len(nrow(catalog))
+      )) {
+    stop("The canonical wave catalog is invalid.", call. = FALSE)
+  }
+  if (is.null(completions)) {
+    completions <- data.frame(
+      canonical_wave_index = integer(), wave_id = character(),
+      binding_digest = character(), decision = character(),
+      completion_sha256 = character(),
+      artifact_manifest_sha256 = character(),
+      stringsAsFactors = FALSE
+    )
+  }
+  if (!is.data.frame(completions) ||
+      !identical(names(completions), required_completion_fields) ||
+      anyDuplicated(completions$canonical_wave_index) ||
+      anyDuplicated(completions$wave_id) ||
+      (nrow(completions) && !identical(
+        completions$canonical_wave_index, seq_len(nrow(completions))
+      )) ||
+      any(completions$binding_digest != binding_digest) ||
+      any(!completions$decision %in% c(
+        "passed", "failed", "skipped_precision_stop"
+      )) ||
+      any(!grepl(
+        "^[0-9a-f]{64}$", completions$completion_sha256
+      )) ||
+      any(!grepl(
+        "^$|^[0-9a-f]{64}$",
+        completions$artifact_manifest_sha256
+      ))) {
+    stop("The append-only wave completion history is invalid.",
+         call. = FALSE)
+  }
+  if (nrow(completions)) {
+    expected_history <- catalog[
+      seq_len(nrow(completions)),
+      c("canonical_wave_index", "wave_id"), drop = FALSE
+    ]
+    observed_history <- completions[
+      c("canonical_wave_index", "wave_id")
+    ]
+    rownames(expected_history) <- rownames(observed_history) <- NULL
+    if (!identical(observed_history, expected_history)) {
+      stop("The wave history skipped or replayed a canonical wave.",
+           call. = FALSE)
+    }
+    if (any(completions$decision == "failed")) {
+      stop("A failed wave permanently blocks later waves.",
+           call. = FALSE)
+    }
+  }
+  next_index <- nrow(completions) + 1L
+  if (next_index > nrow(catalog)) {
+    stop("Every canonical wave already has a terminal record.",
+         call. = FALSE)
+  }
+  current <- catalog[next_index, , drop = FALSE]
+  if (!identical(as.character(requested_wave_id), current$wave_id)) {
+    stop("Only the next canonical wave may be requested.",
+         call. = FALSE)
+  }
+  action <- "launch"
+  decision_sha256 <- ""
+  prior_action <- ""
+  if (!is.na(current$prior_batch_target)) {
+    required_decision_fields <- c(
+      "batch_group", "replications", "next_action",
+      "next_replications", "binding_digest", "decision_sha256"
+    )
+    if (is.null(prior_batch_decision) ||
+        !all(required_decision_fields %in%
+             names(prior_batch_decision))) {
+      stop("A later batch requires its prior batch decision.",
+           call. = FALSE)
+    }
+    prior_action <- as.character(
+      prior_batch_decision$next_action[[1L]]
+    )
+    decision_sha256 <- tolower(as.character(
+      prior_batch_decision$decision_sha256[[1L]]
+    ))
+    if (!identical(
+        as.character(prior_batch_decision$batch_group[[1L]]),
+        current$batch_group
+      ) ||
+        !identical(
+          as.character(prior_batch_decision$binding_digest[[1L]]),
+          binding_digest
+        ) ||
+        !grepl("^[0-9a-f]{64}$", decision_sha256)) {
+      stop("Prior batch evidence belongs to another run or target.",
+           call. = FALSE)
+    }
+    prior_replications <- rqr_confirm_strict_integer(
+      prior_batch_decision$replications[[1L]],
+      "prior batch replications", 1L
+    )
+    if (prior_action == "add_complete_paired_DGP_batch") {
+      if (!identical(
+          prior_replications,
+          as.integer(current$prior_batch_target)
+        ) ||
+          !identical(
+          rqr_confirm_strict_integer(
+            prior_batch_decision$next_replications[[1L]],
+            "prior batch next replications", 1L
+          ),
+          as.integer(current$batch_target)
+        )) {
+        stop("The prior batch decision authorizes another target.",
+             call. = FALSE)
+      }
+    } else if (prior_action %in% c(
+        "precision_pass_stop",
+        "maximum_reached_report_unmet_precision")) {
+      if (prior_replications > as.integer(current$prior_batch_target)) {
+        stop("The precision-stop decision is from a future target.",
+             call. = FALSE)
+      }
+      action <- "skip"
+    } else {
+      stop("The prior batch decision has an unknown action.",
+           call. = FALSE)
+    }
+  }
+  same_batch_sentinel_pass <- NA
+  if (identical(action, "launch") &&
+      identical(current$phase, "standard")) {
+    sentinel_index <- match(
+      current$same_batch_sentinel_wave_id, completions$wave_id
+    )
+    same_batch_sentinel_pass <-
+      !is.na(sentinel_index) &&
+      identical(completions$decision[[sentinel_index]], "passed")
+    if (!isTRUE(same_batch_sentinel_pass)) {
+      stop("A standard wave requires its same-batch sentinel pass.",
+           call. = FALSE)
+    }
+  }
+  list(
+    action = action,
+    current = current,
+    required_predecessor_wave_ids = completions$wave_id,
+    predecessor_completion_sha256 =
+      completions$completion_sha256,
+    predecessor_artifact_manifest_sha256 =
+      completions$artifact_manifest_sha256,
+    same_batch_sentinel_pass = same_batch_sentinel_pass,
+    prior_batch_decision_sha256 = decision_sha256,
+    prior_batch_next_action = prior_action
+  )
+}
+
+rqr_confirm_wave_state_records <- function(
+    state_root, catalog, binding) {
+  if (!dir.exists(state_root)) {
+    return(list(
+      starts = list(), completion_values = list(), completions = NULL
+    ))
+  }
+  run_contract_path <- file.path(state_root, "run_contract.json")
+  if (!file.exists(run_contract_path)) {
+    stop("The wave-state root omitted its run contract.",
+         call. = FALSE)
+  }
+  stored <- jsonlite::read_json(
+    run_contract_path, simplifyVector = TRUE
+  )
+  binding_fields <- names(binding)
+  if (!all(binding_fields %in% names(stored)) ||
+      !identical(
+        rqr_confirm_strict_integer(
+          stored$canonical_wave_count,
+          "canonical wave count", 1L
+        ),
+        nrow(catalog)
+      ) ||
+      any(vapply(binding_fields, function(field) {
+        !identical(
+          as.character(stored[[field]]),
+          as.character(binding[[field]])
+        )
+      }, logical(1L)))) {
+    stop("The wave-state root belongs to another run binding.",
+         call. = FALSE)
+  }
+  start_root <- file.path(state_root, "starts")
+  completion_root <- file.path(state_root, "completions")
+  if (!dir.exists(start_root) || !dir.exists(completion_root)) {
+    stop("The wave-state record directories are incomplete.",
+         call. = FALSE)
+  }
+  start_paths <- sort(list.files(
+    start_root, pattern = "\\.json$", full.names = TRUE
+  ), method = "radix")
+  completion_paths <- sort(list.files(
+    completion_root, pattern = "\\.json$", full.names = TRUE
+  ), method = "radix")
+  if (length(start_paths) != length(completion_paths)) {
+    stop(
+      "An incomplete wave start permanently blocks replay and continuation.",
+      call. = FALSE
+    )
+  }
+  starts <- lapply(start_paths, function(path) {
+    jsonlite::read_json(path, simplifyVector = TRUE)
+  })
+  completion_values <- lapply(
+      seq_along(completion_paths), function(index) {
+    value <- jsonlite::read_json(
+      completion_paths[[index]], simplifyVector = TRUE
+    )
+    start <- starts[[index]]
+    catalog_row <- catalog[index, , drop = FALSE]
+    required_start <- c(
+      "schema_version", "canonical_wave_index", "wave_id", "mode",
+      "phase", "batch_group", "batch_target", "binding_digest",
+      "action", "required_predecessor_wave_ids",
+      "predecessor_completion_sha256",
+      "predecessor_artifact_manifest_sha256",
+      "same_batch_sentinel_pass",
+      "prior_batch_decision_sha256", "prior_batch_next_action",
+      "worker_limit", "task_count", "wave_task_plan_sha256",
+      "output_root", "started_at_utc"
+    )
+    required_completion <- c(
+      "schema_version", "canonical_wave_index", "wave_id", "mode",
+      "phase", "batch_group", "batch_target", "binding_digest",
+      "action", "decision", "start_sha256",
+      "required_predecessor_wave_ids",
+      "predecessor_completion_sha256",
+      "predecessor_artifact_manifest_sha256",
+      "same_batch_sentinel_pass",
+      "prior_batch_decision_sha256", "prior_batch_next_action",
+      "worker_limit", "workers_used", "task_count",
+      "wave_task_plan_sha256", "output_root",
+      "wave_artifact_hashes_sha256", "all_workers_passed",
+      "completed_at_utc"
+    )
+    scalar_equal <- function(observed, expected) {
+      identical(as.character(observed), as.character(expected))
+    }
+    start_index <- rqr_confirm_strict_integer(
+      start$canonical_wave_index,
+      "wave start canonical index", 1L, nrow(catalog)
+    )
+    completion_index <- rqr_confirm_strict_integer(
+      value$canonical_wave_index,
+      "wave completion canonical index", 1L, nrow(catalog)
+    )
+    expected_predecessor_ids <- if (index > 1L) {
+      catalog$wave_id[seq_len(index - 1L)]
+    } else {
+      character()
+    }
+    expected_predecessor_hashes <- if (index > 1L) {
+      vapply(
+        completion_paths[seq_len(index - 1L)],
+        rqr_confirm_sha256, character(1L)
+      )
+    } else {
+      character()
+    }
+    expected_predecessor_artifact_hashes <- if (index > 1L) {
+      vapply(
+        completion_paths[seq_len(index - 1L)],
+        function(previous_path) {
+          previous <- jsonlite::read_json(
+            previous_path, simplifyVector = TRUE
+          )
+          as.character(previous$wave_artifact_hashes_sha256)
+        },
+        character(1L)
+      )
+    } else {
+      character()
+    }
+    start_predecessor_ids <- as.character(unlist(
+      start$required_predecessor_wave_ids, use.names = FALSE
+    ))
+    start_predecessor_hashes <- as.character(unlist(
+      start$predecessor_completion_sha256, use.names = FALSE
+    ))
+    completion_predecessor_ids <- as.character(unlist(
+      value$required_predecessor_wave_ids, use.names = FALSE
+    ))
+    completion_predecessor_hashes <- as.character(unlist(
+      value$predecessor_completion_sha256, use.names = FALSE
+    ))
+    start_predecessor_artifact_hashes <- as.character(unlist(
+      start$predecessor_artifact_manifest_sha256,
+      use.names = FALSE
+    ))
+    completion_predecessor_artifact_hashes <- as.character(unlist(
+      value$predecessor_artifact_manifest_sha256,
+      use.names = FALSE
+    ))
+    if (!all(required_start %in% names(start)) ||
+        !all(required_completion %in% names(value)) ||
+        !identical(
+          start$schema_version, "rqrgibbs_dlm_wave_start/1.0.0"
+        ) ||
+        !identical(
+          value$schema_version,
+          "rqrgibbs_dlm_wave_completion/1.0.0"
+        ) ||
+        !identical(start_index, as.integer(index)) ||
+        !identical(completion_index, as.integer(index)) ||
+        !scalar_equal(start$wave_id, catalog_row$wave_id) ||
+        !scalar_equal(value$wave_id, catalog_row$wave_id) ||
+        !scalar_equal(start$mode, catalog_row$mode) ||
+        !scalar_equal(value$mode, catalog_row$mode) ||
+        !scalar_equal(start$phase, catalog_row$phase) ||
+        !scalar_equal(value$phase, catalog_row$phase) ||
+        !scalar_equal(start$batch_group, catalog_row$batch_group) ||
+        !scalar_equal(value$batch_group, catalog_row$batch_group) ||
+        !identical(
+          rqr_confirm_strict_integer(
+            start$batch_target, "wave start batch target", 1L
+          ),
+          as.integer(catalog_row$batch_target)
+        ) ||
+        !identical(
+          rqr_confirm_strict_integer(
+            value$batch_target, "wave completion batch target", 1L
+          ),
+          as.integer(catalog_row$batch_target)
+        ) ||
+        !scalar_equal(start$binding_digest, binding$binding_digest) ||
+        !scalar_equal(value$binding_digest, binding$binding_digest) ||
+        !identical(
+          rqr_confirm_strict_integer(
+            start$worker_limit, "wave start worker limit", 1L
+          ),
+          as.integer(catalog_row$worker_limit)
+        ) ||
+        !identical(
+          rqr_confirm_strict_integer(
+            value$worker_limit, "wave completion worker limit", 1L
+          ),
+          as.integer(catalog_row$worker_limit)
+        ) ||
+        !identical(
+          rqr_confirm_strict_integer(
+            start$task_count, "wave start task count", 1L
+          ),
+          as.integer(catalog_row$task_count)
+        ) ||
+        !identical(
+          rqr_confirm_strict_integer(
+            value$task_count, "wave completion task count", 1L
+          ),
+          as.integer(catalog_row$task_count)
+        ) ||
+        !identical(
+          start_predecessor_ids, expected_predecessor_ids
+        ) ||
+        !identical(
+          completion_predecessor_ids, expected_predecessor_ids
+        ) ||
+        !identical(
+          start_predecessor_hashes, expected_predecessor_hashes
+        ) ||
+        !identical(
+          completion_predecessor_hashes,
+          expected_predecessor_hashes
+        ) ||
+        !identical(
+          start_predecessor_artifact_hashes,
+          expected_predecessor_artifact_hashes
+        ) ||
+        !identical(
+          completion_predecessor_artifact_hashes,
+          expected_predecessor_artifact_hashes
+        ) ||
+        !identical(as.character(start$action),
+                   as.character(value$action)) ||
+        !as.character(start$action) %in% c("launch", "skip") ||
+        !scalar_equal(
+          start$wave_task_plan_sha256,
+          value$wave_task_plan_sha256
+        ) ||
+        !grepl(
+          "^[0-9a-f]{64}$",
+          as.character(value$wave_task_plan_sha256)
+        ) ||
+        !scalar_equal(start$output_root, value$output_root) ||
+        !scalar_equal(
+          start$prior_batch_decision_sha256,
+          value$prior_batch_decision_sha256
+        ) ||
+        !scalar_equal(
+          start$prior_batch_next_action,
+          value$prior_batch_next_action
+        ) ||
+        !identical(
+          as.logical(start$same_batch_sentinel_pass),
+          as.logical(value$same_batch_sentinel_pass)
+        ) ||
+        !grepl(
+          "^[0-9]{4}-[0-9]{2}-[0-9]{2}T",
+          as.character(start$started_at_utc)
+        ) ||
+        !grepl(
+          "^[0-9]{4}-[0-9]{2}-[0-9]{2}T",
+          as.character(value$completed_at_utc)
+        )) {
+      stop("A wave-state record violates its immutable schema.",
+           call. = FALSE)
+    }
+    if (!identical(
+        as.character(value$start_sha256),
+        rqr_confirm_sha256(start_paths[[index]])
+      )) {
+      stop("A wave completion is not bound to its start record.",
+           call. = FALSE)
+    }
+    if (identical(as.character(value$action), "skip")) {
+      if (!identical(
+          as.character(value$decision), "skipped_precision_stop"
+        ) ||
+          !identical(
+            rqr_confirm_strict_integer(
+              value$workers_used, "skipped wave workers used", 0L
+            ),
+            0L
+          ) ||
+          isTRUE(value$all_workers_passed) ||
+          nzchar(as.character(value$wave_artifact_hashes_sha256))) {
+        stop("A skipped wave has invalid terminal evidence.",
+             call. = FALSE)
+      }
+    } else if (!as.character(value$decision) %in% c(
+        "passed", "failed"
+      ) ||
+        rqr_confirm_strict_integer(
+          value$workers_used, "launched wave workers used", 1L
+        ) > as.integer(catalog_row$worker_limit) ||
+        !grepl(
+          "^[0-9a-f]{64}$",
+          as.character(value$wave_artifact_hashes_sha256)
+        ) ||
+        !identical(
+          isTRUE(value$all_workers_passed),
+          identical(as.character(value$decision), "passed")
+        )) {
+      stop("A launched wave has invalid terminal evidence.",
+           call. = FALSE)
+    }
+    has_prior_batch <- !is.na(catalog_row$prior_batch_target)
+    prior_action <- as.character(value$prior_batch_next_action)
+    prior_digest <- tolower(as.character(
+      value$prior_batch_decision_sha256
+    ))
+    sentinel_pass_raw <- as.logical(value$same_batch_sentinel_pass)
+    sentinel_pass <- if (length(sentinel_pass_raw) == 1L) {
+      sentinel_pass_raw
+    } else {
+      NA
+    }
+    if (!has_prior_batch) {
+      if (nzchar(prior_action) || nzchar(prior_digest)) {
+        stop("An initial-batch wave asserted prior-batch evidence.",
+             call. = FALSE)
+      }
+    } else if (!prior_action %in% c(
+        "add_complete_paired_DGP_batch",
+        "precision_pass_stop",
+        "maximum_reached_report_unmet_precision"
+      ) ||
+        !grepl("^[0-9a-f]{64}$", prior_digest) ||
+        !identical(
+          as.character(value$action),
+          if (prior_action == "add_complete_paired_DGP_batch") {
+            "launch"
+          } else {
+            "skip"
+          }
+        )) {
+      stop("A later wave has inconsistent prior-batch evidence.",
+           call. = FALSE)
+    }
+    if (identical(as.character(value$action), "launch") &&
+        identical(as.character(value$phase), "standard")) {
+      if (!isTRUE(sentinel_pass)) {
+        stop("A launched standard wave lacks its sentinel pass.",
+             call. = FALSE)
+      }
+    } else if (!is.na(sentinel_pass)) {
+      stop("A nonstandard or skipped wave asserted a sentinel pass.",
+           call. = FALSE)
+    }
+    if (identical(as.character(value$action), "launch")) {
+      artifact_path <- file.path(
+        as.character(value$output_root),
+        "wave_artifact_hashes.csv"
+      )
+      if (!file.exists(artifact_path) ||
+          !identical(
+            rqr_confirm_sha256(artifact_path),
+            as.character(value$wave_artifact_hashes_sha256)
+          )) {
+        stop("A launched wave is detached from its artifact manifest.",
+             call. = FALSE)
+      }
+    }
+    value
+  })
+  completions <- lapply(
+    seq_along(completion_values), function(index) {
+      value <- completion_values[[index]]
+      data.frame(
+        canonical_wave_index = rqr_confirm_strict_integer(
+          value$canonical_wave_index,
+          "wave completion canonical index", 1L, nrow(catalog)
+        ),
+        wave_id = as.character(value$wave_id),
+        binding_digest = as.character(value$binding_digest),
+        decision = as.character(value$decision),
+        completion_sha256 = rqr_confirm_sha256(
+          completion_paths[[index]]
+        ),
+        artifact_manifest_sha256 =
+          as.character(value$wave_artifact_hashes_sha256),
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+  completions <- if (length(completions)) {
+    do.call(rbind, completions)
+  } else {
+    NULL
+  }
+  if (length(start_paths)) {
+    expected_names <- sprintf(
+      "%04d__%s.json",
+      seq_along(start_paths),
+      catalog$wave_id[seq_along(start_paths)]
+    )
+    if (!identical(basename(start_paths), expected_names) ||
+        !identical(basename(completion_paths), expected_names)) {
+      stop("Wave-state record names do not follow canonical order.",
+           call. = FALSE)
+    }
+  }
+  list(
+    starts = starts, completion_values = completion_values,
+    completions = completions
+  )
+}
+
+rqr_confirm_read_prior_batch_decision <- function(
+    path, current, binding, completion_values) {
+  path <- normalizePath(path, winslash = "/", mustWork = TRUE)
+  if (!identical(basename(path), "batch_decisions.csv")) {
+    stop("The prior batch decision must be the canonical artifact.",
+         call. = FALSE)
+  }
+  directory <- dirname(path)
+  rqr_confirm_verify_recursive_manifest(directory)
+  run_manifest_path <- file.path(directory, "run_manifest.json")
+  if (!file.exists(run_manifest_path)) {
+    stop("The prior batch decision omitted its run manifest.",
+         call. = FALSE)
+  }
+  run_manifest <- jsonlite::read_json(
+    run_manifest_path, simplifyVector = TRUE
+  )
+  mode <- as.character(run_manifest$mode)
+  detail_path <- file.path(directory, paste0(mode, "_manifest.json"))
+  recursive_path <- file.path(
+    directory, paste0(mode, "_recursive_manifest.csv")
+  )
+  if (!mode %in% c("collect", "audit") ||
+      !file.exists(detail_path) || !file.exists(recursive_path) ||
+      !identical(
+        as.character(run_manifest$source_commit),
+        binding$authorization_commit
+      ) ||
+      !identical(
+        as.character(
+          run_manifest$primary_runtime_binding$runtime_tree_digest
+        ),
+        binding$runtime_tree_digest
+      )) {
+    stop("The prior batch decision has the wrong source or runtime.",
+         call. = FALSE)
+  }
+  detail <- jsonlite::read_json(detail_path, simplifyVector = TRUE)
+  if (!isTRUE(detail$analysis_complete) ||
+      !identical(
+        as.character(detail$status),
+        "integrity_and_analysis_complete"
+      ) ||
+      !identical(
+        as.character(detail$source_commit),
+        binding$authorization_commit
+      )) {
+    stop("The prior batch analysis was not completed successfully.",
+         call. = FALSE)
+  }
+  recursive <- utils::read.csv(
+    recursive_path, stringsAsFactors = FALSE, check.names = FALSE
+  )
+  if (!identical(names(recursive), c("path", "bytes", "sha256")) ||
+      anyNA(recursive) ||
+      any(!grepl("^[0-9a-f]{64}$", recursive$sha256))) {
+    stop("The prior batch recursive evidence is invalid.",
+         call. = FALSE)
+  }
+  completed_wave_hashes <- vapply(
+    completion_values,
+    function(value) as.character(value$wave_artifact_hashes_sha256),
+    character(1L)
+  )
+  completed_wave_hashes <- completed_wave_hashes[
+    nzchar(completed_wave_hashes)
+  ]
+  if (!length(completed_wave_hashes) ||
+      !all(completed_wave_hashes %in% recursive$sha256)) {
+    stop(
+      "The prior batch decision does not cover every launched predecessor.",
+      call. = FALSE
+    )
+  }
+  decisions <- utils::read.csv(
+    path, stringsAsFactors = FALSE, check.names = FALSE
+  )
+  if (!identical(
+      names(decisions), rqr_confirm_artifact_schemas()$batch_decision
+    )) {
+    stop("The prior batch decision schema changed.", call. = FALSE)
+  }
+  replications <- vapply(
+    decisions$replications,
+    rqr_confirm_strict_integer, integer(1L),
+    name = "batch decision replications", minimum = 1L
+  )
+  selected <- which(
+    decisions$batch_group == current$batch_group &
+      replications <= as.integer(current$prior_batch_target)
+  )
+  if (!length(selected)) {
+    stop("The required prior batch decision is absent.",
+         call. = FALSE)
+  }
+  selected_replications <- replications[selected]
+  selected <- selected[
+    selected_replications == max(selected_replications)
+  ]
+  if (length(selected) != 1L) {
+    stop("The latest prior batch decision is duplicated.",
+         call. = FALSE)
+  }
+  value <- decisions[selected, , drop = FALSE]
+  value$binding_digest <- binding$binding_digest
+  value$decision_sha256 <- rqr_confirm_sha256(path)
+  value
+}
+
+rqr_confirm_diagnostic_training_times <- function(generated) {
+  T <- rqr_confirm_strict_integer(generated$T, "generated$T", 1L)
+  indices <- unique(as.integer(round(c(
+    1, 0.25 * T, 0.50 * T, 0.75 * T, T
+  ))))
+  break_time <- generated$latent$break_time %||% integer()
+  if (length(break_time)) {
+    break_time <- rqr_confirm_strict_integer(
+      break_time, "generated$latent$break_time", 1L, T
+    )
+    indices <- c(indices, break_time + (-1L:1L))
+  }
+  missing <- which(is.na(generated$training_y))
+  if (length(missing)) {
+    indices <- c(indices, as.integer(unlist(
+      lapply(missing, function(index) index + (-1L:1L)),
+      use.names = FALSE
+    )))
+  }
+  scale <- as.numeric(generated$training_scale)
+  if (length(scale) == T && all(is.finite(scale)) && T > 1L &&
+      any(diff(scale) != 0)) {
+    scale_boundary <- which.max(abs(diff(log(scale)))) + 1L
+    indices <- c(indices, scale_boundary + (-1L:1L))
+  }
+  sort(unique(indices[indices >= 1L & indices <= T]), method = "radix")
+}
+
+rqr_confirm_interval_function_draws <- function(
+    lower, upper, indices, labels) {
+  lower <- as.matrix(lower)
+  upper <- as.matrix(upper)
+  if (!identical(dim(lower), dim(upper)) ||
+      !nrow(lower) || !ncol(lower) ||
+      any(!is.finite(lower)) || any(!is.finite(upper)) ||
+      any(upper < lower)) {
+    stop("Interval-function diagnostic draws are invalid.",
+         call. = FALSE)
+  }
+  indices <- as.integer(indices)
+  labels <- as.character(labels)
+  if (!length(indices) || length(labels) != length(indices) ||
+      anyNA(indices) || anyNA(labels) || any(!nzchar(labels)) ||
+      any(indices < 1L) || any(indices > nrow(lower)) ||
+      anyDuplicated(indices) || anyDuplicated(labels)) {
+    stop("Diagnostic endpoint indices or labels are invalid.",
+         call. = FALSE)
+  }
+  output <- matrix(
+    NA_real_, nrow = ncol(lower), ncol = 4L * length(indices)
+  )
+  output_names <- character(ncol(output))
+  column <- 0L
+  for (position in seq_along(indices)) {
+    index <- indices[[position]]
+    values <- list(
+      lower = lower[index, ],
+      upper = upper[index, ],
+      midpoint = 0.5 * (lower[index, ] + upper[index, ]),
+      width = upper[index, ] - lower[index, ]
+    )
+    for (function_name in names(values)) {
+      column <- column + 1L
+      output[, column] <- values[[function_name]]
+      output_names[[column]] <- paste(
+        labels[[position]], function_name, sep = "_"
+      )
+    }
+  }
+  colnames(output) <- output_names
+  output
+}
+
+rqr_confirm_conditional_root_draws <- function(
+    terminal, FF_future, GG_future, horizon = NULL) {
+  terminal <- as.matrix(terminal)
+  FF_future <- as.matrix(FF_future)
+  if (!nrow(terminal) || !ncol(terminal) ||
+      nrow(FF_future) != nrow(terminal) ||
+      !ncol(FF_future) ||
+      any(!is.finite(terminal)) || any(!is.finite(FF_future))) {
+    stop("Conditional-root diagnostic inputs are invalid.",
+         call. = FALSE)
+  }
+  p <- nrow(terminal)
+  GG_dimensions <- dim(GG_future)
+  inferred_horizon <- max(c(
+    ncol(FF_future),
+    if (length(GG_dimensions) == 3L) GG_dimensions[[3L]] else 1L
+  ))
+  H <- if (is.null(horizon)) {
+    inferred_horizon
+  } else {
+    rqr_confirm_strict_integer(
+      horizon, "conditional-root horizon", 1L
+    )
+  }
+  if (ncol(FF_future) == 1L && H > 1L) {
+    FF_future <- matrix(
+      rep(FF_future[, 1L], H), nrow = p, ncol = H
+    )
+  } else if (ncol(FF_future) != H) {
+    stop("FF_future has the wrong diagnostic horizon.",
+         call. = FALSE)
+  }
+  GG <- if (is.matrix(GG_future)) {
+    if (!identical(dim(GG_future), c(p, p))) {
+      stop("GG_future has the wrong diagnostic dimension.",
+           call. = FALSE)
+    }
+    array(rep(GG_future, H), dim = c(p, p, H))
+  } else {
+    GG_future <- as.array(GG_future)
+    if (identical(dim(GG_future), c(p, p, 1L)) && H > 1L) {
+      array(rep(GG_future[, , 1L], H), dim = c(p, p, H))
+    } else if (!identical(dim(GG_future), c(p, p, H))) {
+      stop("GG_future has the wrong diagnostic dimension.",
+           call. = FALSE)
+    } else {
+      GG_future
+    }
+  }
+  if (any(!is.finite(GG))) {
+    stop("GG_future contains nonfinite diagnostic values.",
+         call. = FALSE)
+  }
+  state <- terminal
+  output <- matrix(NA_real_, H, ncol(terminal))
+  for (horizon in seq_len(H)) {
+    state <- GG[, , horizon] %*% state
+    output[horizon, ] <- drop(crossprod(
+      FF_future[, horizon], state
+    ))
+  }
+  output
+}
+
+rqr_confirm_diagnostic_schema <- function(
+    method, generated, contract) {
+  method <- as.character(method)[[1L]]
+  mcmc_methods <- c(
+    "M01", "M02", "M03", "M06", "M07",
+    "M08", "M09", "M10", "M11"
+  )
+  if (!method %in% mcmc_methods) {
+    stop("No MCMC diagnostic schema exists for this method.",
+         call. = FALSE)
+  }
+  base <- c(
+    "mean_lower", "mean_upper", "mean_midpoint",
+    "mean_width", "observed_loss"
+  )
+  training <- unlist(lapply(
+    rqr_confirm_diagnostic_training_times(generated),
+    function(index) paste0(
+      sprintf("training_t%04d", index), "_",
+      c("lower", "upper", "midpoint", "width")
+    )
+  ), use.names = FALSE)
+  horizons <- as.integer(contract$config$design$reported_horizons)
+  if (!length(horizons) || anyNA(horizons) ||
+      any(horizons < 1L) || any(horizons > generated$H) ||
+      anyDuplicated(horizons)) {
+    stop("Reported diagnostic horizons are invalid.", call. = FALSE)
+  }
+  future <- unlist(lapply(
+    horizons,
+    function(index) paste0(
+      sprintf("future_h%02d", index), "_",
+      c("lower", "upper", "midpoint", "width")
+    )
+  ), use.names = FALSE)
+  dynamic <- if (method %in% c(
+      "M01", "M02", "M06", "M07",
+      "M08", "M09", "M10", "M11")) {
+    paste0(
+      "terminal_",
+      c("lower", "upper", "midpoint", "width")
+    )
+  } else {
+    character()
+  }
+  learned <- if (identical(method, "M11")) "log_lambda" else character()
+  component_count <- if (method %in% c(
+      "M01", "M09", "M10", "M11")) {
+    length(rqr_confirm_model_bundle(generated)$training$component_dims)
+  } else if (identical(method, "M07")) {
+    1L
+  } else {
+    0L
+  }
+  component <- if (component_count) {
+    paste0("log_q_", seq_len(component_count))
+  } else {
+    character()
+  }
+  c(base, training, dynamic, future, learned, component)
+}
+
+rqr_confirm_scalar_draws <- function(
+    result, generated, contract, method) {
+  training_times <- rqr_confirm_diagnostic_training_times(generated)
+  reported_horizons <- as.integer(
+    contract$config$design$reported_horizons
+  )
+  loss_draws <- function(lower, upper) {
+    observed <- which(is.finite(generated$training_y))
+    if (!length(observed)) {
+      stop("MCMC diagnostics require observed training responses.",
+           call. = FALSE)
+    }
+    vapply(seq_len(ncol(lower)), function(index) {
+      sum(rqr_check_loss(
+        rqr_residual_product(
+          generated$training_y[observed],
+          lower[observed, index], upper[observed, index]
+        ),
+        generated$coverage_level
+      ))
+    }, numeric(1L))
+  }
+  append_functions <- function(values, lower, upper, future_lower,
+                               future_upper, dynamic = TRUE) {
+    training <- rqr_confirm_interval_function_draws(
+      lower, upper, training_times,
+      sprintf("training_t%04d", training_times)
+    )
+    values <- cbind(values, training)
+    if (isTRUE(dynamic)) {
+      values <- cbind(
+        values,
+        rqr_confirm_interval_function_draws(
+          lower, upper, nrow(lower), "terminal"
+        )
+      )
+    }
+    cbind(
+      values,
+      rqr_confirm_interval_function_draws(
+        future_lower, future_upper, reported_horizons,
+        sprintf("future_h%02d", reported_horizons)
+      )
+    )
+  }
+  finalize <- function(values, label) {
+    expected <- rqr_confirm_diagnostic_schema(
+      method, generated, contract
+    )
+    if (!identical(colnames(values), expected) ||
+        any(!is.finite(values))) {
+      stop(
+        sprintf("%s diagnostic draws violate the exact schema.", label),
+        call. = FALSE
+      )
+    }
+    values[, expected, drop = FALSE]
+  }
   if (!is.null(result$fit) &&
       inherits(result$fit, "rqr_dlm_mcmc")) {
     root1 <- result$fit$samp.eta_root1
     root2 <- result$fit$samp.eta_root2
     lower <- pmin(root1, root2)
     upper <- pmax(root1, root2)
-    loss <- vapply(seq_len(ncol(lower)), function(index) {
-      sum(rqr_check_loss(
-        rqr_residual_product(
-          generated$training_y,
-          lower[, index], upper[, index]
-        ),
-        generated$coverage_level
-      ))
-    }, numeric(1L))
     values <- cbind(
       mean_lower = colMeans(lower),
       mean_upper = colMeans(upper),
       mean_midpoint = colMeans(0.5 * (lower + upper)),
       mean_width = colMeans(upper - lower),
-      observed_loss = loss
+      observed_loss = loss_draws(lower, upper)
     )
-    if (isTRUE(result$diagnostics$learned_lambda)) {
+    model_bundle <- rqr_confirm_model_bundle(generated)
+    future_root1 <- rqr_confirm_conditional_root_draws(
+      result$fit$samp.theta_terminal_root1,
+      model_bundle$future$FF, model_bundle$future$GG,
+      horizon = generated$H
+    )
+    future_root2 <- rqr_confirm_conditional_root_draws(
+      result$fit$samp.theta_terminal_root2,
+      model_bundle$future$FF, model_bundle$future$GG,
+      horizon = generated$H
+    )
+    values <- append_functions(
+      values, lower, upper,
+      pmin(future_root1, future_root2),
+      pmax(future_root1, future_root2)
+    )
+    if (identical(method, "M11")) {
+      if (!is.numeric(result$fit$samp.lambda) ||
+          length(result$fit$samp.lambda) != nrow(values) ||
+          any(!is.finite(result$fit$samp.lambda)) ||
+          any(result$fit$samp.lambda <= 0)) {
+        stop("Dynamic RQR diagnostic draws violate the exact schema.",
+             call. = FALSE)
+      }
       values <- cbind(
         values, log_lambda = log(result$fit$samp.lambda)
       )
     }
     if (!is.null(result$fit$samp.evolution_scale)) {
-      scale <- log(result$fit$samp.evolution_scale)
+      raw_scale <- as.matrix(result$fit$samp.evolution_scale)
+      if (nrow(raw_scale) != nrow(values) ||
+          any(!is.finite(raw_scale)) || any(raw_scale <= 0)) {
+        stop("Dynamic RQR diagnostic draws violate the exact schema.",
+             call. = FALSE)
+      }
+      scale <- log(raw_scale)
       colnames(scale) <- paste0(
         "log_q_", seq_len(ncol(scale))
       )
       values <- cbind(values, scale)
     }
-    return(values)
+    return(finalize(values, "Dynamic RQR"))
   }
   if (!is.null(result$fit) &&
       inherits(result$fit, "rqr_mcmc")) {
@@ -3394,22 +4501,29 @@ rqr_confirm_scalar_draws <- function(result, generated) {
     root2 <- X %*% t(result$fit$samp.beta_root2)
     lower <- pmin(root1, root2)
     upper <- pmax(root1, root2)
-    loss <- vapply(seq_len(ncol(lower)), function(index) {
-      sum(rqr_check_loss(
-        rqr_residual_product(
-          generated$training_y,
-          lower[, index], upper[, index]
-        ),
-        generated$coverage_level
-      ))
-    }, numeric(1L))
-    return(cbind(
+    values <- cbind(
       mean_lower = colMeans(lower),
       mean_upper = colMeans(upper),
       mean_midpoint = colMeans(0.5 * (lower + upper)),
       mean_width = colMeans(upper - lower),
-      observed_loss = loss
-    ))
+      observed_loss = loss_draws(lower, upper)
+    )
+    time_future <- (
+      generated$T + seq_len(generated$H)
+    ) / generated$T
+    X_future <- cbind(
+      intercept = 1, time = time_future,
+      predictor = generated$future_predictor
+    )
+    future_root1 <- X_future %*% t(result$fit$samp.beta_root1)
+    future_root2 <- X_future %*% t(result$fit$samp.beta_root2)
+    values <- append_functions(
+      values, lower, upper,
+      pmin(future_root1, future_root2),
+      pmax(future_root1, future_root2),
+      dynamic = FALSE
+    )
+    return(finalize(values, "Fixed-design RQR"))
   }
   if (!is.null(result$fits) &&
       length(result$fits) == 2L &&
@@ -3431,47 +4545,67 @@ rqr_confirm_scalar_draws <- function(result, generated) {
     raw_upper <- ordinate_draws(result$fits[[2L]])
     lower <- pmin(raw_lower, raw_upper)
     upper <- pmax(raw_lower, raw_upper)
-    loss <- vapply(seq_len(ncol(lower)), function(index) {
-      sum(rqr_check_loss(
-        rqr_residual_product(
-          generated$training_y,
-          lower[, index], upper[, index]
-        ),
-        generated$coverage_level
-      ))
-    }, numeric(1L))
-    return(cbind(
+    values <- cbind(
       mean_lower = colMeans(lower),
       mean_upper = colMeans(upper),
       mean_midpoint = colMeans(0.5 * (lower + upper)),
       mean_width = colMeans(upper - lower),
-      observed_loss = loss
-    ))
+      observed_loss = loss_draws(lower, upper)
+    )
+    terminal_draws <- function(fit) {
+      state <- unclass(fit$samp.theta)
+      dimensions <- dim(state)
+      matrix(
+        state[, dimensions[[2L]], ],
+        nrow = dimensions[[1L]], ncol = dimensions[[3L]]
+      )
+    }
+    model_bundle <- rqr_confirm_model_bundle(generated)
+    future_root1 <- rqr_confirm_conditional_root_draws(
+      terminal_draws(result$fits[[1L]]),
+      model_bundle$future$FF, model_bundle$future$GG,
+      horizon = generated$H
+    )
+    future_root2 <- rqr_confirm_conditional_root_draws(
+      terminal_draws(result$fits[[2L]]),
+      model_bundle$future$FF, model_bundle$future$GG,
+      horizon = generated$H
+    )
+    values <- append_functions(
+      values, lower, upper,
+      pmin(future_root1, future_root2),
+      pmax(future_root1, future_root2)
+    )
+    return(finalize(values, "Dynamic-quantile"))
   }
   NULL
 }
 
 rqr_confirm_chain_diagnostics <- function(
-    scalar_chains, contract, sentinel) {
+    scalar_chains, contract, sentinel, method, generated) {
   if (!length(scalar_chains) ||
       any(vapply(scalar_chains, is.null, logical(1L)))) {
     stop("MCMC diagnostics require retained scalar draws.",
          call. = FALSE)
   }
-  common <- Reduce(intersect, lapply(scalar_chains, colnames))
-  required <- c(
-    "mean_lower", "mean_upper", "mean_midpoint",
-    "mean_width", "observed_loss"
+  required <- rqr_confirm_diagnostic_schema(
+    method, generated, contract
   )
-  if (!all(required %in% common)) {
-    stop("A required diagnostic estimand disappeared.", call. = FALSE)
+  schemas <- lapply(scalar_chains, colnames)
+  if (any(!vapply(
+      schemas, identical, logical(1L), required
+    ))) {
+    stop(
+      "A diagnostic chain does not match the exact required estimand schema.",
+      call. = FALSE
+    )
   }
   lengths <- vapply(scalar_chains, nrow, integer(1L))
   if (length(unique(lengths)) != 1L) {
     stop("Diagnostic chains have unequal retained lengths.",
          call. = FALSE)
   }
-  rows <- lapply(common, function(variable) {
+  rows <- lapply(required, function(variable) {
     matrix_values <- do.call(cbind, lapply(
       scalar_chains, function(values) values[, variable]
     ))

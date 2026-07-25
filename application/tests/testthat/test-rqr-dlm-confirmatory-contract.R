@@ -723,15 +723,28 @@ test_that("collection verifies exact tasks, artifacts, and fit IDs", {
   )
   jsonlite::write_json(
     list(
-      schema_version = "rqrgibbs_dlm_wave/1.0.0",
+      schema_version = "rqrgibbs_dlm_wave/2.0.0",
+      canonical_wave_index = 1L,
       wave_id = "fixture", mode = if (plan$embedded_sentinel[[1L]]) {
         "sentinel-core"
       } else {
         "execute-confirmatory"
       },
+      phase = if (plan$embedded_sentinel[[1L]]) {
+        "sentinel"
+      } else {
+        "standard"
+      },
+      batch_group = "fixture", batch_target = 1L,
+      binding_digest = paste(rep("f", 64L), collapse = ""),
+      start_sha256 = paste(rep("1", 64L), collapse = ""),
+      same_batch_sentinel_pass =
+        if (plan$embedded_sentinel[[1L]]) NA else TRUE,
+      prior_batch_decision_sha256 = "",
       worker_limit = 1L, workers_used = 1L, task_count = 1L,
       all_workers_passed = TRUE, no_retry = TRUE, no_reseed = TRUE,
-      source_commit = paste(rep("a", 40L), collapse = "")
+      source_commit = paste(rep("a", 40L), collapse = ""),
+      runtime_tree_digest = paste(rep("e", 64L), collapse = "")
     ),
     file.path(root, "wave_manifest.json"),
     auto_unbox = TRUE, pretty = TRUE
@@ -814,6 +827,387 @@ test_that("wave plans and task subsets preserve the frozen execution order", {
     ),
     "invalid schema or task IDs"
   )
+})
+
+test_that("wave transitions enforce sentinel, predecessor, and batch evidence", {
+  environment <- load_confirmatory_helpers()
+  digest_a <- paste(rep("a", 64L), collapse = "")
+  digest_b <- paste(rep("b", 64L), collapse = "")
+  catalog <- data.frame(
+    canonical_wave_index = 1:4,
+    wave_id = c(
+      "group__target0100__sentinel",
+      "group__target0100__standard",
+      "group__target0200__sentinel",
+      "group__target0200__standard"
+    ),
+    mode = c(
+      "sentinel-core", "execute-confirmatory",
+      "sentinel-core", "execute-confirmatory"
+    ),
+    phase = rep(c("sentinel", "standard"), 2L),
+    batch_group = "group",
+    batch_target = rep(c(100L, 200L), each = 2L),
+    batch_sequence = rep(1:2, each = 2L),
+    study_stage = "core",
+    worker_limit = 1L, task_count = 1L,
+    same_batch_sentinel_wave_id = c(
+      "", "group__target0100__sentinel",
+      "", "group__target0200__sentinel"
+    ),
+    prior_batch_target = c(NA, NA, 100L, 100L),
+    required_predecessor_wave_ids = c(
+      "",
+      "group__target0100__sentinel",
+      paste(
+        "group__target0100__sentinel",
+        "group__target0100__standard", sep = "|"
+      ),
+      paste(
+        "group__target0100__sentinel",
+        "group__target0100__standard",
+        "group__target0200__sentinel", sep = "|"
+      )
+    ),
+    stringsAsFactors = FALSE
+  )
+  first <- environment$rqr_confirm_wave_state_transition(
+    catalog, NULL, catalog$wave_id[[1L]], digest_a
+  )
+  expect_identical(first$action, "launch")
+  expect_error(
+    environment$rqr_confirm_wave_state_transition(
+      catalog, NULL, catalog$wave_id[[2L]], digest_a
+    ),
+    "Only the next"
+  )
+  completion <- function(indices, decisions = rep("passed", length(indices)),
+                         binding = digest_a) {
+    data.frame(
+      canonical_wave_index = indices,
+      wave_id = catalog$wave_id[indices],
+      binding_digest = binding,
+      decision = decisions,
+      completion_sha256 = vapply(
+        indices,
+        function(index) paste(rep(as.character(index), 64L),
+                              collapse = ""),
+        character(1L)
+      ),
+      artifact_manifest_sha256 = vapply(
+        indices,
+        function(index) paste(rep("f", 64L), collapse = ""),
+        character(1L)
+      ),
+      stringsAsFactors = FALSE
+    )
+  }
+  failed <- completion(1L, "failed")
+  expect_error(
+    environment$rqr_confirm_wave_state_transition(
+      catalog, failed, catalog$wave_id[[2L]], digest_a
+    ),
+    "permanently blocks"
+  )
+  expect_error(
+    environment$rqr_confirm_wave_state_transition(
+      catalog, completion(1L), catalog$wave_id[[1L]], digest_a
+    ),
+    "Only the next"
+  )
+  second <- environment$rqr_confirm_wave_state_transition(
+    catalog, completion(1L), catalog$wave_id[[2L]], digest_a
+  )
+  expect_true(second$same_batch_sentinel_pass)
+  expect_error(
+    environment$rqr_confirm_wave_state_transition(
+      catalog, completion(1:2), catalog$wave_id[[3L]], digest_a
+    ),
+    "prior batch decision"
+  )
+  decision <- data.frame(
+    batch_group = "group", replications = 100L,
+    next_action = "add_complete_paired_DGP_batch",
+    next_replications = 200L, binding_digest = digest_a,
+    decision_sha256 = digest_b, stringsAsFactors = FALSE
+  )
+  third <- environment$rqr_confirm_wave_state_transition(
+    catalog, completion(1:2), catalog$wave_id[[3L]], digest_a,
+    decision
+  )
+  expect_identical(third$action, "launch")
+  precision_stop <- decision
+  precision_stop$next_action <- "precision_pass_stop"
+  precision_stop$next_replications <- 100L
+  third_stop <- environment$rqr_confirm_wave_state_transition(
+    catalog, completion(1:2), catalog$wave_id[[3L]], digest_a,
+    precision_stop
+  )
+  expect_identical(third_stop$action, "skip")
+  stopped_history <- completion(
+    1:3, c("passed", "passed", "skipped_precision_stop")
+  )
+  fourth_stop <- environment$rqr_confirm_wave_state_transition(
+    catalog, stopped_history, catalog$wave_id[[4L]], digest_a,
+    precision_stop
+  )
+  expect_identical(fourth_stop$action, "skip")
+  fractional <- decision
+  fractional$replications <- 100.5
+  expect_error(
+    environment$rqr_confirm_wave_state_transition(
+      catalog, completion(1:2), catalog$wave_id[[3L]], digest_a,
+      fractional
+    ),
+    "finite whole number"
+  )
+  expect_error(
+    environment$rqr_confirm_wave_state_transition(
+      catalog, completion(1:2, binding = digest_b),
+      catalog$wave_id[[3L]], digest_a, decision
+    ),
+    "completion history"
+  )
+})
+
+test_that("append-only wave records reject incomplete or altered history", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  catalog <- environment$rqr_confirm_wave_catalog(contract, "maximum")
+  binding <- list(
+    schema_version = "rqrgibbs_dlm_wave_run/1.0.0",
+    run_id = "fixture",
+    authorization_commit = paste(rep("a", 40L), collapse = ""),
+    reviewed_implementation_commit = paste(rep("b", 40L), collapse = ""),
+    runtime_tree_digest = paste(rep("c", 64L), collapse = ""),
+    config_sha256 = paste(rep("d", 64L), collapse = ""),
+    incidence_sha256 = paste(rep("e", 64L), collapse = ""),
+    seed_ledger_sha256 = paste(rep("f", 64L), collapse = ""),
+    task_plan_sha256 = paste(rep("1", 64L), collapse = ""),
+    wave_plan_sha256 = paste(rep("2", 64L), collapse = ""),
+    binding_digest = paste(rep("3", 64L), collapse = "")
+  )
+  root <- tempfile("rqr-wave-state-")
+  dir.create(root)
+  dir.create(file.path(root, "starts"))
+  dir.create(file.path(root, "completions"))
+  on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+  environment$rqr_confirm_atomic_write_json(
+    c(binding, list(canonical_wave_count = nrow(catalog))),
+    file.path(root, "run_contract.json")
+  )
+  wave <- catalog[1L, , drop = FALSE]
+  filename <- sprintf("0001__%s.json", wave$wave_id)
+  start_path <- file.path(root, "starts", filename)
+  completion_path <- file.path(root, "completions", filename)
+  output_root <- file.path(root, "wave-output")
+  dir.create(output_root)
+  wave_manifest_path <- file.path(
+    output_root, "wave_artifact_hashes.csv"
+  )
+  environment$rqr_confirm_atomic_write_csv(
+    data.frame(
+      path = "fixture.txt", bytes = 1,
+      sha256 = paste(rep("a", 64L), collapse = "")
+    ),
+    wave_manifest_path
+  )
+  wave_manifest_digest <- environment$rqr_confirm_sha256(
+    wave_manifest_path
+  )
+  task_digest <- paste(rep("4", 64L), collapse = "")
+  started <- list(
+    schema_version = "rqrgibbs_dlm_wave_start/1.0.0",
+    canonical_wave_index = 1L, wave_id = wave$wave_id,
+    mode = wave$mode, phase = wave$phase,
+    batch_group = wave$batch_group,
+    batch_target = wave$batch_target,
+    binding_digest = binding$binding_digest,
+    action = "launch",
+    required_predecessor_wave_ids = character(),
+    predecessor_completion_sha256 = character(),
+    predecessor_artifact_manifest_sha256 = character(),
+    same_batch_sentinel_pass = NA,
+    prior_batch_decision_sha256 = "",
+    prior_batch_next_action = "",
+    worker_limit = wave$worker_limit,
+    task_count = wave$task_count,
+    wave_task_plan_sha256 = task_digest,
+    output_root = output_root,
+    started_at_utc = "2026-07-25T12:00:00 UTC"
+  )
+  environment$rqr_confirm_atomic_write_json(started, start_path)
+  expect_error(
+    environment$rqr_confirm_wave_state_records(
+      root, catalog, binding
+    ),
+    "incomplete wave start"
+  )
+  completed <- c(
+    started[c(
+      "canonical_wave_index", "wave_id", "mode", "phase",
+      "batch_group", "batch_target", "binding_digest", "action"
+    )],
+    list(
+      schema_version =
+        "rqrgibbs_dlm_wave_completion/1.0.0",
+      decision = "passed",
+      start_sha256 =
+        environment$rqr_confirm_sha256(start_path)
+    ),
+    started[c(
+      "required_predecessor_wave_ids",
+      "predecessor_completion_sha256",
+      "predecessor_artifact_manifest_sha256",
+      "same_batch_sentinel_pass",
+      "prior_batch_decision_sha256", "prior_batch_next_action",
+      "worker_limit", "task_count",
+      "wave_task_plan_sha256", "output_root"
+    )],
+    list(
+      workers_used = 1L,
+      wave_artifact_hashes_sha256 =
+        wave_manifest_digest,
+      all_workers_passed = TRUE,
+      completed_at_utc = "2026-07-25T12:01:00 UTC"
+    )
+  )
+  environment$rqr_confirm_atomic_write_json(
+    completed, completion_path
+  )
+  records <- environment$rqr_confirm_wave_state_records(
+    root, catalog, binding
+  )
+  expect_identical(nrow(records$completions), 1L)
+  write("tampered", wave_manifest_path)
+  expect_error(
+    environment$rqr_confirm_wave_state_records(
+      root, catalog, binding
+    ),
+    "detached from its artifact manifest"
+  )
+  unlink(wave_manifest_path)
+  environment$rqr_confirm_atomic_write_csv(
+    data.frame(
+      path = "fixture.txt", bytes = 1,
+      sha256 = paste(rep("a", 64L), collapse = "")
+    ),
+    wave_manifest_path
+  )
+  unlink(completion_path)
+  completed$wave_id <- "altered-wave"
+  jsonlite::write_json(
+    completed, completion_path,
+    auto_unbox = TRUE, pretty = TRUE, null = "null"
+  )
+  expect_error(
+    environment$rqr_confirm_wave_state_records(
+      root, catalog, binding
+    ),
+    "immutable schema"
+  )
+})
+
+test_that("diagnostics require time-local terminal and future estimands", {
+  skip_if_not_installed("posterior")
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  ledger <- small_confirmatory_ledger(environment, contract)
+  generated <- environment$rqr_confirm_generate_dgp(
+    contract, "S05", 1L, ledger
+  )
+  required <- environment$rqr_confirm_diagnostic_schema(
+    "M11", generated, contract
+  )
+  expect_true(all(c(
+    "training_t0001_lower", "terminal_width",
+    "future_h20_midpoint", "log_lambda", "log_q_1"
+  ) %in% required))
+  chain <- matrix(
+    seq_len(40L * length(required)),
+    nrow = 40L, ncol = length(required),
+    dimnames = list(NULL, required)
+  )
+  missing_future <- chain[
+    , !grepl("^future_h", colnames(chain)), drop = FALSE
+  ]
+  expect_error(
+    environment$rqr_confirm_chain_diagnostics(
+      rep(list(missing_future), 4L), contract,
+      sentinel = TRUE, method = "M11", generated = generated
+    ),
+    "exact required estimand schema"
+  )
+  missing_terminal <- chain[
+    , !grepl("^terminal_", colnames(chain)), drop = FALSE
+  ]
+  expect_error(
+    environment$rqr_confirm_chain_diagnostics(
+      rep(list(missing_terminal), 4L), contract,
+      sentinel = TRUE, method = "M11", generated = generated
+    ),
+    "exact required estimand schema"
+  )
+  model_bundle <- environment$rqr_confirm_model_bundle(generated)
+  draws <- 40L
+  p <- length(model_bundle$training$m0)
+  components <- length(model_bundle$training$component_dims)
+  fit <- structure(
+    list(
+      samp.eta_root1 = matrix(-1, generated$T, draws),
+      samp.eta_root2 = matrix(2, generated$T, draws),
+      samp.theta_terminal_root1 = matrix(0, p, draws),
+      samp.theta_terminal_root2 = matrix(1, p, draws),
+      samp.lambda = rep(1, draws),
+      samp.evolution_scale = matrix(
+        1, draws, components
+      )
+    ),
+    class = "rqr_dlm_mcmc"
+  )
+  extracted <- environment$rqr_confirm_scalar_draws(
+    list(fit = fit), generated, contract, "M11"
+  )
+  expect_identical(colnames(extracted), required)
+  fit_missing_lambda <- fit
+  fit_missing_lambda$samp.lambda <- NULL
+  expect_error(
+    environment$rqr_confirm_scalar_draws(
+      list(fit = fit_missing_lambda), generated, contract, "M11"
+    ),
+    "exact schema"
+  )
+  fit$samp.evolution_scale <- NULL
+  expect_error(
+    environment$rqr_confirm_scalar_draws(
+      list(fit = fit), generated, contract, "M11"
+    ),
+    "exact schema"
+  )
+  lower_a <- rbind(rep(-1, generated$T), rep(-2, generated$T))
+  lower_a <- t(lower_a)
+  upper_a <- lower_a + 3
+  lower_b <- lower_a
+  upper_b <- upper_a
+  lower_b[1L, ] <- lower_b[1L, ] + c(1, -1)
+  lower_b[2L, ] <- lower_b[2L, ] + c(-1, 1)
+  upper_b[1L, ] <- upper_b[1L, ] + c(1, -1)
+  upper_b[2L, ] <- upper_b[2L, ] + c(-1, 1)
+  expect_equal(colMeans(lower_a), colMeans(lower_b))
+  local_a <- environment$rqr_confirm_interval_function_draws(
+    lower_a, upper_a, 1L, "training_t0001"
+  )
+  local_b <- environment$rqr_confirm_interval_function_draws(
+    lower_b, upper_b, 1L, "training_t0001"
+  )
+  expect_false(identical(local_a, local_b))
+  terminal <- rbind(c(1, 2), c(0.5, 1.5))
+  conditional <- environment$rqr_confirm_conditional_root_draws(
+    terminal,
+    FF_future = matrix(c(1, 0, 1, 0), 2L, 2L),
+    GG_future = diag(2L)
+  )
+  expect_identical(conditional, matrix(c(1, 1, 2, 2), 2L, 2L))
 })
 
 test_that("recursive manifests reject altered bytes, file sets, and symlinks", {

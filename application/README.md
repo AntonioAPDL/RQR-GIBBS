@@ -126,8 +126,17 @@ The reviewed confirmatory contract is
 `scripts/15_run_rqr_dlm_confirmatory_simulation.R` implements fail-closed
 preflight, oracle-reference, embedded-sentinel, confirmatory, collection, and
 audit modes. `scripts/17_launch_rqr_dlm_confirmatory_wave.R` partitions one
-canonical precision-batch wave across the frozen worker slots; every worker
-still passes through the process-group monitor and the commit-bound
-authorization boundary. The collector verifies exact task sets, recursive
-artifact hashes, and a common source/runtime/seed bundle before producing an
-analysis. Both execution flags remain false pending independent review.
+canonical precision-batch wave across the frozen worker slots. Its append-only
+state permits only the next wave, requires a same-batch sentinel pass before
+standard work, and binds later batches to the preceding verified precision
+decision. `scripts/18_orchestrate_rqr_dlm_confirmatory_simulation.R` advances
+that state and performs collection at every batch boundary;
+`scripts/19_prepare_rqr_dlm_confirmatory_authorization.R` constructs the exact
+post-review authorization bundle; `scripts/20_launch_rqr_dlm_confirmatory_simulation.sh`
+starts the complete study under a detached supervisor; and
+`scripts/21_healthcheck_rqr_dlm_confirmatory_simulation.R` reports read-only
+progress. Every worker still passes through the process-group monitor and the
+commit-bound authorization boundary. The collector verifies exact task sets,
+recursive artifact hashes, and a common source/runtime/seed bundle before
+producing an analysis. Both execution flags remain false pending independent
+review.

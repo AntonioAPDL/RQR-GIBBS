@@ -1,0 +1,88 @@
+{
+  "R_execution_available": false,
+  "accepted_tracked_evidence": {
+    "confirmatory_fits_executed": 0,
+    "oracle_reference_gates": "15/15",
+    "preflight_gates": "22/22",
+    "runtime_attestation_sha256": "d07343d2f2f77fc17d34401e6a42a83c6de97e93276614ba96c9812897ae7598",
+    "runtime_tree": "608e59fd99c9f16e13d1dd9965d599a34e39e7dbdfbeca024ecd3221567c90c2"
+  },
+  "access_path_used": "attached exact archive",
+  "blocking_findings": [
+    {
+      "id": "WAV-001",
+      "smallest_correction": "Authorization-bound next-wave state machine with exact predecessor manifests, same-batch sentinel pass, prior batch decision, and skip/replay/cross-run negative tests.",
+      "source_paths": [
+        "application/scripts/17_launch_rqr_dlm_confirmatory_wave.R",
+        "application/scripts/lib/rqr_dlm_confirmatory_simulation.R"
+      ],
+      "title": "Wave launcher does not enforce canonical predecessor/sentinel/batch progression"
+    },
+    {
+      "id": "DIA-001",
+      "smallest_correction": "Exact method-aware diagnostic schema covering terminal, reported-horizon future conditional means, and predeclared time-specific endpoint functions; reject omitted columns.",
+      "source_paths": [
+        "application/scripts/lib/rqr_dlm_confirmatory_simulation.R"
+      ],
+      "title": "MCMC diagnostic schema omits time-local, terminal, and future root functionals"
+    }
+  ],
+  "decisions": {
+    "authorization_contract": "PASS",
+    "canonical_wave_plan": "PASS",
+    "collection_failure_contract": "PASS",
+    "create_flag_only_authorization_commit": "NO_GO",
+    "diagnostics_and_precision_stopping": "NO_GO",
+    "implement_narrow_corrections": "GO",
+    "launch_complete_confirmatory_study": "NO_GO",
+    "launch_disposable_pilot": "NO_GO",
+    "oracle_reference_mathematics": "PASS",
+    "output15_design_fidelity": "PASS",
+    "rebuild_attest_authorized_runtime": "NO_GO_CURRENT_SOURCE",
+    "repository_validation_evidence": "ACCEPTED_AS_TRACKED_NOT_RERUN",
+    "rng_and_sentinel_allocation": "PASS",
+    "runtime_lineage": "PASS",
+    "statistical_target_and_interpretation": "PASS",
+    "wave_execution_sequence": "NO_GO"
+  },
+  "design_contract": {
+    "candidate_tuning_fits": 0,
+    "extra_sentinel_chains": 2538,
+    "future_response_subreplications": 20,
+    "incidence_rows": 208,
+    "included_rows": 89,
+    "maximum_logical_fits": 49200,
+    "maximum_software_calls": 43800,
+    "maximum_total_mcmc_chains": 40938,
+    "omitted_rows": 119,
+    "standard_mcmc_chains": 38400
+  },
+  "evidence_interpretation": "Any later result is limited to repeated-sampling operating characteristics under the frozen scenario/method/schedule contract; it is not response-predictive inference, universal superiority, or automatic learned-scale calibration.",
+  "input_archive": {
+    "filename": "rqr_gibbs_output16_review_input_4b95064b01350a6b020146b189dc9d44936aed8f.zip",
+    "integrity_verified": true,
+    "safe_extraction_verified": true,
+    "sha256": "7fa1c754940e9001cee2b8069297e70f6615b3d74647da826504f9a237fdcbef"
+  },
+  "nonblocking_findings": [
+    {
+      "current_prompt_bytes": 14932,
+      "current_prompt_sha256": "57b9fdd6aba650887a308cde99d19305bc0da805288b4aa040839de6f8f73a1f",
+      "id": "SRC-002",
+      "title": "Tracked evidence manifest has stale final Output-16 prompt hash"
+    },
+    {
+      "effect": "Current full-size sampling can permute retained rows but does not break distributional summaries or q-row alignment.",
+      "id": "FCST-001",
+      "title": "Use nd=NULL when exact retained forecast draw identity is desired"
+    }
+  ],
+  "package_version": "0.1.0.9017",
+  "reconstructed_application_tree": "29f938a8359e0c8bf23c41584f91c0b1fd38e25b",
+  "review_date": "2026-07-25",
+  "reviewed_main_commit": "7b7c47204801032e5eb4fe6c9fd332aaaedead43",
+  "reviewed_reconciliation_branch_tip": "4b95064b01350a6b020146b189dc9d44936aed8f",
+  "schema_version": "chatgpt_pro_output16_launch_decision/1.0.0",
+  "source_and_mathematical_recomputation_performed": true,
+  "tracked_execution_evidence_independently_rerun": false
+}

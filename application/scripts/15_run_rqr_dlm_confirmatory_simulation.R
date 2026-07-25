@@ -40,7 +40,7 @@ sys.source(
 contract <- rqr_confirm_read_contract(repo_root)
 rqr_confirm_validate_contract(
   contract,
-  require_closed = !mode %in% c("sentinel-core", "execute-confirmatory")
+  require_closed = FALSE
 )
 rqr_confirm_validate_budget(contract)
 
@@ -288,7 +288,7 @@ if (mode == "preflight") {
       "schema_1_0", "incidence_208_rows", "included_89",
       "omitted_119", "budget_reproduced", "candidate_fits_zero",
       "LEcuyer_full_state_unique", "future_substreams_20",
-      "sentinels_preselected", "execution_flags_false",
+      "sentinels_preselected", "execution_state_valid",
       "disk_at_least_50_GiB", "workers_at_most_32",
       "one_thread_per_worker", "sampled_worker_thread_envelope_two",
       "sampled_reference_thread_envelope_four",
@@ -307,7 +307,13 @@ if (mode == "preflight") {
       contract$config$design$future_subreplications == 20L,
       all(sentinels$selected_before_data),
       !contract$config$diagnostic_pilot_execution_authorized &&
-        !contract$config$confirmatory_execution_authorized,
+        (
+          !contract$config$confirmatory_execution_authorized ||
+            (
+              nzchar(expected_commit) &&
+                !is.null(primary_binding)
+            )
+        ),
       available_GiB >= 50,
       contract$config$resources$workers <= 32L,
       contract$config$resources$threads_per_worker == 1L,
@@ -385,19 +391,24 @@ if (mode == "preflight") {
       authorization_bundle = NULL
     )
     data.frame(
-      test = "execute_without_flag_or_bundle",
+      test = "execute_without_complete_authorization_bundle",
       rejected = FALSE, message = "", pass = FALSE,
       stringsAsFactors = FALSE
     )
   }, error = function(error) {
     message <- conditionMessage(error)
     data.frame(
-      test = "execute_without_flag_or_bundle",
+      test = "execute_without_complete_authorization_bundle",
       rejected = TRUE, message = message,
-      pass = grepl(
-        "execution is disabled", message,
-        fixed = TRUE, ignore.case = TRUE
-      ),
+      pass =
+        grepl(
+          "execution is disabled", message,
+          fixed = TRUE, ignore.case = TRUE
+        ) ||
+        grepl(
+          "authorization is incomplete", message,
+          fixed = TRUE, ignore.case = TRUE
+        ),
       stringsAsFactors = FALSE
     )
   })
@@ -1244,12 +1255,14 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
         ]] <- metrics[[sprintf("coverage_h%02d", horizon)]]
       }
       if (mcmc_method) {
-        scalar_chains <- lapply(
-          chain_results, rqr_confirm_scalar_draws,
-          generated = generated
-        )
+        scalar_chains <- lapply(chain_results, function(value) {
+          rqr_confirm_scalar_draws(
+            value, generated, contract, method
+          )
+        })
         diagnostics <- rqr_confirm_chain_diagnostics(
-          scalar_chains, contract, sentinel = method_is_sentinel
+          scalar_chains, contract, sentinel = method_is_sentinel,
+          method = method, generated = generated
         )
         diagnostics$DGP <- task$DGP[[1L]]
         diagnostics$replication <- task$replication[[1L]]

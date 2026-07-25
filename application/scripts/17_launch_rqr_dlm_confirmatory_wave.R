@@ -1,8 +1,11 @@
 #!/usr/bin/env Rscript
 
-# Launch one authorization-bound confirmatory task wave.  This coordinator
-# only partitions a reviewed canonical wave across its frozen worker slots.
-# Every worker still enters the fail-closed runner and process-group monitor.
+# Launch exactly the next authorization-bound confirmatory task wave.
+#
+# The append-only state contract prevents arbitrary wave selection, replay,
+# skipping the same-batch sentinel, or expanding a replication batch without
+# a verified prior batch decision. A recorded start without a terminal
+# completion is intentionally non-retryable.
 
 arguments <- commandArgs(trailingOnly = TRUE)
 if (length(arguments) != 4L) {
@@ -23,6 +26,9 @@ output_root <- normalizePath(
 )
 if (!mode %in% c("sentinel-core", "execute-confirmatory")) {
   stop("The wave launcher accepts execution modes only.", call. = FALSE)
+}
+if (!grepl("^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$", wave_id)) {
+  stop("The requested wave ID is not path safe.", call. = FALSE)
 }
 
 repo_root <- normalizePath(getwd(), winslash = "/", mustWork = TRUE)
@@ -45,6 +51,102 @@ if (!isTRUE(contract$config$confirmatory_execution_authorized)) {
     authorization_bundle = NULL
   )
 }
+
+required_environment <- c(
+  expected_commit = "RQR_EXPECTED_PRIMARY_COMMIT",
+  authorization = "RQR_CONFIRMATORY_AUTHORIZATION_BUNDLE",
+  primary_attestation = "RQR_PRIMARY_RUNTIME_ATTESTATION",
+  canonical_task_plan = "RQR_CONFIRMATORY_CANONICAL_TASK_PLAN",
+  seed_ledger = "RQR_CONFIRM_SEED_LEDGER",
+  state_root = "RQR_CONFIRMATORY_WAVE_STATE_ROOT",
+  run_id = "RQR_CONFIRMATORY_RUN_ID"
+)
+environment_values <- vapply(
+  required_environment, Sys.getenv, character(1L), unset = ""
+)
+if (any(!nzchar(environment_values))) {
+  stop(
+    paste(
+      "The wave launcher requires the commit, authorization, runtime,",
+      "canonical-plan, seed-ledger, state-root, and run-ID environment."
+    ),
+    call. = FALSE
+  )
+}
+expected_commit <- tolower(environment_values[["expected_commit"]])
+if (!grepl("^[0-9a-f]{40}$", expected_commit)) {
+  stop("RQR_EXPECTED_PRIMARY_COMMIT must be a complete SHA.",
+       call. = FALSE)
+}
+required_file_fields <- c(
+  "authorization", "primary_attestation",
+  "canonical_task_plan", "seed_ledger"
+)
+required_files <- normalizePath(
+  environment_values[required_file_fields],
+  winslash = "/", mustWork = TRUE
+)
+names(required_files) <- required_file_fields
+state_root <- normalizePath(
+  environment_values[["state_root"]], winslash = "/", mustWork = FALSE
+)
+
+git_output <- function(arguments) {
+  output <- system2(
+    "git", c("-C", shQuote(repo_root), arguments),
+    stdout = TRUE, stderr = TRUE,
+    env = c("GIT_OPTIONAL_LOCKS=0", "GIT_TERMINAL_PROMPT=0")
+  )
+  status <- attr(output, "status")
+  if (is.null(status)) status <- 0L
+  if (!identical(as.integer(status), 0L)) {
+    stop("A required read-only Git query failed.", call. = FALSE)
+  }
+  output
+}
+source_commit <- tolower(trimws(git_output(c("rev-parse", "HEAD"))[[1L]]))
+git_status <- git_output(c(
+  "status", "--porcelain=v2", "--untracked-files=all"
+))
+if (!identical(source_commit, expected_commit) || length(git_status)) {
+  stop("The wave launcher requires the exact clean authorization commit.",
+       call. = FALSE)
+}
+
+authorization <- jsonlite::read_json(
+  required_files[["authorization"]], simplifyVector = TRUE
+)
+primary_attestation <- jsonlite::read_json(
+  required_files[["primary_attestation"]], simplifyVector = TRUE
+)
+required_authorization <- c(
+  "schema_version", "reviewed_implementation_commit",
+  "authorization_commit", "authorization_diff_only_flag",
+  "explicit_user_confirmation", "all_reference_gates_pass",
+  "primary_worktree_clean", "primary_runtime_tree_digest",
+  "seed_ledger_sha256", "task_plan_sha256"
+)
+if (!all(required_authorization %in% names(authorization)) ||
+    !identical(
+      authorization$schema_version,
+      "rqrgibbs_dlm_confirmatory_authorization/1.0.0"
+    ) ||
+    !identical(
+      tolower(as.character(authorization$authorization_commit)),
+      expected_commit
+    ) ||
+    !isTRUE(authorization$authorization_diff_only_flag) ||
+    !isTRUE(authorization$explicit_user_confirmation) ||
+    !isTRUE(authorization$all_reference_gates_pass) ||
+    !isTRUE(authorization$primary_worktree_clean) ||
+    !identical(
+      tolower(as.character(primary_attestation$runtime_tree_digest)),
+      tolower(as.character(authorization$primary_runtime_tree_digest))
+    )) {
+  stop("The launcher authorization or isolated runtime binding is invalid.",
+       call. = FALSE)
+}
+
 wave_plan_path <- normalizePath(
   wave_plan_argument, winslash = "/", mustWork = TRUE
 )
@@ -57,25 +159,224 @@ if (!identical(supplied_plan, reviewed_plan)) {
   stop("The supplied wave plan is not the complete canonical plan.",
        call. = FALSE)
 }
-selected <- supplied_plan[supplied_plan$wave_id == wave_id, , drop = FALSE]
-if (!nrow(selected) || length(unique(selected$mode)) != 1L ||
-    !identical(unique(selected$mode), mode)) {
-  stop("The requested wave ID and runner mode are inconsistent.",
+canonical_tasks <- rqr_confirm_replication_plan(
+  contract, planning = "maximum"
+)
+supplied_tasks <- utils::read.csv(
+  required_files[["canonical_task_plan"]],
+  stringsAsFactors = FALSE, check.names = FALSE
+)
+rownames(canonical_tasks) <- rownames(supplied_tasks) <- NULL
+if (!identical(supplied_tasks, canonical_tasks)) {
+  stop("The authorization-bound canonical task plan changed.",
+       call. = FALSE)
+}
+rqr_confirm_validate_seed_ledger(
+  utils::read.csv(
+    required_files[["seed_ledger"]],
+    stringsAsFactors = FALSE, check.names = FALSE
+  ),
+  contract, planning = "maximum", require_complete = TRUE
+)
+
+config_path <- file.path(
+  repo_root, "application", "config", "rqr_dlm",
+  "rqr_dlm_main_simulation_20260724.R"
+)
+catalog <- rqr_confirm_wave_catalog(contract, planning = "maximum")
+binding <- rqr_confirm_wave_binding(
+  run_id = environment_values[["run_id"]],
+  expected_commit = expected_commit,
+  authorization = authorization,
+  config_sha256 = rqr_confirm_sha256(config_path),
+  incidence_sha256 = rqr_confirm_sha256(
+    contract$paths$incidence_path
+  ),
+  seed_ledger_sha256 = rqr_confirm_sha256(
+    required_files[["seed_ledger"]]
+  ),
+  task_plan_sha256 = rqr_confirm_sha256(
+    required_files[["canonical_task_plan"]]
+  ),
+  wave_plan_sha256 = rqr_confirm_sha256(wave_plan_path)
+)
+
+if (!dir.exists(state_root)) {
+  dir.create(state_root, recursive = TRUE, showWarnings = FALSE)
+  dir.create(file.path(state_root, "starts"))
+  dir.create(file.path(state_root, "completions"))
+  run_contract <- c(
+    binding,
+    list(
+      canonical_wave_count = nrow(catalog),
+      created_at_utc = format(
+        Sys.time(), tz = "UTC", usetz = TRUE
+      )
+    )
+  )
+  rqr_confirm_atomic_write_json(
+    run_contract, file.path(state_root, "run_contract.json")
+  )
+}
+records <- rqr_confirm_wave_state_records(
+  state_root, catalog, binding
+)
+next_index <- if (is.null(records$completions)) {
+  1L
+} else {
+  nrow(records$completions) + 1L
+}
+if (next_index > nrow(catalog)) {
+  stop("Every canonical confirmatory wave is already terminal.",
+       call. = FALSE)
+}
+current <- catalog[next_index, , drop = FALSE]
+prior_decision <- NULL
+if (!is.na(current$prior_batch_target)) {
+  prior_path <- Sys.getenv(
+    "RQR_CONFIRMATORY_PRIOR_BATCH_DECISION", unset = ""
+  )
+  if (!nzchar(prior_path)) {
+    stop("The next wave requires a verified prior batch decision.",
+         call. = FALSE)
+  }
+  prior_decision <- rqr_confirm_read_prior_batch_decision(
+    prior_path, current, binding, records$completion_values
+  )
+}
+transition <- rqr_confirm_wave_state_transition(
+  catalog, records$completions, wave_id, binding$binding_digest,
+  prior_batch_decision = prior_decision
+)
+if (!identical(as.character(transition$current$mode), mode)) {
+  stop("The requested runner mode differs from the next canonical wave.",
        call. = FALSE)
 }
 if (file.exists(output_root) || dir.exists(output_root)) {
   stop("The wave output root must be fresh.", call. = FALSE)
 }
-dir.create(output_root, recursive = TRUE, showWarnings = FALSE)
 
-task_fields <- names(rqr_confirm_replication_plan(
-  contract, planning = "maximum"
-))
+selected <- supplied_plan[
+  supplied_plan$wave_id == wave_id, , drop = FALSE
+]
+if (!nrow(selected) ||
+    length(unique(selected$mode)) != 1L ||
+    !identical(unique(selected$mode), mode)) {
+  stop("The requested wave ID and runner mode are inconsistent.",
+       call. = FALSE)
+}
+task_fields <- names(canonical_tasks)
 wave_tasks <- selected[task_fields]
 rqr_confirm_validate_task_subset(wave_tasks, contract)
+temporary_task_plan <- tempfile("wave-task-plan-", tmpdir = state_root)
+on.exit(unlink(temporary_task_plan, force = TRUE), add = TRUE)
+utils::write.csv(
+  wave_tasks, temporary_task_plan,
+  row.names = FALSE, quote = TRUE
+)
+wave_task_plan_sha256 <- rqr_confirm_sha256(temporary_task_plan)
+timestamp_utc <- function() {
+  format(Sys.time(), tz = "UTC", usetz = TRUE)
+}
+state_filename <- sprintf("%04d__%s.json", next_index, wave_id)
+start_path <- file.path(state_root, "starts", state_filename)
+completion_path <- file.path(
+  state_root, "completions", state_filename
+)
+start_record <- list(
+  schema_version = "rqrgibbs_dlm_wave_start/1.0.0",
+  canonical_wave_index = next_index,
+  wave_id = wave_id, mode = mode,
+  phase = as.character(current$phase),
+  batch_group = as.character(current$batch_group),
+  batch_target = as.integer(current$batch_target),
+  binding_digest = binding$binding_digest,
+  action = transition$action,
+  required_predecessor_wave_ids =
+    as.character(transition$required_predecessor_wave_ids),
+  predecessor_completion_sha256 =
+    as.character(transition$predecessor_completion_sha256),
+  predecessor_artifact_manifest_sha256 =
+    as.character(
+      transition$predecessor_artifact_manifest_sha256
+    ),
+  same_batch_sentinel_pass =
+    transition$same_batch_sentinel_pass,
+  prior_batch_decision_sha256 =
+    transition$prior_batch_decision_sha256,
+  prior_batch_next_action =
+    transition$prior_batch_next_action,
+  worker_limit = as.integer(current$worker_limit),
+  task_count = as.integer(current$task_count),
+  wave_task_plan_sha256 = wave_task_plan_sha256,
+  output_root = output_root,
+  started_at_utc = timestamp_utc()
+)
+rqr_confirm_atomic_write_json(start_record, start_path)
+
+write_completion <- function(
+    decision, all_workers_passed, workers_used,
+    wave_artifact_hashes_sha256 = "") {
+  completion <- list(
+    schema_version = "rqrgibbs_dlm_wave_completion/1.0.0",
+    canonical_wave_index = next_index,
+    wave_id = wave_id, mode = mode,
+    phase = as.character(current$phase),
+    batch_group = as.character(current$batch_group),
+    batch_target = as.integer(current$batch_target),
+    binding_digest = binding$binding_digest,
+    action = transition$action,
+    decision = decision,
+    start_sha256 = rqr_confirm_sha256(start_path),
+    required_predecessor_wave_ids =
+      as.character(transition$required_predecessor_wave_ids),
+    predecessor_completion_sha256 =
+      as.character(transition$predecessor_completion_sha256),
+    predecessor_artifact_manifest_sha256 =
+      as.character(
+        transition$predecessor_artifact_manifest_sha256
+      ),
+    same_batch_sentinel_pass =
+      transition$same_batch_sentinel_pass,
+    prior_batch_decision_sha256 =
+      transition$prior_batch_decision_sha256,
+    prior_batch_next_action =
+      transition$prior_batch_next_action,
+    worker_limit = as.integer(current$worker_limit),
+    workers_used = as.integer(workers_used),
+    task_count = as.integer(current$task_count),
+    wave_task_plan_sha256 = wave_task_plan_sha256,
+    output_root = output_root,
+    wave_artifact_hashes_sha256 =
+      wave_artifact_hashes_sha256,
+    all_workers_passed = isTRUE(all_workers_passed),
+    completed_at_utc = timestamp_utc()
+  )
+  rqr_confirm_atomic_write_json(completion, completion_path)
+}
+
+if (identical(transition$action, "skip")) {
+  write_completion(
+    "skipped_precision_stop", all_workers_passed = FALSE,
+    workers_used = 0L
+  )
+  cat("Confirmatory wave recorded as a precision-stop skip.\n")
+  cat("  wave:", wave_id, "\n")
+  cat("  state:", state_root, "\n")
+  quit(save = "no", status = 0L, runLast = FALSE)
+}
+
+dir.create(output_root, recursive = TRUE, showWarnings = FALSE)
 rqr_confirm_atomic_write_csv(
   wave_tasks, file.path(output_root, "wave_task_plan.csv")
 )
+if (!identical(
+    rqr_confirm_sha256(file.path(output_root, "wave_task_plan.csv")),
+    wave_task_plan_sha256
+  )) {
+  stop("The published wave task plan differs from its start record.",
+       call. = FALSE)
+}
 rqr_confirm_atomic_write_csv(
   selected, file.path(output_root, "wave_assignment.csv")
 )
@@ -84,8 +385,7 @@ wrapper <- file.path(
   repo_root, "application", "scripts",
   "15_run_rqr_dlm_confirmatory_simulation.sh"
 )
-if (!file.exists(wrapper) ||
-    file.access(wrapper, mode = 1L) != 0L) {
+if (!file.exists(wrapper) || file.access(wrapper, mode = 1L) != 0L) {
   stop("The monitored confirmatory worker wrapper is unavailable.",
        call. = FALSE)
 }
@@ -100,7 +400,9 @@ dir.create(log_root)
 dir.create(monitor_root)
 
 run_worker <- function(worker_slot) {
-  assigned <- selected[selected$worker_slot == worker_slot, , drop = FALSE]
+  assigned <- selected[
+    selected$worker_slot == worker_slot, , drop = FALSE
+  ]
   shard <- assigned[task_fields]
   shard_path <- file.path(
     shard_root, sprintf("worker-%02d.csv", worker_slot)
@@ -129,7 +431,8 @@ run_worker <- function(worker_slot) {
       ),
       sprintf(
         "RQR_MAX_PROCESS_GROUP_THREADS=%d",
-        contract$config$resources$sampled_process_group_thread_ceiling
+        contract$config$resources$
+          sampled_process_group_thread_ceiling
       )
     ),
     wait = TRUE
@@ -143,19 +446,26 @@ run_worker <- function(worker_slot) {
     full.names = TRUE
   )
   telemetry_paths <- setdiff(telemetry_paths, summary_paths)
-  if (length(summary_paths) != 1L || length(telemetry_paths) != 1L) {
-    stop("A worker did not publish exactly one resource evidence pair.",
-         call. = FALSE)
+  if (length(summary_paths) != 1L ||
+      length(telemetry_paths) != 1L) {
+    stop(
+      "A worker did not publish exactly one resource evidence pair.",
+      call. = FALSE
+    )
   }
   data.frame(
-    wave_id = wave_id, mode = mode, worker_slot = worker_slot,
-    task_count = nrow(shard), exit_status = as.integer(status),
+    wave_id = wave_id, mode = mode,
+    worker_slot = worker_slot,
+    task_count = nrow(shard),
+    exit_status = as.integer(status),
     output_directory = worker_output,
     task_file_sha256 = rqr_confirm_sha256(shard_path),
     stdout_sha256 = rqr_confirm_sha256(stdout_path),
     stderr_sha256 = rqr_confirm_sha256(stderr_path),
-    resource_summary_sha256 = rqr_confirm_sha256(summary_paths[[1L]]),
-    resource_telemetry_sha256 = rqr_confirm_sha256(telemetry_paths[[1L]]),
+    resource_summary_sha256 =
+      rqr_confirm_sha256(summary_paths[[1L]]),
+    resource_telemetry_sha256 =
+      rqr_confirm_sha256(telemetry_paths[[1L]]),
     stringsAsFactors = FALSE
   )
 }
@@ -176,33 +486,48 @@ if (any(worker_error)) {
       schema_version = "rqrgibbs_dlm_wave_failure/1.0.0",
       wave_id = wave_id, mode = mode,
       message_digests = vapply(
-        messages,
-        digest::digest, character(1L),
+        messages, digest::digest, character(1L),
         algo = "sha256", serialize = FALSE
       )
     ),
     file.path(output_root, "wave_launcher_failure.json")
   )
-  stop("At least one confirmatory worker could not be launched.",
-       call. = FALSE)
+  worker_results <- worker_results[!worker_error]
 }
-worker_results <- do.call(rbind, worker_results)
-rqr_confirm_atomic_write_csv(
-  worker_results, file.path(output_root, "wave_worker_status.csv")
-)
+worker_results <- if (length(worker_results)) {
+  do.call(rbind, worker_results)
+} else {
+  data.frame()
+}
+if (nrow(worker_results)) {
+  rqr_confirm_atomic_write_csv(
+    worker_results, file.path(output_root, "wave_worker_status.csv")
+  )
+}
+all_workers_passed <- !any(worker_error) &&
+  nrow(worker_results) == length(worker_slots) &&
+  all(worker_results$exit_status == 0L)
 rqr_confirm_atomic_write_json(
   list(
-    schema_version = "rqrgibbs_dlm_wave/1.0.0",
+    schema_version = "rqrgibbs_dlm_wave/2.0.0",
+    canonical_wave_index = next_index,
     wave_id = wave_id, mode = mode,
+    phase = as.character(current$phase),
+    batch_group = as.character(current$batch_group),
+    batch_target = as.integer(current$batch_target),
+    binding_digest = binding$binding_digest,
+    start_sha256 = rqr_confirm_sha256(start_path),
+    same_batch_sentinel_pass =
+      transition$same_batch_sentinel_pass,
+    prior_batch_decision_sha256 =
+      transition$prior_batch_decision_sha256,
     worker_limit = unique(selected$worker_limit),
     workers_used = length(worker_slots),
     task_count = nrow(selected),
-    all_workers_passed = all(worker_results$exit_status == 0L),
+    all_workers_passed = all_workers_passed,
     no_retry = TRUE, no_reseed = TRUE,
-    source_commit = trimws(system2(
-      "git", c("-C", shQuote(repo_root), "rev-parse", "HEAD"),
-      stdout = TRUE, env = c("GIT_OPTIONAL_LOCKS=0")
-    ))
+    source_commit = source_commit,
+    runtime_tree_digest = binding$runtime_tree_digest
   ),
   file.path(output_root, "wave_manifest.json")
 )
@@ -210,7 +535,16 @@ hashes <- rqr_confirm_recursive_manifest(output_root)
 rqr_confirm_atomic_write_csv(
   hashes, file.path(output_root, "wave_artifact_hashes.csv")
 )
-if (any(worker_results$exit_status != 0L)) {
+wave_hash <- rqr_confirm_sha256(
+  file.path(output_root, "wave_artifact_hashes.csv")
+)
+write_completion(
+  if (all_workers_passed) "passed" else "failed",
+  all_workers_passed = all_workers_passed,
+  workers_used = length(worker_slots),
+  wave_artifact_hashes_sha256 = wave_hash
+)
+if (!all_workers_passed) {
   stop("A confirmatory worker failed; no later wave is authorized.",
        call. = FALSE)
 }
@@ -219,3 +553,4 @@ cat("  wave:", wave_id, "\n")
 cat("  mode:", mode, "\n")
 cat("  workers:", length(worker_slots), "\n")
 cat("  output:", output_root, "\n")
+cat("  state:", state_root, "\n")

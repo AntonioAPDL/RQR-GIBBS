@@ -157,6 +157,15 @@ intention-to-run denominator. Confirmatory execution remains false pending a
 new independent review and a separate flag-only authorization commit; no
 standalone performance pilot is planned.
 
+Cross-wave execution is also fail closed. An append-only run state accepts
+only the next canonical wave, requires the same-batch sentinel pass before a
+standard wave, and requires a verified prior precision decision before a
+larger replication batch. The complete coordinator can resume only after a
+terminal wave record, collects evidence at each batch boundary, and stops
+permanently after a failed or incomplete wave. A separate read-only health
+check reports the supervisor, terminal-wave count, latest collection, next
+canonical wave, and local artifact size without changing the run.
+
 ## Pinned external reference
 
 Expected exdqlm RQR branch:
