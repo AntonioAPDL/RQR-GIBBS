@@ -51,11 +51,16 @@ stderr_file="$monitor_root/${mode}-${stamp}-$$.stderr.log"
 max_seconds="${RQR_MAX_PROCESS_WAVE_SECONDS:-1209600}"
 max_rss_kib="${RQR_MAX_PROCESS_GROUP_RSS_KIB:-1572864}"
 # BLAS/OpenMP and other numerical libraries remain fixed at one compute
-# thread above.  NLWP counts every OS thread, including a transient helper
-# created while loading or running a comparator.  The reviewed resource
-# contract therefore gives that sampled process-group telemetry a distinct,
-# still fail-closed ceiling of two.
-max_threads="${RQR_MAX_PROCESS_GROUP_THREADS:-2}"
+# thread above.  NLWP counts every OS thread, including helper processes
+# created by `R CMD config` while the oracle stage records its toolchain.
+# The declared resource contract therefore gives sampled process-group
+# telemetry a distinct, still fail-closed ceiling: two for ordinary workers
+# and four for the reference stage that invokes the toolchain helper.
+default_max_threads=2
+if [[ "$mode" == "oracle-reference" ]]; then
+  default_max_threads=4
+fi
+max_threads="${RQR_MAX_PROCESS_GROUP_THREADS:-$default_max_threads}"
 poll_seconds="${RQR_MONITOR_POLL_SECONDS:-0.2}"
 
 if ! [[ "$max_seconds" =~ ^[0-9]+$ ]] ||

@@ -94,6 +94,10 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     contract$config$resources$sampled_process_group_thread_ceiling, 2L
   )
   expect_identical(
+    contract$config$resources$
+      sampled_reference_process_group_thread_ceiling, 4L
+  )
+  expect_identical(
     contract$config$resources$sampled_thread_ceiling_role,
     "hard_OS_thread_envelope_not_compute_parallelism"
   )

@@ -187,6 +187,9 @@ if (mode == "preflight") {
     threads_per_worker = contract$config$resources$threads_per_worker,
     sampled_process_group_thread_ceiling =
       contract$config$resources$sampled_process_group_thread_ceiling,
+    sampled_reference_process_group_thread_ceiling =
+      contract$config$resources$
+        sampled_reference_process_group_thread_ceiling,
     sampled_thread_ceiling_role =
       contract$config$resources$sampled_thread_ceiling_role,
     per_worker_memory_GiB =
@@ -287,7 +290,8 @@ if (mode == "preflight") {
       "LEcuyer_full_state_unique", "future_substreams_20",
       "sentinels_preselected", "execution_flags_false",
       "disk_at_least_50_GiB", "workers_at_most_32",
-      "one_thread_per_worker", "sampled_thread_envelope_two",
+      "one_thread_per_worker", "sampled_worker_thread_envelope_two",
+      "sampled_reference_thread_envelope_four",
       "artifact_schemas_frozen",
       "primary_runtime_binding_when_requested",
       "replication_task_ids_unique", "sentinel_tasks_preselected",
@@ -312,6 +316,8 @@ if (mode == "preflight") {
           contract$config$resources$sampled_thread_ceiling_role,
           "hard_OS_thread_envelope_not_compute_parallelism"
         ),
+      contract$config$resources$
+        sampled_reference_process_group_thread_ceiling == 4L,
       TRUE, !nzchar(expected_commit) || !is.null(primary_binding),
       !anyDuplicated(replication_plan$replication_task_id),
       nrow(sentinel_plan) > 0L &&
