@@ -87,3 +87,39 @@ test_that("RQR oracle risk and roots are location-scale equivariant", {
     "positive"
   )
 })
+
+test_that("heavy-tail oracle refinements have stable risk and residuals", {
+  families <- list(
+    list(family = "student_t", params = list(df = 5, scale = sqrt(3 / 5))),
+    list(
+      family = "normal_t_mixture",
+      params = list(
+        normal_weight = 0.90, t_weight = 0.10,
+        t_df = 3, t_shift = 2, t_scale = 1,
+        variance_standardized = TRUE
+      )
+    )
+  )
+  for (spec in families) {
+    for (coverage in c(0.80, 0.90)) {
+      primary <- rqr_oracle_certificate(
+        spec$family, coverage, params = spec$params,
+        tol = 1e-10, grid_size = 1601L
+      )
+      refined <- rqr_oracle_certificate(
+        spec$family, coverage, params = spec$params,
+        tol = 1e-11, grid_size = 3201L
+      )
+      expect_lt(max(abs(c(
+        primary$lower_root - refined$lower_root,
+        primary$upper_root - refined$upper_root
+      ))), 1e-6)
+      expect_lte(
+        abs(primary$profile_objective - refined$profile_objective),
+        1e-8
+      )
+      expect_lte(abs(primary$coverage_residual), 1e-8)
+      expect_lte(abs(primary$moment_residual), 1e-7)
+    }
+  }
+})

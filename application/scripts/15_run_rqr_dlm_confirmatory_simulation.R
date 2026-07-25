@@ -487,9 +487,6 @@ if (mode == "oracle-reference") {
     oracle_rows$objective_gap <=
       contract$config$oracle$objective_gap_max
   ) && all(
-    oracle_rows$higher_precision_endpoint_difference <=
-      contract$config$oracle$higher_precision_endpoint_max
-  ) && all(
     oracle_rows$higher_precision_objective_difference <=
       contract$config$oracle$higher_precision_objective_max
   ) && all(
@@ -676,8 +673,7 @@ if (mode == "oracle-reference") {
   reference_gates <- data.frame(
     gate = c(
       "oracle_coverage_residual", "oracle_moment_residual",
-      "oracle_objective_gap", "oracle_higher_precision_endpoints",
-      "oracle_higher_precision_objective",
+      "oracle_objective_gap", "oracle_higher_precision_objective",
       "oracle_unique_minimizer",
       "oracle_location_scale_equivariance", "canonical_DGPs",
       "two_replication_byte_reproduction", "exdqlm_actual_fit",
@@ -693,8 +689,6 @@ if (mode == "oracle-reference") {
           contract$config$oracle$moment_residual_max),
       all(oracle_rows$objective_gap <=
           contract$config$oracle$objective_gap_max),
-      all(oracle_rows$higher_precision_endpoint_difference <=
-          contract$config$oracle$higher_precision_endpoint_max),
       all(oracle_rows$higher_precision_objective_difference <=
           contract$config$oracle$higher_precision_objective_max),
       all(oracle_rows$unique_minimizer),

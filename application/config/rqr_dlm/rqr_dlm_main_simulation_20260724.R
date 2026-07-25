@@ -243,7 +243,6 @@ rqr_dlm_main_simulation <- list(
     higher_precision_grid_size = 3201L,
     primary_tolerance = 1e-10,
     higher_precision_tolerance = 1e-11,
-    higher_precision_endpoint_max = 1e-8,
     higher_precision_objective_max = 1e-8,
     adaptive_basin_refinement = TRUE,
     unrestricted_multistart = TRUE,

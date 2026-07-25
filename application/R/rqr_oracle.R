@@ -344,6 +344,24 @@ rqr_oracle_certificate <- function(
 
 .rqr_oracle_family_spec <- function(family, params) {
   `%||%` <- function(a, b) if (is.null(a)) b else a
+  truncated_t_moments <- function(z, df) {
+    z <- as.numeric(z)
+    probability <- stats::pt(z, df = df)
+    first <- numeric(length(z))
+    second <- numeric(length(z))
+    finite <- is.finite(z)
+    if (any(finite)) {
+      density <- stats::dt(z[finite], df = df)
+      first[finite] <-
+        -(df + z[finite]^2) * density / (df - 1)
+      second[finite] <-
+        df / (df - 2) * probability[finite] -
+        z[finite] * (df + z[finite]^2) * density / (df - 2)
+    }
+    first[is.infinite(z) & z > 0] <- 0
+    second[is.infinite(z) & z > 0] <- df / (df - 2)
+    list(first = first, second = second)
+  }
   numeric_moment <- function(d, lower, upper, power) {
     force(d)
     force(lower)
@@ -393,12 +411,13 @@ rqr_oracle_certificate <- function(
     }
     if (!is.finite(scale) || scale <= 0) stop("student_t scale must be positive.", call. = FALSE)
     d <- function(x) stats::dt(x / scale, df = df) / scale
+    moments <- function(z) truncated_t_moments(z / scale, df)
     return(list(
       family = "student_t", d = d,
       F = function(z) stats::pt(z / scale, df = df),
       q = function(p) scale * stats::qt(p, df = df),
-      M = numeric_moment(d, -Inf, Inf, 1),
-      M2 = numeric_moment(d, -Inf, Inf, 2),
+      M = function(z) scale * moments(z)$first,
+      M2 = function(z) scale^2 * moments(z)$second,
       mean = 0,
       second_moment = scale^2 * df / (df - 2),
       support = c(-Inf, Inf),
@@ -491,7 +510,14 @@ rqr_oracle_certificate <- function(
       rowSums(mat)
     }
     q <- function(p) vapply(p, function(pp) {
-      stats::uniroot(function(z) F(z) - pp, c(min(means - center - 12 * sds), max(means - center + 12 * sds)))$root
+      stats::uniroot(
+        function(z) F(z) - pp,
+        c(
+          min(means - center - 12 * sds),
+          max(means - center + 12 * sds)
+        ),
+        tol = .Machine$double.eps^0.75
+      )$root
     }, numeric(1))
     second_moment <- sum(
       weights * (sds^2 + (means - center)^2)
@@ -596,6 +622,31 @@ rqr_oracle_certificate <- function(
         t_weight * stats::dt((z - t_shift) / t_scale, df = t_df) /
           t_scale
     }
+    M_raw <- function(z) {
+      standardized <- (z - t_shift) / t_scale
+      t_moments <- truncated_t_moments(standardized, t_df)
+      normal_weight * -stats::dnorm(z) +
+        t_weight * (
+          t_shift * stats::pt(standardized, df = t_df) +
+          t_scale * t_moments$first
+        )
+    }
+    M2_raw <- function(z) {
+      standardized <- (z - t_shift) / t_scale
+      t_probability <- stats::pt(standardized, df = t_df)
+      t_moments <- truncated_t_moments(standardized, t_df)
+      normal_second <- stats::pnorm(z)
+      finite <- is.finite(z)
+      normal_second[finite] <-
+        normal_second[finite] -
+        z[finite] * stats::dnorm(z[finite])
+      normal_weight * normal_second +
+        t_weight * (
+          t_shift^2 * t_probability +
+          2 * t_shift * t_scale * t_moments$first +
+          t_scale^2 * t_moments$second
+        )
+    }
     F <- function(x) F_raw(scale * x + center)
     d <- function(x) d_raw(scale * x + center) * scale
     q <- function(p) vapply(p, function(probability) {
@@ -606,14 +657,24 @@ rqr_oracle_certificate <- function(
       stats::uniroot(
         function(z) F(z) - probability,
         c(lo, hi),
-        tol = 1e-10
+        tol = .Machine$double.eps^0.75
       )$root
     }, numeric(1L))
     return(list(
       family = "normal_t_mixture",
       d = d, F = F, q = q,
-      M = numeric_moment(d, -Inf, Inf, 1),
-      M2 = numeric_moment(d, -Inf, Inf, 2),
+      M = function(x) {
+        raw_x <- scale * x + center
+        (M_raw(raw_x) - center * F_raw(raw_x)) / scale
+      },
+      M2 = function(x) {
+        raw_x <- scale * x + center
+        (
+          M2_raw(raw_x) -
+            2 * center * M_raw(raw_x) +
+            center^2 * F_raw(raw_x)
+        ) / scale^2
+      },
       mean = 0,
       second_moment = (raw_second - raw_mean^2) / scale^2,
       support = c(-Inf, Inf),
