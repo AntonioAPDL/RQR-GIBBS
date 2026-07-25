@@ -23,6 +23,7 @@
 \newcommand{\mat}[1]{\bm{#1}}
 \newcommand{\RHS}{\mathrm{RHS}}
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.08}}
+\DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
 
 \renewcommand{\theequation}{S\arabic{equation}}
@@ -39,10 +40,12 @@
 
 \begin{abstract}
 \noindent
-This supplement records the RQR population target, pseudo-AL augmentation,
-partially collapsed learned-scale sampler, fixed-design Gaussian blocks,
-dynamic FFBS equations, component-discount contracts, and reproducibility
-gates for the standalone RQR-GIBBS article.
+This supplement records the mean-preserving RQR population target, its
+comparison with equal-tailed and shortest-contiguous intervals, a fixed
+mean-tilted extension, the pseudo-AL augmentation, the partially collapsed
+ordinary-RQR learned-scale sampler, fixed-design Gaussian blocks, dynamic FFBS
+equations, component-discount contracts, and reproducibility gates for the
+standalone RQR-GIBBS article.
 \end{abstract}
 
 \section{Scope}
@@ -55,6 +58,7 @@ of endpoint functions; they are not posterior predictive draws of the observed
 response.
 
 \section{Population Target and Restricted Score Equations}
+\label{sec:supp-population-target}
 
 Fix a covariate value \(x\), write \(a=L(x)<U(x)=b\), and define
 \(I_{a,b}(Y)=\ind(a<Y<b)\). Assume
@@ -85,10 +89,158 @@ Substitution into either first-order condition then gives
 \]
 
 The second equation is equivalently
+\[
+\E(Y\mid a<Y<b,X=x)=\E(Y\mid X=x)
+\]
+and
 \(\operatorname{Cov}\{Y,I_{a,b}(Y)\mid X=x\}=0\). It does not imply
-independence, symmetry, equal-tailed endpoints, or uniqueness. The coverage
-implication is established by \citet{PouplinEtAl2024RQR}; the conditional
-first-moment implication is a further consequence of their first-order system.
+independence, symmetry, or equal-tailed endpoints. The coverage implication is
+established by \citet{PouplinEtAl2024RQR}; the conditional first-moment
+implication is a further consequence of their first-order system.
+
+Let \(\mu_x=\E(Y\mid X=x)\). Since
+\(\E(Y-\mu_x\mid X=x)=0\), the first-moment equation is also equivalent to
+\[
+\int_{-\infty}^{a}(\mu_x-y)\,dF_x(y)
+=
+\int_b^\infty(y-\mu_x)\,dF_x(y).
+\label{eq:rqr-tail-moment-balance}
+\]
+Thus ordinary RQR balances omitted tail probability multiplied by average
+tail displacement from the conditional mean; it does not generally balance
+the two omitted probabilities.
+
+\begin{proposition}[Quantile-window identification]
+\label{prop:supp-quantile-window}
+Suppose, in addition, that \(F_x\) is continuous and strictly increasing, and
+let \(Q_x=F_x^{-1}\). Define
+\[
+M_{c,x}(u)=\frac{1}{c}\int_u^{u+c}Q_x(v)\,dv,
+\qquad 0\le u\le1-c.
+\]
+Then \(M_{c,x}\) is strictly increasing, and there is a unique \(u_c(x)\)
+satisfying \(M_{c,x}\{u_c(x)\}=\mu_x\). The corresponding interval is
+\[
+\left[Q_x\{u_c(x)\},Q_x\{u_c(x)+c\}\right].
+\]
+\end{proposition}
+
+\begin{proof}
+Every contiguous interval having conditional content \(c\) has the displayed
+quantile-window form. On the interior of its domain,
+\[
+M_{c,x}'(u)
+=\frac{Q_x(u+c)-Q_x(u)}{c}>0.
+\]
+The average of the lowest conditional \(c\)-fraction is below \(\mu_x\), and
+the average of the highest conditional \(c\)-fraction is above \(\mu_x\), for
+a nondegenerate distribution with finite mean. Continuity and strict
+monotonicity therefore give existence and uniqueness. The first-moment
+equation identifies the stated endpoints.
+\end{proof}
+
+If \(F_x\) is symmetric about \(\mu_x\), then
+\(Q_x(1-v)=2\mu_x-Q_x(v)\). The window beginning at
+\((1-c)/2\) has retained mean \(\mu_x\), so uniqueness gives the equal-tailed
+interval. Conversely, coincidence at one coverage level does not establish
+global symmetry.
+
+The distribution conditional on interval membership and its complementary
+tail distribution both have mean \(\mu_x\). This is a first-moment statement,
+not independence between \(Y\) and interval membership. It also clarifies why
+the endpoint midpoint need not equal \(\mu_x\) under asymmetry.
+
+\begin{proposition}[Mean-preserving contraction]
+\label{prop:supp-convex-order}
+Let \(Y_{\mathrm{in}}\) and \(Y_{\mathrm{out}}\) have the conditional
+distributions of \(Y\) given \(a<Y<b\) and \(Y\notin(a,b)\), respectively,
+at a regular ordinary-RQR target. For every convex function \(\varphi\) for
+which the required expectations exist,
+\[
+\E\{\varphi(Y_{\mathrm{in}})\}
+\le
+\E\{\varphi(Y)\}
+\le
+\E\{\varphi(Y_{\mathrm{out}})\}.
+\]
+Consequently,
+\[
+Y_{\mathrm{in}}\preceq_{\mathrm{cx}}Y
+\preceq_{\mathrm{cx}}Y_{\mathrm{out}}.
+\]
+If second moments exist, the same ordering holds for the corresponding
+variances.
+\end{proposition}
+
+\begin{proof}
+Let \(s_\varphi\) be the affine secant through
+\(\{a,\varphi(a)\}\) and \(\{b,\varphi(b)\}\). Convexity gives
+\(\varphi(y)\le s_\varphi(y)\) on \([a,b]\) and
+\(\varphi(y)\ge s_\varphi(y)\) outside that interval. Both conditional
+distributions have mean \(\mu_x\), so
+\[
+\E\{\varphi(Y_{\mathrm{in}})\}
+\le s_\varphi(\mu_x)
+\le \E\{\varphi(Y_{\mathrm{out}})\}.
+\]
+The full conditional distribution is their mixture with weights \(c\) and
+\(1-c\), which places its convex expectation between the two. Taking
+\(\varphi(y)=(y-\mu_x)^2\) gives the variance statement.
+\end{proof}
+
+\subsection{Interval path, response scale, and tail sensitivity}
+
+Retain the assumptions of
+Proposition~\ref{prop:supp-quantile-window}, write \(u_c\) for the ordinary-RQR
+index, and set \(L_c=Q(u_c)\) and \(U_c=Q(u_c+c)\). Differentiating
+\[
+\int_{u_c}^{u_c+c}\{Q(v)-\mu\}\,dv=0
+\]
+with respect to \(c\) gives
+\[
+\frac{du_c}{dc}
+=-\frac{U_c-\mu}{U_c-L_c}<0,
+\qquad
+\frac{d(u_c+c)}{dc}
+=\frac{\mu-L_c}{U_c-L_c}>0.
+\]
+The ordinary-RQR population intervals are therefore nested as content
+increases. Moreover, \(Q(u_c)<\mu<Q(u_c+c)\), so
+\(F(\mu)\in(u_c,u_c+c)\). It follows directly that
+\[
+L_c\longrightarrow\mu,\qquad U_c\longrightarrow\mu
+\quad\text{as }c\downarrow0.
+\]
+This zero-content anchor is a property of the population interval path; the
+midpoint at a fixed positive \(c\) is not generally the mean, and independent
+fits at several content levels do not by themselves define joint posterior
+draws of that path.
+
+For \(Y^\star=r+sY\), \(s>0\), the ordinary endpoints transform as
+\[
+L_c^\star=r+sL_c,\qquad U_c^\star=r+sU_c.
+\]
+For the tilted family, \(\delta^\star=s\delta\) and
+\[
+\ell^\star_{c,\delta^\star}
+(r+sa,r+sb;r+sy)
+=s^2\ell_{c,\delta}(a,b;y).
+\]
+Thus the population target is positive-affine equivariant. A corresponding
+generalized posterior uses the transformed prior and
+\(\omega_{\mathrm R}^\star=\omega_{\mathrm R}/s^2\). Equivalently, after
+standardizing \(Y^\star=(Y-r)/s\), use
+\(\delta^\star=\delta/s\) and
+\(\omega_{\mathrm R}^\star=\omega_{\mathrm R}s^2\).
+Nonlinear monotone transformations generally change the mean-preserving
+functional rather than merely re-expressing it.
+
+Finally, with fixed endpoints,
+\(\rho_c\{(y-a)(y-b)\}=O(y^2)\) as \(|y|\to\infty\), and the endpoint scores
+grow linearly in \(|y|\). RQR is distribution-free in the sense that it does
+not posit a parametric response density, but it is not quantile-robust to
+arbitrarily heavy tails. This is why the finite-second-moment assumption and
+response-scale choice are scientifically consequential.
 
 Endpoint atoms require directional conditions. Write
 \(m=(a+b)/2\), \(h=(b-a)/2>0\), so
@@ -126,6 +278,168 @@ data-dependent endpoints as fixed, and its zero-gradient argument does not
 cover nonsmooth optima at sample points coinciding with a root. A valid
 finite-sample or asymptotic result requires a separate empirical-process
 analysis.
+
+\section{Fixed-Coverage Interval Functionals}
+\label{sec:supp-interval-functionals}
+
+Suppress \(x\) and write
+\[
+I_c(u)=[Q(u),Q(u+c)],\qquad
+M_c(u)=\frac{1}{c}\int_u^{u+c}Q(v)\,dv,\qquad
+W_c(u)=Q(u+c)-Q(u).
+\]
+The equal-tailed interval fixes \(u_{\mathrm{ET}}=(1-c)/2\). Ordinary RQR
+solves \(M_c(u_{\mathrm{RQR}})=\mu\). The shortest contiguous interval solves
+\[
+u_{\mathrm{SH}}\in\argmin_{0\le u\le1-c}W_c(u).
+\]
+If a positive density exists at an interior shortest solution, then
+\[
+W_c'(u_{\mathrm{SH}})
+=\frac{1}{f\{Q(u_{\mathrm{SH}}+c)\}}
+-\frac{1}{f\{Q(u_{\mathrm{SH}})\}}=0,
+\]
+so the endpoint densities agree. For a continuous unimodal density, this
+interval agrees with the corresponding highest-density interval. Under
+multimodality, a highest-density region can be disconnected; the present
+construction remains restricted to one contiguous interval
+\citep{BrehmerGneiting2021Intervals}.
+
+Under a symmetric unimodal distribution, all three intervals coincide. Under
+asymmetry, they generally differ. The shortest interval is no wider than the
+other two by definition, but there is no universal width ordering between
+ordinary RQR and the equal-tailed interval. The standard interval score is
+aligned with the central equal-tailed target and is not a target-neutral score
+for this comparison \citep{GneitingRaftery2007,BrehmerGneiting2021Intervals}.
+
+\section{Mean-Tilted RQR}
+\label{sec:supp-mean-tilt}
+
+For a fixed mean tilt \(\delta\in\R\), define
+\[
+\ell_{c,\delta}(m,h;y)
+=\rho_c\{(y-m)^2-h^2\}-2c\delta(m-y),
+\label{eq:mean-tilted-loss-midpoint}
+\]
+or, equivalently,
+\[
+\ell_{c,\delta}(a,b;y)
+=\rho_c\{(y-a)(y-b)\}-c\delta(a+b-2y).
+\label{eq:mean-tilted-loss-roots}
+\]
+The second form is invariant to exchanging the raw root labels. The tilt has
+response units so that both terms in the loss have squared-response units.
+
+\begin{proposition}[Fixed-coverage mean-tilted target]
+\label{prop:supp-mean-tilt}
+Under the regularity conditions in
+Section~\ref{sec:supp-population-target}, a nondegenerate interior
+stationary point \((m_\delta,h_\delta)\) satisfies
+\[
+\Pr(|Y-m_\delta|<h_\delta)=c
+\]
+and
+\[
+\E(Y\mid |Y-m_\delta|<h_\delta)=\mu+\delta.
+\]
+If \(F\) is continuous and strictly increasing, the unique lower-tail index is
+the solution of
+\[
+M_c(u_\delta)=\mu+\delta.
+\]
+\end{proposition}
+
+\begin{proof}
+Let \(I_{m,h}(Y)=\ind(|Y-m|<h)\). Away from endpoint atoms,
+\begin{align}
+\frac{\partial}{\partial h}\E\{\ell_{c,\delta}(m,h;Y)\}
+&=2h\{\Pr(I_{m,h}=1)-c\},\\
+\frac{\partial}{\partial m}\E\{\ell_{c,\delta}(m,h;Y)\}
+&=2\E[(m-Y)\{c-I_{m,h}(Y)\}]-2c\delta.
+\end{align}
+The first equation gives content \(c\). Substitution into the second gives
+\(\E\{YI_{m,h}(Y)\}=c(\mu+\delta)\), which is the retained-mean equation.
+Proposition~\ref{prop:supp-quantile-window} and strict monotonicity of \(M_c\)
+give the quantile-window statement.
+\end{proof}
+
+The admissible population tilt range is
+\[
+M_c(0)-\mu\le\delta\le M_c(1-c)-\mu,
+\]
+with the appropriate extended-real interpretation when a tail average is
+infinite. The special oracle tilts are
+\[
+\delta_{\mathrm{RQR}}=0,\qquad
+\delta_{\mathrm{ET}}=M_c\{(1-c)/2\}-\mu,
+\]
+and
+\[
+\delta_{\mathrm{SH}}=M_c(u_{\mathrm{SH}})-\mu.
+\]
+These equalities establish population representation, not automatic
+finite-sample estimation of either recovery tilt.
+
+Implicit differentiation yields
+\[
+\frac{du_\delta}{d\delta}
+=\frac{c}{W_c(u_\delta)}
+\]
+and
+\[
+\frac{dW_c(u_\delta)}{d\delta}
+=\frac{c\,W_c'(u_\delta)}{W_c(u_\delta)}.
+\]
+Hence profiling population width along the admissible tilt path recovers the
+shortest contiguous interval. Boundary solutions require one-sided
+conditions, and this statement does not extend the target to disconnected
+highest-density regions.
+
+The tilt indexes the estimand and is initially treated like a fixed quantile
+level. A scalar tilt generally defines only a restricted global target in a
+regression model; pointwise equal-tailed or shortest recovery generally
+requires \(\delta(x)\). Sampling \(\delta\) as an ordinary unknown would mix
+different interval functionals. Data-driven tilt selection must therefore be
+an external decision or validation layer with independent test data. Under
+positive affine transformation \(Y^\star=r+sY\), the corresponding target uses
+\(\delta^\star=s\delta\), as recorded in
+Section~\ref{sec:supp-population-target}.
+
+\section{RQR-W and Width Regularization}
+\label{sec:supp-rqr-w}
+
+For comparison, the RQR-W population objective in the original RQR article is
+\[
+\E\left[\rho_q\{(Y-a)(Y-b)\}\right]
++\frac{\lambda}{2}(b-a)^2,
+\qquad \lambda\ge0.
+\]
+At a nondegenerate interior stationary point, subtracting the two endpoint
+score equations gives
+\[
+\Pr(a<Y<b)=q-2\lambda.
+\]
+Thus \(q=c+2\lambda\) restores content \(c\), subject to
+\(0\le\lambda<(1-c)/2\). The midpoint equation then gives
+\[
+\E(Y\mid a<Y<b)
+=\mu+\frac{2\lambda}{c}(\mu-m),
+\qquad m=\frac{a+b}{2}.
+\]
+Except in special symmetric cases, RQR-W therefore changes the
+mean-preserving placement equation. It is a coverage-corrected compromise
+between product-check risk and squared width, not a tie-breaker among
+unidentified ordinary-RQR minimizers.
+
+More generally, if a differentiable width penalty \(P(w)\), \(w=b-a\), is
+added to a check loss at level \(q\), the coverage equation is
+\[
+\Pr(a<Y<b)=q-\frac{2P'(w)}{w}.
+\]
+A correction independent of the distribution and realized width is possible
+only when \(P'(w)/w\) is constant, which yields a quadratic penalty up to an
+additive constant. This explains both the form of RQR-W and why its path does
+not generally coincide with the shortest-contiguous path.
 
 \section{Pseudo-AL Kernel}
 
@@ -198,6 +512,33 @@ shrinkage states for each root. The current native dynamic implementation uses
 Gaussian state priors; fixed-design RHS-family support remains an explicit
 adapter to the pinned exdqlm implementation until it is promoted natively.
 
+\subsection{Fixed-rate mean-tilt consequence}
+
+Let \(\vect\delta=(\delta_1,\ldots,\delta_n)^\top\) be fixed and define
+\[
+\mathcal L_{n,c,\vect\delta}
+=\sum_{i=1}^n\left[
+\rho_c(e_i)-c\delta_i(\eta_{1i}+\eta_{2i}-2y_i)
+\right].
+\]
+For a fixed learning rate \(\omega_{\mathrm R}\), the conditional precision
+\(\mat Q_1\) above is unchanged, while its canonical vector becomes
+\[
+\vect h_1^{\mathrm{MT}}
+=\vect h_1+\omega_{\mathrm R}c\mat X^\top\vect\delta.
+\label{eq:mean-tilt-canonical-shift}
+\]
+Root 2 receives the same shift. The latent GIG update is unchanged because the
+tilt contains no \(v_i\). Setting \(\vect\delta=\vect 0\) recovers ordinary RQR
+exactly.
+
+Equation~\eqref{eq:mean-tilt-canonical-shift} is an algebraic implementation
+contract, not evidence that mean tilt is present in the current package. A
+valid implementation must verify exact zero-tilt equivalence, unchanged
+precisions and latent-scale conditionals, root-exchange invariance, affine
+equivariance with a correspondingly transformed learning rate, and
+intercept-only agreement with direct numerical quadrature.
+
 \section{Learned Inverse-Loss Scale}
 
 Let \(s_L>0\) be a declared reference loss scale and set
@@ -230,6 +571,13 @@ Fixed-rate sensitivity grids are therefore primary. If \(s_L\) is estimated
 from the training responses, the calculation convention is recorded and the
 value is frozen before MCMC; this is a data-dependent empirical-Bayes
 specification.
+
+This learned-scale target applies to ordinary RQR only. The mean-tilted loss
+can be negative, and parameter-independent additive constants at fixed
+\(\omega_{\mathrm R}\) become consequential when the learning rate is random.
+The Gamma conditionals below must not be reused for mean-tilted RQR without a
+separately normalized, proper joint target. The initial mean-tilted
+implementation is therefore restricted to fixed learning rates.
 
 If one conditions additionally on \(\vect v\), the normalized augmented
 conditional is
@@ -512,6 +860,14 @@ bulk and tail effective sample sizes. The predeclared convergence, Monte Carlo
 error, quadrature-accuracy, and zero-repair gates all pass. This is a
 target-implementation check on a
 deterministic intercept-only fixture, not a calibration result.
+
+The current bounded and confirmatory RQR-DLM protocols concern ordinary RQR,
+or \(\delta=0\) in the notation of
+Section~\ref{sec:supp-mean-tilt}. Mean-tilted validation is a separate staged
+program: deterministic oracle identities, exact zero-tilt equivalence,
+intercept-only quadrature, fixed-design recovery at prespecified tilts, and
+only afterward an independently evaluated tilt-selection rule. No dynamic
+mean-tilt run is authorized by the algebra in this supplement.
 
 Held-out RQR loss, empirical coverage error, and width at comparable coverage
 are primary. Oracle endpoint recovery is primary when the population RQR roots
