@@ -1,0 +1,16 @@
+"gate","value"
+"oracle_coverage_residual",TRUE
+"oracle_moment_residual",TRUE
+"oracle_objective_gap",TRUE
+"oracle_higher_precision_objective",TRUE
+"oracle_unique_minimizer",TRUE
+"oracle_location_scale_equivariance",TRUE
+"canonical_DGPs",TRUE
+"two_replication_byte_reproduction",TRUE
+"exdqlm_actual_fit",TRUE
+"quantreg_actual_fit",TRUE
+"dependency_runtime_digests",TRUE
+"toolchain_manifest_complete",TRUE
+"primary_runtime_binding",TRUE
+"protected_checkout_unused",TRUE
+"seed_ledger_complete",TRUE
