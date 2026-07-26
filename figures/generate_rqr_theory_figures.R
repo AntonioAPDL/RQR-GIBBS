@@ -3,14 +3,17 @@
 # Deterministic population figures for the RQR article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
-SCRIPT_VERSION <- "2026-07-26-editorial-3"
+SCRIPT_VERSION <- "2026-07-26-al-benchmark-4"
 DEFAULT_CONTENT <- 0.80
 NUMERICAL_TOLERANCES <- list(
   probability_margin = 1e-8,
   integration_relative = 1e-10,
   root_absolute = 1e-10,
   identity_absolute = 2e-7,
-  boundary_index = 5e-6
+  boundary_index = 5e-6,
+  plot_margin_fraction = 0.04,
+  label_anchor_fraction = 0.018,
+  label_extent_fraction = 0.085
 )
 
 GENERATOR_SOURCE_PATH <- local({
@@ -164,9 +167,128 @@ sha256_file <- function(path) {
   digest::digest(file = path, algo = "sha256", serialize = FALSE)
 }
 
+asymmetric_laplace_components <- function(mu = 0, scale = 1, tau = 0.99) {
+  assert_scalar(mu, "mu")
+  assert_scalar(scale, "scale", lower = 0, lower_open = TRUE)
+  assert_scalar(tau, "tau", lower = 0, upper = 1,
+                lower_open = TRUE, upper_open = TRUE)
+
+  pfun <- function(y) {
+    z <- (y - mu) / scale
+    out <- rep(NA_real_, length(z))
+    left <- !is.na(z) & z < 0
+    right <- !is.na(z) & !left
+    out[left] <- tau * exp((1 - tau) * z[left])
+    # -expm1(.) avoids cancellation when the right-tail probability is small.
+    out[right] <- -expm1(log1p(-tau) - tau * z[right])
+    out
+  }
+
+  qfun <- function(p) {
+    out <- rep(NaN, length(p))
+    valid <- !is.na(p) & p >= 0 & p <= 1
+    out[is.na(p)] <- NA_real_
+    out[valid & p == 0] <- -Inf
+    out[valid & p == 1] <- Inf
+    left <- valid & p > 0 & p < tau
+    right <- valid & p >= tau & p < 1
+    out[left] <- mu + scale *
+      (log(p[left]) - log(tau)) / (1 - tau)
+    out[right] <- mu - scale *
+      (log1p(-p[right]) - log1p(-tau)) / tau
+    out
+  }
+
+  dfun <- function(y) {
+    z <- (y - mu) / scale
+    exponent <- ifelse(z < 0, (1 - tau) * z, -tau * z)
+    tau * (1 - tau) * exp(exponent) / scale
+  }
+
+  standardized_below_moment <- function(z) {
+    out <- rep(NA_real_, length(z))
+    left_infinite <- !is.na(z) & is.infinite(z) & z < 0
+    right_infinite <- !is.na(z) & is.infinite(z) & z > 0
+    left <- !is.na(z) & is.finite(z) & z < 0
+    right <- !is.na(z) & is.finite(z) & z >= 0
+    out[left_infinite] <- 0
+    out[right_infinite] <- (1 - 2 * tau) / (tau * (1 - tau))
+    out[left] <- tau * exp((1 - tau) * z[left]) *
+      (z[left] - 1 / (1 - tau))
+    if (any(right)) {
+      zr <- z[right]
+      positive_part <- (1 - tau) / tau * (
+        -expm1(-tau * zr) - tau * zr * exp(-tau * zr)
+      )
+      out[right] <- -tau / (1 - tau) + positive_part
+    }
+    out
+  }
+
+  truncated_below <- function(y) {
+    mu * pfun(y) + scale *
+      standardized_below_moment((y - mu) / scale)
+  }
+
+  positive_tail_first_moment <- function(z) {
+    out <- rep(NA_real_, length(z))
+    finite <- !is.na(z) & is.finite(z)
+    out[finite] <- (1 - tau) * exp(-tau * z[finite]) *
+      (z[finite] + 1 / tau)
+    out[!is.na(z) & is.infinite(z) & z > 0] <- 0
+    out
+  }
+
+  moment_between <- function(lower, upper) {
+    if (length(lower) != 1L || length(upper) != 1L ||
+        is.na(lower) || is.na(upper) || lower > upper) {
+      fail("AL truncated-moment limits must be ordered scalars.")
+    }
+    zl <- (lower - mu) / scale
+    zu <- (upper - mu) / scale
+    probability <- pfun(upper) - pfun(lower)
+    standardized_moment <- if (zu <= 0) {
+      standardized_below_moment(zu) - standardized_below_moment(zl)
+    } else if (zl >= 0) {
+      positive_tail_first_moment(zl) -
+        positive_tail_first_moment(zu)
+    } else {
+      (
+        standardized_below_moment(0) -
+          standardized_below_moment(zl)
+      ) + (
+        positive_tail_first_moment(0) -
+          positive_tail_first_moment(zu)
+      )
+    }
+    mu * probability + scale * standardized_moment
+  }
+
+  mean <- mu + scale * (1 - 2 * tau) / (tau * (1 - tau))
+  variance <- scale^2 * (1 - 2 * tau + 2 * tau^2) /
+    (tau^2 * (1 - tau)^2)
+  list(
+    q = qfun,
+    p = pfun,
+    d = dfun,
+    moment_between = moment_between,
+    truncated_below = truncated_below,
+    standardized_below_moment = standardized_below_moment,
+    mean = mean,
+    variance = variance,
+    sd = sqrt(variance),
+    mu = mu,
+    scale = scale,
+    tau = tau
+  )
+}
+
 make_distribution <- function(id, label, short_label, subtitle, qfun, pfun,
                               dfun, moment_fun, mean, sd,
-                              support = c(-Inf, Inf)) {
+                              support = c(-Inf, Inf),
+                              plot_knots = numeric(),
+                              plot_probabilities = c(0.005, 0.995),
+                              raw_parameters = "") {
   funs <- list(qfun, pfun, dfun, moment_fun)
   if (!all(vapply(funs, is.function, logical(1)))) {
     fail("Distribution %s must provide q, p, d, and truncated-moment functions.",
@@ -174,14 +296,33 @@ make_distribution <- function(id, label, short_label, subtitle, qfun, pfun,
   }
   assert_scalar(mean, paste0(id, "$mean"))
   assert_scalar(sd, paste0(id, "$sd"), lower = 0, lower_open = TRUE)
+  if (length(plot_probabilities) != 2L ||
+      any(!is.finite(plot_probabilities)) ||
+      plot_probabilities[1L] <= 0 ||
+      plot_probabilities[2L] >= 1 ||
+      plot_probabilities[1L] >= plot_probabilities[2L]) {
+    fail("Distribution %s has invalid plotting probabilities.", id)
+  }
   list(
     id = id, label = label, short_label = short_label, subtitle = subtitle,
     q = qfun, p = pfun, d = dfun, moment_between = moment_fun,
-    mean = mean, sd = sd, support = support
+    mean = mean, sd = sd, support = support,
+    plot_knots = plot_knots,
+    plot_probabilities = plot_probabilities,
+    raw_parameters = raw_parameters
   )
 }
 
+distribution_descriptor <- function(dist) {
+  if (nzchar(dist$raw_parameters)) {
+    sprintf("%s[%s]", dist$id, dist$raw_parameters)
+  } else {
+    dist$id
+  }
+}
+
 rqr_theory_distributions <- function() {
+  al <- asymmetric_laplace_components(mu = 0, scale = 1, tau = 0.99)
   normal_moment <- function(lower, upper) {
     stats::dnorm(lower) - stats::dnorm(upper)
   }
@@ -190,10 +331,6 @@ rqr_theory_distributions <- function() {
   }
   exponential_moment <- function(lower, upper) {
     exponential_term(lower) - exponential_term(upper)
-  }
-  gamma_moment <- function(lower, upper) {
-    2 * (stats::pgamma(upper, shape = 3) -
-           stats::pgamma(lower, shape = 3))
   }
   lognormal_moment <- function(lower, upper) {
     sigma <- 0.6
@@ -215,7 +352,8 @@ rqr_theory_distributions <- function() {
   list(
     normal = make_distribution(
       "normal", "Normal(0, 1)", "Normal", "symmetric unimodal benchmark",
-      stats::qnorm, stats::pnorm, stats::dnorm, normal_moment, 0, 1
+      stats::qnorm, stats::pnorm, stats::dnorm, normal_moment, 0, 1,
+      plot_knots = 0
     ),
     exponential = make_distribution(
       "exponential", "Exponential(1)", "Exponential",
@@ -223,15 +361,18 @@ rqr_theory_distributions <- function() {
       function(p) stats::qexp(p, rate = 1),
       function(y) stats::pexp(y, rate = 1),
       function(y) stats::dexp(y, rate = 1),
-      exponential_moment, 1, 1, c(0, Inf)
+      exponential_moment, 1, 1, c(0, Inf), plot_knots = 0
     ),
-    gamma = make_distribution(
-      "gamma", "Gamma(shape=2, scale=1)", "Gamma(2, 1)",
-      "moderate right skew",
-      function(p) stats::qgamma(p, shape = 2, scale = 1),
-      function(y) stats::pgamma(y, shape = 2, scale = 1),
-      function(y) stats::dgamma(y, shape = 2, scale = 1),
-      gamma_moment, 2, sqrt(2), c(0, Inf)
+    asymmetric_laplace = make_distribution(
+      "asymmetric_laplace",
+      "Asymmetric Laplace(mu=0, scale=1, tau=0.99)",
+      "AL(0, 1, 0.99)",
+      "AL(tau=0.99); left-skewed; raw targets, then standardize",
+      al$q, al$p, al$d, al$moment_between, al$mean, al$sd,
+      c(-Inf, Inf),
+      plot_knots = al$mu,
+      plot_probabilities = c(0.005, 0.9995),
+      raw_parameters = "mu_AL=0,s_AL=1,tau_AL=0.99"
     ),
     lognormal = make_distribution(
       "lognormal", "Lognormal(meanlog=0, sdlog=0.6)", "Lognormal(0, 0.6)",
@@ -242,14 +383,15 @@ rqr_theory_distributions <- function() {
       lognormal_moment,
       exp(0.6^2 / 2),
       sqrt((exp(0.6^2) - 1) * exp(0.6^2)),
-      c(0, Inf)
+      c(0, Inf), plot_knots = exp(-0.6^2)
     ),
     beta25 = make_distribution(
       "beta25", "Beta(2, 5)", "Beta(2, 5)", "bounded right skew",
       function(p) stats::qbeta(p, shape1 = 2, shape2 = 5),
       function(y) stats::pbeta(y, shape1 = 2, shape2 = 5),
       function(y) stats::dbeta(y, shape1 = 2, shape2 = 5),
-      beta_moment, 2 / 7, sqrt(2 * 5 / (7^2 * 8)), c(0, 1)
+      beta_moment, 2 / 7, sqrt(2 * 5 / (7^2 * 8)), c(0, 1),
+      plot_knots = 1 / 5
     )
   )
 }
@@ -268,7 +410,10 @@ mirror_distribution <- function(dist, id = paste0("mirror_", dist$id)) {
     },
     mean = -dist$mean,
     sd = dist$sd,
-    support = -rev(dist$support)
+    support = -rev(dist$support),
+    plot_knots = -dist$plot_knots,
+    plot_probabilities = 1 - rev(dist$plot_probabilities),
+    raw_parameters = paste0("reflection_of=", dist$id)
   )
 }
 
@@ -293,7 +438,12 @@ affine_distribution <- function(dist, shift, scale,
     },
     mean = shift + scale * dist$mean,
     sd = scale * dist$sd,
-    support = shift + scale * dist$support
+    support = shift + scale * dist$support,
+    plot_knots = shift + scale * dist$plot_knots,
+    plot_probabilities = dist$plot_probabilities,
+    raw_parameters = sprintf(
+      "affine_of=%s;shift=%.12g;scale=%.12g", dist$id, shift, scale
+    )
   )
 }
 
@@ -436,8 +586,71 @@ check_oracle_summary <- function(dist, summary, content = DEFAULT_CONTENT) {
   invisible(TRUE)
 }
 
-standardized_density_data <- function(dist, zlim = c(-3.25, 5.25), n = 851L) {
-  z <- seq(zlim[1], zlim[2], length.out = n)
+standardize_response <- function(dist, y) {
+  (y - dist$mean) / dist$sd
+}
+
+interval_plot_geometry <- function(dist, summary, labels = TRUE) {
+  endpoints <- standardize_response(
+    dist, c(summary$lower, summary$upper)
+  )
+  quantile_limits <- standardize_response(
+    dist, dist$q(dist$plot_probabilities)
+  )
+  knots <- standardize_response(dist, dist$plot_knots)
+  core <- c(quantile_limits, endpoints, 0, knots)
+  core <- core[is.finite(core)]
+  if (length(core) < 2L || diff(range(core)) <= 0) {
+    fail("Could not form a finite plotting domain for %s.", dist$id)
+  }
+  base_span <- diff(range(core))
+  upper <- setNames(
+    standardize_response(dist, summary$upper), summary$target
+  )
+  label_anchors <- upper +
+    NUMERICAL_TOLERANCES$label_anchor_fraction * base_span
+  label_extents <- label_anchors +
+    NUMERICAL_TOLERANCES$label_extent_fraction * base_span
+  if (labels) core <- c(core, label_anchors, label_extents)
+  core_range <- range(core[is.finite(core)])
+  margin <- NUMERICAL_TOLERANCES$plot_margin_fraction * diff(core_range)
+  zlim <- core_range + c(-margin, margin)
+  required <- c(endpoints, quantile_limits, 0, knots)
+  if (labels) required <- c(required, label_anchors, label_extents)
+  if (any(required < zlim[1L] | required > zlim[2L])) {
+    fail("Adaptive plotting domain clips required geometry for %s.", dist$id)
+  }
+  list(
+    zlim = zlim,
+    label_anchors = label_anchors,
+    label_extents = label_extents,
+    standardized_endpoints = endpoints,
+    standardized_quantile_limits = quantile_limits,
+    standardized_knots = knots
+  )
+}
+
+standardized_density_data <- function(dist, summary = NULL, geometry = NULL,
+                                      n = 851L) {
+  if (is.null(geometry)) {
+    if (is.null(summary)) {
+      summary <- oracle_interval_summary(dist, DEFAULT_CONTENT)
+    }
+    geometry <- interval_plot_geometry(dist, summary)
+  }
+  zlim <- geometry$zlim
+  special <- c(
+    0,
+    geometry$standardized_endpoints,
+    geometry$standardized_quantile_limits,
+    geometry$standardized_knots
+  )
+  special <- special[is.finite(special) &
+                       special >= zlim[1L] & special <= zlim[2L]]
+  z <- sort(unique(c(
+    seq(zlim[1L], zlim[2L], length.out = n),
+    special
+  )))
   y <- dist$mean + dist$sd * z
   density <- dist$sd * dist$d(y)
   if (any(!is.finite(density))) {
@@ -484,12 +697,14 @@ COL <- c(
   mean = "#65727E",
   tilt = "#7C3AED"
 )
-PCH <- c(shortest = 15, equal_tailed = 1, ordinary_rqr = 17)
-LTY <- c(shortest = 1, equal_tailed = 2, ordinary_rqr = 3)
+PCH <- c(equal_tailed = 15, ordinary_rqr = 16, shortest = 17)
+OPEN_PCH <- c(equal_tailed = 0, ordinary_rqr = 1, shortest = 2)
+TARGET_ORDER <- c("equal_tailed", "ordinary_rqr", "shortest")
+INTERVAL_SEGMENT_LTY <- 1L
 TARGET_LABEL <- c(
-  shortest = "SH",
   equal_tailed = "ET",
-  ordinary_rqr = "RQR"
+  ordinary_rqr = "RQR",
+  shortest = "SH"
 )
 
 draw_to_device <- function(open_device, draw_fun) {
@@ -529,11 +744,8 @@ write_panel_data <- function(df, path) {
   path
 }
 
-plot_interval_bars <- function(dist, summary, y0, dy, labels = TRUE,
-                               targets = c(
-                                 "shortest", "equal_tailed", "ordinary_rqr"
-                               ),
-                               label_x = 1.9) {
+plot_interval_bars <- function(dist, summary, geometry, y0, dy,
+                               labels = TRUE, targets = TARGET_ORDER) {
   for (i in seq_along(targets)) {
     target <- targets[i]
     row <- summary[summary$target == target, , drop = FALSE]
@@ -542,7 +754,8 @@ plot_interval_bars <- function(dist, summary, y0, dy, labels = TRUE,
     yy <- y0 - (i - 1) * dy
     graphics::segments(
       lower_z, yy, upper_z, yy,
-      lwd = 4.4, lty = LTY[target], col = COL[target], lend = "round"
+      lwd = 4.4, lty = INTERVAL_SEGMENT_LTY,
+      col = COL[target], lend = "round"
     )
     graphics::points(
       c(lower_z, upper_z), c(yy, yy),
@@ -551,7 +764,7 @@ plot_interval_bars <- function(dist, summary, y0, dy, labels = TRUE,
     if (labels) {
       label <- TARGET_LABEL[target]
       graphics::text(
-        max(label_x, upper_z + 0.18), yy, label, adj = c(0, 0.5),
+        geometry$label_anchors[target], yy, label, adj = c(0, 0.5),
         cex = 0.66, col = COL[target]
       )
     }
@@ -573,7 +786,10 @@ shade_interval <- function(density, lower_z, upper_z, color) {
 figure_01_three_principles <- function(out_dir, dist, content) {
   summary <- oracle_interval_summary(dist, content)
   check_oracle_summary(dist, summary, content)
-  density <- standardized_density_data(dist, zlim = c(-1.6, 4.8))
+  geometry <- interval_plot_geometry(dist, summary)
+  density <- standardized_density_data(
+    dist, summary = summary, geometry = geometry
+  )
   panel_files <- c(
     write_panel_data(
       transform(
@@ -603,9 +819,9 @@ figure_01_three_principles <- function(out_dir, dist, content) {
     on.exit(graphics::par(old))
     graphics::par(
       mfrow = c(1, 3), mar = c(4.0, 3.5, 3.6, 0.7),
-      oma = c(0, 0, 0.2, 0), mgp = c(2.2, 0.65, 0), tcl = -0.3
+      oma = c(0, 0, 1.15, 0), mgp = c(2.2, 0.65, 0), tcl = -0.3
     )
-    targets <- c("equal_tailed", "ordinary_rqr", "shortest")
+    targets <- TARGET_ORDER
     titles <- c("Equal-tailed", "Ordinary RQR", "Shortest contiguous")
     subtitles <- c(
       "Balances omitted probabilities",
@@ -623,36 +839,47 @@ figure_01_three_principles <- function(out_dir, dist, content) {
       graphics::plot(
         density$z, density$density, type = "l", lwd = 2.1,
         col = COL["density"], xlab = "Standardized response, z",
-        ylab = "Density", xlim = range(density$z),
+        ylab = "Density", xlim = geometry$zlim,
         ylim = c(0, max(density$density) * 1.12),
         main = titles[j], cex.main = 0.98
       )
       graphics::mtext(subtitles[j], side = 3, line = 0.25, cex = 0.70)
-      graphics::abline(v = 0, lty = 3, col = COL["mean"])
+      graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
       lower_z <- (row$lower - dist$mean) / dist$sd
       upper_z <- (row$upper - dist$mean) / dist$sd
       shade_interval(density, lower_z, upper_z, COL[target])
+      bar_y <- 0.018 * max(density$density)
       graphics::segments(
-        lower_z, 0.008, upper_z, 0.008,
-        lwd = 5.0, lty = LTY[target], col = COL[target], lend = "round"
+        lower_z, bar_y, upper_z, bar_y,
+        lwd = 5.0, lty = INTERVAL_SEGMENT_LTY,
+        col = COL[target], lend = "round"
       )
       graphics::points(
-        c(lower_z, upper_z), c(0.008, 0.008),
+        c(lower_z, upper_z), c(bar_y, bar_y),
         pch = PCH[target], col = COL[target], cex = 0.84
+      )
+      graphics::text(
+        geometry$label_anchors[target], bar_y,
+        labels = TARGET_LABEL[target], adj = c(0, 0.5),
+        cex = 0.68, col = COL[target]
       )
       graphics::legend(
         "topright", legend = annotations[[j]],
         bty = "n", cex = 0.72
       )
     }
+    graphics::mtext(
+      dist$subtitle, side = 3, outer = TRUE, line = 0.20, cex = 0.72
+    )
   }
   outputs <- with_graphics_devices(
     file.path(out_dir, "fig01_three_balance_principles"),
-    7.2, 2.90, draw
+    7.2, 3.10, draw
   )
   list(
     id = "fig01_three_balance_principles",
-    data = panel_files, outputs = outputs, distributions = dist$id
+    data = panel_files, outputs = outputs,
+    distributions = distribution_descriptor(dist)
   )
 }
 
@@ -660,7 +887,10 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
   summary <- oracle_interval_summary(dist, content)
   check_oracle_summary(dist, summary, content)
   path <- mean_tilt_path_data(dist, content)
-  density <- standardized_density_data(dist)
+  geometry <- interval_plot_geometry(dist, summary)
+  density <- standardized_density_data(
+    dist, summary = summary, geometry = geometry
+  )
   panel_files <- c(
     write_panel_data(
       path[, c("u", "M_minus_mu", "standardized_delta")],
@@ -680,7 +910,7 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
     on.exit(graphics::par(old))
     graphics::par(
       mfrow = c(1, 3), mar = c(4.2, 3.8, 2.7, 0.7),
-      oma = c(0, 0, 0.2, 0), mgp = c(2.3, 0.65, 0), tcl = -0.3
+      oma = c(0, 0, 1.15, 0), mgp = c(2.3, 0.65, 0), tcl = -0.3
     )
     delta_min <- min(summary$standardized_delta) - 0.06
     delta_max <- max(0.20, max(summary$standardized_delta) + 0.05)
@@ -694,16 +924,20 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       ylab = expression(d == (M[c](u) - mu) / SD(Y)),
       main = "Window-to-tilt map"
     )
-    graphics::abline(h = 0, lty = 3, col = COL["mean"])
-    for (target in names(TARGET_LABEL)) {
+    graphics::abline(h = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+    for (target in TARGET_ORDER) {
       row <- summary[summary$target == target, ]
       graphics::points(
         row$u, row$standardized_delta,
         pch = PCH[target], col = COL[target], cex = 1.05
       )
       graphics::text(
-        row$u, row$standardized_delta, labels = TARGET_LABEL[target],
-        pos = 3, offset = 0.35, cex = 0.68
+        row$u, row$standardized_delta,
+        labels = sprintf(
+          "%s %.3f", TARGET_LABEL[target], row$standardized_delta
+        ),
+        pos = if (target == "shortest") 2 else 4,
+        offset = 0.35, cex = 0.64
       )
     }
     graphics::plot(
@@ -711,10 +945,10 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       type = "l", lwd = 2, col = COL["density"],
       xlab = expression(d == delta / SD(Y)),
       ylab = expression((U - L) / SD(Y)),
-      main = "Width profile", xlim = c(delta_min, delta_max)
+      main = "Width near target tilts", xlim = c(delta_min, delta_max)
     )
-    graphics::abline(v = 0, lty = 3, col = COL["mean"])
-    for (target in names(TARGET_LABEL)) {
+    graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+    for (target in TARGET_ORDER) {
       row <- summary[summary$target == target, ]
       graphics::points(
         row$standardized_delta, row$standardized_width,
@@ -722,7 +956,9 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       )
       graphics::text(
         row$standardized_delta, row$standardized_width,
-        labels = TARGET_LABEL[target], pos = 3, offset = 0.35, cex = 0.68
+        labels = TARGET_LABEL[target],
+        pos = if (target == "shortest") 2 else 4,
+        offset = 0.35, cex = 0.68
       )
     }
     ymax <- max(density$density)
@@ -730,29 +966,43 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       density$z, density$density, type = "l", lwd = 2,
       col = COL["density"], xlab = "Standardized response, z",
       ylab = "Density", main = "Selected intervals",
-      xlim = c(-3.25, 5.25), ylim = c(-0.34 * ymax, 1.06 * ymax)
+      xlim = geometry$zlim, ylim = c(-0.34 * ymax, 1.06 * ymax)
     )
-    graphics::abline(v = 0, lty = 3, col = COL["mean"])
+    graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
     plot_interval_bars(
-      dist, summary, -0.055 * ymax, 0.075 * ymax,
-      labels = TRUE, label_x = 1.9
+      dist, summary, geometry, -0.055 * ymax, 0.075 * ymax,
+      labels = TRUE
+    )
+    graphics::mtext(
+      dist$subtitle, side = 3, outer = TRUE, line = 0.20, cex = 0.72
     )
   }
   outputs <- with_graphics_devices(
     file.path(out_dir, "fig02_mean_tilt_recovery_map"),
-    7.2, 3.05, draw
+    7.2, 3.22, draw
   )
   list(
     id = "fig02_mean_tilt_recovery_map",
-    data = panel_files, outputs = outputs, distributions = dist$id
+    data = panel_files, outputs = outputs,
+    distributions = distribution_descriptor(dist)
   )
 }
 
 figure_s01_cross_distribution <- function(out_dir, dists, content) {
-  chosen <- dists[c("normal", "gamma", "lognormal", "beta25")]
+  chosen <- dists[c(
+    "normal", "asymmetric_laplace", "lognormal", "beta25"
+  )]
   summaries <- lapply(chosen, oracle_interval_summary, content = content)
   paths <- lapply(chosen, mean_tilt_path_data, content = content)
-  densities <- lapply(chosen, standardized_density_data)
+  geometries <- Map(interval_plot_geometry, chosen, summaries)
+  densities <- Map(
+    function(dist, summary, geometry) {
+      standardized_density_data(
+        dist, summary = summary, geometry = geometry
+      )
+    },
+    chosen, summaries, geometries
+  )
   panel_files <- character()
   for (i in seq_along(chosen)) {
     check_oracle_summary(chosen[[i]], summaries[[i]], content)
@@ -782,17 +1032,18 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
       dist <- chosen[[i]]
       density <- densities[[i]]
       summary <- summaries[[i]]
+      geometry <- geometries[[i]]
       ymax <- max(density$density)
       graphics::plot(
         density$z, density$density, type = "l", lwd = 1.8,
         col = COL["density"], xlab = "z", ylab = "Density",
-        main = dist$short_label, xlim = c(-3.25, 5.25),
+        main = dist$short_label, xlim = geometry$zlim,
         ylim = c(-0.29 * ymax, 1.05 * ymax), cex.main = 0.92
       )
-      graphics::abline(v = 0, lty = 3, col = COL["mean"])
+      graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
       plot_interval_bars(
-        dist, summary, -0.050 * ymax, 0.068 * ymax,
-        labels = TRUE, label_x = 3.0
+        dist, summary, geometry, -0.050 * ymax, 0.068 * ymax,
+        labels = TRUE
       )
     }
     for (i in seq_along(chosen)) {
@@ -811,36 +1062,40 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
         xlab = "Standardized tilt, d", ylab = "Standardized width",
         xlim = c(delta_min, delta_max)
       )
-      graphics::abline(v = 0, lty = 3, col = COL["mean"])
+      graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
       if (identical(dist$id, "normal")) {
         point <- summary[summary$target == "ordinary_rqr", ]
-        graphics::points(
-          point$standardized_delta, point$standardized_width,
-          pch = 0, col = COL["shortest"], cex = 1.30, lwd = 1.5
+        coincidence_cex <- c(
+          equal_tailed = 1.30, ordinary_rqr = 0.95, shortest = 0.68
         )
-        graphics::points(
-          point$standardized_delta, point$standardized_width,
-          pch = 1, col = COL["equal_tailed"], cex = 0.95, lwd = 1.5
-        )
-        graphics::points(
-          point$standardized_delta, point$standardized_width,
-          pch = 2, col = COL["ordinary_rqr"], cex = 0.62, lwd = 1.5
-        )
+        for (target in TARGET_ORDER) {
+          graphics::points(
+            point$standardized_delta, point$standardized_width,
+            pch = OPEN_PCH[target], col = COL[target],
+            cex = coincidence_cex[target], lwd = 1.5
+          )
+        }
         graphics::text(
           point$standardized_delta, point$standardized_width,
-          labels = "ET = RQR = SH", pos = 3, offset = 0.45, cex = 0.70
+          labels = "ET = RQR = SH", pos = 4, offset = 0.45, cex = 0.70
         )
       } else {
-        label_pos <- c(shortest = 1, equal_tailed = 3, ordinary_rqr = 4)
-        for (target in names(TARGET_LABEL)) {
+        for (target in TARGET_ORDER) {
           row <- summary[summary$target == target, ]
+          label_pos <- if (target == "shortest") {
+            if (row$standardized_delta >= 0) 2 else 4
+          } else if (target == "equal_tailed") {
+            3
+          } else {
+            4
+          }
           graphics::points(
             row$standardized_delta, row$standardized_width,
             pch = PCH[target], col = COL[target], cex = 0.95
           )
           graphics::text(
             row$standardized_delta, row$standardized_width,
-            labels = TARGET_LABEL[target], pos = label_pos[target],
+            labels = TARGET_LABEL[target], pos = label_pos,
             offset = 0.35, cex = 0.66, col = COL[target]
           )
         }
@@ -855,7 +1110,7 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
     id = "figS01_cross_distribution_recovery",
     data = panel_files, outputs = outputs,
     distributions = paste(
-      vapply(chosen, function(x) x$id, character(1)), collapse = ";"
+      vapply(chosen, distribution_descriptor, character(1)), collapse = ";"
     )
   )
 }
@@ -1018,6 +1273,11 @@ write_publication_receipt <- function(records, out_dir, state) {
       declared_source_commit = state$declared_commit,
       source_archive_sha256 = state$source_archive_sha256,
       source_identity_consistent = state$source_identity_consistent,
+      distributions = record$distributions,
+      oracle_scale_contract = paste(
+        "targets computed on each raw population law;",
+        "display coordinates use raw mean/SD standardization"
+      ),
       stringsAsFactors = FALSE
     )
   })
@@ -1044,8 +1304,12 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
     check_oracle_summary(dist, oracle_interval_summary(dist, content), content)
   }))
   records <- list(
-    figure_01_three_principles(out_dir, dists$gamma, content),
-    figure_02_mean_tilt_map(out_dir, dists$gamma, content),
+    figure_01_three_principles(
+      out_dir, dists$asymmetric_laplace, content
+    ),
+    figure_02_mean_tilt_map(
+      out_dir, dists$asymmetric_laplace, content
+    ),
     figure_s01_cross_distribution(out_dir, dists, content),
     figure_s02_loss_geometry(out_dir, content)
   )

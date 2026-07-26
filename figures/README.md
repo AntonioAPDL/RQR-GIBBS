@@ -63,18 +63,33 @@ local audit bundle remains under `application/cache/`, and the repository also
 retains the generator, tests, and vector-native TikZ schematics.
 
 The generator uses analytic truncated first moments for its declared
-distributions and independent response-space integration in the tests. Its
-manifest records the source revision, generator hash, configuration, numerical
-tolerances, dependencies, panel-data hashes, and output hashes. CSV and PNG
-bytes are checked across two independent runs. Base-R PDF devices embed
+distributions and independent response-space integration in the tests. The
+asymmetric-Laplace population benchmark uses the quantile-regression
+parameterization
+`(mu_AL, s_AL, tau_AL) = (0, 1, 0.99)`. Under this convention it is strongly
+left-skewed. Its interval targets are solved on the raw response scale and only
+then mapped to mean/standard-deviation standardized coordinates. This
+population benchmark is distinct from the pseudo-asymmetric-Laplace
+loss-kernel augmentation applied to the RQR pseudo-residual.
+
+The manifest records the source revision, generator hash, configuration,
+numerical tolerances, dependencies, panel-data hashes, and output hashes. CSV
+and PNG bytes are checked across two independent runs. Base-R PDF devices embed
 generation timestamps, so PDF byte identity is not claimed.
 
-The publication PNGs use redundant color, symbol, and line-type encodings.
-Equal-tailed targets use open circles, and the symmetric Normal benchmark marks
-exact three-way coincidence without jitter. The current base-R vector PDFs use
-unembedded device fonts, so TeX deliberately continues to use the audited
-300-dpi PNGs. A future vector transition must use an embedded-font device and
-pass the same font and provenance gates before the TeX inputs change.
+Every target interval segment is solid. Target identity remains redundant
+through direct labels, stable ordering, color, and filled endpoint glyphs:
+equal-tailed uses squares, ordinary RQR uses circles, and shortest contiguous
+uses triangles. The symmetric Normal benchmark marks exact three-way
+coincidence without horizontal jitter. Distribution-panel axes are computed
+from deterministic quantiles, all target endpoints, the population mean,
+density knots, and label extents; generation fails rather than silently
+clipping required geometry.
+
+The current base-R vector PDFs use unembedded device fonts, so TeX deliberately
+continues to use the audited 300-dpi PNGs. A future vector transition must use
+an embedded-font device and pass the same font and provenance gates before the
+TeX inputs change.
 
 Every generated panel is explicitly classified as a deterministic population
 illustration. It cannot support claims about finite-sample

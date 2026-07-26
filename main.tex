@@ -14,6 +14,7 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
 \usepackage{array}
+\usepackage{enumitem}
 \usepackage{tabularx}
 \usepackage{booktabs}
 \usepackage[round,authoryear]{natbib}
@@ -46,7 +47,7 @@
 \newenvironment{algorithmblock}[1]{%
   \refstepcounter{algorithm}\par\medskip
   \noindent\textbf{Algorithm \thealgorithm. #1}\par
-  \begin{enumerate}\setlength{\itemsep}{0.25em}\setlength{\parskip}{0pt}%
+  \begin{enumerate}[leftmargin=2.2em,itemsep=0.3em,parsep=0pt]%
 }{%
   \end{enumerate}\par\medskip
 }
@@ -64,22 +65,25 @@
 \noindent
 Probability content does not by itself determine interval placement. We study
 the interval functional induced by relaxed quantile regression (RQR), whose
-residual-product check loss estimates two exchangeable roots without
+residual-product check loss estimates two unlabeled raw roots without
 preassigning endpoint quantiles. Under explicit conditions, the unrestricted
 population minimizer is the unique contiguous content-\(c\) interval whose
 retained mean equals the population mean. A fixed mean tilt preserves content
-while shifting that retained mean to \(\mu+\delta\); admissible interior tilts
-index the complete contiguous content-\(c\) family, including
-distribution-specific representations of equal-tailed and
-shortest-contiguous intervals. We construct loss-based generalized posteriors
-using a pseudo-asymmetric-Laplace normal--exponential augmentation. The
-resulting sampler combines generalized inverse-Gaussian latent-scale updates
-with Gaussian root-block updates. In a dynamic linear extension, the stacked
-state prior is Gaussian but the joint augmented observation kernel is quartic;
-alternating root-specific forward-filtering backward-sampling steps are exact
-full-conditional updates for the declared fixed-joint models. The construction
-updates interval-root functionals under a loss and prior. It is not a response
-likelihood, and its root draws are not posterior-predictive responses.
+while shifting that retained mean to \(\mu+\delta\). Interior admissible tilts
+index all finite-root interior content-\(c\) windows; qualified one-sided
+limits supply the boundary members. Equal-tailed and shortest-contiguous
+intervals therefore have distribution-specific recovery tilts. We construct
+loss-based generalized posteriors using a pseudo-asymmetric-Laplace
+normal--exponential augmentation. One fixed-rate mean-tilted sampler covers
+fixed-design regression, with ordinary RQR obtained exactly at zero tilt. A
+dynamic linear extension replaces Gaussian coefficient blocks by alternating
+root-specific forward-filtering backward-sampling steps: the stacked state
+prior is Gaussian, but the joint augmented observation kernel is quartic.
+A frozen deep echo-state-network feature matrix supplies a deterministic
+nonlinear readout specialization. Current software and empirical evidence
+concern ordinary RQR; the nonzero-tilt algorithms are derived but not yet
+implemented or validated. All updates concern interval-root functionals under
+a loss and prior, not a response likelihood or posterior-predictive responses.
 \end{abstract}
 
 \section{Introduction}
@@ -111,8 +115,9 @@ the response mean after truncation. Profiling expected loss over its half-width
 then identifies the mean-preserving window as the unique global minimizer
 under explicit distributional conditions. A fixed mean tilt changes the
 retained-mean equation while leaving the content equation unchanged. The tilt
-therefore indexes interval functionals; it is not an automatically learned
-response parameter.
+therefore indexes interval functionals. It is fixed externally, or selected in
+an external validation layer, rather than learned as an ordinary response
+parameter.
 
 Computation follows by exponentiating the declared loss
 \citep{BissiriHolmesWalker2016GeneralBayes}. A
@@ -122,9 +127,12 @@ Bayesian quantile-regression computation
 inverse-Gaussian latent scales and Gaussian conditional root blocks. The
 augmentation acts on a pseudo-residual, not on the response distribution. A
 fixed tilt changes only the Gaussian information vectors. Ridge and
-regularized-horseshoe priors provide corresponding low- and high-dimensional
-readout specifications
-\citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS}.
+regularized-horseshoe priors provide ordinary-RQR readout specifications
+\citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS}. The proposed
+nonzero-tilt algorithms initially use proper Gaussian priors, including
+ridge priors; the
+marginal propriety of the external horseshoe-family adapter under nonzero tilt
+is unresolved.
 
 Our principal structured extension represents each root by a linear Gaussian
 state trajectory. Although the two trajectories have a jointly Gaussian
@@ -134,17 +142,21 @@ for the other, to which standard dynamic-linear-model
 forward-filtering backward-sampling (FFBS) applies
 \citep{GoncalvesMigonBastos2020DQLM}. Alternating those two path draws gives
 exact root-blocked Gibbs updates for the declared fixed-joint RQR models. A
-deterministic nonlinear feature readout is retained as a secondary extension,
-not as a second central thread.
+deterministic deep echo-state-network (DESN) feature matrix gives a secondary
+frozen-feature readout specialization
+\citep{Jaeger2001EchoState,GallicchioMicheliPedrelli2018DeepESNDesign}.
+The reservoir is a recorded design object, not a posterior state.
 
 The contributions are therefore: (i) a mean-preserving characterization and
 global identification result for the ordinary RQR interval functional;
 (ii) a fixed-content mean-tilted family that represents all admissible
-contiguous windows, including distribution-specific equal-tailed and shortest
-members; (iii) generalized-Bayes Gibbs computation for ordinary RQR; and
-(iv) an exact root-blocked RQR dynamic linear model under fixed-joint evolution
-specifications. Nonzero-tilt samplers, data-driven tilt selection, and
-variational approximations remain separate methodological developments.
+interior windows, with boundary members obtained through qualified limits;
+(iii) a master fixed-rate mean-tilted Gibbs construction whose zero-tilt member
+is the implemented ordinary-RQR sampler; and (iv) a root-blocked dynamic linear
+extension plus a frozen-feature DESN adapter. The ordinary fixed-design and
+DLM samplers and the frozen-feature DESN readout adapter are implemented.
+Nonzero-tilt samplers, data-driven tilt selection, and variational
+approximations remain proposed methodological developments.
 
 The interpretation is deliberately narrow. The posterior-like update concerns
 interval-root functionals under a loss and prior. It is not an ordinary
@@ -161,10 +173,10 @@ Shaby2014OpenFacedSandwich}.
 
 Section~\ref{sec:interval-functionals} defines the fixed-content class.
 Sections~\ref{sec:rqr-loss} and~\ref{sec:mean-tilt} identify ordinary and
-mean-tilted RQR. Section~\ref{sec:posterior} gives the generalized posterior
-and Gibbs sampler, Section~\ref{sec:dynamic} develops the dynamic root-state
-model, Section~\ref{sec:evaluation} states the evaluation strategy, and
-Section~\ref{sec:discussion} concludes.
+mean-tilted RQR. Section~\ref{sec:posterior} develops fixed-design
+generalized-Bayes computation, and Section~\ref{sec:structured} treats the DLM
+and frozen-DESN predictor architectures. Section~\ref{sec:evaluation} states
+the evaluation strategy, and Section~\ref{sec:discussion} concludes.
 
 \section{Fixed-Content Interval Functionals}
 \label{sec:interval-functionals}
@@ -211,56 +223,41 @@ For a regular interior shortest interval under a positive density,
 \(f\{Q(u)\}=f\{Q(u+c)\}\). Under multimodality, a highest-density region may
 be disconnected, whereas the targets above remain contiguous
 \citep{BrehmerGneiting2021Intervals}. Figure~\ref{fig:three-interval-principles}
-compares the three principal balance conditions for one right-skewed
+compares the three principal balance conditions for one strongly asymmetric
 distribution.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig01_three_balance_principles.png}
-\caption{\textbf{Three interval-selection principles under right skewness.}
-All panels use a standardized \(\mathrm{Gamma}(2,1)\) population distribution
-and content \(c=0.80\). Equal-tailed (ET) intervals balance omitted
+\caption{\textbf{Three interval-selection principles under left skewness.}
+All panels use the standardized form of an asymmetric-Laplace population with
+raw location \(0\), scale \(1\), quantile level \(0.99\), and content
+\(c=0.80\). The raw location is the \(0.99\) quantile under this convention;
+all targets are computed on the raw population before display coordinates
+subtract its mean and divide by its standard deviation. Equal-tailed (ET)
+intervals balance omitted
 probabilities, ordinary RQR balances omitted first moments, and shortest
-contiguous (SH) intervals minimize geometric width. Color, line type, and
-endpoint shape redundantly encode the three targets. These deterministic
-population calculations compare the functionals; they do not provide
-finite-sample or comparative-performance evidence.}
+contiguous (SH) intervals minimize geometric width. Direct labels, endpoint
+glyphs, and redundant color encode the three targets; every interval segment is
+solid. This population benchmark is distinct from the pseudo-asymmetric-Laplace
+augmentation of the residual product in Section~\ref{sec:gibbs}. These
+deterministic population calculations compare the functionals; they do not
+provide finite-sample or comparative-performance evidence.}
 \label{fig:three-interval-principles}
 \end{figure}
 
-\section{Ordinary Relaxed Quantile Regression}
+\section{Ordinary RQR: The Zero-Tilt Foundation}
 \label{sec:rqr-loss}
 
-Let \(y_i\) be the response and let \(\vect x_i\in\R^p\) be a fixed design row,
-for \(i=1,\ldots,n\). For a content level \(c\in(0,1)\), define two
-exchangeable root readouts
+For generic ordered endpoints \(a<b\), define the residual product
 \[
-\eta_{1i}=\vect x_i^\top\vect\beta_1,\qquad
-\eta_{2i}=\vect x_i^\top\vect\beta_2.
-\]
-The reported interval endpoints are ordered after fitting:
-\[
-L_i=\min(\eta_{1i},\eta_{2i}),\qquad
-U_i=\max(\eta_{1i},\eta_{2i}).
-\]
-The root labels are not lower and upper labels; they are exchangeable
-computational labels.
-
-Define the residual product
-\[
-e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})
+e(a,b;y)=(y-a)(y-b)
 \]
 and the check loss
 \[
 \rho_c(e)=e\{c-\ind(e<0)\}.
 \]
-Then \(e_i<0\) if and only if \(y_i\) lies between the two roots. The empirical
-RQR loss is
-\[
-\mathcal L_{n,c}(\vect\beta_1,\vect\beta_2)
-=\sum_{i=1}^n \rho_c(e_i).
-\]
-For population interpretation, write the ordered endpoints as
+Thus \(e(a,b;y)<0\) if and only if \(y\) lies between the endpoints. Write
 \(a=m-h\) and \(b=m+h\), where \(h>0\). Then
 \[
 (Y-a)(Y-b)=(Y-m)^2-h^2.
@@ -293,8 +290,8 @@ Equivalently,
 
 The population content implication is due to
 \citet{PouplinEtAl2024RQR}. The conditional first-moment equation is a further
-consequence of the same first-order system and does not appear in the original
-RQR article. It is equivalently zero conditional covariance
+consequence of the same first-order system and, to our knowledge, is not
+reported in the original RQR article. It is equivalently zero conditional covariance
 between \(Y\) and interval membership. It also balances the first-moment
 contributions removed from the two tails rather than their probabilities:
 \[
@@ -365,7 +362,8 @@ generalization result requires a separate empirical-process analysis.
 \label{sec:mean-tilt}
 
 To move through the content-\(c\) family without changing the coverage score,
-consider a fixed mean tilt \(\delta\), measured in response units, and define
+consider a fixed retained-mean tilt \(\delta\), measured in response units, and
+define
 \[
 \ell_{c,\delta}(m,h;y)
 =
@@ -379,6 +377,8 @@ Equivalently,
 \]
 The second form shows that the loss remains invariant to exchanging the two
 roots.
+We call this fixed-target family \emph{mean-tilted RQR} (MT-RQR). Ordinary RQR
+is exactly its \(\delta=0\) member.
 
 \begin{proposition}[Fixed-content mean tilt]
 \label{prop:mean-tilt}
@@ -439,12 +439,13 @@ support endpoint. Finite second moments make both endpoint tilt values finite, e
 support endpoint is infinite. At an endpoint tilt, the canonical interval is
 defined by the corresponding one-sided probability-window limit. If the
 support endpoint is infinite, this member is semi-infinite and is not attained
-by finite root coefficients, although the limiting infimum is finite. If the
-support endpoint is finite, roots beyond that endpoint are inactive and the
-population loss does not identify a unique root representation without an
-additional support constraint. Tilts outside the closed admissible range make
-the unrestricted population risk unbounded below in the corresponding
-escaping-root direction, although a proper Gaussian prior can still yield a
+by finite root coefficients, although the limiting population-risk infimum is
+finite. If the support endpoint is finite, roots beyond that endpoint are
+inactive and the population loss does not identify a unique root
+representation without an additional support constraint. Tilts outside the
+closed admissible range make the unrestricted population risk unbounded below
+in the corresponding escaping-root direction, although a proper Gaussian
+prior can still yield a
 proper finite-sample generalized posterior.
 
 \begin{corollary}[Recovery tilts for familiar interval functionals]
@@ -482,8 +483,8 @@ width profile for the same population benchmark.
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig02_mean_tilt_recovery_map.png}
 \caption{\textbf{Population mean-tilt recovery map.}
-For a \(\mathrm{Gamma}(2,1)\) distribution and \(c=0.80\), the retained-window
-mean \(M_c(u)\) maps each interior lower-tail index \(u\) to a unique
+For the same standardized asymmetric-Laplace distribution and \(c=0.80\), the
+retained-window mean \(M_c(u)\) maps each interior lower-tail index \(u\) to a unique
 standardized tilt \(d=\delta/\operatorname{SD}(Y)\). The marked oracle tilts
 recover the shortest contiguous (SH), equal-tailed (ET), and ordinary-RQR
 intervals; ordinary RQR has \(d=0\). The width profile shows that SH, not
@@ -513,57 +514,118 @@ make the tilted kernel integrable. This argument covers the initial ridge and
 Gaussian-state implementations; heavier-tailed shrinkage priors require a
 separate propriety analysis before nonzero tilt is enabled.
 
-\section{Generalized Posterior and Gibbs Computation}
+\section{Generalized-Bayes Computation under Fixed Design}
 \label{sec:posterior}
 
-\subsection{Declared loss targets and augmentation}
+\subsection{Fixed-design target and model-family status}
 
-For priors \(\pi_\beta(\vect\beta_1)\) and
-\(\pi_\beta(\vect\beta_2)\), define the generalized posterior
+Let \(\mathcal O\) index the observed rows of
+\(\mat X\in\R^{n\times p}\), with \(n_{\mathrm{obs}}=|\mathcal O|\), and
+define two raw-root readouts
 \[
-\Pi_{\mathrm R}
+\vect\eta_k=\mat X\vect\beta_k,\qquad k=1,2.
+\]
+Pointwise reporting uses
+\[
+L_i=\min(\eta_{1i},\eta_{2i}),\quad
+U_i=\max(\eta_{1i},\eta_{2i}),\quad
+M_i=(L_i+U_i)/2,\quad W_i=U_i-L_i.
+\]
+For priors \(\pi_1,\pi_2\), a fixed externally declared
+\(\vect\delta\), and a fixed learning rate \(\omega_{\mathrm R}>0\), define
+\begin{equation}
+\begin{split}
+\Pi_{\vect\delta}
 (d\vect\beta_1,d\vect\beta_2\mid\vect y,\mat X)
-\propto
-\pi_\beta(d\vect\beta_1)\pi_\beta(d\vect\beta_2)
-\exp\{-\omega_{\mathrm R}\mathcal L_{n,c}(\vect\beta_1,\vect\beta_2)\},
-\]
-where \(\omega_{\mathrm R}>0\) is a learning rate. A learned-scale version
-uses a positive reference loss scale \(s_L\), sets
-\(\omega_{\mathrm R}=\kappa/s_L\), and places a Gamma prior on \(\kappa\).
-We call
+\propto{}&
+\pi_1(d\vect\beta_1)\pi_2(d\vect\beta_2)\\
+&\times\exp\left\{-\omega_{\mathrm R}
+\sum_{i\in\mathcal O}
+\left[\rho_c(e_i)
+-c\delta_i(\eta_{1i}+\eta_{2i}-2y_i)\right]\right\},
+\end{split}
+\label{eq:fixed-mt-target}
+\end{equation}
+where \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\). This is a
+loss-based generalized posterior, not a response-likelihood posterior. The
+tilt is fixed target metadata rather than a sampled response parameter.
+Nonzero tilt uses a fixed learning rate and a proper Gaussian prior,
+including a ridge prior,
+in the present derivation.
 
-\[
-\Pi_{\mathrm R}(d\vartheta,d\kappa\mid\vect y)
-\propto
-\pi(d\vartheta)\kappa^{n}\pi_\kappa(d\kappa)
-\exp\{-\kappa\mathcal L_{n,c}(\vartheta)/s_L\},
-\]
-the \emph{pseudo-residual-normalized learned-scale target}. The factor
-\(\kappa^n\) arises from normalizing an asymmetric-Laplace kernel in the
-abstract pseudo-residual \(e_i\); it does not normalize a response density in
-\(y_i\). Here \(\vartheta\) collects both roots. If
-\(\kappa\sim\mathrm{Gamma}(a_\kappa,b_\kappa)\) in shape--rate form, its
-collapsed conditional is
+\begin{table}[t!]
+\centering
+\caption{\textbf{Model-family architecture and current methodological
+status.} Panel A separates predictor restrictions from the interval loss;
+Panel B records target and implementation status. FD denotes fixed design.
+``Exact'' means exact conditional updating for the declared generalized
+target, not a correct response likelihood or calibrated endpoint uncertainty.
+Every row retains root or endpoint functionals; none defines response
+simulation.}
+\label{tab:rqr-family-status}
+\TableStyle
+\textbf{Panel A: predictor adapters}\par\smallskip
+\begin{tabularx}{\textwidth}{@{}p{0.14\textwidth}
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+Architecture & Root representation & Prior or evolution & Root block\\
+\midrule
+Fixed design
+& \(\eta_k=\mat X\vect\beta_k\)
+& Proper Gaussian (including ridge); ordinary external shrinkage adapter
+& Gaussian coefficient draw\\
+DLM
+& \(\eta_{kt}=\vect f_t^\top\vect\theta_{kt}\)
+& Fixed \(W_t\), frozen template, or ordinary shared component scales
+& Root-specific FFBS\\
+Frozen DESN
+& \(\eta_k=\mat H_{\mathrm{DESN}}\vect\beta_k\)
+& Recorded features; ridge or ordinary readout adapter
+& Fixed-design Gaussian draw\\
+\bottomrule
+\end{tabularx}
 
-\[
-\kappa\mid\vartheta,\vect y
-\sim\mathrm{Gamma}\left(a_\kappa+n,
-b_\kappa+\mathcal L_{n,c}(\vartheta)/s_L\right).
-\]
-The factor \(\kappa^n\) is part of the declared target rather than an
-irrelevant constant when \(\kappa\) is learned. A pure-loss sensitivity target
-that omits this factor is kept separate.
+\vspace{0.8em}
+\textbf{Panel B: target and status}\par\smallskip
+\begin{tabularx}{\textwidth}{@{}p{0.15\textwidth}
+  p{0.15\textwidth}
+  >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+Target & Rate & Conditional status & Implementation and evidence\\
+\midrule
+RQR-FD
+& Fixed or ordinary learned \(\kappa\)
+& Exact blocks for the declared ordinary target
+& Implemented and validated in declared ordinary modes\\
+MT-RQR-FD
+& Fixed only
+& Derived for proper Gaussian roots, including ridge
+& Proposed; no nonzero-tilt evidence\\
+RQR-DLM
+& Fixed or ordinary learned \(\kappa\)
+& Exact for fixed-joint modes; adaptive discount is working
+& Implemented in declared ordinary modes\\
+MT-RQR-DLM
+& Fixed only
+& Derived for fixed \(W_t\) and frozen templates
+& Proposed; random-scale extension unresolved\\
+RQR-DESN
+& Fixed or ordinary learned \(\kappa\)
+& Exact conditional on frozen features
+& Implemented ordinary readout adapter\\
+MT-RQR-DESN
+& Fixed only
+& Fixed-design specialization with a proper Gaussian ridge prior
+& Proposed; nonzero-tilt shrinkage propriety unresolved\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-The learned \(\kappa\) is part of this declared hierarchical generalized
-target. Coherence for a fixed loss scale does not establish that \(\kappa\) is
-an ordinary jointly learnable response parameter or that its generalized
-posterior calibrates endpoint uncertainty
-\citep{LeeLiuNicholls2025LearningRate,WuMartin2023LearningRateComparison}.
-We therefore use fixed-rate sensitivity analyses as the primary specification
-and treat learned-scale inference as an additional convention. When \(s_L\) is
-computed from training responses, its calculation sample and variance
-convention are recorded and \(s_L\) is frozen before simulation; the resulting
-target is data dependent in an empirical-Bayes sense.
+\subsection{Loss-kernel augmentation and Gaussian blocks}
+\label{sec:gibbs}
 
 Let
 \[
@@ -572,7 +634,7 @@ m_i^{\mathrm R}=y_i(\eta_{1i}+\eta_{2i})-\eta_{1i}\eta_{2i}.
 \]
 Then \(r_i-m_i^{\mathrm R}=e_i\). With
 \[
-\sigma_{\mathrm R}=s_L/\kappa=\omega_{\mathrm R}^{-1},\qquad
+\sigma_{\mathrm R}=\omega_{\mathrm R}^{-1},\qquad
 \xi_c=\frac{1-2c}{c(1-c)},\qquad
 \phi_c=\frac{2}{c(1-c)},
 \]
@@ -586,180 +648,318 @@ r_i\mid m_i^{\mathrm R}+\xi_c v_i,\,
 \Exp(v_i\mid \text{rate}=1/\sigma_{\mathrm R})\,dv_i .
 \]
 This identity is a computational representation of the loss kernel. It should
-not be read as a response model for \(y_i\).
-Figure~\ref{fig:gibbs-computational-schematic} summarizes the resulting scan
-without assigning a response-generating interpretation to the augmentation.
-
-\begin{figure}[t]
-\centering
-\input{figures/rqr_gibbs_computational_schematic.tex}
-\caption{\textbf{Computational augmentation and Gibbs scan.}
-The generalized posterior exponentiates a declared interval-root loss; it is
-not a response-likelihood posterior. The pseudo-asymmetric-Laplace
-normal--exponential representation gives GIG latent-scale updates and Gaussian
-conditional updates for the exchangeable root blocks. Current software
-implements ordinary RQR (\(\delta=0\)); the nonzero fixed-\(\delta\)
-information shift is derived but not implemented or validated. Ordered
-endpoints, widths, and midpoints are interval-root functionals, not
-posterior-predictive response draws.}
-\label{fig:gibbs-computational-schematic}
-\end{figure}
-
-\subsection{Conditional Gibbs blocks}
-\label{sec:gibbs}
+not be read as a response model for \(y_i\). Under the
+three-parameter convention
+\[
+\GIG(p,a,b):\quad
+p(v)\propto v^{p-1}\exp\{-(av+b/v)/2\},
+\]
+the observed latent scales have full conditionals
+\[
+v_i\mid\cdot\sim
+\GIG\left(
+\frac12,\,
+\frac{\omega_{\mathrm R}}{2c(1-c)},\,
+\frac{\omega_{\mathrm R}c(1-c)e_i^2}{2}
+\right),
+\qquad i\in\mathcal O.
+\]
+The ordinary learned-scale convention instead sets
+\(\sigma_{\mathrm R}=s_L/\kappa\) and follows the separate partially collapsed
+order stated in the following subsection and in the supplement.
 
 Conditional on \(\vect\beta_2\), the pseudo-observation equation is linear in
 \(\vect\beta_1\):
 \[
-\mat A_1=\diag(\vect y-\vect\eta_2)\mat X,\qquad
-\vect z_1=\vect y\circ(\vect y-\vect\eta_2)-\xi_c\vect v.
+\mat A_1=\diag(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
+\mat X_{\mathcal O},\qquad
+\vect z_1=\vect y_{\mathcal O}\circ
+(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
+-\xi_c\vect v_{\mathcal O}.
 \]
-With \(W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_i)^{-1}\}\) and Gaussian prior
+With
+\(\mat W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_i)^{-1}:i\in\mathcal O\}\)
+and Gaussian prior
 canonical parameters \((\mat Q_{01},\vect h_{01})\),
 \[
-\mat Q_1=\mat Q_{01}+\mat A_1^\top W_v\mat A_1,\qquad
-\vect h_1=\vect h_{01}+\mat A_1^\top W_v\vect z_1,
+\mat Q_1=\mat Q_{01}+\mat A_1^\top\mat W_v\mat A_1,\qquad
+\vect h_1=\vect h_{01}+\mat A_1^\top\mat W_v\vect z_1
++\omega_{\mathrm R}c\mat X_{\mathcal O}^{\top}\vect\delta_{\mathcal O},
 \]
 so
 \[
 \vect\beta_1\mid\cdot\sim
 \Normal(\mat Q_1^{-1}\vect h_1,\mat Q_1^{-1}).
 \]
-The update for \(\vect\beta_2\) is identical after swapping root labels. The
-latent scales have generalized inverse Gaussian full conditionals. For the
-learned-scale target, one valid partially collapsed scan draws \(\kappa\) from
-its collapsed Gamma conditional, refreshes all latent scales using that new
-draw, and then updates roots 1 and 2. The refresh order is part of the sampler
-contract. Adaptive shrinkage priors use separate shrinkage states for the two
-root coefficient vectors.
+The update for \(\vect\beta_2\) is identical after swapping root labels and
+conditioning on the newly drawn first root. The tilt changes only the two
+Gaussian information vectors: the latent-scale conditionals and Gaussian
+precision matrices are unchanged.
 
-\begin{algorithmblock}{Ordinary-RQR fixed-design Gibbs scan}
+\begin{algorithmblock}{Fixed-rate MT-RQR fixed-design Gibbs scan}
 \label{alg:fixed-design-gibbs}
-\item Initialize both root coefficient blocks, their prior or shrinkage
-states, and---for the normalized learned-scale target---\(\kappa\).
-\item If the learning rate is fixed, retain its declared value. If it is
-learned, draw \(\kappa\) from the collapsed Gamma conditional using the
-current roots, and set \(\sigma_{\mathrm R}=s_L/\kappa\).
-\item Draw each \(v_i\) from its GIG full conditional using the current roots
-and the current \(\sigma_{\mathrm R}\). In the learned-scale scan, this refresh
-must follow the collapsed \(\kappa\) draw.
-\item Draw \(\vect\beta_1\) conditional on \(\vect\beta_2\), then draw
-\(\vect\beta_2\) conditional on the newly sampled \(\vect\beta_1\), using the
-Gaussian systems above. Update any root-specific shrinkage states.
-\item Optionally apply a global root-label swap. Record label-invariant
-functionals through ordered endpoints \(L_i,U_i\), widths, and midpoints.
+\item \textbf{Declared target and applicability.} Target
+\eqref{eq:fixed-mt-target} with fixed \(\omega_{\mathrm R}>0\), fixed
+\(\vect\delta\), and proper Gaussian root priors, including ridge priors. The
+scan applies to
+fixed, recorded design rows; it does not define a response likelihood.
+\item \textbf{Inputs and fixed quantities.} Supply
+\(\vect y,\mat X,\mathcal O,c,\omega_{\mathrm R},\vect\delta_{\mathcal O}\),
+the two prior canonical parameter pairs, iteration controls, and a recorded
+label-swap rule. Missing rows are excluded from every loss, latent-scale, and
+tilt site.
+\item \textbf{Initialization.} Choose finite
+\(\vect\beta_1,\vect\beta_2\) and positive placeholder \(v_i\) for every
+\(i\in\mathcal O\).
+\item \textbf{One complete sweep.} Repeat for every warm-up and sampling
+iteration:
+\begin{enumerate}[label=(\alph*),leftmargin=1.8em,itemsep=0.15em,topsep=0.15em]
+\item compute \(e_i\) and draw every observed \(v_i\) from the GIG
+conditional;
+\item draw \(\vect\beta_1\) conditional on \(\vect\beta_2\) from its Gaussian
+system with shift
+\(\omega_{\mathrm R}c\mat X_{\mathcal O}^{\top}
+\vect\delta_{\mathcal O}\);
+\item rebuild the system and draw \(\vect\beta_2\) conditional on the new
+\(\vect\beta_1\), using the same shift; and
+\item if authorized by exchangeability, swap both complete root labels and
+all associated root-specific states together.
+\end{enumerate}
+\item \textbf{Stored quantities and label handling.} Retain raw roots only
+when required for diagnostics, and report ordered endpoints \(L_i,U_i\),
+widths, midpoints, losses, and complete target metadata. The optional
+acceptance-one swap is omitted unless the two prior and hyperstate blocks are
+exchangeable.
+\item \textbf{Rate and computational status.} This is a fixed-rate scan.
+At \(\vect\delta=\vect 0\) it is exactly the ordinary-RQR scan; the separate
+ordinary learned-\(\kappa\) scan is Algorithm~S1.
+\item \textbf{Implementation and validation status.} The conditional blocks
+are exact for the declared fixed-rate proper-Gaussian generalized target.
+Zero tilt is implemented and validated; nonzero tilt is derived but not yet
+implemented or empirically validated.
 \end{algorithmblock}
 
-For completeness, a scalar fixed mean tilt preserves these conditional
-families. Under a fixed learning rate, the two Gaussian information vectors
-become
-\[
-\vect h_k^{\mathrm{MT}}
-=\vect h_k+\omega_{\mathrm R}c\delta\mat X^\top\vect 1_n,
-\qquad k=1,2.
-\]
-The latent-scale conditional and Gaussian precision matrices are unchanged.
-The supplement gives the algebraic covariate-specific vector extension. These
-are fixed-rate identities, not evidence of an implemented nonzero-tilt API.
-They do not extend the current learned-scale Gamma update: the tilted loss need
-not be nonnegative, and a normalized joint target with random learning rate
-must be derived separately.
+At \(\vect\delta=\vect 0\), Algorithm~\ref{alg:fixed-design-gibbs} reduces
+exactly to the fixed-rate ordinary-RQR scan. At zero tilt, the implemented
+conditional-Gaussian shrinkage adapter may update separate root-specific
+states. That external adapter remains ordinary-only: neither nonzero-tilt
+propriety nor learned-rate normalization has been established for it.
 
-\section{Dynamic RQR: A Root-State Model}
+\subsection{Ordinary-RQR learned inverse-loss scale}
+
+A separate ordinary-only convention uses a positive reference loss scale
+\(s_L\), sets \(\sigma_{\mathrm R}=s_L/\kappa\), writes
+\(\mathcal L_{n,c}(\vartheta)=
+\sum_{i\in\mathcal O}\rho_c(e_i)\), and declares
+\[
+\Pi_{\mathrm R}(d\vartheta,d\kappa\mid\vect y)
+\propto
+\pi(d\vartheta)\kappa^{n_{\mathrm{obs}}}\pi_\kappa(d\kappa)
+\exp\{-\kappa\mathcal L_{n,c}(\vartheta)/s_L\},
+\]
+the \emph{pseudo-residual-normalized learned-scale target}. The factor
+\(\kappa^{n_{\mathrm{obs}}}\) arises from normalizing an asymmetric-Laplace
+kernel in the abstract pseudo-residual \(e_i\); it does not normalize a
+response density in \(y_i\). Here \(\vartheta\) collects both roots. If
+\(\kappa\sim\mathrm{Gamma}(a_\kappa,b_\kappa)\) in shape--rate form, its
+collapsed conditional is
+\[
+\kappa\mid\vartheta,\vect y
+\sim\mathrm{Gamma}\left(a_\kappa+n_{\mathrm{obs}},
+b_\kappa+\mathcal L_{n,c}(\vartheta)/s_L\right).
+\]
+The factor \(\kappa^{n_{\mathrm{obs}}}\) is part of the declared target rather
+than an irrelevant constant when \(\kappa\) is learned. A pure-loss sensitivity
+target that omits this factor is kept separate.
+
+The learned \(\kappa\) is part of this declared hierarchical generalized
+target. Coherence for a fixed loss scale does not establish that \(\kappa\) is
+an ordinary jointly learnable response parameter or that its generalized
+posterior calibrates endpoint uncertainty
+\citep{LeeLiuNicholls2025LearningRate,WuMartin2023LearningRateComparison}.
+We therefore use fixed-rate sensitivity analyses as the primary specification
+and treat learned-scale inference as an additional convention. When \(s_L\) is
+computed from training responses, its calculation sample and variance
+convention are recorded and \(s_L\) is frozen before simulation; the resulting
+target is data dependent in an empirical-Bayes sense.
+
+This target can be paired only with an otherwise valid ordinary fixed-design
+or fixed-joint root adapter. Its partially collapsed scan draws \(\kappa\),
+immediately refreshes every observed latent scale at the new value, and only
+then updates roots 1 and 2; Supplement Algorithm~S1 gives the complete order.
+The mean-tilted loss may be negative, and a proper normalized joint target
+with random rate has not been established. The Gamma update above must not be
+copied to nonzero tilt.
+
+\section{Structured Predictor Extensions}
+\label{sec:structured}
+
+\subsection{Dynamic linear root states}
 \label{sec:dynamic}
 
-For an RQR-DLM or state-space embedding, each root can be represented by a
-latent state path, for example
+The MT-RQR-DLM represents each raw root by a linear Gaussian state trajectory,
 \[
-\eta_{kt}=F_t^\top\theta_{kt},\qquad
-\theta_{kt}=G_t\theta_{k,t-1}+\epsilon_{kt},
-\qquad \epsilon_{kt}\sim\Normal(0,W_{kt}),
+\eta_{kt}=\vect f_t^\top\vect\theta_{kt},\qquad
+\vect\theta_{k0}\sim\Normal(\vect m_0,\mat C_0),\qquad
+\vect\theta_{kt}=\mat G_t\vect\theta_{k,t-1}+\vect\epsilon_{kt},
+\qquad \vect\epsilon_{kt}\sim\Normal(\vect 0,\mat W_t),
 \qquad k=1,2.
 \]
 The two trajectories can be written as one stacked state with block-diagonal
-evolution matrices. That representation does not, however, give one Gaussian
-FFBS update. Jointly in the two root states, the augmented observation kernel
-contains the square of
+evolution matrices. That representation does not yield one Gaussian FFBS
+update. Jointly in both root states, the augmented observation kernel contains
+the square of
 \[
-(y_t-F_t^\top\theta_{1t})(y_t-F_t^\top\theta_{2t}),
+(y_t-\vect f_t^\top\vect\theta_{1t})
+(y_t-\vect f_t^\top\vect\theta_{2t}),
 \]
-and therefore includes fourth-order cross-terms. Conditional on either complete
-root path, the same expression is linear in the other path. The sampler
-accordingly partitions the stacked state by root and uses two sequential FFBS
-blocks. These are exact full-conditional updates for the declared fixed-joint
-target; the issue is potential Markov-chain mixing, not posterior
-approximation.
+and hence fourth-order cross-terms. Conditional on either complete root path,
+the same expression is linear in the other path. Partitioning the stacked
+state by root and drawing the paths sequentially therefore gives exact
+full-conditional updates for the declared fixed-joint target. The concern is
+Markov-chain mixing, not an approximation of either conditional.
 
-Conditional on the second root path and the RQR latent scales, the first root
-path enters through
+For \(t\in\mathcal O\), conditional on the second root path and the RQR latent
+scales, the first path has the pseudo-observation system
 \[
 z_{1t}=y_t(y_t-\eta_{2t})-\xi_c v_t,\qquad
-H_{1t}=(y_t-\eta_{2t})F_t^\top,qquad
-V_t=\phi_c s_Lv_t/\kappa.
+H_{1t}=(y_t-\eta_{2t})\vect f_t^\top,\qquad
+V_t=\phi_c\sigma_{\mathrm R}v_t.
 \]
-This is a scalar-observation Gaussian state-space system, so the complete root
-path can be sampled by forward-filtering backward-sampling. The second root
-path is analogous and conditions on the newly drawn first path.
-
-The evolution specification matters to the target. Fixed \(W_{kt}\) defines a
-Gaussian state prior and gives exact alternating FFBS. A frozen discount
-template first maps component-specific discounts to a complete \(W_{1:T}\)
-sequence through a declared reference covariance recursion and then holds that
-sequence fixed throughout MCMC. Conditional on that template, this gives an
-exact sampler for the stated prior; a template estimated from training data is
-recorded as an empirical-Bayes specification. By contrast, recomputing \(W_t\)
-from each conditional filter covariance
-makes it depend on the other root and latent-scale blocks. We retain that
-exdqlm-compatible recursion only as an experimental working update. A
-two-time scalar mixed-derivative argument in the supplement shows that its two
-advertised conditional FFBS kernels are generally incompatible with a common
-positive smooth joint density.
-
-For an exact component-specific alternative, partition the state into blocks
-and set
+The second root is analogous and conditions on the newly drawn first path.
+Under fixed-rate MT-RQR, the tilt adds the canonical linear site
 \[
-W_t(\vect q)=\operatorname{blockdiag}
-\{q_1Q_{1t},\ldots,q_JQ_{Jt}\},
+\vect g_t=\omega_{\mathrm R}c\delta_t\vect f_t
+\]
+to each root-state conditional. This information-form update never divides by
+\(y_t-\eta_{\mathrm{other},t}\) and remains well defined when that quantity is
+zero. Equivalently, if the ordinary
+pseudo-observation update at time \(t\) gives mean
+\(\vect m_t^{(0)}\) and covariance \(\mat C_t\), the tilted filter uses
+\[
+\vect m_t=\vect m_t^{(0)}+\mat C_t\vect g_t
+\]
+and the same \(\mat C_t\). This shifted mean is propagated before the next
+update. At a missing response, the loss, \(v_t\), and \(\vect g_t\) are all
+absent. In full-path canonical notation the same operation is
+\(\vect m_{\mathrm{path}}^{(0)}+\mat Q_{\mathrm{path}}^{-1}\vect g\), which
+provides a direct implementation check.
+
+The evolution specification is part of the target. Fixed \(\mat W_t\) gives a
+Gaussian state prior. A frozen discount template first maps declared
+component-specific discounts to a complete \(\mat W_{1:T}\) sequence through
+a reference covariance recursion and then holds that sequence fixed throughout
+MCMC. Conditional on the frozen template, alternating root-specific FFBS is
+exact for the stated prior; a template constructed from training data is
+recorded as an empirical-Bayes specification.
+
+\begin{algorithmblock}{Fixed-rate MT-RQR-DLM root-blocked Gibbs scan}
+\label{alg:dynamic-gibbs}
+\item \textbf{Declared target and applicability.} Use the fixed-rate
+mean-tilted loss with two Gaussian root-state priors and either fixed
+\(\mat W_{1:T}\) or one precomputed, frozen discount template. The scan does
+not cover adaptive conditional discounts or random shared component scales.
+\item \textbf{Inputs and fixed quantities.} Supply the responses and observed
+index \((\vect y,\mathcal O)\), \(c,\omega_{\mathrm R},\delta_{1:T}\), all
+design vectors \(\vect f_{1:T}\), all evolution matrices \(\mat G_{1:T}\),
+proper Gaussian initial laws, fixed or frozen \(\mat W_{1:T}\), iteration
+controls, and the label-swap rule.
+\item \textbf{Initialization.} Choose finite root paths
+\(\vect\theta_{1,1:T},\vect\theta_{2,1:T}\) and positive placeholder latent
+scales at observed times. Do not instantiate a latent or tilt site at a
+missing response.
+\item \textbf{One complete sweep.} Repeat for every warm-up and sampling
+iteration:
+\begin{enumerate}[label=(\alph*),leftmargin=1.8em,itemsep=0.15em,topsep=0.15em]
+\item compute the current product residual and draw \(v_t\) at every
+\(t\in\mathcal O\) from the GIG conditional;
+\item conditional on \(\vect\theta_{2,1:T}\), build root 1's scalar
+pseudo-observation system, add
+\(\vect g_t=\omega_{\mathrm R}c\delta_t\vect f_t\) at observed times, and draw
+\(\vect\theta_{1,1:T}\) by FFBS;
+\item rebuild the system conditional on the new first path and draw
+\(\vect\theta_{2,1:T}\) by the analogous tilted FFBS update; and
+\item if all initial laws, evolutions, and root-specific states are
+exchangeable, swap the two complete root blocks together.
+\end{enumerate}
+\item \textbf{Stored quantities and label handling.} Retain ordered
+time-local endpoints, widths, midpoints, selected state functionals, losses,
+and complete target/evolution metadata. These are root functionals, not
+simulated responses.
+\item \textbf{Rate and computational status.} This is a fixed-rate,
+fixed-joint algorithm. At \(\delta_{1:T}=0\) it reduces exactly to the
+implemented ordinary fixed-\(\mat W_t\) or frozen-template RQR-DLM scan.
+\item \textbf{Implementation and validation status.} Sequential root-specific
+FFBS gives exact full-conditional draws for the declared modes. Nonzero tilt
+is derived but unimplemented; adaptive discount remains a working update, and
+the random shared-scale extension remains ordinary-only.
+\end{algorithmblock}
+
+At \(\delta_{1:T}=0\), Algorithm~\ref{alg:dynamic-gibbs} reduces exactly to
+the implemented fixed-rate ordinary-RQR-DLM scan for fixed \(\mat W_t\) or a
+frozen template. A learned-rate tilted target has not been normalized and is
+not obtained by inserting the ordinary Gamma update. Future-root propagation
+uses a separate frozen forecast contract with recorded future
+\(\vect f_t,\mat G_t,\mat W_t\); it neither changes the training Gibbs sweep
+nor defines response simulation.
+
+\subsection{Ordinary-only evolution variants}
+
+For the implemented ordinary model, an exact component-specific alternative
+partitions the state into blocks and sets
+\[
+\mat W_t(\vect q)=\operatorname{blockdiag}
+\{q_1\mat Q_{1t},\ldots,q_J\mat Q_{Jt}\},
 \qquad q_j\sim\operatorname{IG}(a_j,b_j),
 \]
-where \(Q_{jt}\) are fixed positive-definite templates. The multipliers are
+where the \(\mat Q_{jt}\) are fixed positive-definite templates. The multipliers are
 shared across the two roots to preserve prior exchangeability. Sampling the
 time-zero states restores the innovation factorization and yields conjugate
 inverse-Gamma updates for each \(q_j\). The implemented component-scale kernel
 then interweaves this centered update with an exact noncentered slice update:
 state innovations are divided by \(\sqrt{q_j}\), the log scales are updated
 conditional on those standardized innovations, and both root paths are
-reconstructed. This reparameterization is intended to reduce state--scale
-dependence without changing the generalized posterior
+reconstructed. This reparameterization reduces state--scale dependence without
+changing the ordinary generalized posterior
 \citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. The complete
 derivation and scan order appear in the supplement.
 
-\begin{algorithmblock}{Ordinary-RQR root-blocked dynamic Gibbs scan}
-\label{alg:dynamic-gibbs}
-\item Initialize both complete state paths, \(v_{1:T}\), any shared component
-scales, and---for the normalized learned-scale target---\(\kappa\).
-\item If \(\kappa\) is learned, draw it from its collapsed Gamma conditional
-using both current root paths. Then refresh every \(v_t\) from its GIG
-conditional. For a fixed learning rate, begin with the same latent-scale
-refresh at the declared rate.
-\item Conditional on \(\theta_{2,1:T}\), sample
-\(\theta_{1,0:T}\) by FFBS from its scalar-observation Gaussian state-space
-full conditional.
-\item Conditional on the newly sampled \(\theta_{1,1:T}\), sample
-\(\theta_{2,0:T}\) by the analogous FFBS update.
-\item For a shared component-scale model, update each \(q_j\) from its
-inverse-Gamma full conditional using innovations from both roots, including
-the sampled time-zero states. Standardize those innovations at the centered
-draw, apply the declared noncentered log-scale slice sweeps conditional on the
-standardized paths, and reconstruct both root paths at the updated scales.
-\item Optionally swap the two complete root paths. Retain ordered endpoint,
-width, midpoint, state, scale, and loss summaries.
-\end{algorithmblock}
+This component-scale interweaving is not silently generalized to nonzero
+tilt. In the noncentered parameterization the linear tilt depends on
+\(\sqrt{q_j}\) through the reconstructed state path, so the ordinary slice
+target must be modified and validated; propriety of the resulting tilted
+joint target must also be established. Likewise, the implemented
+pseudo-residual-normalized learned-\(\kappa\) update remains ordinary-only.
 
-Algorithm~\ref{alg:dynamic-gibbs} applies only to ordinary RQR and the declared
-fixed-joint evolution modes. A fixed nonzero tilt would add a known
-time-varying information shift to each conditional FFBS block, but neither
-that sampler nor a learned-scale tilted target is implemented here.
+By contrast, recomputing \(\mat W_t\) from each changing conditional filter
+covariance makes the evolution depend on the other root and latent-scale
+blocks. We retain that exdqlm-compatible discount recursion only as an
+experimental working update. A two-time scalar mixed-derivative argument in
+the supplement shows that its two advertised conditional FFBS kernels are
+generally incompatible with one common positive smooth joint density.
+
+\subsection{Frozen-feature DESN readout}
+\label{sec:desn}
+
+Let \(\mat H_{\mathrm{DESN}}\) be a deterministic feature matrix produced by a
+deep echo-state network with fixed, recorded reservoir weights, scaling,
+washout, preprocessing, and random seeds
+\citep{Jaeger2001EchoState,GallicchioMicheliPedrelli2018DeepESNDesign,
+McDermottWikle2018DeepESNUQ}. Setting
+\(\mat X=\mat H_{\mathrm{DESN}}\) in
+Algorithm~\ref{alg:fixed-design-gibbs} defines the fixed-rate MT-RQR-DESN
+readout. Thus this architecture is a fixed-design specialization, not a third
+loss or a posterior model for the reservoir. A proper ridge readout supports
+the proposed nonzero-tilt conditional Gaussian blocks. The current external
+regularized-horseshoe adapter and its evidence concern ordinary RQR only;
+nonzero-tilt propriety and implementation remain open.
+
+Future root functionals use a frozen future feature matrix
+\(\mat H_{\mathrm{DESN,fut}}\) constructed under the same recorded reservoir
+contract. They are ordered endpoint, midpoint, and width functions of the
+readout draws. No response-simulation distribution is implied. Reservoir
+selection or feature tuning must occur outside the generalized-posterior scan
+and be recorded as part of the design protocol.
 
 \section{Evaluation Strategy and Evidence Scope}
 \label{sec:evaluation}
@@ -776,7 +976,10 @@ superiority.
 The matched ordinary-RQR study uses common data-generating mechanisms,
 training and forecast windows, content levels, seeds, and scoring rules across
 fixed-design RQR, RQR-DLM, separately fitted quantile intervals, and empirical
-baselines. Primary summaries are held-out RQR loss, empirical coverage error,
+baselines. Its estimands, factors, Monte Carlo replication, failures, and
+precision targets are frozen before execution following simulation-study
+reporting principles \citep{MorrisWhiteCrowther2019Simulation}. Primary
+summaries are held-out RQR loss, empirical coverage error,
 width at comparable coverage, and endpoint recovery when a population oracle
 is available. The equal-tailed interval score is secondary because it targets
 a different placement principle. Dynamic diagnostics use time-local and
@@ -817,9 +1020,11 @@ The dynamic extension preserves the same interval target while allowing its
 roots to evolve. A Gaussian stacked prior does not overcome the quartic joint
 observation term; exact computation instead alternates the two Gaussian
 root-path conditionals. Fixed evolution covariances, frozen discount
-templates, and shared component scales define fixed-joint targets. Recomputing
-discount covariances from each changing conditional filter remains a working
-recursion, not an exact Gibbs sampler for a demonstrated joint density.
+templates, and ordinary-RQR shared component scales define fixed-joint
+targets. The nonzero-tilt component-scale interweaving extension remains
+disabled. Recomputing discount covariances from each changing conditional
+filter remains a working recursion, not an exact Gibbs sampler for a
+demonstrated joint density.
 
 Important limitations remain. The population results are unrestricted and
 pointwise, whereas fitted regression and state-space classes impose
