@@ -5,10 +5,17 @@ LATEXMK ?= latexmk
 PACKAGE_NAME := $(shell sed -n 's/^Package:[[:space:]]*//p' application/DESCRIPTION)
 PACKAGE_VERSION := $(shell sed -n 's/^Version:[[:space:]]*//p' application/DESCRIPTION)
 PACKAGE_TARBALL := $(PACKAGE_NAME)_$(PACKAGE_VERSION).tar.gz
+THEORY_FIGURE_DIR ?= application/cache/rqr_theory_figures
 
-.PHONY: pdf supplement all-pdf smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf theory-figures test-theory-figures smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
 
-pdf:
+theory-figures:
+	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
+
+test-theory-figures:
+	$(R) figures/test_rqr_theory_figure_oracles.R
+
+pdf: theory-figures
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
 		$(LATEXMK) -pdf -interaction=nonstopmode main.tex; \
 	else \
@@ -18,7 +25,7 @@ pdf:
 		$(PDFLATEX) -interaction=nonstopmode main.tex; \
 	fi
 
-supplement:
+supplement: theory-figures
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
 		$(LATEXMK) -pdf -interaction=nonstopmode rqr-gibbs-supplement.tex; \
 	else \
