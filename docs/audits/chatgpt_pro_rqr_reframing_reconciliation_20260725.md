@@ -102,9 +102,33 @@ provenance receipt. Its tests cover Git failure, argument validation,
 source-commit agreement and mismatch when Git is available, the reduced figure
 set, and receipt hashes.
 
-## Reproducible validation
+## Reproducible validation and release identities
 
-The final release validation is recorded after the source and asset commits:
+The manuscript, supplement, generator, tests, and documentation were committed
+first at:
+
+```text
+30e3e41c6cbda12fbda02655089abe62b9162dff
+```
+
+The four publication PNGs were regenerated from that exact commit in a clean
+detached worktree with:
+
+```text
+Rscript figures/generate_rqr_theory_figures.R \
+  --output-dir=application/cache/rqr_theory_release_30e3e41c6cbda12fbda02655089abe62b9162dff \
+  --source-commit=30e3e41c6cbda12fbda02655089abe62b9162dff
+```
+
+The receipt records `repository_clean=TRUE`,
+`source_identity_consistent=TRUE`, and the full declared and detected commit.
+The publication assets and receipt were committed at:
+
+```text
+67eddb4ef242b8c3de5e1b68272537971f2d6459
+```
+
+Final release validation used:
 
 ```text
 make smoke
@@ -113,12 +137,23 @@ make pdf
 make supplement
 ```
 
-The release check also scans TeX logs for unresolved references, citations,
-and overflow warnings; visually inspects both PDFs and every retained figure;
-verifies the publication-figure receipt; and confirms that no path under
+All four commands passed. The article has 15 pages and the supplement has 19
+pages. Final TeX logs contain no unresolved references or citations, multiply
+defined labels, package warnings, or overfull boxes. All pages and retained
+figures were visually inspected at rendered page size. The publication receipt
+was rehashed successfully:
+
+| Publication asset | SHA-256 |
+|---|---|
+| `fig01_three_balance_principles.png` | `d3ce7ed0316e5dd8e013c963e211f649d5880927ff012e1c73f28e1a35741af4` |
+| `fig02_mean_tilt_recovery_map.png` | `1ce3c1830d54c0e48370e73487258060c35a51fd826d650e641459c38c73f025` |
+| `figS01_cross_distribution_recovery.png` | `869f35b89423daea58da0c97ed7825fca09a9497ba2399f4b41c643514d30495` |
+| `figS02_loss_geometry.png` | `4ef8034b32fcae6cc074273d31873e7e67c663c76b6a1cf7b96ad19588217adc` |
+| `rqr_theory_figure_provenance.csv` | `3a2547fb95572f21aa68ef45204ac2c993e05fcf840ad348285b5f60137a0faf` |
+
+The release comparison confirms that no path under
 `application/R`, `application/src`, `application/scripts`,
 `application/tests`, or active simulation configuration changed in this pass.
-
-The exact source commit used for final deterministic figure generation, final
-asset hashes, build outcomes, integration commit, and pushed `main` identity
-are appended in the release closeout commit.
+The final integration and pushed `main` identities are reported in the Git
+history and the handoff response; they are not embedded self-referentially in
+this file.
