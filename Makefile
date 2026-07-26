@@ -7,7 +7,7 @@ PACKAGE_VERSION := $(shell sed -n 's/^Version:[[:space:]]*//p' application/DESCR
 PACKAGE_TARBALL := $(PACKAGE_NAME)_$(PACKAGE_VERSION).tar.gz
 THEORY_FIGURE_DIR ?= application/cache/rqr_theory_figures
 
-.PHONY: pdf supplement all-pdf theory-figures test-theory-figures smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf theory-figures test-theory-figures smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
@@ -105,6 +105,12 @@ preflight-dlm-confirmatory:
 
 oracle-reference-dlm-confirmatory:
 	application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh oracle-reference application/outputs/rqr_dlm_main_simulation_20260724/oracle-reference
+
+validate-dlm-main-wave1-correction: package-install
+	$(R) application/scripts/22_validate_rqr_dlm_wave1_corrections.R
+
+validate-dlm-main-wave1-comparator: package-install
+	$(R) application/scripts/23_validate_rqr_dlm_wave1_comparator_projection.R
 
 failclosed-dlm-confirmatory:
 	@! $(R) application/scripts/15_run_rqr_dlm_confirmatory_simulation.R execute-confirmatory application/outputs/rqr_dlm_main_simulation_20260724/forbidden-execution

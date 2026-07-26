@@ -48,10 +48,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rqr_noncentered_basis_cpp
+Rcpp::List rqr_noncentered_basis_cpp(const arma::mat& theta, const arma::vec& theta0, const arma::cube& GG, const Rcpp::IntegerVector& component_dims, const arma::vec& q);
+RcppExport SEXP _rqrgibbs_rqr_noncentered_basis_cpp(SEXP thetaSEXP, SEXP theta0SEXP, SEXP GGSEXP, SEXP component_dimsSEXP, SEXP qSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type theta0(theta0SEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type GG(GGSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type component_dims(component_dimsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type q(qSEXP);
+    rcpp_result_gen = Rcpp::wrap(rqr_noncentered_basis_cpp(theta, theta0, GG, component_dims, q));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rqrgibbs_rqr_mvn_draw_cpp", (DL_FUNC) &_rqrgibbs_rqr_mvn_draw_cpp, 4},
     {"_rqrgibbs_rqr_ffbs_cpp", (DL_FUNC) &_rqrgibbs_rqr_ffbs_cpp, 13},
+    {"_rqrgibbs_rqr_noncentered_basis_cpp", (DL_FUNC) &_rqrgibbs_rqr_noncentered_basis_cpp, 5},
     {NULL, NULL, 0}
 };
 

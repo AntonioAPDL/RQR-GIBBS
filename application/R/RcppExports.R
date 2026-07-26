@@ -15,3 +15,7 @@ rqr_ffbs_cpp <- function(z, H, V, GG, m0, C0, evolution_mode, W, D, sample_path,
     .Call(`_rqrgibbs_rqr_ffbs_cpp`, z, H, V, GG, m0, C0, evolution_mode, W, D, sample_path, jitter_ladder, evolution_label, allow_covariance_repair)
 }
 
+rqr_noncentered_basis_cpp <- function(theta, theta0, GG, component_dims, q) {
+    .Call(`_rqrgibbs_rqr_noncentered_basis_cpp`, theta, theta0, GG, component_dims, q)
+}
+

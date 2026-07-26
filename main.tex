@@ -725,8 +725,14 @@ W_t(\vect q)=\operatorname{blockdiag}
 where \(Q_{jt}\) are fixed positive-definite templates. The multipliers are
 shared across the two roots to preserve prior exchangeability. Sampling the
 time-zero states restores the innovation factorization and yields conjugate
-inverse-Gamma updates for each \(q_j\); the complete derivation appears in the
-supplement.
+inverse-Gamma updates for each \(q_j\). The implemented component-scale kernel
+then interweaves this centered update with an exact noncentered slice update:
+state innovations are divided by \(\sqrt{q_j}\), the log scales are updated
+conditional on those standardized innovations, and both root paths are
+reconstructed. This reparameterization is intended to reduce state--scale
+dependence without changing the generalized posterior
+\citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. The complete
+derivation and scan order appear in the supplement.
 
 \begin{algorithmblock}{Ordinary-RQR root-blocked dynamic Gibbs scan}
 \label{alg:dynamic-gibbs}
@@ -743,7 +749,9 @@ full conditional.
 \(\theta_{2,0:T}\) by the analogous FFBS update.
 \item For a shared component-scale model, update each \(q_j\) from its
 inverse-Gamma full conditional using innovations from both roots, including
-the sampled time-zero states.
+the sampled time-zero states. Standardize those innovations at the centered
+draw, apply the declared noncentered log-scale slice sweeps conditional on the
+standardized paths, and reconstruct both root paths at the updated scales.
 \item Optionally swap the two complete root paths. Retain ordered endpoint,
 width, midpoint, state, scale, and loss summaries.
 \end{algorithmblock}

@@ -7,12 +7,43 @@
 rqr_dlm_main_simulation <- list(
   schema_version = "rqrgibbs_dlm_main_simulation/1.0.0",
   config_id = "rqr_dlm_main_simulation_20260724",
-  status = "implemented_pending_independent_review",
+  status = "corrected_main_study_contract",
   generalized_bayes = TRUE,
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
+  implementation_correction = list(
+    schema_version = "rqrgibbs_dlm_main_correction/1.1.0",
+    failed_authorization_commit =
+      "b8b7748ab181a006611b602f64d4edf5be591de6",
+    failed_wave_id =
+      "static_gaussian_T200__target0200__sentinel",
+    failed_wave_artifact_hashes_sha256 =
+      "c003675b037311f30df05a8ed4e9992997e4ae0cb308b93ef44592a9a871b80f",
+    failed_outputs_reused = FALSE,
+    comparative_simulation_metrics_used = FALSE,
+    failed_wave_diagnostics_used_for_computational_correction = TRUE,
+    failed_wave_scientific_metrics_used_for_correction = FALSE,
+    correction_validation_role =
+      "computational_transition_and_fixed_schedule_only",
+    uniform_role_specific_schedule_no_adaptive_extension = TRUE,
+    fresh_relaunch_required = TRUE,
+    comparator_projection_correction =
+      "project each p_by_T state mean through FF to one ordinate per time",
+    component_scale_correction =
+      "exact centered_noncentered_interweaving",
+    provenance_cost_correction =
+      "exclude declared local output roots from the source-worktree sidecar digest",
+    comparator_standard_schedule_correction =
+      "retain_4000_after_projection_correct_full_wave_diagnostic_gate",
+    correction_budget_path =
+      "docs/audits/rqr_dlm_main_correction_budget_20260726.csv",
+    correction_budget_sha256 =
+      "1c8a80e2d1b764a031afbec89b7a5447f6233cc63de138b3dcc94aa9d650db2e",
+    target_prior_seed_or_diagnostic_threshold_changed = FALSE,
+    mcmc_transition_and_standard_schedule_changed = TRUE
+  ),
   diagnostic_pilot_execution_authorized = FALSE,
-  confirmatory_execution_authorized = TRUE,
+  confirmatory_execution_authorized = FALSE,
   implemented_modes = c(
     "preflight", "oracle-reference", "sentinel-core",
     "execute-confirmatory", "collect", "audit"
@@ -145,6 +176,16 @@ rqr_dlm_main_simulation <- list(
   frozen_tuning = list(
     component_scale_prior = list(shape = 2.5, rate = 0.025),
     common_scale_prior = list(shape = 2.5, rate = 0.025),
+    component_scale_kernel = list(
+      centered_inverse_gamma = TRUE,
+      noncentered_slice_interweave = TRUE,
+      interweave_cycles = 1L,
+      slice_width = 1,
+      slice_sweeps_per_cycle = 2L,
+      slice_max_steps = 100L,
+      slice_max_shrink = 1000L,
+      target_change = FALSE
+    ),
     fixed_design_ridge_variance = 25,
     empirical_window = 100L,
     discounts = list(
@@ -158,10 +199,16 @@ rqr_dlm_main_simulation <- list(
   ),
   schedules = list(
     dynamic_rqr = list(burn = 1000L, retain = 2000L, thin = 1L),
+    dynamic_rqr_component_scale_standard =
+      list(burn = 1000L, retain = 6000L, thin = 1L),
     learned_dynamic_rqr =
       list(burn = 1500L, retain = 3000L, thin = 1L),
+    learned_dynamic_rqr_component_scale_standard =
+      list(burn = 1500L, retain = 9000L, thin = 1L),
     dynamic_quantile_endpoint =
       list(burn = 1000L, retain = 2000L, thin = 1L),
+    dynamic_quantile_endpoint_standard =
+      list(burn = 1000L, retain = 4000L, thin = 1L),
     fixed_design_rqr = list(burn = 500L, retain = 1500L, thin = 1L)
   ),
   batching = list(

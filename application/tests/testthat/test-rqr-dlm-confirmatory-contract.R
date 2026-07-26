@@ -89,6 +89,139 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   )
   expect_false(contract$config$diagnostic_pilot_execution_authorized)
   expect_false(contract$config$confirmatory_execution_authorized)
+  expect_identical(
+    contract$config$implementation_correction$schema_version,
+    "rqrgibbs_dlm_main_correction/1.1.0"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      failed_authorization_commit,
+    "b8b7748ab181a006611b602f64d4edf5be591de6"
+  )
+  expect_false(
+    contract$config$implementation_correction$failed_outputs_reused
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      comparative_simulation_metrics_used
+  )
+  expect_true(
+    contract$config$implementation_correction$
+      failed_wave_diagnostics_used_for_computational_correction
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      failed_wave_scientific_metrics_used_for_correction
+  )
+  expect_identical(
+    contract$config$implementation_correction$correction_validation_role,
+    "computational_transition_and_fixed_schedule_only"
+  )
+  expect_true(
+    contract$config$implementation_correction$
+      uniform_role_specific_schedule_no_adaptive_extension
+  )
+  expect_true(
+    contract$config$implementation_correction$fresh_relaunch_required
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      comparator_standard_schedule_correction,
+    "retain_4000_after_projection_correct_full_wave_diagnostic_gate"
+  )
+  expect_identical(
+    contract$config$implementation_correction$correction_budget_sha256,
+    environment$rqr_confirm_sha256(file.path(
+      contract$repo_root,
+      contract$config$implementation_correction$correction_budget_path
+    ))
+  )
+  correction_budget <- utils::read.csv(
+    file.path(
+      contract$repo_root,
+      contract$config$implementation_correction$correction_budget_path
+    ),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  expect_identical(
+    correction_budget$corrected_value[
+      correction_budget$section == "mcmc" &
+        correction_budget$planning == "maximum"
+    ],
+    192836000
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      target_prior_seed_or_diagnostic_threshold_changed
+  )
+  expect_true(
+    contract$config$implementation_correction$
+      mcmc_transition_and_standard_schedule_changed
+  )
+  expect_identical(
+    contract$config$frozen_tuning$component_scale_kernel,
+    list(
+      centered_inverse_gamma = TRUE,
+      noncentered_slice_interweave = TRUE,
+      interweave_cycles = 1L,
+      slice_width = 1,
+      slice_sweeps_per_cycle = 2L,
+      slice_max_steps = 100L,
+      slice_max_shrink = 1000L,
+      target_change = FALSE
+    )
+  )
+  expect_identical(
+    contract$config$schedules$dynamic_rqr_component_scale_standard,
+    list(burn = 1000L, retain = 6000L, thin = 1L)
+  )
+  expect_identical(
+    contract$config$schedules$
+      learned_dynamic_rqr_component_scale_standard,
+    list(burn = 1500L, retain = 9000L, thin = 1L)
+  )
+  expect_identical(
+    contract$config$schedules$dynamic_quantile_endpoint_standard,
+    list(burn = 1000L, retain = 4000L, thin = 1L)
+  )
+  expect_identical(
+    environment$rqr_confirm_dynamic_schedule(
+      contract, "M01", TRUE, "standard"
+    ),
+    contract$config$schedules$dynamic_rqr_component_scale_standard
+  )
+  expect_identical(
+    environment$rqr_confirm_dynamic_schedule(
+      contract, "M01", TRUE, "A"
+    ),
+    contract$config$schedules$dynamic_rqr
+  )
+  expect_identical(
+    environment$rqr_confirm_dynamic_schedule(
+      contract, "M11", TRUE, "standard"
+    ),
+    contract$config$schedules$
+      learned_dynamic_rqr_component_scale_standard
+  )
+  expect_identical(
+    environment$rqr_confirm_dynamic_schedule(
+      contract, "M11", TRUE, "D"
+    ),
+    contract$config$schedules$learned_dynamic_rqr
+  )
+  expect_identical(
+    environment$rqr_confirm_dynamic_quantile_schedule(
+      contract, "standard"
+    ),
+    contract$config$schedules$dynamic_quantile_endpoint_standard
+  )
+  expect_identical(
+    environment$rqr_confirm_dynamic_quantile_schedule(
+      contract, "A"
+    ),
+    contract$config$schedules$dynamic_quantile_endpoint
+  )
   expect_identical(contract$config$resources$threads_per_worker, 1L)
   expect_identical(
     contract$config$resources$sampled_process_group_thread_ceiling, 4L
@@ -197,6 +330,49 @@ test_that("the native model adapter preserves the exdqlm state contract", {
   )
 })
 
+test_that("multistate exdqlm means are projected to observation ordinates", {
+  environment <- load_confirmatory_helpers()
+  FF <- rbind(
+    intercept = rep(1, 5L),
+    predictor = c(-1, -0.5, 0, 0.5, 1)
+  )
+  state_mean <- rbind(
+    intercept = c(1, 2, 3, 4, 5),
+    predictor = c(0.5, 1, 1.5, 2, 2.5)
+  )
+  expected <- as.numeric(colSums(FF * state_mean))
+  expect_identical(
+    environment$rqr_confirm_state_ordinate_mean(FF, state_mean),
+    expected
+  )
+  expect_identical(length(expected), ncol(FF))
+  expect_false(identical(
+    length(as.numeric(state_mean)), length(expected)
+  ))
+
+  fit <- list(
+    model = list(FF = FF),
+    theta.out = list(fm = state_mean)
+  )
+  class(fit) <- "exdqlmMCMC"
+  expect_identical(
+    environment$rqr_confirm_exdqlm_ordinate_mean(fit),
+    expected
+  )
+  expect_error(
+    environment$rqr_confirm_state_ordinate_mean(
+      FF, state_mean[, -1L, drop = FALSE]
+    ),
+    "identical dimensions"
+  )
+  broken <- state_mean
+  broken[1L, 1L] <- Inf
+  expect_error(
+    environment$rqr_confirm_state_ordinate_mean(FF, broken),
+    "finite matrices"
+  )
+})
+
 test_that("all Output-15 budgets and sentinel counts are reproduced", {
   environment <- load_confirmatory_helpers()
   contract <- confirmatory_contract(environment)
@@ -210,6 +386,20 @@ test_that("all Output-15 budgets and sentinel counts are reproduced", {
       contract, planning
     )
     expect_identical(as.numeric(actual$value), expected[[planning]])
+  }
+  expected_iterations <- c(
+    initial = 72132000,
+    central = 132484000,
+    maximum = 192836000
+  )
+  for (planning in names(expected_iterations)) {
+    actual <- environment$rqr_confirm_iteration_budget_summary(
+      contract, planning
+    )
+    expect_identical(
+      actual$value[actual$item == "total_MCMC_iterations"],
+      unname(expected_iterations[[planning]])
+    )
   }
   sentinels <- environment$rqr_confirm_sentinel_map(contract, "maximum")
   expect_identical(

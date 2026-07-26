@@ -1,0 +1,11 @@
+stage,scope,schedule,diagnostics_passed,diagnostics_total,minimum_bulk_ess,minimum_tail_ess,maximum_mcse_over_sd,decision,evidence_role
+failed_authorized_wave,M01 completed tasks,centered_only_original,719,736,3.455814,17.31115,0.5346124,failed,computational_diagnosis_only
+focused_transition_check,S02 replication 85 four chains,one_ASIS_cycle_one_slice_sweep_retain2000,45,46,374.930,723.283,0.05238,failed,transition_selection
+focused_transition_check,S02 replication 85 four chains,one_ASIS_cycle_two_slice_sweeps_retain2000,46,46,434.524,737.384,0.04810,passed,transition_selection
+development_full_wave,M01 20 tasks and 44 chains,one_ASIS_cycle_two_slice_sweeps_original_role_schedules,908,920,85.82349,127.3618,0.1082683,failed,fixed_schedule_selection
+fixed_schedule_check,M01 S01 replication 114,one_ASIS_cycle_two_slice_sweeps_retain6000,46,46,344.8842,681.8867,0.05396943,passed,fixed_schedule_selection
+fixed_schedule_check,M01 S01 replication 71,one_ASIS_cycle_two_slice_sweeps_retain6000,46,46,263.6437,318.5974,0.06276566,passed,fixed_schedule_selection
+development_full_wave,M01 20 tasks and 44 chains,one_ASIS_cycle_two_slice_sweeps_fixed_role_schedules,920,920,263.6437,318.5974,0.06276566,passed,precommit_complete_gate
+development_full_wave,M02 20 tasks 44 interval chains and 88 endpoint fits,projection_correct_standard_retain2000,885,900,108.4209,223.9167,0.09451272,failed,fixed_schedule_selection
+fixed_schedule_check,M02 five failed standard seed streams,projection_correct_standard_retain4000,225,225,247.6298,417.5410,0.0633538,passed,fixed_schedule_selection
+development_full_wave,M02 20 tasks 44 interval chains and 88 endpoint fits,projection_correct_fixed_role_schedules,900,900,247.6298,417.5410,0.0633538,passed,precommit_complete_gate

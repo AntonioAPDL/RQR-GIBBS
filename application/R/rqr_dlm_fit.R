@@ -228,8 +228,8 @@
 #'   `external_repositories`. Repository specifications contain `repo_root`, a
 #'   complete 40-character `expected_git_commit`, and optional runtime package
 #'   and attestation fields.
-#' @param mcmc_control Iteration, seed, storage, backend, progress, and jitter
-#'   controls.
+#' @param mcmc_control Iteration, seed, storage, backend, progress, jitter, and
+#'   optional exact component-scale interweaving controls.
 #' @param init Optional initial states, latent scales, lambda, evolution scales,
 #'   time-zero states, and RNG state.
 #' @return An `rqr_dlm_mcmc` object.
@@ -337,6 +337,59 @@ rqr_dlm_fit <- function(
   }
   v <- rep_len(v_initial, T)
   component_mode <- identical(evolution_mode, "component_scale")
+  component_scale_interweave <-
+    mcmc_control$component_scale_interweave %||% FALSE
+  if (!is.logical(component_scale_interweave) ||
+      length(component_scale_interweave) != 1L ||
+      is.na(component_scale_interweave)) {
+    stop(
+      "mcmc_control$component_scale_interweave must be one logical value.",
+      call. = FALSE
+    )
+  }
+  if (isTRUE(component_scale_interweave) && !component_mode) {
+    stop(
+      "Component-scale interweaving requires evolution_mode='component_scale'.",
+      call. = FALSE
+    )
+  }
+  component_scale_slice_width <- as.numeric(
+    mcmc_control$component_scale_slice_width %||% 1
+  )[1L]
+  if (!is.finite(component_scale_slice_width) ||
+      component_scale_slice_width <= 0) {
+    stop(
+      "mcmc_control$component_scale_slice_width must be positive.",
+      call. = FALSE
+    )
+  }
+  component_scale_slice_max_steps <- .rqr_scalar_integer(
+    mcmc_control$component_scale_slice_max_steps %||% 100L,
+    "mcmc_control$component_scale_slice_max_steps", 1L
+  )
+  component_scale_slice_max_shrink <- .rqr_scalar_integer(
+    mcmc_control$component_scale_slice_max_shrink %||% 1000L,
+    "mcmc_control$component_scale_slice_max_shrink", 1L
+  )
+  component_scale_slice_sweeps <- .rqr_scalar_integer(
+    mcmc_control$component_scale_slice_sweeps %||% 1L,
+    "mcmc_control$component_scale_slice_sweeps", 1L
+  )
+  component_scale_interweave_cycles <- .rqr_scalar_integer(
+    mcmc_control$component_scale_interweave_cycles %||% 1L,
+    "mcmc_control$component_scale_interweave_cycles", 1L
+  )
+  component_scale_kernel_contract <- list(
+    centered_inverse_gamma = component_mode,
+    noncentered_slice_interweave =
+      component_mode && isTRUE(component_scale_interweave),
+    interweave_cycles = component_scale_interweave_cycles,
+    slice_width = component_scale_slice_width,
+    slice_sweeps_per_cycle = component_scale_slice_sweeps,
+    slice_max_steps = component_scale_slice_max_steps,
+    slice_max_shrink = component_scale_slice_max_shrink,
+    target_change = FALSE
+  )
   time0_completion_mode <- component_mode ||
     (
       store_state_draws &&
@@ -393,6 +446,13 @@ rqr_dlm_fit <- function(
   lambda_shape_trace <- lambda_rate_trace <- rep(NA_real_, total_iter)
   root_swap_trace <- logical(total_iter)
   ffbs_iteration <- vector("list", 2L * total_iter)
+  component_scale_interweave_iteration <- if (
+      component_mode && isTRUE(component_scale_interweave)
+    ) {
+    vector("list", total_iter)
+  } else {
+    NULL
+  }
   repair_records <- NULL
   save_idx <- 0L
 
@@ -455,10 +515,55 @@ rqr_dlm_fit <- function(
         theta2[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
         evolution_iter$W[, , 1L]
       )
-      q_update <- .rqr_sample_component_scales(
-        theta1, theta2, theta01, theta02, expanded$GG, evolution
-      )
-      q_evolution <- q_update$draw
+      if (isTRUE(component_scale_interweave)) {
+        iteration_interweave <- vector(
+          "list", component_scale_interweave_cycles
+        )
+        for (cycle in seq_len(component_scale_interweave_cycles)) {
+          q_update <- .rqr_sample_component_scales(
+            theta1, theta2, theta01, theta02, expanded$GG, evolution
+          )
+          q_evolution <- q_update$draw
+          interweave <- .rqr_interweave_component_scales(
+            theta1 = theta1, theta2 = theta2,
+            theta01 = theta01, theta02 = theta02,
+            GG = expanded$GG, FF = expanded$FF,
+            y = y, observed = observed, v = v,
+            xi = constants$xi, obs_variance = obs_variance,
+            evolution = evolution, q = q_evolution,
+            width = component_scale_slice_width,
+            sweeps = component_scale_slice_sweeps,
+            max_steps = component_scale_slice_max_steps,
+            max_shrink = component_scale_slice_max_shrink
+          )
+          q_evolution <- interweave$q
+          theta1 <- interweave$theta1
+          theta2 <- interweave$theta2
+          iteration_interweave[[cycle]] <- data.frame(
+            iteration = iter,
+            cycle = cycle,
+            component = evolution$component_names,
+            evaluations = interweave$diagnostics$evaluations,
+            shrink_steps = interweave$diagnostics$shrink_steps,
+            sweeps_per_cycle = interweave$diagnostics$sweeps,
+            exact_noncentered_slice = TRUE,
+            stringsAsFactors = FALSE
+          )
+        }
+        q_update <- list(
+          draw = q_evolution,
+          posterior = .rqr_component_scale_posterior(
+            theta1, theta2, theta01, theta02, expanded$GG, evolution
+          )
+        )
+        component_scale_interweave_iteration[[iter]] <-
+          do.call(rbind, iteration_interweave)
+      } else {
+        q_update <- .rqr_sample_component_scales(
+          theta1, theta2, theta01, theta02, expanded$GG, evolution
+        )
+        q_evolution <- q_update$draw
+      }
     } else if (time0_completion_mode) {
       # Fixed-W and frozen-template FFBS integrate theta_0 out through
       # (m0, C0). Complete each root path with an exact draw from
@@ -621,6 +726,7 @@ rqr_dlm_fit <- function(
     latent_v = v,
     lambda = lambda,
     evolution_scale = q_evolution,
+    transition_kernel = component_scale_kernel_contract,
     rng_state = rng_state
   )
   checkpoint_digest <- .rqr_digest(checkpoint)
@@ -649,6 +755,8 @@ rqr_dlm_fit <- function(
       generalized_bayes = TRUE,
       response_likelihood = FALSE,
       evolution_mode = evolution_mode,
+      component_scale_transition_kernel =
+        component_scale_kernel_contract,
       target_contract = if (mathematical_exact) "fixed_joint_exact" else "working_sequential",
       exact_joint_target = mathematical_exact,
       numerical_policy = numerical_policy,
@@ -692,6 +800,12 @@ rqr_dlm_fit <- function(
       root_swap_trace = root_swap_trace,
       ffbs_iteration = do.call(rbind, ffbs_iteration),
       numerical_repairs = repair_records %||% data.frame(),
+      component_scale_interweave = if (
+          is.null(component_scale_interweave_iteration)) {
+        data.frame()
+      } else {
+        do.call(rbind, component_scale_interweave_iteration)
+      },
       template_construction_audit = evolution$construction_audit %||% NULL,
       partial_collapse_order = c(
         "lambda_collapsed", "latent_v_refresh", "root1_ffbs",
@@ -702,7 +816,14 @@ rqr_dlm_fit <- function(
         } else if (time0_completion_mode) {
           "fixed_evolution_time0_completion"
         } else NULL,
-        if (component_mode) "component_scale_update" else NULL,
+        if (component_mode && isTRUE(component_scale_interweave)) {
+          sprintf(
+            "component_scale_centered_noncentered_cycles_%d",
+            component_scale_interweave_cycles
+          )
+        } else if (component_mode) {
+          "component_scale_centered_update"
+        } else NULL,
         "global_root_swap"
       )
     ),
@@ -717,6 +838,15 @@ rqr_dlm_fit <- function(
       backend_resolved = backend_resolved,
       observed = observed, store_state_draws = store_state_draws,
       store_latent_draws = store_latent_draws, jitter_ladder = jitter_ladder,
+      component_scale_interweave = component_scale_interweave,
+      component_scale_interweave_cycles =
+        component_scale_interweave_cycles,
+      component_scale_slice_width = component_scale_slice_width,
+      component_scale_slice_sweeps = component_scale_slice_sweeps,
+      component_scale_slice_max_steps =
+        component_scale_slice_max_steps,
+      component_scale_slice_max_shrink =
+        component_scale_slice_max_shrink,
       note = paste(
         "Root trajectory draws arise from a generalized-Bayes loss update;",
         "they are not response draws."
@@ -797,6 +927,36 @@ rqr_dlm_fit <- function(
     numerical_policy = object$model_spec$numerical_policy,
     jitter_ladder = object$misc$jitter_ladder
   )
+  current_transition_kernel <- list(
+    centered_inverse_gamma =
+      identical(object$model_spec$evolution_mode, "component_scale"),
+    noncentered_slice_interweave =
+      identical(object$model_spec$evolution_mode, "component_scale") &&
+        isTRUE(object$misc$component_scale_interweave),
+    interweave_cycles =
+      object$misc$component_scale_interweave_cycles %||% 1L,
+    slice_width = object$misc$component_scale_slice_width %||% 1,
+    slice_sweeps_per_cycle =
+      object$misc$component_scale_slice_sweeps %||% 1L,
+    slice_max_steps =
+      object$misc$component_scale_slice_max_steps %||% 100L,
+    slice_max_shrink =
+      object$misc$component_scale_slice_max_shrink %||% 1000L,
+    target_change = FALSE
+  )
+  if (!identical(
+      object$checkpoint_state$transition_kernel,
+      current_transition_kernel
+    ) ||
+      !identical(
+        object$model_spec$component_scale_transition_kernel,
+        current_transition_kernel
+      )) {
+    stop(
+      "Continuation transition-kernel contract does not match the fitted object.",
+      call. = FALSE
+    )
+  }
   current_object_digests <- lapply(
     .rqr_dlm_provenance_objects(
       expanded, object$evolution, current_target_contract
@@ -966,7 +1126,19 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
       backend = object$misc$backend_requested %||% object$misc$backend,
       store_state_draws = isTRUE(store_state_draws),
       store_latent_draws = isTRUE(store_latent_draws),
-      jitter_ladder = object$misc$jitter_ladder
+      jitter_ladder = object$misc$jitter_ladder,
+      component_scale_interweave =
+        isTRUE(object$misc$component_scale_interweave),
+      component_scale_interweave_cycles =
+        object$misc$component_scale_interweave_cycles %||% 1L,
+      component_scale_slice_width =
+        object$misc$component_scale_slice_width %||% 1,
+      component_scale_slice_sweeps =
+        object$misc$component_scale_slice_sweeps %||% 1L,
+      component_scale_slice_max_steps =
+        object$misc$component_scale_slice_max_steps %||% 100L,
+      component_scale_slice_max_shrink =
+        object$misc$component_scale_slice_max_shrink %||% 1000L
     ),
     init = list(
       state_root1 = checkpoint$theta_root1,

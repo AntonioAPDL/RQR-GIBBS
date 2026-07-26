@@ -264,7 +264,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
-.rqr_schema_version <- function() "rqrgibbs_fit/1.9.0"
+.rqr_schema_version <- function() "rqrgibbs_fit/1.10.0"
 
 .rqr_continuation_history_schema <- function() {
   "rqrgibbs_continuation_history/4.1.0"
@@ -1161,7 +1161,25 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   )
   files <- sort(files)
   relative <- substring(files, nchar(path) + 2L)
-  keep <- !relative %in% as.character(exclude_relative)
+  exclude_relative <- unique(gsub(
+    "/+$", "", as.character(exclude_relative)
+  ))
+  exclude_relative <- exclude_relative[nzchar(exclude_relative)]
+  excluded <- if (length(exclude_relative)) {
+    vapply(
+      relative,
+      function(value) {
+        any(
+          value == exclude_relative |
+            startsWith(value, paste0(exclude_relative, "/"))
+        )
+      },
+      logical(1L)
+    )
+  } else {
+    rep(FALSE, length(relative))
+  }
+  keep <- !excluded
   files <- files[keep]
   relative <- relative[keep]
   info <- file.info(files)
@@ -1717,7 +1735,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     source_package_path = NA_character_,
     source_tree_digest = NA_character_,
     source_worktree_digest = NA_character_,
+    source_worktree_digest_exclusions = character(0),
     runtime_package_tree_digest = NA_character_,
+    runtime_package_tree_digest_exclusions = character(0),
     runtime_direct_source_path_match = FALSE,
     runtime_attestation = runtime_attestation %||% NA_character_,
     runtime_attestation_available = FALSE,
@@ -1769,11 +1789,26 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   empty$source_description_version <- source_version
   empty$source_package_path <- source_path
   empty$source_tree_digest <- source_tree
+  source_worktree_digest_exclusions <- if (
+      identical(package, "rqrgibbs") &&
+        identical(source_subdir, "application")) {
+    c("cache", "data_local", "logs", "outputs", "runs")
+  } else {
+    character(0)
+  }
   empty$source_worktree_digest <- if (dir.exists(source_path)) {
-    tryCatch(.rqr_directory_digest(source_path), error = function(e) NA_character_)
+    tryCatch(
+      .rqr_directory_digest(
+        source_path,
+        exclude_relative = source_worktree_digest_exclusions
+      ),
+      error = function(e) NA_character_
+    )
   } else {
     NA_character_
   }
+  empty$source_worktree_digest_exclusions <-
+    source_worktree_digest_exclusions
   if (!requireNamespace(package, quietly = TRUE)) return(empty)
 
   namespace <- asNamespace(package)
@@ -1790,8 +1825,22 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   direct_path_match <- !is.na(runtime_path) &&
     !is.na(source_path) &&
     identical(runtime_path, source_path)
+  runtime_package_tree_digest_exclusions <- if (
+      direct_path_match &&
+        identical(package, "rqrgibbs") &&
+        identical(source_subdir, "application")) {
+    source_worktree_digest_exclusions
+  } else {
+    character(0)
+  }
   runtime_digest <- if (!is.na(runtime_path)) {
-    tryCatch(.rqr_directory_digest(runtime_path), error = function(e) NA_character_)
+    tryCatch(
+      .rqr_directory_digest(
+        runtime_path,
+        exclude_relative = runtime_package_tree_digest_exclusions
+      ),
+      error = function(e) NA_character_
+    )
   } else {
     NA_character_
   }
@@ -2368,7 +2417,11 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     source_package_path = source_path,
     source_tree_digest = source_tree,
     source_worktree_digest = empty$source_worktree_digest,
+    source_worktree_digest_exclusions =
+      empty$source_worktree_digest_exclusions,
     runtime_package_tree_digest = runtime_digest,
+    runtime_package_tree_digest_exclusions =
+      runtime_package_tree_digest_exclusions,
     runtime_direct_source_path_match = direct_path_match,
     runtime_attestation_available = attestation_available,
     runtime_attestation_match = attestation_match,

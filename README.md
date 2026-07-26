@@ -24,7 +24,8 @@ package under **application/**:
 - **application/R/** contains fixed-design utilities, exdqlm-compatible DLM
   model builders, pure-R FFBS, exact component-scale evolution, the RQR-DLM
   sampler, restart helpers, and DESN adapters.
-- **application/src/** contains the C++17/RcppArmadillo FFBS kernel.
+- **application/src/** contains the C++17/RcppArmadillo FFBS kernel and the
+  noncentered component-path basis used by exact scale interweaving.
 - **application/tests/** contains native package gates, standalone workflow
   contracts, and copied exdqlm reference tests. The copied tests and
   repository-level workflow tests remain available to dedicated Make targets
@@ -145,11 +146,10 @@ The confirmatory runner now has preflight, oracle-reference,
 embedded-sentinel, execution, collection, and audit modes. A deterministic
 wave plan assigns the embedded sentinel phase to at most eight workers and
 standard phases to at most 32 one-compute-thread workers. BLAS, OpenMP, and
-related numerical-library settings are fixed at one; the sampled process
-monitor separately permits at most two operating-system threads per worker.
-The oracle-reference stage permits four because recording the compiler
-toolchain briefly invokes `R CMD config` helper processes; this is recorded
-separately from numerical parallelism. Collection requires the
+related numerical-library settings are fixed at one. The sampled process
+monitor separately permits at most four operating-system threads per worker,
+the empirically validated envelope for the R runtime and its helper
+processes; this is distinct from numerical parallelism. Collection requires the
 authorization-bound task plan, verifies every recursive artifact manifest,
 rejects duplicate or missing worker shards and replication IDs, and requires a
 common source/runtime/seed bundle before analysis. Failed fits remain in the
@@ -165,6 +165,24 @@ terminal wave record, collects evidence at each batch boundary, and stops
 permanently after a failed or incomplete wave. A separate read-only health
 check reports the supervisor, terminal-wave count, latest collection, next
 canonical wave, and local artifact size without changing the run.
+
+The first authorized full-study wave at
+`b8b7748ab181a006611b602f64d4edf5be591de6` stopped fail-closed. Its completed
+M01 fits exposed poor centered-only mixing for the shared component evolution
+scale, and its completed M02 fits exposed an invalid flattening of the
+multistate `exdqlm` posterior mean. No partial scientific result is reusable.
+The correction adds an exact centered--noncentered interweaving transition,
+projects each comparator state through its observation design, and freezes
+uniform role-specific schedules without adaptive extension. The canonical
+design, priors, seeds, estimands, learning-rate modes, targets, and diagnostic
+thresholds are unchanged. The correction audit, fixed budget overlay, and
+validation plan are recorded in
+`docs/audits/rqr_dlm_main_wave1_scale_and_projection_failure_20260726.md`,
+`docs/audits/rqr_dlm_main_correction_budget_20260726.csv`, and
+`docs/implementation_notes/rqr_dlm_component_scale_interweaving_20260726.md`.
+A replacement coordinator may start only from a fresh exact-commit
+authorization and a new ignored run root after both complete first-wave
+correction gates pass.
 
 ## Pinned external reference
 

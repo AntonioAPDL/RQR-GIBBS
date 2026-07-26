@@ -134,7 +134,68 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !isTRUE(config$generalized_bayes) ||
       isTRUE(config$response_likelihood) ||
       isTRUE(config$response_prediction_contract) ||
+      !identical(
+        config$implementation_correction,
+        list(
+          schema_version = "rqrgibbs_dlm_main_correction/1.1.0",
+          failed_authorization_commit =
+            "b8b7748ab181a006611b602f64d4edf5be591de6",
+          failed_wave_id =
+            "static_gaussian_T200__target0200__sentinel",
+          failed_wave_artifact_hashes_sha256 =
+            "c003675b037311f30df05a8ed4e9992997e4ae0cb308b93ef44592a9a871b80f",
+          failed_outputs_reused = FALSE,
+          comparative_simulation_metrics_used = FALSE,
+          failed_wave_diagnostics_used_for_computational_correction =
+            TRUE,
+          failed_wave_scientific_metrics_used_for_correction = FALSE,
+          correction_validation_role =
+            "computational_transition_and_fixed_schedule_only",
+          uniform_role_specific_schedule_no_adaptive_extension = TRUE,
+          fresh_relaunch_required = TRUE,
+          comparator_projection_correction =
+            "project each p_by_T state mean through FF to one ordinate per time",
+          component_scale_correction =
+            "exact centered_noncentered_interweaving",
+          provenance_cost_correction =
+            "exclude declared local output roots from the source-worktree sidecar digest",
+          comparator_standard_schedule_correction =
+            "retain_4000_after_projection_correct_full_wave_diagnostic_gate",
+          correction_budget_path =
+            "docs/audits/rqr_dlm_main_correction_budget_20260726.csv",
+          correction_budget_sha256 =
+            "1c8a80e2d1b764a031afbec89b7a5447f6233cc63de138b3dcc94aa9d650db2e",
+          target_prior_seed_or_diagnostic_threshold_changed = FALSE,
+          mcmc_transition_and_standard_schedule_changed = TRUE
+        )
+      ) ||
       !identical(config$design$candidate_tuning_fits, 0L) ||
+      !identical(
+        config$frozen_tuning$component_scale_kernel,
+        list(
+          centered_inverse_gamma = TRUE,
+          noncentered_slice_interweave = TRUE,
+          interweave_cycles = 1L,
+          slice_width = 1,
+          slice_sweeps_per_cycle = 2L,
+          slice_max_steps = 100L,
+          slice_max_shrink = 1000L,
+          target_change = FALSE
+        )
+      ) ||
+      !identical(
+        config$schedules$dynamic_rqr_component_scale_standard,
+        list(burn = 1000L, retain = 6000L, thin = 1L)
+      ) ||
+      !identical(
+        config$schedules$
+          learned_dynamic_rqr_component_scale_standard,
+        list(burn = 1500L, retain = 9000L, thin = 1L)
+      ) ||
+      !identical(
+        config$schedules$dynamic_quantile_endpoint_standard,
+        list(burn = 1000L, retain = 4000L, thin = 1L)
+      ) ||
       !identical(
         config$authorization_contract$schema_version,
         "rqrgibbs_dlm_confirmatory_authorization/1.0.0"
@@ -183,6 +244,17 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
   ], use.names = FALSE)
   if (!identical(unname(hashes), unname(expected_hashes))) {
     stop("An Output-15 design artifact digest changed.", call. = FALSE)
+  }
+  correction_budget_path <- file.path(
+    contract$repo_root,
+    config$implementation_correction$correction_budget_path
+  )
+  if (!file.exists(correction_budget_path) ||
+      !identical(
+        rqr_confirm_sha256(correction_budget_path),
+        config$implementation_correction$correction_budget_sha256
+      )) {
+    stop("The correction budget overlay digest changed.", call. = FALSE)
   }
   incidence <- contract$incidence
   required <- c(
@@ -510,6 +582,74 @@ rqr_confirm_budget_summary <- function(contract, planning = "maximum") {
   )
 }
 
+rqr_confirm_method_iteration_cost <- function(
+    contract, method, profile_name = "standard") {
+  schedule <- switch(
+    method,
+    M01 = rqr_confirm_dynamic_schedule(
+      contract, method, TRUE, profile_name
+    ),
+    M02 = rqr_confirm_dynamic_quantile_schedule(
+      contract, profile_name
+    ),
+    M03 = contract$config$schedules$fixed_design_rqr,
+    M06 = rqr_confirm_dynamic_schedule(
+      contract, method, FALSE, profile_name
+    ),
+    M07 = rqr_confirm_dynamic_schedule(
+      contract, method, TRUE, profile_name
+    ),
+    M08 = rqr_confirm_dynamic_schedule(
+      contract, method, FALSE, profile_name
+    ),
+    M09 = rqr_confirm_dynamic_schedule(
+      contract, method, TRUE, profile_name
+    ),
+    M10 = rqr_confirm_dynamic_schedule(
+      contract, method, TRUE, profile_name
+    ),
+    M11 = rqr_confirm_dynamic_schedule(
+      contract, method, TRUE, profile_name
+    ),
+    NULL
+  )
+  if (is.null(schedule)) return(0)
+  per_chain <- schedule$burn + schedule$retain * schedule$thin
+  as.numeric(per_chain * rqr_confirm_method_mcmc_chains(method))
+}
+
+rqr_confirm_iteration_budget_summary <- function(
+    contract, planning = "maximum") {
+  planning <- match.arg(planning, c("initial", "central", "maximum"))
+  plan <- rqr_confirm_fit_plan(contract, planning)
+  sentinels <- rqr_confirm_sentinel_map(contract, planning)
+  standard <- sum(mapply(
+    function(method, replications) {
+      replications * rqr_confirm_method_iteration_cost(
+        contract, method, "standard"
+      )
+    },
+    plan$method, plan$replications,
+    USE.NAMES = FALSE
+  ))
+  extra_sentinel <- sum(vapply(
+    sentinels$method,
+    function(method) {
+      3 * rqr_confirm_method_iteration_cost(contract, method, "A")
+    },
+    numeric(1L)
+  ))
+  data.frame(
+    item = c(
+      "standard_MCMC_iterations",
+      "extra_preselected_sentinel_iterations",
+      "total_MCMC_iterations"
+    ),
+    value = c(standard, extra_sentinel, standard + extra_sentinel),
+    stringsAsFactors = FALSE
+  )
+}
+
 rqr_confirm_validate_budget <- function(contract) {
   lookup <- c(
     method_interval_evaluations = "method_interval_evaluations",
@@ -536,6 +676,38 @@ rqr_confirm_validate_budget <- function(contract) {
         )) {
       stop(sprintf("The %s run budget was not reproduced.", planning),
            call. = FALSE)
+    }
+    iteration_budget <- rqr_confirm_iteration_budget_summary(
+      contract, planning
+    )
+    correction_budget <- utils::read.csv(
+      file.path(
+        contract$repo_root,
+        contract$config$implementation_correction$
+          correction_budget_path
+      ),
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+    expected_iterations <- correction_budget$corrected_value[
+      correction_budget$section == "mcmc" &
+        correction_budget$planning == planning &
+        correction_budget$item == "total_MCMC_iterations"
+    ]
+    if (length(expected_iterations) != 1L ||
+        !identical(
+          as.numeric(iteration_budget$value[
+            iteration_budget$item == "total_MCMC_iterations"
+          ]),
+          as.numeric(expected_iterations)
+        )) {
+      stop(
+        sprintf(
+          "The corrected %s MCMC-iteration budget was not reproduced.",
+          planning
+        ),
+        call. = FALSE
+      )
     }
   }
   invisible(TRUE)
@@ -2352,6 +2524,44 @@ rqr_confirm_as_exdqlm_model <- function(model, namespace) {
   converted
 }
 
+rqr_confirm_state_ordinate_mean <- function(FF, state_mean,
+                                            label = "state mean") {
+  FF <- as.matrix(FF)
+  state_mean <- as.matrix(state_mean)
+  if (length(dim(FF)) != 2L || length(dim(state_mean)) != 2L ||
+      !identical(dim(FF), dim(state_mean)) ||
+      !nrow(FF) || !ncol(FF) ||
+      any(!is.finite(FF)) || any(!is.finite(state_mean))) {
+    stop(
+      sprintf(
+        "%s and its observation design must be finite matrices with identical dimensions.",
+        label
+      ),
+      call. = FALSE
+    )
+  }
+  ordinate <- as.numeric(colSums(FF * state_mean))
+  if (length(ordinate) != ncol(FF) || any(!is.finite(ordinate))) {
+    stop(sprintf("%s did not produce finite state ordinates.", label),
+         call. = FALSE)
+  }
+  ordinate
+}
+
+rqr_confirm_exdqlm_ordinate_mean <- function(fit) {
+  if (!inherits(fit, "exdqlmMCMC") ||
+      is.null(fit$model$FF) || is.null(fit$theta.out$fm)) {
+    stop(
+      "The exdqlm fit does not expose its state-mean ordinate contract.",
+      call. = FALSE
+    )
+  }
+  rqr_confirm_state_ordinate_mean(
+    fit$model$FF, fit$theta.out$fm,
+    label = "The exdqlm posterior state mean"
+  )
+}
+
 rqr_confirm_exdqlm_reference <- function(contract, attestation_path,
                                          full_schedule = TRUE) {
   specification <- contract$config$comparator$exdqlm
@@ -2419,8 +2629,12 @@ rqr_confirm_exdqlm_reference <- function(contract, attestation_path,
     fGG = diag(2), plot = FALSE, return.draws = FALSE,
     seed = 2026072502L
   )
+  probe_training_ordinate <-
+    rqr_confirm_exdqlm_ordinate_mean(probe_fit)
   adapter_fit_pass <- inherits(probe_fit, "exdqlmMCMC") &&
     length(probe_fit$samp.sigma) == 3L &&
+    length(probe_training_ordinate) == length(probe_time) &&
+    all(is.finite(probe_training_ordinate)) &&
     length(probe_forecast$ff) == 2L &&
     all(is.finite(probe_forecast$ff))
   if (!adapter_fit_pass) {
@@ -2721,6 +2935,37 @@ rqr_confirm_initialization_profile_name <- function(is_sentinel, chain) {
   if (isTRUE(is_sentinel)) c("A", "B", "C", "D")[[chain]] else "standard"
 }
 
+rqr_confirm_dynamic_schedule <- function(
+    contract, method, component_evolution_method, profile_name) {
+  learned <- identical(method, "M11")
+  standard_component <- isTRUE(component_evolution_method) &&
+    identical(profile_name, "standard")
+  if (learned && standard_component) {
+    return(
+      contract$config$schedules$
+        learned_dynamic_rqr_component_scale_standard
+    )
+  }
+  if (learned) {
+    return(contract$config$schedules$learned_dynamic_rqr)
+  }
+  if (standard_component) {
+    return(
+      contract$config$schedules$dynamic_rqr_component_scale_standard
+    )
+  }
+  contract$config$schedules$dynamic_rqr
+}
+
+rqr_confirm_dynamic_quantile_schedule <- function(
+    contract, profile_name) {
+  if (identical(profile_name, "standard")) {
+    contract$config$schedules$dynamic_quantile_endpoint_standard
+  } else {
+    contract$config$schedules$dynamic_quantile_endpoint
+  }
+}
+
 rqr_confirm_initialization <- function(generated, model, profile,
                                        component_scale = FALSE,
                                        component_scale_base = 1) {
@@ -2785,6 +3030,7 @@ rqr_confirm_dynamic_fit <- function(
   if (is.null(profile)) stop("Unknown initialization profile.",
                              call. = FALSE)
   component_method <- method %in% c("M01", "M09", "M10", "M11")
+  component_evolution_method <- component_method || method == "M07"
   prior <- if (method == "M07") {
     contract$config$frozen_tuning$common_scale_prior
   } else {
@@ -2809,11 +3055,9 @@ rqr_confirm_dynamic_fit <- function(
   } else {
     "fixed_rate"
   }
-  schedule <- if (method == "M11") {
-    contract$config$schedules$learned_dynamic_rqr
-  } else {
-    contract$config$schedules$dynamic_rqr
-  }
+  schedule <- rqr_confirm_dynamic_schedule(
+    contract, method, component_evolution_method, profile_name
+  )
   common <- list(
     y = generated$training_y,
     model = model,
@@ -2828,7 +3072,23 @@ rqr_confirm_dynamic_fit <- function(
       n_burn = schedule$burn, n_mcmc = schedule$retain,
       thin = schedule$thin, backend = "cpp",
       store_state_draws = chain > 1L,
-      store_latent_draws = FALSE, verbose = FALSE
+      store_latent_draws = FALSE, verbose = FALSE,
+      component_scale_interweave = component_evolution_method,
+      component_scale_interweave_cycles =
+        contract$config$frozen_tuning$
+          component_scale_kernel$interweave_cycles,
+      component_scale_slice_width =
+        contract$config$frozen_tuning$
+          component_scale_kernel$slice_width,
+      component_scale_slice_sweeps =
+        contract$config$frozen_tuning$
+          component_scale_kernel$slice_sweeps_per_cycle,
+      component_scale_slice_max_steps =
+        contract$config$frozen_tuning$
+          component_scale_kernel$slice_max_steps,
+      component_scale_slice_max_shrink =
+        contract$config$frozen_tuning$
+          component_scale_kernel$slice_max_shrink
     ),
     init = initial
   )
@@ -3131,7 +3391,9 @@ rqr_confirm_dynamic_quantile <- function(
     lower = (1 - generated$coverage_level) / 2,
     upper = 1 - (1 - generated$coverage_level) / 2
   )
-  schedule <- contract$config$schedules$dynamic_quantile_endpoint
+  schedule <- rqr_confirm_dynamic_quantile_schedule(
+    contract, profile_name
+  )
   cell_id <- contract$incidence$cell_id[
     contract$incidence$DGP == generated$scenario_id &
       contract$incidence$method == "M02"
@@ -3184,8 +3446,8 @@ rqr_confirm_dynamic_quantile <- function(
     )
   }
   raw_training <- cbind(
-    lower = as.numeric(fits[[1L]]$theta.out$fm),
-    upper = as.numeric(fits[[2L]]$theta.out$fm)
+    lower = rqr_confirm_exdqlm_ordinate_mean(fits[[1L]]),
+    upper = rqr_confirm_exdqlm_ordinate_mean(fits[[2L]])
   )
   raw_future <- cbind(
     lower = as.numeric(forecasts[[1L]]$ff),
@@ -4992,7 +5254,10 @@ rqr_confirm_scalar_draws <- function(
       FF <- fit$model$FF
       output <- matrix(NA_real_, dimensions[[2L]], dimensions[[3L]])
       for (draw in seq_len(dimensions[[3L]])) {
-        output[, draw] <- colSums(FF * state[, , draw])
+        output[, draw] <- rqr_confirm_state_ordinate_mean(
+          FF, state[, , draw],
+          label = "An exdqlm retained state draw"
+        )
       }
       output
     }

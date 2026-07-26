@@ -21,6 +21,35 @@ status record, not statistical evidence.
 | Data-driven tilt selection | Population motivation only | Not implemented | No empirical evidence |
 | Variational inference | Future target and derivation project | Not implemented | No evidence |
 
+## Main-simulation correction status
+
+The first authorized main-study wave at
+`b8b7748ab181a006611b602f64d4edf5be591de6` stopped fail-closed. The partial
+run is not comparative evidence and will not be resumed. It identified two
+computational defects within RQR-GIBBS:
+
+- a centered-only shared component-scale transition with inadequate
+  `log_q_1` mixing under the predeclared gates; and
+- an M02 adapter that flattened a multistate CRAN `exdqlm` posterior mean
+  rather than projecting it through the observation design.
+
+The corrected component-scale sampler composes the centered inverse-Gamma
+update with an exact noncentered log-scale slice transition. The M02 adapter
+now returns one projected ordinate per time. Uniform standard-fit schedules
+were fixed from computational diagnostics only; there is no realized-metric
+selection, adaptive extension, or retry. The scientific design, generalized
+posterior, priors, seed ledger, target coverages, estimands, and diagnostic
+thresholds remain unchanged.
+
+The correction derivation and failure reconciliation are
+`docs/implementation_notes/rqr_dlm_component_scale_interweaving_20260726.md`
+and
+`docs/audits/rqr_dlm_main_wave1_scale_and_projection_failure_20260726.md`.
+The replacement full study remains unauthorized until exact isolated-runtime
+M01 and M02 first-wave gates, the full repository validation matrix, and fresh
+preflight/oracle evidence pass. Any replacement must use a new authorization,
+run identifier, and output root.
+
 ## Evidence interpretation
 
 The bounded normalized learned-scale work is a target-and-implementation check

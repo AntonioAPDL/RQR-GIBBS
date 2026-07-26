@@ -273,6 +273,295 @@ test_that("exact component scales use the analytic shared inverse-Gamma conditio
   )
 })
 
+test_that("source digests exclude declared local output roots only", {
+  root <- tempfile("rqr-source-digest-")
+  dir.create(file.path(root, "R"), recursive = TRUE)
+  dir.create(file.path(root, "cache"), recursive = TRUE)
+  dir.create(file.path(root, "runs"), recursive = TRUE)
+  dir.create(file.path(root, "src"), recursive = TRUE)
+  on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+  writeLines("source", file.path(root, "R", "source.R"))
+  writeLines("cache-a", file.path(root, "cache", "fit.rds"))
+  writeLines("run-a", file.path(root, "runs", "status.csv"))
+  writeLines("binary-a", file.path(root, "src", "rqrgibbs.so"))
+  exclusions <- c("cache", "runs")
+  initial <- rqrgibbs:::.rqr_directory_digest(
+    root, exclude_relative = exclusions
+  )
+  writeLines("cache-b", file.path(root, "cache", "fit.rds"))
+  writeLines("run-b", file.path(root, "runs", "status.csv"))
+  expect_identical(
+    rqrgibbs:::.rqr_directory_digest(
+      root, exclude_relative = exclusions
+    ),
+    initial
+  )
+  writeLines("binary-b", file.path(root, "src", "rqrgibbs.so"))
+  expect_false(identical(
+    rqrgibbs:::.rqr_directory_digest(
+      root, exclude_relative = exclusions
+    ),
+    initial
+  ))
+})
+
+test_that("component-scale interweaving is an exact noncentered reparameterization", {
+  evolution <- rqr_evolution_component_scale(
+    templates = list(
+      diag(c(1, 2)),
+      array(c(1, 0.5), dim = c(1, 1, 2))
+    ),
+    component_dims = c(2, 1),
+    prior = list(shape = c(2.5, 3), rate = c(0.1, 0.2)),
+    initial = c(0.2, 0.4),
+    component_names = c("trend", "regression")
+  )
+  GG <- array(rep(diag(3), 2), c(3, 3, 2))
+  GG[1, 2, ] <- 1
+  theta0 <- c(0.2, -0.1, 0.3)
+  q <- c(0.2, 0.4)
+  standardized <- matrix(
+    c(0.2, -0.5, 0.7, 1.1, -0.3, 0.4),
+    nrow = 3
+  )
+  theta <- rqrgibbs:::.rqr_reconstruct_component_path(
+    standardized, theta0, GG, evolution, q
+  )
+  recovered <- rqrgibbs:::.rqr_component_noncentered_innovations(
+    theta, theta0, GG, evolution, q
+  )
+  expect_equal(recovered, standardized, tolerance = 1e-13)
+  expect_equal(
+    rqrgibbs:::.rqr_reconstruct_component_path(
+      recovered, theta0, GG, evolution, q
+    ),
+    theta,
+    tolerance = 1e-13
+  )
+  expect_equal(
+    rqrgibbs:::.rqr_component_path_from_basis(
+      rqrgibbs:::.rqr_component_path_basis(
+        recovered, theta0, GG, evolution
+      ),
+      q
+    ),
+    theta,
+    tolerance = 1e-13
+  )
+  native_basis <- rqrgibbs:::rqr_noncentered_basis_cpp(
+    theta, theta0, GG, as.integer(evolution$component_dims), q
+  )
+  expect_equal(native_basis$standardized, recovered, tolerance = 1e-13)
+  expect_equal(
+    native_basis$baseline,
+    rqrgibbs:::.rqr_component_path_basis(
+      recovered, theta0, GG, evolution
+    )$baseline,
+    tolerance = 1e-13
+  )
+  expect_equal(
+    native_basis$basis,
+    rqrgibbs:::.rqr_component_path_basis(
+      recovered, theta0, GG, evolution
+    )$basis,
+    tolerance = 1e-13
+  )
+
+  path_basis <- list(
+    baseline = native_basis$baseline,
+    basis = native_basis$basis
+  )
+  FF <- matrix(c(1, 0.2, -0.1, 1, 0.3, 0.4), nrow = 3)
+  y <- c(-0.3, 0.8)
+  observed <- c(TRUE, TRUE)
+  v <- c(0.7, 1.1)
+  xi <- -0.4
+  obs_variance <- c(0.8, 1.3)
+  ordinate_basis <- rqrgibbs:::.rqr_component_ordinate_basis(
+    FF, path_basis
+  )
+  expect_equal(
+    as.numeric(
+      ordinate_basis$baseline +
+        ordinate_basis$basis %*% sqrt(q)
+    ),
+    colSums(FF * theta),
+    tolerance = 1e-13
+  )
+  log_density <- function(candidate_q) {
+    rqrgibbs:::.rqr_component_noncentered_log_density(
+      log(candidate_q), ordinate_basis, ordinate_basis, y, observed,
+      v, xi, obs_variance, evolution
+    )
+  }
+  original_transformed_density <- function(candidate_q) {
+    candidate_theta <- rqrgibbs:::.rqr_component_path_from_basis(
+      path_basis, candidate_q
+    )
+    eta <- colSums(FF * candidate_theta)
+    residual <- rqr_residual_product(y, eta, eta) - xi * v
+    prior <- sum(
+      -(evolution$prior$shape + 1) * log(candidate_q) -
+        evolution$prior$rate / candidate_q
+    )
+    evolution_scale_terms <- -sum(
+      2 * ncol(candidate_theta) *
+        evolution$component_dims / 2 * log(candidate_q)
+    )
+    state_jacobian <- sum(
+      ncol(candidate_theta) *
+        evolution$component_dims * log(candidate_q)
+    )
+    log_scale_jacobian <- sum(log(candidate_q))
+    prior + evolution_scale_terms + state_jacobian +
+      log_scale_jacobian -
+      0.5 * sum(residual^2 / obs_variance)
+  }
+  candidate_a <- c(0.15, 0.8)
+  candidate_b <- c(0.6, 0.25)
+  expect_equal(
+    log_density(candidate_a) - log_density(candidate_b),
+    original_transformed_density(candidate_a) -
+      original_transformed_density(candidate_b),
+    tolerance = 1e-12
+  )
+
+  set.seed(1221)
+  draws <- numeric(4000)
+  current <- 0
+  for (index in seq_along(draws)) {
+    current <- rqrgibbs:::.rqr_slice_log_coordinate(
+      current, function(value) -0.5 * value^2,
+      width = 1, max_steps = 100L, max_shrink = 1000L
+    )$value
+    draws[[index]] <- current
+  }
+  draws <- tail(draws, 3000)
+  expect_lt(abs(mean(draws)), 0.08)
+  expect_lt(abs(stats::sd(draws) - 1), 0.08)
+
+  fit <- rqr_dlm_fit(
+    y = c(-1.2, -0.4, 0.1, 0.8, 1.4),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "component_scale",
+    component_templates = list(matrix(1, 1, 1)),
+    evolution_scale_prior = list(shape = 3, rate = 0.2),
+    numerical_policy = "fail",
+    mcmc_control = list(
+      n_burn = 2, n_mcmc = 5, seed = 1222,
+      backend = "cpp", store_state_draws = TRUE,
+      component_scale_interweave = TRUE,
+      component_scale_interweave_cycles = 2L,
+      component_scale_slice_sweeps = 1L
+    )
+  )
+  expect_true(fit$misc$component_scale_interweave)
+  expect_identical(
+    fit$diagnostics$partial_collapse_order,
+    c(
+      "lambda_collapsed", "latent_v_refresh", "root1_ffbs",
+      "root1_time0", "root2_ffbs", "root2_time0",
+      "component_scale_centered_noncentered_cycles_2",
+      "global_root_swap"
+    )
+  )
+  expect_identical(
+    nrow(fit$diagnostics$component_scale_interweave),
+    14L
+  )
+  expect_true(all(
+    fit$diagnostics$component_scale_interweave$
+      exact_noncentered_slice
+  ))
+  expect_true(all(
+    fit$diagnostics$component_scale_interweave$
+      sweeps_per_cycle == 1L
+  ))
+  expect_identical(
+    fit$diagnostics$component_scale_interweave$cycle,
+    rep(1:2, 7L)
+  )
+  recomputed <- lapply(seq_len(5L), function(draw) {
+    rqrgibbs:::.rqr_component_scale_posterior(
+      matrix(
+        fit$samp.theta_root1[, , draw],
+        nrow = fit$expanded_model$p
+      ),
+      matrix(
+        fit$samp.theta_root2[, , draw],
+        nrow = fit$expanded_model$p
+      ),
+      fit$samp.theta0_root1[, draw],
+      fit$samp.theta0_root2[, draw],
+      fit$expanded_model$GG,
+      fit$evolution
+    )
+  })
+  expect_equal(
+    unname(fit$samp.evolution_scale_shape),
+    do.call(rbind, lapply(recomputed, `[[`, "shape"))
+  )
+  expect_equal(
+    unname(fit$samp.evolution_scale_rate),
+    do.call(rbind, lapply(recomputed, `[[`, "rate"))
+  )
+  continued <- rqr_dlm_continue(fit, n_mcmc = 2)
+  expect_true(continued$misc$component_scale_interweave)
+  uninterrupted <- rqr_dlm_fit(
+    y = c(-1.2, -0.4, 0.1, 0.8, 1.4),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "component_scale",
+    component_templates = list(matrix(1, 1, 1)),
+    evolution_scale_prior = list(shape = 3, rate = 0.2),
+    numerical_policy = "fail",
+    mcmc_control = list(
+      n_burn = 2, n_mcmc = 7, seed = 1222,
+      backend = "cpp", store_state_draws = TRUE,
+      component_scale_interweave = TRUE,
+      component_scale_interweave_cycles = 2L,
+      component_scale_slice_sweeps = 1L
+    )
+  )
+  expect_identical(
+    continued$samp.eta_root1,
+    uninterrupted$samp.eta_root1[, 6:7, drop = FALSE]
+  )
+  expect_identical(
+    continued$samp.eta_root2,
+    uninterrupted$samp.eta_root2[, 6:7, drop = FALSE]
+  )
+  expect_identical(
+    continued$samp.evolution_scale,
+    uninterrupted$samp.evolution_scale[6:7, , drop = FALSE]
+  )
+  expect_identical(
+    continued$samp.theta_root1,
+    uninterrupted$samp.theta_root1[, , 6:7, drop = FALSE]
+  )
+  expect_identical(
+    continued$samp.theta_root2,
+    uninterrupted$samp.theta_root2[, , 6:7, drop = FALSE]
+  )
+  expect_identical(
+    continued$checkpoint_state$theta_root1,
+    uninterrupted$checkpoint_state$theta_root1
+  )
+  expect_identical(
+    continued$checkpoint_state$theta_root2,
+    uninterrupted$checkpoint_state$theta_root2
+  )
+  expect_identical(
+    continued$checkpoint_state$evolution_scale,
+    uninterrupted$checkpoint_state$evolution_scale
+  )
+  expect_identical(
+    continued$checkpoint_state$rng_state,
+    uninterrupted$checkpoint_state$rng_state
+  )
+})
+
 test_that("fixed-W state storage completes retained paths at time zero", {
   fit <- rqr_dlm_fit(
     y = c(-1, -0.2, 0.5, 1.1),
@@ -421,7 +710,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.9.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.10.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
@@ -781,6 +1070,12 @@ test_that("DLM continuation rejects every target and checkpoint mutation", {
       info = name
     )
   }
+  altered_kernel <- fit
+  altered_kernel$misc$component_scale_interweave <- TRUE
+  expect_error(
+    rqr_dlm_continue(altered_kernel, 1),
+    "transition-kernel contract"
+  )
 
   checkpoint_mutations <- list(
     root1 = function(x) {
@@ -825,6 +1120,11 @@ test_that("DLM continuation rejects every target and checkpoint mutation", {
     rng = function(x) {
       set.seed(999)
       x$checkpoint_state$rng_state <- .Random.seed
+      x
+    },
+    transition_kernel = function(x) {
+      x$checkpoint_state$transition_kernel$
+        noncentered_slice_interweave <- TRUE
       x
     }
   )
