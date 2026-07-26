@@ -101,6 +101,15 @@ The source commit and provenance-bound publication-asset commit are recorded
 in the final publication closeout below.
 
 ```text
-source commit: pending source freeze
-publication commit: pending asset publication
+source commit:
+  4e8554c5b77dc6dbdb8e8577ff064e8d9be3457d
+
+publication-asset commit:
+  e75a7e83c5dc9ebcc205730ca516ba325dac0580
+
+Figure 2 SHA-256:
+  58324c0fa877929dbf18323dceab98518fe25699e0d3597695cd72f5c195d6d3
+
+publication receipt SHA-256:
+  b92a242ecada2365e1791fd590a0b31b908e8e89b71d735110c726888e09e4cd
 ```
