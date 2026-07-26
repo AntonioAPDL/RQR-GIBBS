@@ -31,6 +31,58 @@ rqr_confirm_sha256 <- function(path) {
   digest::digest(file = path, algo = "sha256", serialize = FALSE)
 }
 
+rqr_confirm_primary_provenance_control <- function(
+    repo_root, expected_commit, primary_attestation_path) {
+  if (!is.character(repo_root) || length(repo_root) != 1L ||
+      is.na(repo_root) || !nzchar(repo_root)) {
+    stop("repo_root must be one nonempty directory path.", call. = FALSE)
+  }
+  repo_root <- normalizePath(repo_root, winslash = "/", mustWork = TRUE)
+  expected_commit <- tolower(as.character(expected_commit))
+  if (length(expected_commit) != 1L || is.na(expected_commit) ||
+      !grepl("^[0-9a-f]{40}$", expected_commit)) {
+    stop("expected_commit must be one complete Git SHA.", call. = FALSE)
+  }
+  if (!is.character(primary_attestation_path) ||
+      length(primary_attestation_path) != 1L ||
+      is.na(primary_attestation_path) ||
+      !nzchar(primary_attestation_path) ||
+      !file.exists(primary_attestation_path)) {
+    stop(
+      "primary_attestation_path must be one existing RDS file path.",
+      call. = FALSE
+    )
+  }
+  primary_attestation_path <- normalizePath(
+    primary_attestation_path, winslash = "/", mustWork = TRUE
+  )
+  attestation <- tryCatch(
+    readRDS(primary_attestation_path),
+    error = function(e) NULL
+  )
+  if (!is.list(attestation) ||
+      !identical(
+        attestation$schema_version,
+        "rqrgibbs_runtime_attestation/5.0.0"
+      ) ||
+      !identical(
+        tolower(as.character(attestation$source_commit %||% "")),
+        expected_commit
+      )) {
+    stop(
+      "The primary runtime attestation has the wrong schema or source commit.",
+      call. = FALSE
+    )
+  }
+  list(
+    repo_root = repo_root,
+    expected_git_commit = expected_commit,
+    # The package provenance API intentionally receives the RDS path. It
+    # independently re-reads and verifies the lineage evidence at fit time.
+    primary_runtime_attestation = primary_attestation_path
+  )
+}
+
 rqr_confirm_read_contract <- function(repo_root) {
   repo_root <- normalizePath(repo_root, winslash = "/", mustWork = TRUE)
   environment <- new.env(parent = baseenv())

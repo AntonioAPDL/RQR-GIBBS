@@ -120,6 +120,44 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_invisible(environment$rqr_confirm_validate_contract(altered))
 })
 
+test_that("fit provenance retains the primary attestation file path", {
+  environment <- load_confirmatory_helpers()
+  root <- tempfile("rqr-confirm-primary-provenance-")
+  dir.create(root)
+  on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+  commit <- paste(rep("a", 40L), collapse = "")
+  attestation_path <- file.path(root, "primary-runtime-attestation.rds")
+  saveRDS(
+    list(
+      schema_version = "rqrgibbs_runtime_attestation/5.0.0",
+      source_commit = commit
+    ),
+    attestation_path,
+    version = 3L
+  )
+  control <- environment$rqr_confirm_primary_provenance_control(
+    root, commit, attestation_path
+  )
+  expect_identical(
+    control$primary_runtime_attestation,
+    normalizePath(attestation_path, winslash = "/", mustWork = TRUE)
+  )
+  expect_true(file.exists(control$primary_runtime_attestation))
+  expect_error(
+    environment$rqr_confirm_primary_provenance_control(
+      root, commit, readRDS(attestation_path)
+    ),
+    "must be one existing RDS file path"
+  )
+  wrong_commit <- paste(rep("b", 40L), collapse = "")
+  expect_error(
+    environment$rqr_confirm_primary_provenance_control(
+      root, wrong_commit, attestation_path
+    ),
+    "wrong schema or source commit"
+  )
+})
+
 test_that("all Output-15 budgets and sentinel counts are reproduced", {
   environment <- load_confirmatory_helpers()
   contract <- confirmatory_contract(environment)

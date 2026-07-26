@@ -977,10 +977,8 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
   ledger <- rqr_confirm_validate_seed_ledger(
     ledger, contract, planning = "maximum", require_complete = TRUE
   )
-  provenance_control <- list(
-    repo_root = repo_root,
-    expected_git_commit = expected_commit,
-    primary_runtime_attestation = readRDS(primary_attestation_path)
+  provenance_control <- rqr_confirm_primary_provenance_control(
+    repo_root, expected_commit, primary_attestation_path
   )
   run_root <- file.path(staging, "replications")
   dir.create(run_root, recursive = TRUE)
