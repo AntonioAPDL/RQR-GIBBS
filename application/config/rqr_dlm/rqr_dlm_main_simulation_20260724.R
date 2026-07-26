@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   diagnostic_pilot_execution_authorized = FALSE,
-  confirmatory_execution_authorized = FALSE,
+  confirmatory_execution_authorized = TRUE,
   implemented_modes = c(
     "preflight", "oracle-reference", "sentinel-core",
     "execute-confirmatory", "collect", "audit"
