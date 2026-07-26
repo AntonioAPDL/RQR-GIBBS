@@ -2,6 +2,13 @@
 
 Date: 2026-07-26
 
+> **Historical-scope note.** This record documents the exact numerical fixture
+> introduced at `d45ab4f...`. A subsequent publication-label pass removes the
+> fixture's family name and parameters from the rendered figures and their
+> captions to keep an arbitrary illustrative distribution separate from the
+> RQR construction. The exact law, deterministic oracles, and provenance below
+> remain current reproducibility information.
+
 ## Scope
 
 This pass changes only the deterministic population illustration used in

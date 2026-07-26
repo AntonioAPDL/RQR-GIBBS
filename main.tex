@@ -230,26 +230,18 @@ distribution.
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig01_three_balance_principles.png}
 \caption{\textbf{Three interval-selection principles under left skewness.}
-All panels begin with raw
-\(Y\sim\operatorname{AL}_{0.8}(0,1)\) under the quantile-regression
-asymmetric-Laplace convention and display
-\(Z=\{Y-\E(Y)\}/\operatorname{SD}(Y)\), with interval content \(c=0.80\). The
-subscript is the distribution's quantile/asymmetry index
-\(\tau_{\mathrm{AL}}=0.8\), so
-\(\Pr(Y\leq 0)=\tau_{\mathrm{AL}}\). This index is specified independently of
-the interval content and was not chosen to match it; the common numerical
-value \(0.8\) is incidental to this illustration.
-All targets are computed on the raw population scale; their display
-coordinates then subtract \(\E(Y)\) and divide by
-\(\operatorname{SD}(Y)\). Equal-tailed (ET)
+All panels use the same continuous left-skewed population illustration with
+interval content \(c=0.80\), displayed as
+\(Z=\{Y-\E(Y)\}/\operatorname{SD}(Y)\). The illustrative population is not
+part of the RQR construction; it makes the three placement principles visibly
+distinct. All targets are computed on the raw population scale before
+standardization. Equal-tailed (ET)
 intervals balance omitted
 probabilities, ordinary RQR balances omitted first moments, and shortest
 contiguous (SH) intervals minimize geometric width. Direct labels, endpoint
 glyphs, and redundant color encode the three targets; every interval segment is
-solid. This population benchmark is distinct from the pseudo-asymmetric-Laplace
-augmentation of the residual product in Section~\ref{sec:gibbs}. These
-deterministic population calculations compare the functionals; they do not
-provide finite-sample or comparative-performance evidence.}
+solid. These deterministic population calculations compare the functionals;
+they do not provide finite-sample or comparative-performance evidence.}
 \label{fig:three-interval-principles}
 \end{figure}
 
@@ -484,15 +476,14 @@ For an interior tilt,
 Thus an interior width minimum along the tilt path satisfies the usual
 equal-endpoint-density condition.
 Figure~\ref{fig:mean-tilt-map} traces this one-to-one interior map and its
-width profile for the same population benchmark.
+width profile for the same population illustration.
 
 \begin{figure}[h!]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig02_mean_tilt_recovery_map.png}
 \caption{\textbf{Population mean-tilt recovery map.}
-For the same raw \(Y\sim\operatorname{AL}_{0.8}(0,1)\), displayed after
-mean/standard-deviation standardization, and separately specified content
-\(c=0.80\), the
+For the same continuous left-skewed population illustration and content
+\(c=0.80\), displayed after mean/standard-deviation standardization, the
 retained-window mean \(M_c(u)\) maps each interior lower-tail index \(u\) to a unique
 standardized tilt \(d=\delta/\operatorname{SD}(Y)\). The marked oracle tilts
 recover the shortest contiguous (SH), equal-tailed (ET), and ordinary-RQR

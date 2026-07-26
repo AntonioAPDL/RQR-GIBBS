@@ -3,7 +3,7 @@
 # Deterministic population figures for the RQR article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
-SCRIPT_VERSION <- "2026-07-26-al-benchmark-5"
+SCRIPT_VERSION <- "2026-07-26-left-skew-public-label-6"
 DEFAULT_CONTENT <- 0.80
 ILLUSTRATION_AL_TAU <- 0.80
 NUMERICAL_TOLERANCES <- list(
@@ -323,7 +323,11 @@ distribution_descriptor <- function(dist) {
   }
 }
 
-rqr_theory_distributions <- function() {
+rqr_theory_distributions <- function(content = DEFAULT_CONTENT) {
+  assert_scalar(
+    content, "content", lower = 0, upper = 1,
+    lower_open = TRUE, upper_open = TRUE
+  )
   al <- asymmetric_laplace_components(
     mu = 0, scale = 1, tau = ILLUSTRATION_AL_TAU
   )
@@ -370,10 +374,10 @@ rqr_theory_distributions <- function() {
     asymmetric_laplace = make_distribution(
       "asymmetric_laplace",
       "Asymmetric Laplace(mu=0, scale=1, tau=0.8)",
-      expression(AL[0.8](0, 1)),
-      expression(
-        Y %~% AL[0.8](0, 1) * ";" ~~
-          tau[AL] ~~ "and" ~~ c ~~ "are separate inputs"
+      "Left-skewed",
+      bquote(
+        "Left-skewed illustration;" ~~
+          "interval content" ~~ c == .(content)
       ),
       al$q, al$p, al$d, al$moment_between, al$mean, al$sd,
       c(-Inf, Inf),
@@ -1315,7 +1319,7 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   out_dir <- normalizePath(out_dir, mustWork = TRUE)
   content <- DEFAULT_CONTENT
-  dists <- rqr_theory_distributions()
+  dists <- rqr_theory_distributions(content)
   invisible(lapply(dists, function(dist) {
     check_oracle_summary(dist, oracle_interval_summary(dist, content), content)
   }))

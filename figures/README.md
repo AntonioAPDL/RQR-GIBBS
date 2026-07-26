@@ -62,6 +62,12 @@ the generator hash, and the detected and declared source identities. The full
 local audit bundle remains under `application/cache/`, and the repository also
 retains the generator, tests, and vector-native TikZ schematics.
 
+To keep the statistical comparison separate from an arbitrary illustrative
+distribution choice, the publication-facing figures and captions call the
+example only an illustrative continuous left-skewed population benchmark. Its
+exact law remains documented below and in the generator, tests, panel data,
+manifest, and publication provenance receipt.
+
 The generator uses analytic truncated first moments for its declared
 distributions and independent response-space integration in the tests. The
 asymmetric-Laplace population benchmark uses the quantile-regression

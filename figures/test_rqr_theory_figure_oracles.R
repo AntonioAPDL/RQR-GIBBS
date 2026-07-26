@@ -131,7 +131,7 @@ response_window_mean <- function(dist, lower, upper, content) {
 content <- DEFAULT_CONTENT
 al_tau <- ILLUSTRATION_AL_TAU
 tolerance <- 3e-7
-dists <- rqr_theory_distributions()
+dists <- rqr_theory_distributions(content)
 assert_close(
   c(content, al_tau), c(0.80, 0.80), 1e-15,
   "interval content and AL quantile index are separately declared"
@@ -173,6 +173,66 @@ assert_true(
   al$mean < al$q(0.5) && al$q(0.5) < al$mu,
   "tau=0.8 AL is left-skewed under the declared convention"
 )
+public_al_label_text <- paste(
+  c(
+    deparse(al_dist$short_label, width.cutoff = 500L),
+    deparse(al_dist$subtitle, width.cutoff = 500L)
+  ),
+  collapse = " "
+)
+assert_true(
+  identical(al_dist$short_label, "Left-skewed") &&
+    grepl("Left-skewed illustration", public_al_label_text,
+          fixed = TRUE),
+  "reader-facing labels describe the illustrative shape without naming its law"
+)
+assert_true(
+  !grepl("Laplace|tau|AL\\[|AL_", public_al_label_text),
+  "reader-facing labels omit the internal population-law parameterization"
+)
+assert_true(
+  grepl("0.8", public_al_label_text, fixed = TRUE),
+  "reader-facing figure subtitle retains interval content"
+)
+extract_figure_block <- function(path, publication_file) {
+  lines <- readLines(
+    file.path(repository_root(), path), warn = FALSE, encoding = "UTF-8"
+  )
+  image_line <- grep(publication_file, lines, fixed = TRUE)
+  assert_true(
+    length(image_line) == 1L,
+    sprintf("%s has one include for %s", path, publication_file)
+  )
+  starts <- which(
+    seq_along(lines) <= image_line &
+      grepl("\\begin{figure}", lines, fixed = TRUE)
+  )
+  ends <- which(
+    seq_along(lines) >= image_line &
+      grepl("\\end{figure}", lines, fixed = TRUE)
+  )
+  assert_true(
+    length(starts) >= 1L && length(ends) >= 1L,
+    sprintf("%s has a complete figure block for %s", path, publication_file)
+  )
+  paste(lines[max(starts):min(ends)], collapse = "\n")
+}
+public_figure_blocks <- c(
+  extract_figure_block("main.tex", "fig01_three_balance_principles.png"),
+  extract_figure_block("main.tex", "fig02_mean_tilt_recovery_map.png"),
+  extract_figure_block(
+    "rqr-gibbs-supplement.tex",
+    "figS01_cross_distribution_recovery.png"
+  )
+)
+for (term in c(
+    "\\operatorname{AL}", "asymmetric-Laplace", "\\tau_{\\mathrm{AL}}"
+)) {
+  assert_true(
+    !any(grepl(term, public_figure_blocks, fixed = TRUE)),
+    sprintf("publication figure blocks omit the internal fixture term %s", term)
+  )
+}
 
 p_grid <- sort(unique(c(
   exp(seq(log(1e-12), log(0.01), length.out = 80L)),
