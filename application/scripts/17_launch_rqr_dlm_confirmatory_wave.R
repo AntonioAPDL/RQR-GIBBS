@@ -122,8 +122,8 @@ if (!identical(source_commit, expected_commit) || length(git_status)) {
 authorization <- jsonlite::read_json(
   required_files[["authorization"]], simplifyVector = TRUE
 )
-primary_attestation <- jsonlite::read_json(
-  required_files[["primary_attestation"]], simplifyVector = TRUE
+primary_attestation <- readRDS(
+  required_files[["primary_attestation"]]
 )
 required_authorization <- c(
   "schema_version", "reviewed_implementation_commit",
@@ -146,10 +146,34 @@ if (!all(required_authorization %in% names(authorization)) ||
     !isTRUE(authorization$all_reference_gates_pass) ||
     !isTRUE(authorization$primary_worktree_clean) ||
     !identical(
-      tolower(as.character(primary_attestation$runtime_tree_digest)),
+      as.character(primary_attestation$schema_version),
+      "rqrgibbs_runtime_attestation/5.0.0"
+    ) ||
+    !identical(
+      tolower(as.character(primary_attestation$source_commit)),
+      expected_commit
+    ) ||
+    !identical(
+      tolower(as.character(
+        primary_attestation$runtime_package_tree_digest
+      )),
       tolower(as.character(authorization$primary_runtime_tree_digest))
     )) {
   stop("The launcher authorization or isolated runtime binding is invalid.",
+       call. = FALSE)
+}
+primary_runtime_path <- normalizePath(
+  primary_attestation$runtime_package_path,
+  winslash = "/", mustWork = TRUE
+)
+if (!requireNamespace("rqrgibbs", quietly = TRUE) ||
+    !identical(
+      normalizePath(
+        find.package("rqrgibbs"), winslash = "/", mustWork = TRUE
+      ),
+      primary_runtime_path
+    )) {
+  stop("The wave launcher did not load the attested primary runtime.",
        call. = FALSE)
 }
 

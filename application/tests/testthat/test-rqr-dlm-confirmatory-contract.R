@@ -1165,6 +1165,28 @@ test_that("the direct wave launcher rejects alternate output before publication"
     'wave_output_base = "RQR_CONFIRMATORY_WAVE_OUTPUT_BASE"',
     launcher, fixed = TRUE
   )))
+  primary_start <- grep(
+    "^primary_attestation <- readRDS\\(", launcher
+  )
+  authorization_fields <- grep(
+    "^required_authorization <- c\\(", launcher
+  )
+  expect_length(primary_start, 1L)
+  expect_length(authorization_fields, 1L)
+  primary_block <- launcher[
+    primary_start[[1L]]:(authorization_fields[[1L]] - 1L)
+  ]
+  expect_false(any(grepl(
+    "jsonlite::read_json", primary_block, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "required_files[[\"primary_attestation\"]]",
+    primary_block, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "primary_attestation$runtime_package_tree_digest",
+    launcher, fixed = TRUE
+  )))
 })
 
 test_that("the detached launcher reads the official primary RDS attestation", {
