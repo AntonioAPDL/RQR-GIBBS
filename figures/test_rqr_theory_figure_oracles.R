@@ -128,9 +128,14 @@ response_window_mean <- function(dist, lower, upper, content) {
   value
 }
 
-content <- 0.80
+content <- DEFAULT_CONTENT
+al_tau <- ILLUSTRATION_AL_TAU
 tolerance <- 3e-7
 dists <- rqr_theory_distributions()
+assert_close(
+  c(content, al_tau), c(0.80, 0.80), 1e-15,
+  "interval content and AL quantile index are separately declared"
+)
 assert_true(
   length(unique(unname(PCH))) == length(PCH),
   "target symbols are shape-distinct"
@@ -151,29 +156,29 @@ assert_true(
 # 1. The asymmetric-Laplace population benchmark uses the declared
 # quantile-regression convention. This is a population law, not the
 # pseudo-residual loss-kernel augmentation used by the sampler.
-al <- asymmetric_laplace_components(mu = 0, scale = 1, tau = 0.99)
+al <- asymmetric_laplace_components(mu = 0, scale = 1, tau = al_tau)
 al_dist <- dists$asymmetric_laplace
-assert_close(al$p(0), 0.99, 1e-14, "AL location is the tau quantile")
+assert_close(al$p(0), al_tau, 1e-14, "AL location is the tau quantile")
 assert_close(
   c(al$mean, al$variance, al$sd),
   c(
-    -98.98989898989899,
-    10001.020304050607,
-    100.00510139013213
+    -3.75,
+    26.5625,
+    5.153882032022076
   ),
-  5e-11,
+  5e-13,
   "AL analytic moments"
 )
 assert_true(
   al$mean < al$q(0.5) && al$q(0.5) < al$mu,
-  "tau=0.99 AL is left-skewed under the declared convention"
+  "tau=0.8 AL is left-skewed under the declared convention"
 )
 
 p_grid <- sort(unique(c(
   exp(seq(log(1e-12), log(0.01), length.out = 80L)),
-  seq(0.01, 0.98, length.out = 300L),
-  0.99 + c(-1e-10, -1e-12, 0, 1e-12, 1e-10),
-  seq(0.991, 0.999, length.out = 100L),
+  seq(0.01, al_tau - 0.01, length.out = 300L),
+  al_tau + c(-1e-10, -1e-12, 0, 1e-12, 1e-10),
+  seq(al_tau + 0.001, 0.999, length.out = 100L),
   1 - exp(seq(log(1e-12), log(5e-4), length.out = 80L))
 )))
 p_grid <- p_grid[p_grid > 0 & p_grid < 1]
@@ -186,8 +191,11 @@ assert_close(
   al$q(al$p(y_grid)), y_grid, 2e-8,
   "AL quantile-CDF inversion"
 )
+monotonicity_grid <- seq(
+  al$q(1e-10), al$q(1 - 1e-10), length.out = 2001L
+)
 assert_true(
-  all(diff(al$p(seq(-1500, 20, length.out = 2001L))) >= 0),
+  all(diff(al$p(monotonicity_grid)) >= 0),
   "AL CDF is monotone"
 )
 assert_true(
@@ -217,7 +225,7 @@ assert_close(
   second_numeric - mean_numeric^2, al$variance, 5e-6,
   "AL numerical variance"
 )
-for (limits in list(c(-500, -100), c(-100, 1), c(0.1, 3))) {
+for (limits in list(c(-30, -8), c(-8, 1), c(0.1, 8))) {
   numerical <- stats::integrate(
     function(y) y * al$d(y),
     lower = limits[1L], upper = limits[2L],
@@ -259,6 +267,39 @@ for (dist in dists) {
     paste(dist$id, "ordinary-RQR retained mean")
   )
 }
+
+# The illustrative equality tau=0.8 and c=0.8 is numerical only. Perturb each
+# input separately to guard against accidental coupling in the generator.
+probe_al <- asymmetric_laplace_components(mu = 0, scale = 1, tau = 0.79)
+probe_dist <- make_distribution(
+  "asymmetric_laplace_probe",
+  "Asymmetric Laplace probe",
+  "AL probe",
+  "tau/content independence probe",
+  probe_al$q, probe_al$p, probe_al$d, probe_al$moment_between,
+  probe_al$mean, probe_al$sd,
+  support = c(-Inf, Inf), plot_knots = probe_al$mu,
+  raw_parameters = "mu_AL=0,s_AL=1,tau_AL=0.79"
+)
+assert_close(
+  probe_al$p(0), 0.79, 1e-14,
+  "changing AL tau changes the distribution quantile index"
+)
+assert_close(
+  oracle_interval_summary(probe_dist, content)$content,
+  rep(content, 3L), 2e-8,
+  "changing AL tau does not change interval content"
+)
+probe_content <- 0.79
+assert_close(
+  oracle_interval_summary(al_dist, probe_content)$content,
+  rep(probe_content, 3L), 2e-8,
+  "changing interval content does not change AL tau"
+)
+assert_close(
+  al_dist$p(al$mu), al_tau, 1e-14,
+  "changing interval content leaves the AL quantile index fixed"
+)
 
 # 3. Analytic truncated moments agree with independent response-space
 # integration, including windows close to each probability boundary.
@@ -347,16 +388,16 @@ al_summary <- al_summary[
 ]
 assert_close(
   al_summary$u,
-  c(0.198, 0.1, 0.0459597871957907),
+  c(0.16, 0.1, 0.0534325656741456),
   8e-10,
   "AL lower-tail indices"
 )
 assert_close(
   al_summary$lower,
   c(
-    -160.94379124341004,
-    -229.25347571405442,
-    -306.99381203635281
+    -8.047189562170502,
+    -10.397207708399183,
+    -13.530956617479615
   ),
   2e-7,
   "AL raw lower endpoints"
@@ -364,9 +405,9 @@ assert_close(
 assert_close(
   al_summary$upper,
   c(
-    1.625694861044546,
-    -9.531017980432486,
-    -15.723311751763041
+    2.011797390542625,
+    0.866433975699932,
+    0.388539676790271
   ),
   2e-7,
   "AL raw upper endpoints"
@@ -374,9 +415,9 @@ assert_close(
 assert_close(
   (al_summary$lower - al_dist$mean) / al_dist$sd,
   c(
-    -0.619507319049869,
-    -1.302569318098897,
-    -2.079933024966448
+    -0.833777245088500,
+    -1.289747741042340,
+    -1.897784341339163
   ),
   2e-9,
   "AL standardized lower endpoints"
@@ -384,22 +425,22 @@ assert_close(
 assert_close(
   (al_summary$upper - al_dist$mean) / al_dist$sd,
   c(
-    1.006104613187979,
-    0.894543175957359,
-    0.832623397013546
+    1.117952905158378,
+    0.895719759788277,
+    0.802994645797954
   ),
   2e-9,
   "AL standardized upper endpoints"
 )
 assert_close(
   al_summary$standardized_delta,
-  c(0.398274923398273, 0.169233249013427, 0),
+  c(0.292759522537032, 0.140204357045383, 0),
   2e-9,
   "AL standardized recovery tilts"
 )
 assert_close(
   al_summary$standardized_width,
-  c(1.625611932237848, 2.197112494056256, 2.912556421979994),
+  c(1.951730150246878, 2.185467500830618, 2.700778987137117),
   2e-9,
   "AL standardized widths"
 )
@@ -579,8 +620,14 @@ assert_true(
   "publication receipt paths"
 )
 assert_true(
-  all(c("distributions", "oracle_scale_contract") %in% names(receipt)),
-  "publication receipt records distributions and the raw-scale oracle contract"
+  all(c(
+    "distributions", "interval_content", "al_quantile_index",
+    "oracle_scale_contract"
+  ) %in% names(receipt)),
+  paste(
+    "publication receipt separately records the distribution index,",
+    "interval content, and raw-scale oracle contract"
+  )
 )
 al_receipt <- receipt[
   receipt$figure_id %in% c(
@@ -590,8 +637,20 @@ al_receipt <- receipt[
   ),
 ]
 assert_true(
-  all(grepl("tau_AL=0.99", al_receipt$distributions, fixed = TRUE)),
+  all(grepl("tau_AL=0.8", al_receipt$distributions, fixed = TRUE)),
   "AL publication receipts retain the raw parameter metadata"
+)
+assert_close(
+  al_receipt$interval_content, rep(content, nrow(al_receipt)), 1e-15,
+  "AL publication receipts record interval content separately"
+)
+assert_close(
+  al_receipt$al_quantile_index, rep(al_tau, nrow(al_receipt)), 1e-15,
+  "AL publication receipts record the AL quantile index separately"
+)
+assert_true(
+  !any(grepl("tau_AL=0.99", al_receipt$distributions, fixed = TRUE)),
+  "AL publication receipts contain no stale tau=0.99 metadata"
 )
 assert_true(
   all(grepl(

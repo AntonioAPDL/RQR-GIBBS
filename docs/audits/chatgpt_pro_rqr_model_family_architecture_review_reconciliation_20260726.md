@@ -2,6 +2,16 @@
 
 Date: 2026-07-26
 
+> **Historical-scope note.** This reconciliation records the model-family
+> architecture pass exactly as implemented at `55799cbf...`, including its
+> then-current \(\tau_{\mathrm{AL}}=0.99\) illustrative law. The subsequent
+> AL-illustration revision replaces that benchmark with
+> \(\operatorname{AL}_{0.8}(0,1)\), treats \(\tau_{\mathrm{AL}}\) and interval
+> content \(c\) as independent inputs, and is documented in
+> `docs/audits/rqr_al08_illustration_revision_20260726.md`. The historical
+> values below are retained for provenance and are not the current manuscript
+> specification.
+
 ## Scope and source identity
 
 This pass independently audited the ChatGPT Pro model-family architecture

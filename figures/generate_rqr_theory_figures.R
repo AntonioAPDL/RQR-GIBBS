@@ -3,8 +3,9 @@
 # Deterministic population figures for the RQR article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
-SCRIPT_VERSION <- "2026-07-26-al-benchmark-4"
+SCRIPT_VERSION <- "2026-07-26-al-benchmark-5"
 DEFAULT_CONTENT <- 0.80
+ILLUSTRATION_AL_TAU <- 0.80
 NUMERICAL_TOLERANCES <- list(
   probability_margin = 1e-8,
   integration_relative = 1e-10,
@@ -167,7 +168,8 @@ sha256_file <- function(path) {
   digest::digest(file = path, algo = "sha256", serialize = FALSE)
 }
 
-asymmetric_laplace_components <- function(mu = 0, scale = 1, tau = 0.99) {
+asymmetric_laplace_components <- function(
+    mu = 0, scale = 1, tau = ILLUSTRATION_AL_TAU) {
   assert_scalar(mu, "mu")
   assert_scalar(scale, "scale", lower = 0, lower_open = TRUE)
   assert_scalar(tau, "tau", lower = 0, upper = 1,
@@ -322,7 +324,9 @@ distribution_descriptor <- function(dist) {
 }
 
 rqr_theory_distributions <- function() {
-  al <- asymmetric_laplace_components(mu = 0, scale = 1, tau = 0.99)
+  al <- asymmetric_laplace_components(
+    mu = 0, scale = 1, tau = ILLUSTRATION_AL_TAU
+  )
   normal_moment <- function(lower, upper) {
     stats::dnorm(lower) - stats::dnorm(upper)
   }
@@ -365,14 +369,17 @@ rqr_theory_distributions <- function() {
     ),
     asymmetric_laplace = make_distribution(
       "asymmetric_laplace",
-      "Asymmetric Laplace(mu=0, scale=1, tau=0.99)",
-      "AL(0, 1, 0.99)",
-      "AL(tau=0.99); left-skewed; raw targets, then standardize",
+      "Asymmetric Laplace(mu=0, scale=1, tau=0.8)",
+      expression(AL[0.8](0, 1)),
+      expression(
+        Y %~% AL[0.8](0, 1) * ";" ~~
+          tau[AL] ~~ "and" ~~ c ~~ "are separate inputs"
+      ),
       al$q, al$p, al$d, al$moment_between, al$mean, al$sd,
       c(-Inf, Inf),
       plot_knots = al$mu,
-      plot_probabilities = c(0.005, 0.9995),
-      raw_parameters = "mu_AL=0,s_AL=1,tau_AL=0.99"
+      plot_probabilities = c(0.005, 0.995),
+      raw_parameters = "mu_AL=0,s_AL=1,tau_AL=0.8"
     ),
     lognormal = make_distribution(
       "lognormal", "Lognormal(meanlog=0, sdlog=0.6)", "Lognormal(0, 0.6)",
@@ -869,7 +876,7 @@ figure_01_three_principles <- function(out_dir, dist, content) {
       )
     }
     graphics::mtext(
-      dist$subtitle, side = 3, outer = TRUE, line = 0.20, cex = 0.72
+      dist$subtitle, side = 3, outer = TRUE, line = -0.20, cex = 0.72
     )
   }
   outputs <- with_graphics_devices(
@@ -974,7 +981,7 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       labels = TRUE
     )
     graphics::mtext(
-      dist$subtitle, side = 3, outer = TRUE, line = 0.20, cex = 0.72
+      dist$subtitle, side = 3, outer = TRUE, line = -0.20, cex = 0.72
     )
   }
   outputs <- with_graphics_devices(
@@ -1255,7 +1262,8 @@ write_figure_manifest <- function(records, out_dir, content, state) {
   path
 }
 
-write_publication_receipt <- function(records, out_dir, state) {
+write_publication_receipt <- function(records, out_dir, state, content,
+                                      al_tau = ILLUSTRATION_AL_TAU) {
   generator <- script_path()
   rows <- lapply(records, function(record) {
     png <- record$outputs[grepl("\\.png$", record$outputs)]
@@ -1274,6 +1282,14 @@ write_publication_receipt <- function(records, out_dir, state) {
       source_archive_sha256 = state$source_archive_sha256,
       source_identity_consistent = state$source_identity_consistent,
       distributions = record$distributions,
+      interval_content = content,
+      al_quantile_index = if (
+        grepl("asymmetric_laplace", record$distributions, fixed = TRUE)
+      ) {
+        al_tau
+      } else {
+        NA_real_
+      },
       oracle_scale_contract = paste(
         "targets computed on each raw population law;",
         "display coordinates use raw mean/SD standardization"
@@ -1314,7 +1330,9 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
     figure_s02_loss_geometry(out_dir, content)
   )
   manifest <- write_figure_manifest(records, out_dir, content, state)
-  receipt <- write_publication_receipt(records, out_dir, state)
+  receipt <- write_publication_receipt(
+    records, out_dir, state, content, ILLUSTRATION_AL_TAU
+  )
   message("Generated deterministic population figures under: ", out_dir)
   message("Manifest: ", manifest)
   message("Publication receipt: ", receipt)

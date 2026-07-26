@@ -230,11 +230,18 @@ distribution.
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig01_three_balance_principles.png}
 \caption{\textbf{Three interval-selection principles under left skewness.}
-All panels use the standardized form of an asymmetric-Laplace population with
-raw location \(0\), scale \(1\), quantile level \(0.99\), and content
-\(c=0.80\). The raw location is the \(0.99\) quantile under this convention;
-all targets are computed on the raw population before display coordinates
-subtract its mean and divide by its standard deviation. Equal-tailed (ET)
+All panels begin with raw
+\(Y\sim\operatorname{AL}_{0.8}(0,1)\) under the quantile-regression
+asymmetric-Laplace convention and display
+\(Z=\{Y-\E(Y)\}/\operatorname{SD}(Y)\), with interval content \(c=0.80\). The
+subscript is the distribution's quantile/asymmetry index
+\(\tau_{\mathrm{AL}}=0.8\), so
+\(\Pr(Y\leq 0)=\tau_{\mathrm{AL}}\). This index is specified independently of
+the interval content and was not chosen to match it; the common numerical
+value \(0.8\) is incidental to this illustration.
+All targets are computed on the raw population scale; their display
+coordinates then subtract \(\E(Y)\) and divide by
+\(\operatorname{SD}(Y)\). Equal-tailed (ET)
 intervals balance omitted
 probabilities, ordinary RQR balances omitted first moments, and shortest
 contiguous (SH) intervals minimize geometric width. Direct labels, endpoint
@@ -483,7 +490,9 @@ width profile for the same population benchmark.
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig02_mean_tilt_recovery_map.png}
 \caption{\textbf{Population mean-tilt recovery map.}
-For the same standardized asymmetric-Laplace distribution and \(c=0.80\), the
+For the same raw \(Y\sim\operatorname{AL}_{0.8}(0,1)\), displayed after
+mean/standard-deviation standardization, and separately specified content
+\(c=0.80\), the
 retained-window mean \(M_c(u)\) maps each interior lower-tail index \(u\) to a unique
 standardized tilt \(d=\delta/\operatorname{SD}(Y)\). The marked oracle tilts
 recover the shortest contiguous (SH), equal-tailed (ET), and ordinary-RQR

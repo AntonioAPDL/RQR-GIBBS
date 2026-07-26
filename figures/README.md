@@ -66,11 +66,15 @@ The generator uses analytic truncated first moments for its declared
 distributions and independent response-space integration in the tests. The
 asymmetric-Laplace population benchmark uses the quantile-regression
 parameterization
-`(mu_AL, s_AL, tau_AL) = (0, 1, 0.99)`. Under this convention it is strongly
-left-skewed. Its interval targets are solved on the raw response scale and only
-then mapped to mean/standard-deviation standardized coordinates. This
-population benchmark is distinct from the pseudo-asymmetric-Laplace
-loss-kernel augmentation applied to the RQR pseudo-residual.
+`(mu_AL, s_AL, tau_AL) = (0, 1, 0.8)`, denoted
+`AL_0.8(0, 1)`. Under this convention it is left-skewed and `mu_AL` is its
+0.8 quantile. The distributional index `tau_AL` and interval content `c` are
+separate inputs; their shared value of 0.8 in the publication illustration is
+incidental. The publication receipt records them in separate columns. Interval
+targets are solved on the raw response scale and only then mapped to
+mean/standard-deviation standardized coordinates. This population benchmark
+is distinct from the pseudo-asymmetric-Laplace loss-kernel augmentation
+applied to the RQR pseudo-residual.
 
 The manifest records the source revision, generator hash, configuration,
 numerical tolerances, dependencies, panel-data hashes, and output hashes. CSV
