@@ -11,6 +11,8 @@
 \usepackage{amsthm}
 \numberwithin{equation}{section}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
 \usepackage{array}
 \usepackage{tabularx}
 \usepackage{booktabs}
@@ -32,9 +34,9 @@
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
 
-\title{\vspace{-0.6cm}Bayesian Relaxed Quantile Regression for Direct Interval Forecasting}
+\title{\vspace{-0.6cm}Generalized Bayesian Relaxed Quantile Regression for Direct Interval Forecasting}
 \author{Antonio De Leon$^{1}$ \and Raquel Prado$^{1}$ \and Bruno Sans\'o$^{1}$}
-\date{\small $^{1}$Department of Statistics, University of California, Santa Cruz\\
+\date{\small $^{1}$ Department of Statistics, University of California, Santa Cruz\\
 \vspace{0.25em}\today}
 
 \begin{document}
@@ -43,27 +45,24 @@
 
 \begin{abstract}
 \noindent
-Prediction intervals are often built from two fitted conditional quantiles, but
-that construction fixes endpoint probabilities before assessing which
-fixed-coverage interval functional is scientifically relevant. Relaxed
-quantile regression (RQR) instead estimates two interval roots directly through
-a residual-product loss. Under regularity, its nondegenerate unrestricted
-population solution is the unique contiguous interval of the declared content
-whose retained distribution preserves the response mean. A fixed mean tilt
-shifts this retained-mean condition without changing the coverage equation and
-thereby indexes the full family of contiguous fixed-content intervals. We
-develop a Bayesian generalized-posterior formulation for ordinary RQR and show
-that a pseudo-residual-normalized exponentiated loss admits a
-pseudo-asymmetric-Laplace normal--exponential augmentation. Conditional on one
-root and the latent scales, the other root has a Gaussian full conditional.
-For a fixed learning rate, the tilted kernel retains these conditional
-families and changes only the Gaussian canonical vectors. The implemented
-ordinary construction supports fixed nonlinear readouts and a linear dynamic
-extension in which each root trajectory is updated by forward-filtering
-backward-sampling. Fixed evolution covariances, frozen component-discount
-templates, and shared component-specific evolution scales define coherent
-state priors. Posterior summaries are interval-root functions under a
-loss-based update, not posterior predictive response draws.
+Prediction intervals built from two fitted conditional quantiles fix the
+endpoint probabilities before determining which fixed-content interval
+functional is scientifically relevant. Relaxed quantile regression (RQR)
+instead estimates two exchangeable interval roots through a residual-product
+loss. We show that, under regularity, the unrestricted nondegenerate population
+target is the unique contiguous interval of the declared content whose
+truncation preserves the response mean. We then introduce a fixed mean tilt
+that changes the retained-mean condition while leaving the coverage equation
+unchanged, thereby indexing the contiguous fixed-content interval family.
+Ordinary and fixed-tilt RQR admit generalized-posterior formulations based on
+a pseudo-asymmetric-Laplace normal--exponential augmentation: the latent scales
+have generalized inverse-Gaussian conditionals, and each root has a Gaussian
+conditional given the other. For a fixed learning rate, the tilt changes only
+the Gaussian information vectors. The currently implemented target is ordinary
+RQR, including fixed nonlinear readouts and a dynamic extension with sequential
+root-specific forward-filtering backward-sampling. All reported draws summarize
+interval-root functionals under a loss-based update, not posterior-predictive
+responses.
 \end{abstract}
 
 \section{Introduction}
@@ -122,7 +121,7 @@ root trajectory and the latent scales, the other root trajectory has a Gaussian
 state-space observation equation and can be sampled by FFBS. This extension is
 important because it places RQR beside dynamic quantile and state-space
 forecasting methods while preserving the direct-interval target
-\citep{GoncalvesMigonBastos2020DQLM,SinghRaman2025ESNStateSpace}.
+\citep{GoncalvesMigonBastos2020DQLM}.
 
 The interpretation is deliberately limited. The generalized posterior updates
 beliefs about interval endpoint functions under the declared RQR loss and
@@ -290,6 +289,7 @@ Target & Selection equation & Interpretation\\
 Equal-tailed & \(u=(1-c)/2\) & Equal omitted probabilities\\
 Ordinary RQR & \(M_c(u)=\mu\) & Mean-preserving truncation\\
 Shortest contiguous & \(u\in\argmin_v W_c(v)\) & Minimum geometric width\\
+Mean-tilted RQR & \(M_c(u)=\mu+\delta\) & Fixed retained-mean placement\\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -297,6 +297,21 @@ For a regular interior shortest interval under a positive density,
 \(f\{Q(u)\}=f\{Q(u+c)\}\). Under multimodality, a highest-density region may
 be disconnected, whereas the intervals considered here are contiguous
 \citep{BrehmerGneiting2021Intervals}.
+Figure~\ref{fig:three-interval-principles} displays these distinct balance
+conditions for one right-skewed population distribution.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{application/cache/rqr_theory_figures/fig01_three_balance_principles.pdf}
+\caption{\textbf{Three interval-selection principles under right skewness.}
+All panels use a standardized \(\mathrm{Gamma}(2,1)\) population distribution
+and content \(c=0.80\). Equal-tailed (ET) intervals balance omitted
+probabilities, ordinary RQR balances omitted first moments, and shortest
+contiguous (SH) intervals minimize geometric width. These deterministic
+population/oracle calculations do not provide finite-sample, calibration, or
+comparative-performance evidence.}
+\label{fig:three-interval-principles}
+\end{figure}
 
 To move through the content-\(c\) family without changing the coverage score,
 consider a fixed mean tilt \(\delta\), measured in response units, and define
@@ -323,14 +338,15 @@ stationary point of the mean-tilted population risk satisfies
 \Pr(a_\delta<Y<b_\delta)=c,\qquad
 \E(Y\mid a_\delta<Y<b_\delta)=\mu+\delta.
 \]
-If \(F\) is continuous and strictly increasing, its unique quantile-window
-index solves
+If \(F\) is continuous and strictly increasing, then for every \(\delta\)
+strictly between \(M_c(0)-\mu\) and \(M_c(1-c)-\mu\), its unique interior
+quantile-window index solves
 \[
 M_c(u_\delta)=\mu+\delta.
 \]
-Consequently, as \(\delta\) ranges over
-\([M_c(0)-\mu,M_c(1-c)-\mu]\), the target spans the contiguous
-content-\(c\) interval family.
+The closure of this path, obtained by allowing finite endpoint tilts, spans the
+full contiguous content-\(c\) interval family; endpoint windows are boundary
+solutions governed by one-sided conditions.
 \end{proposition}
 
 Ordinary RQR is recovered by \(\delta_{\mathrm{RQR}}=0\). The oracle tilts
@@ -347,6 +363,23 @@ where \(u_{\mathrm{SH}}\in\argmin_u W_c(u)\). Moreover,
 \]
 Thus an interior width minimum along the tilt path satisfies the usual
 equal-endpoint-density condition.
+Figure~\ref{fig:mean-tilt-map} traces this one-to-one interior map and its
+width profile for the same population benchmark.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{application/cache/rqr_theory_figures/fig03_mean_tilt_recovery_map.pdf}
+\caption{\textbf{Population mean-tilt recovery map.}
+For a \(\mathrm{Gamma}(2,1)\) distribution and \(c=0.80\), the retained-window
+mean \(M_c(u)\) maps each interior lower-tail index \(u\) to a unique
+standardized tilt \(d=\delta/\operatorname{SD}(Y)\). The marked oracle tilts
+recover the shortest contiguous (SH), equal-tailed (ET), and ordinary-RQR
+intervals; ordinary RQR has \(d=0\). The width profile shows that SH, not
+ordinary RQR in general, minimizes geometric width. The quantities are
+deterministic population/oracle theory and do not constitute an estimated-tilt
+procedure.}
+\label{fig:mean-tilt-map}
+\end{figure}
 
 These are population and oracle statements. A universal tilt does not recover
 the same interval functional across distributions, and conditional recovery
@@ -359,6 +392,14 @@ not invariant to arbitrary monotone response transformations. The current
 RQR-DLM implementation and validation protocol use \(\delta=0\). Mean-tilted
 computation and data-driven tilt selection require their own code and
 validation before empirical claims are made.
+
+The population score equations do not by themselves establish propriety of a
+finite-sample generalized posterior under an arbitrary root prior. For a fixed
+learning rate, a finite design or finite state horizon, and proper Gaussian
+root priors, the tilt is linear in the root parameters and Gaussian prior tails
+make the tilted kernel integrable. This argument covers the initial ridge and
+Gaussian-state implementations; heavier-tailed shrinkage priors require a
+separate propriety analysis before nonzero tilt is enabled.
 
 \section{Generalized Posterior and Augmentation}
 \label{sec:posterior}
@@ -403,7 +444,7 @@ The learned \(\lambda\) is part of this declared hierarchical generalized
 target. Coherence for a fixed loss scale does not establish that \(\lambda\) is
 an ordinary jointly learnable response parameter or that its generalized
 posterior calibrates endpoint uncertainty
-\citep{LeeLiuNicholls2025LearningRate,WuMartin2020LearningRateComparison}.
+\citep{LeeLiuNicholls2025LearningRate,WuMartin2023LearningRateComparison}.
 We therefore use fixed-rate sensitivity analyses as the primary specification
 and treat learned-scale inference as an additional convention. When \(s_L\) is
 computed from training responses, its calculation sample and variance
@@ -432,6 +473,24 @@ r_t\mid m_t^{\mathrm R}+\xi_c v_t,\,
 \]
 This identity is a computational representation of the loss kernel. It should
 not be read as a response model for \(y_t\).
+Figure~\ref{fig:gibbs-computational-schematic} summarizes the resulting scan
+without assigning a response-generating interpretation to the augmentation.
+
+\begin{figure}[t]
+\centering
+\resizebox{0.99\textwidth}{!}{%
+  \input{figures/rqr_gibbs_computational_schematic.tex}%
+}
+\caption{\textbf{Computational augmentation and Gibbs scan for fixed mean
+tilt.} The generalized posterior exponentiates a declared interval-root loss;
+it is not a response-likelihood posterior. The pseudo-asymmetric-Laplace
+normal--exponential representation gives GIG latent-scale updates and Gaussian
+conditional updates for the exchangeable root blocks. For fixed
+\(\omega\) and \(\delta\), the tilt changes only the Gaussian information
+vectors. Ordered endpoints, widths, and midpoints are interval-root
+functionals, not posterior-predictive response draws.}
+\label{fig:gibbs-computational-schematic}
+\end{figure}
 
 \section{Gibbs Sampling}
 \label{sec:gibbs}
@@ -582,28 +641,12 @@ of an equal-tailed or shortest interval will not be described as evidence that
 the corresponding tilt can be estimated from finite data.
 
 The standard interval score remains secondary because its canonical endpoints
-are the corresponding equal-tailed quantiles. RQR does not preassign those
-endpoint probabilities. Promotion-grade run manifests require an exact expected
-repository commit. Fit objects record the detected commit and clean or unknown
-status separately, together with package provenance, data and matrix digests,
-numerical policy, RNG state, and a complete continuation checkpoint under a
-versioned schema. Continuation verifies schema, data and model digests, and the
-recorded numerical environment before claiming bitwise equivalence. Full state
-paths are opt-in. Repair counts and numerical eligibility are inherited across
-all continuation segments. Each generation records its parent checkpoint,
-segment and cumulative repair counts, exactness, reproducibility, promotion
-status, mismatch ledger, and requested and resolved FFBS backends; validation
-reconstructs these recursions before continuation. Promotion-grade primary and
-external namespaces are built in isolated libraries from Git archives whose
-file modes, blob identifiers, and paths match the declared commit trees.
-Promotion also requires the executing primary namespace to match that isolated
-runtime; a clean source checkout alone is insufficient. The local-build
-attestation compares the complete expected and built source-package file sets,
-rehashes post-command build and installation receipts and logs, requires one
-successful full-package installation, and binds both the pre-marker and final
-installed-runtime digests to that source package.
-Terminal states and component-scale draws are retained for root forecasting
-with explicit future covariance templates.
+are the corresponding equal-tailed quantiles, whereas RQR does not preassign
+endpoint probabilities. Promotion-grade computation uses versioned target,
+data, numerical-policy, RNG, environment, and continuation records; the full
+provenance and attestation contract is documented in the supplement and
+implementation notes. Terminal states and component-scale draws are retained
+for root forecasting with explicit future covariance templates.
 
 A bounded intercept-only learned-scale fixture cross-checks the production
 partially collapsed scan against a separately coded fully augmented scan and

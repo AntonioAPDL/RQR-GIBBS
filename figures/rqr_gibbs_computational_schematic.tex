@@ -1,0 +1,54 @@
+\begin{tikzpicture}[
+  font=\scriptsize,
+  >={Latex[length=2.2mm]},
+  flow/.style={draw=black!70, rounded corners=2pt, fill=black!3,
+    align=left, inner sep=5pt, minimum height=3.65cm},
+  arrow/.style={->, semithick, black!75},
+  warning/.style={draw=black!65, dashed, rounded corners=2pt,
+    fill=black!1, align=center, inner sep=3pt}
+]
+  \node[flow, text width=4.15cm] (target) {
+    \textbf{Declared generalized target}\par\smallskip
+    \(\Pi_{\delta}(\beta_1,\beta_2\mid y,X)\propto\)\par
+    \(\displaystyle
+      \pi(\beta_1,\beta_2)
+      \exp\!\left\{-\omega\sum_t\ell_{c,\delta,t}\right\}.
+    \)\par\medskip
+    \(c\): probability content\par
+    \(\delta\): retained-mean placement\par
+    \(\omega\): learning rate
+  };
+
+  \node[flow, text width=4.55cm, right=6mm of target] (augment) {
+    \textbf{Pseudo-residual augmentation}\par\smallskip
+    \(e_t=(y_t-\eta_{1t})(y_t-\eta_{2t})\),\par
+    \(r_t=y_t^2\),\quad
+    \(m_t^{\mathrm R}
+      =y_t(\eta_{1t}+\eta_{2t})-\eta_{1t}\eta_{2t}\),\par
+    \(r_t-m_t^{\mathrm R}=e_t\).\par\medskip
+    The pseudo-AL normal--exponential kernel makes
+    \(v_t\) conditionally GIG and either root conditionally
+    Gaussian given the other.
+  };
+
+  \node[flow, text width=4.55cm, right=6mm of augment] (scan) {
+    \textbf{One Gibbs scan}\par\smallskip
+    \(v_{1:T}\) \(\longrightarrow\)
+    root 1 given root 2 \(\longrightarrow\)\par
+    root 2 given updated root 1
+    \(\longrightarrow\) optional global swap.\par\medskip
+    Order roots only for summaries:\par
+    \(L_t=\min(\eta_{1t},\eta_{2t})\),\quad
+    \(U_t=\max(\eta_{1t},\eta_{2t})\),\par
+    width \(U_t-L_t\), midpoint \((L_t+U_t)/2\).\par\medskip
+    Fixed \(\delta\): information-vector shift only;
+    Gaussian precisions are unchanged.
+  };
+
+  \draw[arrow] (target) -- (augment);
+  \draw[arrow] (augment) -- (scan);
+
+  \node[warning, text width=7.0cm, below=3mm of augment] (scope) {
+    \textbf{Loss-kernel representation, not a response likelihood for \(Y_t\).}
+  };
+\end{tikzpicture}

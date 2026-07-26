@@ -7,6 +7,9 @@
 \usepackage{setspace}
 \onehalfspacing
 \usepackage{amsmath,amssymb,mathtools,bm,booktabs,tabularx,array,amsthm}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
 \usepackage{enumitem}
 \usepackage[round,authoryear]{natbib}
 \usepackage{hyperref}
@@ -28,10 +31,11 @@
 
 \renewcommand{\theequation}{S\arabic{equation}}
 \renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
 \renewcommand{\thesection}{S\arabic{section}}
 \renewcommand{\thesubsection}{S\arabic{section}.\arabic{subsection}}
 
-\title{Supplementary Material for \emph{Bayesian Relaxed Quantile Regression for Direct Interval Forecasting}}
+\title{Supplementary Material for \emph{Generalized Bayesian Relaxed Quantile Regression for Direct Interval Forecasting}}
 \author{Antonio De Leon \and Raquel Prado \and Bruno Sans\'o}
 \date{\today}
 
@@ -228,10 +232,10 @@ For the tilted family, \(\delta^\star=s\delta\) and
 \]
 Thus the population target is positive-affine equivariant. A corresponding
 generalized posterior uses the transformed prior and
-\(\omega_{\mathrm R}^\star=\omega_{\mathrm R}/s^2\). Equivalently, after
-standardizing \(Y^\star=(Y-r)/s\), use
-\(\delta^\star=\delta/s\) and
-\(\omega_{\mathrm R}^\star=\omega_{\mathrm R}s^2\).
+\(\omega_{\mathrm R}^\star=\omega_{\mathrm R}/s^2\). Conversely, if the
+original response is standardized as \(\widetilde Y=(Y-r)/s\), use
+\(\widetilde\delta=\delta/s\) and
+\(\widetilde\omega_{\mathrm R}=\omega_{\mathrm R}s^2\).
 Nonlinear monotone transformations generally change the mean-preserving
 functional rather than merely re-expressing it.
 
@@ -312,6 +316,22 @@ ordinary RQR and the equal-tailed interval. The standard interval score is
 aligned with the central equal-tailed target and is not a target-neutral score
 for this comparison \citep{GneitingRaftery2007,BrehmerGneiting2021Intervals}.
 
+\clearpage
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{application/cache/rqr_theory_figures/fig02_symmetry_vs_skewness.pdf}
+\caption{\textbf{Symmetry as the coincidence case.}
+All intervals have population content \(c=0.80\), and response, tilt, and width
+are standardized by the population standard deviation. For the symmetric
+unimodal Normal law, the shortest contiguous (SH), equal-tailed (ET), and
+ordinary-RQR intervals coincide at \(d=0\). For the displayed right-skewed
+Lognormal law, SH is recovered by the most negative mean tilt, ET by an
+intermediate negative tilt, and ordinary RQR by \(d=0\). This sign ordering is
+not asserted for every asymmetric distribution. The figure reports
+deterministic population/oracle quantities.}
+\label{fig:supp-symmetry-skewness}
+\end{figure}
+
 \section{Mean-Tilted RQR}
 \label{sec:supp-mean-tilt}
 
@@ -342,11 +362,14 @@ and
 \[
 \E(Y\mid |Y-m_\delta|<h_\delta)=\mu+\delta.
 \]
-If \(F\) is continuous and strictly increasing, the unique lower-tail index is
-the solution of
+If \(F\) is continuous and strictly increasing and \(\delta\) lies strictly
+between the endpoint values of the admissible range, the unique interior
+lower-tail index is the solution of
 \[
 M_c(u_\delta)=\mu+\delta.
 \]
+Endpoint tilts are understood as boundary limits and satisfy the corresponding
+one-sided stationarity conditions.
 \end{proposition}
 
 \begin{proof}
@@ -363,12 +386,27 @@ Proposition~\ref{prop:supp-quantile-window} and strict monotonicity of \(M_c\)
 give the quantile-window statement.
 \end{proof}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{application/cache/rqr_theory_figures/figS02_loss_geometry.pdf}
+\caption{\textbf{RQR loss geometry and the fixed midpoint tilt.}
+For \(c=0.80\), \(m=0\), and \(h=1\), the residual product is negative exactly
+inside the interval. The half-width score contracts \(h\) for covered
+observations and expands it for misses. A fixed \(\delta\) adds a constant
+shift to the midpoint score but leaves the half-width score unchanged. These
+are deterministic pointwise score calculations, not fitted or simulated
+results.}
+\label{fig:supp-loss-geometry}
+\end{figure}
+
 The admissible population tilt range is
 \[
 M_c(0)-\mu\le\delta\le M_c(1-c)-\mu,
 \]
 with the appropriate extended-real interpretation when a tail average is
-infinite. The special oracle tilts are
+infinite. Interior tilts correspond one-to-one with interior quantile windows;
+the full closed interval family is obtained by adjoining the feasible boundary
+limits. The special oracle tilts are
 \[
 \delta_{\mathrm{RQR}}=0,\qquad
 \delta_{\mathrm{ET}}=M_c\{(1-c)/2\}-\mu,
@@ -404,6 +442,29 @@ an external decision or validation layer with independent test data. Under
 positive affine transformation \(Y^\star=r+sY\), the corresponding target uses
 \(\delta^\star=s\delta\), as recorded in
 Section~\ref{sec:supp-population-target}.
+
+These population equations do not establish finite-sample propriety under
+arbitrary root priors. For a fixed learning rate and a finite-dimensional
+Gaussian root prior, the ordinary RQR loss is nonnegative and the tilt is
+linear in the roots. The resulting kernel is integrable because a Gaussian
+density has finite exponential moments in every linear direction. This covers
+the initial ridge fixed-design model and finite-horizon Gaussian state model.
+Nonzero tilt under heavier-tailed shrinkage priors requires a separate
+coercivity or propriety result.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{application/cache/rqr_theory_figures/figS01_cross_distribution_recovery.pdf}
+\caption{\textbf{Recovery tilts across symmetric and skewed distributions.}
+Every interval has population content \(c=0.80\). The top row shows
+standardized densities and the shortest contiguous (SH), equal-tailed (ET),
+and ordinary-RQR intervals. The bottom row shows standardized width over the
+mean-tilted family. The Normal benchmark gives three-way coincidence at
+\(d=0\); the displayed right-skewed laws require negative oracle tilts to
+recover ET and SH. The results are deterministic population/oracle
+calculations and do not imply a finite-sample tilt-selection rule.}
+\label{fig:supp-cross-distribution}
+\end{figure}
 
 \section{RQR-W and Width Regularization}
 \label{sec:supp-rqr-w}
@@ -566,7 +627,7 @@ pseudo-residual \(e_t\), not a density in \(y_t\). It is an analyst-declared
 joint generalized target rather than a consequence that \(\lambda\) is an
 ordinary response parameter. Coherence of a fixed-rate loss update does not by
 itself establish same-data learning or calibration of this scale
-\citep{LeeLiuNicholls2025LearningRate,WuMartin2020LearningRateComparison}.
+\citep{LeeLiuNicholls2025LearningRate,WuMartin2023LearningRateComparison}.
 Fixed-rate sensitivity grids are therefore primary. If \(s_L\) is estimated
 from the training responses, the calculation convention is recorded and the
 value is frozen before MCMC; this is a data-dependent empirical-Bayes
@@ -645,6 +706,21 @@ root-specific FFBS draws is thus an exact blocked Gibbs scan for the stated
 target, not an approximation obtained by fitting the roots separately. A
 general non-Gaussian joint path sampler could target the same generalized
 posterior, but would give up the closed-form Gaussian FFBS blocks.
+
+\begin{figure}[t]
+\centering
+\resizebox{0.99\textwidth}{!}{%
+  \input{figures/rqr_dlm_blocked_state_schematic.tex}%
+}
+\caption{\textbf{Blocked state update for RQR-DLM.}
+The two root paths have a stacked Gaussian prior, but the augmented
+observation term is quartic jointly because it contains
+\(\eta_{1t}\eta_{2t}\). Hence one ordinary simultaneous Gaussian FFBS draw is
+unavailable. Conditional on either complete root path and the latent scales,
+the other path enters linearly and has an exact Gaussian full conditional,
+giving the sequential root-specific FFBS blocks shown here.}
+\label{fig:supp-dlm-blocked-state}
+\end{figure}
 
 Conditional on \(\theta_{2,1:T}\), \(v_{1:T}\), and \(\lambda\), root 1 has
 \begin{align}
@@ -875,13 +951,12 @@ are available. The standard interval score is secondary because its canonical
 target is an equal-tailed interval, whereas RQR does not preassign endpoint
 quantile probabilities.
 
-\section{Migrated Preliminary RQR-DESN Table}
+\section{Status of Preliminary RQR-DESN Evidence}
 
-The table below is migrated from the Q-DESN supplement as preliminary,
-calibration-screened evidence. It is not yet the final standalone simulation
-study because it does not include the planned RQR-DLM comparison.
-
-\input{tables/rqr_desn_targeted_confirmation_winner_map.tex}
+Preliminary RQR-DESN results are withheld from the circulated article package
+until the matched standalone study, including the planned RQR-DLM comparison,
+is complete. This avoids presenting calibration-screened legacy output as
+confirmatory evidence for the current article target.
 
 \nocite{PouplinEtAl2024RQR,BissiriHolmesWalker2016GeneralBayes,KozumiKobayashi2011Gibbs,GoncalvesMigonBastos2020DQLM}
 \bibliographystyle{plainnat}
