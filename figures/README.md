@@ -69,6 +69,13 @@ tolerances, dependencies, panel-data hashes, and output hashes. CSV and PNG
 bytes are checked across two independent runs. Base-R PDF devices embed
 generation timestamps, so PDF byte identity is not claimed.
 
+The publication PNGs use redundant color, symbol, and line-type encodings.
+Equal-tailed targets use open circles, and the symmetric Normal benchmark marks
+exact three-way coincidence without jitter. The current base-R vector PDFs use
+unembedded device fonts, so TeX deliberately continues to use the audited
+300-dpi PNGs. A future vector transition must use an embedded-font device and
+pass the same font and provenance gates before the TeX inputs change.
+
 Every generated panel is explicitly classified as a deterministic population
 illustration. It cannot support claims about finite-sample
 recovery, calibration, comparative performance, MCMC accuracy, or

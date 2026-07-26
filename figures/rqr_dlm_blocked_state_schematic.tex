@@ -2,35 +2,32 @@
   font=\scriptsize,
   >={Latex[length=2.2mm]},
   box/.style={draw=black!70, rounded corners=2pt, fill=black!3,
-    align=left, inner sep=5pt},
+    align=left, inner sep=5pt, minimum height=2.85cm},
   warning/.style={draw=black!65, dashed, rounded corners=2pt,
-    fill=black!1, align=left, inner sep=5pt},
+    fill=black!1, align=left, inner sep=5pt, minimum height=2.85cm},
   arrow/.style={->, semithick, black!75}
 ]
-  \node[box, text width=4.25cm] (prior) {
+  \node[box, text width=3.75cm] (prior) {
     \textbf{Stacked Gaussian state prior}\par\smallskip
-    \(\alpha_t=(\theta_{1t}^{\top},\theta_{2t}^{\top})^{\top}\),\par
-    \(\alpha_t=\mathcal G_t\alpha_{t-1}+\varepsilon_t\),\par
-    \(\mathcal G_t=\operatorname{blockdiag}(G_t,G_t)\),\quad
-    \(\mathcal W_t=\operatorname{blockdiag}(W_{1t},W_{2t})\).
+    \(\alpha_t=(\theta_{1t}^{\top},\theta_{2t}^{\top})^{\top}\)
+    evolves with block-diagonal \(\mathcal G_t\) and
+    \(\mathcal W_t\).
   };
 
-  \node[warning, text width=4.65cm, right=6mm of prior] (quartic) {
-    \textbf{Joint augmented observation is not Gaussian}\par\smallskip
-    \(\{(y_t-\eta_{1t})(y_t-\eta_{2t})-\xi_cv_t\}^{2}\)
-    contains \(\eta_{1t}^{2}\eta_{2t}^{2}\).\par\smallskip
-    The joint log kernel is quartic, so one ordinary simultaneous
-    Gaussian FFBS draw is unavailable.
+  \node[warning, text width=4.05cm, right=6mm of prior] (quartic) {
+    \textbf{Quartic joint obstruction}\par\smallskip
+    The squared augmented pseudo-residual contains
+    \(\eta_{1t}^{2}\eta_{2t}^{2}\). The joint log kernel is
+    therefore not Gaussian, so one ordinary simultaneous FFBS draw
+    is unavailable.
   };
 
-  \node[box, text width=4.85cm, right=6mm of quartic] (blocked) {
-    \textbf{Sequential Gaussian blocks}\par\smallskip
-    1.\ \(\theta_{1,1:T}\mid\theta_{2,1:T},v,\ldots\):
-    Gaussian FFBS.\par
-    2.\ \(\theta_{2,1:T}\mid\theta_{1,1:T}^{\mathrm{new}},v,\ldots\):
-    Gaussian FFBS.\par
-    3.\ Optional global root-label swap.\par\smallskip
-    Each path enters linearly after conditioning on the other.
+  \node[box, text width=4.05cm, right=6mm of quartic] (blocked) {
+    \textbf{Condition one path, then FFBS}\par\smallskip
+    root 1 given root 2 \(\longrightarrow\)\par
+    root 2 given new root 1 \(\longrightarrow\)\par
+    optional global label swap.\par\smallskip
+    Each path is linear Gaussian after conditioning on the other.
   };
 
   \draw[arrow] (prior) -- (quartic);

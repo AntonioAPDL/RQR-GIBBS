@@ -3,7 +3,7 @@
 # Deterministic population figures for the RQR article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
-SCRIPT_VERSION <- "2026-07-25-reframing-2"
+SCRIPT_VERSION <- "2026-07-26-editorial-3"
 DEFAULT_CONTENT <- 0.80
 NUMERICAL_TOLERANCES <- list(
   probability_margin = 1e-8,
@@ -484,7 +484,8 @@ COL <- c(
   mean = "#65727E",
   tilt = "#7C3AED"
 )
-PCH <- c(shortest = 15, equal_tailed = 16, ordinary_rqr = 17)
+PCH <- c(shortest = 15, equal_tailed = 1, ordinary_rqr = 17)
+LTY <- c(shortest = 1, equal_tailed = 2, ordinary_rqr = 3)
 TARGET_LABEL <- c(
   shortest = "SH",
   equal_tailed = "ET",
@@ -541,7 +542,7 @@ plot_interval_bars <- function(dist, summary, y0, dy, labels = TRUE,
     yy <- y0 - (i - 1) * dy
     graphics::segments(
       lower_z, yy, upper_z, yy,
-      lwd = 4.4, col = COL[target], lend = "round"
+      lwd = 4.4, lty = LTY[target], col = COL[target], lend = "round"
     )
     graphics::points(
       c(lower_z, upper_z), c(yy, yy),
@@ -602,7 +603,7 @@ figure_01_three_principles <- function(out_dir, dist, content) {
     on.exit(graphics::par(old))
     graphics::par(
       mfrow = c(1, 3), mar = c(4.0, 3.5, 3.6, 0.7),
-      oma = c(0, 0, 2.4, 0), mgp = c(2.2, 0.65, 0), tcl = -0.3
+      oma = c(0, 0, 0.2, 0), mgp = c(2.2, 0.65, 0), tcl = -0.3
     )
     targets <- c("equal_tailed", "ordinary_rqr", "shortest")
     titles <- c("Equal-tailed", "Ordinary RQR", "Shortest contiguous")
@@ -633,24 +634,17 @@ figure_01_three_principles <- function(out_dir, dist, content) {
       shade_interval(density, lower_z, upper_z, COL[target])
       graphics::segments(
         lower_z, 0.008, upper_z, 0.008,
-        lwd = 5.0, col = COL[target], lend = "round"
+        lwd = 5.0, lty = LTY[target], col = COL[target], lend = "round"
       )
       graphics::points(
         c(lower_z, upper_z), c(0.008, 0.008),
-        pch = PCH[target], col = COL[target], cex = 0.72
+        pch = PCH[target], col = COL[target], cex = 0.84
       )
       graphics::legend(
         "topright", legend = annotations[[j]],
-        bty = "n", cex = 0.66
+        bty = "n", cex = 0.72
       )
     }
-    graphics::mtext(
-      sprintf(
-        "Three interval principles at common content c = %.2f",
-        content
-      ),
-      outer = TRUE, line = 0.65, cex = 0.98, font = 2
-    )
   }
   outputs <- with_graphics_devices(
     file.path(out_dir, "fig01_three_balance_principles"),
@@ -686,7 +680,7 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
     on.exit(graphics::par(old))
     graphics::par(
       mfrow = c(1, 3), mar = c(4.2, 3.8, 2.7, 0.7),
-      oma = c(0, 0, 2.2, 0), mgp = c(2.3, 0.65, 0), tcl = -0.3
+      oma = c(0, 0, 0.2, 0), mgp = c(2.3, 0.65, 0), tcl = -0.3
     )
     delta_min <- min(summary$standardized_delta) - 0.06
     delta_max <- max(0.20, max(summary$standardized_delta) + 0.05)
@@ -695,18 +689,20 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       path$standardized_delta <= delta_max
     plot_path <- path[visible, , drop = FALSE]
     graphics::plot(
-      path$u, path$M_minus_mu, type = "l", lwd = 2,
+      path$u, path$standardized_delta, type = "l", lwd = 2,
       col = COL["density"], xlab = "Lower-tail index, u",
-      ylab = expression(M[c](u) - mu), main = "Tilt-to-window map"
+      ylab = expression(d == (M[c](u) - mu) / SD(Y)),
+      main = "Window-to-tilt map"
     )
     graphics::abline(h = 0, lty = 3, col = COL["mean"])
     for (target in names(TARGET_LABEL)) {
       row <- summary[summary$target == target, ]
       graphics::points(
-        row$u, row$delta, pch = PCH[target], col = COL[target], cex = 1.05
+        row$u, row$standardized_delta,
+        pch = PCH[target], col = COL[target], cex = 1.05
       )
       graphics::text(
-        row$u, row$delta, labels = TARGET_LABEL[target],
+        row$u, row$standardized_delta, labels = TARGET_LABEL[target],
         pos = 3, offset = 0.35, cex = 0.68
       )
     }
@@ -740,13 +736,6 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
     plot_interval_bars(
       dist, summary, -0.055 * ymax, 0.075 * ymax,
       labels = TRUE, label_x = 1.9
-    )
-    graphics::mtext(
-      sprintf(
-        "Mean-tilt recovery map for %s, c = %.2f",
-        dist$short_label, content
-      ),
-      outer = TRUE, line = 0.65, cex = 0.98, font = 2
     )
   }
   outputs <- with_graphics_devices(
@@ -785,9 +774,9 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
     old <- graphics::par(no.readonly = TRUE)
     on.exit(graphics::par(old))
     graphics::par(
-      mfrow = c(2, 4), mar = c(3.3, 3.2, 2.4, 0.4),
-      oma = c(0.5, 0, 2.2, 0), mgp = c(1.95, 0.55, 0), tcl = -0.25,
-      cex = 0.78
+      mfrow = c(2, 4), mar = c(3.4, 3.3, 2.5, 0.5),
+      oma = c(0.5, 0, 0.3, 0), mgp = c(1.95, 0.55, 0), tcl = -0.25,
+      cex = 0.82
     )
     for (i in seq_along(chosen)) {
       dist <- chosen[[i]]
@@ -802,10 +791,12 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
       )
       graphics::abline(v = 0, lty = 3, col = COL["mean"])
       plot_interval_bars(
-        dist, summary, -0.050 * ymax, 0.068 * ymax, labels = FALSE
+        dist, summary, -0.050 * ymax, 0.068 * ymax,
+        labels = TRUE, label_x = 3.0
       )
     }
     for (i in seq_along(chosen)) {
+      dist <- chosen[[i]]
       path <- paths[[i]]
       summary <- summaries[[i]]
       delta_min <- min(summary$standardized_delta) - 0.06
@@ -821,25 +812,44 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
         xlim = c(delta_min, delta_max)
       )
       graphics::abline(v = 0, lty = 3, col = COL["mean"])
-      for (target in names(TARGET_LABEL)) {
-        row <- summary[summary$target == target, ]
+      if (identical(dist$id, "normal")) {
+        point <- summary[summary$target == "ordinary_rqr", ]
         graphics::points(
-          row$standardized_delta, row$standardized_width,
-          pch = PCH[target], col = COL[target], cex = 0.90
+          point$standardized_delta, point$standardized_width,
+          pch = 0, col = COL["shortest"], cex = 1.30, lwd = 1.5
         )
+        graphics::points(
+          point$standardized_delta, point$standardized_width,
+          pch = 1, col = COL["equal_tailed"], cex = 0.95, lwd = 1.5
+        )
+        graphics::points(
+          point$standardized_delta, point$standardized_width,
+          pch = 2, col = COL["ordinary_rqr"], cex = 0.62, lwd = 1.5
+        )
+        graphics::text(
+          point$standardized_delta, point$standardized_width,
+          labels = "ET = RQR = SH", pos = 3, offset = 0.45, cex = 0.70
+        )
+      } else {
+        label_pos <- c(shortest = 1, equal_tailed = 3, ordinary_rqr = 4)
+        for (target in names(TARGET_LABEL)) {
+          row <- summary[summary$target == target, ]
+          graphics::points(
+            row$standardized_delta, row$standardized_width,
+            pch = PCH[target], col = COL[target], cex = 0.95
+          )
+          graphics::text(
+            row$standardized_delta, row$standardized_width,
+            labels = TARGET_LABEL[target], pos = label_pos[target],
+            offset = 0.35, cex = 0.66, col = COL[target]
+          )
+        }
       }
     }
-    graphics::mtext(
-      sprintf(
-        "Fixed-content interval families across distributions, c = %.2f",
-        content
-      ),
-      outer = TRUE, line = 0.65, cex = 0.98, font = 2
-    )
   }
   outputs <- with_graphics_devices(
     file.path(out_dir, "figS01_cross_distribution_recovery"),
-    7.2, 5.25, draw
+    7.2, 5.45, draw
   )
   list(
     id = "figS01_cross_distribution_recovery",
@@ -877,13 +887,13 @@ figure_s02_loss_geometry <- function(out_dir, content) {
     on.exit(graphics::par(old))
     graphics::par(
       mfrow = c(1, 3), mar = c(4.0, 3.8, 3.2, 0.7),
-      oma = c(0, 0, 2.2, 0), mgp = c(2.25, 0.65, 0), tcl = -0.3
+      oma = c(0, 0, 0.2, 0), mgp = c(2.25, 0.65, 0), tcl = -0.3
     )
     graphics::plot(
       y, residual_product, type = "l", lwd = 2,
       col = COL["density"], xlab = "Response, y",
       ylab = expression((y - m)^2 - h^2),
-      main = "Inside and outside"
+      main = "(a) Residual product"
     )
     graphics::abline(h = 0, lty = 3, col = COL["mean"])
     graphics::abline(v = c(-half_width, half_width), lty = 2,
@@ -893,23 +903,32 @@ figure_s02_loss_geometry <- function(out_dir, content) {
       border = NA, col = grDevices::adjustcolor(COL["ordinary_rqr"], 0.09)
     )
     graphics::lines(y, residual_product, lwd = 2, col = COL["density"])
-    graphics::text(0, -0.65, "inside: e < 0", cex = 0.72)
+    graphics::text(0, -0.65, "inside: e < 0", cex = 0.78)
     graphics::plot(
       y, half_width_score, type = "s", lwd = 2,
       col = COL["ordinary_rqr"], xlab = "Response, y",
       ylab = expression(partialdiff[ h ] * ell[c]),
-      main = "Half-width score", ylim = c(-1.8, 0.7)
+      main = "(b) Half-width score", ylim = c(-1.8, 0.7)
     )
     graphics::abline(v = c(-half_width, half_width), lty = 2,
                      col = COL["mean"])
     graphics::abline(h = 0, lty = 3, col = COL["mean"])
-    graphics::text(0, 0.50, "covered: contracts h", cex = 0.70)
-    graphics::text(0, -1.48, "misses: expand h", cex = 0.70)
+    graphics::points(
+      c(-half_width, half_width), rep(-2 * half_width * content, 2),
+      pch = 16, col = COL["ordinary_rqr"], cex = 0.75
+    )
+    graphics::points(
+      c(-half_width, half_width),
+      rep(2 * half_width * (1 - content), 2),
+      pch = 1, col = COL["ordinary_rqr"], cex = 0.82
+    )
+    graphics::text(0, 0.50, "covered: contracts h", cex = 0.76)
+    graphics::text(0, -1.48, "misses: expand h", cex = 0.76)
     graphics::plot(
       y, midpoint_score, type = "l", lwd = 2,
       col = COL["ordinary_rqr"], xlab = "Response, y",
       ylab = expression(partialdiff[m] * ell[c * "," * delta]),
-      main = "Midpoint score"
+      main = "(c) Midpoint score"
     )
     graphics::lines(
       y, tilted_midpoint_score, lwd = 2, col = COL["tilt"], lty = 2
@@ -921,14 +940,7 @@ figure_s02_loss_geometry <- function(out_dir, content) {
       "topleft",
       legend = c(expression(delta == 0), expression(delta == 0.25)),
       col = c(COL["ordinary_rqr"], COL["tilt"]),
-      lty = c(1, 2), lwd = 2, bty = "n", cex = 0.72
-    )
-    graphics::mtext(
-      sprintf(
-        "RQR loss geometry: c = %.2f, m = 0, h = 1",
-        content
-      ),
-      outer = TRUE, line = 0.65, cex = 0.98, font = 2
+      lty = c(1, 2), lwd = 2, bty = "n", cex = 0.80
     )
   }
   outputs <- with_graphics_devices(

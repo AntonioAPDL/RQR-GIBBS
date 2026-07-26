@@ -131,6 +131,18 @@ response_window_mean <- function(dist, lower, upper, content) {
 content <- 0.80
 tolerance <- 3e-7
 dists <- rqr_theory_distributions()
+assert_true(
+  length(unique(unname(PCH))) == length(PCH),
+  "target symbols are shape-distinct"
+)
+assert_true(
+  identical(unname(PCH["equal_tailed"]), 1),
+  "equal-tailed target uses an open-circle symbol"
+)
+assert_true(
+  length(unique(unname(LTY))) == length(LTY),
+  "target interval bars have redundant line-type encodings"
+)
 
 # 1. Content and ordinary-RQR mean preservation.
 for (dist in dists) {
@@ -355,6 +367,23 @@ assert_true(
     )
   }, logical(1))),
   "publication receipt hashes"
+)
+
+loss_geometry <- utils::read.csv(
+  file.path(out1, "figS02_loss_geometry.csv"),
+  stringsAsFactors = FALSE
+)
+boundary <- loss_geometry[loss_geometry$y %in% c(-1, 1), , drop = FALSE]
+assert_true(nrow(boundary) == 2L, "strict-boundary rows are present")
+assert_true(
+  all(!as.logical(boundary$inside)),
+  "strict interval convention excludes both endpoint observations"
+)
+assert_close(
+  boundary$half_width_score,
+  rep(-2 * content, 2),
+  1e-12,
+  "strict-boundary half-width score uses indicator zero"
 )
 
 cat("PASS: deterministic RQR theory figures and oracle checks completed.\n")
