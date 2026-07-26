@@ -91,7 +91,8 @@ validate_wave_state <- function(require_present = FALSE) {
     "schema_version", "run_id", "authorization_commit",
     "reviewed_implementation_commit", "runtime_tree_digest",
     "config_sha256", "incidence_sha256", "seed_ledger_sha256",
-    "task_plan_sha256", "wave_plan_sha256", "binding_digest"
+    "task_plan_sha256", "wave_plan_sha256", "wave_output_base",
+    "binding_digest"
   )
   if (!all(binding_fields %in% names(stored))) {
     stop("The append-only run contract is incomplete.", call. = FALSE)
@@ -149,6 +150,7 @@ rqr_confirm_atomic_write_json(
 
 Sys.setenv(
   RQR_CONFIRMATORY_WAVE_STATE_ROOT = state_root,
+  RQR_CONFIRMATORY_WAVE_OUTPUT_BASE = wave_root,
   RQR_CONFIRMATORY_WAVE_PLAN = wave_plan_path
 )
 launcher <- file.path(

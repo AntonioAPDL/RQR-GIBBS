@@ -3436,7 +3436,7 @@ rqr_confirm_wave_catalog <- function(contract, planning = "maximum") {
 rqr_confirm_wave_binding <- function(
     run_id, expected_commit, authorization, config_sha256,
     incidence_sha256, seed_ledger_sha256, task_plan_sha256,
-    wave_plan_sha256) {
+    wave_plan_sha256, wave_output_base) {
   scalar_text <- function(value, name, pattern = NULL) {
     if (!is.character(value) || length(value) != 1L ||
         is.na(value) || !nzchar(value) ||
@@ -3455,8 +3455,19 @@ rqr_confirm_wave_binding <- function(
     stop("The wave-state authorization bundle is incomplete.",
          call. = FALSE)
   }
+  if (!is.character(wave_output_base) ||
+      length(wave_output_base) != 1L ||
+      is.na(wave_output_base) ||
+      !nzchar(wave_output_base) ||
+      !dir.exists(wave_output_base)) {
+    stop("Invalid wave-state binding field: wave_output_base.",
+         call. = FALSE)
+  }
+  wave_output_base <- normalizePath(
+    wave_output_base, winslash = "/", mustWork = TRUE
+  )
   binding <- list(
-    schema_version = "rqrgibbs_dlm_wave_run/1.0.0",
+    schema_version = "rqrgibbs_dlm_wave_run/1.1.0",
     run_id = scalar_text(
       run_id, "run_id", "^[a-z0-9][a-z0-9._-]{0,127}$"
     ),
@@ -3486,7 +3497,8 @@ rqr_confirm_wave_binding <- function(
     ),
     wave_plan_sha256 = scalar_text(
       wave_plan_sha256, "wave_plan_sha256", "^[0-9a-f]{64}$"
-    )
+    ),
+    wave_output_base = wave_output_base
   )
   expected_commit <- scalar_text(
     expected_commit, "expected_commit", "^[0-9a-f]{40}$"
@@ -3507,6 +3519,62 @@ rqr_confirm_wave_binding <- function(
     binding, algo = "sha256", serialize = TRUE
   )
   binding
+}
+
+rqr_confirm_wave_output_root <- function(binding, catalog_row) {
+  if (!is.list(binding) ||
+      !identical(
+        as.character(binding$schema_version),
+        "rqrgibbs_dlm_wave_run/1.1.0"
+      ) ||
+      !is.character(binding$wave_output_base) ||
+      length(binding$wave_output_base) != 1L ||
+      is.na(binding$wave_output_base) ||
+      !dir.exists(binding$wave_output_base) ||
+      !is.data.frame(catalog_row) ||
+      nrow(catalog_row) != 1L) {
+    stop("The canonical wave-output binding is invalid.",
+         call. = FALSE)
+  }
+  index <- rqr_confirm_strict_integer(
+    catalog_row$canonical_wave_index,
+    "canonical wave-output index", 1L
+  )
+  wave_id <- as.character(catalog_row$wave_id)
+  if (length(wave_id) != 1L ||
+      !grepl("^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$", wave_id)) {
+    stop("The canonical wave-output ID is invalid.", call. = FALSE)
+  }
+  normalizePath(
+    file.path(
+      normalizePath(
+        binding$wave_output_base, winslash = "/", mustWork = TRUE
+      ),
+      sprintf("%04d__%s", index, wave_id)
+    ),
+    winslash = "/", mustWork = FALSE
+  )
+}
+
+rqr_confirm_require_wave_output_root <- function(
+    supplied_output_root, binding, catalog_row) {
+  if (!is.character(supplied_output_root) ||
+      length(supplied_output_root) != 1L ||
+      is.na(supplied_output_root) ||
+      !nzchar(supplied_output_root)) {
+    stop("The supplied wave output root is invalid.", call. = FALSE)
+  }
+  supplied <- normalizePath(
+    supplied_output_root, winslash = "/", mustWork = FALSE
+  )
+  expected <- rqr_confirm_wave_output_root(binding, catalog_row)
+  if (!identical(supplied, expected)) {
+    stop(
+      "The supplied wave output root is not the authorization-bound canonical path.",
+      call. = FALSE
+    )
+  }
+  expected
 }
 
 rqr_confirm_wave_state_transition <- function(
@@ -3735,6 +3803,9 @@ rqr_confirm_wave_state_records <- function(
     )
     start <- starts[[index]]
     catalog_row <- catalog[index, , drop = FALSE]
+    expected_output_root <- rqr_confirm_wave_output_root(
+      binding, catalog_row
+    )
     required_start <- c(
       "schema_version", "canonical_wave_index", "wave_id", "mode",
       "phase", "batch_group", "batch_target", "binding_digest",
@@ -3908,6 +3979,7 @@ rqr_confirm_wave_state_records <- function(
           as.character(value$wave_task_plan_sha256)
         ) ||
         !scalar_equal(start$output_root, value$output_root) ||
+        !scalar_equal(start$output_root, expected_output_root) ||
         !scalar_equal(
           start$prior_batch_decision_sha256,
           value$prior_batch_decision_sha256
@@ -4065,6 +4137,56 @@ rqr_confirm_wave_state_records <- function(
       stop("Wave-state record names do not follow canonical order.",
            call. = FALSE)
     }
+  }
+  wave_output_base <- normalizePath(
+    binding$wave_output_base, winslash = "/", mustWork = TRUE
+  )
+  observed_output_paths <- list.files(
+    wave_output_base, all.files = TRUE, no.. = TRUE,
+    full.names = TRUE, recursive = FALSE
+  )
+  if (length(observed_output_paths)) {
+    output_info <- file.info(observed_output_paths)
+    if (any(!output_info$isdir) ||
+        any(nzchar(Sys.readlink(observed_output_paths)))) {
+      stop(
+        "The canonical wave-output base contains a non-directory or symbolic-link entry.",
+        call. = FALSE
+      )
+    }
+    observed_output_paths <- sort(
+      normalizePath(
+        observed_output_paths, winslash = "/", mustWork = TRUE
+      ),
+      method = "radix"
+    )
+  }
+  launched_indices <- which(vapply(
+    completion_values,
+    function(value) identical(as.character(value$action), "launch"),
+    logical(1L)
+  ))
+  expected_output_paths <- if (length(launched_indices)) {
+    sort(
+      vapply(
+        launched_indices,
+        function(index) {
+          rqr_confirm_wave_output_root(
+            binding, catalog[index, , drop = FALSE]
+          )
+        },
+        character(1L)
+      ),
+      method = "radix"
+    )
+  } else {
+    character()
+  }
+  if (!identical(observed_output_paths, expected_output_paths)) {
+    stop(
+      "The canonical wave-output history contains an orphaned or missing directory.",
+      call. = FALSE
+    )
   }
   list(
     starts = starts, completion_values = completion_values,

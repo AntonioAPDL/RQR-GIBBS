@@ -974,8 +974,13 @@ test_that("append-only wave records reject incomplete or altered history", {
   environment <- load_confirmatory_helpers()
   contract <- confirmatory_contract(environment)
   catalog <- environment$rqr_confirm_wave_catalog(contract, "maximum")
+  root <- tempfile("rqr-wave-state-")
+  dir.create(root)
+  wave_output_base <- file.path(root, "wave-outputs")
+  dir.create(wave_output_base)
+  on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
   binding <- list(
-    schema_version = "rqrgibbs_dlm_wave_run/1.0.0",
+    schema_version = "rqrgibbs_dlm_wave_run/1.1.0",
     run_id = "fixture",
     authorization_commit = paste(rep("a", 40L), collapse = ""),
     reviewed_implementation_commit = paste(rep("b", 40L), collapse = ""),
@@ -985,13 +990,13 @@ test_that("append-only wave records reject incomplete or altered history", {
     seed_ledger_sha256 = paste(rep("f", 64L), collapse = ""),
     task_plan_sha256 = paste(rep("1", 64L), collapse = ""),
     wave_plan_sha256 = paste(rep("2", 64L), collapse = ""),
+    wave_output_base = normalizePath(
+      wave_output_base, winslash = "/", mustWork = TRUE
+    ),
     binding_digest = paste(rep("3", 64L), collapse = "")
   )
-  root <- tempfile("rqr-wave-state-")
-  dir.create(root)
   dir.create(file.path(root, "starts"))
   dir.create(file.path(root, "completions"))
-  on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
   environment$rqr_confirm_atomic_write_json(
     c(binding, list(canonical_wave_count = nrow(catalog))),
     file.path(root, "run_contract.json")
@@ -1000,7 +1005,9 @@ test_that("append-only wave records reject incomplete or altered history", {
   filename <- sprintf("0001__%s.json", wave$wave_id)
   start_path <- file.path(root, "starts", filename)
   completion_path <- file.path(root, "completions", filename)
-  output_root <- file.path(root, "wave-output")
+  output_root <- file.path(
+    wave_output_base, sprintf("0001__%s", wave$wave_id)
+  )
   dir.create(output_root)
   wave_manifest_path <- file.path(
     output_root, "wave_artifact_hashes.csv"
@@ -1106,6 +1113,58 @@ test_that("append-only wave records reject incomplete or altered history", {
     ),
     "immutable schema"
   )
+  correct_completion <- completed
+  correct_completion$wave_id <- wave$wave_id
+  unlink(completion_path)
+  environment$rqr_confirm_atomic_write_json(
+    correct_completion, completion_path
+  )
+  expect_identical(
+    nrow(environment$rqr_confirm_wave_state_records(
+      root, catalog, binding
+    )$completions),
+    1L
+  )
+  unlink(c(start_path, completion_path))
+  expect_error(
+    environment$rqr_confirm_wave_state_records(
+      root, catalog, binding
+    ),
+    "orphaned or missing"
+  )
+  alternate_root <- file.path(root, "fresh-alternate-output")
+  expect_error(
+    environment$rqr_confirm_require_wave_output_root(
+      alternate_root, binding, wave
+    ),
+    "authorization-bound canonical path"
+  )
+  expect_false(file.exists(alternate_root))
+})
+
+test_that("the direct wave launcher rejects alternate output before publication", {
+  launcher_path <- testthat::test_path(
+    "..", "..", "scripts",
+    "17_launch_rqr_dlm_confirmatory_wave.R"
+  )
+  launcher <- readLines(launcher_path, warn = FALSE)
+  guard_line <- grep(
+    "^output_root <- rqr_confirm_require_wave_output_root\\(",
+    launcher
+  )
+  start_line <- grep("^start_record <- list\\(", launcher)
+  output_creation_line <- grep(
+    "^dir\\.create\\(output_root,", launcher
+  )
+  expect_length(guard_line, 1L)
+  expect_length(start_line, 1L)
+  expect_length(output_creation_line, 1L)
+  expect_lt(guard_line, start_line)
+  expect_lt(guard_line, output_creation_line)
+  expect_true(any(grepl(
+    'wave_output_base = "RQR_CONFIRMATORY_WAVE_OUTPUT_BASE"',
+    launcher, fixed = TRUE
+  )))
 })
 
 test_that("diagnostics require time-local terminal and future estimands", {

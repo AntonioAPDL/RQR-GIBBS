@@ -43,7 +43,8 @@ binding_fields <- c(
   "schema_version", "run_id", "authorization_commit",
   "reviewed_implementation_commit", "runtime_tree_digest",
   "config_sha256", "incidence_sha256", "seed_ledger_sha256",
-  "task_plan_sha256", "wave_plan_sha256", "binding_digest"
+  "task_plan_sha256", "wave_plan_sha256", "wave_output_base",
+  "binding_digest"
 )
 binding <- binding[binding_fields]
 records <- rqr_confirm_wave_state_records(

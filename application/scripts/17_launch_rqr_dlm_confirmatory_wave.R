@@ -59,6 +59,7 @@ required_environment <- c(
   canonical_task_plan = "RQR_CONFIRMATORY_CANONICAL_TASK_PLAN",
   seed_ledger = "RQR_CONFIRM_SEED_LEDGER",
   state_root = "RQR_CONFIRMATORY_WAVE_STATE_ROOT",
+  wave_output_base = "RQR_CONFIRMATORY_WAVE_OUTPUT_BASE",
   run_id = "RQR_CONFIRMATORY_RUN_ID"
 )
 environment_values <- vapply(
@@ -68,7 +69,8 @@ if (any(!nzchar(environment_values))) {
   stop(
     paste(
       "The wave launcher requires the commit, authorization, runtime,",
-      "canonical-plan, seed-ledger, state-root, and run-ID environment."
+      "canonical-plan, seed-ledger, state-root, canonical wave-output,",
+      "and run-ID environment."
     ),
     call. = FALSE
   )
@@ -89,6 +91,10 @@ required_files <- normalizePath(
 names(required_files) <- required_file_fields
 state_root <- normalizePath(
   environment_values[["state_root"]], winslash = "/", mustWork = FALSE
+)
+wave_output_base <- normalizePath(
+  environment_values[["wave_output_base"]],
+  winslash = "/", mustWork = TRUE
 )
 
 git_output <- function(arguments) {
@@ -198,7 +204,8 @@ binding <- rqr_confirm_wave_binding(
   task_plan_sha256 = rqr_confirm_sha256(
     required_files[["canonical_task_plan"]]
   ),
-  wave_plan_sha256 = rqr_confirm_sha256(wave_plan_path)
+  wave_plan_sha256 = rqr_confirm_sha256(wave_plan_path),
+  wave_output_base = wave_output_base
 )
 
 if (!dir.exists(state_root)) {
@@ -252,6 +259,9 @@ if (!identical(as.character(transition$current$mode), mode)) {
   stop("The requested runner mode differs from the next canonical wave.",
        call. = FALSE)
 }
+output_root <- rqr_confirm_require_wave_output_root(
+  output_root, binding, current
+)
 if (file.exists(output_root) || dir.exists(output_root)) {
   stop("The wave output root must be fresh.", call. = FALSE)
 }
