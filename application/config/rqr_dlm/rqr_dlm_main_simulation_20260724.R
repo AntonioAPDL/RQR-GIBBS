@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   diagnostic_pilot_execution_authorized = FALSE,
-  confirmatory_execution_authorized = TRUE,
+  confirmatory_execution_authorized = FALSE,
   implemented_modes = c(
     "preflight", "oracle-reference", "sentinel-core",
     "execute-confirmatory", "collect", "audit"
@@ -311,7 +311,7 @@ rqr_dlm_main_simulation <- list(
   ),
   resources = list(
     workers = 32L, sentinel_workers = 8L, threads_per_worker = 1L,
-    sampled_process_group_thread_ceiling = 2L,
+    sampled_process_group_thread_ceiling = 4L,
     sampled_reference_process_group_thread_ceiling = 4L,
     sampled_thread_ceiling_role =
       "hard_OS_thread_envelope_not_compute_parallelism",

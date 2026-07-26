@@ -54,12 +54,10 @@ max_rss_kib="${RQR_MAX_PROCESS_GROUP_RSS_KIB:-1572864}"
 # thread above.  NLWP counts every OS thread, including helper processes
 # created by `R CMD config` while the oracle stage records its toolchain.
 # The declared resource contract therefore gives sampled process-group
-# telemetry a distinct, still fail-closed ceiling: two for ordinary workers
-# and four for the reference stage that invokes the toolchain helper.
-default_max_threads=2
-if [[ "$mode" == "oracle-reference" ]]; then
-  default_max_threads=4
-fi
+# telemetry a distinct, still fail-closed ceiling of four. A numerical worker
+# remains fixed at one compute thread; the envelope also counts the R runtime
+# helper thread and short-lived operating-system validation processes.
+default_max_threads=4
 max_threads="${RQR_MAX_PROCESS_GROUP_THREADS:-$default_max_threads}"
 poll_seconds="${RQR_MONITOR_POLL_SECONDS:-0.2}"
 

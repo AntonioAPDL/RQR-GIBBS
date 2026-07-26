@@ -97,7 +97,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       ) ||
       !identical(config$resources$threads_per_worker, 1L) ||
       !identical(
-        config$resources$sampled_process_group_thread_ceiling, 2L
+        config$resources$sampled_process_group_thread_ceiling, 4L
       ) ||
       !identical(
         config$resources$
@@ -2202,18 +2202,20 @@ rqr_confirm_dependency_manifest <- function(package, runtime_library) {
 }
 
 rqr_confirm_toolchain_manifest <- function() {
+  makeconf_path <- file.path(R.home("etc"), "Makeconf")
+  if (!file.exists(makeconf_path)) {
+    stop("The active R Makeconf is unavailable.", call. = FALSE)
+  }
+  makeconf <- readLines(makeconf_path, warn = FALSE)
   r_config <- function(key) {
-    output <- suppressWarnings(system2(
-      file.path(R.home("bin"), "R"),
-      c("CMD", "config", key),
-      stdout = TRUE, stderr = TRUE
-    ))
-    status <- attr(output, "status")
-    if (is.null(status)) status <- 0L
-    if (!identical(as.integer(status), 0L)) {
-      return(sprintf("unavailable_status_%d", as.integer(status)))
+    matches <- grep(
+      paste0("^", key, "[[:space:]]*="),
+      makeconf, value = TRUE
+    )
+    if (!length(matches)) {
+      return("unavailable_in_R_Makeconf")
     }
-    paste(output, collapse = " ")
+    trimws(sub("^[^=]*=", "", tail(matches, 1L)))
   }
   package_names <- c(
     "rqrgibbs", "posterior", "digest", "jsonlite", "Rcpp",
@@ -2246,6 +2248,7 @@ rqr_confirm_toolchain_manifest <- function() {
     operating_system = R.version$os,
     CC = r_config("CC"),
     CXX17 = r_config("CXX17"),
+    R_Makeconf_sha256 = rqr_confirm_sha256(makeconf_path),
     BLAS = blas,
     LAPACK = lapack,
     setNames(package_versions, paste0("package_", package_names))

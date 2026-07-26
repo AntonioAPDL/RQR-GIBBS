@@ -290,7 +290,7 @@ if (mode == "preflight") {
       "LEcuyer_full_state_unique", "future_substreams_20",
       "sentinels_preselected", "execution_state_valid",
       "disk_at_least_50_GiB", "workers_at_most_32",
-      "one_thread_per_worker", "sampled_worker_thread_envelope_two",
+      "one_thread_per_worker", "sampled_worker_thread_envelope_four",
       "sampled_reference_thread_envelope_four",
       "artifact_schemas_frozen",
       "primary_runtime_binding_when_requested",
@@ -317,7 +317,7 @@ if (mode == "preflight") {
       available_GiB >= 50,
       contract$config$resources$workers <= 32L,
       contract$config$resources$threads_per_worker == 1L,
-      contract$config$resources$sampled_process_group_thread_ceiling == 2L &&
+      contract$config$resources$sampled_process_group_thread_ceiling == 4L &&
         identical(
           contract$config$resources$sampled_thread_ceiling_role,
           "hard_OS_thread_envelope_not_compute_parallelism"

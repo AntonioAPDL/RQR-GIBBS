@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(contract$config$resources$threads_per_worker, 1L)
   expect_identical(
-    contract$config$resources$sampled_process_group_thread_ceiling, 2L
+    contract$config$resources$sampled_process_group_thread_ceiling, 4L
   )
   expect_identical(
     contract$config$resources$
@@ -1216,6 +1216,25 @@ test_that("the detached launcher reads the official primary RDS attestation", {
   expect_false(any(grepl(
     "jq ", primary_block, fixed = TRUE
   )))
+})
+
+test_that("toolchain binding is subprocess-free inside monitored workers", {
+  environment <- load_confirmatory_helpers()
+  manifest <- environment$rqr_confirm_toolchain_manifest()
+  expect_true(all(c(
+    "CC", "CXX17", "R_Makeconf_sha256"
+  ) %in% manifest$key))
+  expect_match(
+    manifest$value[manifest$key == "R_Makeconf_sha256"],
+    "^[0-9a-f]{64}$"
+  )
+  expect_false(grepl(
+    "system2",
+    paste(deparse(body(
+      environment$rqr_confirm_toolchain_manifest
+    )), collapse = "\n"),
+    fixed = TRUE
+  ))
 })
 
 test_that("diagnostics require time-local terminal and future estimands", {
