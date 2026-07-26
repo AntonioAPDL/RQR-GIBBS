@@ -8,16 +8,24 @@ separates the population functional, generalized-Bayes computation, dynamic
 model, and evaluation strategy from repository governance. This file is a
 status record, not statistical evidence.
 
+The reader-facing model hierarchy is static interval-root regression,
+an ordinary-only regularized-horseshoe adapter based on the
+Nishimura–Suchard augmentation (RHS-NS), frozen-feature DESN as a
+static-design specialization, and dynamic linear root states. DESN reuses the
+static coefficient sampler; the DLM is the first architecture that replaces it
+with root-specific FFBS.
+
 ## Scope ledger at the editorial freeze
 
 | Component | Mathematical scope | Software status | Article evidence status |
 |---|---|---|---|
-| Ordinary fixed-design RQR | Loss target and Gaussian/GIG blocks | Implemented | Small target checks exist; matched results are not reported in the manuscript |
+| Ordinary static ridge RQR | Loss target and Gaussian/GIG coefficient blocks | Implemented natively | Small target checks exist; matched results are not reported in the manuscript |
+| Ordinary static RHS-NS RQR | Conditional-Gaussian regularization with separate root-specific prior states; fixed or declared learned \(\kappa\) | Implemented through the pinned, isolated exdqlm adapter | Adapter tests exist; no nonzero-tilt or standalone native-RHS claim |
+| Ordinary RQR-DESN | Frozen deterministic-feature specialization of static regression | Implemented | Design/readout checks exist; matched DESN evidence remains deferred |
 | Ordinary RQR-DLM | Alternating root-specific FFBS for declared fixed-joint modes | Implemented | Reference and bounded checks exist; comparative results remain governed by the simulation protocol |
-| Ordinary RQR-DESN | Deterministic-feature readout | Implemented | Design/readout checks exist; matched DESN evidence remains deferred |
-| Fixed-design mean-tilted RQR | Population target and fixed-rate information shift | Derived, not implemented | No empirical evidence |
+| Static mean-tilted RQR | Population target and fixed-rate information shift under proper Gaussian/ridge priors | Derived, not implemented | No empirical evidence |
+| DESN mean-tilted RQR | Frozen-feature specialization under a proper Gaussian/ridge readout | Not implemented | No empirical evidence; RHS-NS propriety remains unresolved |
 | Dynamic mean-tilted RQR | Conditional information-shift algebra only | Not implemented | No empirical evidence |
-| DESN mean-tilted RQR | Fixed-feature algebra only | Not implemented | No empirical evidence |
 | Data-driven tilt selection | Population motivation only | Not implemented | No empirical evidence |
 | Variational inference | Future target and derivation project | Not implemented | No evidence |
 

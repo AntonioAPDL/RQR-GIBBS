@@ -3,7 +3,7 @@
 # Deterministic population figures for the RQR article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
-SCRIPT_VERSION <- "2026-07-26-left-skew-public-label-6"
+SCRIPT_VERSION <- "2026-07-26-figure02-label-placement-7"
 DEFAULT_CONTENT <- 0.80
 ILLUSTRATION_AL_TAU <- 0.80
 NUMERICAL_TOLERANCES <- list(
@@ -717,6 +717,27 @@ TARGET_LABEL <- c(
   ordinary_rqr = "RQR",
   shortest = "SH"
 )
+FIGURE_02_MAP_LABEL_POSITION <- c(
+  equal_tailed = 4L,
+  ordinary_rqr = 1L,
+  shortest = 2L
+)
+FIGURE_02_WIDTH_LABEL_POSITION <- c(
+  equal_tailed = 4L,
+  ordinary_rqr = 4L,
+  shortest = 3L
+)
+FIGURE_02_LABEL_OFFSET <- 0.45
+
+figure_02_map_label <- function(target, standardized_delta) {
+  if (!target %in% TARGET_ORDER) {
+    fail("Unknown Figure 2 target label '%s'.", target)
+  }
+  if (identical(target, "ordinary_rqr")) {
+    return(sprintf("%s %.2f", TARGET_LABEL[target], 0))
+  }
+  sprintf("%s %.3f", TARGET_LABEL[target], standardized_delta)
+}
 
 draw_to_device <- function(open_device, draw_fun) {
   open_device()
@@ -944,11 +965,10 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       )
       graphics::text(
         row$u, row$standardized_delta,
-        labels = sprintf(
-          "%s %.3f", TARGET_LABEL[target], row$standardized_delta
-        ),
-        pos = if (target == "shortest") 2 else 4,
-        offset = 0.35, cex = 0.64
+        labels = figure_02_map_label(target, row$standardized_delta),
+        pos = FIGURE_02_MAP_LABEL_POSITION[target],
+        offset = FIGURE_02_LABEL_OFFSET, cex = 0.64,
+        col = COL[target]
       )
     }
     graphics::plot(
@@ -968,8 +988,9 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       graphics::text(
         row$standardized_delta, row$standardized_width,
         labels = TARGET_LABEL[target],
-        pos = if (target == "shortest") 2 else 4,
-        offset = 0.35, cex = 0.68
+        pos = FIGURE_02_WIDTH_LABEL_POSITION[target],
+        offset = FIGURE_02_LABEL_OFFSET, cex = 0.68,
+        col = COL[target]
       )
     }
     ymax <- max(density$density)

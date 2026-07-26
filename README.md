@@ -1,9 +1,12 @@
 # RQR-GIBBS
 
 Standalone manuscript and reproducibility workspace for Bayesian relaxed
-quantile regression (RQR) with Gibbs sampling, fixed nonlinear DESN readouts,
-and a native linear dynamic/state-space extension. The working descriptor is
-coverage-targeted interval-root regression under the RQR loss.
+quantile regression (RQR) with Gibbs sampling. The model hierarchy begins with
+static interval-root regression, adds an ordinary-RQR regularized-horseshoe
+adapter based on the Nishimura–Suchard augmentation (RHS-NS), treats frozen
+nonlinear DESN readouts as a fixed-design specialization, and then extends the
+roots through a native linear dynamic/state-space model. The working descriptor
+is coverage-targeted interval-root regression under the RQR loss.
 
 ## Purpose
 
@@ -11,19 +14,24 @@ The project separates RQR from the Q-DESN article because RQR has a different
 inferential target. Q-DESN estimates conditional quantile ordinates. RQR
 directly estimates two interval roots under a residual-product loss and a
 generalized-Bayes update. The Gibbs construction arises from a pseudo-AL
-augmentation of that loss.
+augmentation of that loss. Static ridge and ordinary RHS-NS regression share
+the same conditional-Gaussian root calculation; a frozen DESN feature design
+reuses that static scan, whereas the DLM replaces coefficient draws with
+root-specific FFBS path draws.
 
 ## Current status
 
 The repository contains a manuscript, derivation supplement, and development R
 package under **application/**:
 
-- **main.tex** states the fixed-design and dynamic targets.
+- **main.tex** presents the static regression, frozen-feature DESN, and dynamic
+  linear-root targets in that order.
 - **rqr-gibbs-supplement.tex** gives the population, augmentation,
   learned-scale, FFBS, and component-discount derivations.
-- **application/R/** contains fixed-design utilities, exdqlm-compatible DLM
-  model builders, pure-R FFBS, exact component-scale evolution, the RQR-DLM
-  sampler, restart helpers, and DESN adapters.
+- **application/R/** contains fixed-design ridge and RHS-NS adapters,
+  frozen-feature DESN utilities, exdqlm-compatible DLM model builders, pure-R
+  FFBS, exact component-scale evolution, the RQR-DLM sampler, and restart
+  helpers.
 - **application/src/** contains the C++17/RcppArmadillo FFBS kernel and the
   noncentered component-path basis used by exact scale interweaving.
 - **application/tests/** contains native package gates, standalone workflow
@@ -71,7 +79,7 @@ Component-scale forecasts can combine saved evolution-scale draws with fixed
 future component templates.
 
 The pinned exdqlm branch remains the read-only implementation reference for
-RQR-DESN and RHS-family compatibility. Promotion of either path additionally
+RQR-DESN and RHS-NS compatibility. Promotion of either path additionally
 requires the executing exdqlm namespace to come from an isolated, attested
 runtime of the exact pinned commit. Direct source-tree loading is prohibited.
 `make prepare-exdqlm-runtime` uses read-only Git access to create an archive,

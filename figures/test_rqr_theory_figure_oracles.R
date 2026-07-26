@@ -152,6 +152,35 @@ assert_true(
   identical(INTERVAL_SEGMENT_LTY, 1L),
   "all target interval bars are solid"
 )
+assert_true(
+  identical(
+    unname(FIGURE_02_MAP_LABEL_POSITION[TARGET_ORDER]),
+    c(4L, 1L, 2L)
+  ),
+  "Figure 2 map labels place RQR below its marker"
+)
+assert_true(
+  identical(
+    unname(FIGURE_02_WIDTH_LABEL_POSITION[TARGET_ORDER]),
+    c(4L, 4L, 3L)
+  ),
+  "Figure 2 width labels place SH above its marker"
+)
+assert_true(
+  identical(figure_02_map_label("ordinary_rqr", 9e-12), "RQR 0.00"),
+  "Figure 2 ordinary-RQR map label uses the requested literal"
+)
+assert_true(
+  identical(
+    unname(COL[c("ordinary_rqr", "shortest")]),
+    c("#2563EB", "#D97706")
+  ),
+  "Figure 2 RQR and SH annotations retain blue and orange encodings"
+)
+assert_close(
+  FIGURE_02_LABEL_OFFSET, 0.45, 1e-15,
+  "Figure 2 annotation offset"
+)
 
 # 1. The asymmetric-Laplace population benchmark uses the declared
 # quantile-regression convention. This is a population law, not the

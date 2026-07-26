@@ -96,6 +96,12 @@ from deterministic quantiles, all target endpoints, the population mean,
 density knots, and label extents; generation fails rather than silently
 clipping required geometry.
 
+Figure 2 uses an explicit annotation contract: `RQR 0.00` is centered below
+the blue zero-tilt marker in the window-to-tilt panel, and the orange `SH`
+label is centered above its marker in the width panel. The remaining labels
+retain fixed target-specific positions and colors, and the oracle test checks
+these mappings before rendering.
+
 The current base-R vector PDFs use unembedded device fonts, so TeX deliberately
 continues to use the audited 300-dpi PNGs. A future vector transition must use
 an embedded-font device and pass the same font and provenance gates before the
