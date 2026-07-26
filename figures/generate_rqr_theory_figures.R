@@ -422,7 +422,7 @@ draw_to_device <- function(open_device, draw_fun) {
 }
 
 with_graphics_devices <- function(base_path, width, height, draw_fun,
-                                  preview_dpi = 180) {
+                                  preview_dpi = 300) {
   pdf_path <- paste0(base_path, ".pdf")
   png_path <- paste0(base_path, ".png")
   draw_to_device(

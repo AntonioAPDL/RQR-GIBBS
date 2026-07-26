@@ -60,11 +60,13 @@ Two vector-native TikZ sources record:
 1. the generalized-target, pseudo-residual augmentation, and Gibbs scan; and
 2. the RQR-DLM stacked-prior, quartic-observation, sequential-FFBS logic.
 
-The generated PDF, PNG, CSV, and manifest artifacts stay under
-`application/cache/rqr_theory_figures/`. The TeX build targets regenerate them
-automatically. Captions label every numerical panel as deterministic
-population/oracle theory and explicitly exclude empirical or predictive
-interpretations.
+The complete generated PDF, PNG, CSV, and manifest bundle stays under
+`application/cache/rqr_theory_figures/`. Five deterministic 300-dpi publication
+PNGs are additionally tracked under `figures/generated/` so that a clean
+Overleaf checkout compiles without R. The TeX build targets still regenerate
+the complete local audit bundle automatically. Captions label every numerical
+panel as deterministic population/oracle theory and explicitly exclude
+empirical or predictive interpretations.
 
 ## Scope deliberately deferred
 
@@ -110,5 +112,5 @@ All article-pass gates completed successfully on Jerez:
 | `make supplement` | Pass with BibTeX; 18 pages |
 | Final TeX log scan | No unresolved citation/reference, overfull-box, or fatal-error match |
 | Visual page inspection | Pass for all generated panels and both TikZ schematics |
-| Tracked generated PDFs | None |
+| Tracked generated PDFs | None; only the five reproducible Overleaf PNG assets are tracked |
 | Changes under `application/R`, `application/src`, `application/scripts`, `application/tests`, or `application/config` | None |

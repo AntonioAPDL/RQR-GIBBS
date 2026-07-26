@@ -24,10 +24,26 @@ application/cache/rqr_theory_figures/
 ```
 
 That root is intentionally ignored. `make pdf` and `make supplement` regenerate
-the figure assets before compiling the documents. A standalone submission or
-Overleaf bundle must include the generated PDF assets at the paths referenced
-by the TeX sources, while the Git repository retains the audited generator,
-tests, and vector-native TikZ sources.
+the complete figure-audit bundle before compiling the documents.
+
+The TeX sources use the publication PNGs tracked under:
+
+```text
+figures/generated/
+```
+
+These 300-dpi assets make a clean Git or Overleaf checkout self-contained.
+They are generated from the same audited source with:
+
+```bash
+Rscript figures/generate_rqr_theory_figures.R \
+  --output-dir=figures/generated
+```
+
+The nested `.gitignore` retains only the five publication PNGs and ignores the
+redundant PDF, CSV, and manifest outputs in that directory. The full local audit
+bundle remains under `application/cache/`, and the repository also retains the
+generator, tests, and vector-native TikZ schematics.
 
 The generator uses analytic truncated first moments for its declared
 distributions and independent response-space integration in the tests. Its
