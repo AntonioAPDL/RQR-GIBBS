@@ -1167,6 +1167,35 @@ test_that("the direct wave launcher rejects alternate output before publication"
   )))
 })
 
+test_that("the detached launcher reads the official primary RDS attestation", {
+  launcher_path <- testthat::test_path(
+    "..", "..", "scripts",
+    "20_launch_rqr_dlm_confirmatory_simulation.sh"
+  )
+  launcher <- readLines(launcher_path, warn = FALSE)
+  primary_start <- grep(
+    '^primary_runtime_path="\\$\\($', launcher
+  )
+  exdqlm_start <- grep(
+    "^exdqlm_runtime_path=", launcher
+  )
+  expect_length(primary_start, 1L)
+  expect_length(exdqlm_start, 1L)
+  primary_block <- launcher[
+    primary_start[[1L]]:(exdqlm_start[[1L]] - 1L)
+  ]
+  expect_true(any(grepl(
+    "attestation <- readRDS", primary_block, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "attestation$runtime_package_path",
+    primary_block, fixed = TRUE
+  )))
+  expect_false(any(grepl(
+    "jq ", primary_block, fixed = TRUE
+  )))
+})
+
 test_that("diagnostics require time-local terminal and future estimands", {
   skip_if_not_installed("posterior")
   environment <- load_confirmatory_helpers()

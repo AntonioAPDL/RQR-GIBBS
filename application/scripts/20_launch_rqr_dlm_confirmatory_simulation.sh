@@ -66,7 +66,21 @@ if [[ "$head_commit" != "$authorization_commit" ||
   exit 65
 fi
 
-primary_runtime_path="$(jq -er '.runtime_path' "$primary_attestation")"
+primary_runtime_path="$(
+  Rscript -e '
+    arguments <- commandArgs(trailingOnly = TRUE)
+    attestation <- readRDS(arguments[[1L]])
+    runtime_path <- attestation$runtime_package_path
+    if (!is.character(runtime_path) ||
+        length(runtime_path) != 1L ||
+        is.na(runtime_path) ||
+        !dir.exists(runtime_path)) {
+      stop("The primary RDS attestation has no valid runtime path.",
+           call. = FALSE)
+    }
+    cat(normalizePath(runtime_path, winslash = "/", mustWork = TRUE))
+  ' "$primary_attestation"
+)"
 exdqlm_runtime_path="$(jq -er '.runtime_path' "$exdqlm_attestation")"
 quantreg_runtime_path="$(jq -er '.runtime_path' "$quantreg_attestation")"
 for runtime_path in \
