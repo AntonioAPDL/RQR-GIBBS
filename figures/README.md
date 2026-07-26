@@ -1,7 +1,7 @@
 # RQR article figures
 
 This directory contains tracked source for the article's deterministic
-population/oracle figures and algebraic schematics. It does not contain fitted
+population figures and algebraic schematics. It does not contain fitted
 models, MCMC output, simulation evidence, or a response-generating model.
 
 Run the numerical oracle and reproducibility checks with:
@@ -40,10 +40,27 @@ Rscript figures/generate_rqr_theory_figures.R \
   --output-dir=figures/generated
 ```
 
-The nested `.gitignore` retains only the five publication PNGs and ignores the
-redundant PDF, CSV, and manifest outputs in that directory. The full local audit
-bundle remains under `application/cache/`, and the repository also retains the
-generator, tests, and vector-native TikZ schematics.
+For an immutable source archive or a release checkout, explicit source identity
+can be supplied without pretending that Git established cleanliness:
+
+```bash
+Rscript figures/generate_rqr_theory_figures.R \
+  --output-dir=figures/generated \
+  --source-commit=<full-git-object-id> \
+  --source-archive-sha256=<full-sha256>
+```
+
+If Git is available, a declared commit must match `HEAD`. If either Git query
+fails, repository cleanliness is recorded as unknown (`NA`), never as clean.
+An explicit commit or archive digest is recorded separately from detected Git
+state.
+
+The nested `.gitignore` retains only the four publication PNGs and a lightweight
+provenance receipt. Redundant PDF, panel CSV, and full-manifest outputs remain
+ignored. The receipt records each publication PNG's byte count and SHA-256,
+the generator hash, and the detected and declared source identities. The full
+local audit bundle remains under `application/cache/`, and the repository also
+retains the generator, tests, and vector-native TikZ schematics.
 
 The generator uses analytic truncated first moments for its declared
 distributions and independent response-space integration in the tests. Its
@@ -52,7 +69,7 @@ tolerances, dependencies, panel-data hashes, and output hashes. CSV and PNG
 bytes are checked across two independent runs. Base-R PDF devices embed
 generation timestamps, so PDF byte identity is not claimed.
 
-Every generated panel is explicitly classified as deterministic
-population/oracle theory. It cannot support claims about finite-sample
+Every generated panel is explicitly classified as a deterministic population
+illustration. It cannot support claims about finite-sample
 recovery, calibration, comparative performance, MCMC accuracy, or
 posterior-predictive responses.

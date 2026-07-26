@@ -35,7 +35,7 @@
 \renewcommand{\thesection}{S\arabic{section}}
 \renewcommand{\thesubsection}{S\arabic{section}.\arabic{subsection}}
 
-\title{Supplementary Material for \emph{Generalized Bayesian Relaxed Quantile Regression for Direct Interval Forecasting}}
+\title{Supplementary Material for \emph{Interval Functionals and Generalized Bayesian Computation for Relaxed Quantile Regression}}
 \author{Antonio De Leon \and Raquel Prado \and Bruno Sans\'o}
 \date{\today}
 
@@ -44,15 +44,17 @@
 
 \begin{abstract}
 \noindent
-This supplement records the mean-preserving RQR population target, its
-comparison with equal-tailed and shortest-contiguous intervals, a fixed
-mean-tilted extension, the pseudo-AL augmentation, the partially collapsed
-ordinary-RQR learned-scale sampler, fixed-design Gaussian blocks, dynamic FFBS
-equations, component-discount contracts, and reproducibility gates for the
-standalone RQR-GIBBS article.
+Ordinary relaxed quantile regression induces a mean-preserving fixed-content
+interval under the population conditions stated in the main article. The
+derivations below establish its score equations, quantile-window and
+profiled-risk identification, and consequences for the retained and omitted
+distributions. They also distinguish equal-tailed, shortest-contiguous, and
+mean-tilted targets; derive the pseudo-asymmetric-Laplace augmentation and
+Gaussian/GIG blocks; and give the ordinary-RQR dynamic FFBS, component-scale,
+learned-scale, and validation contracts.
 \end{abstract}
 
-\section{Scope}
+\section{Interpretive Scope}
 
 The main article presents the statistical target and the core Gibbs sampler.
 This supplement keeps the derivations and implementation contracts recoverable.
@@ -61,7 +63,7 @@ likelihood. Root-trajectory draws from a state evolution equation remain draws
 of endpoint functions; they are not posterior predictive draws of the observed
 response.
 
-\section{Population Target and Restricted Score Equations}
+\section{Ordinary-RQR Score Derivations and Consequences}
 \label{sec:supp-population-target}
 
 Fix a covariate value \(x\), write \(a=L(x)<U(x)=b\), and define
@@ -116,8 +118,8 @@ the two omitted probabilities.
 
 \begin{proposition}[Quantile-window identification]
 \label{prop:supp-quantile-window}
-Suppose, in addition, that \(F_x\) is continuous and strictly increasing, and
-let \(Q_x=F_x^{-1}\). Define
+Suppose, in addition, that \(F_x\) is continuous and strictly increasing on
+its support, and let \(Q_x=F_x^{-1}\). Define
 \[
 M_{c,x}(u)=\frac{1}{c}\int_u^{u+c}Q_x(v)\,dv,
 \qquad 0\le u\le1-c.
@@ -130,7 +132,8 @@ satisfying \(M_{c,x}\{u_c(x)\}=\mu_x\). The corresponding interval is
 \end{proposition}
 
 \begin{proof}
-Every contiguous interval having conditional content \(c\) has the displayed
+Modulo conditional probability-zero portions outside the support, every
+canonical contiguous interval having content \(c\) has the displayed
 quantile-window form. On the interior of its domain,
 \[
 M_{c,x}'(u)
@@ -260,6 +263,9 @@ At a local minimum, \(D_-R_x\le0\le D_+R_x\), and therefore
 \[
 \Pr(a<Y<b\mid X=x)\le c\le\Pr(a\le Y\le b\mid X=x).
 \]
+Without a separate joint subgradient and endpoint-mass allocation analysis,
+these directional conditions do not imply the exact retained-mean equality
+derived above under endpoint continuity.
 If \(a=b=m\), then \(e=(Y-m)^2\) and the risk is
 \(c\E\{(Y-m)^2\mid X=x\}\); the coincident-root target is the conditional
 mean when the second moment exists.
@@ -293,11 +299,14 @@ M_c(u)=\frac{1}{c}\int_u^{u+c}Q(v)\,dv,\qquad
 W_c(u)=Q(u+c)-Q(u).
 \]
 The equal-tailed interval fixes \(u_{\mathrm{ET}}=(1-c)/2\). Ordinary RQR
-solves \(M_c(u_{\mathrm{RQR}})=\mu\). The shortest contiguous interval solves
+solves \(M_c(u_{\mathrm{RQR}})=\mu\). Define the possibly set-valued collection
+of shortest contiguous windows by
 \[
-u_{\mathrm{SH}}\in\argmin_{0\le u\le1-c}W_c(u).
+\mathcal U_{\mathrm{SH}}
+=\argmin_{0\le u\le1-c}W_c(u).
 \]
-If a positive density exists at an interior shortest solution, then
+If a positive density exists at an interior \(u_{\mathrm{SH}}\in
+\mathcal U_{\mathrm{SH}}\), then
 \[
 W_c'(u_{\mathrm{SH}})
 =\frac{1}{f\{Q(u_{\mathrm{SH}}+c)\}}
@@ -315,22 +324,6 @@ other two by definition, but there is no universal width ordering between
 ordinary RQR and the equal-tailed interval. The standard interval score is
 aligned with the central equal-tailed target and is not a target-neutral score
 for this comparison \citep{GneitingRaftery2007,BrehmerGneiting2021Intervals}.
-
-\clearpage
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/generated/fig02_symmetry_vs_skewness.png}
-\caption{\textbf{Symmetry as the coincidence case.}
-All intervals have population content \(c=0.80\), and response, tilt, and width
-are standardized by the population standard deviation. For the symmetric
-unimodal Normal law, the shortest contiguous (SH), equal-tailed (ET), and
-ordinary-RQR intervals coincide at \(d=0\). For the displayed right-skewed
-Lognormal law, SH is recovered by the most negative mean tilt, ET by an
-intermediate negative tilt, and ordinary RQR by \(d=0\). This sign ordering is
-not asserted for every asymmetric distribution. The figure reports
-deterministic population/oracle quantities.}
-\label{fig:supp-symmetry-skewness}
-\end{figure}
 
 \section{Mean-Tilted RQR}
 \label{sec:supp-mean-tilt}
@@ -362,9 +355,9 @@ and
 \[
 \E(Y\mid |Y-m_\delta|<h_\delta)=\mu+\delta.
 \]
-If \(F\) is continuous and strictly increasing and \(\delta\) lies strictly
-between the endpoint values of the admissible range, the unique interior
-lower-tail index is the solution of
+If \(F\) is continuous and strictly increasing on its support and \(\delta\)
+lies strictly between the endpoint values of the admissible range, the unique
+interior lower-tail index is the solution of
 \[
 M_c(u_\delta)=\mu+\delta.
 \]
@@ -386,37 +379,125 @@ Proposition~\ref{prop:supp-quantile-window} and strict monotonicity of \(M_c\)
 give the quantile-window statement.
 \end{proof}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/generated/figS02_loss_geometry.png}
-\caption{\textbf{RQR loss geometry and the fixed midpoint tilt.}
-For \(c=0.80\), \(m=0\), and \(h=1\), the residual product is negative exactly
-inside the interval. The half-width score contracts \(h\) for covered
-observations and expands it for misses. A fixed \(\delta\) adds a constant
-shift to the midpoint score but leaves the half-width score unchanged. These
-are deterministic pointwise score calculations, not fitted or simulated
-results.}
-\label{fig:supp-loss-geometry}
-\end{figure}
+\begin{proposition}[Global profiled-risk identification]
+\label{prop:supp-profiled-risk}
+Suppose that the support closure of \(F\) is an interval
+\([\ell,r]\), where either endpoint may be infinite, \(F\) is continuous and
+strictly increasing between its support endpoints, and \(\E(Y^2)<\infty\).
+Assume also the differentiation and envelope conditions used below. For every
+\(m\in\R\), there is a unique \(h_c(m)>0\) satisfying
+\[
+\Pr\{|Y-m|<h_c(m)\}=c.
+\]
+Set \(u_c(m)=F\{m-h_c(m)\}\), so \(u_c(m)\in[0,1-c]\), and define
+\[
+\overline R_{c,\delta}(m)
+=
+\E\{\ell_{c,\delta}(m,h_c(m);Y)\}.
+\]
+Then, wherever the derivative exists,
+\[
+\overline R_{c,\delta}'(m)
+=2c\left[M_c\{u_c(m)\}-\mu-\delta\right],
+\label{eq:supp-profiled-risk-derivative}
+\]
+with the corresponding one-sided derivatives at support transitions. For
+\[
+\delta_-:=M_c(0)-\mu<\delta<
+\delta_+:=M_c(1-c)-\mu,
+\]
+the expected loss has a unique global minimizer over finite ordered roots. Its
+index \(u_\delta\in(0,1-c)\) satisfies
+\[
+M_c(u_\delta)=\mu+\delta.
+\]
+Nondegeneracy gives \(\delta_-<0<\delta_+\), so ordinary RQR is an interior
+member. The two raw root-label permutations represent the same ordered
+interval.
+\end{proposition}
+
+\begin{proof}
+For fixed \(m\), put \(Z_m=(Y-m)^2\) and \(q=h^2\). The subgradient interval of
+\(q\mapsto\E\{\rho_c(Z_m-q)\}\) is
+\[
+\left[\Pr(Z_m<q)-c,\ \Pr(Z_m\le q)-c\right].
+\]
+Continuity and strict increase on the support interval make the distribution
+of \(|Y-m|\) continuous and strictly increasing over its effective range.
+Thus \(q_c(m)=h_c(m)^2\) is the unique global minimizer in the half-width
+direction.
+
+Write \(a_c(m)=m-h_c(m)\) and \(b_c(m)=m+h_c(m)\). Continuity gives
+\[
+F\{b_c(m)\}-F\{a_c(m)\}=c,
+\]
+so \(F\{b_c(m)\}=u_c(m)+c\). When \(0<u_c(m)<1-c\),
+\[
+a_c(m)=Q\{u_c(m)\},\qquad
+b_c(m)=Q\{u_c(m)+c\},
+\]
+and therefore
+\[
+m=m_c\{u_c(m)\}
+:=\frac{Q\{u_c(m)\}+Q\{u_c(m)+c\}}{2}.
+\]
+The map \(m_c(u)\) is strictly increasing. If a root extends beyond a finite
+support endpoint, \(u_c(m)\) is clamped at \(0\) or \(1-c\); hence \(u_c\) is
+globally nondecreasing.
+
+The envelope theorem and endpoint continuity give
+\begin{align*}
+\overline R_{c,\delta}'(m)
+&=
+2\E\!\left[(m-Y)
+\{\smash{c-\ind(a_c(m)<Y<b_c(m))}\}\right]-2c\delta\\
+&=
+2c\left[M_c\{u_c(m)\}-\mu-\delta\right],
+\end{align*}
+which proves \eqref{eq:supp-profiled-risk-derivative}. Strict monotonicity of
+\(Q\) also gives, for \(v>u\),
+\[
+M_c(v)-M_c(u)
+=\frac{1}{c}\int_0^c\{Q(v+s)-Q(u+s)\}\,ds>0.
+\]
+For an interior admissible tilt, the profiled derivative is therefore negative
+before the unique solution of \(M_c(u)=\mu+\delta\) and positive afterward.
+The profiled risk has a unique global midpoint minimizer, and the preceding
+fixed-\(m\) argument gives its unique positive half-width. This proves joint
+global identification of the ordered roots.
+\end{proof}
 
 The admissible population tilt range is
 \[
 M_c(0)-\mu\le\delta\le M_c(1-c)-\mu,
 \]
-with the appropriate extended-real interpretation when a tail average is
-infinite. Interior tilts correspond one-to-one with interior quantile windows;
-the full closed interval family is obtained by adjoining the feasible boundary
-limits. The special oracle tilts are
+and both endpoint values are finite under the assumed second moment. Interior
+tilts correspond one-to-one with finite-root quantile windows. At
+\(\delta_- = M_c(0)-\mu\), the canonical lower boundary member is
+\([Q(0),Q(c)]\). If \(Q(0)=-\infty\), it is a semi-infinite limiting interval
+with a finite infimum that is not attained by finite roots. If \(Q(0)\) is
+finite, every pair \((a,Q(c))\) with \(a\le Q(0)\) has the same population
+loss, so the inactive lower root is not identified without a support
+constraint. The upper boundary has the symmetric qualification. For
+\(\delta<\delta_-\) or \(\delta>\delta_+\), the unrestricted population risk
+is unbounded below along the corresponding escaping-root direction and has no
+finite global target.
+
+Ordinary and equal-tailed recovery use
 \[
 \delta_{\mathrm{RQR}}=0,\qquad
 \delta_{\mathrm{ET}}=M_c\{(1-c)/2\}-\mu,
 \]
-and
+whereas shortest-contiguous recovery is generally set-valued. Define
 \[
-\delta_{\mathrm{SH}}=M_c(u_{\mathrm{SH}})-\mu.
+\Delta_{\mathrm{SH}}
+=
+\{M_c(u)-\mu:u\in\mathcal U_{\mathrm{SH}}\}.
 \]
-These equalities establish population representation, not automatic
-finite-sample estimation of either recovery tilt.
+If \(\mathcal U_{\mathrm{SH}}\) is a singleton, its element and tilt are denoted
+by \(u_{\mathrm{SH}}\) and \(\delta_{\mathrm{SH}}\). These identities establish
+population representation, not automatic finite-sample estimation of a
+recovery tilt.
 
 Implicit differentiation yields
 \[
@@ -428,10 +509,10 @@ and
 \frac{dW_c(u_\delta)}{d\delta}
 =\frac{c\,W_c'(u_\delta)}{W_c(u_\delta)}.
 \]
-Hence profiling population width along the admissible tilt path recovers the
-shortest contiguous interval. Boundary solutions require one-sided
-conditions, and this statement does not extend the target to disconnected
-highest-density regions.
+Hence profiling population width along the interior admissible tilt path
+identifies any interior shortest-contiguous member. Boundary members use the
+canonical one-sided closure described above, and the statement does not extend
+the target to disconnected highest-density regions.
 
 The tilt indexes the estimand and is initially treated like a fixed quantile
 level. A scalar tilt generally defines only a restricted global target in a
@@ -458,12 +539,27 @@ coercivity or propriety result.
 \caption{\textbf{Recovery tilts across symmetric and skewed distributions.}
 Every interval has population content \(c=0.80\). The top row shows
 standardized densities and the shortest contiguous (SH), equal-tailed (ET),
-and ordinary-RQR intervals. The bottom row shows standardized width over the
-mean-tilted family. The Normal benchmark gives three-way coincidence at
-\(d=0\); the displayed right-skewed laws require negative oracle tilts to
-recover ET and SH. The results are deterministic population/oracle
-calculations and do not imply a finite-sample tilt-selection rule.}
+and ordinary-RQR intervals, represented respectively by orange squares, green
+circles, and blue triangles; the interval bars have the same top-to-bottom
+order. The bottom row shows standardized width over the mean-tilted family.
+The Normal benchmark gives three-way coincidence at \(d=0\); the displayed
+right-skewed laws require negative population tilts to represent ET and SH.
+This deterministic population illustration does not imply a finite-sample
+tilt-selection rule.}
 \label{fig:supp-cross-distribution}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS02_loss_geometry.png}
+\caption{\textbf{RQR loss geometry and the fixed midpoint tilt.}
+For \(c=0.80\), \(m=0\), and \(h=1\), the residual product is negative exactly
+inside the interval. The half-width score contracts \(h\) for covered
+observations and expands it for misses. A fixed \(\delta\) adds a constant
+shift to the midpoint score but leaves the half-width score unchanged. These
+are deterministic pointwise score calculations, not fitted or simulated
+results.}
+\label{fig:supp-loss-geometry}
 \end{figure}
 
 \section{RQR-W and Width Regularization}
@@ -664,14 +760,7 @@ The implemented partially collapsed scan uses the following order:
 \end{enumerate}
 The second step cannot be skipped after the collapsed draw.
 
-\section{RQR-DESN Contract}
-
-RQR-DESN conditions on a deterministic DESN feature matrix. The reservoir seed,
-depth, units, lag window, spectral radius, leak rate, input scaling, washout,
-and feature reducers are design variables, not posterior unknowns. Posterior
-summaries are ordered endpoint functions, widths, and midpoints.
-
-\section{RQR-DLM Contract and FFBS}
+\section{Dynamic Root-State Computation}
 
 For root \(k=1,2\), let
 \[
@@ -718,7 +807,9 @@ observation term is quartic jointly because it contains
 \(\eta_{1t}\eta_{2t}\). Hence one ordinary simultaneous Gaussian FFBS draw is
 unavailable. Conditional on either complete root path and the latent scales,
 the other path enters linearly and has an exact Gaussian full conditional,
-giving the sequential root-specific FFBS blocks shown here.}
+giving the sequential root-specific FFBS blocks shown here. The schematic
+describes the current ordinary RQR-DLM target (\(\delta=0\)); it does not
+authorize a dynamic nonzero-tilt run.}
 \label{fig:supp-dlm-blocked-state}
 \end{figure}
 
@@ -892,40 +983,29 @@ each root path and its time-zero state, updates all \(q_j\), and optionally
 swaps the two complete root labels. Static \(q_j=0\) components are separate
 degenerate models and are not part of the inverse-Gamma support.
 
-\section{Validation Gates}
+\section{Deterministic Nonlinear Readout Contract}
+
+RQR-DESN conditions on a deterministic DESN feature matrix. The reservoir seed,
+depth, units, lag window, spectral radius, leak rate, input scaling, washout,
+and feature reducers are design variables, not posterior unknowns. Posterior
+summaries are ordered endpoint functions, widths, and midpoints. Current
+software implements ordinary RQR readouts; nonzero mean tilt is not implemented
+or validated.
+
+\section{Validation and Evidence Ledger}
 
 Before a production simulation, the package must pass pure-R/C++ filtering and
 smoothing parity against an independent dense Gaussian reference,
 multiblock discount construction, missing-observation, extreme-scale GIG,
 learned-scale, component-scale conditional, checkpoint-continuation,
 root-label, and small end-to-end tests. Promotion-grade exact-target fits must
-have zero numerical repairs. A run manifest must then freeze data-generating
-mechanisms, sample sizes, train/test windows, forecast horizons, method
-configurations, seeds, package versions, and repository commits. Fit objects
-record data, complete model/target/evolution, and checkpoint digests; RNG state;
-compiler and BLAS/LAPACK provenance; required external-repository states; and a
-versioned schema. Promotion requires clean detected checkouts matching every
-exact commit declared in the run manifest. If an external package contributes
-executed code, promotion additionally requires an isolated-runtime
-attestation. The verifier reconstructs the Git and extracted-archive
-mode--blob--path manifests, compares the complete expected and built
-source-package file sets, rehashes post-command receipts and build and
-installation logs, requires one successful full-package installation, and
-checks both the pre-marker and final installed-runtime digests. A
-source-package lineage marker is required inside the executing runtime; direct
-source-tree execution is ineligible. This is a controlled local-build
-integrity contract, not a claim of bit-for-bit reproducible compilation across
-platforms or a cryptographic signature. The primary \texttt{rqrgibbs}
-namespace is subject to the same isolated-runtime rule. Exact
-continuation stops on schema, checkpoint, data, model, target, or evolution
-mismatch and, by default, on package, R, numerical-library, dependency, or
-source-commit mismatch. An explicit portability override is persisted and
-removes reproducibility and promotion eligibility. Repair counts, numerical
-exactness, reproducibility, and promotion status are recorded per generation.
-Validation reconstructs parent-checkpoint links, the mismatch ledger, and every
-cumulative recursion; requested and resolved FFBS backends are compared
-separately. Heavy
-state draws and fitted objects remain in ignored local output directories.
+have zero numerical repairs. A versioned run manifest freezes the target,
+data-generating mechanisms, forecast design, seeds, numerical policy, package
+versions, and source commits. Promotion also requires an isolated runtime
+bound to the declared source and integrity-checked continuation records.
+Complete archive, build, installation, runtime, and checkpoint verification is
+documented in the repository audit notes rather than repeated here. Heavy state
+draws and fitted objects remain in ignored local output directories.
 
 The first bounded normalized learned-scale fixture uses four production
 partially collapsed chains, four independently coded fully augmented chains,
@@ -951,7 +1031,7 @@ are available. The standard interval score is secondary because its canonical
 target is an equal-tailed interval, whereas RQR does not preassign endpoint
 quantile probabilities.
 
-\section{Status of Preliminary RQR-DESN Evidence}
+\subsection{Withheld RQR-DESN evidence}
 
 Preliminary RQR-DESN results are withheld from the circulated article package
 until the matched standalone study, including the planned RQR-DLM comparison,

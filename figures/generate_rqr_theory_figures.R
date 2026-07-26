@@ -1,9 +1,9 @@
 #!/usr/bin/env Rscript
 
-# Deterministic population/oracle figures for the RQR article.
+# Deterministic population figures for the RQR article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
-SCRIPT_VERSION <- "2026-07-25-article-1"
+SCRIPT_VERSION <- "2026-07-25-reframing-2"
 DEFAULT_CONTENT <- 0.80
 NUMERICAL_TOLERANCES <- list(
   probability_margin = 1e-8,
@@ -48,32 +48,112 @@ repository_root <- function() {
   normalizePath(file.path(dirname(script_path()), ".."), mustWork = TRUE)
 }
 
-parse_output_dir <- function(args = commandArgs(trailingOnly = TRUE)) {
-  hit <- grep("^--output-dir=", args, value = TRUE)
-  if (length(hit) > 1L) fail("Use at most one --output-dir argument.")
-  if (!length(hit)) return(file.path(tempdir(), "rqr_theory_figures"))
-  path <- sub("^--output-dir=", "", hit)
-  if (!nzchar(path)) fail("--output-dir must not be empty.")
-  path
+parse_single_argument <- function(args, name, default = NA_character_) {
+  prefix <- paste0("--", name, "=")
+  hit <- grep(paste0("^", prefix), args, value = TRUE)
+  if (length(hit) > 1L) fail("Use at most one --%s argument.", name)
+  if (!length(hit)) return(default)
+  value <- sub(paste0("^", prefix), "", hit)
+  if (!nzchar(value)) fail("--%s must not be empty.", name)
+  value
 }
 
-git_output <- function(args) {
-  root <- repository_root()
-  out <- suppressWarnings(system2(
-    "git", c("-C", shQuote(root), args),
-    stdout = TRUE, stderr = TRUE
-  ))
-  status <- attr(out, "status")
-  if (!is.null(status) && status != 0L) return(character())
-  out
-}
-
-source_state <- function() {
-  commit <- git_output(c("rev-parse", "HEAD"))
-  status <- git_output(c("status", "--porcelain", "--untracked-files=normal"))
+parse_generator_arguments <- function(args = commandArgs(trailingOnly = TRUE)) {
+  known <- grepl(
+    "^--(output-dir|source-commit|source-archive-sha256)=",
+    args
+  )
+  if (length(args) && any(!known)) {
+    fail("Unknown generator argument: %s", args[which(!known)[1L]])
+  }
+  out_dir <- parse_single_argument(
+    args, "output-dir", file.path(tempdir(), "rqr_theory_figures")
+  )
+  source_commit <- parse_single_argument(args, "source-commit")
+  archive_sha256 <- parse_single_argument(args, "source-archive-sha256")
+  if (!is.na(source_commit) &&
+      !grepl("^([[:xdigit:]]{40}|[[:xdigit:]]{64})$", source_commit)) {
+    fail("--source-commit must be a full 40- or 64-character hexadecimal ID.")
+  }
+  if (!is.na(archive_sha256) &&
+      !grepl("^[[:xdigit:]]{64}$", archive_sha256)) {
+    fail("--source-archive-sha256 must be a 64-character hexadecimal digest.")
+  }
   list(
-    commit = if (length(commit)) commit[1L] else NA_character_,
-    clean = length(status) == 0L
+    output_dir = out_dir,
+    source_commit = if (is.na(source_commit)) NA_character_ else
+      tolower(source_commit),
+    source_archive_sha256 = if (is.na(archive_sha256)) NA_character_ else
+      tolower(archive_sha256)
+  )
+}
+
+git_output <- function(args, root = repository_root(), executable = "git") {
+  tryCatch({
+    out <- suppressWarnings(system2(
+      executable, c("-C", shQuote(root), args),
+      stdout = TRUE, stderr = TRUE
+    ))
+    status <- attr(out, "status")
+    if (is.null(status)) status <- 0L
+    list(
+      ok = identical(as.integer(status), 0L),
+      status = as.integer(status),
+      output = as.character(out),
+      error = NA_character_
+    )
+  }, error = function(e) {
+    list(
+      ok = FALSE,
+      status = NA_integer_,
+      output = character(),
+      error = conditionMessage(e)
+    )
+  })
+}
+
+source_state <- function(declared_commit = NA_character_,
+                         source_archive_sha256 = NA_character_,
+                         root = repository_root(),
+                         git_executable = "git") {
+  commit_result <- git_output(
+    c("rev-parse", "--verify", "HEAD"), root, git_executable
+  )
+  status_result <- git_output(
+    c("status", "--porcelain", "--untracked-files=normal"),
+    root, git_executable
+  )
+  detected_commit <- if (
+    commit_result$ok && length(commit_result$output) == 1L &&
+      grepl("^([[:xdigit:]]{40}|[[:xdigit:]]{64})$", commit_result$output)
+  ) {
+    tolower(commit_result$output)
+  } else {
+    NA_character_
+  }
+  git_state_ok <- commit_result$ok && status_result$ok &&
+    !is.na(detected_commit)
+  if (!is.na(declared_commit) && !is.na(detected_commit) &&
+      !identical(tolower(declared_commit), detected_commit)) {
+    fail(
+      "Declared source commit %s does not match detected HEAD %s.",
+      declared_commit, detected_commit
+    )
+  }
+  list(
+    commit = detected_commit,
+    clean = if (git_state_ok) length(status_result$output) == 0L else NA,
+    declared_commit = declared_commit,
+    source_archive_sha256 = source_archive_sha256,
+    source_identity_consistent = if (
+      is.na(declared_commit) || is.na(detected_commit)
+    ) {
+      NA
+    } else {
+      identical(tolower(declared_commit), detected_commit)
+    },
+    rev_parse_status = commit_result$status,
+    worktree_status = status_result$status
   )
 }
 
@@ -533,7 +613,7 @@ figure_01_three_principles <- function(out_dir, dist, content) {
     )
     annotations <- list(
       expression(P(Y < L) == 0.10 ~~ "and" ~~ P(Y > U) == 0.10),
-      expression(E(Y~"|"~L < Y & Y < U) == E(Y)),
+      "retained mean = population mean",
       expression(f(L) == f(U))
     )
     for (j in seq_along(targets)) {
@@ -566,7 +646,7 @@ figure_01_three_principles <- function(out_dir, dist, content) {
     }
     graphics::mtext(
       sprintf(
-        "Three interval principles at common content c = %.2f (population/oracle theory)",
+        "Three interval principles at common content c = %.2f",
         content
       ),
       outer = TRUE, line = 0.65, cex = 0.98, font = 2
@@ -582,80 +662,7 @@ figure_01_three_principles <- function(out_dir, dist, content) {
   )
 }
 
-figure_02_symmetry_skewness <- function(out_dir, dists, content) {
-  chosen <- dists[c("normal", "lognormal")]
-  summaries <- lapply(chosen, oracle_interval_summary, content = content)
-  densities <- lapply(chosen, standardized_density_data)
-  panel_files <- character()
-  for (i in seq_along(chosen)) {
-    check_oracle_summary(chosen[[i]], summaries[[i]], content)
-    panel_files <- c(
-      panel_files,
-      write_panel_data(
-        summaries[[i]],
-        file.path(
-          out_dir, sprintf("fig02_%s_intervals.csv", chosen[[i]]$id)
-        )
-      ),
-      write_panel_data(
-        densities[[i]],
-        file.path(out_dir, sprintf("fig02_%s_density.csv", chosen[[i]]$id))
-      )
-    )
-  }
-  draw <- function() {
-    old <- graphics::par(no.readonly = TRUE)
-    on.exit(graphics::par(old))
-    graphics::par(
-      mfrow = c(1, 2), mar = c(4.1, 3.9, 3.0, 0.8),
-      oma = c(0, 0, 2.2, 0), mgp = c(2.25, 0.65, 0), tcl = -0.3
-    )
-    for (i in seq_along(chosen)) {
-      dist <- chosen[[i]]
-      density <- densities[[i]]
-      summary <- summaries[[i]]
-      ymax <- max(density$density)
-      title <- if (dist$id == "normal") {
-        "Normal: symmetry"
-      } else {
-        "Lognormal: right skew"
-      }
-      graphics::plot(
-        density$z, density$density, type = "l", lwd = 2.1,
-        col = COL["density"], xlab = "Standardized response, z",
-        ylab = "Density", main = title, xlim = c(-3.25, 5.25),
-        ylim = c(-0.34 * ymax, 1.06 * ymax), cex.main = 0.98
-      )
-      graphics::mtext(dist$subtitle, side = 3, line = 0.20, cex = 0.70)
-      graphics::abline(v = 0, lty = 3, col = COL["mean"])
-      plot_interval_bars(
-        dist, summary,
-        y0 = -0.055 * ymax, dy = 0.075 * ymax,
-        labels = TRUE, label_x = 1.9
-      )
-    }
-    graphics::mtext(
-      sprintf(
-        "Symmetry and skewness at common content c = %.2f (population/oracle theory)",
-        content
-      ),
-      outer = TRUE, line = 0.65, cex = 1.0, font = 2
-    )
-  }
-  outputs <- with_graphics_devices(
-    file.path(out_dir, "fig02_symmetry_vs_skewness"),
-    7.2, 3.35, draw
-  )
-  list(
-    id = "fig02_symmetry_vs_skewness",
-    data = panel_files, outputs = outputs,
-    distributions = paste(
-      vapply(chosen, function(x) x$id, character(1)), collapse = ";"
-    )
-  )
-}
-
-figure_03_mean_tilt_map <- function(out_dir, dist, content) {
+figure_02_mean_tilt_map <- function(out_dir, dist, content) {
   summary <- oracle_interval_summary(dist, content)
   check_oracle_summary(dist, summary, content)
   path <- mean_tilt_path_data(dist, content)
@@ -663,16 +670,16 @@ figure_03_mean_tilt_map <- function(out_dir, dist, content) {
   panel_files <- c(
     write_panel_data(
       path[, c("u", "M_minus_mu", "standardized_delta")],
-      file.path(out_dir, "fig03_panelA_window_mean.csv")
+      file.path(out_dir, "fig02_panelA_window_mean.csv")
     ),
     write_panel_data(
       path[, c("standardized_delta", "standardized_width")],
-      file.path(out_dir, "fig03_panelB_width_profile.csv")
+      file.path(out_dir, "fig02_panelB_width_profile.csv")
     ),
     write_panel_data(
-      summary, file.path(out_dir, "fig03_panelC_selected_intervals.csv")
+      summary, file.path(out_dir, "fig02_panelC_selected_intervals.csv")
     ),
-    write_panel_data(density, file.path(out_dir, "fig03_density.csv"))
+    write_panel_data(density, file.path(out_dir, "fig02_density.csv"))
   )
   draw <- function() {
     old <- graphics::par(no.readonly = TRUE)
@@ -736,18 +743,18 @@ figure_03_mean_tilt_map <- function(out_dir, dist, content) {
     )
     graphics::mtext(
       sprintf(
-        "Mean-tilt recovery map for %s, c = %.2f (population/oracle theory)",
+        "Mean-tilt recovery map for %s, c = %.2f",
         dist$short_label, content
       ),
       outer = TRUE, line = 0.65, cex = 0.98, font = 2
     )
   }
   outputs <- with_graphics_devices(
-    file.path(out_dir, "fig03_mean_tilt_recovery_map"),
+    file.path(out_dir, "fig02_mean_tilt_recovery_map"),
     7.2, 3.05, draw
   )
   list(
-    id = "fig03_mean_tilt_recovery_map",
+    id = "fig02_mean_tilt_recovery_map",
     data = panel_files, outputs = outputs, distributions = dist$id
   )
 }
@@ -824,7 +831,7 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
     }
     graphics::mtext(
       sprintf(
-        "Fixed-content interval families across distributions, c = %.2f (population/oracle theory)",
+        "Fixed-content interval families across distributions, c = %.2f",
         content
       ),
       outer = TRUE, line = 0.65, cex = 0.98, font = 2
@@ -918,7 +925,7 @@ figure_s02_loss_geometry <- function(out_dir, content) {
     )
     graphics::mtext(
       sprintf(
-        "RQR loss geometry at c = %.2f, m = 0, h = 1 (population/oracle theory)",
+        "RQR loss geometry: c = %.2f, m = 0, h = 1",
         content
       ),
       outer = TRUE, line = 0.65, cex = 0.98, font = 2
@@ -933,8 +940,7 @@ figure_s02_loss_geometry <- function(out_dir, content) {
   )
 }
 
-write_figure_manifest <- function(records, out_dir, content) {
-  state <- source_state()
+write_figure_manifest <- function(records, out_dir, content, state) {
   generator <- script_path()
   rows <- lapply(records, function(record) {
     data_hashes <- vapply(record$data, sha256_file, character(1))
@@ -943,6 +949,11 @@ write_figure_manifest <- function(records, out_dir, content) {
       figure_id = record$id,
       repository_commit = state$commit,
       repository_clean = state$clean,
+      declared_source_commit = state$declared_commit,
+      source_archive_sha256 = state$source_archive_sha256,
+      source_identity_consistent = state$source_identity_consistent,
+      git_rev_parse_status = state$rev_parse_status,
+      git_worktree_status = state$worktree_status,
       generator = file.path("figures", basename(generator)),
       generator_sha256 = sha256_file(generator),
       script_version = SCRIPT_VERSION,
@@ -965,7 +976,7 @@ write_figure_manifest <- function(records, out_dir, content) {
         "base-R PDF metadata contains generation timestamps"
       ),
       evidence_class = paste(
-        "deterministic population/oracle theory;",
+        "deterministic population illustration;",
         "not fitted, calibration, or response-predictive evidence"
       ),
       stringsAsFactors = FALSE
@@ -977,11 +988,42 @@ write_figure_manifest <- function(records, out_dir, content) {
   path
 }
 
+write_publication_receipt <- function(records, out_dir, state) {
+  generator <- script_path()
+  rows <- lapply(records, function(record) {
+    png <- record$outputs[grepl("\\.png$", record$outputs)]
+    if (length(png) != 1L) {
+      fail("Figure %s must have exactly one publication PNG.", record$id)
+    }
+    data.frame(
+      figure_id = record$id,
+      publication_file = basename(png),
+      bytes = unname(file.info(png)$size),
+      sha256 = sha256_file(png),
+      generator_sha256 = sha256_file(generator),
+      repository_commit = state$commit,
+      repository_clean = state$clean,
+      declared_source_commit = state$declared_commit,
+      source_archive_sha256 = state$source_archive_sha256,
+      source_identity_consistent = state$source_identity_consistent,
+      stringsAsFactors = FALSE
+    )
+  })
+  path <- file.path(out_dir, "rqr_theory_figure_provenance.csv")
+  utils::write.csv(do.call(rbind, rows), path, row.names = FALSE)
+  path
+}
+
 main <- function(args = commandArgs(trailingOnly = TRUE)) {
   if (!requireNamespace("digest", quietly = TRUE)) {
     fail("Install package 'digest' before generating theory figures.")
   }
-  out_dir <- parse_output_dir(args)
+  parsed <- parse_generator_arguments(args)
+  state <- source_state(
+    declared_commit = parsed$source_commit,
+    source_archive_sha256 = parsed$source_archive_sha256
+  )
+  out_dir <- parsed$output_dir
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   out_dir <- normalizePath(out_dir, mustWork = TRUE)
   content <- DEFAULT_CONTENT
@@ -991,15 +1033,19 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
   }))
   records <- list(
     figure_01_three_principles(out_dir, dists$gamma, content),
-    figure_02_symmetry_skewness(out_dir, dists, content),
-    figure_03_mean_tilt_map(out_dir, dists$gamma, content),
+    figure_02_mean_tilt_map(out_dir, dists$gamma, content),
     figure_s01_cross_distribution(out_dir, dists, content),
     figure_s02_loss_geometry(out_dir, content)
   )
-  manifest <- write_figure_manifest(records, out_dir, content)
-  message("Generated deterministic population/oracle figures under: ", out_dir)
+  manifest <- write_figure_manifest(records, out_dir, content, state)
+  receipt <- write_publication_receipt(records, out_dir, state)
+  message("Generated deterministic population figures under: ", out_dir)
   message("Manifest: ", manifest)
-  invisible(list(output_dir = out_dir, records = records, manifest = manifest))
+  message("Publication receipt: ", receipt)
+  invisible(list(
+    output_dir = out_dir, records = records, manifest = manifest,
+    publication_receipt = receipt, source_state = state
+  ))
 }
 
 if (!identical(Sys.getenv("RQR_THEORY_FIGURES_LIBRARY_ONLY"), "1")) {

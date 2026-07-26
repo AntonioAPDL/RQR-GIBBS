@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 # Independent numerical and end-to-end checks for the deterministic
-# population/oracle figure generator.
+# population figure generator.
 
 test_script_path <- function() {
   args <- commandArgs(trailingOnly = FALSE)
@@ -46,6 +46,73 @@ assert_true <- function(value, label) {
   if (!isTRUE(value)) stop(sprintf("FAIL %s", label), call. = FALSE)
   invisible(TRUE)
 }
+
+assert_error <- function(expr, label) {
+  failed <- FALSE
+  tryCatch(
+    force(expr),
+    error = function(e) {
+      failed <<- TRUE
+    }
+  )
+  assert_true(failed, label)
+}
+
+# 0. Source-provenance parsing and Git failures are explicit.
+nonrepo <- tempfile("rqr_theory_nonrepo_")
+dir.create(nonrepo)
+failed_state <- source_state(root = nonrepo)
+assert_true(is.na(failed_state$clean), "Git failure gives unknown cleanliness")
+assert_true(
+  is.na(failed_state$commit), "Git failure gives unknown detected commit"
+)
+assert_error(
+  parse_generator_arguments(c(
+    "--source-commit=0123456789012345678901234567890123456789",
+    "--source-commit=abcdefabcdefabcdefabcdefabcdefabcdefabcd"
+  )),
+  "duplicate declared source commit is rejected"
+)
+assert_error(
+  parse_generator_arguments("--source-commit=abc"),
+  "short declared source commit is rejected"
+)
+assert_error(
+  parse_generator_arguments("--source-archive-sha256=abc"),
+  "short source archive digest is rejected"
+)
+assert_error(
+  parse_generator_arguments("--unexpected=value"),
+  "unknown generator argument is rejected"
+)
+archive_digest <- paste(rep("a", 64L), collapse = "")
+archive_state <- source_state(
+  source_archive_sha256 = archive_digest,
+  root = nonrepo
+)
+assert_true(
+  identical(archive_state$source_archive_sha256, archive_digest),
+  "declared source archive digest is retained"
+)
+assert_true(
+  is.na(archive_state$clean),
+  "declared archive identity does not manufacture Git cleanliness"
+)
+detected_state <- source_state()
+assert_true(!is.na(detected_state$commit), "test checkout has a detected commit")
+matched_state <- source_state(declared_commit = detected_state$commit)
+assert_true(
+  isTRUE(matched_state$source_identity_consistent),
+  "matching declared source commit is accepted"
+)
+wrong_commit <- paste(rep(
+  if (substr(detected_state$commit, 1L, 1L) == "0") "1" else "0",
+  nchar(detected_state$commit)
+), collapse = "")
+assert_error(
+  source_state(declared_commit = wrong_commit),
+  "mismatched declared source commit is rejected"
+)
 
 response_window_mean <- function(dist, lower, upper, content) {
   value <- stats::integrate(
@@ -240,15 +307,14 @@ run2 <- main(sprintf("--output-dir=%s", out2))
 expected_outputs <- c(
   "fig01_three_balance_principles.pdf",
   "fig01_three_balance_principles.png",
-  "fig02_symmetry_vs_skewness.pdf",
-  "fig02_symmetry_vs_skewness.png",
-  "fig03_mean_tilt_recovery_map.pdf",
-  "fig03_mean_tilt_recovery_map.png",
+  "fig02_mean_tilt_recovery_map.pdf",
+  "fig02_mean_tilt_recovery_map.png",
   "figS01_cross_distribution_recovery.pdf",
   "figS01_cross_distribution_recovery.png",
   "figS02_loss_geometry.pdf",
   "figS02_loss_geometry.png",
-  "rqr_theory_figure_manifest.csv"
+  "rqr_theory_figure_manifest.csv",
+  "rqr_theory_figure_provenance.csv"
 )
 assert_true(
   all(file.exists(file.path(out1, expected_outputs))),
@@ -267,11 +333,28 @@ for (name in stable_files) {
   assert_true(identical(hash1, hash2), paste(name, "byte reproduction"))
 }
 manifest <- utils::read.csv(run1$manifest, stringsAsFactors = FALSE)
-assert_true(nrow(manifest) == 5L, "five-figure manifest")
+assert_true(nrow(manifest) == 4L, "four-figure manifest")
 assert_true(
-  all(grepl("population/oracle theory", manifest$evidence_class,
+  all(grepl("deterministic population illustration", manifest$evidence_class,
             fixed = TRUE)),
-  "oracle-only evidence labels"
+  "population-illustration evidence labels"
+)
+receipt <- utils::read.csv(
+  run1$publication_receipt, stringsAsFactors = FALSE
+)
+assert_true(nrow(receipt) == 4L, "four-figure publication receipt")
+assert_true(
+  all(file.exists(file.path(out1, receipt$publication_file))),
+  "publication receipt paths"
+)
+assert_true(
+  all(vapply(seq_len(nrow(receipt)), function(i) {
+    identical(
+      sha256_file(file.path(out1, receipt$publication_file[i])),
+      receipt$sha256[i]
+    )
+  }, logical(1))),
+  "publication receipt hashes"
 )
 
 cat("PASS: deterministic RQR theory figures and oracle checks completed.\n")

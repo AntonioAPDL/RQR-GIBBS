@@ -45,9 +45,17 @@ M_c'(u)=\frac{Q(u+c)-Q(u)}{c}>0,
 \]
 
 the equation \(M_c(u)=\mathbb E(Y)\) identifies at most one content-\(c\)
-quantile window, and the endpoint window averages bracket the population mean
-under the stated nondegeneracy and integrability conditions. This supplies
-existence and uniqueness within the unrestricted contiguous interval class.
+quantile window, and the endpoint window averages strictly bracket the
+population mean under the stated nondegeneracy and integrability conditions.
+Profiling the expected loss over the half-width gives the derivative
+\[
+\overline R'_{c,\delta}(m)
+=2c\{M_c(u_c(m))-\mu-\delta\},
+\]
+where \(u_c(m)\) is clamped to \(0\) or \(1-c\) when a root extends beyond a
+finite support endpoint. Its negative-to-positive sign change supplies a
+unique global finite-root target for every interior admissible tilt, not only
+a stationary-window characterization.
 
 For a fixed response-scale tilt \(\delta\), the proposed loss is
 
@@ -70,10 +78,21 @@ and
 =\mathbb E(Y)+\delta.
 \]
 
-Thus \(M_c(u_\delta)=\mathbb E(Y)+\delta\). Admissible fixed tilts index the
-contiguous content-\(c\) family. Distribution-specific oracle tilts represent
-the equal-tailed and shortest-contiguous intervals. This is a population
-representation result, not a data-driven selection result.
+Thus \(M_c(u_\delta)=\mathbb E(Y)+\delta\). Interior admissible fixed tilts
+index the finite-root contiguous content-\(c\) family. At an admissible
+endpoint, a finite support endpoint leaves the inactive root unidentified,
+whereas an infinite support endpoint produces an unattained semi-infinite
+limiting member. Outside the closed admissible range, the unrestricted
+population risk is unbounded below. Distribution-specific population tilts
+represent the equal-tailed interval. Shortest-contiguous recovery is
+set-valued unless its width minimizer is unique:
+\[
+\mathcal U_{\mathrm{SH}}=\arg\min_{0\le u\le1-c}W_c(u),\qquad
+\Delta_{\mathrm{SH}}
+=\{M_c(u)-\mu:u\in\mathcal U_{\mathrm{SH}}\}.
+\]
+These are population representation results, not data-driven selection
+results.
 
 For a fixed learning rate and fixed tilt vector, the pseudo-AL augmentation is
 unchanged. Each Gaussian root precision is unchanged and its information
@@ -107,35 +126,41 @@ assumptions substantive.
 
 `main.tex` now:
 
-1. states the mean-preserving population interpretation in the abstract and
+1. defines the fixed-content interval family before introducing the ordinary
+   RQR target;
+2. states the mean-preserving population interpretation in the abstract and
    introduction;
-2. develops the midpoint--half-width geometry;
-3. states the population first-moment and quantile-window propositions;
+3. develops the midpoint--half-width geometry and the global profiled-risk
+   identification result;
 4. records the retained-core interpretation, nested population path, and
    quadratic tail sensitivity without turning the midpoint into a mean;
-5. compares equal-tailed, ordinary RQR, and shortest-contiguous targets;
-6. introduces the fixed mean-tilted population target and oracle recovery
-   tilts;
-7. records the fixed-rate Gaussian information-vector shift;
-8. states that the current RQR-DLM implementation and confirmatory protocol
-   concern ordinary RQR, equivalently zero tilt; and
-9. keeps response-predictive and calibration claims out of scope.
+5. compares equal-tailed, ordinary RQR, and set-valued
+   shortest-contiguous recovery;
+6. introduces the fixed mean-tilted population target with explicit boundary
+   and out-of-range qualifications;
+7. records only the scalar fixed-rate Gaussian information-vector shift;
+8. makes RQR-DLM the primary computational extension and RQR-DESN a secondary
+   deterministic-feature readout;
+9. records implementation and evidence status in a compact table; and
+10. keeps response-predictive and calibration claims out of scope.
 
 `rqr-gibbs-supplement.tex` now:
 
 1. gives the ordinary-RQR score derivation, tail first-moment balance, and
    quantile-window proof;
-2. proves the retained-core convex-order contraction;
-3. derives nesting, the zero-content mean anchor, positive-affine
+2. proves global profiled-risk identification with one-sided boundary logic;
+3. proves the retained-core convex-order contraction;
+4. derives nesting, the zero-content mean anchor, positive-affine
    equivariance, and tail sensitivity;
-4. distinguishes shortest-contiguous intervals from potentially disconnected
+5. distinguishes shortest-contiguous intervals from potentially disconnected
    highest-density regions;
-5. proves the fixed-coverage mean-tilt characterization;
-6. derives the width-profile relationship;
-7. derives the RQR-W coverage correction and changed retained-mean equation;
-8. records the fixed-rate canonical-vector shift and required implementation
+6. proves the fixed-coverage mean-tilt characterization and set-valued
+   shortest recovery;
+7. derives the width-profile relationship;
+8. derives the RQR-W coverage correction and changed retained-mean equation;
+9. records the fixed-rate canonical-vector shift and required implementation
    tests; and
-9. explicitly prevents reuse of the ordinary learned-scale Gamma update for
+10. explicitly prevents reuse of the ordinary learned-scale Gamma update for
    the tilted loss.
 
 The bibliography adds the published interval-functional and elicitability
@@ -157,7 +182,6 @@ The following items are not presented as established or implemented:
 - finite-sample or asymptotic tilt-selection guarantees;
 - mean inference from endpoint draws;
 - the conditional-mean pseudo-outcome and its cross-fitted uncertainty module;
-- generalized-posterior calibration of endpoint uncertainty;
 - width-channel shrinkage priors and feature selection;
 - a reported asymmetry index before its empirical role is frozen;
 - small-coverage expansions and extrapolated mean inference;
@@ -203,19 +227,22 @@ and what was deferred.
 
 The first implementation must reject learned-rate modes for nonzero mean tilt.
 
-## Article-figure sequence after validation
+## Article figure allocation
 
-The preferred figure sequence is:
+The retained deterministic theory-figure sequence is:
 
 1. equal-tail probability, RQR tail first-moment balance, and shortest width
    at common content;
-2. coincidence under symmetry and separation under skewness;
-3. the quantile-window mean and width paths indexed by standardized tilt;
-4. the pseudo-residual augmentation and blocked Gibbs scan; and
-5. finite-sample target recovery with independent oracle truth.
+2. the quantile-window mean and width paths indexed by standardized tilt;
+3. the pseudo-residual augmentation and blocked Gibbs scan;
+4. the cross-distribution recovery matrix;
+5. pointwise loss geometry; and
+6. the blocked DLM scan.
 
-Until the fixed-tilt implementation is validated, these remain a figure plan
-rather than manuscript results.
+The former standalone symmetry-versus-skewness figure is removed because the
+cross-distribution matrix contains the same comparison. Captions and the
+figure manifest classify all distributional calculations as deterministic
+population illustrations, not finite-sample evidence.
 
 ## Overleaf release checklist
 
@@ -226,8 +253,8 @@ Before committing the article revision:
 2. rerun `make smoke`, `make pdf`, and `make supplement`;
 3. require no undefined citations, references, or TeX overflow warnings;
 4. inspect the rendered pages containing the new propositions and table;
-5. confirm that only manuscript source, bibliography, and this integration
-   note are staged;
+5. confirm that only manuscript source, deterministic figure source/tests,
+   publication assets, and manuscript audit documentation are staged;
 6. ensure generated PDFs, TeX logs, and local source syntheses remain ignored;
 7. commit the article revision separately from any simulation authorization;
    and

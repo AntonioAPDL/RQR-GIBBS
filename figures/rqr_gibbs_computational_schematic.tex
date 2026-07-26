@@ -15,7 +15,7 @@
       \exp\!\left\{-\omega\sum_t\ell_{c,\delta,t}\right\}.
     \)\par\medskip
     \(c\): probability content\par
-    \(\delta\): retained-mean placement\par
+    \(\delta\): prescribed retained-mean placement\par
     \(\omega\): learning rate
   };
 
@@ -41,8 +41,9 @@
     \(L_t=\min(\eta_{1t},\eta_{2t})\),\quad
     \(U_t=\max(\eta_{1t},\eta_{2t})\),\par
     width \(U_t-L_t\), midpoint \((L_t+U_t)/2\).\par\medskip
-    Fixed \(\delta\): information-vector shift only;
-    Gaussian precisions are unchanged.
+    \textbf{Implemented:} ordinary RQR, \(\delta=0\).\par
+    \textbf{Derived fixed-rate algebra:} \(\delta\ne0\) shifts only
+    information vectors; it is not yet implemented or validated.
   };
 
   \draw[arrow] (target) -- (augment);
