@@ -48,9 +48,10 @@ binding_fields <- c(
 )
 binding <- binding[binding_fields]
 records <- rqr_confirm_wave_state_records(
-  state_root, catalog, binding
+  state_root, catalog, binding, allow_active_start = TRUE
 )
 values <- records$completion_values
+active_start <- records$active_start
 decisions <- if (length(values)) {
   vapply(
     values, function(value) as.character(value$decision),
@@ -60,8 +61,14 @@ decisions <- if (length(values)) {
   character()
 }
 completed <- length(values)
-next_wave <- if (completed < nrow(catalog)) {
-  catalog$wave_id[[completed + 1L]]
+active_wave <- if (!is.null(active_start)) {
+  as.character(active_start$wave_id)
+} else {
+  "none"
+}
+next_index <- completed + if (is.null(active_start)) 1L else 2L
+next_wave <- if (next_index <= nrow(catalog)) {
+  catalog$wave_id[[next_index]]
 } else {
   "none"
 }
@@ -116,6 +123,7 @@ cat("  passed waves:", sum(decisions == "passed"), "\n")
 cat("  precision-stop skips:",
     sum(decisions == "skipped_precision_stop"), "\n")
 cat("  failed waves:", sum(decisions == "failed"), "\n")
+cat("  active canonical wave:", active_wave, "\n")
 cat("  next canonical wave:", next_wave, "\n")
 cat("  latest collection:", latest_collection, "\n")
 cat("  current wave artifact GiB:",

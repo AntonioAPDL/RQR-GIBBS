@@ -2311,6 +2311,47 @@ rqr_confirm_toolchain_manifest <- function() {
   )
 }
 
+rqr_confirm_as_exdqlm_model <- function(model, namespace) {
+  if (!is.environment(namespace) ||
+      !exists("as.exdqlm", envir = namespace, inherits = FALSE) ||
+      !exists("is.exdqlm", envir = namespace, inherits = FALSE)) {
+    stop("The attested exdqlm namespace omits its model constructors.",
+         call. = FALSE)
+  }
+  required <- c("m0", "C0", "FF", "GG")
+  if (!is.list(model) || !all(required %in% names(model)) ||
+      any(vapply(model[required], is.null, logical(1L)))) {
+    stop("The native model cannot be converted to exdqlm.",
+         call. = FALSE)
+  }
+  source <- unclass(model)[required]
+  converted <- get(
+    "as.exdqlm", envir = namespace, inherits = FALSE
+  )(source)
+  is_exdqlm <- get(
+    "is.exdqlm", envir = namespace, inherits = FALSE
+  )
+  same_numeric <- function(left, right) {
+    identical(dim(left), dim(right)) &&
+      isTRUE(all.equal(
+        as.numeric(left), as.numeric(right),
+        tolerance = 0, check.attributes = FALSE
+      ))
+  }
+  if (!isTRUE(is_exdqlm(converted)) ||
+      !identical(names(converted), required) ||
+      !same_numeric(converted$m0, matrix(source$m0, ncol = 1L)) ||
+      !same_numeric(converted$C0, as.matrix(source$C0)) ||
+      !same_numeric(converted$FF, as.matrix(source$FF)) ||
+      !same_numeric(converted$GG, source$GG)) {
+    stop(
+      "The attested exdqlm conversion changed the native state-space contract.",
+      call. = FALSE
+    )
+  }
+  converted
+}
+
 rqr_confirm_exdqlm_reference <- function(contract, attestation_path,
                                          full_schedule = TRUE) {
   specification <- contract$config$comparator$exdqlm
@@ -2323,7 +2364,69 @@ rqr_confirm_exdqlm_reference <- function(contract, attestation_path,
   namespace <- asNamespace("exdqlm")
   mcmc <- get("exdqlmMCMC", envir = namespace)
   forecast <- get("exdqlmForecast", envir = namespace)
-  polytrend <- get("polytrendMod", envir = namespace)
+  adapter_models <- list(
+    local_level = rqr_polytrend(
+      1L, m0 = 0, C0 = matrix(4, 1L, 1L), name = "level"
+    ),
+    trend_seasonal = rqr_polytrend(
+      2L, m0 = c(0, 0), C0 = diag(c(4, 1)), name = "trend"
+    ) + rqr_seasonal(
+      12L, 1L, m0 = c(0, 0), C0 = diag(2, 2),
+      name = "seasonal"
+    ),
+    trend_regression = rqr_polytrend(
+      2L, m0 = c(0, 0), C0 = diag(c(4, 1)), name = "trend"
+    ) + rqr_regression(
+      matrix(seq(-1, 1, length.out = 32L), 32L, 1L),
+      m0 = 0, C0 = matrix(2, 1L, 1L), name = "regression"
+    )
+  )
+  adapter_models <- lapply(
+    adapter_models, rqr_confirm_as_exdqlm_model,
+    namespace = namespace
+  )
+  adapter_pass <- all(vapply(
+    adapter_models,
+    function(model) {
+      inherits(model, "exdqlm") &&
+        all(c("m0", "C0", "FF", "GG") %in% names(model))
+    },
+    logical(1L)
+  ))
+  if (!adapter_pass) {
+    stop("The native-to-exdqlm model adapter reference failed.",
+         call. = FALSE)
+  }
+  probe_time <- seq_len(20L)
+  probe_model <- rqr_confirm_as_exdqlm_model(
+    rqr_regression(
+      cbind(intercept = 1, predictor = seq(-1, 1, length.out = 20L)),
+      m0 = c(0, 0), C0 = diag(4, 2), name = "regression"
+    ),
+    namespace
+  )
+  set.seed(2026072501L, kind = "L'Ecuyer-CMRG")
+  probe_fit <- mcmc(
+    y = sin(probe_time / 3), p0 = 0.10, model = probe_model,
+    df = 0.95, dim.df = 2L, dqlm.ind = TRUE,
+    init.from.vb = FALSE, fix.sigma = FALSE, sig.init = 1,
+    PriorSigma = NULL, n.burn = 2L, n.mcmc = 3L,
+    verbose = FALSE, trace.diagnostics = FALSE
+  )
+  probe_forecast <- forecast(
+    start.t = length(probe_time), k = 2L, m1 = probe_fit,
+    fFF = cbind(c(1, 1.1), c(1, 1.2)),
+    fGG = diag(2), plot = FALSE, return.draws = FALSE,
+    seed = 2026072502L
+  )
+  adapter_fit_pass <- inherits(probe_fit, "exdqlmMCMC") &&
+    length(probe_fit$samp.sigma) == 3L &&
+    length(probe_forecast$ff) == 2L &&
+    all(is.finite(probe_forecast$ff))
+  if (!adapter_fit_pass) {
+    stop("The adapted exdqlm fit/forecast reference failed.",
+         call. = FALSE)
+  }
   formals_digest <- digest::digest(
     formals(mcmc), algo = "sha256", serialize = TRUE
   )
@@ -2338,9 +2441,7 @@ rqr_confirm_exdqlm_reference <- function(contract, attestation_path,
     0.03 * time + sin(time / 3) +
       c(rep(-0.15, 16L), rep(0.15, 16L))
   ))
-  model <- polytrend(
-    1L, m0 = 0, C0 = matrix(4, 1L, 1L), backend = "R"
-  )
+  model <- adapter_models$local_level
   probabilities <- c(lower = 0.10, upper = 0.90)
   fits <- vector("list", 2L)
   forecasts <- vector("list", 2L)
@@ -2398,6 +2499,10 @@ rqr_confirm_exdqlm_reference <- function(contract, attestation_path,
       raw_endpoint_forecasts_retained = TRUE,
       ordering_only_for_interval_metrics = TRUE,
       response_predictive_draws_used = FALSE,
+      native_model_adapter_checked = TRUE,
+      native_model_adapter_fit_checked = TRUE,
+      native_model_adapter_structures =
+        paste(names(adapter_models), collapse = ";"),
       formals_digest = formals_digest,
       runtime_tree_digest = attestation$runtime_tree_digest,
       pass = TRUE,
@@ -3006,7 +3111,9 @@ rqr_confirm_dynamic_quantile <- function(
   mcmc <- get("exdqlmMCMC", envir = namespace)
   forecast_function <- get("exdqlmForecast", envir = namespace)
   model_bundle <- rqr_confirm_model_bundle(generated)
-  model <- unclass(model_bundle$training)
+  model <- rqr_confirm_as_exdqlm_model(
+    model_bundle$training, namespace
+  )
   future_model <- unclass(model_bundle$future)
   profile_name <- profile_name %||% c("A", "B", "C", "D")[[chain]]
   profile <- if (identical(profile_name, "standard")) {
@@ -3798,7 +3905,7 @@ rqr_confirm_wave_state_transition <- function(
 }
 
 rqr_confirm_wave_state_records <- function(
-    state_root, catalog, binding) {
+    state_root, catalog, binding, allow_active_start = FALSE) {
   if (!dir.exists(state_root)) {
     return(list(
       starts = list(), completion_values = list(), completions = NULL
@@ -3842,11 +3949,18 @@ rqr_confirm_wave_state_records <- function(
   completion_paths <- sort(list.files(
     completion_root, pattern = "\\.json$", full.names = TRUE
   ), method = "radix")
+  active_start_path <- character()
   if (length(start_paths) != length(completion_paths)) {
-    stop(
-      "An incomplete wave start permanently blocks replay and continuation.",
-      call. = FALSE
-    )
+    if (isTRUE(allow_active_start) &&
+        length(start_paths) == length(completion_paths) + 1L) {
+      active_start_path <- tail(start_paths, 1L)
+      start_paths <- head(start_paths, -1L)
+    } else {
+      stop(
+        "An incomplete wave start permanently blocks replay and continuation.",
+        call. = FALSE
+      )
+    }
   }
   starts <- lapply(start_paths, function(path) {
     jsonlite::read_json(path, simplifyVector = TRUE)
@@ -4048,11 +4162,11 @@ rqr_confirm_wave_state_records <- function(
           as.logical(value$same_batch_sentinel_pass)
         ) ||
         !grepl(
-          "^[0-9]{4}-[0-9]{2}-[0-9]{2}T",
+          "^[0-9]{4}-[0-9]{2}-[0-9]{2}[ T]",
           as.character(start$started_at_utc)
         ) ||
         !grepl(
-          "^[0-9]{4}-[0-9]{2}-[0-9]{2}T",
+          "^[0-9]{4}-[0-9]{2}-[0-9]{2}[ T]",
           as.character(value$completed_at_utc)
         )) {
       stop("A wave-state record violates its immutable schema.",
@@ -4181,6 +4295,147 @@ rqr_confirm_wave_state_records <- function(
   } else {
     NULL
   }
+  active_start <- NULL
+  if (length(active_start_path)) {
+    active_start <- jsonlite::read_json(
+      active_start_path, simplifyVector = TRUE
+    )
+    active_index <- length(completion_paths) + 1L
+    catalog_row <- catalog[active_index, , drop = FALSE]
+    required_active <- c(
+      "schema_version", "canonical_wave_index", "wave_id", "mode",
+      "phase", "batch_group", "batch_target", "binding_digest",
+      "action", "required_predecessor_wave_ids",
+      "predecessor_completion_sha256",
+      "predecessor_artifact_manifest_sha256",
+      "same_batch_sentinel_pass",
+      "prior_batch_decision_sha256", "prior_batch_next_action",
+      "worker_limit", "task_count", "wave_task_plan_sha256",
+      "output_root", "started_at_utc"
+    )
+    expected_predecessor_ids <- if (active_index > 1L) {
+      catalog$wave_id[seq_len(active_index - 1L)]
+    } else {
+      character()
+    }
+    expected_predecessor_hashes <- if (active_index > 1L) {
+      vapply(
+        completion_paths, rqr_confirm_sha256, character(1L)
+      )
+    } else {
+      character()
+    }
+    expected_predecessor_artifact_hashes <- if (active_index > 1L) {
+      vapply(
+        completion_values,
+        function(value) {
+          as.character(value$wave_artifact_hashes_sha256)
+        },
+        character(1L)
+      )
+    } else {
+      character()
+    }
+    active_predecessor_ids <- as.character(unlist(
+      active_start$required_predecessor_wave_ids,
+      use.names = FALSE
+    ))
+    active_predecessor_hashes <- as.character(unlist(
+      active_start$predecessor_completion_sha256,
+      use.names = FALSE
+    ))
+    active_predecessor_artifact_hashes <- as.character(unlist(
+      active_start$predecessor_artifact_manifest_sha256,
+      use.names = FALSE
+    ))
+    expected_output_root <- rqr_confirm_wave_output_root(
+      binding, catalog_row
+    )
+    if (!all(required_active %in% names(active_start)) ||
+        !identical(
+          active_start$schema_version,
+          "rqrgibbs_dlm_wave_start/1.0.0"
+        ) ||
+        !identical(
+          rqr_confirm_strict_integer(
+            active_start$canonical_wave_index,
+            "active wave canonical index", 1L, nrow(catalog)
+          ),
+          as.integer(active_index)
+        ) ||
+        !identical(
+          as.character(active_start$wave_id),
+          as.character(catalog_row$wave_id)
+        ) ||
+        !identical(
+          as.character(active_start$mode),
+          as.character(catalog_row$mode)
+        ) ||
+        !identical(
+          as.character(active_start$phase),
+          as.character(catalog_row$phase)
+        ) ||
+        !identical(
+          as.character(active_start$batch_group),
+          as.character(catalog_row$batch_group)
+        ) ||
+        !identical(
+          rqr_confirm_strict_integer(
+            active_start$batch_target,
+            "active wave batch target", 1L
+          ),
+          as.integer(catalog_row$batch_target)
+        ) ||
+        !identical(
+          as.character(active_start$binding_digest),
+          as.character(binding$binding_digest)
+        ) ||
+        !as.character(active_start$action) %in% c("launch", "skip") ||
+        !identical(
+          rqr_confirm_strict_integer(
+            active_start$worker_limit,
+            "active wave worker limit", 1L
+          ),
+          as.integer(catalog_row$worker_limit)
+        ) ||
+        !identical(
+          rqr_confirm_strict_integer(
+            active_start$task_count,
+            "active wave task count", 1L
+          ),
+          as.integer(catalog_row$task_count)
+        ) ||
+        !identical(
+          active_predecessor_ids, expected_predecessor_ids
+        ) ||
+        !identical(
+          active_predecessor_hashes, expected_predecessor_hashes
+        ) ||
+        !identical(
+          active_predecessor_artifact_hashes,
+          expected_predecessor_artifact_hashes
+        ) ||
+        !grepl(
+          "^[0-9a-f]{64}$",
+          as.character(active_start$wave_task_plan_sha256)
+        ) ||
+        !identical(
+          normalizePath(
+            active_start$output_root, winslash = "/",
+            mustWork = identical(
+              as.character(active_start$action), "launch"
+            )
+          ),
+          expected_output_root
+        ) ||
+        !grepl(
+          "^[0-9]{4}-[0-9]{2}-[0-9]{2}[ T]",
+          as.character(active_start$started_at_utc)
+        )) {
+      stop("An active wave-start record violates its immutable schema.",
+           call. = FALSE)
+    }
+  }
   if (length(start_paths)) {
     expected_names <- sprintf(
       "%04d__%s.json",
@@ -4190,6 +4445,17 @@ rqr_confirm_wave_state_records <- function(
     if (!identical(basename(start_paths), expected_names) ||
         !identical(basename(completion_paths), expected_names)) {
       stop("Wave-state record names do not follow canonical order.",
+           call. = FALSE)
+    }
+  }
+  if (length(active_start_path)) {
+    expected_active_name <- sprintf(
+      "%04d__%s.json",
+      length(completion_paths) + 1L,
+      catalog$wave_id[[length(completion_paths) + 1L]]
+    )
+    if (!identical(basename(active_start_path), expected_active_name)) {
+      stop("The active wave-state record is out of canonical order.",
            call. = FALSE)
     }
   }
@@ -4237,6 +4503,18 @@ rqr_confirm_wave_state_records <- function(
   } else {
     character()
   }
+  if (!is.null(active_start) &&
+      identical(as.character(active_start$action), "launch")) {
+    expected_output_paths <- sort(
+      c(
+        expected_output_paths,
+        normalizePath(
+          active_start$output_root, winslash = "/", mustWork = TRUE
+        )
+      ),
+      method = "radix"
+    )
+  }
   if (!identical(observed_output_paths, expected_output_paths)) {
     stop(
       "The canonical wave-output history contains an orphaned or missing directory.",
@@ -4245,7 +4523,7 @@ rqr_confirm_wave_state_records <- function(
   }
   list(
     starts = starts, completion_values = completion_values,
-    completions = completions
+    completions = completions, active_start = active_start
   )
 }
 

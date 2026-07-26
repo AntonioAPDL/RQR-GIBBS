@@ -158,6 +158,45 @@ test_that("fit provenance retains the primary attestation file path", {
   )
 })
 
+test_that("the native model adapter preserves the exdqlm state contract", {
+  environment <- load_confirmatory_helpers()
+  namespace <- new.env(parent = emptyenv())
+  namespace$as.exdqlm <- function(model) {
+    model$m0 <- matrix(model$m0, ncol = 1L)
+    class(model) <- "exdqlm"
+    model
+  }
+  namespace$is.exdqlm <- function(model) {
+    inherits(model, "exdqlm")
+  }
+  native <- rqr_polytrend(
+    2L, m0 = c(0, 0), C0 = diag(c(4, 1)), name = "trend"
+  ) + rqr_regression(
+    matrix(seq(-1, 1, length.out = 20L), 20L, 1L),
+    m0 = 0, C0 = matrix(2, 1L, 1L), name = "regression"
+  )
+  converted <- environment$rqr_confirm_as_exdqlm_model(
+    native, namespace
+  )
+  expect_s3_class(converted, "exdqlm")
+  expect_identical(dim(converted$FF), dim(native$FF))
+  expect_identical(dim(converted$GG), dim(native$GG))
+  expect_equal(as.numeric(converted$FF), as.numeric(native$FF))
+  expect_equal(as.numeric(converted$GG), as.numeric(native$GG))
+  broken <- new.env(parent = emptyenv())
+  broken$as.exdqlm <- function(model) {
+    model$m0 <- matrix(model$m0, ncol = 1L)
+    model$FF <- model$FF[, -1L, drop = FALSE]
+    class(model) <- "exdqlm"
+    model
+  }
+  broken$is.exdqlm <- namespace$is.exdqlm
+  expect_error(
+    environment$rqr_confirm_as_exdqlm_model(native, broken),
+    "changed the native state-space contract"
+  )
+})
+
 test_that("all Output-15 budgets and sentinel counts are reproduced", {
   environment <- load_confirmatory_helpers()
   contract <- confirmatory_contract(environment)
@@ -1079,7 +1118,7 @@ test_that("append-only wave records reject incomplete or altered history", {
     task_count = wave$task_count,
     wave_task_plan_sha256 = task_digest,
     output_root = output_root,
-    started_at_utc = "2026-07-25T12:00:00 UTC"
+    started_at_utc = "2026-07-25 12:00:00 UTC"
   )
   environment$rqr_confirm_atomic_write_json(started, start_path)
   expect_error(
@@ -1087,6 +1126,14 @@ test_that("append-only wave records reject incomplete or altered history", {
       root, catalog, binding
     ),
     "incomplete wave start"
+  )
+  active_records <- environment$rqr_confirm_wave_state_records(
+    root, catalog, binding, allow_active_start = TRUE
+  )
+  expect_length(active_records$completion_values, 0L)
+  expect_identical(
+    as.character(active_records$active_start$wave_id),
+    as.character(wave$wave_id)
   )
   completed <- c(
     started[c(
@@ -1114,7 +1161,7 @@ test_that("append-only wave records reject incomplete or altered history", {
       wave_artifact_hashes_sha256 =
         wave_manifest_digest,
       all_workers_passed = TRUE,
-      completed_at_utc = "2026-07-25T12:01:00 UTC"
+      completed_at_utc = "2026-07-25 12:01:00 UTC"
     )
   )
   environment$rqr_confirm_atomic_write_json(
