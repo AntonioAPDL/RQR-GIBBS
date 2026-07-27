@@ -38,7 +38,7 @@ ordinary_v1_reference_fixture <- function(config, prior_id) {
 
 ordinary_v1_reference_fit <- function(
     y, X, prior, mode, seed = NULL, n_mcmc = 2L,
-    embedding_contract = NULL) {
+    embedding_contract = NULL, thin = 1L, init = list()) {
   rqr_mcmc_fit(
     y = y, X = X, coverage_level = 0.8,
     learning_rate = 1, lambda_initial = 1,
@@ -49,11 +49,12 @@ ordinary_v1_reference_fit <- function(
     numerical_policy = "fail",
     root_swap_probability = 0.5,
     mcmc_control = list(
-      n_burn = 0L, n_mcmc = n_mcmc, thin = 1L,
+      n_burn = 0L, n_mcmc = n_mcmc, thin = thin,
       seed = seed, store_latent_draws = TRUE,
       store_prior_state_draws = identical(prior$type, "rhs_ns")
     ),
-    embedding_contract = embedding_contract
+    embedding_contract = embedding_contract,
+    init = init
   )
 }
 
@@ -64,21 +65,21 @@ ordinary_v1_reference_bind <- function(segments, field) {
 }
 
 ordinary_v1_expect_exact_continuation <- function(
-    y, X, prior, mode, seed, embedding_contract = NULL) {
+    y, X, prior, mode, seed, embedding_contract = NULL, thin = 1L) {
   full <- ordinary_v1_reference_fit(
     y, X, prior, mode, seed = seed, n_mcmc = 6L,
-    embedding_contract = embedding_contract
+    embedding_contract = embedding_contract, thin = thin
   )
   first <- ordinary_v1_reference_fit(
     y, X, prior, mode, seed = seed, n_mcmc = 2L,
-    embedding_contract = embedding_contract
+    embedding_contract = embedding_contract, thin = thin
   )
   second <- rqr_mcmc_continue(
-    first, n_mcmc = 2L, store_latent_draws = TRUE,
+    first, n_mcmc = 2L, thin = thin, store_latent_draws = TRUE,
     store_prior_state_draws = identical(prior$type, "rhs_ns")
   )
   third <- rqr_mcmc_continue(
-    second, n_mcmc = 2L, store_latent_draws = TRUE,
+    second, n_mcmc = 2L, thin = thin, store_latent_draws = TRUE,
     store_prior_state_draws = identical(prior$type, "rhs_ns")
   )
   segments <- list(first, second, third)
@@ -126,10 +127,17 @@ ordinary_v1_expect_exact_continuation <- function(
     full$checkpoint_state$rng_state
   )
   expect_identical(
-    third$checkpoint_state$completed_iterations, 6L
+    third$checkpoint_state$completed_iterations, 6L * thin
   )
   expect_identical(
     third$continuation_history_contract$generation, 2L
+  )
+  expect_identical(
+    vapply(
+      third$segment_schedule_contract$segments,
+      `[[`, integer(1L), "thin"
+    ),
+    rep(as.integer(thin), 3L)
   )
   expect_silent(
     rqrgibbs:::.rqr_validate_continuation_history(third)
@@ -188,6 +196,94 @@ test_that("all eight static fixture-rate cells are exact under 6 versus 2+2+2", 
     ordinary_v1_expect_exact_continuation(
       fixture$y, fixture$X, prior, cells$mode[[index]],
       cells$seed[[index]]
+    )
+  }
+})
+
+test_that("F03 ridge and zero-mean Gaussian transitions are bitwise identical", {
+  config <- ordinary_v1_reference_config()
+  fixture <- config$fixtures$F03
+  ridge <- rqr_beta_prior(
+    "ridge", ridge = list(tau2 = fixture$ridge$tau2)
+  )
+  gaussian <- rqr_beta_prior(
+    "gaussian", gaussian = fixture$gaussian[-1L]
+  )
+  explicit_init <- list(
+    beta1 = c(intercept = -0.6, x = 0.15, z = -0.1),
+    beta2 = c(intercept = 0.9, x = 0.55, z = 0.2),
+    lambda = 1.25,
+    latent_v = seq(0.7, 1.6, length.out = length(fixture$y))
+  )
+  fields <- c(
+    "samp.beta_root1", "samp.beta_root2", "samp.lambda",
+    "samp.latent_v"
+  )
+  diagnostic_fields <- c(
+    "loss_trace", "scaled_loss_trace", "weighted_loss_trace",
+    "lambda_trace", "effective_learning_rate_trace",
+    "lambda_post_shape_trace", "lambda_post_rate_trace",
+    "precision_strategy_root1", "precision_strategy_root2",
+    "root_swap_trace"
+  )
+
+  for (mode_index in seq_along(c(
+      "fixed_rate", "learned_pseudoresidual_normalized"
+    ))) {
+    mode <- c(
+      "fixed_rate", "learned_pseudoresidual_normalized"
+    )[[mode_index]]
+    seed <- 82840L + mode_index
+    ridge_fit <- ordinary_v1_reference_fit(
+      fixture$y, fixture$X, ridge, mode,
+      seed = seed, n_mcmc = 4L, init = explicit_init
+    )
+    gaussian_fit <- ordinary_v1_reference_fit(
+      fixture$y, fixture$X, gaussian, mode,
+      seed = seed, n_mcmc = 4L, init = explicit_init
+    )
+    for (field in fields) {
+      expect_identical(
+        ridge_fit[[field]], gaussian_fit[[field]],
+        info = paste(mode, field)
+      )
+    }
+    for (field in diagnostic_fields) {
+      expect_identical(
+        ridge_fit$diagnostics[[field]],
+        gaussian_fit$diagnostics[[field]],
+        info = paste(mode, "diagnostic", field)
+      )
+    }
+    for (field in c(
+        "beta_root1", "beta_root2", "lambda", "latent_v",
+        "rng_state", "completed_iterations"
+      )) {
+      expect_identical(
+        ridge_fit$checkpoint_state[[field]],
+        gaussian_fit$checkpoint_state[[field]],
+        info = paste(mode, "checkpoint", field)
+      )
+    }
+  }
+})
+
+test_that("static continuation is exact with thinning greater than one", {
+  config <- ordinary_v1_reference_config()
+  fixture <- config$fixtures$F03
+  ridge <- ordinary_v1_reference_prior(config, "ridge")
+  for (mode_index in seq_along(c(
+      "fixed_rate", "learned_pseudoresidual_normalized"
+    ))) {
+    mode <- c(
+      "fixed_rate", "learned_pseudoresidual_normalized"
+    )[[mode_index]]
+    result <- ordinary_v1_expect_exact_continuation(
+      fixture$y, fixture$X, ridge, mode,
+      seed = 82850L + mode_index, thin = 2L
+    )
+    expect_identical(
+      result$full$checkpoint_state$completed_iterations, 12L
     )
   }
 })

@@ -22,6 +22,7 @@ engine.
 | Component | Mathematical scope | Software status | Article evidence status |
 |---|---|---|---|
 | Ordinary static ridge RQR | Loss target and Gaussian/GIG coefficient blocks | Implemented natively | Small target checks exist; matched results are not reported in the manuscript |
+| Ordinary static full-Gaussian RQR | Proper multivariate Gaussian coefficient prior with a declared mean and positive-definite precision | Implemented natively; ridge is recovered by zero mean and scalar precision | Dense conditional and ridge-equivalence checks exist; matched results are not reported in the manuscript |
 | Ordinary static RHS-NS RQR | Conditional-Gaussian regularization with separate root-specific prior states; fixed or declared learned \(\kappa\) | Implemented natively under the declared RHS-NS joint kernel | Conditional, parity, continuation, and bounded release gates are defined; no nonzero-tilt RHS-NS claim |
 | Ordinary RQR-DESN | Frozen deterministic-feature specialization of static regression | Native readout implemented; the promotion fixture is materialized through a pinned isolated exdqlm reference runtime | Design/readout checks exist; matched DESN evidence remains deferred |
 | Ordinary RQR-DLM | Alternating root-specific FFBS for declared fixed-joint modes | Implemented | Reference and bounded checks exist; comparative results remain governed by the simulation protocol |

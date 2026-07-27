@@ -29,7 +29,8 @@
 #'
 #' @param y Numeric response vector. `NA` entries are allowed and omitted from
 #'   every loss and augmentation update while their design rows are retained.
-#' @param X Finite numeric design matrix.
+#' @param X Finite numeric design matrix. Column names may be absent; when
+#'   supplied, they must be complete, nonempty, and unique.
 #' @param coverage_level Interval coverage level in `(0, 1)`.
 #' @param learning_rate Positive fixed generalized-Bayes rate `omega_R`.
 #' @param lambda_initial Positive initial inverse loss scale for learned mode.
@@ -987,7 +988,8 @@ rqr_posterior_draws.rqr_mcmc <- function(
 #'
 #' @param object An `rqr_mcmc` fit.
 #' @param X_new A finite numeric matrix with the fitted columns in their exact
-#'   order. Named fitted designs require identical column names.
+#'   order. Named fitted designs require identical column names; unnamed
+#'   fitted designs require an unnamed matrix.
 #' @param nd Number of retained draws to use when `draws` is `NULL`.
 #' @param draws Optional output from [rqr_posterior_draws()] for this fit. A
 #'   plain list containing only `beta_root1` and `beta_root2` matrices is also
@@ -1079,6 +1081,11 @@ predict_interval.rqr_mcmc <- function(
       )
     }
     colnames(X_new) <- supplied_names
+  } else if (!is.null(supplied_names)) {
+    stop(
+      "Unnamed fitted designs require unnamed X_new columns.",
+      call. = FALSE
+    )
   }
   X_new
 }

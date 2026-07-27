@@ -8,6 +8,9 @@
   contracts, including complete root-specific prior-state swaps.
 - Added observed-mask missing-response semantics, versioned checkpoints,
   integrity-checked exact continuation, and schema-bound interval prediction.
+- Made fixed-design column identity fail closed: a design is either unnamed or
+  has complete, nonempty, unique column names, and prediction preserves the
+  same named/unnamed contract.
 - Added immutable training and future DESN feature-design contracts. Frozen
   DESN readouts reuse the fixed-design transition; promotion-grade training
   materializations require the pinned isolated exdqlm runtime and a
@@ -40,6 +43,9 @@
   terminal failure/status rows, strict manifest schemas and nonsymlink roots,
   plus an exact six-file monitor contract exercised by ten shell fault
   scenarios.
+- Added bitwise end-to-end ridge/full-Gaussian transition equivalence checks
+  in both accepted rate modes and exact three-segment continuation checks with
+  thinning greater than one.
 - Preserved the existing RQR-DLM transition and its interpretation. The
   pseudo-AL variables augment a generalized-Bayes loss and do not define a
   response likelihood or posterior-predictive response distribution.

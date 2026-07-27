@@ -10,7 +10,8 @@
 \item{object}{An \code{rqr_mcmc} fit.}
 
 \item{X_new}{A finite numeric matrix with the fitted columns in their exact
-order. Named fitted designs require identical column names.}
+order. Named fitted designs require identical column names; unnamed
+fitted designs require an unnamed matrix.}
 
 \item{nd}{Number of retained draws to use when \code{draws} is \code{NULL}.}
 

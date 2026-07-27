@@ -55,7 +55,20 @@
   if (any(!is.finite(X))) {
     stop("X must contain only finite values.", call. = FALSE)
   }
-  if (!is.null(X_names)) colnames(X) <- X_names
+  if (!is.null(X_names)) {
+    if (length(X_names) != ncol(X) ||
+        anyNA(X_names) || any(!nzchar(X_names)) ||
+        anyDuplicated(X_names)) {
+      stop(
+        paste(
+          "If supplied, colnames(X) must be complete, nonempty,",
+          "and unique."
+        ),
+        call. = FALSE
+      )
+    }
+    colnames(X) <- X_names
+  }
   if (!is.null(X_rows)) rownames(X) <- X_rows
 
   observed <- !is.na(y)
@@ -69,10 +82,7 @@
     row_ids <- as.character(seq_len(nrow(X)))
   }
   column_names <- colnames(X)
-  named_columns <- !is.null(column_names) &&
-    length(column_names) == ncol(X) &&
-    !anyNA(column_names) && all(nzchar(column_names)) &&
-    !anyDuplicated(column_names)
+  named_columns <- !is.null(column_names)
 
   contract <- list(
     schema_version = .rqr_static_data_schema(),

@@ -285,6 +285,42 @@ test_that("complete and missing-data fixed-design fits are finite and omit NA ro
   )
 })
 
+test_that("fixed-design column identity is either absent or complete", {
+  make_data <- fd_v1_get(".rqr_fixed_design_data")
+  fixture <- fd_v1_fixture(missing = FALSE)
+
+  named <- make_data(fixture$y, fixture$X)
+  expect_true(named$named_columns)
+  expect_identical(named$column_names, colnames(fixture$X))
+
+  unnamed_X <- unname(fixture$X)
+  unnamed <- make_data(fixture$y, unnamed_X)
+  expect_false(unnamed$named_columns)
+  expect_null(unnamed$column_names)
+  expect_null(colnames(unnamed$X))
+
+  duplicate_X <- fixture$X
+  colnames(duplicate_X) <- c("(Intercept)", "x", "x")
+  expect_error(
+    make_data(fixture$y, duplicate_X),
+    "complete, nonempty, and unique"
+  )
+
+  empty_X <- fixture$X
+  colnames(empty_X) <- c("(Intercept)", "x", "")
+  expect_error(
+    make_data(fixture$y, empty_X),
+    "complete, nonempty, and unique"
+  )
+
+  missing_X <- fixture$X
+  colnames(missing_X) <- c("(Intercept)", "x", NA_character_)
+  expect_error(
+    make_data(fixture$y, missing_X),
+    "complete, nonempty, and unique"
+  )
+})
+
 test_that("full nonzero Gaussian prior gives the dense analytic beta conditional", {
   make_prior <- fd_v1_get("rqr_beta_prior")
   validate_prior <- fd_v1_get(".rqr_prior_validate")
@@ -891,6 +927,36 @@ test_that("prediction requires exact fitted feature names and valid named draws"
   expect_error(
     predict_fit(fit, X_new = X_new, draws = empty_draws),
     "root-coefficient draws are invalid"
+  )
+})
+
+test_that("unnamed fixed designs preserve positional prediction identity", {
+  make_prior <- fd_v1_get("rqr_beta_prior")
+  fixture <- fd_v1_fixture(missing = FALSE)
+  fixture$X <- unname(fixture$X)
+  fit <- fd_v1_fit(
+    fixture,
+    make_prior("ridge", ridge = list(tau2 = 3)),
+    mode = "fixed_rate",
+    n_mcmc = 3L,
+    seed = 1769L
+  )
+  predict_fit <- fd_v1_get("predict_interval.rqr_mcmc")
+  posterior_draws <- fd_v1_get("rqr_posterior_draws.rqr_mcmc")
+  X_new <- unname(fixture$X[1:2, , drop = FALSE])
+  draws <- posterior_draws(fit)
+
+  expect_null(colnames(draws$beta_root1))
+  expect_null(colnames(draws$beta_root2))
+  expect_silent(
+    predict_fit(fit, X_new = X_new, draws = draws)
+  )
+
+  named_X_new <- X_new
+  colnames(named_X_new) <- c("(Intercept)", "x", "z")
+  expect_error(
+    predict_fit(fit, X_new = named_X_new, draws = draws),
+    "Unnamed fitted designs require unnamed X_new columns"
   )
 })
 

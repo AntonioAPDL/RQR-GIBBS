@@ -28,7 +28,8 @@ rqr_mcmc_fit(
 \item{y}{Numeric response vector. \code{NA} entries are allowed and omitted from
 every loss and augmentation update while their design rows are retained.}
 
-\item{X}{Finite numeric design matrix.}
+\item{X}{Finite numeric design matrix. Column names may be absent; when
+supplied, they must be complete, nonempty, and unique.}
 
 \item{coverage_level}{Interval coverage level in \verb{(0, 1)}.}
 
