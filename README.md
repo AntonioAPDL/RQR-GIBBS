@@ -212,14 +212,19 @@ their already frozen standard schedules, holds the full M02 DLM target common
 across chains while supplying distinct target-preserving MCMC warm starts
 through the CRAN interface, moves diagnostic construction inside the
 structured failure boundary, and retains only compact endpoint/diagnostic
-objects instead of accumulating full sentinel fits. It also adds an exact
-one-root partially collapsed component-scale transition: a deterministic C++
-Kalman marginal integrates one root for the scale update, that root is redrawn
-by FFBS, and the existing ASIS move follows. This changes the transition, not
-the generalized posterior or iteration-count budget. A development-only
-four-profile comparison selected three slice sweeps before the complete
-exact-runtime wave gates; its outputs are not scientific or promotion
-evidence. The maximum contract now
+objects instead of accumulating full sentinel fits. It also adds exact
+rootwise partially collapsed component-scale transitions: a deterministic C++
+Kalman marginal integrates and redraws each root in turn before the existing
+centered--noncentered ASIS transition. The symmetric second block was added
+after a clean one-root promotion gate still missed six of 1,150 wave-2
+diagnostics; none of that failed gate is reused. A subsequent one-cycle
+symmetric development wave still missed three of 1,150 diagnostics, so the
+current candidate composes a second exact ASIS cycle before any new promotion
+gate. This changes the transition, not the generalized posterior or
+iteration-count budget. A development-only four-profile comparison selected
+three slice sweeps per rootwise scale block before the complete exact-runtime
+wave gates; its outputs are not scientific or promotion evidence. The maximum
+contract now
 contains 205,658,000 MCMC iterations: 74.8257 percent above the original
 Output-15 budget and 3.2949 percent above the previously launched ASIS-corrected
 budget.  The execution flag remains false until exact-source projection, M01
@@ -227,9 +232,12 @@ and M02 mixing, resource, package, and document gates pass.
 The exact third-run closeout and recovery boundary are recorded in
 `docs/audits/rqr_dlm_main_third_launch_wave2_closeout_20260727.md`,
 `docs/audits/rqr_dlm_second_wave_component_scale_diagnosis_20260727.md`,
+`docs/audits/rqr_dlm_exact_promotion_e9c8068_closeout_20260727.md`,
 `docs/audits/rqr_dlm_main_correction_budget_20260727.csv`, and
 `docs/audits/rqr_dlm_relaunch_readiness_audit_20260727.md`, together with
-`docs/implementation_notes/rqr_dlm_main_third_launch_recovery_plan_20260727.md`.
+`docs/implementation_notes/rqr_dlm_main_third_launch_recovery_plan_20260727.md`
+and
+`docs/implementation_notes/rqr_dlm_two_ASIS_finish_plan_20260727.md`.
 A replacement coordinator may start only from a fresh exact-commit
 authorization and a new ignored run root after the complete first-wave and
 affected-wave correction gates pass.

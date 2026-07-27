@@ -7,12 +7,31 @@ mixing boundary without changing the generalized-Bayes target, priors,
 diagnostic thresholds, scenario design, seeds, estimands, comparator versions,
 or no-retry policy.  Relaunch only after exact-runtime correction gates pass.
 
+## Exact-promotion update
+
+The first clean promotion at
+`e9c8068b4d9f135b7d717c3b072754f3b13f1e1a` passed M01 wave 1, both M02
+waves, the horizon/fixed-design gate, and the resource gate. M01 wave 2
+completed all 49 fits but passed only 1,144 of 1,150 diagnostics. Five
+ordinary one-chain tasks retained inadequate component-scale ESS. The
+one-root transition is therefore superseded by a symmetric composition that
+integrates and redraws root 1 conditional on root 2 and then integrates and
+redraws root 2 conditional on the refreshed root 1. Each block is invariant
+for the same target. A one-cycle symmetric development wave improved the
+second-wave boundary but still passed only 1,147 of 1,150 diagnostics, so the
+current candidate composes a second exact centered--noncentered ASIS cycle.
+The failed gates are not reused, and execution remains false. Exact values
+and hashes are recorded in
+`docs/audits/rqr_dlm_exact_promotion_e9c8068_closeout_20260727.md`; the
+current finish sequence is summarized in
+`docs/implementation_notes/rqr_dlm_two_ASIS_finish_plan_20260727.md`.
+
 ## Independent diagnosis and design decision
 
 | Observed boundary | Diagnosis | Selected correction | Why this is the narrow correction |
 |---|---|---|---|
 | one-state exdqlm projection | base-R dimension dropping changed `1 x T` to `T x 1` | dimension-preserving array extraction followed by the existing `FF` projection | preserves the CRAN 1.1.0 object and observation contract |
-| full second-wave M01 gate | 49 of 49 fits completed at 6,000 retained draws, but only 1,131 of 1,150 diagnostics passed; 12 of 25 tasks failed, principally because \(\log q_1\) retained autocorrelation of 0.93--0.98 | add an exact one-root partially collapsed scale transition before FFBS and ASIS | integrates the state block responsible for the dependence while preserving the target, prior, threshold, seed, and fixed schedule |
+| full second-wave M01 gate | 49 of 49 fits completed at 6,000 retained draws, but only 1,131 of 1,150 diagnostics passed; 12 of 25 tasks failed, principally because \(\log q_1\) retained autocorrelation of 0.93--0.98 | add exact symmetric rootwise partially collapsed scale transitions and two centered--noncentered ASIS cycles | integrates each root path in turn and interweaves the centered and noncentered scale parameterizations while preserving the target, prior, threshold, seed, and fixed schedule |
 | prospective learned component-scale cells | the same role mismatch existed at 3,000 versus 9,000 retained draws | match both learned component-scale roles at 9,000 retained draws before observing those cells | avoids a post-result, method-specific schedule decision |
 | M02 between-chain disagreement | the four supposed initialization profiles shifted `model$m0`, which is a prior mean and therefore part of the target; moreover, CRAN exdqlm 1.1.0 ignores `sig.init` when `init.from.vb=FALSE` | hold `m0`, `C0`, evolution, discounts, and priors common; supply distinct initial state paths and scales through the existing `vb_init_fit` MCMC-initialization interface | restores a valid same-target, genuinely overdispersed multi-chain diagnostic without modifying exdqlm |
 | M02 role schedule mismatch | the standard role was already frozen at 4,000 retained draws per endpoint while the sentinel role used 2,000 | match the complete sentinel role to the 4,000-draw standard role | removes a role-only computational difference prospectively |
@@ -60,9 +79,11 @@ The following alternatives are rejected:
    a sequential worker advances.
 6. Add a deterministic C++ Kalman log-marginal calculation with an independent
    R implementation and dense-Gaussian parity test.
-7. Add the exact partially collapsed block
-   \((q,\theta_1,\theta_{10})\mid(\theta_2,\theta_{20},v,\ldots)\), followed by
-   root-2 FFBS, the existing ASIS move, and the global label swap.
+7. Compose the exact partially collapsed blocks in both root orientations:
+   update \((q,\theta_1,\theta_{10})\) conditional on root 2, then update
+   \((q,\theta_2,\theta_{20})\) conditional on the refreshed root 1.
+8. Compose two exact centered--noncentered ASIS cycles and the global label
+   swap without changing the generalized posterior.
 
 ### B. Fixed schedule
 
@@ -98,7 +119,8 @@ and process-tree resource envelope; iteration counts alone are not presented
 as a wall-clock forecast.
 
 A development-only, shortened comparison on the diagnosed S03 replication 28
-selected three slice sweeps before the exact wave gates. Across four
+selected three slice sweeps per rootwise scale block before the exact wave
+gates. Across four
 overdispersed profiles and 1,500 retained draws per chain, three sweeps passed
 all checked diagnostics; for \(\log q_1\), \(\widehat R=1.0014\), bulk
 ESS \(=405.4\), tail ESS \(=892.6\), and MCSE/SD \(=0.0497\). Two sweeps
@@ -106,6 +128,12 @@ narrowly missed the unchanged bulk-ESS gate at 381.0, while six sweeps failed.
 Three sweeps cost 471.8 seconds per chain on average versus 459.2 seconds for
 two. These dirty-source fits are transition-selection evidence only and cannot
 authorize execution or contribute scientific metrics.
+
+A complete one-cycle symmetric development wave later reduced the failed
+second-wave M01 rows from six to three, but it did not satisfy the unchanged
+diagnostic contract. The current candidate therefore composes a second ASIS
+cycle prospectively and must pass the complete affected wave before it can
+enter an exact-runtime promotion.
 
 The exact maximum workload becomes:
 
@@ -140,7 +168,7 @@ The correction must pass:
 4. dense-Gaussian and R/C++ equality for the partially collapsed scale
    log target, plus byte-identical continuation under its checkpoint contract;
 5. all M01 jobs in both waves under the fixed schedules and the prospectively
-   frozen three-sweep partially collapsed transition;
+   frozen three-sweep symmetric rootwise, two-ASIS transition;
 6. all frozen R-hat, bulk ESS, tail ESS, and MCSE gates;
 7. zero numerical repairs and exact-target status;
 8. a worst-case resource set covering high state dimension, long training

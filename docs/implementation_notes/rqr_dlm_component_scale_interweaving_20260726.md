@@ -109,7 +109,7 @@ ancillarity--sufficiency interweaving transition. The time-zero states remain
 fixed during the noncentered step. The optional global root-label swap follows
 the completed interweaving transition.
 
-## Exact one-root partial collapse
+## Exact symmetric rootwise partial collapse
 
 The complete second-wave development gate subsequently showed that ASIS alone
 does not uniformly remove the scale--trajectory dependence. All 49 fits
@@ -120,9 +120,9 @@ failures involved \(\log q_1\); lag-one autocorrelation reached approximately
 fixed 1,000-iteration burn-in. This is computational diagnostic evidence, not
 a comparative simulation result.
 
-The replacement transition adds an exact partially collapsed block before the
-ordinary root-specific FFBS steps. Condition on root 2, including its time-zero
-state, and integrate root 1 and its time-zero state. Let
+The first replacement transition added an exact partially collapsed block
+before the ordinary root-specific FFBS steps. Condition on root 2, including
+its time-zero state, and integrate root 1 and its time-zero state. Let
 \(\ell_1(\boldsymbol q)\) be the Gaussian Kalman-filter log marginal for the
 root-1 pseudo-observation equation conditional on root 2 and the current RQR
 latent scales. For the conditioned root-2 path, define
@@ -149,20 +149,33 @@ The \(Td_j/2\) contribution is from the single conditioned root. The
 integrated root contributes through the Kalman marginal rather than through a
 second innovation sum. After coordinate slice sampling from this kernel, the
 algorithm draws root 1 by FFBS at the accepted scale and completes its
-time-zero state conditionally. It then draws root 2 conditionally and applies
-the existing centered--noncentered ASIS transition. Thus the new ordering
-composes:
+time-zero state conditionally.
+
+The first clean exact-runtime promotion gate showed why that single
+orientation was incomplete as a mixing correction. Wave 1 passed 920/920
+diagnostics, but wave 2 passed only 1,144/1,150. All 49 fits were exact,
+reproducibility eligible, and within the resource boundary; five ordinary
+one-chain tasks missed the fixed \(\log q_1\) ESS/MCSE gates, and one of those
+also missed the observed-loss gate. No output from that failed gate is reused.
+The remaining dependence is structurally explained by conditioning on root 2
+throughout the only marginal scale move.
+
+The symmetric correction composes the corresponding block in both
+orientations:
 
 1. a target-invariant slice transition for the marginal scale kernel followed
    by exact draws of \((\boldsymbol\theta_1,\theta_{10})\) conditional on the
    accepted scale, root 2, and the remaining augmented variables;
-2. an exact root-2 FFBS and time-zero completion conditional on root 1;
+2. the same marginal scale transition with the root indices exchanged,
+   followed by exact draws of
+   \((\boldsymbol\theta_2,\theta_{20})\) conditional on the refreshed root 1;
 3. the exact centered--noncentered scale interweave; and
 4. the global root-label swap.
 
 Each block leaves the same augmented generalized posterior invariant. The
-root-label swap makes the nominal choice to integrate root 1 symmetric over
-successive iterations. No response likelihood or response-predictive
+second rootwise block is not justified by the label swap: a swap after the
+completed sweep does not remove within-iteration dependence between the scale
+and the conditioned path. No response likelihood or response-predictive
 distribution is introduced. The deterministic marginal calculation is
 implemented in C++ because it is evaluated repeatedly inside the scale slice
 step; the R implementation is retained as an independent parity reference.
@@ -177,10 +190,10 @@ contract enables both moves for every component-scale method, including the
 common-scale ablation. It freezes:
 
 ```text
-one-root partial collapse = TRUE
-integrated root           = root 1
+rootwise partial collapse = TRUE
+integrated-root sequence  = root 1, root 2
 slice width       = 1
-interweave cycles = 1
+interweave cycles = 2
 sweeps per cycle  = 3
 step-out budget   = 100
 shrinkage budget  = 1000
@@ -200,7 +213,13 @@ based on an assumption that more transitions are uniformly better.
 Mean elapsed time rose from 459.2 seconds at two sweeps to 471.8 seconds at
 three. These dirty-source development fits can reject or select a prospective
 transition but cannot authorize execution or enter the scientific analysis.
-The complete first- and second-wave exact-runtime gates remain decisive.
+A later complete one-cycle symmetric development wave passed 1,147 of 1,150
+second-wave M01 diagnostics, improving on the one-root exact-runtime failure
+but still missing fixed single-chain scale diagnostics. The current candidate
+therefore keeps the same symmetric rootwise partial collapse and composes a
+second exact centered--noncentered ASIS cycle before any new clean promotion
+gate. The complete first- and second-wave exact-runtime gates remain
+decisive.
 
 Fixed-rate standard and four-chain sentinel component-scale fits both retain
 6,000 draws after 1,000 burn-in iterations. The learned-scale counterpart
@@ -224,8 +243,8 @@ no-extension rule and does not modify exdqlm.
 The fit, checkpoint, and continuation metadata record these choices. The
 checkpoint digest binds the transition-kernel contract, and continuation
 rejects a mismatch between checkpoint, fit metadata, and requested resumed
-kernel. Fit schema `rqrgibbs_fit/1.11.0` and development package version
-`0.1.0.9023` identify the partially collapsed checkpoint contract.
+kernel. Fit schema `rqrgibbs_fit/1.13.0` and development package version
+`0.1.0.9025` identify the symmetric rootwise, two-ASIS checkpoint contract.
 
 ## Provenance-cost boundary
 

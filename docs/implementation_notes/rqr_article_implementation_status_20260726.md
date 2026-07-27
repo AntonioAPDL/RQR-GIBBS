@@ -45,12 +45,18 @@ The first correction composed the centered inverse-Gamma update with an exact
 noncentered log-scale slice transition. A complete second-wave development
 gate later finished all 49 M01 chains but failed 19 of 1,150 diagnostics
 across 12 of 25 tasks, principally because the component scale retained
-substantial trajectory dependence. The next prospective kernel therefore
-adds an exact one-root partial collapse, evaluated by a deterministic C++
-Kalman marginal and independently checked in R, before the root-specific FFBS
-and existing ASIS move. A shortened four-profile computational comparison
-selected three slice sweeps before the complete exact-source gates; it is
-transition-selection evidence and not a scientific result. The M02 adapter
+substantial trajectory dependence. The next kernel added an exact one-root
+partial collapse, evaluated by a deterministic C++ Kalman marginal and
+independently checked in R, before the root-specific FFBS and existing ASIS
+move. Its first exact-runtime wave-2 gate still missed six of 1,150
+diagnostics, all involving one-chain scale dependence (with one accompanying
+loss failure). The current symmetric correction applies the same invariant
+marginal-update/conditional-redraw block to each root in turn and composes a
+second exact centered--noncentered ASIS cycle after a one-cycle symmetric
+development wave still missed three diagnostics. A shortened four-profile
+computational comparison selected three slice sweeps per rootwise scale block
+before the complete exact-source gates; it is transition-selection evidence
+and not a scientific result. The M02 adapter
 now returns one projected ordinate per
 time and supplies genuinely distinct target-preserving warm starts while
 holding its prior and evolution target common across chains. Uniform schedules

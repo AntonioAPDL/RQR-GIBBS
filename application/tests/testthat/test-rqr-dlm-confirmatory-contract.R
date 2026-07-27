@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.7.0"
+    "rqrgibbs_dlm_main_correction/1.9.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -162,7 +162,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_identical(
     contract$config$implementation_correction$
       component_scale_transition_selection,
-    "three_slice_sweeps_selected_before_exact_complete_wave_gates"
+    "two_ASIS_cycles_selected_before_new_exact_complete_wave_gates"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -202,11 +202,11 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_identical(
     contract$config$frozen_tuning$component_scale_kernel,
     list(
-      one_root_partially_collapsed = TRUE,
-      collapsed_integrated_root = "root1",
+      symmetric_rootwise_partially_collapsed = TRUE,
+      collapsed_integrated_roots = c("root1", "root2"),
       centered_inverse_gamma = TRUE,
       noncentered_slice_interweave = TRUE,
-      interweave_cycles = 1L,
+      interweave_cycles = 2L,
       slice_width = 1,
       slice_sweeps_per_cycle = 3L,
       slice_max_steps = 100L,

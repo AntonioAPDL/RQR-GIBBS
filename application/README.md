@@ -148,11 +148,13 @@ the protected exdqlm source was not changed. A later complete development gate
 finished all 49 M01 chains but failed 19 of 1,150 diagnostics across 12 of 25
 tasks, so the fixed 6,000-draw schedule is not treated as sufficient under
 ASIS alone. The current correction adds dimension-preserving state extraction,
-an exact one-root partially collapsed scale update evaluated by a deterministic
-C++ Kalman marginal, and fixed 6,000-draw and 9,000-draw
-component-scale sentinel schedules. Three slice sweeps were selected in a
-shortened, development-only four-profile comparison before the exact complete
-wave gates. The correction also adds a fixed 4,000-draw-per-endpoint M02
+exact symmetric rootwise partially collapsed scale updates evaluated by a
+deterministic C++ Kalman marginal, and fixed 6,000-draw and 9,000-draw
+component-scale sentinel schedules. Three slice sweeps per rootwise scale
+block were selected in a shortened, development-only four-profile comparison,
+and a second exact centered--noncentered ASIS cycle is now the prospective
+candidate after one symmetric one-cycle wave still missed fixed scale
+diagnostics. The correction also adds a fixed 4,000-draw-per-endpoint M02
 sentinel schedule, one common M02 DLM prior/evolution target across chains,
 distinct target-preserving M02 initial state paths and scales,
 structured publication of post-fitting diagnostic exceptions, and per-chain

@@ -1277,9 +1277,15 @@ Only the conditioned root contributes the \(Td_j/2\) innovation
 normalization and \(E_{2j}\) term; the integrated root contributes through
 \(\ell_{1,\mathrm K}\). Coordinate slice transitions leave
 \eqref{eq:supp-component-scale-partial-collapse} invariant. Conditional on
-the accepted scales, FFBS then redraws root 1 and its time-zero state. Root 2
-is updated conditionally afterward. This is an exact partially collapsed
-transition for the augmented generalized posterior, although each finite
+the accepted scales, FFBS then redraws root 1 and its time-zero state. The
+sampler next exchanges the root indices: it constructs
+\((z_{2t},\vect h_{2t})\) conditional on the refreshed root 1, replaces
+\((\ell_{1,\mathrm K},E_{2j})\) in
+\eqref{eq:supp-component-scale-partial-collapse} by
+\((\ell_{2,\mathrm K},E_{1j})\), updates \(\vect q\), and redraws root 2 and
+its time-zero state. Each marginal scale transition followed by its
+conditional path redraw is invariant for the same augmented generalized
+posterior; hence their root-symmetric composition is invariant. Each finite
 slice sweep is a Markov transition rather than an independent conditional
 draw.
 
@@ -1352,14 +1358,12 @@ the final retained paths.
 
 One ordinary-RQR sweep that leaves the declared augmented target invariant
 updates collapsed \(\kappa\) when it is learned,
-refreshes \(\vect v\), applies the root-1 partially collapsed scale and path
-transition in \eqref{eq:supp-component-scale-partial-collapse}, samples root 2
-and its time-zero state, applies the centered component-scale and noncentered
-updates in the interweaving transition, and optionally swaps the two complete
-root labels. Because that swap occurs with probability one half, the nominal
-choice to integrate root 1 does not privilege one exchangeable root across
-iterations. Static \(q_j=0\) components are separate degenerate models and are
-not part of the inverse-Gamma support.
+refreshes \(\vect v\), applies the root-1 partially collapsed scale/path
+transition in \eqref{eq:supp-component-scale-partial-collapse}, applies its
+root-2 counterpart conditional on the refreshed root 1, applies the centered
+component-scale and noncentered updates in the interweaving transition, and
+optionally swaps the two complete root labels. Static \(q_j=0\) components are
+separate degenerate models and are not part of the inverse-Gamma support.
 
 \section{Reproducibility and Evidence Scope}
 

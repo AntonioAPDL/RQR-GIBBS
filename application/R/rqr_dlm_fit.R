@@ -403,14 +403,14 @@ rqr_dlm_fit <- function(
     "mcmc_control$component_scale_interweave_cycles", 1L
   )
   component_scale_kernel_contract <- list(
-    one_root_partially_collapsed =
+    symmetric_rootwise_partially_collapsed =
       component_mode && isTRUE(component_scale_collapsed_update),
-    collapsed_integrated_root = if (
+    collapsed_integrated_roots = if (
         component_mode && isTRUE(component_scale_collapsed_update)
       ) {
-      "root1"
+      c("root1", "root2")
     } else {
-      "none"
+      character(0)
     },
     centered_inverse_gamma = component_mode,
     noncentered_slice_interweave =
@@ -537,6 +537,7 @@ rqr_dlm_fit <- function(
       q_evolution <- collapsed_update$q
       component_scale_collapsed_iteration[[iter]] <- data.frame(
         iteration = iter,
+        block = 1L,
         component = evolution$component_names,
         evaluations = collapsed_update$diagnostics$evaluations,
         shrink_steps = collapsed_update$diagnostics$shrink_steps,
@@ -568,6 +569,41 @@ rqr_dlm_fit <- function(
     H2[, !observed] <- 0
     z2 <- y * (y - eta1) - constants$xi * v
     z2[!observed] <- NA_real_
+    if (component_mode && isTRUE(component_scale_collapsed_update)) {
+      collapsed_update_root2 <- .rqr_collapsed_component_scale_update(
+        conditioned_theta = theta1,
+        conditioned_theta0 = theta01,
+        z = z2, H = H2, obs_variance = obs_variance,
+        GG = expanded$GG, m0 = expanded$m0, C0 = expanded$C0,
+        evolution = evolution, q = q_evolution,
+        backend = backend_resolved,
+        width = component_scale_slice_width,
+        sweeps = component_scale_slice_sweeps,
+        max_steps = component_scale_slice_max_steps,
+        max_shrink = component_scale_slice_max_shrink
+      )
+      q_evolution <- collapsed_update_root2$q
+      component_scale_collapsed_iteration[[iter]] <- rbind(
+        component_scale_collapsed_iteration[[iter]],
+        data.frame(
+          iteration = iter,
+          block = 2L,
+          component = evolution$component_names,
+          evaluations =
+            collapsed_update_root2$diagnostics$evaluations,
+          shrink_steps =
+            collapsed_update_root2$diagnostics$shrink_steps,
+          sweeps = collapsed_update_root2$diagnostics$sweeps,
+          integrated_root = "root2",
+          conditioned_root = "root1",
+          exact_partially_collapsed = TRUE,
+          stringsAsFactors = FALSE
+        )
+      )
+      evolution_iter <- .rqr_materialize_component_evolution(
+        evolution, q_evolution, T, p
+      )
+    }
     draw2 <- rqr_ffbs_sample(
       z2, H2, obs_variance, expanded$GG, expanded$m0, expanded$C0,
       evolution_iter, backend = backend_resolved, jitter_ladder = jitter_ladder,
@@ -887,6 +923,12 @@ rqr_dlm_fit <- function(
         } else NULL,
         "root1_ffbs",
         if (component_mode) "root1_time0" else NULL,
+        if (
+            component_mode &&
+              isTRUE(component_scale_collapsed_update)
+          ) {
+          "component_scale_root2_collapsed"
+        } else NULL,
         "root2_ffbs",
         if (component_mode) {
           "root2_time0"
@@ -1007,16 +1049,16 @@ rqr_dlm_fit <- function(
     jitter_ladder = object$misc$jitter_ladder
   )
   current_transition_kernel <- list(
-    one_root_partially_collapsed =
+    symmetric_rootwise_partially_collapsed =
       identical(object$model_spec$evolution_mode, "component_scale") &&
         isTRUE(object$misc$component_scale_collapsed_update),
-    collapsed_integrated_root = if (
+    collapsed_integrated_roots = if (
         identical(object$model_spec$evolution_mode, "component_scale") &&
           isTRUE(object$misc$component_scale_collapsed_update)
       ) {
-      "root1"
+      c("root1", "root2")
     } else {
-      "none"
+      character(0)
     },
     centered_inverse_gamma =
       identical(object$model_spec$evolution_mode, "component_scale"),

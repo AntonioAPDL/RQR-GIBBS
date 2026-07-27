@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   implementation_correction = list(
-    schema_version = "rqrgibbs_dlm_main_correction/1.7.0",
+    schema_version = "rqrgibbs_dlm_main_correction/1.9.0",
     failed_authorization_commit =
       "b8b7748ab181a006611b602f64d4edf5be591de6",
     failed_wave_id =
@@ -74,11 +74,25 @@ rqr_dlm_main_simulation <- list(
     second_wave_component_scale_gate_role =
       "full development gate exposed residual q mixing and is not promotion evidence",
     component_scale_collapsed_correction = paste(
-      "exact one_root partially_collapsed q update;",
-      "integrate root1 then redraw root1 before root2 and ASIS"
+      "exact symmetric rootwise partially_collapsed q updates;",
+      "integrate and redraw each root in turn before ASIS"
+    ),
+    first_exact_promotion_failure =
+      "wave2_standard_single_chain_q_ESS_at_e9c8068",
+    first_exact_promotion_outputs_reused = FALSE,
+    symmetric_rootwise_correction_reason = paste(
+      "one-root collapse left q coupled to the conditioned root;",
+      "compose two exact rootwise collapsed blocks"
+    ),
+    symmetric_rootwise_development_failure =
+      "wave2_S03_rep0013_and_rep0094_scale_mixing_with_one_ASIS_cycle",
+    symmetric_rootwise_development_outputs_reused = FALSE,
+    two_ASIS_cycle_correction_reason = paste(
+      "retain both exact rootwise collapsed blocks;",
+      "compose a second exact centered_noncentered scale transition"
     ),
     component_scale_transition_selection =
-      "three_slice_sweeps_selected_before_exact_complete_wave_gates",
+      "two_ASIS_cycles_selected_before_new_exact_complete_wave_gates",
     component_scale_transition_benchmark_role =
       "development_only_no_scientific_metrics_no_promotion",
     correction_budget_path =
@@ -223,11 +237,11 @@ rqr_dlm_main_simulation <- list(
     component_scale_prior = list(shape = 2.5, rate = 0.025),
     common_scale_prior = list(shape = 2.5, rate = 0.025),
     component_scale_kernel = list(
-      one_root_partially_collapsed = TRUE,
-      collapsed_integrated_root = "root1",
+      symmetric_rootwise_partially_collapsed = TRUE,
+      collapsed_integrated_roots = c("root1", "root2"),
       centered_inverse_gamma = TRUE,
       noncentered_slice_interweave = TRUE,
-      interweave_cycles = 1L,
+      interweave_cycles = 2L,
       slice_width = 1,
       slice_sweeps_per_cycle = 3L,
       slice_max_steps = 100L,

@@ -986,17 +986,18 @@ where the \(\mat Q_{jt}\) are fixed positive-definite templates. The multipliers
 shared across the two roots to preserve prior exchangeability. Sampling the
 time-zero states restores the innovation factorization and yields conjugate
 inverse-Gamma updates for each \(q_j\). The implemented component-scale kernel
-first conditions on one root and integrates the other root through its
-Gaussian pseudo-observation model. A slice transition updates the log scales
-under this Kalman marginal, after which FFBS redraws the integrated root at the
-accepted scales. The second root is then updated conditionally. Finally, the
-sampler interweaves the centered inverse-Gamma update with a noncentered slice
-update: state innovations are divided by \(\sqrt{q_j}\), the log scales are
-updated conditional on those standardized innovations, and both root paths
-are reconstructed. The global label swap makes the nominal choice of
-integrated root symmetric across iterations. These partially collapsed and
-interweaving transitions leave the same ordinary generalized posterior
-invariant
+uses two rootwise partially collapsed blocks. It first conditions on root 2,
+integrates root 1 through its Gaussian pseudo-observation model, updates the
+log scales under the resulting Kalman marginal, and redraws root 1 by FFBS.
+It then exchanges the root roles, updates the scales under the root-2 Kalman
+marginal conditional on the refreshed root 1, and redraws root 2. Finally,
+the sampler interweaves the centered inverse-Gamma update with a noncentered
+slice update: state innovations are divided by \(\sqrt{q_j}\), the log scales
+are updated conditional on those standardized innovations, and both root
+paths are reconstructed. Each rootwise marginal-update/conditional-redraw
+block is invariant for the same target, as are the interweaving transition
+and the optional global label swap. Their composition therefore leaves the
+same ordinary generalized posterior invariant
 \citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. The complete
 derivation and scan order appear in the supplement.
 

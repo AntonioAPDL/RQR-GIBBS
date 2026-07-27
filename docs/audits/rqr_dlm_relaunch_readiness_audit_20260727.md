@@ -4,6 +4,12 @@ Date: 2026-07-27 UTC
 
 ## Executive decision
 
+Post-audit update: the exact-runtime promotion at `e9c8068` failed the
+complete second-wave M01 gate at 1,144/1,150 diagnostics. This readiness
+decision is therefore superseded by
+`docs/audits/rqr_dlm_exact_promotion_e9c8068_closeout_20260727.md`; execution
+remains false while a symmetric two-root composition is validated.
+
 The third main-study run is terminal and must not be resumed. Its second
 canonical wave exposed a singleton projection defect, inadequate
 component-scale mixing, incomplete diagnostic-exception publication, and an
@@ -48,7 +54,7 @@ built, installed, and tested below the RQR-GIBBS ignored cache.
 | Finding | Root cause | Implemented correction | Relaunch gate |
 |---|---|---|---|
 | singleton exdqlm projection | base-R extraction dropped the state dimension when \(p=1\) | preserve `p x T` and `p x draws`, then project through `FF` | synthetic and actual isolated CRAN 1.1.0 checks |
-| M01 component-scale failure | strong scale--trajectory dependence remained after centered--noncentered ASIS | integrate one root in an exact partial-collapse scale transition, redraw it by FFBS, then update the other root and apply ASIS | complete M01 gates for canonical waves 1 and 2 |
+| M01 component-scale failure | strong scale--trajectory dependence remained after centered--noncentered ASIS and after a one-root partial collapse | integrate and redraw each root in exact rootwise partial-collapse blocks, then apply two centered--noncentered ASIS cycles | complete M01 gates for canonical waves 1 and 2 |
 | M02 invalid multi-chain comparison | initialization profiles changed `m0`, hence changed the target | hold every target field fixed and use only CRAN's precomputed MCMC-state warm-start interface | common-target and distinct-initialization digests in both wave gates |
 | post-fit diagnostic exception | diagnostic construction was outside the structured failure boundary | publish a hashed failure row, erase method metrics, and stop systemically | failure-injection and source-contract tests |
 | worker RSS at 95.1% of ceiling | full sentinel fits and an immediate RDS readback coexisted | compact each chain immediately, release it, and validate RDS bytes in a clean process | conservative retained-state resource envelope |
@@ -80,10 +86,12 @@ The coefficient \(Td_j/2\) and energy \(E_{2j}\) come from the one
 conditioned root. The integrated root contributes through the Kalman
 marginal. Coordinate slice steps are finite Markov transitions that leave
 this marginal invariant; they are not described as independent exact draws.
-FFBS then redraws the integrated root at the accepted scale. The root-2
-conditional update, centered inverse-Gamma update, noncentered ASIS update,
-and global label swap are each invariant for the same augmented generalized
-posterior. Their composition changes the transition but not the target.
+FFBS then redraws the integrated root at the accepted scale. The symmetric
+candidate repeats the same marginal-update/conditional-redraw block with the
+root roles exchanged, then composes two centered--noncentered ASIS cycles and
+the global label swap. Each block is invariant for the same augmented
+generalized posterior. Their composition changes the transition but not the
+target.
 
 This is an augmented generalized-Bayes loss update. The Gaussian calculation
 is not a response likelihood, and root-state draws are not

@@ -560,7 +560,9 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
       "lambda_collapsed", "latent_v_refresh",
       "component_scale_root1_collapsed",
       "root1_ffbs",
-      "root1_time0", "root2_ffbs", "root2_time0",
+      "root1_time0",
+      "component_scale_root2_collapsed",
+      "root2_ffbs", "root2_time0",
       "component_scale_centered_noncentered_cycles_2",
       "global_root_swap"
     )
@@ -571,12 +573,20 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
   )
   expect_identical(
     nrow(fit$diagnostics$component_scale_collapsed),
-    7L
+    14L
   )
   expect_true(all(
     fit$diagnostics$component_scale_collapsed$
       exact_partially_collapsed
   ))
+  expect_identical(
+    fit$diagnostics$component_scale_collapsed$integrated_root,
+    rep(c("root1", "root2"), times = 7L)
+  )
+  expect_identical(
+    fit$diagnostics$component_scale_collapsed$conditioned_root,
+    rep(c("root2", "root1"), times = 7L)
+  )
   expect_true(all(
     fit$diagnostics$component_scale_interweave$
       exact_noncentered_slice
@@ -819,7 +829,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.11.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.13.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
