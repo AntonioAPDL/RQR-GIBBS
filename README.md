@@ -244,9 +244,51 @@ validation plan are recorded in
 `docs/audits/rqr_dlm_main_wave1_scale_and_projection_failure_20260726.md`,
 `docs/audits/rqr_dlm_main_correction_budget_20260726.csv`, and
 `docs/implementation_notes/rqr_dlm_component_scale_interweaving_20260726.md`.
+
+A second authorization-bound run stopped at its second wave when a fixed
+future-design horizon was reused for shorter training horizons.  The
+prospectively declared horizon is now passed through every generator,
+sentinel, execution, and collection boundary; no result from that run is
+reused.  A third fresh run passed its static-Gaussian sentinel wave but stopped
+fail-closed in the local-level sentinel wave.  The third stop exposed an R
+dimension-dropping defect for one-state exdqlm draws, three fixed-schedule M01
+component-scale mixing failures, incomplete compact publication of
+post-fitting diagnostic exceptions, and insufficient memory margin caused by
+immediate duplicate deserialization of an ignored sentinel sidecar.  None is
+an exdqlm source defect, and neither the exdqlm nor Q-DESN repository is
+modified.
+
+The complete second-wave development gate then showed that schedule matching
+alone was insufficient: all 49 M01 fits completed, but only 1,131 of 1,150
+diagnostics passed and 12 of 25 tasks failed at least one gate, predominantly
+for the shared component scale.  The current fail-closed correction preserves
+singleton state arrays as
+`p`-by-`T` matrices, matches component-scale and M02 sentinel schedules to
+their already frozen standard schedules, holds the full M02 DLM target common
+across chains while supplying distinct target-preserving MCMC warm starts
+through the CRAN interface, moves diagnostic construction inside the
+structured failure boundary, and retains only compact endpoint/diagnostic
+objects instead of accumulating full sentinel fits. It also adds an exact
+one-root partially collapsed component-scale transition: a deterministic C++
+Kalman marginal integrates one root for the scale update, that root is redrawn
+by FFBS, and the existing ASIS move follows. This changes the transition, not
+the generalized posterior or iteration-count budget. A development-only
+four-profile comparison selected three slice sweeps before the complete
+exact-runtime wave gates; its outputs are not scientific or promotion
+evidence. The maximum contract now
+contains 205,658,000 MCMC iterations: 74.8257 percent above the original
+Output-15 budget and 3.2949 percent above the previously launched ASIS-corrected
+budget.  The execution flag remains false until exact-source projection, M01
+and M02 mixing, resource, package, and document gates pass.
+The exact third-run closeout and recovery boundary are recorded in
+`docs/audits/rqr_dlm_main_third_launch_wave2_closeout_20260727.md`,
+`docs/audits/rqr_dlm_second_wave_component_scale_diagnosis_20260727.md`,
+`docs/audits/rqr_dlm_main_correction_budget_20260727.csv`, and
+`docs/audits/rqr_dlm_relaunch_readiness_audit_20260727.md`, together with
+`docs/implementation_notes/rqr_dlm_main_third_launch_recovery_plan_20260727.md`.
 A replacement coordinator may start only from a fresh exact-commit
-authorization and a new ignored run root after both complete first-wave
-correction gates pass.
+authorization and a new ignored run root after the complete first-wave and
+affected-wave correction gates pass.
 
 ## Pinned external reference
 

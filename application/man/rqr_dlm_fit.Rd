@@ -81,9 +81,9 @@ complete 40-character \code{expected_git_commit}, and optional runtime package
 and attestation fields.}
 
 \item{mcmc_control}{A fully named list containing supported iteration, seed,
-storage, backend, progress, jitter, and optional exact component-scale
-interweaving controls. Unknown fields and coercive scalar values are
-rejected.}
+storage, backend, progress, jitter, and optional exact partially
+collapsed/interwoven component-scale controls. Unknown fields and coercive
+scalar values are rejected.}
 
 \item{init}{A fully named list of optional initial state paths, latent
 scales, lambda, evolution scales, time-zero states, and RNG state.

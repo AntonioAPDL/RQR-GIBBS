@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.2.0"
+    "rqrgibbs_dlm_main_correction/1.7.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -147,6 +147,29 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
       second_failed_scientific_metrics_used
   )
   expect_identical(
+    contract$config$implementation_correction$
+      third_failed_authorization_commit,
+    "ce02915f8e6270fb21c4cce1bdc231beeda12292"
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      third_failed_outputs_reused
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      third_failed_scientific_metrics_used
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      component_scale_transition_selection,
+    "three_slice_sweeps_selected_before_exact_complete_wave_gates"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      component_scale_transition_benchmark_role,
+    "development_only_no_scientific_metrics_no_promotion"
+  )
+  expect_identical(
     contract$config$implementation_correction$correction_budget_sha256,
     environment$rqr_confirm_sha256(file.path(
       contract$repo_root,
@@ -166,7 +189,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
       correction_budget$section == "mcmc" &
         correction_budget$planning == "maximum"
     ],
-    199098000
+    205658000
   )
   expect_false(
     contract$config$implementation_correction$
@@ -174,16 +197,18 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   )
   expect_true(
     contract$config$implementation_correction$
-      mcmc_transition_and_standard_schedule_changed
+      mcmc_transition_and_fixed_role_schedule_changed
   )
   expect_identical(
     contract$config$frozen_tuning$component_scale_kernel,
     list(
+      one_root_partially_collapsed = TRUE,
+      collapsed_integrated_root = "root1",
       centered_inverse_gamma = TRUE,
       noncentered_slice_interweave = TRUE,
       interweave_cycles = 1L,
       slice_width = 1,
-      slice_sweeps_per_cycle = 2L,
+      slice_sweeps_per_cycle = 3L,
       slice_max_steps = 100L,
       slice_max_shrink = 1000L,
       target_change = FALSE
@@ -194,12 +219,25 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     list(burn = 1000L, retain = 6000L, thin = 1L)
   )
   expect_identical(
+    contract$config$schedules$dynamic_rqr_component_scale_sentinel,
+    list(burn = 1000L, retain = 6000L, thin = 1L)
+  )
+  expect_identical(
     contract$config$schedules$
       learned_dynamic_rqr_component_scale_standard,
     list(burn = 1500L, retain = 9000L, thin = 1L)
   )
   expect_identical(
+    contract$config$schedules$
+      learned_dynamic_rqr_component_scale_sentinel,
+    list(burn = 1500L, retain = 9000L, thin = 1L)
+  )
+  expect_identical(
     contract$config$schedules$dynamic_quantile_endpoint_standard,
+    list(burn = 1000L, retain = 4000L, thin = 1L)
+  )
+  expect_identical(
+    contract$config$schedules$dynamic_quantile_endpoint_sentinel,
     list(burn = 1000L, retain = 4000L, thin = 1L)
   )
   expect_identical(
@@ -216,7 +254,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     environment$rqr_confirm_dynamic_schedule(
       contract, "M01", TRUE, "A"
     ),
-    contract$config$schedules$dynamic_rqr
+    contract$config$schedules$dynamic_rqr_component_scale_sentinel
   )
   expect_identical(
     environment$rqr_confirm_dynamic_schedule(
@@ -229,7 +267,8 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     environment$rqr_confirm_dynamic_schedule(
       contract, "M11", TRUE, "D"
     ),
-    contract$config$schedules$learned_dynamic_rqr
+    contract$config$schedules$
+      learned_dynamic_rqr_component_scale_sentinel
   )
   expect_identical(
     environment$rqr_confirm_dynamic_quantile_schedule(
@@ -241,7 +280,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     environment$rqr_confirm_dynamic_quantile_schedule(
       contract, "A"
     ),
-    contract$config$schedules$dynamic_quantile_endpoint
+    contract$config$schedules$dynamic_quantile_endpoint_sentinel
   )
   expect_identical(
     environment$rqr_confirm_fixed_design_schedule(
@@ -406,6 +445,189 @@ test_that("multistate exdqlm means are projected to observation ordinates", {
   )
 })
 
+test_that("M02 initialization profiles do not change the DLM target", {
+  environment <- load_confirmatory_helpers()
+  body_text <- paste(
+    deparse(environment$rqr_confirm_dynamic_quantile),
+    collapse = "\n"
+  )
+  expect_false(grepl(
+    "endpoint_model$m0 <-", body_text, fixed = TRUE
+  ))
+  expect_true(grepl(
+    "common_target_digest", body_text, fixed = TRUE
+  ))
+  expect_true(grepl(
+    "profile_changed_target = FALSE", body_text, fixed = TRUE
+  ))
+  expect_true(grepl(
+    "vb_init_fit = endpoint_initialization",
+    body_text, fixed = TRUE
+  ))
+  expect_false(grepl("sig.init =", body_text, fixed = TRUE))
+})
+
+test_that("M02 overdispersed starts are target-preserving MCMC state", {
+  environment <- load_confirmatory_helpers()
+  generated <- list(T = 5L)
+  model <- list(
+    m0 = c(0, 0),
+    FF = rbind(rep(1, 5L), seq(0, 1, length.out = 5L))
+  )
+  endpoint_values <- c(-3, -1, 1, 3)
+  sigma_values <- c(0.5, 1, 2, 4)
+  initializations <- Map(
+    function(endpoint, sigma) {
+      environment$rqr_confirm_exdqlm_mcmc_initialization(
+        generated, model, endpoint, sigma
+      )
+    },
+    endpoint_values, sigma_values
+  )
+  digests <- vapply(
+    initializations,
+    digest::digest,
+    character(1L),
+    algo = "sha256",
+    serialize = TRUE
+  )
+  expect_length(unique(digests), 4L)
+  for (index in seq_along(initializations)) {
+    initial <- initializations[[index]]
+    expect_identical(
+      dim(initial$theta.out$sm), c(2L, 5L)
+    )
+    expect_equal(
+      as.numeric(colSums(model$FF * initial$theta.out$sm)),
+      rep(endpoint_values[[index]], 5L),
+      tolerance = 1e-12
+    )
+    expect_identical(
+      initial$sig.out$E.sigma, sigma_values[[index]]
+    )
+    expect_false(initial$rqrgibbs_initialization$target_changed)
+  }
+  expect_identical(model$m0, c(0, 0))
+})
+
+test_that("singleton retained states preserve state and time dimensions", {
+  environment <- load_confirmatory_helpers()
+  singleton <- array(
+    seq_len(15L), dim = c(state = 1L, time = 5L, draw = 3L)
+  )
+  draw <- environment$rqr_confirm_state_draw_matrix(singleton, 2L)
+  expect_identical(dim(draw), c(1L, 5L))
+  expect_identical(as.numeric(draw), as.numeric(singleton[, , 2L]))
+  expect_identical(
+    dim(environment$rqr_confirm_terminal_state_draws(singleton)),
+    c(1L, 3L)
+  )
+  expect_true(all(is.finite(
+    environment$rqr_confirm_state_ordinate_mean(
+      matrix(1, 1L, 5L), draw
+    )
+  )))
+
+  multistate <- array(
+    seq_len(30L), dim = c(state = 2L, time = 5L, draw = 3L)
+  )
+  expect_identical(
+    dim(environment$rqr_confirm_state_draw_matrix(multistate, 3L)),
+    c(2L, 5L)
+  )
+  expect_identical(
+    dim(environment$rqr_confirm_terminal_state_draws(multistate)),
+    c(2L, 3L)
+  )
+  expect_error(
+    environment$rqr_confirm_state_draw_matrix(
+      array(1, c(1L, 5L)), 1L
+    ),
+    "p-by-T-by-draw"
+  )
+})
+
+test_that("method results compact to ordered finite endpoint contracts", {
+  environment <- load_confirmatory_helpers()
+  value <- list(
+    training_lower = c(-2, -1),
+    training_upper = c(1, 2),
+    future_lower = c(-1.5, -0.5),
+    future_upper = c(1.5, 2.5),
+    endpoint_target = "quantile",
+    fits = list(large = TRUE),
+    diagnostics = list()
+  )
+  compact <- environment$rqr_confirm_compact_method_result(value)
+  expect_identical(
+    names(compact),
+    c(
+      "training_lower", "training_upper",
+      "future_lower", "future_upper", "endpoint_target"
+    )
+  )
+  expect_false("fits" %in% names(compact))
+  expect_error(
+    environment$rqr_confirm_compact_method_result(
+      within(value, future_upper[1L] <- -2)
+    ),
+    "invalid compact endpoint"
+  )
+  expect_error(
+    environment$rqr_confirm_compact_method_result(
+      value[names(value) != "future_lower"]
+    ),
+    "omitted a compact endpoint"
+  )
+})
+
+test_that("execution publishes diagnostic failures without duplicate RDS reads", {
+  runner <- readLines(
+    testthat::test_path(
+      "..", "..", "scripts",
+      "15_run_rqr_dlm_confirmatory_simulation.R"
+    ),
+    warn = FALSE
+  )
+  expect_true(any(grepl(
+    'failure_class <- "mcmc_diagnostic_construction_failure"',
+    runner, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    '"systemic diagnostic construction failure:"',
+    runner, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "failed_metric_fields <- c(",
+    runner, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "failed_metric_fields",
+    runner, fixed = TRUE
+  )))
+  expect_false(any(grepl(
+    "readRDS(temporary)", runner, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "doubling the worker's live memory", runner, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "invisible(gc(full = TRUE))", runner, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "rqr_confirm_compact_method_result(full_result)",
+    runner, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    '"sentinel_diagnostics_ignored.rds"',
+    runner, fixed = TRUE
+  )))
+  expect_false(any(grepl(
+    '"sentinel_chains_ignored.rds"',
+    runner, fixed = TRUE
+  )))
+})
+
 test_that("all Output-15 budgets and sentinel counts are reproduced", {
   environment <- load_confirmatory_helpers()
   contract <- confirmatory_contract(environment)
@@ -421,9 +643,9 @@ test_that("all Output-15 budgets and sentinel counts are reproduced", {
     expect_identical(as.numeric(actual$value), expected[[planning]])
   }
   expected_iterations <- c(
-    initial = 74182000,
-    central = 136640000,
-    maximum = 199098000
+    initial = 76518000,
+    central = 141088000,
+    maximum = 205658000
   )
   for (planning in names(expected_iterations)) {
     actual <- environment$rqr_confirm_iteration_budget_summary(

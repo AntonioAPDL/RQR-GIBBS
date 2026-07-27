@@ -8,6 +8,17 @@ rqr_mvn_draw_cpp <- function(mean, covariance, jitter_ladder, allow_repair) {
     .Call(`_rqrgibbs_rqr_mvn_draw_cpp`, mean, covariance, jitter_ladder, allow_repair)
 }
 
+#' C++ scalar-observation Gaussian filter log marginal
+#'
+#' This deterministic filter is used by an exact partially collapsed
+#' component-scale transition. It performs no covariance repair and consumes
+#' no random numbers.
+#'
+#' @keywords internal
+rqr_filter_log_marginal_cpp <- function(z, H, V, GG, m0, C0, W) {
+    .Call(`_rqrgibbs_rqr_filter_log_marginal_cpp`, z, H, V, GG, m0, C0, W)
+}
+
 #' C++ scalar-observation FFBS kernel
 #'
 #' @keywords internal

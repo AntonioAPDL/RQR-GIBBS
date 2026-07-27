@@ -68,11 +68,21 @@ dispersion: the mandatory partial-collapse order redraws the rate and then
 refreshes every observed latent scale before either root update. Validation
 profiles disperse the roots and, for RHS-NS, their complete prior states.
 
-The pinned exdqlm branch remains a protected, read-only reference:
+The pinned exdqlm branch remains a protected, read-only compatibility and
+comparator reference:
 
 ```text
 branch: feature/rqr-desn-readout-20260716
 commit: dffb71ee70b597d6a716ee74be1cbc99731cd453
 ```
 
-Never compile, install, or load it directly from its checkout.
+The executable RQR and RQR-DLM implementation is now native to the standalone
+`rqrgibbs` package in this repository. The pinned exdqlm commit is a read-only
+compatibility and comparator reference; it is not an implementation target and
+is never compiled, installed, or loaded directly from its checkout. Validation
+materializes that exact commit with `git archive` and builds it only below the
+ignored `application/cache/` tree.
+
+Changes to the native sampler, state-space utilities, or public contracts must
+be made here and covered by the package tests. They must not be propagated into
+an exdqlm source checkout as a side effect of this project.

@@ -1,0 +1,40 @@
+section,planning,item,original_value,corrected_value,unit,multiplier,basis
+design,maximum,canonical_waves,110,110,waves,1.000000,Output-15 incidence and canonical wave plan unchanged
+design,maximum,replication_tasks,8400,8400,tasks,1.000000,maximum plan unchanged
+design,maximum,total_MCMC_chain_executions,40938,40938,chains,1.000000,chain and sentinel incidence unchanged
+mcmc,initial,total_MCMC_iterations,43332000,76518000,iterations,1.765854,fixed role-specific schedules reproduced from the incidence and sentinel plans
+mcmc,central,total_MCMC_iterations,80484000,141088000,iterations,1.752994,fixed role-specific schedules reproduced from the incidence and sentinel plans
+mcmc,maximum,total_MCMC_iterations,117636000,205658000,iterations,1.748257,fixed role-specific schedules reproduced from the incidence and sentinel plans
+schedule,standard,M01_M07_M09_M10_retained_draws,2000,6000,draws,3.000000,one-chain component-scale diagnostic correction
+schedule,sentinel,M01_M07_M09_M10_retained_draws,2000,6000,draws,3.000000,four-chain component-scale schedule matched to the fixed standard role after local-level mixing failure
+schedule,standard,M11_retained_draws,3000,9000,draws,3.000000,one-chain learned-scale component diagnostic correction
+schedule,sentinel,M11_retained_draws,3000,9000,draws,3.000000,four-chain learned component-scale schedule matched prospectively to the fixed standard role
+schedule,standard,M02_retained_draws_per_endpoint,2000,4000,draws,2.000000,projection-correct one-chain comparator diagnostic correction
+schedule,sentinel,M02_retained_draws_per_endpoint,2000,4000,draws,2.000000,four-chain comparator schedule matched prospectively to its standard role after the complete projection-correct local-level gate
+schedule,standard,M03_retained_draws,1500,3000,draws,2.000000,one-chain fixed-design diagnostic correction
+schedule,sentinel,M03_retained_draws,1500,1500,draws,1.000000,four-chain fixed-design schedule unchanged
+benchmark,development,M01_S01_rep0114_fit_elapsed,330.876,496.814,seconds,1.501511,identical 3000-iteration seed stream before versus after exact ASIS
+benchmark,development,M01_S01_rep0114_standard_fit_elapsed,,1083.578,seconds,,7000 total iterations under corrected standard schedule
+benchmark,development,M01_S01_rep0114_peak_RSS,,762672,KiB,,GNU time maximum resident set
+benchmark,development,M01_S03_rep0028_ASIS_only_elapsed,,420.70,seconds,,2500-iteration development chain before partial collapse
+benchmark,development,M01_S03_rep0028_selected_partial_collapse_elapsed,,467.06,seconds,,2500-iteration development chain with three partial-collapse and ASIS slice sweeps
+benchmark,development,M01_S03_rep0028_log_q_bulk_ESS,48.980,108.028,draws,2.205553,same 1500 retained draws in the single-chain transition comparison
+benchmark,development,M01_S03_rep0028_log_q_effective_draws_per_second,0.11643,0.23129,draws_per_second,1.986516,same scenario replication profile and shortened development schedule
+benchmark,development,M01_S03_rep0028_four_chain_log_q_Rhat,,1.00137,ratio,,three-sweep four-profile development comparison
+benchmark,development,M01_S03_rep0028_four_chain_log_q_bulk_ESS,,405.3803,draws,,three-sweep four-profile development comparison with 1500 retained draws per chain
+benchmark,development,M01_S03_rep0028_four_chain_log_q_tail_ESS,,892.6263,draws,,three-sweep four-profile development comparison with 1500 retained draws per chain
+benchmark,development,M01_S03_rep0028_four_chain_log_q_MCSE_over_SD,,0.0497085,ratio,,three-sweep four-profile development comparison
+benchmark,failed_run,maximum_sampled_worker_RSS,,1496068,KiB,,third launch wave-1 worker peak before deferred local-only RDS validation
+benchmark,failed_run,declared_worker_RSS_ceiling,,1572864,KiB,,1.5 GiB process-group ceiling
+projection,initial,safeguarded_upper_CPU_hours_optimistic,947,2787.7,CPU hours,2.943717,iteration and ASIS factors followed by the full-workload hard-case partial-collapse factor
+projection,initial,safeguarded_upper_CPU_hours_central,1458,4291.8,CPU hours,2.943621,iteration and ASIS factors followed by the full-workload hard-case partial-collapse factor
+projection,initial,safeguarded_upper_CPU_hours_conservative,2551,7509.2,CPU hours,2.943630,iteration and ASIS factors followed by the full-workload hard-case partial-collapse factor
+projection,central,safeguarded_upper_CPU_hours_optimistic,1731,5058.3,CPU hours,2.922184,iteration and ASIS factors followed by the full-workload hard-case partial-collapse factor
+projection,central,safeguarded_upper_CPU_hours_central,2663,7781.7,CPU hours,2.922155,iteration and ASIS factors followed by the full-workload hard-case partial-collapse factor
+projection,central,safeguarded_upper_CPU_hours_conservative,4660,13617.3,CPU hours,2.922167,iteration and ASIS factors followed by the full-workload hard-case partial-collapse factor
+projection,maximum,safeguarded_upper_CPU_hours_optimistic,2514,7326.5,CPU hours,2.914280,iteration and ASIS factors followed by the full-workload hard-case partial-collapse factor
+projection,maximum,safeguarded_upper_CPU_hours_central,3868,11272.6,CPU hours,2.914323,iteration and ASIS factors followed by the full-workload hard-case partial-collapse factor
+projection,maximum,safeguarded_upper_CPU_hours_conservative,6768,19724.0,CPU hours,2.914303,iteration and ASIS factors followed by the full-workload hard-case partial-collapse factor
+projection,initial,safeguarded_upper_wall_hours_32_workers,53,156.1,hours,2.945283,whole-study upper envelope applies the measured selected hard-case factor to every method
+projection,central,safeguarded_upper_wall_hours_32_workers,96,280.5,hours,2.921875,whole-study upper envelope applies the measured selected hard-case factor to every method
+projection,maximum,safeguarded_upper_wall_hours_32_workers,140,408.0,hours,2.914286,whole-study upper envelope applies the measured selected hard-case factor to every method

@@ -31,6 +31,22 @@ rqr_confirm_sha256 <- function(path) {
   digest::digest(file = path, algo = "sha256", serialize = FALSE)
 }
 
+rqr_confirm_process_peak_rss_kib <- function() {
+  status_path <- "/proc/self/status"
+  if (!file.exists(status_path)) return(NA_real_)
+  lines <- readLines(status_path, warn = FALSE)
+  value <- sub(
+    "^VmHWM:[[:space:]]*([0-9]+)[[:space:]]+kB.*$",
+    "\\1", grep("^VmHWM:", lines, value = TRUE)
+  )
+  if (length(value) != 1L) return(NA_real_)
+  value <- suppressWarnings(as.numeric(value))
+  if (length(value) != 1L || !is.finite(value) || value < 0) {
+    return(NA_real_)
+  }
+  value
+}
+
 rqr_confirm_primary_provenance_control <- function(
     repo_root, expected_commit, primary_attestation_path) {
   if (!is.character(repo_root) || length(repo_root) != 1L ||
@@ -137,7 +153,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$implementation_correction,
         list(
-          schema_version = "rqrgibbs_dlm_main_correction/1.2.0",
+          schema_version = "rqrgibbs_dlm_main_correction/1.7.0",
           failed_authorization_commit =
             "b8b7748ab181a006611b602f64d4edf5be591de6",
           failed_wave_id =
@@ -175,23 +191,57 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
             "retain_3000_for_one_chain_standard_fits_after_computational_diagnostic_gate",
           script_invocation_correction =
             "invoke monitored shell workers through bash independent of Git mode transport",
+          third_failed_authorization_commit =
+            "ce02915f8e6270fb21c4cce1bdc231beeda12292",
+          third_failed_wave_id =
+            "local_level_gaussian_T200__target0200__sentinel",
+          third_failed_wave_artifact_hashes_sha256 =
+            "418b6facad514e09dc7fe3650c8c172c88fa82cb84054b11506bc885284a039c",
+          third_failed_outputs_reused = FALSE,
+          third_failed_scientific_metrics_used = FALSE,
+          singleton_state_projection_correction =
+            "preserve p_by_T shape when p_equals_one and project through FF",
+          component_scale_sentinel_schedule_correction =
+            "match fixed component_scale standard schedule without adaptive extension",
+          dynamic_quantile_sentinel_schedule_correction =
+            "match fixed M02 standard schedule after the complete projection_correct wave gate",
+          dynamic_quantile_target_correction = paste(
+            "hold m0_C0_discount_and_priors common across chains;",
+            "vary only RNG and target_preserving vb_init_fit state"
+          ),
+          diagnostic_exception_correction =
+            "publish structured atomic failure evidence before fail_closed stop",
+          sentinel_serialization_correction =
+            "persist compact scalar diagnostics without accumulating full sentinel fits",
+          second_wave_component_scale_gate_role =
+            "full development gate exposed residual q mixing and is not promotion evidence",
+          component_scale_collapsed_correction = paste(
+            "exact one_root partially_collapsed q update;",
+            "integrate root1 then redraw root1 before root2 and ASIS"
+          ),
+          component_scale_transition_selection =
+            "three_slice_sweeps_selected_before_exact_complete_wave_gates",
+          component_scale_transition_benchmark_role =
+            "development_only_no_scientific_metrics_no_promotion",
           correction_budget_path =
-            "docs/audits/rqr_dlm_main_correction_budget_20260726.csv",
+            "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
           correction_budget_sha256 =
-            "fe6239069a95e75285448ec01d40752c9bcb96bbecf182fdc239a6d3a1757969",
+            "68e8cbdee5736d8cd85978300eea92753c081ecad8edb5c6afde9c2a9b0e33d8",
           target_prior_seed_or_diagnostic_threshold_changed = FALSE,
-          mcmc_transition_and_standard_schedule_changed = TRUE
+          mcmc_transition_and_fixed_role_schedule_changed = TRUE
         )
       ) ||
       !identical(config$design$candidate_tuning_fits, 0L) ||
       !identical(
         config$frozen_tuning$component_scale_kernel,
         list(
+          one_root_partially_collapsed = TRUE,
+          collapsed_integrated_root = "root1",
           centered_inverse_gamma = TRUE,
           noncentered_slice_interweave = TRUE,
           interweave_cycles = 1L,
           slice_width = 1,
-          slice_sweeps_per_cycle = 2L,
+          slice_sweeps_per_cycle = 3L,
           slice_max_steps = 100L,
           slice_max_shrink = 1000L,
           target_change = FALSE
@@ -202,12 +252,25 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
         list(burn = 1000L, retain = 6000L, thin = 1L)
       ) ||
       !identical(
+        config$schedules$dynamic_rqr_component_scale_sentinel,
+        list(burn = 1000L, retain = 6000L, thin = 1L)
+      ) ||
+      !identical(
         config$schedules$
           learned_dynamic_rqr_component_scale_standard,
         list(burn = 1500L, retain = 9000L, thin = 1L)
       ) ||
       !identical(
+        config$schedules$
+          learned_dynamic_rqr_component_scale_sentinel,
+        list(burn = 1500L, retain = 9000L, thin = 1L)
+      ) ||
+      !identical(
         config$schedules$dynamic_quantile_endpoint_standard,
+        list(burn = 1000L, retain = 4000L, thin = 1L)
+      ) ||
+      !identical(
+        config$schedules$dynamic_quantile_endpoint_sentinel,
         list(burn = 1000L, retain = 4000L, thin = 1L)
       ) ||
       !identical(
@@ -2554,6 +2617,84 @@ rqr_confirm_as_exdqlm_model <- function(model, namespace) {
   converted
 }
 
+rqr_confirm_state_draw_matrix <- function(state, draw,
+                                          label = "state draw") {
+  state <- unclass(state)
+  dimensions <- dim(state)
+  if (length(dimensions) != 3L ||
+      any(!is.finite(dimensions)) ||
+      any(dimensions <= 0L)) {
+    stop(sprintf("%s must be a nonempty p-by-T-by-draw array.", label),
+         call. = FALSE)
+  }
+  draw <- rqr_confirm_strict_integer(
+    draw, paste(label, "index"), 1L, dimensions[[3L]]
+  )
+  value <- matrix(
+    state[, , draw, drop = FALSE],
+    nrow = dimensions[[1L]], ncol = dimensions[[2L]]
+  )
+  if (!identical(unname(dim(value)), unname(dimensions[1:2])) ||
+      any(!is.finite(value))) {
+    stop(sprintf("%s did not preserve a finite p-by-T shape.", label),
+         call. = FALSE)
+  }
+  value
+}
+
+rqr_confirm_terminal_state_draws <- function(state,
+                                             label = "terminal states") {
+  state <- unclass(state)
+  dimensions <- dim(state)
+  if (length(dimensions) != 3L ||
+      any(!is.finite(dimensions)) ||
+      any(dimensions <= 0L)) {
+    stop(sprintf("%s require a nonempty p-by-T-by-draw array.", label),
+         call. = FALSE)
+  }
+  value <- matrix(
+    state[, dimensions[[2L]], , drop = FALSE],
+    nrow = dimensions[[1L]], ncol = dimensions[[3L]]
+  )
+  if (!identical(
+      unname(dim(value)), unname(dimensions[c(1L, 3L)])
+    ) ||
+      any(!is.finite(value))) {
+    stop(sprintf("%s did not preserve a finite p-by-draw shape.", label),
+         call. = FALSE)
+  }
+  value
+}
+
+rqr_confirm_compact_method_result <- function(value) {
+  required <- c(
+    "training_lower", "training_upper",
+    "future_lower", "future_upper", "endpoint_target"
+  )
+  if (!is.list(value) || !all(required %in% names(value))) {
+    stop("A method result omitted a compact endpoint field.",
+         call. = FALSE)
+  }
+  endpoint_names <- required[required != "endpoint_target"]
+  endpoints <- lapply(value[endpoint_names], as.numeric)
+  if (any(vapply(endpoints, function(x) {
+      !length(x) || any(!is.finite(x))
+    }, logical(1L))) ||
+      length(endpoints$training_lower) !=
+        length(endpoints$training_upper) ||
+      length(endpoints$future_lower) !=
+        length(endpoints$future_upper) ||
+      any(endpoints$training_upper < endpoints$training_lower) ||
+      any(endpoints$future_upper < endpoints$future_lower) ||
+      !is.character(value$endpoint_target) ||
+      length(value$endpoint_target) != 1L ||
+      !value$endpoint_target %in% c("rqr", "quantile")) {
+    stop("A method result has an invalid compact endpoint contract.",
+         call. = FALSE)
+  }
+  c(endpoints, list(endpoint_target = value$endpoint_target))
+}
+
 rqr_confirm_state_ordinate_mean <- function(FF, state_mean,
                                             label = "state mean") {
   FF <- as.matrix(FF)
@@ -2714,6 +2855,45 @@ rqr_confirm_exdqlm_reference <- function(contract, attestation_path,
     lower = pmin(raw[, 1L], raw[, 2L]),
     upper = pmax(raw[, 1L], raw[, 2L])
   )
+  singleton_projection_pass <- all(vapply(
+    fits,
+    function(fit) {
+      state <- unclass(fit$samp.theta)
+      dimensions <- dim(state)
+      if (length(dimensions) != 3L ||
+          dimensions[[1L]] != 1L ||
+          dimensions[[2L]] != length(y) ||
+          dimensions[[3L]] != schedule$retain) {
+        return(FALSE)
+      }
+      selected_draws <- unique(c(
+        1L, max(1L, floor(schedule$retain / 2L)), schedule$retain
+      ))
+      all(vapply(
+        selected_draws,
+        function(draw) {
+          ordinate <- rqr_confirm_state_ordinate_mean(
+            fit$model$FF,
+            rqr_confirm_state_draw_matrix(
+              state, draw,
+              label = "The singleton exdqlm reference draw"
+            ),
+            label = "The singleton exdqlm reference draw"
+          )
+          length(ordinate) == length(y) && all(is.finite(ordinate))
+        },
+        logical(1L)
+      )) &&
+        identical(
+          dim(rqr_confirm_terminal_state_draws(
+            state,
+            label = "The singleton exdqlm reference terminal states"
+          )),
+          c(1L, schedule$retain)
+        )
+    },
+    logical(1L)
+  ))
   pass <- all(vapply(fits, function(fit) {
     isTRUE(fit$dqlm.ind) &&
       identical(fit$init.from.vb, FALSE) &&
@@ -2721,6 +2901,7 @@ rqr_confirm_exdqlm_reference <- function(contract, attestation_path,
       all(is.finite(fit$samp.sigma)) &&
       all(fit$samp.sigma > 0)
   }, logical(1L))) &&
+    singleton_projection_pass &&
     all(is.finite(raw)) && all(is.finite(ordered)) &&
     all(ordered[, "upper"] >= ordered[, "lower"])
   if (!pass) stop("The actual exdqlm fit/forecast reference failed.",
@@ -2745,6 +2926,7 @@ rqr_confirm_exdqlm_reference <- function(contract, attestation_path,
       response_predictive_draws_used = FALSE,
       native_model_adapter_checked = TRUE,
       native_model_adapter_fit_checked = TRUE,
+      singleton_retained_state_projection_checked = TRUE,
       native_model_adapter_structures =
         paste(names(adapter_models), collapse = ";"),
       formals_digest = formals_digest,
@@ -3038,21 +3220,26 @@ rqr_confirm_initialization_profile_name <- function(is_sentinel, chain) {
 rqr_confirm_dynamic_schedule <- function(
     contract, method, component_evolution_method, profile_name) {
   learned <- identical(method, "M11")
-  standard_component <- isTRUE(component_evolution_method) &&
-    identical(profile_name, "standard")
-  if (learned && standard_component) {
-    return(
-      contract$config$schedules$
-        learned_dynamic_rqr_component_scale_standard
-    )
+  component <- isTRUE(component_evolution_method)
+  standard <- identical(profile_name, "standard")
+  if (learned && component && standard) {
+    return(contract$config$schedules$
+      learned_dynamic_rqr_component_scale_standard)
+  }
+  if (learned && component) {
+    return(contract$config$schedules$
+      learned_dynamic_rqr_component_scale_sentinel)
   }
   if (learned) {
     return(contract$config$schedules$learned_dynamic_rqr)
   }
-  if (standard_component) {
-    return(
-      contract$config$schedules$dynamic_rqr_component_scale_standard
-    )
+  if (component && standard) {
+    return(contract$config$schedules$
+      dynamic_rqr_component_scale_standard)
+  }
+  if (component) {
+    return(contract$config$schedules$
+      dynamic_rqr_component_scale_sentinel)
   }
   contract$config$schedules$dynamic_rqr
 }
@@ -3062,7 +3249,7 @@ rqr_confirm_dynamic_quantile_schedule <- function(
   if (identical(profile_name, "standard")) {
     contract$config$schedules$dynamic_quantile_endpoint_standard
   } else {
-    contract$config$schedules$dynamic_quantile_endpoint
+    contract$config$schedules$dynamic_quantile_endpoint_sentinel
   }
 }
 
@@ -3182,6 +3369,12 @@ rqr_confirm_dynamic_fit <- function(
       thin = schedule$thin, backend = "cpp",
       store_state_draws = chain > 1L,
       store_latent_draws = FALSE, verbose = FALSE,
+      component_scale_collapsed_update =
+        component_evolution_method &&
+          isTRUE(
+            contract$config$frozen_tuning$
+              component_scale_kernel$one_root_partially_collapsed
+          ),
       component_scale_interweave = component_evolution_method,
       component_scale_interweave_cycles =
         contract$config$frozen_tuning$
@@ -3468,6 +3661,69 @@ rqr_confirm_static_quantile <- function(
   )
 }
 
+rqr_confirm_exdqlm_mcmc_initialization <- function(
+    generated, model, endpoint_initial, sigma_initial) {
+  if (!is.list(generated) || !is.list(model) ||
+      !is.numeric(endpoint_initial) || length(endpoint_initial) != 1L ||
+      !is.finite(endpoint_initial) ||
+      !is.numeric(sigma_initial) || length(sigma_initial) != 1L ||
+      !is.finite(sigma_initial) || sigma_initial <= 0) {
+    stop("The exdqlm MCMC initialization contract is invalid.",
+         call. = FALSE)
+  }
+  T <- rqr_confirm_strict_integer(generated$T, "generated$T", 1L)
+  m0 <- as.numeric(model$m0)
+  FF <- as.matrix(model$FF)
+  p <- length(m0)
+  if (!p || any(!is.finite(m0)) ||
+      !identical(nrow(FF), p) ||
+      !ncol(FF) || any(!is.finite(FF))) {
+    stop("The exdqlm initialization model is invalid.", call. = FALSE)
+  }
+  if (ncol(FF) == 1L && T > 1L) {
+    FF <- matrix(rep(FF[, 1L], T), nrow = p, ncol = T)
+  }
+  if (!identical(ncol(FF), T)) {
+    stop("The exdqlm initialization design does not match T.",
+         call. = FALSE)
+  }
+  theta <- matrix(m0, nrow = p, ncol = T)
+  for (time in seq_len(T)) {
+    direction <- FF[, time]
+    norm2 <- sum(direction^2)
+    if (!is.finite(norm2) || norm2 <= 0) {
+      stop("An exdqlm initialization direction is zero.",
+           call. = FALSE)
+    }
+    theta[, time] <- theta[, time] +
+      direction *
+        (endpoint_initial - sum(direction * theta[, time])) / norm2
+  }
+  projected <- as.numeric(colSums(FF * theta))
+  if (any(!is.finite(projected)) ||
+      max(abs(projected - endpoint_initial)) >
+        100 * .Machine$double.eps * max(1, abs(endpoint_initial))) {
+    stop("The exdqlm initial state path missed its endpoint ordinate.",
+         call. = FALSE)
+  }
+  # CRAN exdqlm 1.1.0 accepts a precomputed warm-start object and, in the
+  # DQLM branch, consumes only these three moments before the first transition.
+  # They alter the algorithmic start, not model$m0, model$C0, discounts,
+  # PriorSigma, or any other target-defining object.
+  list(
+    sig.out = list(E.sigma = as.numeric(sigma_initial)),
+    vts.out = list(E.uts = rep(1 / sigma_initial, T)),
+    theta.out = list(sm = theta),
+    rqrgibbs_initialization = list(
+      schema_version =
+        "rqrgibbs_exdqlm_mcmc_initialization/1.0.0",
+      endpoint_initial = as.numeric(endpoint_initial),
+      sigma_initial = as.numeric(sigma_initial),
+      target_changed = FALSE
+    )
+  )
+}
+
 rqr_confirm_dynamic_quantile <- function(
     contract, generated, chain, ledger, exdqlm_attestation_path,
     profile_name = NULL) {
@@ -3481,6 +3737,14 @@ rqr_confirm_dynamic_quantile <- function(
   namespace <- asNamespace("exdqlm")
   mcmc <- get("exdqlmMCMC", envir = namespace)
   forecast_function <- get("exdqlmForecast", envir = namespace)
+  if (!all(c(
+      "init.from.vb", "vb_init_fit", "PriorSigma", "sig.init"
+    ) %in% names(formals(mcmc)))) {
+    stop(
+      "The attested exdqlm runtime lacks the frozen MCMC warm-start interface.",
+      call. = FALSE
+    )
+  }
   model_bundle <- rqr_confirm_model_bundle(generated)
   model <- rqr_confirm_as_exdqlm_model(
     model_bundle$training, namespace
@@ -3494,7 +3758,6 @@ rqr_confirm_dynamic_quantile <- function(
   }
   if (is.null(profile)) stop("Unknown initialization profile.",
                              call. = FALSE)
-  initial_interval <- rqr_confirm_profile_interval(generated, profile)
   df <- rqr_confirm_discount_profile(
     contract$config, generated, model_bundle$training
   )
@@ -3505,25 +3768,37 @@ rqr_confirm_dynamic_quantile <- function(
   schedule <- rqr_confirm_dynamic_quantile_schedule(
     contract, profile_name
   )
+  profile_endpoints <- rqr_confirm_profile_interval(generated, profile)
   cell_id <- contract$incidence$cell_id[
     contract$incidence$DGP == generated$scenario_id &
       contract$incidence$method == "M02"
   ]
-  fits <- forecasts <- vector("list", 2L)
+  fits <- forecasts <- initializations <- vector("list", 2L)
+  common_target_digest <- digest::digest(
+    list(
+      y = generated$training_y,
+      model = model,
+      discount = df,
+      component_dimensions =
+        model_bundle$training$component_dims,
+      probabilities = unname(probabilities),
+      dqlm_ind = TRUE,
+      fix_sigma = FALSE,
+      prior_sigma = NULL
+    ),
+    algo = "sha256", serialize = TRUE
+  )
   for (index in seq_along(probabilities)) {
     endpoint <- names(probabilities)[[index]]
     endpoint_model <- model
-    direction <- as.numeric(endpoint_model$FF[, 1L])
-    norm2 <- sum(direction^2)
-    if (!is.finite(norm2) || norm2 <= 0) {
-      stop("The dynamic-quantile initial direction is zero.",
-           call. = FALSE)
-    }
-    current <- sum(direction * as.numeric(endpoint_model$m0))
-    endpoint_model$m0 <- endpoint_model$m0 +
-      direction * (
-        initial_interval[[endpoint]] - current
-      ) / norm2
+    endpoint_initialization <-
+      rqr_confirm_exdqlm_mcmc_initialization(
+        generated = generated,
+        model = endpoint_model,
+        endpoint_initial = unname(profile_endpoints[[endpoint]]),
+        sigma_initial = profile$component_scale_multiplier
+      )
+    initializations[[index]] <- endpoint_initialization
     method_key <- paste(
       "method", cell_id, generated$replication, endpoint, chain,
       sep = "|"
@@ -3534,9 +3809,9 @@ rqr_confirm_dynamic_quantile <- function(
         y = generated$training_y,
         p0 = unname(probabilities[[index]]), model = endpoint_model,
         df = df, dim.df = model_bundle$training$component_dims,
-        dqlm.ind = TRUE, init.from.vb = FALSE,
+        dqlm.ind = TRUE, init.from.vb = TRUE,
+        vb_init_fit = endpoint_initialization,
         fix.sigma = FALSE,
-        sig.init = profile$component_scale_multiplier,
         PriorSigma = NULL,
         n.burn = schedule$burn, n.mcmc = schedule$retain,
         verbose = FALSE, trace.diagnostics = FALSE
@@ -3580,7 +3855,15 @@ rqr_confirm_dynamic_quantile <- function(
       )),
       raw_endpoints_retained = TRUE,
       profile = profile_name,
-      sig_init = profile$component_scale_multiplier,
+      initial_endpoint_ordinates = unname(profile_endpoints),
+      initial_sigma = profile$component_scale_multiplier,
+      initialization_digest = digest::digest(
+        initializations, algo = "sha256", serialize = TRUE
+      ),
+      initialization_contract =
+        "target_preserving_precomputed_mcmc_state",
+      common_target_digest = common_target_digest,
+      profile_changed_target = FALSE,
       response_predictive_draws = FALSE
     )
   )
@@ -5379,7 +5662,9 @@ rqr_confirm_scalar_draws <- function(
       output <- matrix(NA_real_, dimensions[[2L]], dimensions[[3L]])
       for (draw in seq_len(dimensions[[3L]])) {
         output[, draw] <- rqr_confirm_state_ordinate_mean(
-          FF, state[, , draw],
+          FF, rqr_confirm_state_draw_matrix(
+            state, draw, label = "An exdqlm retained state draw"
+          ),
           label = "An exdqlm retained state draw"
         )
       }
@@ -5397,11 +5682,9 @@ rqr_confirm_scalar_draws <- function(
       observed_loss = loss_draws(lower, upper)
     )
     terminal_draws <- function(fit) {
-      state <- unclass(fit$samp.theta)
-      dimensions <- dim(state)
-      matrix(
-        state[, dimensions[[2L]], ],
-        nrow = dimensions[[1L]], ncol = dimensions[[3L]]
+      rqr_confirm_terminal_state_draws(
+        fit$samp.theta,
+        label = "The exdqlm retained terminal states"
       )
     }
     model_bundle <- rqr_confirm_model_bundle(generated)

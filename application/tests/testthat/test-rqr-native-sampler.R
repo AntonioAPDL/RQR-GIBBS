@@ -631,6 +631,90 @@ test_that("source digests exclude declared local output roots only", {
   ))
 })
 
+test_that("collapsed component-scale filter matches the dense Gaussian target", {
+  n_time <- 3L
+  m0 <- 0.2
+  C0 <- matrix(0.7, 1L, 1L)
+  GG <- array(1, c(1L, 1L, n_time))
+  H <- matrix(c(1, 0.7, -0.4), 1L, n_time)
+  z <- c(0.3, NA, -0.2)
+  V <- c(0.5, 0.6, 0.8)
+  q <- 0.25
+  fixed <- rqr_evolution_fixed(
+    array(q, c(1L, 1L, n_time))
+  )
+  value_r <- rqrgibbs:::.rqr_filter_log_marginal(
+    z, H, V, GG, m0, C0, fixed, backend = "R"
+  )
+  value_cpp <- rqrgibbs:::.rqr_filter_log_marginal(
+    z, H, V, GG, m0, C0, fixed, backend = "cpp"
+  )
+  state_covariance <- outer(
+    seq_len(n_time), seq_len(n_time),
+    function(left, right) C0[[1L]] + q * pmin(left, right)
+  )
+  observed <- which(!is.na(z))
+  observation_matrix <- diag(as.numeric(H), n_time)
+  dense_covariance <- (
+    observation_matrix %*% state_covariance %*%
+      observation_matrix +
+      diag(V, n_time)
+  )[observed, observed, drop = FALSE]
+  dense_mean <- as.numeric(H) * m0
+  dense_mean <- dense_mean[observed]
+  dense_residual <- z[observed] - dense_mean
+  factor <- chol(dense_covariance)
+  dense_value <- -0.5 * (
+    length(observed) * log(2 * pi) +
+      2 * sum(log(diag(factor))) +
+      sum(forwardsolve(t(factor), dense_residual)^2)
+  )
+  expect_equal(value_r, dense_value, tolerance = 1e-12)
+  expect_equal(value_cpp, dense_value, tolerance = 1e-12)
+
+  component <- rqr_evolution_component_scale(
+    templates = list(matrix(1, 1L, 1L)),
+    component_dims = 1L,
+    prior = list(shape = 2.5, rate = 0.025),
+    initial = q
+  )
+  conditioned_theta0 <- -0.1
+  conditioned_theta <- matrix(c(0.05, -0.12, 0.09), 1L)
+  conditioned <- rqrgibbs:::.rqr_conditioned_component_scale_kernel(
+    conditioned_theta, conditioned_theta0, GG, component
+  )
+  direct_log_density <- function(candidate_q) {
+    candidate_fixed <- rqrgibbs:::.rqr_materialize_component_evolution(
+      component, candidate_q, n_time, 1L
+    )
+    marginal <- rqrgibbs:::.rqr_filter_log_marginal(
+      z, H, V, GG, m0, C0, candidate_fixed, backend = "cpp"
+    )
+    -component$prior$shape * log(candidate_q) -
+      component$prior$rate / candidate_q -
+      conditioned$log_scale_power * log(candidate_q) -
+      conditioned$rate_increment / candidate_q +
+      marginal
+  }
+  candidate_a <- 0.08
+  candidate_b <- 0.45
+  collapsed_a <-
+    rqrgibbs:::.rqr_collapsed_component_scale_log_density(
+      log(candidate_a), conditioned, z, H, V, GG, m0, C0,
+      component, backend = "cpp"
+    )
+  collapsed_b <-
+    rqrgibbs:::.rqr_collapsed_component_scale_log_density(
+      log(candidate_b), conditioned, z, H, V, GG, m0, C0,
+      component, backend = "cpp"
+    )
+  expect_equal(
+    collapsed_a - collapsed_b,
+    direct_log_density(candidate_a) - direct_log_density(candidate_b),
+    tolerance = 1e-12
+  )
+})
+
 test_that("component-scale interweaving is an exact noncentered reparameterization", {
   evolution <- rqr_evolution_component_scale(
     templates = list(
@@ -646,6 +730,18 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
   GG[1, 2, ] <- 1
   theta0 <- c(0.2, -0.1, 0.3)
   q <- c(0.2, 0.4)
+  expanded_templates <- rqrgibbs:::.rqr_expand_component_templates(
+    evolution, 2L, 3L
+  )
+  expect_equal(
+    rqrgibbs:::.rqr_component_W_from_expanded_templates(
+      expanded_templates, evolution$component_dims, q, 2L, 3L
+    ),
+    rqrgibbs:::.rqr_materialize_component_evolution(
+      evolution, q, 2L, 3L
+    )$W,
+    tolerance = 0
+  )
   standardized <- matrix(
     c(0.2, -0.5, 0.7, 1.1, -0.3, 0.4),
     nrow = 3
@@ -777,6 +873,7 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
     mcmc_control = list(
       n_burn = 2, n_mcmc = 5, seed = 1222,
       backend = "cpp", store_state_draws = TRUE,
+      component_scale_collapsed_update = TRUE,
       component_scale_interweave = TRUE,
       component_scale_interweave_cycles = 2L,
       component_scale_slice_sweeps = 1L
@@ -786,7 +883,9 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
   expect_identical(
     fit$diagnostics$partial_collapse_order,
     c(
-      "lambda_collapsed", "latent_v_refresh", "root1_ffbs",
+      "lambda_collapsed", "latent_v_refresh",
+      "component_scale_root1_collapsed",
+      "root1_ffbs",
       "root1_time0", "root2_ffbs", "root2_time0",
       "component_scale_centered_noncentered_cycles_2",
       "global_root_swap"
@@ -796,6 +895,14 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
     nrow(fit$diagnostics$component_scale_interweave),
     14L
   )
+  expect_identical(
+    nrow(fit$diagnostics$component_scale_collapsed),
+    7L
+  )
+  expect_true(all(
+    fit$diagnostics$component_scale_collapsed$
+      exact_partially_collapsed
+  ))
   expect_true(all(
     fit$diagnostics$component_scale_interweave$
       exact_noncentered_slice
@@ -833,6 +940,7 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
     do.call(rbind, lapply(recomputed, `[[`, "rate"))
   )
   continued <- rqr_dlm_continue(fit, n_mcmc = 2)
+  expect_true(continued$misc$component_scale_collapsed_update)
   expect_true(continued$misc$component_scale_interweave)
   uninterrupted <- rqr_dlm_fit(
     y = c(-1.2, -0.4, 0.1, 0.8, 1.4),
@@ -845,6 +953,7 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
     mcmc_control = list(
       n_burn = 2, n_mcmc = 7, seed = 1222,
       backend = "cpp", store_state_draws = TRUE,
+      component_scale_collapsed_update = TRUE,
       component_scale_interweave = TRUE,
       component_scale_interweave_cycles = 2L,
       component_scale_slice_sweeps = 1L
@@ -1626,6 +1735,17 @@ test_that("iteration controls fail with actionable scalar-integer errors", {
       mcmc_control = list(n_burn = NA_integer_, n_mcmc = 2)
     ),
     "mcmc_control\\$n_burn"
+  )
+  expect_error(
+    rqr_dlm_fit(
+      rnorm(6), rqr_polytrend(1L), 0.8,
+      evolution_mode = "fixed_W", W = 0.1,
+      mcmc_control = list(
+        n_burn = 0L, n_mcmc = 2L,
+        component_scale_collapsed_update = TRUE
+      )
+    ),
+    "requires evolution_mode='component_scale'"
   )
 })
 

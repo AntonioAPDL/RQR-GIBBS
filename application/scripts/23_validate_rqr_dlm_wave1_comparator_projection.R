@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-# Re-execute every M02 interval-chain job represented in the first failed
+# Re-execute every M02 interval-chain job represented in one declared
 # confirmatory wave. This validates the corrected state-to-ordinate projection
 # and the original M02 diagnostic contract. It is computational validation,
 # not a comparative simulation result.
@@ -135,7 +135,13 @@ if (nzchar(expected_commit)) {
 }
 
 ledger <- rqr_confirm_seed_ledger(contract, planning = "maximum")
-wave_id <- "static_gaussian_T200__target0200__sentinel"
+wave_id <- Sys.getenv(
+  "RQR_CORRECTION_WAVE_ID",
+  unset = "static_gaussian_T200__target0200__sentinel"
+)
+wave_tag <- if (identical(
+    wave_id, "static_gaussian_T200__target0200__sentinel"
+  )) "wave1" else "wave2"
 wave_plan <- rqr_confirm_wave_plan(contract, planning = "maximum")
 wave_tasks <- wave_plan[
   wave_plan$wave_id == wave_id &
@@ -143,9 +149,9 @@ wave_tasks <- wave_plan[
   ,
   drop = FALSE
 ]
-if (nrow(wave_tasks) != 20L ||
+if (!nrow(wave_tasks) ||
     !all(wave_tasks$embedded_sentinel)) {
-  stop("The canonical first-wave M02 task contract changed.",
+  stop("The canonical M02 correction-wave task contract is empty or invalid.",
        call. = FALSE)
 }
 sentinels <- rqr_confirm_sentinel_map(contract, planning = "maximum")
@@ -177,8 +183,24 @@ for (row in seq_len(nrow(wave_tasks))) {
     )
   }
 }
-if (length(jobs) != 44L) {
-  stop("The canonical comparator gate must contain 44 interval chains.",
+expected_jobs <- sum(vapply(
+  seq_len(nrow(wave_tasks)),
+  function(row) {
+    scenario_id <- wave_tasks$DGP[[row]]
+    replication <- wave_tasks$replication[[row]]
+    cell_id <- contract$incidence$cell_id[
+      contract$incidence$DGP == scenario_id &
+        contract$incidence$method == "M02"
+    ]
+    if (any(
+        sentinels$cell_id == cell_id &
+          sentinels$replication == replication
+      )) 4L else 1L
+  },
+  integer(1L)
+))
+if (!identical(length(jobs), expected_jobs)) {
+  stop("The canonical comparator gate has an incorrect interval-chain count.",
        call. = FALSE)
 }
 workers <- as.integer(Sys.getenv(
@@ -186,7 +208,7 @@ workers <- as.integer(Sys.getenv(
 ))
 if (is.na(workers) || workers < 1L || workers > length(jobs)) {
   stop(
-    "RQR_COMPARATOR_CORRECTION_WORKERS must be an integer from 1 through 44.",
+    "RQR_COMPARATOR_CORRECTION_WORKERS must not exceed the job count.",
     call. = FALSE
   )
 }
@@ -210,20 +232,29 @@ results <- parallel::mclapply(
         exdqlm_attestation_path = exdqlm_attestation,
         profile_name = job$profile
       )
+      scalars <- rqr_confirm_scalar_draws(
+        value, generated, contract, "M02"
+      )
       list(
         ok = TRUE,
         job = job,
         fit_elapsed_seconds =
           as.numeric(proc.time()[["elapsed"]] - fit_started),
-        scalars = rqr_confirm_scalar_draws(
-          value, generated, contract, "M02"
-        )
+        common_target_digest =
+          value$diagnostics$common_target_digest,
+        initialization_digest =
+          value$diagnostics$initialization_digest,
+        profile_changed_target =
+          value$diagnostics$profile_changed_target,
+        scalars = scalars,
+        peak_RSS_KiB = rqr_confirm_process_peak_rss_kib()
       )
     }, error = function(error) {
       list(
         ok = FALSE, job = job,
         error_class = class(error)[[1L]],
-        message = conditionMessage(error)
+        message = conditionMessage(error),
+        peak_RSS_KiB = rqr_confirm_process_peak_rss_kib()
       )
     })
   }
@@ -237,6 +268,53 @@ result_keys <- vapply(
   results, function(result) job_key(result$job), character(1L)
 )
 task_keys <- unique(result_keys)
+peak_values <- vapply(
+  results,
+  function(result) as.numeric(result$peak_RSS_KiB %||% NA_real_),
+  numeric(1L)
+)
+maximum_peak_RSS_KiB <- if (any(is.finite(peak_values))) {
+  max(peak_values[is.finite(peak_values)])
+} else {
+  NA_real_
+}
+common_target_pass <- all(vapply(
+  split(results, result_keys),
+  function(selected) {
+    all(vapply(selected, function(result) {
+      isTRUE(result$ok) &&
+        identical(result$profile_changed_target, FALSE) &&
+        is.character(result$common_target_digest) &&
+        length(result$common_target_digest) == 1L &&
+        grepl("^[0-9a-f]{64}$", result$common_target_digest)
+    }, logical(1L))) &&
+      length(unique(vapply(
+        selected, `[[`, character(1L), "common_target_digest"
+      ))) == 1L
+  },
+  logical(1L)
+))
+overdispersed_initialization_pass <- all(vapply(
+  split(results, result_keys),
+  function(selected) {
+    valid <- all(vapply(selected, function(result) {
+      isTRUE(result$ok) &&
+        is.character(result$initialization_digest) &&
+        length(result$initialization_digest) == 1L &&
+        grepl("^[0-9a-f]{64}$", result$initialization_digest)
+    }, logical(1L)))
+    if (!valid) return(FALSE)
+    digests <- vapply(
+      selected, `[[`, character(1L), "initialization_digest"
+    )
+    if (isTRUE(selected[[1L]]$job$sentinel)) {
+      length(selected) == 4L && length(unique(digests)) == 4L
+    } else {
+      length(selected) == 1L && length(unique(digests)) == 1L
+    }
+  },
+  logical(1L)
+))
 diagnostics <- vector("list", length(task_keys))
 summary_rows <- vector("list", length(task_keys))
 for (index in seq_along(task_keys)) {
@@ -284,6 +362,18 @@ for (index in seq_along(task_keys)) {
       },
       numeric(1L)
     )),
+    maximum_peak_RSS_KiB = {
+      selected_peaks <- vapply(
+        selected,
+        function(result) as.numeric(result$peak_RSS_KiB %||% NA_real_),
+        numeric(1L)
+      )
+      if (any(is.finite(selected_peaks))) {
+        max(selected_peaks[is.finite(selected_peaks)])
+      } else {
+        NA_real_
+      }
+    },
     minimum_bulk_ess = suppressWarnings(min(value$ess_bulk, na.rm = TRUE)),
     minimum_tail_ess = suppressWarnings(min(value$ess_tail, na.rm = TRUE)),
     maximum_mcse_over_sd =
@@ -317,17 +407,18 @@ atomic_rds <- function(value, path) {
 }
 atomic_rds(
   list(jobs = jobs, results = results, diagnostics = diagnostics),
-  file.path(output_root, "wave1_M02_chain_evidence.rds")
+  file.path(output_root, paste0(wave_tag, "_M02_chain_evidence.rds"))
 )
 rqr_confirm_atomic_write_csv(
-  diagnostics, file.path(output_root, "wave1_M02_diagnostics.csv")
+  diagnostics,
+  file.path(output_root, paste0(wave_tag, "_M02_diagnostics.csv"))
 )
 rqr_confirm_atomic_write_csv(
-  summary, file.path(output_root, "wave1_M02_summary.csv")
+  summary, file.path(output_root, paste0(wave_tag, "_M02_summary.csv"))
 )
 manifest <- list(
   schema_version =
-    "rqrgibbs_dlm_wave1_comparator_projection_validation/1.0.0",
+    "rqrgibbs_dlm_wave_comparator_projection_validation/2.0.0",
   source_commit = source_commit,
   source_clean = !nzchar(source_status),
   package_version = as.character(utils::packageVersion("rqrgibbs")),
@@ -367,6 +458,17 @@ manifest <- list(
   thread_environment = as.list(thread_environment),
   comparator_projection =
     "colSums(FF * posterior_state_mean_or_draw)",
+  common_target_across_initialization_profiles = common_target_pass,
+  overdispersed_initialization_profiles_verified =
+    overdispersed_initialization_pass,
+  initialization_contract =
+    "target_preserving_precomputed_mcmc_state",
+  target_fields_held_fixed =
+    paste(
+      "y;m0;C0;FF;GG;discounts;component_dimensions;",
+      "dqlm_ind;fix_sigma;PriorSigma;quantile_probability",
+      sep = ""
+    ),
   comparative_simulation_metrics_used = FALSE,
   failed_outputs_reused = FALSE,
   all_fits_succeeded = all(vapply(results, `[[`, logical(1L), "ok")),
@@ -378,6 +480,12 @@ manifest <- list(
     },
     numeric(1L)
   )),
+  maximum_process_peak_RSS_KiB = maximum_peak_RSS_KiB,
+  declared_worker_memory_ceiling_KiB =
+    contract$config$resources$per_worker_memory_GiB * 1024^2,
+  resource_margin_pass = is.finite(maximum_peak_RSS_KiB) &&
+    maximum_peak_RSS_KiB <=
+      0.80 * contract$config$resources$per_worker_memory_GiB * 1024^2,
   started_at_utc = started_at,
   completed_at_utc = completed_at
 )
@@ -391,15 +499,21 @@ rqr_confirm_atomic_write_csv(
 
 cat(sprintf(
   paste0(
-    "Wave-1 M02 projection gate: %d interval chains, %d endpoint fits, ",
+    "M02 projection gate for %s: %d interval chains, %d endpoint fits, ",
     "%d tasks, %d/%d diagnostics passed.\\n"
   ),
-  length(jobs), 2L * length(jobs), length(task_keys),
+  wave_id, length(jobs), 2L * length(jobs), length(task_keys),
   sum(diagnostics$pass), nrow(diagnostics)
 ))
 if (!isTRUE(manifest$all_fits_succeeded) ||
     !isTRUE(manifest$all_diagnostics_passed) ||
+    !isTRUE(manifest$common_target_across_initialization_profiles) ||
+    !isTRUE(manifest$overdispersed_initialization_profiles_verified) ||
+    !isTRUE(manifest$resource_margin_pass) ||
     (nzchar(expected_commit) &&
       !isTRUE(manifest$primary_reproducibility_eligible))) {
-  stop("The wave-1 M02 projection gate failed.", call. = FALSE)
+  stop(
+    sprintf("The M02 correction gate for %s failed.", wave_id),
+    call. = FALSE
+  )
 }

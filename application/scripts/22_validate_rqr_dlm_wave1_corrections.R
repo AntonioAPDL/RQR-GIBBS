@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-# Re-execute every M01 chain represented in the first failed confirmatory wave.
+# Re-execute every M01 chain represented in one declared confirmatory wave.
 # This is a target-preserving implementation-correction gate, not an
 # inferential simulation run. Heavy chain objects remain under an ignored
 # output root; only compact summaries are candidates for promotion.
@@ -101,7 +101,13 @@ if (nzchar(expected_commit) &&
 contract <- rqr_confirm_read_contract(repo_root)
 rqr_confirm_validate_contract(contract, require_closed = TRUE)
 ledger <- rqr_confirm_seed_ledger(contract, planning = "maximum")
-wave_id <- "static_gaussian_T200__target0200__sentinel"
+wave_id <- Sys.getenv(
+  "RQR_CORRECTION_WAVE_ID",
+  unset = "static_gaussian_T200__target0200__sentinel"
+)
+wave_tag <- if (identical(
+    wave_id, "static_gaussian_T200__target0200__sentinel"
+  )) "wave1" else "wave2"
 wave_plan <- rqr_confirm_wave_plan(contract, planning = "maximum")
 wave_tasks <- wave_plan[
   wave_plan$wave_id == wave_id &
@@ -109,9 +115,10 @@ wave_tasks <- wave_plan[
   ,
   drop = FALSE
 ]
-if (nrow(wave_tasks) != 20L ||
+if (!nrow(wave_tasks) ||
     !all(wave_tasks$embedded_sentinel)) {
-  stop("The canonical first-wave M01 task contract changed.", call. = FALSE)
+  stop("The canonical M01 correction-wave task contract is empty or invalid.",
+       call. = FALSE)
 }
 sentinels <- rqr_confirm_sentinel_map(contract, planning = "maximum")
 
@@ -142,13 +149,29 @@ for (row in seq_len(nrow(wave_tasks))) {
     )
   }
 }
-if (length(jobs) != 44L) {
-  stop("The canonical correction gate must contain 44 M01 chains.",
+expected_jobs <- sum(vapply(
+  seq_len(nrow(wave_tasks)),
+  function(row) {
+    scenario_id <- wave_tasks$DGP[[row]]
+    replication <- wave_tasks$replication[[row]]
+    cell_id <- contract$incidence$cell_id[
+      contract$incidence$DGP == scenario_id &
+        contract$incidence$method == "M01"
+    ]
+    if (any(
+        sentinels$cell_id == cell_id &
+          sentinels$replication == replication
+      )) 4L else 1L
+  },
+  integer(1L)
+))
+if (!identical(length(jobs), expected_jobs)) {
+  stop("The canonical correction gate has an incorrect M01 chain count.",
        call. = FALSE)
 }
 workers <- as.integer(Sys.getenv("RQR_CORRECTION_WORKERS", unset = "8"))
 if (is.na(workers) || workers < 1L || workers > length(jobs)) {
-  stop("RQR_CORRECTION_WORKERS must be an integer from 1 through 44.",
+  stop("RQR_CORRECTION_WORKERS must not exceed the correction job count.",
        call. = FALSE)
 }
 
@@ -172,6 +195,9 @@ results <- parallel::mclapply(
         provenance_control = provenance_control,
         profile_name = job$profile
       )
+      scalars <- rqr_confirm_scalar_draws(
+        value, generated, contract, "M01"
+      )
       list(
         ok = TRUE,
         job = job,
@@ -181,15 +207,15 @@ results <- parallel::mclapply(
           isTRUE(value$fit$provenance$reproducibility_eligible),
         runtime_tree_digest =
           value$fit$provenance$primary_runtime_tree_digest,
-        scalars = rqr_confirm_scalar_draws(
-          value, generated, contract, "M01"
-        )
+        scalars = scalars,
+        peak_RSS_KiB = rqr_confirm_process_peak_rss_kib()
       )
     }, error = function(error) {
       list(
         ok = FALSE, job = job,
         error_class = class(error)[[1L]],
-        message = conditionMessage(error)
+        message = conditionMessage(error),
+        peak_RSS_KiB = rqr_confirm_process_peak_rss_kib()
       )
     })
   }
@@ -203,6 +229,16 @@ result_keys <- vapply(
   results, function(result) job_key(result$job), character(1L)
 )
 task_keys <- unique(result_keys)
+peak_values <- vapply(
+  results,
+  function(result) as.numeric(result$peak_RSS_KiB %||% NA_real_),
+  numeric(1L)
+)
+maximum_peak_RSS_KiB <- if (any(is.finite(peak_values))) {
+  max(peak_values[is.finite(peak_values)])
+} else {
+  NA_real_
+}
 diagnostics <- vector("list", length(task_keys))
 summary_rows <- vector("list", length(task_keys))
 for (index in seq_along(task_keys)) {
@@ -251,6 +287,18 @@ for (index in seq_along(task_keys)) {
       },
       numeric(1L)
     )),
+    maximum_peak_RSS_KiB = {
+      selected_peaks <- vapply(
+        selected,
+        function(result) as.numeric(result$peak_RSS_KiB %||% NA_real_),
+        numeric(1L)
+      )
+      if (any(is.finite(selected_peaks))) {
+        max(selected_peaks[is.finite(selected_peaks)])
+      } else {
+        NA_real_
+      }
+    },
     log_q_1_rhat = if (nrow(q_row)) q_row$rhat[[1L]] else NA_real_,
     log_q_1_ess_bulk =
       if (nrow(q_row)) q_row$ess_bulk[[1L]] else NA_real_,
@@ -277,16 +325,17 @@ atomic_rds <- function(value, path) {
 }
 atomic_rds(
   list(jobs = jobs, results = results, diagnostics = diagnostics),
-  file.path(output_root, "wave1_M01_chain_evidence.rds")
+  file.path(output_root, paste0(wave_tag, "_M01_chain_evidence.rds"))
 )
 rqr_confirm_atomic_write_csv(
-  diagnostics, file.path(output_root, "wave1_M01_diagnostics.csv")
+  diagnostics,
+  file.path(output_root, paste0(wave_tag, "_M01_diagnostics.csv"))
 )
 rqr_confirm_atomic_write_csv(
-  summary, file.path(output_root, "wave1_M01_summary.csv")
+  summary, file.path(output_root, paste0(wave_tag, "_M01_summary.csv"))
 )
 manifest <- list(
-  schema_version = "rqrgibbs_dlm_wave1_correction_validation/1.0.0",
+  schema_version = "rqrgibbs_dlm_wave_correction_validation/2.0.0",
   source_commit = source_commit,
   source_clean = !nzchar(source_status),
   package_version = as.character(utils::packageVersion("rqrgibbs")),
@@ -316,7 +365,7 @@ manifest <- list(
   standard_component_scale_schedule =
     contract$config$schedules$dynamic_rqr_component_scale_standard,
   sentinel_component_scale_schedule =
-    contract$config$schedules$dynamic_rqr,
+    contract$config$schedules$dynamic_rqr_component_scale_sentinel,
   exact_target_preserving_kernel = TRUE,
   comparative_simulation_metrics_used = FALSE,
   failed_outputs_reused = FALSE,
@@ -349,6 +398,12 @@ manifest <- list(
     },
     numeric(1L)
   )),
+  maximum_process_peak_RSS_KiB = maximum_peak_RSS_KiB,
+  declared_worker_memory_ceiling_KiB =
+    contract$config$resources$per_worker_memory_GiB * 1024^2,
+  resource_margin_pass = is.finite(maximum_peak_RSS_KiB) &&
+    maximum_peak_RSS_KiB <=
+      0.80 * contract$config$resources$per_worker_memory_GiB * 1024^2,
   all_diagnostics_passed = all(diagnostics$pass),
   started_at_utc = started_at,
   completed_at_utc = completed_at
@@ -363,15 +418,19 @@ rqr_confirm_atomic_write_csv(
 
 cat(sprintf(
   paste0(
-    "Wave-1 M01 correction gate: %d chains, %d tasks, ",
+    "M01 correction gate for %s: %d chains, %d tasks, ",
     "%d/%d diagnostics passed.\\n"
   ),
-  length(jobs), length(task_keys), sum(diagnostics$pass),
+  wave_id, length(jobs), length(task_keys), sum(diagnostics$pass),
   nrow(diagnostics)
 ))
 if (!isTRUE(manifest$all_fits_succeeded) ||
     !isTRUE(manifest$all_diagnostics_passed) ||
+    !isTRUE(manifest$resource_margin_pass) ||
     (nzchar(expected_commit) &&
       !isTRUE(manifest$all_fits_reproducibility_eligible))) {
-  stop("The wave-1 M01 correction gate failed.", call. = FALSE)
+  stop(
+    sprintf("The M01 correction gate for %s failed.", wave_id),
+    call. = FALSE
+  )
 }

@@ -165,6 +165,28 @@ rqr_evolution_component_scale <- function(
   ), class = "rqr_evolution")
 }
 
+.rqr_component_W_from_expanded_templates <- function(
+    templates, component_dims, q, n_time, p) {
+  component_dims <- as.integer(component_dims)
+  q <- as.numeric(q)
+  if (length(templates) != length(component_dims) ||
+      length(q) != length(component_dims) ||
+      sum(component_dims) != p ||
+      any(!is.finite(q)) || any(q <= 0)) {
+    stop(
+      "The expanded component-covariance inputs are invalid.",
+      call. = FALSE
+    )
+  }
+  indices <- .rqr_component_indices(component_dims)
+  W <- array(0, c(p, p, n_time))
+  for (j in seq_along(component_dims)) {
+    W[indices[[j]], indices[[j]], ] <-
+      q[[j]] * templates[[j]]
+  }
+  W
+}
+
 .rqr_draw_initial_state <- function(theta1, G1, m0, C0, W1) {
   theta1 <- as.numeric(theta1)
   m0 <- as.numeric(m0)
@@ -303,6 +325,177 @@ rqr_evolution_component_scale <- function(
   list(
     draw = 1 / stats::rgamma(length(posterior$shape), posterior$shape, rate = posterior$rate),
     posterior = posterior
+  )
+}
+
+.rqr_conditioned_component_scale_kernel <- function(
+    theta, theta0, GG, evolution) {
+  theta <- as.matrix(theta)
+  p <- nrow(theta)
+  T <- ncol(theta)
+  theta0 <- as.numeric(theta0)
+  if (length(theta0) != p ||
+      any(!is.finite(c(theta, theta0)))) {
+    stop(
+      "The conditioned component-scale path inputs are invalid.",
+      call. = FALSE
+    )
+  }
+  GG <- .rqr_expand_cube(GG, T, p, "GG")
+  templates <- .rqr_expand_component_templates(evolution, T, p)
+  dims <- as.integer(evolution$component_dims)
+  indices <- .rqr_component_indices(dims)
+  rate_increment <- numeric(length(dims))
+  previous <- theta0
+  for (tt in seq_len(T)) {
+    innovation <- theta[, tt] - drop(GG[, , tt] %*% previous)
+    for (j in seq_along(dims)) {
+      U <- chol(templates[[j]][, , tt])
+      whitened <- forwardsolve(
+        t(U), innovation[indices[[j]]]
+      )
+      rate_increment[[j]] <- rate_increment[[j]] +
+        0.5 * sum(whitened^2)
+    }
+    previous <- theta[, tt]
+  }
+  list(
+    log_scale_power = 0.5 * T * dims,
+    rate_increment = rate_increment
+  )
+}
+
+.rqr_collapsed_component_scale_log_density <- function(
+    log_q, conditioned_kernel, z, H, obs_variance, GG, m0, C0,
+    evolution, backend = c("cpp", "R", "auto"),
+    expanded_templates = NULL) {
+  log_q <- as.numeric(log_q)
+  candidate_q <- exp(log_q)
+  if (length(candidate_q) != length(evolution$component_dims) ||
+      any(!is.finite(candidate_q)) || any(candidate_q <= 0)) {
+    return(-Inf)
+  }
+  backend <- match.arg(backend)
+  candidate_W <- if (is.null(expanded_templates)) {
+    .rqr_materialize_component_evolution(
+      evolution, candidate_q, length(z), length(m0)
+    )$W
+  } else {
+    .rqr_component_W_from_expanded_templates(
+      expanded_templates, evolution$component_dims, candidate_q,
+      length(z), length(m0)
+    )
+  }
+  log_marginal <- tryCatch(
+    if (identical(backend, "cpp") &&
+        !is.null(expanded_templates)) {
+      as.numeric(rqr_filter_log_marginal_cpp(
+        z, H, obs_variance, GG, m0, C0, candidate_W
+      ))
+    } else {
+      .rqr_filter_log_marginal(
+        z = z, H = H, V = obs_variance, GG = GG,
+        m0 = m0, C0 = C0,
+        evolution = structure(
+          list(mode = "component_scale", W = candidate_W),
+          class = "rqr_evolution"
+        ),
+        backend = backend
+      )
+    },
+    error = function(error) -Inf
+  )
+  if (!is.finite(log_marginal)) return(-Inf)
+  sum(
+    -(as.numeric(evolution$prior$shape) +
+        conditioned_kernel$log_scale_power) * log_q -
+      (as.numeric(evolution$prior$rate) +
+        conditioned_kernel$rate_increment) / candidate_q
+  ) + log_marginal
+}
+
+.rqr_collapsed_component_scale_update <- function(
+    conditioned_theta, conditioned_theta0, z, H, obs_variance,
+    GG, m0, C0, evolution, q, backend = c("cpp", "R", "auto"),
+    width = 1, sweeps = 1L, max_steps = 100L,
+    max_shrink = 1000L) {
+  q <- as.numeric(q)
+  log_q <- log(q)
+  if (length(q) != length(evolution$component_dims) ||
+      any(!is.finite(q)) || any(q <= 0)) {
+    stop(
+      "The collapsed component-scale values are invalid.",
+      call. = FALSE
+    )
+  }
+  backend <- match.arg(backend)
+  conditioned_theta <- as.matrix(conditioned_theta)
+  n_time <- ncol(conditioned_theta)
+  p <- nrow(conditioned_theta)
+  z <- as.numeric(z)
+  H <- as.matrix(H)
+  obs_variance <- as.numeric(obs_variance)
+  GG <- .rqr_expand_cube(GG, n_time, p, "GG")
+  m0 <- as.numeric(m0)
+  C0 <- as.matrix(C0)
+  if (length(z) != n_time ||
+      !identical(dim(H), c(p, n_time)) ||
+      length(obs_variance) != n_time ||
+      length(m0) != p ||
+      !identical(dim(C0), c(p, p)) ||
+      any(is.nan(z)) || any(is.infinite(z)) ||
+      any(!is.finite(c(H, obs_variance, GG, m0, C0))) ||
+      any(obs_variance <= 0)) {
+    stop(
+      "The collapsed component-scale filter inputs are invalid.",
+      call. = FALSE
+    )
+  }
+  expanded_templates <- .rqr_expand_component_templates(
+    evolution, n_time, p
+  )
+  conditioned_kernel <- .rqr_conditioned_component_scale_kernel(
+    conditioned_theta, conditioned_theta0, GG, evolution
+  )
+  evaluate <- function(candidate_log_q) {
+    .rqr_collapsed_component_scale_log_density(
+      candidate_log_q, conditioned_kernel, z, H, obs_variance,
+      GG, m0, C0, evolution, backend, expanded_templates
+    )
+  }
+  sweeps <- .rqr_scalar_integer(
+    sweeps, "collapsed component-scale slice sweeps", 1L
+  )
+  evaluation_count <- shrink_count <- integer(length(q))
+  for (sweep in seq_len(sweeps)) {
+    for (j in seq_along(q)) {
+      coordinate_density <- function(value) {
+        candidate <- log_q
+        candidate[[j]] <- value
+        evaluate(candidate)
+      }
+      update <- .rqr_slice_log_coordinate(
+        log_q[[j]], coordinate_density, width = width,
+        max_steps = max_steps, max_shrink = max_shrink
+      )
+      log_q[[j]] <- update$value
+      evaluation_count[[j]] <-
+        evaluation_count[[j]] + update$evaluations
+      shrink_count[[j]] <-
+        shrink_count[[j]] + update$shrink_steps
+    }
+  }
+  list(
+    q = exp(log_q),
+    diagnostics = list(
+      evaluations = evaluation_count,
+      shrink_steps = shrink_count,
+      sweeps = sweeps,
+      integrated_root_path = TRUE,
+      conditioned_root_path = TRUE,
+      exact_partially_collapsed = TRUE
+    ),
+    conditioned_kernel = conditioned_kernel
   )
 }
 

@@ -1324,6 +1324,46 @@ and
 \theta_{k0}\mid\theta_{k1},\vect q
 \sim\Normal(m_{k0}^\star,C_{k0}^\star).
 \]
+
+The implemented transition first reduces scale--trajectory dependence by
+integrating one root path. Conditional on root 2 and the current latent scales,
+the root-1 pseudo-observation equation has
+\[
+z_{1t}=y_t(y_t-\eta_{2t})-\xi_cv_t,\qquad
+\vect h_{1t}=(y_t-\eta_{2t})\vect f_t,
+\]
+with observation variance \(V_t\); missing observations are omitted from the
+filter update. Let \(\ell_{1,\mathrm K}(\vect q)\) denote the resulting
+Gaussian Kalman-filter log marginal after integrating
+\((\vect\theta_{1,1:T},\vect\theta_{10})\) under the initial law
+\(\Normal(m_0,C_0)\). For the conditioned root, define
+\[
+E_{2j}=\frac12\sum_{t=1}^T
+d_{2jt}^\top Q_{jt}^{-1}d_{2jt}.
+\]
+On the log scale \(x_j=\log q_j\), the partially collapsed scale kernel is,
+up to a constant,
+\begin{equation}
+\log\pi(\vect x\mid
+\vect\theta_{2,0:T},\vect v,\ldots)
+=
+\ell_{1,\mathrm K}(\exp\vect x)
+-\sum_{j=1}^J\left[
+\left(a_j+\frac{Td_j}{2}\right)x_j+
+(b_j+E_{2j})e^{-x_j}
+\right].
+\label{eq:supp-component-scale-partial-collapse}
+\end{equation}
+Only the conditioned root contributes the \(Td_j/2\) innovation
+normalization and \(E_{2j}\) term; the integrated root contributes through
+\(\ell_{1,\mathrm K}\). Coordinate slice transitions leave
+\eqref{eq:supp-component-scale-partial-collapse} invariant. Conditional on
+the accepted scales, FFBS then redraws root 1 and its time-zero state. Root 2
+is updated conditionally afterward. This is an exact partially collapsed
+transition for the augmented generalized posterior, although each finite
+slice sweep is a Markov transition rather than an independent conditional
+draw.
+
 The centered inverse-Gamma update can mix slowly when a component is nearly
 static because its scale is strongly coupled to the realized state
 innovations. The implemented confirmatory kernel therefore uses
@@ -1391,12 +1431,16 @@ invariant. The time-zero states are held fixed during the noncentered step.
 Conditional shape and rate values saved for diagnostics are recomputed from
 the final retained paths.
 
-One exact ordinary-RQR sweep updates collapsed \(\kappa\) when it is learned, refreshes
-\(\vect v\), samples each root path and its time-zero state, applies the
-centered component-scale and noncentered updates in the interweaving
-transition, and optionally swaps the two complete root labels. Static
-\(q_j=0\) components are separate degenerate models and are not part of the
-inverse-Gamma support.
+One ordinary-RQR sweep that leaves the declared augmented target invariant
+updates collapsed \(\kappa\) when it is learned,
+refreshes \(\vect v\), applies the root-1 partially collapsed scale and path
+transition in \eqref{eq:supp-component-scale-partial-collapse}, samples root 2
+and its time-zero state, applies the centered component-scale and noncentered
+updates in the interweaving transition, and optionally swaps the two complete
+root labels. Because that swap occurs with probability one half, the nominal
+choice to integrate root 1 does not privilege one exchangeable root across
+iterations. Static \(q_j=0\) components are separate degenerate models and are
+not part of the inverse-Gamma support.
 
 \section{Reproducibility and Evidence Scope}
 
