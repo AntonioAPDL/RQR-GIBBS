@@ -36,6 +36,110 @@
   }
 }
 
+.rqr_filter_log_marginal_r <- function(
+    z, H, V, GG, m0, C0, evolution) {
+  z <- as.numeric(z)
+  H <- as.matrix(H)
+  V <- as.numeric(V)
+  m0 <- as.numeric(m0)
+  p <- length(m0)
+  n_time <- length(z)
+  GG <- .rqr_expand_cube(GG, n_time, p, "GG")
+  evo <- .rqr_prepare_evolution(evolution, p, n_time)
+  if (!identical(evo$mode_code, 0L)) {
+    stop(
+      "The filter log marginal requires a fixed covariance cube.",
+      call. = FALSE
+    )
+  }
+  m_previous <- m0
+  C_previous <- .rqr_symmetrize(C0)
+  log_marginal <- 0
+  for (tt in seq_len(n_time)) {
+    a <- drop(GG[, , tt] %*% m_previous)
+    R <- .rqr_symmetrize(
+      GG[, , tt] %*% C_previous %*% t(GG[, , tt]) +
+        evo$W[, , tt]
+    )
+    m <- a
+    C <- R
+    if (!is.na(z[[tt]])) {
+      h <- H[, tt]
+      rh <- drop(R %*% h)
+      q <- drop(crossprod(h, rh)) + V[[tt]]
+      if (!is.finite(q) || q <= 0) {
+        stop(
+          "Nonpositive forecast variance in filter log marginal.",
+          call. = FALSE
+        )
+      }
+      residual <- z[[tt]] - drop(crossprod(h, a))
+      log_marginal <- log_marginal - 0.5 * (
+        log(2 * pi) + log(q) + residual^2 / q
+      )
+      m <- a + rh * residual / q
+      C <- .rqr_symmetrize(R - tcrossprod(rh) / q)
+    }
+    if (any(!is.finite(c(m, C)))) {
+      stop("Nonfinite filter-log-marginal recursion.", call. = FALSE)
+    }
+    m_previous <- m
+    C_previous <- C
+  }
+  if (!is.finite(log_marginal)) {
+    stop("The Gaussian filter log marginal is nonfinite.", call. = FALSE)
+  }
+  as.numeric(log_marginal)
+}
+
+.rqr_filter_log_marginal <- function(
+    z, H, V, GG, m0, C0, evolution,
+    backend = c("cpp", "R", "auto")) {
+  backend <- .rqr_resolve_ffbs_backend(match.arg(backend))
+  z <- as.numeric(z)
+  if (!length(z) || any(is.nan(z)) || any(is.infinite(z))) {
+    stop(
+      "z must be nonempty and may contain finite values or NA only.",
+      call. = FALSE
+    )
+  }
+  m0 <- as.numeric(m0)
+  if (!length(m0) || any(!is.finite(m0))) {
+    stop("m0 must be a nonempty finite vector.", call. = FALSE)
+  }
+  p <- length(m0)
+  n_time <- length(z)
+  H <- .rqr_expand_columns(H, n_time, "H")
+  V <- as.numeric(V)
+  if (length(V) != n_time || any(!is.finite(V)) || any(V <= 0)) {
+    stop("V must be finite, positive, and length(z).", call. = FALSE)
+  }
+  GG <- .rqr_expand_cube(GG, n_time, p, "GG")
+  if (any(!is.finite(GG))) {
+    stop("GG must contain only finite values.", call. = FALSE)
+  }
+  C0 <- .rqr_validate_symmetric_matrix(C0, "C0")
+  if (!all(dim(C0) == c(p, p))) {
+    stop("C0 dimensions must match length(m0).", call. = FALSE)
+  }
+  .rqr_chol_with_jitter(C0, jitter_ladder = 0)
+  evo <- .rqr_prepare_evolution(evolution, p, n_time)
+  if (!identical(evo$mode_code, 0L)) {
+    stop(
+      "The filter log marginal requires a fixed covariance cube.",
+      call. = FALSE
+    )
+  }
+  if (identical(backend, "cpp")) {
+    return(as.numeric(rqr_filter_log_marginal_cpp(
+      z, H, V, GG, m0, C0, evo$W
+    )))
+  }
+  .rqr_filter_log_marginal_r(
+    z, H, V, GG, m0, C0, evolution
+  )
+}
+
 .rqr_ffbs_r <- function(z, H, V, GG, m0, C0, evolution, sample = FALSE,
                         jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6),
                         numerical_policy = c("fail", "record_repair")) {

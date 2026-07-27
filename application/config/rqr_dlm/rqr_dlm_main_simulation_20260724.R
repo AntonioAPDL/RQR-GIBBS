@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   implementation_correction = list(
-    schema_version = "rqrgibbs_dlm_main_correction/1.2.0",
+    schema_version = "rqrgibbs_dlm_main_correction/1.7.0",
     failed_authorization_commit =
       "b8b7748ab181a006611b602f64d4edf5be591de6",
     failed_wave_id =
@@ -49,15 +49,47 @@ rqr_dlm_main_simulation <- list(
       "retain_3000_for_one_chain_standard_fits_after_computational_diagnostic_gate",
     script_invocation_correction =
       "invoke monitored shell workers through bash independent of Git mode transport",
+    third_failed_authorization_commit =
+      "ce02915f8e6270fb21c4cce1bdc231beeda12292",
+    third_failed_wave_id =
+      "local_level_gaussian_T200__target0200__sentinel",
+    third_failed_wave_artifact_hashes_sha256 =
+      "418b6facad514e09dc7fe3650c8c172c88fa82cb84054b11506bc885284a039c",
+    third_failed_outputs_reused = FALSE,
+    third_failed_scientific_metrics_used = FALSE,
+    singleton_state_projection_correction =
+      "preserve p_by_T shape when p_equals_one and project through FF",
+    component_scale_sentinel_schedule_correction =
+      "match fixed component_scale standard schedule without adaptive extension",
+    dynamic_quantile_sentinel_schedule_correction =
+      "match fixed M02 standard schedule after the complete projection_correct wave gate",
+    dynamic_quantile_target_correction = paste(
+      "hold m0_C0_discount_and_priors common across chains;",
+      "vary only RNG and target_preserving vb_init_fit state"
+    ),
+    diagnostic_exception_correction =
+      "publish structured atomic failure evidence before fail_closed stop",
+    sentinel_serialization_correction =
+      "persist compact scalar diagnostics without accumulating full sentinel fits",
+    second_wave_component_scale_gate_role =
+      "full development gate exposed residual q mixing and is not promotion evidence",
+    component_scale_collapsed_correction = paste(
+      "exact one_root partially_collapsed q update;",
+      "integrate root1 then redraw root1 before root2 and ASIS"
+    ),
+    component_scale_transition_selection =
+      "three_slice_sweeps_selected_before_exact_complete_wave_gates",
+    component_scale_transition_benchmark_role =
+      "development_only_no_scientific_metrics_no_promotion",
     correction_budget_path =
-      "docs/audits/rqr_dlm_main_correction_budget_20260726.csv",
+      "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
     correction_budget_sha256 =
-      "fe6239069a95e75285448ec01d40752c9bcb96bbecf182fdc239a6d3a1757969",
+      "68e8cbdee5736d8cd85978300eea92753c081ecad8edb5c6afde9c2a9b0e33d8",
     target_prior_seed_or_diagnostic_threshold_changed = FALSE,
-    mcmc_transition_and_standard_schedule_changed = TRUE
+    mcmc_transition_and_fixed_role_schedule_changed = TRUE
   ),
   diagnostic_pilot_execution_authorized = FALSE,
-  confirmatory_execution_authorized = TRUE,
+  confirmatory_execution_authorized = FALSE,
   implemented_modes = c(
     "preflight", "oracle-reference", "sentinel-core",
     "execute-confirmatory", "collect", "audit"
@@ -191,11 +223,13 @@ rqr_dlm_main_simulation <- list(
     component_scale_prior = list(shape = 2.5, rate = 0.025),
     common_scale_prior = list(shape = 2.5, rate = 0.025),
     component_scale_kernel = list(
+      one_root_partially_collapsed = TRUE,
+      collapsed_integrated_root = "root1",
       centered_inverse_gamma = TRUE,
       noncentered_slice_interweave = TRUE,
       interweave_cycles = 1L,
       slice_width = 1,
-      slice_sweeps_per_cycle = 2L,
+      slice_sweeps_per_cycle = 3L,
       slice_max_steps = 100L,
       slice_max_shrink = 1000L,
       target_change = FALSE
@@ -215,13 +249,19 @@ rqr_dlm_main_simulation <- list(
     dynamic_rqr = list(burn = 1000L, retain = 2000L, thin = 1L),
     dynamic_rqr_component_scale_standard =
       list(burn = 1000L, retain = 6000L, thin = 1L),
+    dynamic_rqr_component_scale_sentinel =
+      list(burn = 1000L, retain = 6000L, thin = 1L),
     learned_dynamic_rqr =
       list(burn = 1500L, retain = 3000L, thin = 1L),
     learned_dynamic_rqr_component_scale_standard =
       list(burn = 1500L, retain = 9000L, thin = 1L),
+    learned_dynamic_rqr_component_scale_sentinel =
+      list(burn = 1500L, retain = 9000L, thin = 1L),
     dynamic_quantile_endpoint =
       list(burn = 1000L, retain = 2000L, thin = 1L),
     dynamic_quantile_endpoint_standard =
+      list(burn = 1000L, retain = 4000L, thin = 1L),
+    dynamic_quantile_endpoint_sentinel =
       list(burn = 1000L, retain = 4000L, thin = 1L),
     fixed_design_rqr = list(burn = 500L, retain = 1500L, thin = 1L),
     fixed_design_rqr_standard =

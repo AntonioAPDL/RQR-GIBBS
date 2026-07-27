@@ -159,6 +159,88 @@ Rcpp::List rqr_mvn_draw_cpp(const arma::vec& mean,
   );
 }
 
+//' C++ scalar-observation Gaussian filter log marginal
+//'
+//' This deterministic filter is used by an exact partially collapsed
+//' component-scale transition. It performs no covariance repair and consumes
+//' no random numbers.
+//'
+//' @keywords internal
+// [[Rcpp::export]]
+double rqr_filter_log_marginal_cpp(const arma::vec& z,
+                                   const arma::mat& H,
+                                   const arma::vec& V,
+                                   const arma::cube& GG,
+                                   const arma::vec& m0,
+                                   const arma::mat& C0,
+                                   const arma::cube& W) {
+  const arma::uword p = m0.n_elem;
+  const arma::uword T = z.n_elem;
+  if (T < 1 || H.n_rows != p || H.n_cols != T || V.n_elem != T ||
+      GG.n_rows != p || GG.n_cols != p || GG.n_slices != T ||
+      C0.n_rows != p || C0.n_cols != p ||
+      W.n_rows != p || W.n_cols != p || W.n_slices != T) {
+    Rcpp::stop("Incompatible filter-log-marginal dimensions.");
+  }
+  if (arma::any(V <= 0.0) || !V.is_finite() || !H.is_finite() ||
+      !GG.is_finite() || !m0.is_finite() || !C0.is_finite() ||
+      !W.is_finite()) {
+    Rcpp::stop(
+      "Filter-log-marginal inputs must be finite and V must be positive."
+    );
+  }
+
+  arma::vec mprev = m0;
+  arma::mat Cprev = symm(C0);
+  double log_marginal = 0.0;
+  const double log_two_pi = std::log(2.0 * std::acos(-1.0));
+  for (arma::uword t = 0; t < T; ++t) {
+    const double zt = z(t);
+    if (R_IsNaN(zt) && !R_IsNA(zt)) {
+      Rcpp::stop(
+        "z may contain finite values or NA only; NaN is invalid."
+      );
+    }
+    if (std::isinf(zt)) {
+      Rcpp::stop(
+        "z may contain finite values or NA only; Inf is invalid."
+      );
+    }
+    const arma::mat Gt = GG.slice(t);
+    const arma::vec at = Gt * mprev;
+    const arma::mat Rt = symm(
+      Gt * Cprev * Gt.t() + W.slice(t)
+    );
+    arma::vec mt = at;
+    arma::mat Ct = Rt;
+    if (!R_IsNA(zt)) {
+      const arma::vec h = H.col(t);
+      const arma::vec rh = Rt * h;
+      const double qt = arma::dot(h, rh) + V(t);
+      if (!std::isfinite(qt) || qt <= 0.0) {
+        Rcpp::stop(
+          "Nonpositive forecast variance in filter log marginal."
+        );
+      }
+      const double residual = zt - arma::dot(h, at);
+      log_marginal += -0.5 * (
+        log_two_pi + std::log(qt) + residual * residual / qt
+      );
+      mt = at + rh * residual / qt;
+      Ct = symm(Rt - (rh * rh.t()) / qt);
+    }
+    if (!mt.is_finite() || !Ct.is_finite()) {
+      Rcpp::stop("Nonfinite filter-log-marginal recursion.");
+    }
+    mprev = mt;
+    Cprev = Ct;
+  }
+  if (!std::isfinite(log_marginal)) {
+    Rcpp::stop("The Gaussian filter log marginal is nonfinite.");
+  }
+  return log_marginal;
+}
+
 //' C++ scalar-observation FFBS kernel
 //'
 //' @keywords internal

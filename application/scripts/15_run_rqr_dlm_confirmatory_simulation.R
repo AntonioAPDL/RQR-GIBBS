@@ -999,7 +999,16 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
     )
     on.exit(unlink(temporary, force = TRUE), add = TRUE)
     saveRDS(value, temporary, compress = "xz")
-    readRDS(temporary)
+    # This is a heavy, ignored diagnostic sidecar rather than a promotion
+    # artifact.  Do not deserialize a second copy while the fitted chains are
+    # still resident: the byte hash and later clean-process validation provide
+    # the integrity boundary without doubling the worker's live memory.
+    if (!file.exists(temporary) ||
+        !is.finite(file.info(temporary)$size) ||
+        file.info(temporary)$size <= 0) {
+      stop("Atomic RDS serialization produced no finite bytes.",
+           call. = FALSE)
+    }
     rqr_confirm_sha256(temporary)
     if (file.exists(path) || !file.rename(temporary, path)) {
       stop("Atomic RDS publication failed.", call. = FALSE)
@@ -1095,13 +1104,15 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
         1L
       }
       chain_results <- vector("list", chains)
+      scalar_chains <- if (mcmc_method) vector("list", chains) else NULL
       failure <- NULL
+      diagnostic_failure <- NULL
       started <- proc.time()[["elapsed"]]
       for (chain in seq_len(chains)) {
         profile_name <- rqr_confirm_initialization_profile_name(
           method_is_sentinel, chain
         )
-        chain_results[[chain]] <- tryCatch(
+        full_result <- tryCatch(
           rqr_confirm_execute_method(
             contract, generated, method, chain, ledger,
             provenance_control = provenance_control,
@@ -1115,9 +1126,35 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           }
         )
         if (!is.null(failure)) break
+        if (mcmc_method) {
+          scalar_chains[[chain]] <- tryCatch(
+            rqr_confirm_scalar_draws(
+              full_result, generated, contract, method
+            ),
+            error = function(error) {
+              diagnostic_failure <<- error
+              NULL
+            }
+          )
+          if (!is.null(diagnostic_failure)) {
+            failure <- diagnostic_failure
+            full_result <- NULL
+            invisible(gc(full = TRUE))
+            break
+          }
+        }
+        chain_results[[chain]] <-
+          rqr_confirm_compact_method_result(full_result)
+        full_result <- NULL
+        invisible(gc(full = TRUE))
       }
       elapsed <- proc.time()[["elapsed"]] - started
       if (!is.null(failure)) {
+        failure_class <- if (!is.null(diagnostic_failure)) {
+          "mcmc_diagnostic_construction_failure"
+        } else {
+          class(failure)[[1L]]
+        }
         replication_failure_index <- replication_failure_index + 1L
         failure_index <- failure_index + 1L
         failure_row <- data.frame(
@@ -1125,7 +1162,7 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           cell_id = method_cell_id,
           replication = task$replication[[1L]],
           method = method,
-          failure_class = class(failure)[[1L]],
+          failure_class = failure_class,
           message_digest = digest::digest(
             conditionMessage(failure), algo = "sha256",
             serialize = FALSE
@@ -1142,7 +1179,7 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           cell_id = method_cell_id,
           replication = task$replication[[1L]],
           method = method, status = "failed",
-          failure_class = class(failure)[[1L]],
+          failure_class = failure_class,
           training_loss = NA_real_, heldout_rqr_loss = NA_real_,
           aggregate_coverage = NA_real_, mean_width = NA_real_,
           central_interval_score = NA_real_,
@@ -1168,7 +1205,7 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           ]] <- NA_real_
         }
         failure_message <- conditionMessage(failure)
-        global_stop <- grepl(
+        global_stop <- !is.null(diagnostic_failure) || grepl(
           "provenance|runtime|source|seed|artifact|exact joint target",
           failure_message, ignore.case = TRUE
         )
@@ -1183,8 +1220,13 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
         )
         if (isTRUE(global_stop)) {
           cell_stop <- TRUE
+          failure_prefix <- if (!is.null(diagnostic_failure)) {
+            "systemic diagnostic construction failure:"
+          } else {
+            "systemic fit failure:"
+          }
           cell_stop_message <- paste(
-            "systemic fit failure:", method,
+            failure_prefix, method,
             digest::digest(
               failure_message, algo = "sha256", serialize = FALSE
             )
@@ -1258,15 +1300,83 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
         ]] <- metrics[[sprintf("coverage_h%02d", horizon)]]
       }
       if (mcmc_method) {
-        scalar_chains <- lapply(chain_results, function(value) {
-          rqr_confirm_scalar_draws(
-            value, generated, contract, method
-          )
-        })
-        diagnostics <- rqr_confirm_chain_diagnostics(
-          scalar_chains, contract, sentinel = method_is_sentinel,
-          method = method, generated = generated
+        diagnostic_failure <- NULL
+        diagnostic_payload <- tryCatch(
+          {
+            if (length(scalar_chains) != chains ||
+                any(vapply(scalar_chains, is.null, logical(1L)))) {
+              stop("A compact scalar chain is missing.", call. = FALSE)
+            }
+            list(
+              scalar_chains = scalar_chains,
+              diagnostics = rqr_confirm_chain_diagnostics(
+                scalar_chains, contract,
+                sentinel = method_is_sentinel,
+                method = method, generated = generated
+              )
+            )
+          },
+          error = function(error) {
+            diagnostic_failure <<- error
+            NULL
+          }
         )
+        if (!is.null(diagnostic_failure)) {
+          failure_class <- "mcmc_diagnostic_construction_failure"
+          failure_message <- conditionMessage(diagnostic_failure)
+          replication_result_index <- length(replication_results)
+          replication_results[[replication_result_index]]$status <-
+            "failed"
+          replication_results[[replication_result_index]]$failure_class <-
+            failure_class
+          failed_metric_fields <- c(
+            "training_loss", "heldout_rqr_loss",
+            "aggregate_coverage", "mean_width",
+            "central_interval_score", "future_mean_lower",
+            "future_mean_upper", "future_mean_midpoint",
+            "endpoint_rmse_lower", "endpoint_rmse_upper",
+            "cross_target_distance", "realized_root_rmse",
+            grep(
+              "^coverage_h",
+              names(replication_results[[replication_result_index]]),
+              value = TRUE
+            )
+          )
+          replication_results[[replication_result_index]][
+            failed_metric_fields
+          ] <- NA_real_
+          replication_failure_index <- replication_failure_index + 1L
+          failure_index <- failure_index + 1L
+          failure_row <- data.frame(
+            run_id = basename(output_dir),
+            cell_id = method_cell_id,
+            replication = task$replication[[1L]],
+            method = method,
+            failure_class = failure_class,
+            message_digest = digest::digest(
+              failure_message, algo = "sha256", serialize = FALSE
+            ),
+            intention_to_run_denominator = TRUE,
+            retry_count = 0L,
+            stringsAsFactors = FALSE
+          )
+          replication_failures[[replication_failure_index]] <-
+            failure_row
+          failure_rows[[failure_index]] <- failure_row
+          cell_stop <- TRUE
+          global_stop <- TRUE
+          cell_stop_message <- paste(
+            "systemic diagnostic construction failure:", method,
+            digest::digest(
+              failure_message, algo = "sha256", serialize = FALSE
+            )
+          )
+          stage_status <- "failed_global_stop"
+          stage_exit_status <- 1L
+          break
+        }
+        scalar_chains <- diagnostic_payload$scalar_chains
+        diagnostics <- diagnostic_payload$diagnostics
         diagnostics$DGP <- task$DGP[[1L]]
         diagnostics$replication <- task$replication[[1L]]
         diagnostics$method <- method
@@ -1317,10 +1427,15 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
         }
       }
       if (method_is_sentinel) {
-        sentinel_objects[[method]] <- lapply(
-          chain_results, function(value) {
-            value[c("fit", "fits", "forecast", "forecasts", "diagnostics")]
-          }
+        sentinel_objects[[method]] <- list(
+          schema_version =
+            "rqrgibbs_dlm_compact_sentinel_diagnostics/1.0.0",
+          scalar_chains = scalar_chains,
+          diagnostics = diagnostics,
+          full_fit_objects_retained = FALSE,
+          exact_refit_inputs_bound = TRUE,
+          generalized_bayes = TRUE,
+          response_prediction_contract = FALSE
         )
       }
     }
@@ -1379,7 +1494,7 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
       atomic_rds(
         sentinel_objects,
         file.path(
-          replication_staging, "sentinel_chains_ignored.rds"
+          replication_staging, "sentinel_diagnostics_ignored.rds"
         )
       )
     }
@@ -1441,6 +1556,20 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
     run_status$ended_at[[task_index]] <- format(
       Sys.time(), tz = "UTC", usetz = TRUE
     )
+    # A worker processes several replications sequentially.  Release every
+    # heavy task-local reference before advancing so R does not retain a
+    # completed sentinel fit merely because its last top-level binding is
+    # still visible.  Compact rows above are independent objects.
+    for (object_name in c(
+        "sentinel_objects", "chain_results", "diagnostic_payload",
+        "scalar_chains", "value", "generated", "forecast",
+        "forecasts"
+      )) {
+      if (exists(object_name, inherits = FALSE)) {
+        assign(object_name, NULL, inherits = FALSE)
+      }
+    }
+    invisible(gc(full = TRUE))
     if (cell_stop) {
       if (global_stop && task_index < nrow(run_status)) {
         remaining <- seq.int(task_index + 1L, nrow(run_status))

@@ -986,11 +986,17 @@ where the \(\mat Q_{jt}\) are fixed positive-definite templates. The multipliers
 shared across the two roots to preserve prior exchangeability. Sampling the
 time-zero states restores the innovation factorization and yields conjugate
 inverse-Gamma updates for each \(q_j\). The implemented component-scale kernel
-then interweaves this centered update with an exact noncentered slice update:
-state innovations are divided by \(\sqrt{q_j}\), the log scales are updated
-conditional on those standardized innovations, and both root paths are
-reconstructed. This reparameterization reduces state--scale dependence without
-changing the ordinary generalized posterior
+first conditions on one root and integrates the other root through its
+Gaussian pseudo-observation model. A slice transition updates the log scales
+under this Kalman marginal, after which FFBS redraws the integrated root at the
+accepted scales. The second root is then updated conditionally. Finally, the
+sampler interweaves the centered inverse-Gamma update with a noncentered slice
+update: state innovations are divided by \(\sqrt{q_j}\), the log scales are
+updated conditional on those standardized innovations, and both root paths
+are reconstructed. The global label swap makes the nominal choice of
+integrated root symmetric across iterations. These partially collapsed and
+interweaving transitions leave the same ordinary generalized posterior
+invariant
 \citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. The complete
 derivation and scan order appear in the supplement.
 

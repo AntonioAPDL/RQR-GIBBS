@@ -41,9 +41,19 @@ computational defects within RQR-GIBBS:
 - an M02 adapter that flattened a multistate CRAN `exdqlm` posterior mean
   rather than projecting it through the observation design.
 
-The corrected component-scale sampler composes the centered inverse-Gamma
-update with an exact noncentered log-scale slice transition. The M02 adapter
-now returns one projected ordinate per time. Uniform standard-fit schedules
+The first correction composed the centered inverse-Gamma update with an exact
+noncentered log-scale slice transition. A complete second-wave development
+gate later finished all 49 M01 chains but failed 19 of 1,150 diagnostics
+across 12 of 25 tasks, principally because the component scale retained
+substantial trajectory dependence. The next prospective kernel therefore
+adds an exact one-root partial collapse, evaluated by a deterministic C++
+Kalman marginal and independently checked in R, before the root-specific FFBS
+and existing ASIS move. A shortened four-profile computational comparison
+selected three slice sweeps before the complete exact-source gates; it is
+transition-selection evidence and not a scientific result. The M02 adapter
+now returns one projected ordinate per
+time and supplies genuinely distinct target-preserving warm starts while
+holding its prior and evolution target common across chains. Uniform schedules
 were fixed from computational diagnostics only; there is no realized-metric
 selection, adaptive extension, or retry. The scientific design, generalized
 posterior, priors, seed ledger, target coverages, estimands, and diagnostic
@@ -52,11 +62,13 @@ thresholds remain unchanged.
 The correction derivation and failure reconciliation are
 `docs/implementation_notes/rqr_dlm_component_scale_interweaving_20260726.md`
 and
-`docs/audits/rqr_dlm_main_wave1_scale_and_projection_failure_20260726.md`.
+`docs/audits/rqr_dlm_main_wave1_scale_and_projection_failure_20260726.md`,
+with the second-wave diagnosis in
+`docs/audits/rqr_dlm_second_wave_component_scale_diagnosis_20260727.md`.
 The replacement full study remains unauthorized until exact isolated-runtime
-M01 and M02 first-wave gates, the full repository validation matrix, and fresh
-preflight/oracle evidence pass. Any replacement must use a new authorization,
-run identifier, and output root.
+M01 and M02 gates for both affected waves, the full repository validation
+matrix, and fresh preflight/oracle evidence pass. Any replacement must use a
+new authorization, run identifier, and output root.
 
 ## Evidence interpretation
 

@@ -25,6 +25,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rqr_filter_log_marginal_cpp
+double rqr_filter_log_marginal_cpp(const arma::vec& z, const arma::mat& H, const arma::vec& V, const arma::cube& GG, const arma::vec& m0, const arma::mat& C0, const arma::cube& W);
+RcppExport SEXP _rqrgibbs_rqr_filter_log_marginal_cpp(SEXP zSEXP, SEXP HSEXP, SEXP VSEXP, SEXP GGSEXP, SEXP m0SEXP, SEXP C0SEXP, SEXP WSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type z(zSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type H(HSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type V(VSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type GG(GGSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type m0(m0SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type C0(C0SEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type W(WSEXP);
+    rcpp_result_gen = Rcpp::wrap(rqr_filter_log_marginal_cpp(z, H, V, GG, m0, C0, W));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rqr_ffbs_cpp
 Rcpp::List rqr_ffbs_cpp(const arma::vec& z, const arma::mat& H, const arma::vec& V, const arma::cube& GG, const arma::vec& m0, const arma::mat& C0, const int evolution_mode, const arma::cube& W, const arma::mat& D, const bool sample_path, const arma::vec& jitter_ladder, const std::string evolution_label, const bool allow_covariance_repair);
 RcppExport SEXP _rqrgibbs_rqr_ffbs_cpp(SEXP zSEXP, SEXP HSEXP, SEXP VSEXP, SEXP GGSEXP, SEXP m0SEXP, SEXP C0SEXP, SEXP evolution_modeSEXP, SEXP WSEXP, SEXP DSEXP, SEXP sample_pathSEXP, SEXP jitter_ladderSEXP, SEXP evolution_labelSEXP, SEXP allow_covariance_repairSEXP) {
@@ -66,6 +83,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rqrgibbs_rqr_mvn_draw_cpp", (DL_FUNC) &_rqrgibbs_rqr_mvn_draw_cpp, 4},
+    {"_rqrgibbs_rqr_filter_log_marginal_cpp", (DL_FUNC) &_rqrgibbs_rqr_filter_log_marginal_cpp, 7},
     {"_rqrgibbs_rqr_ffbs_cpp", (DL_FUNC) &_rqrgibbs_rqr_ffbs_cpp, 13},
     {"_rqrgibbs_rqr_noncentered_basis_cpp", (DL_FUNC) &_rqrgibbs_rqr_noncentered_basis_cpp, 5},
     {NULL, NULL, 0}

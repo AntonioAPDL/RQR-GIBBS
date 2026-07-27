@@ -140,3 +140,26 @@ commit-bound authorization boundary. The collector verifies exact task sets,
 recursive artifact hashes, and a common source/runtime/seed bundle before
 producing an analysis. Both execution flags remain false pending independent
 review.
+
+The third fresh main-study attempt stopped fail-closed after one passed and
+one failed canonical wave. The failed local-level sentinel wave identified
+one-state exdqlm dimension dropping and M01 component-scale mixing failures;
+the protected exdqlm source was not changed. A later complete development gate
+finished all 49 M01 chains but failed 19 of 1,150 diagnostics across 12 of 25
+tasks, so the fixed 6,000-draw schedule is not treated as sufficient under
+ASIS alone. The current correction adds dimension-preserving state extraction,
+an exact one-root partially collapsed scale update evaluated by a deterministic
+C++ Kalman marginal, and fixed 6,000-draw and 9,000-draw
+component-scale sentinel schedules. Three slice sweeps were selected in a
+shortened, development-only four-profile comparison before the exact complete
+wave gates. The correction also adds a fixed 4,000-draw-per-endpoint M02
+sentinel schedule, one common M02 DLM prior/evolution target across chains,
+distinct target-preserving M02 initial state paths and scales,
+structured publication of post-fitting diagnostic exceptions, and per-chain
+compaction before atomic sentinel-diagnostic serialization.
+`scripts/22_validate_rqr_dlm_wave1_corrections.R` and
+`scripts/23_validate_rqr_dlm_wave1_comparator_projection.R` accept a frozen
+`RQR_CORRECTION_WAVE_ID`, while
+`scripts/25_validate_rqr_dlm_resource_envelope.R` exercises the largest
+planned retained-state shapes.  The execution flag remains false until these
+gates pass from a clean exact isolated runtime.

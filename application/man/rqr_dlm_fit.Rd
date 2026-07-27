@@ -78,7 +78,8 @@ spellings are accepted and normalized to these names.}
 complete 40-character `expected_git_commit`, and optional runtime package
 and attestation fields.}
 
-\item{mcmc_control}{Iteration, seed, storage, backend, progress, and jitter
+\item{mcmc_control}{Iteration, seed, storage, backend, progress, jitter, and
+optional exact partially collapsed and interwoven component-scale
 controls.}
 
 \item{init}{Optional initial states, latent scales, lambda, evolution scales,
