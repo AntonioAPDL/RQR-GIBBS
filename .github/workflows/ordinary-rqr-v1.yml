@@ -1,0 +1,156 @@
+name: ordinary-rqr-v1
+
+"on":
+  pull_request:
+    paths:
+      - ".github/workflows/ordinary-rqr-v1.yml"
+      - "Makefile"
+      - "application/.Rbuildignore"
+      - "application/DESCRIPTION"
+      - "application/LICENSE"
+      - "application/NEWS.md"
+      - "application/NAMESPACE"
+      - "application/R/**"
+      - "application/config/rqr_ordinary_v1/**"
+      - "application/man/**"
+      - "application/scripts/25_validate_rqr_ordinary_v1.R"
+      - "application/scripts/26_run_rqr_ordinary_v1_validation.sh"
+      - "application/scripts/27_test_rqr_ordinary_v1_monitor.sh"
+      - "application/scripts/28_materialize_rqr_ordinary_v1_desn_design.R"
+      - "application/scripts/lib/**"
+      - "application/src/**"
+      - "application/tests/**"
+      - "application/vignettes/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ordinary-rqr-v1.yml"
+      - "Makefile"
+      - "application/.Rbuildignore"
+      - "application/DESCRIPTION"
+      - "application/LICENSE"
+      - "application/NEWS.md"
+      - "application/NAMESPACE"
+      - "application/R/**"
+      - "application/config/rqr_ordinary_v1/**"
+      - "application/man/**"
+      - "application/scripts/25_validate_rqr_ordinary_v1.R"
+      - "application/scripts/26_run_rqr_ordinary_v1_validation.sh"
+      - "application/scripts/27_test_rqr_ordinary_v1_monitor.sh"
+      - "application/scripts/28_materialize_rqr_ordinary_v1_desn_design.R"
+      - "application/scripts/lib/**"
+      - "application/src/**"
+      - "application/tests/**"
+      - "application/vignettes/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ordinary-rqr-v1-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bounded-native-checks:
+    name: R 4.5.3 / bounded native checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      VECLIB_MAXIMUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      R_KEEP_PKG_SOURCE: "yes"
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: "true"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install R
+        uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2
+        with:
+          r-version: "4.5.3"
+          use-public-rspm: true
+
+      - name: Install package dependencies
+        uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2
+        with:
+          working-directory: application
+          dependencies: '"hard"'
+          extra-packages: |
+            any::testthat
+            any::knitr
+            any::posterior
+            any::rmarkdown
+            any::withr
+
+      - name: Run ordinary-RQR version-1 checks
+        run: make ordinary-v1-ci
+
+  package-documentation-check:
+    name: R 4.5.3 / roxygen drift and R CMD check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      VECLIB_MAXIMUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      R_KEEP_PKG_SOURCE: "yes"
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: "true"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install R
+        uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2
+        with:
+          r-version: "4.5.3"
+          use-public-rspm: true
+
+      - name: Install Pandoc
+        uses: r-lib/actions/setup-pandoc@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2
+
+      - name: Install package and documentation dependencies
+        uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2
+        with:
+          working-directory: application
+          dependencies: '"hard"'
+          extra-packages: |
+            any::coda
+            any::exdqlm
+            any::knitr
+            any::posterior
+            any::pracma
+            any::rmarkdown
+            any::roxygen2
+            any::testthat
+            any::withr
+
+      - name: Regenerate package interfaces and documentation
+        run: make package-document
+
+      - name: Reject generated-interface and documentation drift
+        shell: bash
+        run: |
+          git diff --exit-code -- \
+            application/DESCRIPTION \
+            application/NAMESPACE \
+            application/R/RcppExports.R \
+            application/man \
+            application/src/RcppExports.cpp
+          test -z "$(git status --porcelain -- \
+            application/DESCRIPTION \
+            application/NAMESPACE \
+            application/R/RcppExports.R \
+            application/man \
+            application/src/RcppExports.cpp)"
+
+      - name: Run source-package check
+        run: make ordinary-v1-package-check

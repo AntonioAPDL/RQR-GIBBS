@@ -7,14 +7,14 @@
 rqr_discount_matrix(df, dim.df, p = sum(dim.df))
 }
 \arguments{
-\item{df}{Component-specific discounts in `(0,1]`.}
+\item{df}{Component-specific discounts in \verb{(0,1]}.}
 
 \item{dim.df}{State dimensions for those components.}
 
-\item{p}{Total state dimension; defaults to `sum(dim.df)`.}
+\item{p}{Total state dimension; defaults to \code{sum(dim.df)}.}
 }
 \value{
-A `p x p` block matrix.
+A \verb{p x p} block matrix.
 }
 \description{
 Build an exdqlm-compatible component discount matrix

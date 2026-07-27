@@ -11,7 +11,7 @@ rqr_evolution_fixed(W)
 positive-semidefinite validity are checked against the model at fit time.}
 }
 \value{
-An exact fixed-prior `rqr_evolution` specification.
+An exact fixed-prior \code{rqr_evolution} specification.
 }
 \description{
 Construct a fixed-covariance RQR evolution specification

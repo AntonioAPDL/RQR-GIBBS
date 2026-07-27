@@ -2,8 +2,9 @@
 
 Standalone manuscript and reproducibility workspace for Bayesian relaxed
 quantile regression (RQR) with Gibbs sampling. The model hierarchy begins with
-static interval-root regression, adds an ordinary-RQR regularized-horseshoe
-adapter based on the Nishimura–Suchard augmentation (RHS-NS), treats frozen
+static interval-root regression, adds a native ordinary-RQR
+shrunken-shoulder horseshoe based on the Nishimura--Suchard augmentation
+(RHS-NS), treats frozen
 nonlinear DESN readouts as a fixed-design specialization, and then extends the
 roots through a native linear dynamic/state-space model. The working descriptor
 is coverage-targeted interval-root regression under the RQR loss.
@@ -28,10 +29,11 @@ package under **application/**:
   linear-root targets in that order.
 - **rqr-gibbs-supplement.tex** gives the population, augmentation,
   learned-scale, FFBS, and component-discount derivations.
-- **application/R/** contains fixed-design ridge and RHS-NS adapters,
-  frozen-feature DESN utilities, exdqlm-compatible DLM model builders, pure-R
-  FFBS, exact component-scale evolution, the RQR-DLM sampler, and restart
-  helpers.
+- **application/R/** contains the shared fixed-design transition; native
+  ridge, full-Gaussian, and RHS-NS priors; observed-mask and exact-continuation
+  contracts; immutable DESN training/future designs; exdqlm-compatible DLM
+  model builders; pure-R FFBS; exact component-scale evolution; and the
+  RQR-DLM sampler.
 - **application/src/** contains the C++17/RcppArmadillo FFBS kernel and the
   noncentered component-path basis used by exact scale interweaving.
 - **application/tests/** contains native package gates, standalone workflow
@@ -39,8 +41,19 @@ package under **application/**:
   repository-level workflow tests remain available to dedicated Make targets
   but are excluded from the package source where appropriate; `R CMD check`
   runs the native package contract.
+- **application/vignettes/ordinary-rqr-v1.Rmd** gives a lightweight,
+  executable introduction to native fixed-design RQR and an RQR-DESN readout
+  conditional on an already frozen feature design.
 - **docs/implementation_notes/rqr_dlm_native_design_20260722.md** freezes the
   exact and experimental evolution-mode contracts.
+
+The ordinary zero-tilt version-1 source candidate is implemented. Its release
+claim remains pending exact-runtime package, reference, manuscript,
+representative one-cell benchmark, and bounded 48-fit validation. The
+validator has four separate modes: `preflight`,
+`reference-only`, `benchmark-one-cell`, and `execute-bounded`. The tracked
+bounded configuration is deliberately disabled; no ordinary-v1 validation
+result is claimed merely from source completion.
 
 Fixed evolution covariances, frozen discount templates, and shared
 component-specific inverse-Gamma evolution scales define exact samplers for
@@ -78,18 +91,55 @@ history statuses and saved RNG state are validated before any coercion.
 Component-scale forecasts can combine saved evolution-scale draws with fixed
 future component templates.
 
-The pinned exdqlm branch remains the read-only implementation reference for
-RQR-DESN and RHS-NS compatibility. Promotion of either path additionally
-requires the executing exdqlm namespace to come from an isolated, attested
-runtime of the exact pinned commit. Direct source-tree loading is prohibited.
+The pinned exdqlm branch remains a read-only reference and an optional
+materializer for deterministic DESN feature designs. Static ordinary-RQR
+inference and RHS-NS state updates are native and do not load exdqlm. A fit
+conditional on a serialized `rqr_desn_design` likewise needs no executing
+exdqlm namespace. Only the explicitly selected reference materializer requires
+an isolated, attested exdqlm runtime at the exact pinned commit. Direct
+source-tree loading is prohibited.
+
+The validation runner preserves that boundary per fit: standalone
+fixed-design cells bind the isolated primary `rqrgibbs` runtime and require no
+external repository, whereas promotion-grade D02 DESN cells require exactly
+the pinned isolated `exdqlm` runtime. The D02 receipt explicitly stores
+source/runtime lineage, the materializer-argument digest, and the complete
+materialized-design-payload digest. Raw effective arguments and the seed remain
+in the tracked configuration and compact materialization evidence rather than
+being duplicated inside the receipt.
+That receipt attests the training design only. A versioned DESN future-design
+contract checks feature alignment, declared forecast semantics, and the
+content digest of the supplied future rows, but it does not establish how
+those rows were generated. The training receipt cannot be transferred to
+future rows. Until a separate future-specific materialization receipt is
+implemented and verified, DESN future-root objects are explicitly
+nonpromotable. The bounded future checks exercise conditional root mechanics
+for frozen rows; they are not evidence of scientific forecast provenance or a
+response-simulation distribution.
 `make prepare-exdqlm-runtime` uses read-only Git access to create an archive,
 then builds entirely under the ignored `application/cache/` tree. Its
 versioned attestation binds the source commit and tree, archive checksum,
 installed package digest, and disjoint archive/runtime paths while recording
 that the full external checkout—including ignored files—was unchanged. The
-RQR adapters also refuse a namespace whose package path contains Git checkout
-metadata. The reference smoke tests are extracted from the attested archive
-and never execute from the exdqlm checkout.
+reference materializer also refuses a namespace whose package path contains
+Git checkout metadata. Reference smoke tests are extracted from the attested
+archive and never execute from the exdqlm checkout.
+
+Static continuation is available only through the validated public
+`rqr_mcmc_continue()` boundary. Direct calls to `rqr_mcmc_fit()` cannot inject
+continuation-only state: the implementation uses a private token-bound worker
+after checkpoint/history validation and rejects unknown or ambiguous `init`
+and `mcmc_control` fields.
+
+For validation-chain initialization, `lambda_initial` and the positive
+`latent_v` placeholders are computationally valid starting values, but they
+are not independent overdispersion dimensions. Under the mandatory
+partial-collapse order, the learned rate is drawn from its collapsed
+conditional and every observed latent scale is then refreshed before either
+root update. Fixed-rate scans likewise refresh the latent scales before their
+first root update. The prespecified overdispersed profiles therefore separate
+chains through the root coefficients and, for RHS-NS fits, their complete
+root-specific prior states.
 
 The corrected frozen learned-scale bounded pilot passed at source commit
 `3a37c5ee42973fd0ba1fa4792f609d1a48bcc98f`: four production collapsed chains,
@@ -212,8 +262,20 @@ PDF inventory and checksums.
     make smoke
     make pdf
     make supplement
+    make package-document
     make package-install
     make test-native
+    make test-ordinary-v1
+    RQR_EXPECTED_PRIMARY_COMMIT="$(git rev-parse HEAD)" \
+      make materialize-ordinary-v1-desn
+    RQR_EXPECTED_PRIMARY_COMMIT="$(git rev-parse HEAD)" \
+      make preflight-ordinary-v1
+    RQR_EXPECTED_PRIMARY_COMMIT="$(git rev-parse HEAD)" \
+      make reference-ordinary-v1
+    RQR_EXPECTED_PRIMARY_COMMIT="$(git rev-parse HEAD)" \
+      RQR_ORDINARY_V1_BENCHMARK_CONFIRM=I_CONFIRM_ORDINARY_V1_ONE_CELL_BENCHMARK \
+      make benchmark-ordinary-v1-one-cell
+    make test-ordinary-v1-monitor
     make test-standalone-contracts
     make prepare-exdqlm-runtime
     make test-exdqlm-rqr
@@ -224,6 +286,14 @@ PDF inventory and checksums.
       make preflight-dlm-bounded
     RQR_EXPECTED_PRIMARY_COMMIT=<reviewed-full-sha> \
       make reference-dlm-bounded
+
+The ordinary-v1 benchmark is one four-chain D02 DESN RHS-NS learned-rate cell,
+not a pilot or part of the 48-fit grid. It must pass while the source-candidate
+execution flag is still false. A later flag-only authorization commit can run
+`execute-ordinary-v1-bounded` only with `RQR_ORDINARY_V1_CONFIRM=YES` and
+explicit `RQR_ORDINARY_V1_REFERENCE_DIR`,
+`RQR_ORDINARY_V1_BENCHMARK_DIR`, and
+`RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR` pointing to the exact bound evidence.
 
 No production simulation should be launched until its matched protocol is
 frozen and explicitly approved. The bounded pilot does not provide that

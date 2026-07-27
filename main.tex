@@ -76,17 +76,18 @@ intervals therefore have distribution-specific recovery tilts. We construct
 loss-based generalized posteriors using a pseudo-asymmetric-Laplace
 normal--exponential augmentation. One fixed-rate mean-tilted sampler covers
 static regression under proper Gaussian priors, with ordinary RQR obtained
-exactly at zero tilt. An ordinary-only conditional-Gaussian
-regularized-horseshoe adapter using the Nishimura--Suchard augmentation
-(RHS-NS) supplies regularized regression, and a frozen deep echo-state-network
+exactly at zero tilt. An ordinary-only native shrunken-shoulder horseshoe
+using the Nishimura--Suchard augmentation (RHS-NS) supplies regularized
+regression, and a frozen deep echo-state-network
 feature matrix is a deterministic nonlinear-design specialization of the same
 static scan. A dynamic linear extension then replaces coefficient blocks by
 alternating root-specific forward-filtering backward-sampling steps: the
 stacked state prior is Gaussian, but the joint augmented observation kernel is
-quartic. Current software and empirical evidence concern ordinary RQR; the
-nonzero-tilt algorithms are derived but not yet implemented or validated. All
-updates concern interval-root functionals under a loss and prior, not a
-response likelihood or posterior-predictive responses.
+quartic. Current software targets ordinary RQR; computational evidence is
+reported only for the fixtures and architectures that have completed their
+declared gates. The nonzero-tilt algorithms are derived but not yet implemented
+or validated. All updates concern interval-root functionals under a loss and
+prior, not a response likelihood or posterior-predictive responses.
 \end{abstract}
 
 \section{Introduction}
@@ -133,11 +134,13 @@ fixed tilt changes only the Gaussian information vectors. This yields a
 three-stage predictor hierarchy. First, static interval-root regression uses a
 fixed design matrix and conditionally Gaussian coefficient blocks. Proper
 Gaussian priors include ridge; at zero tilt, the implemented ordinary-RQR
-branch also supports a root-specific RHS-NS regularization adapter
+branch also supports native root-specific RHS-NS states under one shared,
+exchangeable prior specification
 \citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS,
-NishimuraSuchard2023SSS}. The nonzero-tilt derivation remains restricted to
-proper Gaussian priors because propriety of the external random-scale adapter
-has not been established. Second, substituting a deterministic, recorded DESN
+MakalicSchmidt2016SimpleSampler,NishimuraSuchard2023SSS}. The current
+nonzero-tilt derivation boundary remains restricted to proper Gaussian
+priors; no nonzero-tilt RHS-NS software claim is made. Second, substituting a
+deterministic, recorded DESN
 feature design gives a frozen-feature specialization of this same static
 regression and sampler
 \citep{Jaeger2001EchoState,GallicchioMicheliPedrelli2018DeepESNDesign}.
@@ -538,7 +541,10 @@ L_i=\min(\eta_{1i},\eta_{2i}),\quad
 U_i=\max(\eta_{1i},\eta_{2i}),\quad
 M_i=(L_i+U_i)/2,\quad W_i=U_i-L_i.
 \]
-For priors \(\pi_1,\pi_2\), a fixed externally declared
+The theoretical target permits root-specific priors \(\pi_1,\pi_2\). The
+current ordinary-v1 software instead binds one shared, exchangeable prior
+specification to both roots; RHS-NS then evolves two distinct prior states
+under that common specification. For a fixed externally declared
 \(\vect\delta\), and a fixed learning rate \(\omega_{\mathrm R}>0\), define
 \begin{equation}
 \begin{split}
@@ -581,7 +587,7 @@ Architecture & Root representation & Prior or evolution & Root block\\
 \midrule
 Static regression
 & \(\eta_k=\mat X\vect\beta_k\)
-& Proper Gaussian (including ridge); ordinary external RHS-NS adapter
+& Proper Gaussian (including ridge); ordinary native RHS-NS
 & Conditional Gaussian coefficient draw\\
 Frozen DESN
 & \(\eta_k=\mat X_{\mathrm{DESN}}\vect\beta_k\)
@@ -604,25 +610,27 @@ Dynamic linear roots
 Target & Rate & Conditional status & Implementation and evidence\\
 \midrule
 RQR-FD
-& Fixed or ordinary learned \(\kappa\)
+& Fixed or normalized learned \(\kappa\)
 & Exact blocks for the declared ordinary target
-& Implemented and validated in declared ordinary modes\\
+& Implemented source candidate; release status is determined by the
+ordinary-v1 gate\\
 MT-RQR-FD
 & Fixed only
 & Derived for proper Gaussian roots, including ridge
 & Proposed; no nonzero-tilt evidence\\
 RQR-DESN
-& Fixed or ordinary learned \(\kappa\)
+& Fixed or normalized learned \(\kappa\)
 & Exact conditional on frozen features
-& Implemented ordinary static-readout specialization\\
+& Implemented ordinary static-readout specialization; validation is
+fixture-specific\\
 MT-RQR-DESN
 & Fixed only
 & Fixed-design specialization with a proper Gaussian ridge prior
 & Proposed; nonzero-tilt shrinkage propriety unresolved\\
 RQR-DLM
-& Fixed or ordinary learned \(\kappa\)
+& Fixed or normalized learned \(\kappa\)
 & Exact for fixed-joint modes; adaptive discount is working
-& Implemented in declared ordinary modes\\
+& Implemented; evidence is mode- and protocol-specific\\
 MT-RQR-DLM
 & Fixed only
 & Derived for fixed \(W_t\) and frozen templates
@@ -709,11 +717,12 @@ The fixed-design calculation is also the foundation for regularized ordinary
 RQR. Let \(\vect\psi_k\) denote a root-specific prior state and suppose that,
 conditional on that state, root \(k\) has Gaussian canonical parameters
 \(\{\mat Q_{0k}(\vect\psi_k),\vect h_{0k}(\vect\psi_k)\}\). The implemented
-ordinary-RQR MCMC adapter supports RHS-NS
+ordinary-RQR MCMC supports a native RHS-NS hierarchy
 \citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS,
-NishimuraSuchard2023SSS}. As an input requirement for this branch, the first
-design column must be the declared intercept and is excluded from shrinkage.
-For every remaining coefficient \(j\), the current conditional prior precision is
+MakalicSchmidt2016SimpleSampler,NishimuraSuchard2023SSS}. Its input contract
+requires one explicitly named constant-one intercept column, which may occur
+at any design position and is excluded from shrinkage. For every active
+coefficient \(j\), the conditional prior precision is
 \[
 d_{kj}
 =\frac{1}{\tau_k^2\lambda_{kj}^2}+\frac{1}{\zeta_k^2},
@@ -724,12 +733,13 @@ The local, global, auxiliary, and shoulder-scale quantities in
 roots carry distinct, identically specified prior states, and a root-label
 swap moves \((\vect\beta_k,\vect\psi_k)\) as one complete block.
 
-This is an external conditional-Gaussian adapter, not a native rederivation of
-the marginal RHS-NS hierarchy. The RQR API accepts this \(\text{RHS-NS}\)
-branch, rather than a generic \(\mathrm{RHS}\) mode. It is implemented only for
-ordinary RQR, \(\vect\delta=\vect 0\). The Gaussian
-moment-generating-function argument that establishes fixed-rate nonzero-tilt
-propriety does not establish the same result after random-scale mixing.
+The local and global half-Cauchy scales use Makalic--Schmidt inverse-Gamma
+auxiliaries; the shoulder variance is fixed or receives a declared
+inverse-Gamma prior. The supplement gives the augmented joint kernel and every
+scale conditional in its RHS-NS derivation. The implementation is native,
+closure-free, and accepts the narrower \(\text{RHS-NS}\) branch rather than a
+generic \(\mathrm{RHS}\) mode. Its present software and validation scope is
+ordinary RQR, \(\vect\delta=\vect 0\).
 
 \begin{algorithmblock}{Static fixed-rate RQR/MT-RQR root-blocked Gibbs scan}
 \label{alg:fixed-design-gibbs}
@@ -737,15 +747,19 @@ propriety does not establish the same result after random-scale mixing.
 \eqref{eq:fixed-mt-target} with fixed \(\omega_{\mathrm R}>0\), fixed
 \(\vect\delta\), and proper Gaussian root priors, including ridge priors; or
 the implemented ordinary-only branch with
-\(\vect\delta=\vect 0\) and the conditional-Gaussian RHS-NS adapter. The scan
+\(\vect\delta=\vect 0\) and the native conditional-Gaussian RHS-NS hierarchy.
+The scan
 applies to fixed, recorded design rows; it does not define a response
 likelihood.
 \item \textbf{Inputs and fixed quantities.} Supply
 \(\vect y,\mat X,\mathcal O,c,\omega_{\mathrm R},\vect\delta_{\mathcal O}\),
 iteration controls, and a recorded label-swap rule. Supply either two Gaussian
-prior canonical parameter pairs or two identically specified RHS-NS prior
-states and their fixed hyperparameters. Missing rows are excluded from every
-loss, latent-scale, and tilt site.
+prior canonical parameter pairs for the theoretical Gaussian construction, or
+the current software's one shared exchangeable Gaussian or RHS-NS prior
+specification. The latter creates two distinct, identically initialized
+root-specific prior states and uses the complete-block acceptance-one swap
+with probability \(1/2\). Missing rows are excluded from every loss,
+latent-scale, and tilt site.
 \item \textbf{Initialization.} Choose finite
 \(\vect\beta_1,\vect\beta_2\) and positive placeholder \(v_i\) for every
 \(i\in\mathcal O\). Initialize valid root-specific prior states when using
@@ -766,7 +780,8 @@ new \(\vect\beta_1\);
 \item in the ordinary RHS-NS branch, update \(\vect\psi_2\) conditional on the
 new \(\vect\beta_2\); and
 \item if authorized by exchangeability, swap both complete root labels and
-all associated root-specific states together.
+all associated root-specific states together; the implemented shared-prior
+ordinary branch does so with probability \(1/2\).
 \end{enumerate}
 \item \textbf{Stored quantities and label handling.} Retain raw roots only
 when required for diagnostics, and report ordered endpoints \(L_i,U_i\),
@@ -777,18 +792,19 @@ exchangeable.
 At \(\vect\delta=\vect 0\) it is exactly the ordinary-RQR scan; the separate
 ordinary learned-\(\kappa\) scan is Algorithm~S1.
 \item \textbf{Implementation and validation status.} The conditional blocks
-are exact for the declared fixed-rate proper-Gaussian generalized target.
-Zero-tilt ridge and RHS-NS branches are implemented. Nonzero tilt is derived
+are exact for the declared fixed-rate proper-Gaussian generalized target and
+for the declared zero-tilt augmented RHS-NS target. Zero-tilt ridge,
+full-Gaussian, and RHS-NS branches are implemented. Nonzero tilt is derived
 for proper Gaussian priors, including ridge, but is not yet implemented or
 empirically validated; the RHS-NS nonzero-tilt branch remains unresolved.
 \end{algorithmblock}
 
 At \(\vect\delta=\vect 0\), Algorithm~\ref{alg:fixed-design-gibbs} reduces
 exactly to the fixed-rate ordinary-RQR scan. At zero tilt, the implemented
-RHS-NS adapter updates the separate root-specific states displayed above.
-That external adapter remains ordinary-only. It may also be used within the
+RHS-NS hierarchy updates the separate root-specific states displayed above.
+That native branch remains ordinary-only. It may also be used within the
 ordinary learned-\(\kappa\) target and partial-collapse order below; this does
-not establish either fixed- or learned-rate nonzero-tilt propriety.
+not constitute a nonzero-tilt implementation claim.
 
 \subsection{Frozen-feature DESN specialization}
 \label{sec:desn}
@@ -805,11 +821,20 @@ or Gibbs sampler is introduced. A ridge readout supports the proposed
 fixed-rate nonzero-tilt Gaussian blocks; the implemented RHS-NS readout and
 all current evidence concern ordinary RQR only.
 
-Future root functionals use a frozen future design
-\(\mat X_{\mathrm{DESN,fut}}\) constructed under the same recorded reservoir
-contract, without using held-out responses to refit its features. Ordered
-endpoints, midpoints, and widths are functions of the readout draws. No
-response-simulation distribution is implied, and reservoir or feature
+A versioned future-design contract for
+\(\mat X_{\mathrm{DESN,fut}}\) verifies feature alignment, the parent-design
+link, declared forecast semantics, and the content digest of the supplied
+rows. It does not independently regenerate or attest those rows. In
+particular, a receipt for the training design does not transfer to future
+features. Future-root objects therefore remain nonpromotable until a separate
+future-specific materialization receipt is available. The contract
+distinguishes an origin-fixed precomputed design, rolling teacher-forced
+one-step evaluation, and an origin-fixed external driver path. Teacher forcing
+is not labeled a fixed-origin multi-step forecast. Explicit named future
+matrices remain a compatibility-only path. Ordered endpoints, midpoints, and
+widths are conditional root functionals. Their bounded checks concern
+conditional propagation on frozen rows, not scientific forecast provenance.
+No response-simulation distribution is implied, and reservoir or feature
 selection occurs outside the generalized-posterior scan.
 
 \subsection{Ordinary-RQR learned inverse-loss scale}
@@ -855,11 +880,15 @@ This target can be paired only with an otherwise valid ordinary fixed-design
 or fixed-joint root adapter. Its partially collapsed scan draws \(\kappa\),
 immediately refreshes every observed latent scale at the new value, and only
 then updates roots 1 and 2; Supplement Algorithm~S1 gives the complete order.
+Consequently, the input value of \(\kappa\) and the initial positive latent
+scales are valid placeholders but not independent overdispersed-start
+dimensions. Multi-chain dispersion is introduced through the raw roots and,
+for RHS-NS fits, their complete root-specific prior states.
 For any proper ordinary root/prior-state law \(\pi(\vartheta)\), joint
 integrability follows because the loss is nonnegative,
 \(\exp\{-\kappa\mathcal L_{n,c}(\vartheta)/s_L\}\leq1\), and the Gamma prior
 has a finite \(n_{\mathrm{obs}}\)th moment. This covers the declared ordinary
-RHS-NS adapter while preserving its complete prior-state updates.
+native RHS-NS hierarchy while preserving its complete prior-state updates.
 The mean-tilted loss may be negative, and a proper normalized joint target
 with random rate has not been established. The Gamma update above must not be
 copied to nonzero tilt.
@@ -933,7 +962,8 @@ not cover adaptive conditional discounts or random shared component scales.
 index \((\vect y,\mathcal O)\), \(c,\omega_{\mathrm R},\delta_{1:T}\), all
 design vectors \(\vect f_{1:T}\), all evolution matrices \(\mat G_{1:T}\),
 proper Gaussian initial laws, fixed or frozen \(\mat W_{1:T}\), iteration
-controls, and the label-swap rule.
+controls, and the implemented acceptance-one global label swap attempted with
+probability \(1/2\).
 \item \textbf{Initialization.} Choose finite root paths
 \(\vect\theta_{1,1:T},\vect\theta_{2,1:T}\) and positive placeholder latent
 scales at observed times. Do not instantiate a latent or tilt site at a
@@ -949,8 +979,8 @@ pseudo-observation system, add
 \(\vect\theta_{1,1:T}\) by FFBS;
 \item rebuild the system conditional on the new first path and draw
 \(\vect\theta_{2,1:T}\) by the analogous tilted FFBS update; and
-\item if all initial laws, evolutions, and root-specific states are
-exchangeable, swap the two complete root blocks together.
+\item with probability \(1/2\), and only under the declared exchangeable
+initial laws and shared evolution, swap the two complete root blocks together.
 \end{enumerate}
 \item \textbf{Stored quantities and label handling.} Retain ordered
 time-local endpoints, widths, midpoints, selected state functionals, losses,
@@ -1018,7 +1048,10 @@ Small reference problems compare Gibbs output with quadrature, dense Gaussian
 conditionals, analytic scale updates, and exact checkpoint continuation. These
 checks establish target and implementation agreement for the stated fixtures;
 they do not establish empirical coverage calibration or forecasting
-superiority.
+superiority. Tracked evidence includes the intercept-only learned-scale
+quadrature fixture and bounded exact-mode RQR-DLM mechanics checks. The new
+ordinary-v1 static and frozen-DESN release grid is reported only after its
+separate gate completes.
 
 The matched ordinary-RQR study uses common data-generating mechanisms,
 training and forecast windows, content levels, seeds, and scoring rules across
@@ -1033,7 +1066,8 @@ a different placement principle. Dynamic diagnostics use time-local and
 future ordered roots, widths, midpoints, losses, learning scales, and
 component scales rather than only time averages.
 
-Current computational evidence concerns ordinary RQR. Nonzero mean tilt
+Current software and the completed computational evidence concern ordinary
+RQR, but evidence remains fixture- and architecture-specific. Nonzero mean tilt
 requires zero-tilt equivalence checks, independent small-target references,
 and fixed-design validation at prespecified population tilts before any
 data-driven selection rule is evaluated. Variational inference likewise
@@ -1059,7 +1093,8 @@ This interpretation also clarifies the role of Bayesian computation. The
 normal--exponential representation is an augmentation of an exponentiated
 loss in a pseudo-residual. It makes static root-regression blocks conditionally
 Gaussian, but it neither supplies a response likelihood nor licenses simulated
-responses. The ordinary RHS-NS adapter regularizes those coefficient blocks;
+responses. The ordinary native RHS-NS hierarchy regularizes those coefficient
+blocks;
 a frozen DESN feature design invokes the same static scan rather than defining
 a separate interval model. The learned inverse-loss scale \(\kappa\) is a
 convention within a declared normalized generalized target, not a response

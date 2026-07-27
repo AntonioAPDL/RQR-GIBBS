@@ -10,6 +10,14 @@ The package implements fixed-design and dynamic samplers for the RQR
 residual-product loss. Its pseudo-AL representation is a computational
 augmentation of a loss kernel, not a response likelihood.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/AntonioAPDL/RQR-GIBBS}
+  \item Report bugs at \url{https://github.com/AntonioAPDL/RQR-GIBBS/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Antonio De Leon \email{jaguir26@ucsc.edu}
 

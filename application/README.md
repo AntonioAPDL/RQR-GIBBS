@@ -24,8 +24,95 @@ layer for the standalone article.
 
 Install and run the native gates from the repository root:
 
+    make package-document
     make package-install
     make test-native
+
+`make package-document` regenerates both the Rcpp registration wrappers and
+the roxygen2 namespace/help files. Commit those generated files with their
+source changes; CI reruns the target and rejects any drift.
+
+## Ordinary zero-tilt RQR version 1
+
+The fixed-design sampler, ridge/full-Gaussian/RHS-NS priors, missing-response
+contract, checkpoint continuation, frozen-DESN wrapper, and future-design
+contracts are native to `rqrgibbs`. Promotion-grade DESN validation first
+materializes one D02 design without fitting a readout:
+
+    export RQR_EXPECTED_PRIMARY_COMMIT="$(git rev-parse HEAD)"
+    make materialize-ordinary-v1-desn
+    make preflight-ordinary-v1
+    make reference-ordinary-v1
+    RQR_ORDINARY_V1_BENCHMARK_CONFIRM=I_CONFIRM_ORDINARY_V1_ONE_CELL_BENCHMARK \
+      make benchmark-ordinary-v1-one-cell
+    make test-ordinary-v1-monitor
+
+The materializer loads both packages only from exact archive-built isolated
+runtimes, guards the protected exdqlm checkout including ignored files, and
+writes a receipt-v2 design plus compact hashes below ignored directories. The
+receipt explicitly records source/runtime lineage, the
+materializer-argument digest, and the complete materialized-payload digest;
+the tracked configuration and compact evidence retain the raw effective
+arguments and seed. The wrapper discovers the unique design for the current
+source SHA in `reference-only`, `benchmark-one-cell`, and `execute-bounded`;
+an explicit `RQR_ORDINARY_V1_ATTESTED_DESN_DESIGN_RDS` can override discovery.
+
+The four validator modes are `preflight`, `reference-only`,
+`benchmark-one-cell`, and `execute-bounded`. BENCH01 is exactly four D02 DESN
+fixed-shoulder RHS-NS chains under the normalized learned rate. It is a
+resource/mechanics benchmark, not part of the 48-fit grid or a scientific
+pilot, and it requires the exact confirmation shown above while bounded
+execution remains disabled.
+
+Both BENCH01 and the complete `reference-only` bundle are generated from the
+reviewed, execution-disabled source candidate. A later authorization commit
+may change only the execution flag and the recorded reviewed SHA. Before the
+48-fit grid starts, the runner verifies those candidate bundles against the
+flag-only commit's source ancestry, exact runtime content, toolchain, hashes,
+and attested D02 design.
+
+Bounded execution remains disabled in source candidates. Authorization uses
+two commits: a reviewed, fail-closed implementation commit and a later
+config-only commit that changes only the execution flag and records the
+reviewed implementation SHA. The runner reconstructs and verifies that entire
+delta before it can accept `RQR_ORDINARY_V1_CONFIRM=YES`.
+
+Final authorization also requires the exact hashed reference bundle and both
+benchmark bundles. Their locations are supplied through
+`RQR_ORDINARY_V1_REFERENCE_DIR`, `RQR_ORDINARY_V1_BENCHMARK_DIR`, and
+`RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR`. The benchmark output binds four
+passing fits, diagnostics, DESN training provenance, conditional future-root
+contract evidence, and local chain hashes; its monitor bundle binds sampled
+resources, wrapper closeout, and the wrapper artifact manifest.
+
+Per-fit provenance remains strict. Native fixed-design fits bind only the
+isolated primary runtime and require no external repository. Promotion-grade
+D02 DESN fits require exactly the pinned isolated exdqlm runtime and a
+receipt-v2 design reverified against that executing runtime.
+
+The receipt-v2 object attests the materialized training design. A versioned
+future-design object separately validates the parent feature schema, feature
+order, declared precomputed/teacher-forced/external-driver semantics, and
+future-row content digest. It does not attest the process that generated those
+future rows, and the training receipt does not transfer to them. Until a
+future-specific materialization receipt is available, returned DESN
+future-root functionals are nonpromotable even when their future contract
+validates. Bounded future checks concern conditional root propagation on
+frozen rows, not scientific forecast provenance and not future responses.
+
+Exact static continuation is available through `rqr_mcmc_continue()`.
+Continuation-only initialization fields cannot be injected through
+`rqr_mcmc_fit()`: a private token-bound worker is reached only after checkpoint
+and continuation-history validation. Unknown or ambiguous `init` and
+`mcmc_control` fields fail instead of being silently ignored.
+
+`lambda_initial` and fresh observed-site `latent_v` values initialize a valid
+scan but are not separate overdispersed-start dimensions. The mandatory
+learned-rate sweep first redraws the rate from its collapsed conditional and
+then refreshes every observed latent scale; fixed-rate sweeps also refresh
+those scales before the first root update. The four-chain initialization
+profiles therefore disperse root coefficients and, where applicable, complete
+RHS-NS prior states.
 
 The pseudo-AL representation augments a loss and is not a response likelihood.
 The fixed-W, discount-template, and component-scale modes are exact for their
@@ -48,8 +135,8 @@ at an explicitly expected commit. Full state-path storage defaults to off;
 when it is enabled, exact fixed-W and frozen-template fits complete each
 retained path with a draw from the Gaussian time-zero conditional. Component-
 scale fits retain the same time-zero states because their innovation-scale
-update conditions on them.
-terminal state draws remain available to `rqr_forecast_roots()`, which can use
+update conditions on them. Terminal state draws remain available to
+`rqr_forecast_roots()`, which can use
 either explicit future covariances or saved component-scale draws with fixed
 future templates. Fit objects include a versioned provenance and RNG
 checkpoint. `rqr_dlm_continue()` verifies schema, checkpoint integrity,
@@ -64,12 +151,14 @@ repair totals, exactness, reproducibility, promotion, and the mismatch ledger
 across every generation. `backend="auto"` records both the requested and
 resolved backend. Promotion requires the executing `rqrgibbs` namespace to
 come from a verified isolated-runtime attestation; direct `pkgload` execution
-is exploratory or test-only.
-RQR-DESN and RHS promotion also requires the executing exdqlm namespace to
-match an isolated-library attestation for the clean pinned source. A direct
-source-tree namespace is intentionally ineligible. Run `make
-prepare-primary-runtime` and `make prepare-exdqlm-runtime` with the reviewed
-primary commit in `RQR_EXPECTED_PRIMARY_COMMIT`. Version-5 attestations
+is exploratory or test-only. Native fixed-design inference, native RHS-NS
+updates, and a fit conditional on a serialized `rqr_desn_design` do not load
+exdqlm. Only the optional exdqlm reference materializer requires an
+isolated-library attestation for the clean pinned source; a namespace loaded
+from that source checkout is intentionally ineligible. Run `make
+prepare-primary-runtime` and, when using that materializer,
+`make prepare-exdqlm-runtime` with the reviewed primary commit in
+`RQR_EXPECTED_PRIMARY_COMMIT`. Version-5 attestations
 reconstruct and compare each archive entry's Git mode, blob identifier, and
 path with the declared commit tree, compare the complete expected and built
 source-package file sets, rehash post-command build and installation receipts

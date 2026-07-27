@@ -10,9 +10,9 @@ rqr_as_dlm_model(model)
 \item{model}{A model list or exdqlm-compatible object.}
 }
 \value{
-An `rqr_dlm_model`.
+An \code{rqr_dlm_model}.
 }
 \description{
-The list contract (`FF`, `GG`, `m0`, and `C0`) is compatible with exdqlm
+The list contract (\code{FF}, \code{GG}, \code{m0}, and \code{C0}) is compatible with exdqlm
 1.1.0 model objects.
 }

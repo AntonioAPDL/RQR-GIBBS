@@ -18,7 +18,7 @@ rqr_ffbs_sample(
 )
 }
 \arguments{
-\item{z}{Pseudo-observation vector; `NA` denotes a missing observation.}
+\item{z}{Pseudo-observation vector; \code{NA} denotes a missing observation.}
 
 \item{H}{State-by-time observation design.}
 
@@ -30,12 +30,12 @@ rqr_ffbs_sample(
 
 \item{evolution}{Evolution specification.}
 
-\item{backend}{One of `"cpp"`, `"R"`, or `"auto"`.}
+\item{backend}{One of \code{"cpp"}, \code{"R"}, or \code{"auto"}.}
 
 \item{jitter_ladder}{Declared matrix-relative Cholesky jitter ladder. An
 exactly zero matrix uses a separately recorded absolute fallback.}
 
-\item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
+\item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 }
 \value{
 Filtering/smoothing moments and one sampled state path.

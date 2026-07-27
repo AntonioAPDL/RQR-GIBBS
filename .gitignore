@@ -28,6 +28,8 @@ Rplots.pdf
 *.o
 *.so
 *.dll
+application/vignettes/*.html
+application/vignettes/*_files/
 __pycache__/
 *.py[cod]
 

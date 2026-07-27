@@ -6,8 +6,9 @@ PACKAGE_NAME := $(shell sed -n 's/^Package:[[:space:]]*//p' application/DESCRIPT
 PACKAGE_VERSION := $(shell sed -n 's/^Version:[[:space:]]*//p' application/DESCRIPTION)
 PACKAGE_TARBALL := $(PACKAGE_NAME)_$(PACKAGE_VERSION).tar.gz
 THEORY_FIGURE_DIR ?= application/cache/rqr_theory_figures
+ORDINARY_V1_NATIVE_FILTER := native-(package-integration|beta-prior|rhs-ns|fixed-design-v1|ordinary-v1-(materializer|reference-cells|validation-runner)|desn-design|desn-fit-v1|desn-future-contract)
 
-.PHONY: pdf supplement all-pdf theory-figures test-theory-figures smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-horizon-fixed-design failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf theory-figures test-theory-figures smoke package-document package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-ordinary-v1 ordinary-v1-ci ordinary-v1-package-check materialize-ordinary-v1-desn preflight-ordinary-v1 reference-ordinary-v1 guard-benchmark-ordinary-v1 benchmark-ordinary-v1-one-cell test-ordinary-v1-monitor guard-execute-ordinary-v1 execute-ordinary-v1-bounded test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-horizon-fixed-design failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
@@ -40,6 +41,10 @@ all-pdf: pdf supplement
 smoke:
 	$(R) application/scripts/00_validate_environment.R
 
+package-document:
+	$(R) -e 'Rcpp::compileAttributes("application")'
+	$(R) -e 'roxygen2::roxygenise("application")'
+
 package-install:
 	R CMD INSTALL --preclean application
 
@@ -51,6 +56,61 @@ prepare-primary-runtime:
 
 test-native: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "native", reporter = "summary")'
+
+# CI-only helper: package-install compiles from the checkout and may leave
+# ignored compiler products. Do not invoke this target in a shared local
+# checkout; the ordinary-v1 workflow runs it in an ephemeral runner.
+test-ordinary-v1: package-install
+	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "$(ORDINARY_V1_NATIVE_FILTER)", reporter = "summary")'
+
+# Ephemeral-CI entry point. This target installs only the standalone package
+# and runs bounded unit/reference fixtures. It does not prepare protected
+# external runtimes or invoke any simulation launcher.
+ordinary-v1-ci: test-ordinary-v1 test-ordinary-v1-monitor
+
+# Full source-package check remains explicit because it also runs the broader
+# native regression suite. It contains no simulation execution target.
+ordinary-v1-package-check: package-check
+
+# Design materialization only. The script requires clean main at the exact
+# reviewed commit recorded in the frozen configuration and writes solely to
+# ignored cache/output roots. It never fits a readout or launches MCMC.
+materialize-ordinary-v1-desn: prepare-primary-runtime prepare-exdqlm-runtime
+	@test "$${RQR_EXPECTED_PRIMARY_COMMIT:-}" != "" || \
+		{ echo "Set RQR_EXPECTED_PRIMARY_COMMIT to the exact clean-main SHA."; exit 2; }
+	$(R) application/scripts/28_materialize_rqr_ordinary_v1_desn_design.R
+
+preflight-ordinary-v1: prepare-primary-runtime
+	application/scripts/26_run_rqr_ordinary_v1_validation.sh preflight
+
+reference-ordinary-v1: materialize-ordinary-v1-desn
+	application/scripts/26_run_rqr_ordinary_v1_validation.sh reference-only
+
+guard-benchmark-ordinary-v1:
+	@test "$${RQR_ORDINARY_V1_BENCHMARK_CONFIRM:-}" = \
+		"I_CONFIRM_ORDINARY_V1_ONE_CELL_BENCHMARK" || \
+		{ echo "Set the exact ordinary-v1 benchmark confirmation."; exit 2; }
+
+benchmark-ordinary-v1-one-cell: guard-benchmark-ordinary-v1 materialize-ordinary-v1-desn
+	application/scripts/26_run_rqr_ordinary_v1_validation.sh benchmark-one-cell
+
+test-ordinary-v1-monitor:
+	application/scripts/27_test_rqr_ordinary_v1_monitor.sh
+
+# This target remains fail-closed while ordinary_v1_execute_enabled is FALSE
+# in the reviewed tracked configuration.
+guard-execute-ordinary-v1:
+	@test "$${RQR_ORDINARY_V1_CONFIRM:-}" = "YES" || \
+		{ echo "Set RQR_ORDINARY_V1_CONFIRM=YES."; exit 2; }
+	@test -d "$${RQR_ORDINARY_V1_REFERENCE_DIR:-}" || \
+		{ echo "Set RQR_ORDINARY_V1_REFERENCE_DIR to the reviewed bundle."; exit 2; }
+	@test -d "$${RQR_ORDINARY_V1_BENCHMARK_DIR:-}" || \
+		{ echo "Set RQR_ORDINARY_V1_BENCHMARK_DIR to the reviewed bundle."; exit 2; }
+	@test -d "$${RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR:-}" || \
+		{ echo "Set RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR."; exit 2; }
+
+execute-ordinary-v1-bounded: guard-execute-ordinary-v1 materialize-ordinary-v1-desn
+	application/scripts/26_run_rqr_ordinary_v1_validation.sh execute-bounded
 
 test-standalone-contracts: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "dlm-bounded|dlm-main|dlm-confirmatory", reporter = "summary")'

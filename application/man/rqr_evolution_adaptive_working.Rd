@@ -7,12 +7,12 @@
 rqr_evolution_adaptive_working(df, component_dims)
 }
 \arguments{
-\item{df}{Component discounts in `(0,1]`.}
+\item{df}{Component discounts in \verb{(0,1]}.}
 
 \item{component_dims}{Positive state-block dimensions.}
 }
 \value{
-An experimental working/sequential `rqr_evolution` specification.
+An experimental working/sequential \code{rqr_evolution} specification.
 }
 \description{
 This constructor preserves the exdqlm component-discount matrix interface

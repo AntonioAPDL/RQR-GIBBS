@@ -15,6 +15,6 @@ rqr_sample_gig_half(b, a)
 A positive numeric vector.
 }
 \description{
-Samples `GIG(1/2,a,b)` under density convention proportional to
-`v^(-1/2) exp(-(a*v+b/v)/2)`. The exact `b=0` limit is handled separately.
+Samples \code{GIG(1/2,a,b)} under density convention proportional to
+\verb{v^(-1/2) exp(-(a*v+b/v)/2)}. The exact \code{b=0} limit is handled separately.
 }

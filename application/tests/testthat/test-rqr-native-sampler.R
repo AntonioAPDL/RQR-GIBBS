@@ -39,7 +39,7 @@ test_that("learning-rate targets are locked and fixed rate means omega_R", {
       list(shape = 4, rate = 4, power = 0.3),
       "learned_pseudoresidual_normalized"
     ),
-    "not accepted"
+    "unsupported fields"
   )
   normalized <- rqrgibbs:::.rqr_lambda_posterior_params(
     2, 10, list(shape = 4, rate = 4), "learned_pseudoresidual_normalized"
@@ -60,6 +60,9 @@ test_that("learning-rate targets are locked and fixed rate means omega_R", {
   expect_equal(fit$model_spec$effective_learning_rate, 2)
   expect_true(all(fit$samp.lambda == 8))
   expect_match(fit$model_spec$inferential_target, "omega_R")
+  expect_true(fit$model_spec$ordinary_v1_scope_eligible)
+  expect_true(fit$model_spec$continuation_supported)
+  expect_true(is.list(fit$continuation_history_contract))
 })
 
 test_that("dynamic learned-scale sampler follows the partially collapsed contract", {
@@ -85,6 +88,8 @@ test_that("dynamic learned-scale sampler follows the partially collapsed contrac
   expect_true(all(na.omit(fit$diagnostics$lambda_post_shape_trace) == 4 + T))
   expect_true(all(is.finite(fit$samp.lambda) & fit$samp.lambda > 0))
   expect_identical(fit$model_spec$learning_rate_mode, "learned_pseudoresidual_normalized")
+  expect_true(fit$model_spec$ordinary_v1_scope_eligible)
+  expect_true(fit$model_spec$continuation_supported)
   expect_true(fit$model_spec$target_numerical_eligible)
   expect_false(fit$model_spec$reproducibility_eligible)
   expect_false(fit$model_spec$promotion_eligible)
@@ -93,6 +98,323 @@ test_that("dynamic learned-scale sampler follows the partially collapsed contrac
   expect_equal(dim(fit$samp.theta_terminal_root1), c(1L, 12L))
   interval <- predict_interval(fit)
   expect_true(all(interval$upper_draws >= interval$lower_draws))
+})
+
+test_that("dynamic learned_pure is executable diagnostic compatibility only", {
+  fit <- rqr_dlm_fit(
+    y = c(-1.1, -0.35, 0.1, 0.65, 1.2),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "fixed_W",
+    W = 0.03,
+    learning_rate_mode = "learned_pure",
+    lambda_prior = list(shape = 4, rate = 3),
+    numerical_policy = "fail",
+    mcmc_control = list(
+      n_burn = 0L, n_mcmc = 2L, seed = 1204L, backend = "R"
+    )
+  )
+
+  expect_s3_class(fit, "rqr_dlm_mcmc")
+  expect_identical(
+    fit$model_spec$learning_rate_mode, "learned_pure"
+  )
+  expect_false(fit$model_spec$ordinary_v1_scope_eligible)
+  expect_false(fit$model_spec$continuation_supported)
+  expect_false(fit$model_spec$promotion_eligible)
+  expect_true(fit$model_spec$exact_joint_target)
+  expect_true(all(is.finite(fit$samp.lambda) & fit$samp.lambda > 0))
+  expect_null(fit$continuation_history_contract)
+  expect_identical(
+    fit$continuation_history_digest, NA_character_
+  )
+  expect_error(
+    rqr_dlm_continue(fit, n_mcmc = 1L),
+    "diagnostic legacy target and is not continuable"
+  )
+  expect_error(
+    rqr_dlm_continue(fit, n_mcmc = 0L),
+    "diagnostic legacy target and is not continuable"
+  )
+})
+
+test_that("RQR-DLM draw and fitted-interval boundaries fail closed", {
+  fit <- structure(
+    list(
+      y = c(-0.5, NA_real_, 0.75),
+      samp.eta_root1 = matrix(
+        c(-1.2, -0.9, -0.6, -1.0, -0.7, -0.4),
+        nrow = 3L
+      ),
+      samp.eta_root2 = matrix(
+        c(0.4, 0.7, 1.0, 0.6, 0.9, 1.2),
+        nrow = 3L
+      ),
+      samp.lambda = c(1.5, 2.0),
+      model_spec = list(
+        coverage_level = 0.8,
+        evolution_mode = "fixed_W",
+        target_contract = "fixed_joint_exact",
+        numerical_repair_count = 0L,
+        promotion_eligible = FALSE
+      )
+    ),
+    class = c("rqr_dlm_mcmc", "rqr_fit")
+  )
+
+  set.seed(1211)
+  rng_before <- .Random.seed
+  all_draws <- rqr_posterior_draws(fit)
+  expect_identical(.Random.seed, rng_before)
+  expect_identical(
+    names(all_draws),
+    c("eta_root1", "eta_root2", "lambda", "index", "nd")
+  )
+  expect_identical(all_draws$index, 1:2)
+  expect_identical(all_draws$nd, 2L)
+  expect_silent(rqrgibbs:::.rqr_validate_dlm_draws(fit, all_draws))
+
+  expect_error(
+    rqr_posterior_draws(fit, seed = 1212),
+    "seed must be NULL when nd is NULL"
+  )
+  expect_identical(.Random.seed, rng_before)
+  expect_error(
+    rqr_posterior_draws(fit, unsupported = TRUE),
+    "unsupported arguments"
+  )
+  expect_error(
+    rqrgibbs:::rqr_posterior_draws.rqr_dlm_mcmc(unclass(fit)),
+    "Expected an rqr_dlm_mcmc"
+  )
+  expect_error(
+    rqr_posterior_draws(fit, nd = 0L, seed = 1212),
+    "nd must be one finite integer"
+  )
+  expect_identical(.Random.seed, rng_before)
+
+  sampled_a <- rqr_posterior_draws(fit, nd = 3L, seed = 1213)
+  sampled_b <- rqr_posterior_draws(fit, nd = 3L, seed = 1213)
+  expect_identical(sampled_a, sampled_b)
+  expect_equal(dim(sampled_a$eta_root1), c(3L, 3L))
+  expect_length(sampled_a$lambda, 3L)
+  expect_true(all(sampled_a$index %in% 1:2))
+  expect_true(anyDuplicated(sampled_a$index) > 0L)
+  expect_silent(rqrgibbs:::.rqr_validate_dlm_draws(fit, sampled_a))
+
+  bad <- fit
+  bad$samp.eta_root2 <- bad$samp.eta_root2[-1L, , drop = FALSE]
+  expect_error(
+    rqr_posterior_draws(bad),
+    "matching nonempty finite plain numeric matrices"
+  )
+  bad <- fit
+  bad$samp.eta_root1[1L, 1L] <- Inf
+  expect_error(rqr_posterior_draws(bad), "finite plain numeric matrices")
+  bad <- fit
+  class(bad$samp.eta_root1) <- c("custom_matrix", "matrix")
+  expect_error(rqr_posterior_draws(bad), "plain numeric matrices")
+  bad <- fit
+  bad$y <- matrix(bad$y, ncol = 1L)
+  expect_error(rqr_posterior_draws(bad), "fitted response length")
+  bad <- fit
+  bad$y[] <- NA_real_
+  expect_error(rqr_posterior_draws(bad), "fitted response length")
+  bad <- fit
+  bad$samp.lambda <- matrix(bad$samp.lambda, nrow = 1L)
+  expect_error(rqr_posterior_draws(bad), "lambda draws")
+  bad <- fit
+  bad$samp.lambda[1L] <- 0
+  expect_error(rqr_posterior_draws(bad), "finite, positive")
+
+  known <- all_draws
+  canonical_known <- rqrgibbs:::.rqr_validate_dlm_draws(fit, known)
+  expect_identical(canonical_known, known)
+  pred_known <- predict_interval(fit, draws = known)
+  expect_equal(dim(pred_known$lower_draws), c(3L, 2L))
+  expect_true(all(pred_known$upper_draws >= pred_known$lower_draws))
+  expect_identical(pred_known$draws, known)
+  expect_identical(pred_known$draw_index, 1:2)
+  expect_false(pred_known$response_predictive_draws)
+  expect_match(pred_known$interpretation, "no response draw")
+
+  external <- list(
+    eta_root1 = matrix(
+      as.integer(c(-1, -1, -1, -2, -2, -2)),
+      nrow = 3L
+    ),
+    eta_root2 = matrix(
+      as.integer(c(1, 1, 1, 2, 2, 2)),
+      nrow = 3L
+    )
+  )
+  canonical_external <- rqrgibbs:::.rqr_validate_dlm_draws(fit, external)
+  expect_identical(
+    names(canonical_external),
+    c("eta_root1", "eta_root2", "lambda", "index", "nd")
+  )
+  expect_type(canonical_external$eta_root1, "double")
+  expect_null(canonical_external$lambda)
+  expect_identical(
+    canonical_external$index, rep(NA_integer_, 2L)
+  )
+  expect_identical(canonical_external$nd, 2L)
+  pred_external <- predict_interval(fit, draws = external)
+  expect_identical(pred_external$draws, canonical_external)
+  expect_identical(
+    pred_external$draw_index, rep(NA_integer_, 2L)
+  )
+  expect_silent(
+    predict_interval(fit, draws = canonical_external)
+  )
+
+  unbound_with_metadata <- c(
+    external,
+    list(
+      lambda = c(2.5, 3.5),
+      index = rep(NA_integer_, 2L),
+      nd = 2L
+    )
+  )
+  canonical_unbound <- rqrgibbs:::.rqr_validate_dlm_draws(
+    fit, unbound_with_metadata
+  )
+  expect_identical(
+    canonical_unbound$index, rep(NA_integer_, 2L)
+  )
+  expect_identical(canonical_unbound$lambda, c(2.5, 3.5))
+
+  set.seed(1214)
+  rng_before_explicit <- .Random.seed
+  expect_error(
+    predict_interval(fit, draws = external, nd = 1L),
+    "nd and seed must be NULL"
+  )
+  expect_error(
+    predict_interval(fit, draws = external, seed = 1214),
+    "nd and seed must be NULL"
+  )
+  expect_identical(.Random.seed, rng_before_explicit)
+  expect_error(
+    predict_interval(fit, draws = external, unsupported = TRUE),
+    "unsupported arguments"
+  )
+  expect_error(
+    rqrgibbs:::predict_interval.rqr_dlm_mcmc(
+      unclass(fit), draws = external
+    ),
+    "Expected an rqr_dlm_mcmc"
+  )
+
+  invalid <- external
+  invalid$typo <- TRUE
+  expect_error(
+    rqrgibbs:::.rqr_validate_dlm_draws(fit, invalid),
+    "unsupported fields: typo"
+  )
+  invalid <- unname(external)
+  expect_error(
+    rqrgibbs:::.rqr_validate_dlm_draws(fit, invalid),
+    "fully named"
+  )
+  invalid <- external
+  names(invalid) <- rep("eta_root1", 2L)
+  expect_error(
+    rqrgibbs:::.rqr_validate_dlm_draws(fit, invalid),
+    "duplicate fields"
+  )
+  invalid <- external
+  class(invalid) <- "custom_draw_list"
+  expect_error(
+    rqrgibbs:::.rqr_validate_dlm_draws(fit, invalid),
+    "plain named list"
+  )
+  expect_error(
+    rqrgibbs:::.rqr_validate_dlm_draws(
+      fit, external["eta_root1"]
+    ),
+    "both root-ordinate matrices"
+  )
+  invalid <- external
+  invalid$eta_root1 <- as.data.frame(invalid$eta_root1)
+  expect_error(
+    predict_interval(fit, draws = invalid),
+    "plain numeric matrices"
+  )
+  invalid <- external
+  class(invalid$eta_root1) <- c("custom_matrix", "matrix")
+  expect_error(
+    predict_interval(fit, draws = invalid),
+    "plain numeric matrices"
+  )
+  invalid <- external
+  invalid$eta_root2[1L, 1L] <- NA_real_
+  expect_error(predict_interval(fit, draws = invalid), "finite numeric")
+  invalid <- external
+  invalid$eta_root1 <- invalid$eta_root1[, FALSE, drop = FALSE]
+  invalid$eta_root2 <- invalid$eta_root2[, FALSE, drop = FALSE]
+  expect_error(predict_interval(fit, draws = invalid), "one row per fitted time")
+  invalid <- external
+  invalid$lambda <- c(1, -1)
+  expect_error(predict_interval(fit, draws = invalid), "lambda draws")
+  invalid <- external
+  invalid$lambda <- matrix(c(1, 2), nrow = 1L)
+  expect_error(predict_interval(fit, draws = invalid), "numeric vector")
+  invalid <- external
+  invalid$index <- c(1, 2)
+  expect_error(predict_interval(fit, draws = invalid), "integer vector")
+  invalid <- external
+  invalid$index <- c(1L, NA_integer_)
+  expect_error(predict_interval(fit, draws = invalid), "retained-draw range")
+  invalid <- external
+  invalid$index <- c(1L, 3L)
+  expect_error(predict_interval(fit, draws = invalid), "retained-draw range")
+  invalid <- known
+  invalid$index <- c(1L, 1L)
+  invalid$eta_root1 <- fit$samp.eta_root1[, c(1L, 1L), drop = FALSE]
+  invalid$eta_root2 <- fit$samp.eta_root2[, c(1L, 1L), drop = FALSE]
+  invalid$lambda <- fit$samp.lambda[c(1L, 1L)]
+  expect_error(predict_interval(fit, draws = invalid), "must be unique")
+  invalid <- known
+  invalid$eta_root1[1L, 1L] <- invalid$eta_root1[1L, 1L] + 0.1
+  expect_error(
+    predict_interval(fit, draws = invalid),
+    "do not identify the supplied DLM root-ordinate draws"
+  )
+  invalid <- known
+  invalid$lambda[1L] <- invalid$lambda[1L] + 0.1
+  expect_error(
+    predict_interval(fit, draws = invalid),
+    "do not identify the supplied DLM lambda draws"
+  )
+  invalid <- external
+  invalid$nd <- 1L
+  expect_error(predict_interval(fit, draws = invalid), "nd must equal")
+  invalid <- external
+  invalid$nd <- matrix(2L, nrow = 1L)
+  expect_error(
+    predict_interval(fit, draws = invalid),
+    "nd must be one plain numeric scalar"
+  )
+
+  repeated <- list(
+    eta_root1 = fit$samp.eta_root1[
+      , c(1L, 2L, 1L), drop = FALSE
+    ],
+    eta_root2 = fit$samp.eta_root2[
+      , c(1L, 2L, 1L), drop = FALSE
+    ],
+    lambda = fit$samp.lambda[c(1L, 2L, 1L)],
+    index = c(1L, 2L, 1L),
+    nd = 3L
+  )
+  expect_silent(rqrgibbs:::.rqr_validate_dlm_draws(fit, repeated))
+
+  expect_error(print(fit, unsupported = TRUE), "unsupported arguments")
+  expect_output(print(fit), "RQR dynamic MCMC fit")
+  corrupt <- fit
+  corrupt$samp.eta_root1[1L, 1L] <- NA_real_
+  expect_error(print(corrupt), "finite plain numeric matrices")
 })
 
 test_that("native fixed-design ridge MCMC has no private exdqlm dependency", {
@@ -180,6 +502,10 @@ test_that("future root forecasting is explicit and does not simulate responses",
   expect_match(fc$interpretation, "no response simulation")
   expect_equal(fc$diagnostics$repair_count, 0L)
   expect_identical(fc$draw_index, seq_len(ncol(fit$samp.eta_root1)))
+  expect_identical(fc$draw_binding_status, "fit_retained_draws")
+  expect_identical(
+    fc$diagnostics$draw_binding_status, "fit_retained_draws"
+  )
   expect_error(
     rqr_forecast_roots(
       fit, FF_future = matrix(1, 1, 2), GG_future = 1,
@@ -601,7 +927,9 @@ test_that("component-scale root forecasts match analytic state moments", {
   fixture <- structure(list(
     samp.theta_terminal_root1 = matrix(terminal, 1, n_save),
     samp.theta_terminal_root2 = matrix(terminal, 1, n_save),
-    samp.evolution_scale = matrix(q, n_save, 1),
+    samp.evolution_scale = matrix(
+      q, n_save, 1, dimnames = list(NULL, "level")
+    ),
     evolution = rqr_evolution_component_scale(
       templates = list(matrix(1, 1, 1)),
       component_dims = 1L,
@@ -636,9 +964,12 @@ test_that("component-scale root forecasts match analytic state moments", {
   expect_lte(max(abs(empirical_variance - analytic_variance) / variance_mcse), 5)
   expect_equal(
     forecast$diagnostics$component_scale_draws,
-    matrix(q, n_draw, 1)
+    matrix(q, n_draw, 1, dimnames = list(NULL, "level"))
   )
   expect_equal(forecast$diagnostics$repair_count, 0L)
+  expect_identical(
+    forecast$draw_binding_status, "unbound_external_state_fixture"
+  )
 })
 
 test_that("all-draw component forecasts preserve varying saved scale rows", {
@@ -710,7 +1041,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.10.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.11.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
@@ -1029,7 +1360,10 @@ test_that("DLM continuation rejects every target and checkpoint mutation", {
     evolution_scale_prior = list(shape = 3, rate = 2),
     learning_rate_mode = "learned_pseudoresidual_normalized",
     lambda_prior = list(shape = 4, rate = 5),
-    mcmc_control = list(n_burn = 0, n_mcmc = 2, seed = 1211, backend = "cpp")
+    mcmc_control = list(
+      n_burn = 0, n_mcmc = 2, seed = 1211, backend = "cpp",
+      store_state_draws = TRUE, store_latent_draws = TRUE
+    )
   )
 
   target_mutations <- list(
@@ -1168,6 +1502,120 @@ test_that("DLM continuation rejects every target and checkpoint mutation", {
       info = name
     )
   }
+
+  envelope_mutations <- list(
+    last_alias = function(x) {
+      x$last$lambda <- x$last$lambda + 1
+      x
+    },
+    retained_root = function(x) {
+      x$samp.eta_root1[1L, ncol(x$samp.eta_root1)] <-
+        x$samp.eta_root1[1L, ncol(x$samp.eta_root1)] + 1
+      x
+    },
+    retained_terminal_state = function(x) {
+      x$samp.theta_terminal_root1[
+        1L, ncol(x$samp.theta_terminal_root1)
+      ] <- x$samp.theta_terminal_root1[
+        1L, ncol(x$samp.theta_terminal_root1)
+      ] + 1
+      x
+    },
+    retained_full_state = function(x) {
+      index <- dim(x$samp.theta_root1)[3L]
+      x$samp.theta_root1[1L, 1L, index] <-
+        x$samp.theta_root1[1L, 1L, index] + 1
+      x
+    },
+    retained_lambda = function(x) {
+      x$samp.lambda[length(x$samp.lambda)] <-
+        x$samp.lambda[length(x$samp.lambda)] + 1
+      x
+    },
+    retained_latent = function(x) {
+      x$samp.latent_v[1L, ncol(x$samp.latent_v)] <-
+        x$samp.latent_v[1L, ncol(x$samp.latent_v)] + 1
+      x
+    },
+    retained_scale = function(x) {
+      x$samp.evolution_scale[
+        nrow(x$samp.evolution_scale), 1L
+      ] <- x$samp.evolution_scale[
+        nrow(x$samp.evolution_scale), 1L
+      ] + 1
+      x
+    },
+    scale_shape_nonpositive = function(x) {
+      x$samp.evolution_scale_shape[1L, 1L] <- 0
+      x
+    },
+    scale_rate_names = function(x) {
+      colnames(x$samp.evolution_scale_rate) <- "wrong"
+      x
+    },
+    one_sided_time0 = function(x) {
+      x$samp.theta0_root2 <- NULL
+      x
+    },
+    schedule_digest = function(x) {
+      x$segment_schedule_digest <- strrep("0", 64L)
+      x
+    },
+    schedule_arithmetic = function(x) {
+      last_index <- length(x$segment_schedule_contract$segments)
+      x$segment_schedule_contract$segments[[last_index]]$
+        end_completed_iterations <-
+        x$segment_schedule_contract$segments[[last_index]]$
+          end_completed_iterations + 1L
+      x$segment_schedule_digest <- rqrgibbs:::.rqr_digest(
+        x$segment_schedule_contract
+      )
+      x
+    }
+  )
+  for (name in names(envelope_mutations)) {
+    altered <- envelope_mutations[[name]](fit)
+    expect_error(
+      rqr_posterior_draws(altered),
+      "DLM|checkpoint|schedule|retained|state|scale|latent",
+      info = paste("read", name)
+    )
+    expect_error(
+      rqr_dlm_continue(altered, 1L),
+      "DLM|checkpoint|schedule|retained|state|scale|latent",
+      info = paste("continue", name)
+    )
+  }
+
+  forged_last <- envelope_mutations$last_alias(fit)
+  expect_error(
+    predict_interval(forged_last),
+    "last-state alias"
+  )
+  expect_error(
+    rqr_forecast_roots(
+      forged_last,
+      FF_future = matrix(1, 1L, 1L),
+      GG_future = 1, W_future = 0.1
+    ),
+    "last-state alias"
+  )
+  expect_error(print(forged_last), "last-state alias")
+
+  fixed_fit <- rqr_dlm_fit(
+    y, rqr_polytrend(1L, C0 = 2), 0.8,
+    evolution_mode = "fixed_W", W = 0.05,
+    learning_rate = 1.25, loss_reference_scale = 2,
+    learning_rate_mode = "fixed_rate",
+    mcmc_control = list(
+      n_burn = 0L, n_mcmc = 2L, seed = 1212L, backend = "R"
+    )
+  )
+  fixed_fit$samp.lambda[1L] <- fixed_fit$samp.lambda[1L] + 1
+  expect_error(
+    rqr_posterior_draws(fixed_fit),
+    "Fixed-rate DLM lambda"
+  )
 })
 
 test_that("iteration controls fail with actionable scalar-integer errors", {
@@ -1178,6 +1626,293 @@ test_that("iteration controls fail with actionable scalar-integer errors", {
       mcmc_control = list(n_burn = NA_integer_, n_mcmc = 2)
     ),
     "mcmc_control\\$n_burn"
+  )
+})
+
+test_that("DLM public controls reject unknown fields and silent coercions", {
+  base <- list(
+    y = seq(-0.4, 0.4, length.out = 6L),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "fixed_W",
+    W = 0.05
+  )
+  call_fit <- function(mcmc_control = list(
+                         n_burn = 0L, n_mcmc = 1L, backend = "R"
+                       ),
+                       init = list(), ...) {
+    do.call(
+      rqr_dlm_fit,
+      c(
+        base,
+        list(mcmc_control = mcmc_control, init = init),
+        list(...)
+      )
+    )
+  }
+
+  expect_error(
+    call_fit(mcmc_control = list(
+      n_burn = 0L, n_mcmc = 1L, backend = "R", typo = TRUE
+    )),
+    "unsupported fields: typo"
+  )
+  expect_error(
+    call_fit(init = list(unknown_state = 1)),
+    "unsupported fields: unknown_state"
+  )
+  expect_error(
+    call_fit(init = list(
+      state_root1 = matrix(0, 1, 6),
+      state_root2 = matrix(0, 1, 6),
+      theta1 = matrix(0, 1, 6)
+    )),
+    "canonical state paths and their legacy aliases"
+  )
+  expect_error(
+    call_fit(mcmc_control = list(
+      n_burn = 0L, n_mcmc = 1L, backend = "r"
+    )),
+    "must be exactly one of"
+  )
+  expect_error(
+    call_fit(mcmc_control = list(
+      n_burn = 0L, n_mcmc = 1L, backend = "R",
+      store_state_draws = 1
+    )),
+    "store_state_draws must be TRUE or FALSE"
+  )
+  expect_error(
+    call_fit(mcmc_control = list(
+      n_burn = 0L, n_mcmc = 1L, backend = "R",
+      component_scale_slice_width = c(1, 2)
+    )),
+    "component_scale_slice_width must be one finite numeric scalar"
+  )
+  expect_error(
+    call_fit(mcmc_control = list(
+      n_burn = 0L, n_mcmc = 1L, backend = "R",
+      jitter_ladder = "0"
+    )),
+    "jitter_ladder must be a nonempty plain numeric"
+  )
+  expect_error(
+    call_fit(learning_rate = c(1, 2)),
+    "learning_rate must be one finite numeric scalar"
+  )
+  continuation_only <- list(
+    completed_iterations = 1L,
+    continued_from_checkpoint = TRUE,
+    parent_cumulative_numerical_repair_count = 0L,
+    parent_chain_history_numerically_exact = TRUE,
+    parent_promotion_eligible = TRUE,
+    continuation_control = list()
+  )
+  for (field in names(continuation_only)) {
+    expect_error(
+      call_fit(init = stats::setNames(
+        list(continuation_only[[field]]), field
+      )),
+      "Continuation-only init fields",
+      info = field
+    )
+  }
+  expect_false(
+    ".continuation_token" %in% names(formals(rqr_dlm_fit))
+  )
+  expect_error(
+    do.call(
+      rqrgibbs:::.rqr_dlm_fit_impl,
+      c(
+        base,
+        list(
+          mcmc_control = list(
+            n_burn = 0L, n_mcmc = 1L, backend = "R"
+          ),
+          init = continuation_only,
+          .continuation_token = new.env(parent = emptyenv())
+        )
+      )
+    ),
+    "private validated.*worker boundary"
+  )
+  bad_y <- base
+  bad_y$y <- factor(seq_len(6L))
+  bad_y$mcmc_control <- list(
+    n_burn = 0L, n_mcmc = 1L, backend = "R"
+  )
+  expect_error(
+    do.call(rqr_dlm_fit, bad_y),
+    "plain numeric vector"
+  )
+
+  set.seed(1213)
+  rng_before <- .Random.seed
+  expect_error(
+    call_fit(mcmc_control = list(
+      n_burn = 0L, n_mcmc = 1L, seed = 99L, backend = "R",
+      verbose = 1
+    )),
+    "verbose must be TRUE or FALSE"
+  )
+  expect_identical(.Random.seed, rng_before)
+  expect_error(
+    call_fit(
+      mcmc_control = list(
+        n_burn = 0L, n_mcmc = 1L, seed = 99L, backend = "R"
+      ),
+      init = list(rng_state = rng_before)
+    ),
+    "not both"
+  )
+
+  valid <- call_fit()
+  expect_s3_class(valid, "rqr_dlm_mcmc")
+  expect_error(
+    rqr_dlm_continue(valid, 1L, store_state_draws = 1),
+    "store_state_draws must be TRUE or FALSE"
+  )
+})
+
+test_that("future roots validate stored states and draw bindings", {
+  fit <- rqr_dlm_fit(
+    y = seq(-0.4, 0.4, length.out = 7L),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "fixed_W",
+    W = 0.04,
+    mcmc_control = list(
+      n_burn = 0L, n_mcmc = 3L, seed = 1214L,
+      backend = "R", store_state_draws = TRUE
+    )
+  )
+  forecast_args <- list(
+    FF_future = matrix(1, 1, 2),
+    GG_future = 1,
+    W_future = 0.04,
+    seed = 1215L
+  )
+  valid <- do.call(rqr_forecast_roots, c(list(object = fit), forecast_args))
+  expect_identical(valid$draw_index, seq_len(3L))
+  expect_identical(valid$draw_binding_status, "fit_retained_draws")
+
+  full_only <- fit
+  full_only$samp.theta_terminal_root1 <- NULL
+  full_only$samp.theta_terminal_root2 <- NULL
+  fallback <- do.call(
+    rqr_forecast_roots, c(list(object = full_only), forecast_args)
+  )
+  expect_identical(fallback$draw_index, seq_len(3L))
+
+  mutations <- list(
+    missing_second_terminal = function(x) {
+      x$samp.theta_terminal_root2 <- NULL
+      x
+    },
+    nonfinite_terminal = function(x) {
+      x$samp.theta_terminal_root1[1L, 1L] <- NA_real_
+      x
+    },
+    retained_draw_mismatch = function(x) {
+      x$samp.theta_terminal_root1 <-
+        x$samp.theta_terminal_root1[, -1L, drop = FALSE]
+      x$samp.theta_terminal_root2 <-
+        x$samp.theta_terminal_root2[, -1L, drop = FALSE]
+      x$samp.theta_root1 <- NULL
+      x$samp.theta_root2 <- NULL
+      x
+    },
+    terminal_path_mismatch = function(x) {
+      x$samp.theta_terminal_root1[1L, 1L] <-
+        x$samp.theta_terminal_root1[1L, 1L] + 1
+      x
+    },
+    ordinate_binding_mismatch = function(x) {
+      x$samp.theta_root1 <- NULL
+      x$samp.theta_root2 <- NULL
+      x$samp.theta_terminal_root1 <-
+        x$samp.theta_terminal_root1[, c(2L, 1L, 3L), drop = FALSE]
+      x
+    },
+    partial_fitted_draws = function(x) {
+      x$samp.eta_root2 <- NULL
+      x
+    },
+    missing_expanded_model = function(x) {
+      x$expanded_model <- NULL
+      x
+    },
+    wrong_state_dimension = function(x) {
+      x$expanded_model$p <- 2L
+      x
+    }
+  )
+  for (label in names(mutations)) {
+    bad <- mutations[[label]](fit)
+    set.seed(1216)
+    rng_before <- .Random.seed
+    expect_error(
+      do.call(
+        rqr_forecast_roots,
+        c(list(object = bad), forecast_args)
+      ),
+      info = label
+    )
+    expect_identical(.Random.seed, rng_before, info = label)
+  }
+
+  component_fit <- rqr_dlm_fit(
+    y = seq(-0.3, 0.3, length.out = 6L),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "component_scale",
+    component_templates = list(matrix(1, 1, 1)),
+    mcmc_control = list(
+      n_burn = 0L, n_mcmc = 3L, seed = 1217L, backend = "R"
+    )
+  )
+  component_args <- list(
+    FF_future = matrix(1, 1, 1),
+    GG_future = 1,
+    component_templates_future = list(matrix(1, 1, 1)),
+    seed = 1218L
+  )
+  component_valid <- do.call(
+    rqr_forecast_roots,
+    c(list(object = component_fit), component_args)
+  )
+  expect_identical(
+    component_valid$diagnostics$component_scale_draws,
+    component_fit$samp.evolution_scale
+  )
+
+  transposed <- component_fit
+  transposed$samp.evolution_scale <-
+    t(transposed$samp.evolution_scale)
+  expect_error(
+    do.call(
+      rqr_forecast_roots,
+      c(list(object = transposed), component_args)
+    ),
+    "retained-draw-by-component"
+  )
+  unnamed <- component_fit
+  colnames(unnamed$samp.evolution_scale) <- NULL
+  expect_error(
+    do.call(
+      rqr_forecast_roots,
+      c(list(object = unnamed), component_args)
+    ),
+    "component-name order"
+  )
+  nonfinite_scale <- component_fit
+  nonfinite_scale$samp.evolution_scale[1L, 1L] <- Inf
+  expect_error(
+    do.call(
+      rqr_forecast_roots,
+      c(list(object = nonfinite_scale), component_args)
+    ),
+    "finite positive"
   )
 })
 

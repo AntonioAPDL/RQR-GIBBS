@@ -7,12 +7,12 @@
 rqr_constants(coverage_level, learning_rate = 1)
 }
 \arguments{
-\item{coverage_level}{Interval coverage level in `(0, 1)`.}
+\item{coverage_level}{Interval coverage level in \verb{(0, 1)}.}
 
 \item{learning_rate}{Positive generalized-Bayes learning rate.}
 }
 \value{
-A named list with `alpha`, `omega`, `sigma`, `xi`, and `phi`.
+A named list with \code{alpha}, \code{omega}, \code{sigma}, \code{xi}, and \code{phi}.
 }
 \description{
 RQR loss constants

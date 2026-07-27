@@ -2,22 +2,31 @@
 % Please edit documentation in R/rqr_numerics.R
 \name{beta_prior}
 \alias{beta_prior}
-\title{Construct a standalone beta-prior specification}
+\title{Backward-compatible coefficient-prior constructor}
 \usage{
-beta_prior(type = c("ridge", "rhs", "rhs_ns"), ridge = list(), rhs = list())
+beta_prior(
+  type = c("ridge", "gaussian", "rhs_ns", "rhs"),
+  ridge = list(),
+  rhs = list(),
+  gaussian = list(),
+  rhs_ns = NULL
+)
 }
 \arguments{
 \item{type}{Prior type.}
 
-\item{ridge}{Ridge controls, including `tau2`.}
+\item{ridge}{Ridge controls, including \code{tau2}.}
 
-\item{rhs}{RHS controls forwarded to `exdqlm::beta_prior()`.}
+\item{rhs}{Legacy controls for \code{"rhs_ns"}.}
+
+\item{gaussian}{Full-Gaussian controls.}
+
+\item{rhs_ns}{Native RHS-NS controls. When omitted, \code{rhs} is used.}
 }
 \value{
 A prior specification.
 }
 \description{
-Ridge is native. RHS-family objects may be constructed by an installed
-`exdqlm` reference package, but their MCMC state remains an explicit adapter
-rather than part of the native DLM core.
+New code should use \code{\link[=rqr_beta_prior]{rqr_beta_prior()}}. This compatibility wrapper is fully
+native and never loads an exdqlm namespace.
 }

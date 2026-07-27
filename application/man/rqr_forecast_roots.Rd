@@ -17,14 +17,14 @@ rqr_forecast_roots(
 )
 }
 \arguments{
-\item{object}{An `rqr_dlm_mcmc` fit.}
+\item{object}{An \code{rqr_dlm_mcmc} fit.}
 
 \item{FF_future}{State-by-horizon observation design.}
 
 \item{GG_future}{Evolution matrix or cube.}
 
 \item{W_future}{Explicit evolution covariance matrix or cube. Supply either
-this argument or `component_templates_future`.}
+this argument or \code{component_templates_future}.}
 
 \item{component_templates_future}{Optional fixed future component templates.
 For a component-scale fit, these are combined with the saved draw-specific
@@ -34,13 +34,15 @@ evolution multipliers.}
 
 \item{seed}{Optional seed.}
 
-\item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
+\item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 
 \item{jitter_ladder}{Matrix-relative jitter ladder for record-repair mode.
 An exactly zero matrix uses a separately recorded absolute fallback.}
 }
 \value{
-Future root and ordered endpoint draws with repair diagnostics.
+Future root and ordered endpoint draws with repair diagnostics and
+an explicit retained-draw binding status. Hand-built state-only fixtures
+are marked unbound rather than being represented as fitted-draw indices.
 }
 \description{
 These are state-evolution draws for interval roots, not predictive response

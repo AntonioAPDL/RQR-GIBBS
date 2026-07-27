@@ -8,7 +8,14 @@
 }
 
 .rqr_numerical_policy <- function(policy = c("fail", "record_repair")) {
-  match.arg(as.character(policy)[1L], c("fail", "record_repair"))
+  choices <- c("fail", "record_repair")
+  if (identical(policy, choices)) policy <- policy[[1L]]
+  if (!is.character(policy) || length(policy) != 1L ||
+      is.na(policy) || !nzchar(policy)) {
+    stop("numerical_policy must be exactly 'fail' or 'record_repair'.",
+         call. = FALSE)
+  }
+  match.arg(policy, choices)
 }
 
 .rqr_jitter_ladder <- function(policy, jitter_ladder) {
@@ -237,13 +244,45 @@
 
 .exal_normalize_mcmc_precision_beta_cfg <- function(precision_cfg = NULL) {
   precision_cfg <- precision_cfg %||% list()
-  if (!is.list(precision_cfg)) stop("precision configuration must be a list.", call. = FALSE)
+  .rqr_validate_named_list_fields(
+    precision_cfg, "precision configuration",
+    c(
+      "enabled", "symmetrize", "jitter_ladder",
+      "eigen_fallback", "trace"
+    )
+  )
+  enabled <- .rqr_scalar_logical(
+    precision_cfg$enabled %||% TRUE,
+    "precision configuration$enabled"
+  )
+  symmetrize <- .rqr_scalar_logical(
+    precision_cfg$symmetrize %||% TRUE,
+    "precision configuration$symmetrize"
+  )
+  eigen_fallback <- .rqr_scalar_logical(
+    precision_cfg$eigen_fallback %||% FALSE,
+    "precision configuration$eigen_fallback"
+  )
+  trace <- .rqr_scalar_logical(
+    precision_cfg$trace %||% TRUE,
+    "precision configuration$trace"
+  )
+  if (!enabled || !symmetrize || eigen_fallback) {
+    stop(
+      paste(
+        "Ordinary RQR v1 requires enabled=TRUE, symmetrize=TRUE,",
+        "and eigen_fallback=FALSE in the precision configuration."
+      ),
+      call. = FALSE
+    )
+  }
   list(
-    enabled = TRUE,
-    symmetrize = TRUE,
-    jitter_ladder = precision_cfg$jitter_ladder %||% c(0, 1e-12, 1e-10, 1e-8, 1e-6),
-    eigen_fallback = FALSE,
-    trace = isTRUE(precision_cfg$trace %||% TRUE)
+    enabled = enabled,
+    symmetrize = symmetrize,
+    jitter_ladder = precision_cfg$jitter_ladder %||%
+      c(0, 1e-12, 1e-10, 1e-8, 1e-6),
+    eigen_fallback = eigen_fallback,
+    trace = trace
   )
 }
 
@@ -341,26 +380,37 @@ rqr_sample_gig_half <- function(b, a) {
   t(as.matrix(ans))
 }
 
-#' Construct a standalone beta-prior specification
+#' Backward-compatible coefficient-prior constructor
 #'
-#' Ridge is native. RHS-family objects may be constructed by an installed
-#' `exdqlm` reference package, but their MCMC state remains an explicit adapter
-#' rather than part of the native DLM core.
+#' New code should use [rqr_beta_prior()]. This compatibility wrapper is fully
+#' native and never loads an exdqlm namespace.
 #'
 #' @param type Prior type.
 #' @param ridge Ridge controls, including `tau2`.
-#' @param rhs RHS controls forwarded to `exdqlm::beta_prior()`.
+#' @param rhs Legacy controls for `"rhs_ns"`.
+#' @param gaussian Full-Gaussian controls.
+#' @param rhs_ns Native RHS-NS controls. When omitted, `rhs` is used.
 #' @return A prior specification.
 #' @export
-beta_prior <- function(type = c("ridge", "rhs", "rhs_ns"), ridge = list(), rhs = list()) {
+beta_prior <- function(
+    type = c("ridge", "gaussian", "rhs_ns", "rhs"),
+    ridge = list(), rhs = list(), gaussian = list(),
+    rhs_ns = NULL) {
   type <- match.arg(type)
-  if (identical(type, "ridge")) {
-    tau2 <- as.numeric(ridge$tau2 %||% 1e4)[1L]
-    if (!is.finite(tau2) || tau2 <= 0) stop("ridge$tau2 must be positive.", call. = FALSE)
-    return(list(type = "ridge", hypers = list(tau2 = tau2)))
+  if (identical(type, "rhs")) {
+    stop(
+      paste(
+        "The generic legacy 'rhs' prior is not an ordinary-RQR v1 target.",
+        "Use type='rhs_ns' with an explicit intercept_name."
+      ),
+      call. = FALSE
+    )
   }
-  .rqr_installed_namespace("exdqlm", "RHS-family construction")
-  getExportedValue("exdqlm", "beta_prior")(type = type, ridge = ridge, rhs = rhs)
+  if (is.null(rhs_ns)) rhs_ns <- rhs
+  rqr_beta_prior(
+    type = type, ridge = ridge, gaussian = gaussian,
+    rhs_ns = rhs_ns
+  )
 }
 
 .rqr_installed_namespace <- function(package, context) {
@@ -389,6 +439,9 @@ beta_prior <- function(type = c("ridge", "rhs", "rhs_ns"), ridge = list(), rhs =
   namespace
 }
 
+# Deprecated compatibility adapters retained only for old serialized/reference
+# workflows. Ordinary-RQR v1 inference uses the native prior interface and
+# never calls these functions.
 .rqr_exdqlm_internal <- function(name) {
   .rqr_installed_namespace(
     "exdqlm", sprintf("The '%s' compatibility adapter", name)
@@ -397,10 +450,14 @@ beta_prior <- function(type = c("ridge", "rhs", "rhs_ns"), ridge = list(), rhs =
 }
 
 .qdesn_assert_rhs_prior_obj_intercept_policy <- function(...) {
-  .rqr_exdqlm_internal(".qdesn_assert_rhs_prior_obj_intercept_policy")(...)
+  .rqr_exdqlm_internal(
+    ".qdesn_assert_rhs_prior_obj_intercept_policy"
+  )(...)
 }
 .exal_mcmc_rhs_ns_prepare_state <- function(...) {
-  .rqr_exdqlm_internal(".exal_mcmc_rhs_ns_prepare_state")(...)
+  .rqr_exdqlm_internal(
+    ".exal_mcmc_rhs_ns_prepare_state"
+  )(...)
 }
 .exal_mcmc_rhs_ns_precisions <- function(...) {
   .rqr_exdqlm_internal(".exal_mcmc_rhs_ns_precisions")(...)

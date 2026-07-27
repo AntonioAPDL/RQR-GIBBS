@@ -18,7 +18,7 @@ rqr_seasonal(period, harmonics = 1L, m0 = NULL, C0 = NULL, name = "seasonal")
 \item{name}{Component name.}
 }
 \value{
-An `rqr_dlm_model`.
+An \code{rqr_dlm_model}.
 }
 \description{
 Fourier seasonal RQR-DLM component

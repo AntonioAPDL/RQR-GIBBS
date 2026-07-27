@@ -16,7 +16,7 @@ rqr_polytrend(order = 1L, m0 = NULL, C0 = NULL, name = "trend")
 \item{name}{Component name.}
 }
 \value{
-An `rqr_dlm_model`.
+An \code{rqr_dlm_model}.
 }
 \description{
 Polynomial-trend RQR-DLM component

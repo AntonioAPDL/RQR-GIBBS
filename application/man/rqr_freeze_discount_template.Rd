@@ -22,19 +22,19 @@ rqr_freeze_discount_template(
 
 \item{df, dim.df}{exdqlm-compatible component discounts and dimensions.}
 
-\item{reference_variance}{Positive scalar or length-`n_time` vector.}
+\item{reference_variance}{Positive scalar or length-\code{n_time} vector.}
 
-\item{reference_design}{Optional `p x n_time` pseudo-design; defaults to FF.}
+\item{reference_design}{Optional \verb{p x n_time} pseudo-design; defaults to FF.}
 
-\item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
+\item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 
 \item{jitter_ladder}{Matrix-relative jitter ladder used only under
 record-repair. An exactly zero matrix uses a separately recorded absolute
 fallback.}
 }
 \value{
-An evolution specification containing a fixed `W` cube and a
-  construction audit.
+An evolution specification containing a fixed \code{W} cube and a
+construction audit.
 }
 \description{
 Freeze a component-discount covariance template

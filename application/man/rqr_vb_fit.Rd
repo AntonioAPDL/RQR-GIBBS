@@ -20,22 +20,22 @@ rqr_vb_fit(
 
 \item{X}{Design matrix.}
 
-\item{coverage_level}{Interval coverage level in `(0, 1)`.}
+\item{coverage_level}{Interval coverage level in \verb{(0, 1)}.}
 
 \item{learning_rate}{Positive generalized-Bayes learning rate.}
 
 \item{beta_prior_obj}{Beta prior object. The initial VB backend supports
 ridge priors.}
 
-\item{vb_control}{Named list with `max_iter`, `tol`, `verbose`, `seed`, and
-`n_draws`.}
+\item{vb_control}{Named list with \code{max_iter}, \code{tol}, \code{verbose}, \code{seed}, and
+\code{n_draws}.}
 
 \item{init}{Optional initial values.}
 
 \item{...}{Reserved.}
 }
 \value{
-An `rqr_vb` object.
+An \code{rqr_vb} object.
 }
 \description{
 This is a fast approximation to the RQR generalized posterior. MCMC remains

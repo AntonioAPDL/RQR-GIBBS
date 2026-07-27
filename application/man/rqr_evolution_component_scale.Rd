@@ -24,10 +24,10 @@ rqr_evolution_component_scale(
 \item{component_names}{Optional component names.}
 }
 \value{
-An `rqr_evolution` specification.
+An \code{rqr_evolution} specification.
 }
 \description{
-Defines `W_t = blockdiag(q_1 Q_1t, ..., q_J Q_Jt)` with fixed positive-
+Defines \verb{W_t = blockdiag(q_1 Q_1t, ..., q_J Q_Jt)} with fixed positive-
 definite templates and shared inverse-Gamma component multipliers across the
 two exchangeable roots. This is distinct from adaptive discount recursion.
 }

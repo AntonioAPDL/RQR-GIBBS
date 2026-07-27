@@ -16,7 +16,7 @@ rqr_regression(X, m0 = NULL, C0 = NULL, name = "regression")
 \item{name}{Component name.}
 }
 \value{
-An `rqr_dlm_model`.
+An \code{rqr_dlm_model}.
 }
 \description{
 Regression-state RQR-DLM component

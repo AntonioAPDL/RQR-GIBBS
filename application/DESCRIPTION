@@ -1,18 +1,23 @@
 Package: rqrgibbs
 Type: Package
 Title: Generalized Bayes Interval-Root Regression with Gibbs Sampling
-Version: 0.1.0.9021
+Version: 0.1.0.9022
 Authors@R: c(
     person("Antonio", "De Leon", role = c("aut", "cre"),
            email = "jaguir26@ucsc.edu"),
     person("Raquel", "Prado", role = "aut"),
     person("Bruno", "Sanso", role = "aut")
   )
-Description: Research implementation of loss-based interval regression with
-    fixed-design, deep echo-state-network readout, and linear dynamic model
-    embeddings. The normal-exponential construction augments an exponentiated
-    interval loss and is not a response likelihood.
+Description: Research implementation of loss-based interval-root regression
+    for fixed designs, frozen deep echo-state-network features, and linear
+    dynamic model embeddings. Ordinary relaxed quantile regression (RQR)
+    supports native ridge, full Gaussian, and shrunken-shoulder horseshoe
+    priors, observed-mask missingness, and exact checkpoint continuation. The
+    normal-exponential construction augments an exponentiated interval loss
+    and is not a response likelihood.
 License: MIT + file LICENSE
+URL: https://github.com/AntonioAPDL/RQR-GIBBS
+BugReports: https://github.com/AntonioAPDL/RQR-GIBBS/issues
 Encoding: UTF-8
 Depends: R (>= 4.1.0)
 Imports:
@@ -26,9 +31,14 @@ LinkingTo:
 Suggests:
     coda,
     exdqlm,
+    knitr,
     posterior (>= 1.7.0),
     pracma,
-    testthat (>= 3.0.0)
+    rmarkdown,
+    testthat (>= 3.0.0),
+    withr
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 SystemRequirements: C++17
+Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.0.0

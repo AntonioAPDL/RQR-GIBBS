@@ -32,14 +32,14 @@ rqr_dlm_fit(
 )
 }
 \arguments{
-\item{y}{Response vector. `NA` values are treated as missing observations.}
+\item{y}{Response vector. \code{NA} values are treated as missing observations.}
 
-\item{model}{An [rqr_as_dlm_model()] or exdqlm-compatible model.}
+\item{model}{An \code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}} or exdqlm-compatible model.}
 
-\item{coverage_level}{Interval coverage target in `(0,1)`.}
+\item{coverage_level}{Interval coverage target in \verb{(0,1)}.}
 
-\item{evolution_mode}{One of `"fixed_W"`, `"discount_template"`,
-`"component_scale"`, or `"adaptive_discount"`.}
+\item{evolution_mode}{One of \code{"fixed_W"}, \code{"discount_template"},
+\code{"component_scale"}, or \code{"adaptive_discount"}.}
 
 \item{evolution_spec}{Optional previously constructed evolution object. Used
 for exact continuation and overrides the other evolution arguments.}
@@ -58,38 +58,45 @@ evolution multipliers.}
 
 \item{evolution_scale_initial}{Initial positive component multipliers.}
 
-\item{learning_rate}{Fixed generalized-Bayes learning rate `omega_R`.}
+\item{learning_rate}{Fixed generalized-Bayes learning rate \code{omega_R}.}
 
 \item{lambda_initial}{Initial inverse loss scale for learned modes.}
 
-\item{loss_reference_scale}{Positive reference scale `s_L`. It does not
-alter fixed `learning_rate`; learned modes use `lambda/s_L`.}
+\item{loss_reference_scale}{Positive reference scale \code{s_L}. It does not
+alter fixed \code{learning_rate}; learned modes use \code{lambda/s_L}.}
 
-\item{learning_rate_mode}{One of `"fixed_rate"`,
-`"learned_pseudoresidual_normalized"`, or `"learned_pure"`. Legacy mode
-spellings are accepted and normalized to these names.}
+\item{learning_rate_mode}{One of \code{"fixed_rate"},
+\code{"learned_pseudoresidual_normalized"}, or \code{"learned_pure"}. Legacy mode
+spellings are accepted and normalized to these names. \code{"learned_pure"}
+remains executable only for diagnostic compatibility; it is outside the
+ordinary-v1 scope, nonpromotable, and noncontinuable.}
 
 \item{lambda_prior}{Gamma shape--rate prior without a custom power field.}
 
-\item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
+\item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 
 \item{provenance_control}{Optional primary-repository provenance plus named
-`external_repositories`. Repository specifications contain `repo_root`, a
-complete 40-character `expected_git_commit`, and optional runtime package
+\code{external_repositories}. Repository specifications contain \code{repo_root}, a
+complete 40-character \code{expected_git_commit}, and optional runtime package
 and attestation fields.}
 
-\item{mcmc_control}{Iteration, seed, storage, backend, progress, and jitter
-controls.}
+\item{mcmc_control}{A fully named list containing supported iteration, seed,
+storage, backend, progress, jitter, and optional exact component-scale
+interweaving controls. Unknown fields and coercive scalar values are
+rejected.}
 
-\item{init}{Optional initial states, latent scales, lambda, evolution scales,
-time-zero states, and RNG state.}
+\item{init}{A fully named list of optional initial state paths, latent
+scales, lambda, evolution scales, time-zero states, and RNG state.
+\code{theta1} and \code{theta2} remain supported as legacy aliases for
+\code{state_root1} and \code{state_root2}; supplying both forms is an error.
+Continuation-history fields are private to \code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}}.}
 }
 \value{
-An `rqr_dlm_mcmc` object.
+An \code{rqr_dlm_mcmc} object.
 }
 \description{
 This sampler targets root trajectories under an exponentiated RQR loss and
-Gaussian state priors. It does not define a response likelihood. Fixed `W`,
+Gaussian state priors. It does not define a response likelihood. Fixed \code{W},
 frozen discount templates, and component-scale evolution priors define exact
 generalized-posterior samplers when no numerical repair is used. Adaptive
 discount recursion is an explicitly experimental working update.

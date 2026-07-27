@@ -2,7 +2,7 @@
 % Please edit documentation in R/rqr_mcmc_fit.R
 \name{rqr_mcmc_fit}
 \alias{rqr_mcmc_fit}
-\title{Fit fixed-design RQR with exact Gibbs MCMC}
+\title{Fit ordinary fixed-design RQR by exact Gibbs sampling}
 \usage{
 rqr_mcmc_fit(
   y,
@@ -16,61 +16,64 @@ rqr_mcmc_fit(
   lambda_prior = list(shape = 4, rate = 4),
   beta_prior_obj = NULL,
   numerical_policy = c("fail", "record_repair"),
+  root_swap_probability = 0.5,
   provenance_control = list(),
   mcmc_control = list(),
   init = list(),
+  embedding_contract = NULL,
   ...
 )
 }
 \arguments{
-\item{y}{Response vector.}
+\item{y}{Numeric response vector. \code{NA} entries are allowed and omitted from
+every loss and augmentation update while their design rows are retained.}
 
-\item{X}{Design matrix.}
+\item{X}{Finite numeric design matrix.}
 
-\item{coverage_level}{Interval coverage level in `(0, 1)`.}
+\item{coverage_level}{Interval coverage level in \verb{(0, 1)}.}
 
-\item{learning_rate}{Positive fixed generalized-Bayes rate `omega_R`.}
+\item{learning_rate}{Positive fixed generalized-Bayes rate \code{omega_R}.}
 
-\item{lambda_initial}{Positive initial inverse loss scale for learned modes.}
+\item{lambda_initial}{Positive initial inverse loss scale for learned mode.}
 
-\item{loss_reference_scale}{Positive reference scale `s_L`. In fixed-rate
-mode, `learning_rate` is the effective rate `omega_R` and this argument
-does not alter the target. Learned modes use `omega_R=lambda/s_L`.}
+\item{loss_reference_scale}{Positive fixed reference scale \code{s_L}.}
 
-\item{learning_rate_mode}{Learning-rate treatment. `"fixed_rate"` uses
-`learning_rate` directly as `omega_R`.
-`"learned_pseudoresidual_normalized"` samples the inverse-loss scale from
-the generalized posterior proportional
-to `lambda^T exp(-lambda L_c/s_L)`. `"learned_pure"` is a diagnostic target
-proportional to `exp(-lambda L_c/s_L)`.}
+\item{learning_rate_mode}{One of \code{"fixed_rate"},
+\code{"learned_pseudoresidual_normalized"}, or the backward-compatible
+diagnostic mode \code{"learned_pure"}.}
 
-\item{lambda_prior}{Gamma prior for learned `lambda`, as a list with
-positive `shape` and `rate`. Target powers are fixed by the selected mode.}
+\item{lambda_prior}{Gamma prior for learned \code{lambda}, with positive \code{shape}
+and \code{rate}.}
 
-\item{beta_prior_obj}{Beta prior object from [beta_prior()]. Version 1
-supports `"ridge"` and `"rhs_ns"`.}
+\item{beta_prior_obj}{A closure-free prior from \code{\link[=rqr_beta_prior]{rqr_beta_prior()}} or a
+supported legacy prior. Legacy hyperparameters are extracted into a
+native closure-free contract; callbacks are neither retained nor run.}
 
-\item{numerical_policy}{Either `"fail"` or `"record_repair"` for Gaussian
-precision factorizations.}
+\item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 
-\item{provenance_control}{Optional primary-repository provenance plus named
-`external_repositories`. Each repository specification contains
-`repo_root`, a complete 40-character `expected_git_commit`, and optional
-runtime-package attestation metadata. RHS fits require the executing
-exdqlm namespace to match the pinned source for promotion eligibility.}
+\item{root_swap_probability}{Probability of the complete root/prior-state
+label swap at the end of each Gibbs transition.}
 
-\item{mcmc_control}{Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
-`verbose`, `progress_every`, `precision_beta`, and `store_latent_draws`.}
+\item{provenance_control}{Repository and isolated-runtime provenance
+controls.}
 
-\item{init}{Optional initial values.}
+\item{mcmc_control}{Named list with \code{n_burn}, \code{n_mcmc}, \code{thin}, \code{seed},
+\code{precision_beta}, \code{store_latent_draws}, and
+\code{store_prior_state_draws}.}
+
+\item{init}{Optional complete or partial initial Markov state.}
+
+\item{embedding_contract}{Optional closure-free semantic contract for a
+design generator such as a frozen DESN design.}
 
 \item{...}{Reserved.}
 }
 \value{
-An `rqr_mcmc` object.
+An \code{rqr_mcmc} object.
 }
 \description{
-This fits the generalized-Bayes RQR interval readout for a fixed design
-matrix. It is not a likelihood for the original response and does not define
-posterior predictive response draws.
+This function updates two exchangeable interval-root regressions under the
+ordinary (zero-tilt) RQR loss.  The result is a generalized-Bayes interval
+update.  It is not a likelihood for the response and does not provide
+posterior-predictive response draws.
 }

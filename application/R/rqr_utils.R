@@ -4,6 +4,85 @@ if (!exists("%||%", mode = "function")) {
   `%||%` <- function(a, b) if (is.null(a)) b else a
 }
 
+.rqr_validate_named_list_fields <- function(
+    x, name, allowed = character(0)) {
+  if (!is.list(x)) {
+    stop(sprintf("%s must be a list.", name), call. = FALSE)
+  }
+  if (!length(x)) return(invisible(x))
+  field_names <- names(x)
+  if (is.null(field_names) || anyNA(field_names) ||
+      any(!nzchar(field_names))) {
+    stop(
+      sprintf("%s must be a fully named list.", name),
+      call. = FALSE
+    )
+  }
+  duplicate_fields <- unique(field_names[duplicated(field_names)])
+  if (length(duplicate_fields)) {
+    stop(
+      sprintf(
+        "%s contains duplicate fields: %s.",
+        name, paste(duplicate_fields, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+  unsupported <- setdiff(field_names, allowed)
+  if (length(unsupported)) {
+    stop(
+      sprintf(
+        "%s contains unsupported fields: %s.",
+        name, paste(unsupported, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(x)
+}
+
+.rqr_scalar_logical <- function(x, name) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    stop(sprintf("%s must be TRUE or FALSE.", name), call. = FALSE)
+  }
+  x
+}
+
+.rqr_reject_dots <- function(dots, context) {
+  if (!length(dots)) return(invisible(TRUE))
+  labels <- names(dots)
+  if (is.null(labels)) labels <- rep("<unnamed>", length(dots))
+  labels[is.na(labels) | !nzchar(labels)] <- "<unnamed>"
+  stop(
+    sprintf(
+      "%s received unsupported arguments: %s.",
+      context, paste(labels, collapse = ", ")
+    ),
+    call. = FALSE
+  )
+}
+
+.rqr_scalar_numeric <- function(
+    x, name, lower = -Inf, upper = Inf,
+    lower_open = FALSE, upper_open = FALSE) {
+  if (!is.numeric(x) || length(x) != 1L || is.na(x) ||
+      !is.finite(x)) {
+    stop(sprintf("%s must be one finite numeric scalar.", name),
+         call. = FALSE)
+  }
+  below <- if (lower_open) x <= lower else x < lower
+  above <- if (upper_open) x >= upper else x > upper
+  if (below || above) {
+    interval <- paste0(
+      if (lower_open) "(" else "[", format(lower), ", ",
+      format(upper), if (upper_open) ")" else "]"
+    )
+    stop(sprintf("%s must lie in %s.", name, interval),
+         call. = FALSE)
+  }
+  as.numeric(x)
+}
+
 #' RQR loss constants
 #'
 #' @param coverage_level Interval coverage level in `(0, 1)`.
@@ -11,14 +90,13 @@ if (!exists("%||%", mode = "function")) {
 #' @return A named list with `alpha`, `omega`, `sigma`, `xi`, and `phi`.
 #' @export
 rqr_constants <- function(coverage_level, learning_rate = 1) {
-  alpha <- as.numeric(coverage_level)[1L]
-  omega <- as.numeric(learning_rate)[1L]
-  if (!is.finite(alpha) || alpha <= 0 || alpha >= 1) {
-    stop("coverage_level must be a finite scalar in (0, 1).", call. = FALSE)
-  }
-  if (!is.finite(omega) || omega <= 0) {
-    stop("learning_rate must be a finite positive scalar.", call. = FALSE)
-  }
+  alpha <- .rqr_scalar_numeric(
+    coverage_level, "coverage_level",
+    lower = 0, upper = 1, lower_open = TRUE, upper_open = TRUE
+  )
+  omega <- .rqr_scalar_numeric(
+    learning_rate, "learning_rate", lower = 0, lower_open = TRUE
+  )
   list(
     alpha = alpha,
     omega = omega,
@@ -114,7 +192,17 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 }
 
 .rqr_learning_rate_mode <- function(learning_rate_mode) {
-  mode <- tolower(as.character(learning_rate_mode %||% "fixed_rate")[1L])
+  choices <- c(
+    "fixed_rate", "learned_pseudoresidual_normalized", "learned_pure"
+  )
+  supplied <- learning_rate_mode %||% "fixed_rate"
+  if (identical(supplied, choices)) supplied <- supplied[[1L]]
+  if (!is.character(supplied) || length(supplied) != 1L ||
+      is.na(supplied) || !nzchar(supplied)) {
+    stop("learning_rate_mode must be one nonempty string.",
+         call. = FALSE)
+  }
+  mode <- tolower(supplied)
   mode <- switch(mode,
     fixed = "fixed_rate",
     learned = "learned_pseudoresidual_normalized",
@@ -124,7 +212,6 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     pure = "learned_pure",
     mode
   )
-  choices <- c("fixed_rate", "learned_pseudoresidual_normalized", "learned_pure")
   if (!mode %in% choices) {
     stop(
       sprintf(
@@ -149,21 +236,25 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   if (!is.list(lambda_prior)) {
     stop("lambda_prior must be a list with positive shape and rate.", call. = FALSE)
   }
-  shape <- as.numeric(lambda_prior$shape %||% lambda_prior$a %||% 4)[1L]
-  rate <- as.numeric(lambda_prior$rate %||% lambda_prior$b %||% 4)[1L]
-  if (!is.null(lambda_prior$power) || !is.null(lambda_prior$nu)) {
+  .rqr_validate_named_list_fields(
+    lambda_prior, "lambda_prior", c("shape", "rate", "a", "b")
+  )
+  if (all(c("shape", "a") %in% names(lambda_prior)) ||
+      all(c("rate", "b") %in% names(lambda_prior))) {
     stop(
-      "lambda_prior$power and lambda_prior$nu are not accepted: the normalized and pure targets have fixed powers.",
+      "lambda_prior cannot supply both a canonical field and its alias.",
       call. = FALSE
     )
   }
+  shape <- .rqr_scalar_numeric(
+    lambda_prior$shape %||% lambda_prior$a %||% 4,
+    "lambda_prior$shape", lower = 0, lower_open = TRUE
+  )
+  rate <- .rqr_scalar_numeric(
+    lambda_prior$rate %||% lambda_prior$b %||% 4,
+    "lambda_prior$rate", lower = 0, lower_open = TRUE
+  )
   power <- if (identical(mode, "learned_pseudoresidual_normalized")) 1 else 0
-  if (identical(mode, "fixed_rate")) {
-    if (!is.finite(shape)) shape <- 4
-    if (!is.finite(rate)) rate <- 4
-  }
-  if (!is.finite(shape) || shape <= 0) stop("lambda_prior$shape must be positive.", call. = FALSE)
-  if (!is.finite(rate) || rate <= 0) stop("lambda_prior$rate must be positive.", call. = FALSE)
   structure(
     list(shape = shape, rate = rate, power = power, mode = mode),
     class = c("rqr_lambda_prior", "list")
@@ -173,10 +264,10 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 .rqr_lambda_posterior_params <- function(loss_sum, n, lambda_prior, learning_rate_mode) {
   mode <- .rqr_learning_rate_mode(learning_rate_mode)
   prior <- .rqr_lambda_prior(lambda_prior, mode)
-  loss_sum <- as.numeric(loss_sum)[1L]
-  n <- as.integer(n)[1L]
-  if (!is.finite(loss_sum) || loss_sum < 0) stop("loss_sum must be finite and nonnegative.", call. = FALSE)
-  if (!is.finite(n) || n <= 0L) stop("n must be a positive integer.", call. = FALSE)
+  loss_sum <- .rqr_scalar_numeric(
+    loss_sum, "loss_sum", lower = 0
+  )
+  n <- .rqr_scalar_integer(n, "n", minimum = 1L)
   if (identical(mode, "fixed_rate")) {
     return(list(shape = NA_real_, rate = NA_real_, power_count = 0))
   }
@@ -264,7 +355,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
-.rqr_schema_version <- function() "rqrgibbs_fit/1.10.0"
+.rqr_schema_version <- function() "rqrgibbs_fit/1.11.0"
 
 .rqr_continuation_history_schema <- function() {
   "rqrgibbs_continuation_history/4.1.0"
@@ -929,10 +1020,20 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       call. = FALSE
     )
   }
+  .rqr_validate_named_list_fields(
+    spec,
+    sprintf("provenance_control$external_repositories$%s", name),
+    c(
+      "repo_root", "expected_git_commit", "runtime_package",
+      "runtime_attestation", "require_isolated_runtime",
+      "source_subdir"
+    )
+  )
   repo_root <- spec$repo_root %||% NULL
   if (!is.null(repo_root)) {
-    if (length(repo_root) != 1L || is.na(repo_root) ||
-        !nzchar(as.character(repo_root))) {
+    if (!is.character(repo_root) ||
+        length(repo_root) != 1L || is.na(repo_root) ||
+        !nzchar(repo_root)) {
       stop(
         sprintf(
           "provenance_control$external_repositories$%s$repo_root must be one nonempty path.",
@@ -941,13 +1042,27 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
         call. = FALSE
       )
     }
-    repo_root <- normalizePath(as.character(repo_root), winslash = "/", mustWork = FALSE)
+    repo_root <- normalizePath(
+      repo_root, winslash = "/", mustWork = FALSE
+    )
   }
   expected <- spec$expected_git_commit %||% NULL
   if (!is.null(expected)) {
-    expected <- tolower(as.character(expected))
-    if (length(expected) != 1L || is.na(expected) ||
-        !grepl("^[0-9a-f]{40}$", expected)) {
+    if (!is.character(expected) ||
+        length(expected) != 1L || is.na(expected)) {
+      stop(
+        sprintf(
+          paste0(
+            "provenance_control$external_repositories$%s$",
+            "expected_git_commit must be one complete 40-character Git SHA."
+          ),
+          name
+        ),
+        call. = FALSE
+      )
+    }
+    expected <- tolower(expected)
+    if (!grepl("^[0-9a-f]{40}$", expected)) {
       stop(
         sprintf(
           paste0(
@@ -962,8 +1077,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   }
   runtime_package <- spec$runtime_package %||% NULL
   if (!is.null(runtime_package)) {
-    runtime_package <- as.character(runtime_package)
-    if (length(runtime_package) != 1L || is.na(runtime_package) ||
+    if (!is.character(runtime_package) ||
+        length(runtime_package) != 1L || is.na(runtime_package) ||
         !nzchar(runtime_package)) {
       stop(
         sprintf(
@@ -976,8 +1091,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   }
   runtime_attestation <- spec$runtime_attestation %||% NULL
   if (!is.null(runtime_attestation)) {
-    runtime_attestation <- as.character(runtime_attestation)
-    if (length(runtime_attestation) != 1L || is.na(runtime_attestation) ||
+    if (!is.character(runtime_attestation) ||
+        length(runtime_attestation) != 1L || is.na(runtime_attestation) ||
         !nzchar(runtime_attestation)) {
       stop(
         sprintf(
@@ -1006,8 +1121,10 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       call. = FALSE
     )
   }
-  source_subdir <- as.character(spec$source_subdir %||% ".")[1L]
-  if (is.na(source_subdir) || !nzchar(source_subdir) ||
+  source_subdir <- spec$source_subdir %||% "."
+  if (!is.character(source_subdir) ||
+      length(source_subdir) != 1L ||
+      is.na(source_subdir) || !nzchar(source_subdir) ||
       grepl("(^|/)\\.\\.(/|$)", source_subdir) ||
       startsWith(source_subdir, "/")) {
     stop(
@@ -1031,18 +1148,39 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 .rqr_provenance_control <- function(control = list()) {
   if (is.null(control)) control <- list()
   if (!is.list(control)) stop("provenance_control must be a list.", call. = FALSE)
+  .rqr_validate_named_list_fields(
+    control, "provenance_control",
+    c(
+      "repo_root", "expected_git_commit",
+      "primary_runtime_attestation", "external_repositories",
+      "required_external_repositories"
+    )
+  )
   repo_root <- control$repo_root %||% NULL
   if (!is.null(repo_root)) {
-    if (length(repo_root) != 1L || is.na(repo_root) || !nzchar(as.character(repo_root))) {
+    if (!is.character(repo_root) ||
+        length(repo_root) != 1L || is.na(repo_root) ||
+        !nzchar(repo_root)) {
       stop("provenance_control$repo_root must be one nonempty path.", call. = FALSE)
     }
-    repo_root <- normalizePath(as.character(repo_root), winslash = "/", mustWork = FALSE)
+    repo_root <- normalizePath(
+      repo_root, winslash = "/", mustWork = FALSE
+    )
   }
   expected <- control$expected_git_commit %||% NULL
   if (!is.null(expected)) {
-    expected <- tolower(as.character(expected))
-    if (length(expected) != 1L || is.na(expected) ||
-        !grepl("^[0-9a-f]{40}$", expected)) {
+    if (!is.character(expected) ||
+        length(expected) != 1L || is.na(expected)) {
+      stop(
+        paste(
+          "provenance_control$expected_git_commit must be one complete",
+          "40-character Git SHA."
+        ),
+        call. = FALSE
+      )
+    }
+    expected <- tolower(expected)
+    if (!grepl("^[0-9a-f]{40}$", expected)) {
       stop(
         "provenance_control$expected_git_commit must be one complete 40-character Git SHA.",
         call. = FALSE
@@ -1067,20 +1205,34 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     })
     names(external) <- external_names
   }
-  required_external <- as.character(
+  required_external <-
     control$required_external_repositories %||% character(0)
-  )
-  if (anyNA(required_external) || any(!nzchar(required_external)) ||
+  if (!is.character(required_external) ||
+      anyNA(required_external) || any(!nzchar(required_external)) ||
       anyDuplicated(required_external)) {
     stop(
       "provenance_control$required_external_repositories must contain unique nonempty names.",
       call. = FALSE
     )
   }
+  missing_required <- setdiff(required_external, names(external))
+  if (length(missing_required)) {
+    stop(
+      sprintf(
+        paste(
+          "Every required external repository needs a specification:",
+          "%s."
+        ),
+        paste(missing_required, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
   primary_runtime_attestation <- control$primary_runtime_attestation %||% NULL
   if (!is.null(primary_runtime_attestation)) {
-    primary_runtime_attestation <- as.character(primary_runtime_attestation)[1L]
-    if (is.na(primary_runtime_attestation) ||
+    if (!is.character(primary_runtime_attestation) ||
+        length(primary_runtime_attestation) != 1L ||
+        is.na(primary_runtime_attestation) ||
         !nzchar(primary_runtime_attestation)) {
       stop(
         "provenance_control$primary_runtime_attestation must be one nonempty path.",
@@ -1100,15 +1252,50 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   )
 }
 
+.rqr_stored_optional_provenance_text <- function(value, field) {
+  if (is.null(value)) return(NULL)
+  if (!is.character(value) || length(value) != 1L) {
+    stop(
+      sprintf(
+        "Stored provenance field '%s' must be one character value or NULL.",
+        field
+      ),
+      call. = FALSE
+    )
+  }
+  if (is.na(value)) return(NULL)
+  if (!nzchar(value)) {
+    stop(
+      sprintf(
+        "Stored provenance field '%s' must not be empty.",
+        field
+      ),
+      call. = FALSE
+    )
+  }
+  value
+}
+
 .rqr_require_external_repository <- function(
     control, name, expected_git_commit, runtime_package = NULL) {
   control <- .rqr_provenance_control(control)
-  name <- as.character(name)[1L]
-  if (is.na(name) || !nzchar(name)) {
-    stop("Required external repository name must be nonempty.", call. = FALSE)
+  if (!is.character(name) || length(name) != 1L ||
+      is.na(name) || !nzchar(name)) {
+    stop(
+      "Required external repository name must be one nonempty string.",
+      call. = FALSE
+    )
   }
-  expected_git_commit <- tolower(as.character(expected_git_commit)[1L])
-  if (is.na(expected_git_commit) ||
+  if (!is.character(expected_git_commit) ||
+      length(expected_git_commit) != 1L ||
+      is.na(expected_git_commit)) {
+    stop(
+      "Required external repository commit must be one complete Git SHA.",
+      call. = FALSE
+    )
+  }
+  expected_git_commit <- tolower(expected_git_commit)
+  if (
       !grepl("^[0-9a-f]{40}$", expected_git_commit)) {
     stop("Required external repository commit must be a complete Git SHA.", call. = FALSE)
   }
@@ -1129,9 +1316,13 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   }
   spec$expected_git_commit <- expected_git_commit
   if (!is.null(runtime_package)) {
-    runtime_package <- as.character(runtime_package)[1L]
-    if (is.na(runtime_package) || !nzchar(runtime_package)) {
-      stop("Required runtime package name must be nonempty.", call. = FALSE)
+    if (!is.character(runtime_package) ||
+        length(runtime_package) != 1L ||
+        is.na(runtime_package) || !nzchar(runtime_package)) {
+      stop(
+        "Required runtime package name must be one nonempty string.",
+        call. = FALSE
+      )
     }
     if (!is.null(spec$runtime_package) &&
         !identical(spec$runtime_package, runtime_package)) {
@@ -2765,7 +2956,10 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   type <- as.character(beta_prior_obj$type %||% "ridge")[1L]
   if (identical(type, "ridge")) return(list())
   if (identical(type, "rhs_ns")) {
-    st <- .exal_mcmc_rhs_ns_prepare_state(beta_prior_obj, p = p, init = list(beta_prior_state = init_state))
+    st <- .exal_mcmc_rhs_ns_prepare_state(
+      beta_prior_obj, p = p,
+      init = list(beta_prior_state = init_state)
+    )
     return(st)
   }
   stop("RQR currently supports beta_prior_obj$type in {'ridge','rhs_ns'}.", call. = FALSE)
@@ -2777,7 +2971,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     return(list(state = state, stats = list()))
   }
   if (identical(type, "rhs_ns")) {
-    return(.exal_mcmc_rhs_ns_gibbs_update(state, beta, beta_prior_obj, freeze_tau = freeze_tau))
+    return(.exal_mcmc_rhs_ns_gibbs_update(
+      state, beta, beta_prior_obj, freeze_tau = freeze_tau
+    ))
   }
   stop("RQR currently supports beta_prior_obj$type in {'ridge','rhs_ns'}.", call. = FALSE)
 }
@@ -2828,23 +3024,33 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   )
 }
 
-#' Draw posterior beta samples from an RQR fit
+#' Extract interval-root draws from a fitted RQR model
 #'
-#' @param object An RQR fit object.
-#' @param nd Number of draws. `NULL` keeps all available MCMC draws.
-#' @param seed Optional RNG seed.
-#' @param ... Reserved.
-#' @return A list with `beta_root1`, `beta_root2`, and `nd`.
+#' Methods preserve the fitted model's root parameterization. Fixed-design and
+#' frozen-DESN methods return root-coefficient draws, whereas the RQR-DLM
+#' method returns time-indexed root-ordinate draws. These are draws under a
+#' loss-based generalized update, not posterior-predictive response draws.
+#'
+#' @param object A fitted RQR model.
+#' @param nd Number of draws to return. `NULL` keeps all available draws.
+#' @param seed Optional seed used only when draws are subsampled.
+#' @param ... Method-specific arguments.
+#' @return A model-specific list of draws and their retained-draw indices.
 #' @export
 rqr_posterior_draws <- function(object, nd = NULL, seed = NULL, ...) {
   UseMethod("rqr_posterior_draws")
 }
 
-#' Predict RQR intervals
+#' Evaluate fitted RQR interval roots
 #'
-#' @param object An RQR fit object.
+#' Methods order the two exchangeable raw roots pointwise and return lower,
+#' upper, midpoint, and width functionals. Evaluation is conditional on the
+#' method-specific design or fitted state path. It does not define or sample a
+#' response distribution.
+#'
+#' @param object A fitted RQR model.
 #' @param ... Method-specific arguments.
-#' @return A list of interval draws and summaries.
+#' @return A model-specific list of interval-root draws and summaries.
 #' @export
 predict_interval <- function(object, ...) {
   UseMethod("predict_interval")
