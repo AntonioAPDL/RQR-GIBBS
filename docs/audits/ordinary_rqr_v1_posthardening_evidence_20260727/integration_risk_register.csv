@@ -3,6 +3,8 @@ rqrgibbs_ordinary_v1_integration_risk/1.0.0,merge while DLM recovery is active,c
 rqrgibbs_ordinary_v1_integration_risk/1.0.0,drop ordinary or DLM Makefile targets,high,resolve PHONY conflict by exact union
 rqrgibbs_ordinary_v1_integration_risk/1.0.0,reuse package version 0.1.0.9022 or 0.1.0.9023,high,advance integrated package to 0.1.0.9024 or newer
 rqrgibbs_ordinary_v1_integration_risk/1.0.0,treat old four-role DLM companion as complete,critical,advance atomically to seven roles and currently expected 55 input artifacts
-rqrgibbs_ordinary_v1_integration_risk/1.0.0,omit recovery validators from protected inventory,high,include scripts 22 23 and 25 plus confirmatory helper library
+rqrgibbs_ordinary_v1_integration_risk/1.0.0,omit recovery validators from protected inventory,high,include scripts 22 through 25 plus confirmatory helper and correction budget
+rqrgibbs_ordinary_v1_integration_risk/1.0.0,accept resource evidence without exact runtime and deserialization peak binding,critical,harden producer and gate both written and clean-process peaks
+rqrgibbs_ordinary_v1_integration_risk/1.0.0,change M02 schedules without a producer schema advance,high,record standard and sentinel schedules explicitly under an advanced schema
 rqrgibbs_ordinary_v1_integration_risk/1.0.0,reuse dirty development DLM outputs,critical,regenerate all gates from the final clean exact isolated runtime
 rqrgibbs_ordinary_v1_integration_risk/1.0.0,launch ordinary bounded grid before BENCH01 and review,critical,keep execution false through exact reference benchmark and independent review

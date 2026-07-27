@@ -144,8 +144,20 @@ Under the current closed DLM contracts, these comprise 55 input artifacts.
 The companion may retain five compact outputs, but its schema, semantic
 checks, counts, collector hash, tests, documentation, and authorization gate
 must advance atomically. The protected inventory must include recovery
-validators 22, 23, and 25 and the confirmatory helper library. Package version
+validators 22 through 25, the confirmatory helper library, and the correction
+budget, for a currently expected 29 protected inputs. Package version
 `0.1.0.9024` or newer must identify the integrated state.
+
+Two producer contracts require hardening before promotion evidence is
+generated:
+
+- the resource-envelope producer must bind the exact primary runtime,
+  attestation, configuration, incidence matrix, seed ledger, and thread
+  environment, and must gate the maximum across written-object and
+  clean-process deserialization peaks; and
+- the M02 producer must record both standard and sentinel endpoint schedules
+  explicitly under an advanced schema rather than changing the existing
+  schema silently.
 
 Development recovery outputs are not reusable promotion evidence because
 they are generated from a dirty source state and lack final runtime
