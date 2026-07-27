@@ -91,6 +91,7 @@ jobs:
             any::testthat
             any::knitr
             any::posterior
+            any::pracma
             any::rmarkdown
             any::withr
 
