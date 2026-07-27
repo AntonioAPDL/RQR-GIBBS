@@ -1,0 +1,24 @@
+schema_version,gate,status,scope_or_result
+rqrgibbs_ordinary_v1_posthardening/1.0.0,audited_source_commit,PASS,9d8b23d5f99ff9dc05567adb5323f08b7cc3e151
+rqrgibbs_ordinary_v1_posthardening/1.0.0,package_version,PASS,0.1.0.9023
+rqrgibbs_ordinary_v1_posthardening/1.0.0,tracked_R_sources,PASS,114
+rqrgibbs_ordinary_v1_posthardening/1.0.0,GitHub_bounded_native_job,PASS,run 30246484885 job 89914610944
+rqrgibbs_ordinary_v1_posthardening/1.0.0,GitHub_roxygen_package_job,PASS,run 30246484885 job 89914610809 with Pandoc
+rqrgibbs_ordinary_v1_posthardening/1.0.0,fixed_design_colname_boundary,PASS,complete unique nonempty names or no names
+rqrgibbs_ordinary_v1_posthardening/1.0.0,F03_transition_equivalence,PASS,ridge tau2 4 equals Gaussian precision 0.25 I in both accepted rate modes
+rqrgibbs_ordinary_v1_posthardening/1.0.0,nonunit_thin_continuation,PASS,6 equals 2 plus 2 plus 2 retained draws with thin 2 in both accepted rate modes
+rqrgibbs_ordinary_v1_posthardening/1.0.0,F01_quadrature_contract,PASS,6 means plus 5 corrected event probabilities
+rqrgibbs_ordinary_v1_posthardening/1.0.0,monitor_fault_contract,PASS,10 of 10 deterministic scenarios
+rqrgibbs_ordinary_v1_posthardening/1.0.0,success_output_counts,PASS,preflight 12 reference 23 benchmark 23 bounded 29
+rqrgibbs_ordinary_v1_posthardening/1.0.0,prospective_fit_grid,PASS,48 fits in 12 four-chain cells
+rqrgibbs_ordinary_v1_posthardening/1.0.0,seed_ledger,PASS,82 unique rows
+rqrgibbs_ordinary_v1_posthardening/1.0.0,execution_flag,PASS,FALSE
+rqrgibbs_ordinary_v1_posthardening/1.0.0,independent_traceability,PASS,no remaining ordinary-v1 model prior export or API blocker
+rqrgibbs_ordinary_v1_posthardening/1.0.0,protected_exdqlm_guard,PASS,dffb71ee70b597d6a716ee74be1cbc99731cd453 clean and unmutated
+rqrgibbs_ordinary_v1_posthardening/1.0.0,protected_qdesn_guard,PASS,f9f22804eff3871bb5350c8add04b7c9f4d4957b clean and unmutated
+rqrgibbs_ordinary_v1_posthardening/1.0.0,final_DLM_integration,PENDING,active recovery must land clean before final freeze
+rqrgibbs_ordinary_v1_posthardening/1.0.0,exact_isolated_runtime,PENDING_RELEASE_GATE,rebuild after final DLM integration
+rqrgibbs_ordinary_v1_posthardening/1.0.0,reference_and_D02,PENDING_RELEASE_GATE,regenerate from exact integrated runtime
+rqrgibbs_ordinary_v1_posthardening/1.0.0,protected_DLM_companion,PENDING_RELEASE_GATE,advance to seven roles and currently expected 55 inputs
+rqrgibbs_ordinary_v1_posthardening/1.0.0,BENCH01,NOT_RUN,requires exact disabled candidate
+rqrgibbs_ordinary_v1_posthardening/1.0.0,bounded_48_fit_grid,NOT_AUTHORIZED,requires review and flag-only authorization
