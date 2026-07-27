@@ -979,6 +979,45 @@ ordinary_v1_reference_tables_fixture <- function(runner, base_config) {
   )
 }
 
+test_that("ordinary-v1 evidence executes the exact hardened source-test set", {
+  runner <- ordinary_v1_runner_environment()
+  expected <- c(
+    "test-rqr-native-beta-prior.R",
+    "test-rqr-native-rhs-ns.R",
+    "test-rqr-native-fixed-design-v1.R",
+    "test-rqr-native-static-output-envelopes.R",
+    "test-rqr-native-ordinary-v1-missingness.R",
+    "test-rqr-native-ordinary-v1-boundary-audit.R",
+    "test-rqr-native-ordinary-v1-materializer.R",
+    "test-rqr-native-ordinary-v1-reference-cells.R",
+    "test-rqr-native-ordinary-v1-f01-quadrature.R",
+    "test-rqr-native-desn-design.R",
+    "test-rqr-native-desn-fit-v1.R",
+    "test-rqr-native-desn-future-contract.R",
+    "test-rqr-native-desn-contract-hardening.R",
+    "test-rqr-evolution-numerical-contract.R",
+    "test-rqr-filter-log-marginal-hardening.R",
+    "test-rqr-public-ffbs-hardening.R",
+    "test-rqr-evolution-fit-semantic-boundary.R",
+    "test-rqr-native-history-kernel-contract.R",
+    "test-rqr-native-dlm-output-envelopes.R",
+    "test-rqr-dlm-correction-producer-static-contract.R",
+    "test-rqr-native-ordinary-v1-protected-dlm-companion.R",
+    "test-rqr-native-package-integration.R",
+    "test-rqr-native-model.R",
+    "test-rqr-native-ffbs.R",
+    "test-rqr-native-sampler.R",
+    "test-rqr-native-oracle.R",
+    "test-rqr-native-ordinary-v1-validation-runner.R"
+  )
+  actual <- runner$rqr_ordinary_v1_reference_test_names()
+  expect_identical(actual, expected)
+  expect_identical(anyDuplicated(actual), 0L)
+  expect_true(all(file.exists(
+    testthat::test_path(actual)
+  )))
+})
+
 test_that("ordinary-v1 configuration freezes a unique disabled 48-fit grid", {
   runner <- ordinary_v1_runner_environment()
   config <- ordinary_v1_config(runner)
@@ -1048,22 +1087,37 @@ test_that("ordinary-v1 configuration freezes a unique disabled 48-fit grid", {
   expect_identical(
     config$desn_schema_contract,
     c(
-      design = "rqrgibbs_desn_design/1.0.0",
+      design = "rqrgibbs_desn_design/1.1.0",
       materialization_receipt =
-        "rqrgibbs_desn_materialization_receipt/2.0.0",
+        "rqrgibbs_desn_materialization_receipt/3.0.0",
+      materialization_manifest =
+        "rqrgibbs_desn_materialization_manifest/1.0.0",
       materialization_receipt_status =
-        "rqrgibbs_desn_materialization_receipt_status/1.0.0",
+        "rqrgibbs_desn_materialization_receipt_status/1.1.0",
       materialization_verification =
-        "rqrgibbs_desn_materialization_verification/1.0.0",
-      fit = "rqrgibbs_desn_fit/1.1.0",
-      future_design = "rqrgibbs_desn_future_design/1.1.0",
+        "rqrgibbs_desn_materialization_verification/1.1.0",
+      fit = "rqrgibbs_desn_fit/1.2.0",
+      draws = "rqrgibbs_desn_draws/1.0.0",
+      prediction = "rqrgibbs_desn_prediction/1.0.0",
+      future_design = "rqrgibbs_desn_future_design/1.2.0",
       future_verification =
-        "rqrgibbs_desn_future_verification/1.0.0"
+        "rqrgibbs_desn_future_verification/1.1.0"
     )
   )
   expect_false(
     "fit_readout" %in%
       names(config$fixtures$D02$effective_arguments)
+  )
+  expect_identical(
+    config$fixtures$D02$effective_arguments$add_bias, TRUE
+  )
+  expect_identical(
+    config$fixtures$D02$effective_arguments$input_mode,
+    "raw_y_lags"
+  )
+  expect_identical(
+    config$fixtures$D02$effective_arguments$standardize_inputs,
+    FALSE
   )
   expect_identical(config$mcmc$burn_in, 1000L)
   expect_identical(config$mcmc$retained_per_chain, 3000L)
@@ -1087,21 +1141,21 @@ test_that("ordinary-v1 configuration freezes a unique disabled 48-fit grid", {
     config$protected_dlm_companion,
     list(
       schema_version =
-        "rqrgibbs_ordinary_v1_protected_dlm_companion/1.0.0",
+        "rqrgibbs_ordinary_v1_protected_dlm_companion/2.1.0",
       collector_path = paste0(
         "application/scripts/",
         "30_bundle_rqr_ordinary_v1_protected_dlm_evidence.R"
       ),
       collector_sha256 =
-        "eba18d34f7b50a9166d4991fafcaa1ae669e0dd0eba3ca0d4c9d3416d0be0f88",
+        "bd29584acdff3ee5f6da4cbe52860e874105115ccbbed2ef6aee06a714e75fc7",
       compact_files = c(
         "artifact_hashes.csv", "bundle_manifest.json",
         "input_artifact_hashes.csv", "input_bundle_summary.csv",
         "semantic_gates.csv"
       ),
-      semantic_gate_count = 16L,
-      input_role_count = 4L,
-      input_artifact_count = 39L,
+      semantic_gate_count = 23L,
+      input_role_count = 7L,
+      input_artifact_count = 55L,
       execution_environment =
         "RQR_ORDINARY_V1_DLM_COMPANION_DIR",
       source_state_role =
@@ -1151,8 +1205,18 @@ test_that("ordinary-v1 configuration freezes a unique disabled 48-fit grid", {
       "application/src/RcppExports.cpp",
       "application/src/rqr_interweave.cpp",
       "application/src/Makevars",
-      "application/src/Makevars.win"
+      "application/src/Makevars.win",
+      "application/scripts/22_validate_rqr_dlm_wave1_corrections.R",
+      "application/scripts/23_validate_rqr_dlm_wave1_comparator_projection.R",
+      "application/scripts/24_validate_rqr_dlm_horizon_and_fixed_design.R",
+      "application/scripts/25_validate_rqr_dlm_resource_envelope.R",
+      "application/scripts/lib/rqr_dlm_confirmatory_simulation.R",
+      "docs/audits/rqr_dlm_main_correction_budget_20260727.csv"
     )
+  )
+  expect_identical(
+    names(config$protected_dlm_sha256),
+    runner$rqr_ordinary_v1_protected_dlm_paths()
   )
   expect_true(all(grepl(
     "^[[:xdigit:]]{64}$", unname(config$protected_dlm_sha256)
@@ -1560,6 +1624,17 @@ test_that("authorization accepts only a strict config-only flag commit", {
 test_that("future-DESN evidence preserves parent sidecars and nonpromotion", {
   runner <- ordinary_v1_runner_environment()
   config <- ordinary_v1_config(runner)
+  # The package-level DESN hardening suite exercises the complete typed
+  # prediction validator. Isolate this runner-level test to the additional
+  # promotion sidecars by replacing only that already-tested inner validator
+  # in the private source-only test environment.
+  runner$getFromNamespace <- function(name, namespace) {
+    if (identical(name, ".rqr_validate_desn_prediction") &&
+        identical(namespace, "rqrgibbs")) {
+      return(function(object, prediction) invisible(TRUE))
+    }
+    base::getFromNamespace(name, namespace)
+  }
   future <- structure(
     list(
       schema_version =
@@ -1578,22 +1653,33 @@ test_that("future-DESN evidence preserves parent sidecars and nonpromotion", {
     list(schema_version = config$desn_schema_contract[["fit"]]),
     class = c("rqr_desn_fit", "list")
   )
-  valid <- list(
-    future_design = future,
-    future_contract_verified = TRUE,
-    legacy_future_matrix = FALSE,
-    parent_design_materialization_external_binding_verified = TRUE,
-    parent_fit_reproducibility_eligible = TRUE,
-    parent_fit_promotion_eligible = TRUE,
-    future_external_provenance_bound = FALSE,
-    future_reproducibility_eligible = FALSE,
-    reproducibility_eligible = FALSE,
-    promotion_eligible = FALSE,
-    promotion_status =
-      "verified_future_contract_unattested_materialization",
-    response_predictive_draws = FALSE,
-    lower_draws = matrix(c(-1, -0.5), nrow = 1L),
-    upper_draws = matrix(c(1, 1.5), nrow = 1L)
+  valid <- structure(
+    list(
+      schema_version = config$desn_schema_contract[["prediction"]],
+      draws = structure(
+        list(
+          schema_version = config$desn_schema_contract[["draws"]],
+          source_bound = TRUE
+        ),
+        class = c("rqr_desn_draws", "list")
+      ),
+      future_design = future,
+      future_contract_verified = TRUE,
+      legacy_future_matrix = FALSE,
+      parent_design_materialization_external_binding_verified = TRUE,
+      parent_fit_reproducibility_eligible = TRUE,
+      parent_fit_promotion_eligible = TRUE,
+      future_external_provenance_bound = FALSE,
+      future_reproducibility_eligible = FALSE,
+      reproducibility_eligible = FALSE,
+      promotion_eligible = FALSE,
+      promotion_status =
+        "verified_future_contract_unattested_materialization",
+      response_predictive_draws = FALSE,
+      lower_draws = matrix(c(-1, -0.5), nrow = 1L),
+      upper_draws = matrix(c(1, 1.5), nrow = 1L)
+    ),
+    class = c("rqr_desn_prediction", "list")
   )
   evidence <- runner$rqr_ordinary_v1_validate_desn_prediction(
     valid, fit, config$desn_schema_contract

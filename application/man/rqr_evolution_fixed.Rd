@@ -7,12 +7,38 @@
 rqr_evolution_fixed(W)
 }
 \arguments{
-\item{W}{Evolution covariance matrix or time-varying cube. Dimensions and
-positive-semidefinite validity are checked against the model at fit time.}
+\item{W}{Evolution covariance matrix or time-varying covariance cube.}
 }
 \value{
 An exact fixed-prior \code{rqr_evolution} specification.
 }
 \description{
-Construct a fixed-covariance RQR evolution specification
+\code{W} is fixed before MCMC. For a state of dimension \code{p}, it must be a finite
+symmetric positive-semidefinite \verb{p x p} matrix or a \verb{p x p x T} cube. A
+matrix is reused at every time; a cube must have one or exactly \code{T} slices.
+Dimensions, symmetry, and positive-semidefinite validity are checked against
+the model at fit time.
 }
+\examples{
+evolution <- rqr_evolution_fixed(diag(c(0.04, 0.01)))
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

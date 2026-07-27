@@ -28,11 +28,11 @@ feature order.}
 
 \item{seed}{Optional seed used only when draws are subsampled.}
 
-\item{...}{Reserved; passed to the fixed-design evaluation method.}
+\item{...}{Reserved; supplying an argument is an error.}
 }
 \value{
-A fixed-design interval-root evaluation augmented with frozen-design
-parentage, semantics, and eligibility metadata.
+A typed and digested \code{rqr_desn_prediction} containing interval-root
+evaluations, frozen-design parentage, semantics, and eligibility metadata.
 }
 \description{
 Prefer a validated \code{\link[=rqr_desn_future_design]{rqr_desn_future_design()}} so that feature order,

@@ -13,6 +13,85 @@ test_that("native model composition preserves the exdqlm matrix contract", {
   expect_equal(model$GG[1:2, 3:4], matrix(0, 2, 2))
 })
 
+test_that("seasonal components handle ordinary and Nyquist harmonics explicitly", {
+  seasonal <- rqr_seasonal(
+    period = 12,
+    harmonics = c(1L, 6L),
+    m0 = c(0.1, -0.2, 0.3),
+    C0 = diag(c(2, 3, 4)),
+    name = "annual"
+  )
+
+  expect_s3_class(seasonal, "rqr_dlm_model")
+  expect_identical(seasonal$component_dims, 3L)
+  expect_identical(seasonal$component_names, "annual")
+  expect_identical(dim(seasonal$FF), c(3L, 1L))
+  expect_identical(dim(seasonal$GG), c(3L, 3L))
+  expect_equal(seasonal$GG[1:2, 1:2], matrix(
+    c(cos(pi / 6), sin(pi / 6), -sin(pi / 6), cos(pi / 6)),
+    2L, 2L, byrow = TRUE
+  ))
+  expect_identical(seasonal$GG[3L, 3L], -1)
+  expect_identical(drop(seasonal$m0), c(0.1, -0.2, 0.3))
+
+  expect_error(rqr_seasonal(12, harmonics = 0), "invalid Fourier")
+  expect_error(rqr_seasonal(12, harmonics = 1.5), "invalid Fourier")
+  expect_error(rqr_seasonal(12, harmonics = 7), "invalid Fourier")
+  expect_error(rqr_seasonal(1, harmonics = 1), "invalid Fourier")
+  expect_error(rqr_seasonal(12, harmonics = integer()), "invalid Fourier")
+  expect_error(rqr_seasonal(c(12, 24), harmonics = 1), "one finite numeric")
+  expect_error(rqr_seasonal("12", harmonics = 1), "one finite numeric")
+  expect_error(
+    rqr_seasonal(12, harmonics = c(1L, 1L)),
+    "plain unique integer"
+  )
+  expect_error(rqr_seasonal(12, harmonics = "1"), "plain unique integer")
+
+  noninteger_period <- rqr_seasonal(365.25, harmonics = 1L)
+  expect_identical(noninteger_period$component_dims, 2L)
+})
+
+test_that("trend seasonal and regression composition preserves blocks and time", {
+  n_time <- 8L
+  trend <- rqr_polytrend(
+    order = 2L,
+    C0 = diag(c(4, 1)),
+    name = "trend"
+  )
+  seasonal <- rqr_seasonal(
+    period = 4,
+    harmonics = c(1L, 2L),
+    C0 = diag(3),
+    name = "seasonal"
+  )
+  regression <- rqr_regression(
+    X = cbind(x = seq(-1, 1, length.out = n_time)),
+    C0 = matrix(2, 1, 1),
+    name = "regression"
+  )
+  model <- trend + seasonal + regression
+
+  expect_identical(model$component_dims, c(2L, 3L, 1L))
+  expect_identical(
+    model$component_names,
+    c("trend", "seasonal", "regression")
+  )
+  expect_identical(dim(model$FF), c(6L, n_time))
+  expect_identical(dim(model$GG), c(6L, 6L))
+  expect_equal(model$C0, diag(c(4, 1, 1, 1, 1, 2)))
+  expect_equal(model$GG[1:2, 3:6], matrix(0, 2L, 4L))
+  expect_equal(model$GG[3:5, c(1:2, 6)], matrix(0, 3L, 3L))
+
+  short_regression <- rqr_regression(
+    X = matrix(seq_len(n_time - 1L), ncol = 1L),
+    name = "short"
+  )
+  expect_error(
+    regression + short_regression,
+    "FF time dimensions are incompatible"
+  )
+})
+
 test_that("component discounts match exdqlm 1.1.0 block construction", {
   D <- rqr_discount_matrix(df = c(0.9, 0.8, 1), dim.df = c(2, 1, 2))
   expect_equal(D[1:2, 1:2], matrix((1 - 0.9) / 0.9, 2, 2))
@@ -84,6 +163,19 @@ test_that("fixed evolution covariances are symmetric positive semidefinite", {
   fixed <- rqr_evolution_fixed(diag(2))
   expect_s3_class(fixed, "rqr_evolution")
   expect_true(fixed$exact_joint_target)
+  expect_error(rqr_evolution_fixed(1), "plain finite numeric square")
+  expect_error(
+    rqr_evolution_fixed(data.frame(a = 1)),
+    "plain finite numeric square"
+  )
+  expect_error(
+    rqr_evolution_fixed(matrix(c(1, 0.1, 0, 1), 2, 2)),
+    "not symmetric"
+  )
+  expect_error(
+    rqr_evolution_fixed(diag(c(1, -1e-8))),
+    "materially indefinite"
+  )
   working <- rqr_evolution_adaptive_working(c(0.9, 0.8), c(1, 1))
   expect_false(working$exact_joint_target)
   expect_true(working$working_sequential)
@@ -127,6 +219,56 @@ test_that("discount template inputs and component metadata fail explicitly", {
   bad$component_names <- c("a", "b")
   expect_error(rqr_as_dlm_model(bad), "positive integers")
   expect_error(rqr_discount_matrix(0.9, 1.5), "positive integers")
+})
+
+test_that("public DLM constructors reject coercive matrix and numeric inputs", {
+  expect_error(
+    rqr_regression(data.frame(x = 1:4)),
+    "plain finite numeric"
+  )
+  expect_error(
+    rqr_regression(matrix(as.character(1:4), ncol = 1L)),
+    "plain finite numeric"
+  )
+  expect_error(rqr_regression(1:4), "plain finite numeric")
+
+  expect_error(rqr_discount_matrix("0.9", 1L), "plain numeric")
+  expect_error(
+    rqr_discount_matrix(matrix(0.9, 1L, 1L), 1L),
+    "plain numeric"
+  )
+  expect_error(
+    rqr_discount_matrix(0.9, "1"),
+    "plain vector of positive integers"
+  )
+
+  model <- rqr_polytrend(1L, C0 = matrix(2, 1, 1))
+  expect_error(
+    rqr_freeze_discount_template(
+      model, 2.5, 0.9, 1L, reference_variance = 1
+    ),
+    "n_time must be one finite integer"
+  )
+  expect_error(
+    rqr_freeze_discount_template(
+      model, 3L, 0.9, 1L, reference_variance = "1"
+    ),
+    "reference_variance must be a plain numeric"
+  )
+  expect_error(
+    rqr_freeze_discount_template(
+      model, 3L, 0.9, 1L, reference_variance = 1,
+      reference_design = data.frame(x = rep(1, 3))
+    ),
+    "reference_design must be a plain finite numeric"
+  )
+  expect_error(
+    rqr_freeze_discount_template(
+      model, 3L, 0.9, 1L, reference_variance = 1,
+      jitter_ladder = "0"
+    ),
+    "jitter_ladder must be a plain nonempty"
+  )
 })
 
 test_that("material covariance asymmetry is rejected rather than silently changed", {
@@ -256,6 +398,63 @@ test_that("component-scale evolution validates SPD templates and model blocks", 
     ),
     "scalar or length J"
   )
+})
+
+test_that("component-scale evolution rejects ambiguous or coercive contracts", {
+  template <- matrix(1, 1, 1)
+
+  expect_error(
+    rqr_evolution_component_scale(
+      list(template), 1L, prior = list(shape = 2, rate = 1, unknown = 3)
+    ),
+    "unsupported fields"
+  )
+  expect_error(
+    rqr_evolution_component_scale(
+      list(template), 1L,
+      prior = structure(list(2, 3), names = c("shape", "shape"))
+    ),
+    "duplicate fields"
+  )
+  expect_error(
+    rqr_evolution_component_scale(
+      list(template), 1L, prior = list(shape = 2, a = 2, rate = 1)
+    ),
+    "at most one shape"
+  )
+  expect_error(
+    rqr_evolution_component_scale(
+      list(template), 1L, prior = list(shape = 2, rate = 1, b = 1)
+    ),
+    "at most one shape field.*at most one rate"
+  )
+  expect_error(
+    rqr_evolution_component_scale(
+      list(template), 1L, prior = list(shape = "2", rate = 1)
+    ),
+    "plain numeric vectors"
+  )
+  expect_error(
+    rqr_evolution_component_scale(list(template), 1L, initial = "1"),
+    "initial must be a plain numeric"
+  )
+  expect_error(
+    rqr_evolution_component_scale(
+      list(template), 1L, component_names = 1
+    ),
+    "plain character vector"
+  )
+  expect_error(
+    rqr_evolution_component_scale(
+      list(data.frame(x = 1)), 1L
+    ),
+    "plain numeric matrix or cube"
+  )
+
+  aliases <- rqr_evolution_component_scale(
+    list(template), 1L, prior = list(a = 3, b = 2)
+  )
+  expect_identical(aliases$prior, list(shape = 3, rate = 2))
 })
 
 test_that("native RQR algebra and ordered endpoints are root-label invariant", {

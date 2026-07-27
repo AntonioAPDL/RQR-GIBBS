@@ -1,5 +1,6 @@
 #include <RcppArmadillo.h>
 #include <cmath>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -25,6 +26,19 @@ struct DrawResult {
   double relative_jitter;
   bool used_psd;
   int clamped_eigenvalues;
+  int roundoff_clamped_eigenvalues;
+  double min_eigenvalue;
+  double matrix_scale;
+  double jitter_scale;
+  bool absolute_jitter_fallback;
+};
+
+struct CovarianceResult {
+  arma::mat matrix;
+  double jitter;
+  double relative_jitter;
+  int clamped_eigenvalues;
+  int roundoff_clamped_eigenvalues;
   double min_eigenvalue;
   double matrix_scale;
   double jitter_scale;
@@ -33,6 +47,37 @@ struct DrawResult {
 
 arma::mat symm(const arma::mat& x) {
   return 0.5 * x + 0.5 * x.t();
+}
+
+arma::mat validate_filter_covariance(
+    const arma::mat& input,
+    const std::string& name,
+    const double tolerance =
+      100.0 * std::numeric_limits<double>::epsilon()) {
+  if (input.n_rows < 1 || input.n_rows != input.n_cols ||
+      !input.is_finite()) {
+    Rcpp::stop(name + " must be a finite square matrix.");
+  }
+  const double scale = arma::abs(input).max();
+  const double asymmetry = arma::abs(input - input.t()).max();
+  if ((scale > 0.0 &&
+       (!std::isfinite(asymmetry) || asymmetry / scale > tolerance)) ||
+      (scale == 0.0 && asymmetry > 0.0)) {
+    Rcpp::stop(name + " is not symmetric.");
+  }
+  const arma::mat covariance = symm(input);
+  arma::vec eigenvalues;
+  if (!arma::eig_sym(eigenvalues, covariance)) {
+    Rcpp::stop(
+      "Symmetric eigendecomposition failed for " + name + "."
+    );
+  }
+  const double eigen_scale = arma::abs(eigenvalues).max();
+  if (eigen_scale > 0.0 &&
+      eigenvalues.min() / eigen_scale < -tolerance) {
+    Rcpp::stop(name + " is materially indefinite.");
+  }
+  return covariance;
 }
 
 SpdResult spd_factor(const arma::mat& input, const arma::vec& ladder) {
@@ -74,6 +119,84 @@ SpdResult spd_factor(const arma::mat& input, const arma::vec& ladder) {
   Rcpp::stop("Positive-definite Cholesky factorization failed after the declared jitter ladder.");
 }
 
+CovarianceResult validate_or_repair_covariance(
+    const arma::mat& input,
+    const std::string& name,
+    const arma::vec& ladder,
+    const bool allow_repair,
+    const double supplied_reference_scale = NA_REAL,
+    const double tolerance =
+      100.0 * std::numeric_limits<double>::epsilon()) {
+  if (input.n_rows < 1 || input.n_rows != input.n_cols ||
+      !input.is_finite()) {
+    Rcpp::stop(name + " must be a finite square matrix.");
+  }
+  const double input_scale = arma::abs(input).max();
+  const double asymmetry = arma::abs(input - input.t()).max();
+  if ((input_scale > 0.0 &&
+       (!std::isfinite(asymmetry) ||
+        asymmetry / input_scale > tolerance)) ||
+      (input_scale == 0.0 && asymmetry > 0.0)) {
+    Rcpp::stop(name + " is not symmetric.");
+  }
+  const arma::mat covariance = symm(input);
+  arma::vec values;
+  arma::mat vectors;
+  if (!arma::eig_sym(values, vectors, covariance)) {
+    Rcpp::stop(
+      "Symmetric eigendecomposition failed for " + name + "."
+    );
+  }
+  const double minimum = values.min();
+  const double eigen_scale = arma::abs(values).max();
+  double reference_scale = eigen_scale;
+  if (!R_IsNA(supplied_reference_scale)) {
+    if (!std::isfinite(supplied_reference_scale) ||
+        supplied_reference_scale < 0.0) {
+      Rcpp::stop(
+        "Covariance reference scale must be finite and nonnegative."
+      );
+    }
+    reference_scale = std::max(
+      reference_scale, supplied_reference_scale
+    );
+  }
+  if (minimum >= 0.0) {
+    return CovarianceResult{
+      covariance, 0.0, 0.0, 0, 0, minimum,
+      input_scale, input_scale, false
+    };
+  }
+  const bool near_psd =
+    reference_scale == 0.0 || minimum / reference_scale >= -tolerance;
+  if (near_psd) {
+    int roundoff_clamped = 0;
+    for (arma::uword j = 0; j < values.n_elem; ++j) {
+      if (values(j) < 0.0) {
+        values(j) = 0.0;
+        ++roundoff_clamped;
+      }
+    }
+    return CovarianceResult{
+      symm(vectors * arma::diagmat(values) * vectors.t()),
+      0.0, 0.0, 0, roundoff_clamped, minimum,
+      input_scale, input_scale, false
+    };
+  }
+  if (!allow_repair) {
+    Rcpp::stop(
+      name + " has a negative eigenvalue, and covariance repair is "
+      "disabled under numerical_policy='fail'."
+    );
+  }
+  const SpdResult factor = spd_factor(covariance, ladder);
+  return CovarianceResult{
+    factor.matrix, factor.jitter, factor.relative_jitter, 0, 0,
+    factor.min_eigenvalue, factor.matrix_scale, factor.jitter_scale,
+    factor.absolute_jitter_fallback
+  };
+}
+
 arma::mat inv_from_lower(const arma::mat& L) {
   arma::mat eye = arma::eye(L.n_rows, L.n_cols);
   arma::mat Linv = arma::solve(arma::trimatl(L), eye);
@@ -88,7 +211,7 @@ DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
   if (arma::chol(L, cov, "lower")) {
     return DrawResult{
       mean + L * arma::randn<arma::vec>(mean.n_elem), 0.0, 0.0,
-      false, 0, NA_REAL, matrix_scale, matrix_scale, false
+      false, 0, 0, NA_REAL, matrix_scale, matrix_scale, false
     };
   }
   arma::vec values;
@@ -98,9 +221,13 @@ DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
   }
   const double scale = arma::abs(values).max();
   const bool near_psd = scale == 0.0 || values.min() / scale >= -1e-10;
+  const bool roundoff_psd =
+    scale == 0.0 ||
+    values.min() / scale >=
+      -100.0 * std::numeric_limits<double>::epsilon();
   if (near_psd) {
     const double min_eigenvalue = values.min();
-    if (!allow_repair && arma::any(values < 0.0)) {
+    if (!allow_repair && arma::any(values < 0.0) && !roundoff_psd) {
       Rcpp::stop(
         "Gaussian covariance has a negative eigenvalue, and projection is "
         "disabled under numerical_policy='fail'."
@@ -112,7 +239,10 @@ DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
     }
     return DrawResult{
       mean + vectors * (arma::sqrt(values) % arma::randn<arma::vec>(mean.n_elem)),
-      0.0, 0.0, true, clamped, min_eigenvalue, matrix_scale,
+      0.0, 0.0, true,
+      roundoff_psd ? 0 : clamped,
+      roundoff_psd ? clamped : 0,
+      min_eigenvalue, matrix_scale,
       matrix_scale, false
     };
   }
@@ -125,7 +255,7 @@ DrawResult mvn_draw(const arma::vec& mean, const arma::mat& covariance,
   SpdResult fac = spd_factor(cov, ladder);
   return DrawResult{
     mean + fac.chol_lower * arma::randn<arma::vec>(mean.n_elem),
-    fac.jitter, fac.relative_jitter, false, 0, fac.min_eigenvalue,
+    fac.jitter, fac.relative_jitter, false, 0, 0, fac.min_eigenvalue,
     fac.matrix_scale, fac.jitter_scale, fac.absolute_jitter_fallback
   };
 }
@@ -154,7 +284,9 @@ Rcpp::List rqr_mvn_draw_cpp(const arma::vec& mean,
       Rcpp::Named("jitter_scale") = result.jitter_scale,
       Rcpp::Named("absolute_jitter_fallback") =
         result.absolute_jitter_fallback,
-      Rcpp::Named("clamped_eigenvalues") = result.clamped_eigenvalues
+      Rcpp::Named("clamped_eigenvalues") = result.clamped_eigenvalues,
+      Rcpp::Named("roundoff_clamped_eigenvalues") =
+        result.roundoff_clamped_eigenvalues
     )
   );
 }
@@ -176,7 +308,8 @@ double rqr_filter_log_marginal_cpp(const arma::vec& z,
                                    const arma::cube& W) {
   const arma::uword p = m0.n_elem;
   const arma::uword T = z.n_elem;
-  if (T < 1 || H.n_rows != p || H.n_cols != T || V.n_elem != T ||
+  if (p < 1 || T < 1 || H.n_rows != p || H.n_cols != T ||
+      V.n_elem != T ||
       GG.n_rows != p || GG.n_cols != p || GG.n_slices != T ||
       C0.n_rows != p || C0.n_cols != p ||
       W.n_rows != p || W.n_cols != p || W.n_slices != T) {
@@ -190,8 +323,19 @@ double rqr_filter_log_marginal_cpp(const arma::vec& z,
     );
   }
 
+  const arma::mat validated_C0 =
+    validate_filter_covariance(C0, "C0");
+  arma::cube validated_W(p, p, T);
+  for (arma::uword t = 0; t < T; ++t) {
+    validated_W.slice(t) = validate_filter_covariance(
+      W.slice(t),
+      "W slice " + std::to_string(t + 1)
+    );
+  }
+
   arma::vec mprev = m0;
-  arma::mat Cprev = symm(C0);
+  arma::mat Cprev = validated_C0;
+  const arma::mat identity = arma::eye(p, p);
   double log_marginal = 0.0;
   const double log_two_pi = std::log(2.0 * std::acos(-1.0));
   for (arma::uword t = 0; t < T; ++t) {
@@ -208,8 +352,9 @@ double rqr_filter_log_marginal_cpp(const arma::vec& z,
     }
     const arma::mat Gt = GG.slice(t);
     const arma::vec at = Gt * mprev;
-    const arma::mat Rt = symm(
-      Gt * Cprev * Gt.t() + W.slice(t)
+    const arma::mat Rt = validate_filter_covariance(
+      symm(Gt * Cprev * Gt.t() + validated_W.slice(t)),
+      "forecast covariance at time " + std::to_string(t + 1)
     );
     arma::vec mt = at;
     arma::mat Ct = Rt;
@@ -226,8 +371,16 @@ double rqr_filter_log_marginal_cpp(const arma::vec& z,
       log_marginal += -0.5 * (
         log_two_pi + std::log(qt) + residual * residual / qt
       );
-      mt = at + rh * residual / qt;
-      Ct = symm(Rt - (rh * rh.t()) / qt);
+      const arma::vec gain = rh / qt;
+      mt = at + gain * residual;
+      const arma::mat update = identity - gain * h.t();
+      Ct = validate_filter_covariance(
+        symm(
+          update * Rt * update.t() +
+          V(t) * (gain * gain.t())
+        ),
+        "filtered covariance at time " + std::to_string(t + 1)
+      );
     }
     if (!mt.is_finite() || !Ct.is_finite()) {
       Rcpp::stop("Nonfinite filter-log-marginal recursion.");
@@ -268,8 +421,50 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
     Rcpp::stop("Incompatible FFBS dimensions.");
   }
   if (evolution_mode != 0 && evolution_mode != 1) Rcpp::stop("Unknown evolution mode.");
-  if (arma::any(V <= 0.0) || !V.is_finite() || !H.is_finite() || !GG.is_finite()) {
-    Rcpp::stop("H, V, and GG must be finite and V positive.");
+  if (arma::any(V <= 0.0) || !V.is_finite() || !H.is_finite() ||
+      !GG.is_finite() || !m0.is_finite() || !C0.is_finite() ||
+      !W.is_finite() || !D.is_finite()) {
+    Rcpp::stop(
+      "H, V, GG, m0, C0, W, and D must be finite and V positive."
+    );
+  }
+  if (jitter_ladder.n_elem < 1 || !jitter_ladder.is_finite() ||
+      arma::any(jitter_ladder < 0.0) ||
+      arma::min(jitter_ladder) != 0.0) {
+    Rcpp::stop(
+      "jitter_ladder must be finite, nonnegative, nonempty, and contain zero."
+    );
+  }
+  if (!allow_covariance_repair &&
+      arma::any(jitter_ladder > 0.0)) {
+    Rcpp::stop(
+      "Positive jitter is invalid when covariance repair is disabled."
+    );
+  }
+  const bool fixed_label =
+    evolution_label == "fixed_W" ||
+    evolution_label == "discount_template" ||
+    evolution_label == "component_scale";
+  if ((evolution_mode == 0 && !fixed_label) ||
+      (evolution_mode == 1 && evolution_label != "adaptive_discount")) {
+    Rcpp::stop("The evolution label does not match the evolution mode.");
+  }
+  const arma::mat validated_C0 =
+    validate_filter_covariance(C0, "C0");
+  arma::mat C0_chol;
+  if (!arma::chol(C0_chol, validated_C0, "lower")) {
+    Rcpp::stop("C0 must be positive definite.");
+  }
+  arma::cube validated_W = W;
+  arma::mat validated_D = D;
+  if (evolution_mode == 0) {
+    for (arma::uword t = 0; t < T; ++t) {
+      validated_W.slice(t) = validate_filter_covariance(
+        W.slice(t), "W slice " + std::to_string(t + 1)
+      );
+    }
+  } else {
+    validated_D = validate_filter_covariance(D, "D");
   }
 
   arma::mat a(p, T), m(p, T), sm(p, T);
@@ -277,10 +472,12 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
   arma::vec q(T); q.fill(NA_REAL);
   arma::vec residual(T); residual.fill(NA_REAL);
   arma::vec mprev = m0;
-  arma::mat Cprev = symm(C0);
+  arma::mat Cprev = validated_C0;
+  const arma::mat identity = arma::eye(p, p);
   double max_jitter = 0.0;
   int jitter_count = 0;
   int psd_draw_count = 0;
+  int roundoff_psd_count = 0;
   std::vector<std::string> repair_stage;
   std::vector<int> repair_time;
   std::vector<std::string> repair_strategy;
@@ -314,8 +511,27 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
     const arma::mat Gt = GG.slice(t);
     a.col(t) = Gt * mprev;
     arma::mat P = symm(Gt * Cprev * Gt.t());
-    arma::mat Wt = evolution_mode == 0 ? W.slice(t) : D % P;
-    R.slice(t) = symm(P + Wt);
+    arma::mat Wt =
+      evolution_mode == 0 ? validated_W.slice(t) : validated_D % P;
+    CovarianceResult forecast = validate_or_repair_covariance(
+      symm(P + Wt),
+      "forecast covariance at time " + std::to_string(t + 1),
+      jitter_ladder, allow_covariance_repair
+    );
+    R.slice(t) = forecast.matrix;
+    roundoff_psd_count += forecast.roundoff_clamped_eigenvalues;
+    if (forecast.jitter > 0.0) {
+      ++jitter_count;
+      max_jitter = std::max(max_jitter, forecast.jitter);
+    }
+    record_repair(
+      "forecast_covariance", t + 1,
+      forecast.jitter > 0.0 ? "cholesky_jitter" : "eigen_clamp",
+      forecast.jitter, forecast.relative_jitter,
+      forecast.min_eigenvalue, forecast.matrix_scale,
+      forecast.jitter_scale, forecast.absolute_jitter_fallback,
+      forecast.clamped_eigenvalues
+    );
     const double zt = z(t);
     if (R_IsNaN(zt) && !R_IsNA(zt)) Rcpp::stop("z may contain finite values or NA only; NaN is invalid.");
     if (std::isinf(zt)) Rcpp::stop("z may contain finite values or NA only; Inf is invalid.");
@@ -325,19 +541,34 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
       q(t) = arma::dot(h, rh) + V(t);
       if (!std::isfinite(q(t)) || q(t) <= 0.0) Rcpp::stop("Nonpositive forecast variance.");
       residual(t) = z(t) - arma::dot(h, a.col(t));
-      m.col(t) = a.col(t) + rh * residual(t) / q(t);
-      C.slice(t) = symm(R.slice(t) - (rh * rh.t()) / q(t));
+      const arma::vec gain = rh / q(t);
+      m.col(t) = a.col(t) + gain * residual(t);
+      const arma::mat update = identity - gain * h.t();
+      CovarianceResult filtered = validate_or_repair_covariance(
+        symm(
+          update * R.slice(t) * update.t() +
+          V(t) * (gain * gain.t())
+        ),
+        "filtered covariance at time " + std::to_string(t + 1),
+        jitter_ladder, allow_covariance_repair
+      );
+      C.slice(t) = filtered.matrix;
+      roundoff_psd_count += filtered.roundoff_clamped_eigenvalues;
+      if (filtered.jitter > 0.0) {
+        ++jitter_count;
+        max_jitter = std::max(max_jitter, filtered.jitter);
+      }
+      record_repair(
+        "filter_covariance", t + 1,
+        filtered.jitter > 0.0 ? "cholesky_jitter" : "eigen_clamp",
+        filtered.jitter, filtered.relative_jitter,
+        filtered.min_eigenvalue, filtered.matrix_scale,
+        filtered.jitter_scale, filtered.absolute_jitter_fallback,
+        filtered.clamped_eigenvalues
+      );
     } else {
       m.col(t) = a.col(t);
       C.slice(t) = R.slice(t);
-    }
-    SpdResult cf = spd_factor(C.slice(t), jitter_ladder);
-    C.slice(t) = cf.matrix;
-    if (cf.jitter > 0.0) {
-      ++jitter_count; max_jitter = std::max(max_jitter, cf.jitter);
-      record_repair("filter_covariance", t + 1, "cholesky_jitter", cf.jitter,
-                    cf.relative_jitter, cf.min_eigenvalue, cf.matrix_scale,
-                    cf.jitter_scale, cf.absolute_jitter_fallback, 0);
     }
     mprev = m.col(t);
     Cprev = C.slice(t);
@@ -358,7 +589,31 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
       }
       arma::mat B = C.slice(t) * GG.slice(t + 1).t() * inv_from_lower(rf.chol_lower);
       sm.col(t) = m.col(t) + B * (sm.col(t + 1) - a.col(t + 1));
-      sC.slice(t) = symm(C.slice(t) + B * (sC.slice(t + 1) - rf.matrix) * B.t());
+      const arma::mat smoother_increment =
+        B * (sC.slice(t + 1) - rf.matrix) * B.t();
+      CovarianceResult smoother = validate_or_repair_covariance(
+        symm(C.slice(t) + smoother_increment),
+        "smoother covariance at time " + std::to_string(t + 1),
+        jitter_ladder, allow_covariance_repair,
+        std::max(
+          arma::abs(C.slice(t)).max(),
+          arma::abs(smoother_increment).max()
+        )
+      );
+      sC.slice(t) = smoother.matrix;
+      roundoff_psd_count += smoother.roundoff_clamped_eigenvalues;
+      if (smoother.jitter > 0.0) {
+        ++jitter_count;
+        max_jitter = std::max(max_jitter, smoother.jitter);
+      }
+      record_repair(
+        "smoother_covariance", t + 1,
+        smoother.jitter > 0.0 ? "cholesky_jitter" : "eigen_clamp",
+        smoother.jitter, smoother.relative_jitter,
+        smoother.min_eigenvalue, smoother.matrix_scale,
+        smoother.jitter_scale, smoother.absolute_jitter_fallback,
+        smoother.clamped_eigenvalues
+      );
     }
   }
 
@@ -370,6 +625,7 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
     );
     path.col(T - 1) = terminal.draw;
     if (terminal.used_psd) ++psd_draw_count;
+    roundoff_psd_count += terminal.roundoff_clamped_eigenvalues;
     if (terminal.jitter > 0.0) { ++jitter_count; max_jitter = std::max(max_jitter, terminal.jitter); }
     record_repair("terminal_draw_covariance", T,
                   terminal.jitter > 0.0 ? "cholesky_jitter" : "eigen_clamp",
@@ -390,10 +646,36 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
         }
         arma::mat B = C.slice(t) * GG.slice(t + 1).t() * inv_from_lower(rf.chol_lower);
         arma::vec h = m.col(t) + B * (path.col(t + 1) - a.col(t + 1));
-        arma::mat HC = symm(C.slice(t) - B * rf.matrix * B.t());
+        const arma::mat backward_reduction =
+          B * rf.matrix * B.t();
+        CovarianceResult backward = validate_or_repair_covariance(
+          symm(C.slice(t) - backward_reduction),
+          "backward conditional covariance at time " +
+            std::to_string(t + 1),
+          jitter_ladder, allow_covariance_repair,
+          std::max(
+            arma::abs(C.slice(t)).max(),
+            arma::abs(backward_reduction).max()
+          )
+        );
+        arma::mat HC = backward.matrix;
+        roundoff_psd_count += backward.roundoff_clamped_eigenvalues;
+        if (backward.jitter > 0.0) {
+          ++jitter_count;
+          max_jitter = std::max(max_jitter, backward.jitter);
+        }
+        record_repair(
+          "backward_draw_covariance", t + 1,
+          backward.jitter > 0.0 ? "cholesky_jitter" : "eigen_clamp",
+          backward.jitter, backward.relative_jitter,
+          backward.min_eigenvalue, backward.matrix_scale,
+          backward.jitter_scale, backward.absolute_jitter_fallback,
+          backward.clamped_eigenvalues
+        );
         DrawResult state = mvn_draw(h, HC, jitter_ladder, allow_covariance_repair);
         path.col(t) = state.draw;
         if (state.used_psd) ++psd_draw_count;
+        roundoff_psd_count += state.roundoff_clamped_eigenvalues;
         if (state.jitter > 0.0) { ++jitter_count; max_jitter = std::max(max_jitter, state.jitter); }
         record_repair("backward_draw_covariance", t + 1,
                       state.jitter > 0.0 ? "cholesky_jitter" : "eigen_clamp",
@@ -426,6 +708,7 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
       Rcpp::Named("max_jitter") = max_jitter,
       Rcpp::Named("jitter_count") = jitter_count,
       Rcpp::Named("psd_draw_count") = psd_draw_count,
+      Rcpp::Named("roundoff_psd_count") = roundoff_psd_count,
       Rcpp::Named("repair_count") = static_cast<int>(repair_stage.size()),
       Rcpp::Named("repair_records") = Rcpp::DataFrame::create(
         Rcpp::Named("stage") = repair_stage,

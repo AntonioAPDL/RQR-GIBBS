@@ -227,10 +227,54 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 .rqr_lambda_prior <- function(lambda_prior = list(), learning_rate_mode = "fixed_rate") {
   mode <- .rqr_learning_rate_mode(learning_rate_mode)
   if (inherits(lambda_prior, "rqr_lambda_prior")) {
-    if (!identical(lambda_prior$mode, mode)) {
-      stop("Internal lambda prior mode does not match learning_rate_mode.", call. = FALSE)
+    expected_power <- if (identical(
+        mode, "learned_pseudoresidual_normalized"
+      )) {
+      1
+    } else {
+      0
     }
-    return(lambda_prior)
+    if (!is.list(lambda_prior) ||
+        !identical(class(lambda_prior), c(
+          "rqr_lambda_prior", "list"
+        )) ||
+        !identical(
+          names(attributes(lambda_prior)), c("names", "class")
+        ) ||
+        !identical(
+          names(lambda_prior),
+          c("shape", "rate", "power", "mode")
+        ) ||
+        anyDuplicated(names(lambda_prior)) ||
+        !identical(lambda_prior$mode, mode) ||
+        !is.numeric(lambda_prior$power) ||
+        length(lambda_prior$power) != 1L ||
+        is.na(lambda_prior$power) ||
+        !identical(as.numeric(lambda_prior$power),
+                   as.numeric(expected_power))) {
+      stop(
+        paste(
+          "The canonical lambda prior conflicts with its exact",
+          "mode-derived field and power contract."
+        ),
+        call. = FALSE
+      )
+    }
+    shape <- .rqr_scalar_numeric(
+      lambda_prior$shape, "lambda_prior$shape",
+      lower = 0, lower_open = TRUE
+    )
+    rate <- .rqr_scalar_numeric(
+      lambda_prior$rate, "lambda_prior$rate",
+      lower = 0, lower_open = TRUE
+    )
+    return(structure(
+      list(
+        shape = shape, rate = rate,
+        power = expected_power, mode = mode
+      ),
+      class = c("rqr_lambda_prior", "list")
+    ))
   }
   if (is.null(lambda_prior)) lambda_prior <- list()
   if (!is.list(lambda_prior)) {
@@ -325,9 +369,11 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
 }
 
-.rqr_restore_rng <- function(state) {
-  if (is.null(state)) return(invisible(FALSE))
-  if (!is.numeric(state) || length(state) < 2L || anyNA(state) ||
+.rqr_canonical_rng_state <- function(state) {
+  if (is.null(state)) return(NULL)
+  if (!is.numeric(state) || is.object(state) ||
+      !is.null(attributes(state)) ||
+      length(state) < 2L || anyNA(state) ||
       any(!is.finite(state)) || any(state != floor(state)) ||
       any(state < -.Machine$integer.max) ||
       any(state > .Machine$integer.max)) {
@@ -346,7 +392,12 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
         ))) {
     stop("init$rng_state must be a complete integer .Random.seed vector.", call. = FALSE)
   }
-  state <- as.integer(state)
+  as.integer(state)
+}
+
+.rqr_restore_rng <- function(state) {
+  state <- .rqr_canonical_rng_state(state)
+  if (is.null(state)) return(invisible(FALSE))
   assign(".Random.seed", state, envir = .GlobalEnv)
   invisible(TRUE)
 }
@@ -355,10 +406,537 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
-.rqr_schema_version <- function() "rqrgibbs_fit/1.11.0"
+.rqr_initialization_schema <- function() {
+  "rqrgibbs_segment_initialization/1.0.0"
+}
+
+.rqr_retained_draws_schema <- function() {
+  "rqrgibbs_retained_draws/1.0.0"
+}
+
+.rqr_retained_evidence_schema <- function() {
+  "rqrgibbs_retained_evidence/1.0.0"
+}
+
+.rqr_make_retained_draws_contract <- function(family, draws) {
+  if (!is.character(family) || length(family) != 1L ||
+      is.na(family) || !nzchar(family)) {
+    stop("Retained-draw family must be one nonempty string.",
+         call. = FALSE)
+  }
+  if (!is.list(draws) || is.object(draws) ||
+      is.null(names(draws)) || anyNA(names(draws)) ||
+      any(!nzchar(names(draws))) || anyDuplicated(names(draws))) {
+    stop(
+      "Retained draws must be a plain uniquely named list.",
+      call. = FALSE
+    )
+  }
+  .rqr_assert_data_only_contract(draws, "retained_draws")
+  field_digests <- vapply(
+    draws, .rqr_digest, character(1L), USE.NAMES = TRUE
+  )
+  contract <- list(
+    schema_version = .rqr_retained_draws_schema(),
+    family = family,
+    field_names = names(draws),
+    field_digests = field_digests,
+    retained_draws_digest = .rqr_digest(draws)
+  )
+  .rqr_validate_retained_draws_contract(
+    contract, family = family, draws = draws
+  )
+  contract
+}
+
+.rqr_validate_retained_draws_contract <- function(
+    contract, family = NULL, draws, stored_digest = NULL) {
+  expected_fields <- c(
+    "schema_version", "family", "field_names",
+    "field_digests", "retained_draws_digest"
+  )
+  if (!is.list(contract) || is.object(contract) ||
+      !identical(names(attributes(contract)), "names") ||
+      !identical(names(contract), expected_fields) ||
+      anyDuplicated(names(contract)) ||
+      !identical(
+        contract$schema_version, .rqr_retained_draws_schema()
+      ) ||
+      !is.character(contract$family) ||
+      length(contract$family) != 1L ||
+      is.na(contract$family) || !nzchar(contract$family) ||
+      (!is.null(family) && !identical(contract$family, family)) ||
+      !is.character(contract$field_names) ||
+      anyNA(contract$field_names) ||
+      any(!nzchar(contract$field_names)) ||
+      anyDuplicated(contract$field_names) ||
+      !is.character(contract$field_digests) ||
+      anyNA(contract$field_digests) ||
+      any(!grepl("^[0-9a-f]{64}$", contract$field_digests)) ||
+      !identical(names(contract$field_digests), contract$field_names) ||
+      !is.character(contract$retained_draws_digest) ||
+      length(contract$retained_draws_digest) != 1L ||
+      !grepl(
+        "^[0-9a-f]{64}$", contract$retained_draws_digest
+      ) ||
+      !is.list(draws) || is.object(draws) ||
+      !identical(names(draws), contract$field_names)) {
+    stop(
+      "The retained-draw contract has an invalid exact schema.",
+      call. = FALSE
+    )
+  }
+  .rqr_assert_data_only_contract(draws, "retained_draws")
+  expected_field_digests <- vapply(
+    draws, .rqr_digest, character(1L), USE.NAMES = TRUE
+  )
+  if (!identical(
+        contract$field_digests, expected_field_digests
+      ) ||
+      !identical(
+        contract$retained_draws_digest, .rqr_digest(draws)
+      )) {
+    stop(
+      "The retained draws do not match their content digests.",
+      call. = FALSE
+    )
+  }
+  digest <- .rqr_digest(contract)
+  if (!is.null(stored_digest) &&
+      (!is.character(stored_digest) ||
+       length(stored_digest) != 1L ||
+       !identical(stored_digest, digest))) {
+    stop("The retained-draw contract digest is invalid.",
+         call. = FALSE)
+  }
+  invisible(list(
+    digest = digest,
+    retained_draws_digest = contract$retained_draws_digest
+  ))
+}
+
+.rqr_make_retained_evidence_contract <- function(family, evidence) {
+  if (!is.character(family) || length(family) != 1L ||
+      is.na(family) || !nzchar(family) ||
+      !is.list(evidence) || is.object(evidence) ||
+      is.null(names(evidence)) || anyNA(names(evidence)) ||
+      any(!nzchar(names(evidence))) || anyDuplicated(names(evidence))) {
+    stop(
+      "Retained evidence requires a family and plain named artifacts.",
+      call. = FALSE
+    )
+  }
+  .rqr_assert_data_only_contract(evidence, "retained_evidence")
+  artifact_digests <- vapply(
+    evidence, .rqr_digest, character(1L), USE.NAMES = TRUE
+  )
+  contract <- list(
+    schema_version = .rqr_retained_evidence_schema(),
+    family = family,
+    artifact_names = names(evidence),
+    artifact_digests = artifact_digests,
+    retained_evidence_digest = .rqr_digest(evidence)
+  )
+  .rqr_validate_retained_evidence_contract(
+    contract, family = family, evidence = evidence
+  )
+  contract
+}
+
+.rqr_validate_retained_evidence_contract <- function(
+    contract, family = NULL, evidence, stored_digest = NULL) {
+  expected_fields <- c(
+    "schema_version", "family", "artifact_names",
+    "artifact_digests", "retained_evidence_digest"
+  )
+  if (!is.list(contract) || is.object(contract) ||
+      !identical(names(attributes(contract)), "names") ||
+      !identical(names(contract), expected_fields) ||
+      anyDuplicated(names(contract)) ||
+      !identical(
+        contract$schema_version, .rqr_retained_evidence_schema()
+      ) ||
+      !is.character(contract$family) ||
+      length(contract$family) != 1L ||
+      is.na(contract$family) || !nzchar(contract$family) ||
+      (!is.null(family) && !identical(contract$family, family)) ||
+      !is.character(contract$artifact_names) ||
+      anyNA(contract$artifact_names) ||
+      any(!nzchar(contract$artifact_names)) ||
+      anyDuplicated(contract$artifact_names) ||
+      !is.character(contract$artifact_digests) ||
+      anyNA(contract$artifact_digests) ||
+      any(!grepl("^[0-9a-f]{64}$", contract$artifact_digests)) ||
+      !identical(
+        names(contract$artifact_digests), contract$artifact_names
+      ) ||
+      !is.character(contract$retained_evidence_digest) ||
+      length(contract$retained_evidence_digest) != 1L ||
+      !grepl(
+        "^[0-9a-f]{64}$", contract$retained_evidence_digest
+      ) ||
+      !is.list(evidence) || is.object(evidence) ||
+      !identical(names(evidence), contract$artifact_names)) {
+    stop(
+      "The retained-evidence contract has an invalid exact schema.",
+      call. = FALSE
+    )
+  }
+  .rqr_assert_data_only_contract(evidence, "retained_evidence")
+  expected_digests <- vapply(
+    evidence, .rqr_digest, character(1L), USE.NAMES = TRUE
+  )
+  if (!identical(contract$artifact_digests, expected_digests) ||
+      !identical(
+        contract$retained_evidence_digest, .rqr_digest(evidence)
+      )) {
+    stop(
+      "The retained evidence does not match its content digests.",
+      call. = FALSE
+    )
+  }
+  digest <- .rqr_digest(contract)
+  if (!is.null(stored_digest) &&
+      (!is.character(stored_digest) ||
+       length(stored_digest) != 1L ||
+       !identical(stored_digest, digest))) {
+    stop("The retained-evidence contract digest is invalid.",
+         call. = FALSE)
+  }
+  invisible(list(
+    digest = digest,
+    retained_evidence_digest =
+      contract$retained_evidence_digest
+  ))
+}
+
+.rqr_make_initialization_contract <- function(
+    family, initial_state, seed = NULL, rng_state = NULL,
+    continued = FALSE, parent_checkpoint_digest = NULL) {
+  if (!is.character(family) || length(family) != 1L ||
+      is.na(family) || !nzchar(family)) {
+    stop("Initialization family must be one nonempty string.",
+         call. = FALSE)
+  }
+  continued <- .rqr_scalar_logical(continued, "continued")
+  if (!is.list(initial_state) || is.object(initial_state)) {
+    stop("initial_state must be a plain named list.",
+         call. = FALSE)
+  }
+  .rqr_assert_data_only_contract(initial_state, "initial_state")
+  # Freeze an independent snapshot before the transition kernel starts.
+  # Several MCMC updates replace slices of atomic vectors in place. R's
+  # copy-on-modify behaviour is an implementation detail and must not be the
+  # integrity boundary for the recorded segment start. A serialization
+  # round-trip is safe here because the preceding data-only check excludes
+  # environments, external pointers, functions, and other live objects.
+  initial_state <- unserialize(
+    serialize(initial_state, connection = NULL, version = 3L)
+  )
+  seed <- if (is.null(seed)) {
+    NA_integer_
+  } else {
+    .rqr_scalar_integer(seed, "initialization seed", 0L)
+  }
+  rng_state <- .rqr_canonical_rng_state(rng_state)
+  if (!is.na(seed) && !is.null(rng_state)) {
+    stop(
+      "An initialization contract cannot contain both seed and RNG state.",
+      call. = FALSE
+    )
+  }
+  parent_checkpoint_digest <- if (continued) {
+    value <- tolower(as.character(
+      parent_checkpoint_digest %||% NA_character_
+    )[1L])
+    if (!grepl("^[0-9a-f]{64}$", value)) {
+      stop(
+        paste(
+          "A continuation initialization requires a complete parent",
+          "checkpoint digest."
+        ),
+        call. = FALSE
+      )
+    }
+    value
+  } else {
+    NA_character_
+  }
+  rng_source <- if (!is.na(seed)) {
+    "explicit_seed"
+  } else if (!is.null(rng_state)) {
+    if (continued) "parent_checkpoint_rng" else "explicit_rng_state"
+  } else {
+    "ambient_unbound"
+  }
+  contract <- list(
+    schema_version = .rqr_initialization_schema(),
+    family = family,
+    segment_type = if (continued) "continuation" else "fresh",
+    rng_source = rng_source,
+    seed = seed,
+    rng_state = rng_state,
+    parent_checkpoint_digest = parent_checkpoint_digest,
+    initial_state = initial_state,
+    initial_state_digest = .rqr_digest(initial_state),
+    reproducibility_bound =
+      !identical(rng_source, "ambient_unbound")
+  )
+  .rqr_validate_initialization_contract(contract, family)
+  contract
+}
+
+.rqr_validate_initialization_contract <- function(
+    contract, family = NULL, stored_digest = NULL) {
+  expected_fields <- c(
+    "schema_version", "family", "segment_type", "rng_source",
+    "seed", "rng_state", "parent_checkpoint_digest",
+    "initial_state", "initial_state_digest",
+    "reproducibility_bound"
+  )
+  if (!is.list(contract) || is.object(contract) ||
+      !identical(names(attributes(contract)), "names") ||
+      !identical(names(contract), expected_fields) ||
+      anyDuplicated(names(contract)) ||
+      !identical(
+        contract$schema_version, .rqr_initialization_schema()
+      ) ||
+      !is.character(contract$family) ||
+      length(contract$family) != 1L ||
+      is.na(contract$family) || !nzchar(contract$family) ||
+      (!is.null(family) && !identical(contract$family, family)) ||
+      !is.character(contract$segment_type) ||
+      length(contract$segment_type) != 1L ||
+      is.na(contract$segment_type) ||
+      !contract$segment_type %in% c("fresh", "continuation") ||
+      !is.character(contract$rng_source) ||
+      length(contract$rng_source) != 1L ||
+      is.na(contract$rng_source) ||
+      !contract$rng_source %in% c(
+        "explicit_seed", "explicit_rng_state",
+        "parent_checkpoint_rng", "ambient_unbound"
+      ) ||
+      !is.numeric(contract$seed) ||
+      length(contract$seed) != 1L ||
+      (!is.na(contract$seed) &&
+       (!is.finite(contract$seed) ||
+        contract$seed != floor(contract$seed) ||
+        contract$seed < 0 ||
+        contract$seed > .Machine$integer.max)) ||
+      !is.logical(contract$reproducibility_bound) ||
+      length(contract$reproducibility_bound) != 1L ||
+      is.na(contract$reproducibility_bound) ||
+      !is.list(contract$initial_state) ||
+      is.object(contract$initial_state)) {
+    stop(
+      "The segment initialization contract has an invalid schema.",
+      call. = FALSE
+    )
+  }
+  .rqr_assert_data_only_contract(
+    contract$initial_state,
+    "initialization_contract$initial_state"
+  )
+  rng_state <- .rqr_canonical_rng_state(contract$rng_state)
+  continued <- identical(contract$segment_type, "continuation")
+  source_valid <- switch(
+    contract$rng_source,
+    explicit_seed =
+      !continued && !is.na(contract$seed) && is.null(rng_state),
+    explicit_rng_state =
+      !continued && is.na(contract$seed) && !is.null(rng_state),
+    parent_checkpoint_rng =
+      continued && is.na(contract$seed) && !is.null(rng_state),
+    ambient_unbound =
+      !continued && is.na(contract$seed) && is.null(rng_state),
+    FALSE
+  )
+  parent_valid <- if (continued) {
+    is.character(contract$parent_checkpoint_digest) &&
+      length(contract$parent_checkpoint_digest) == 1L &&
+      grepl(
+        "^[0-9a-f]{64}$",
+        contract$parent_checkpoint_digest
+      )
+  } else {
+    identical(contract$parent_checkpoint_digest, NA_character_)
+  }
+  expected_bound <- !identical(
+    contract$rng_source, "ambient_unbound"
+  )
+  if (!source_valid || !parent_valid ||
+      !identical(
+        contract$reproducibility_bound, expected_bound
+      ) ||
+      !is.character(contract$initial_state_digest) ||
+      length(contract$initial_state_digest) != 1L ||
+      !grepl(
+        "^[0-9a-f]{64}$", contract$initial_state_digest
+      ) ||
+      !identical(
+        .rqr_digest(contract$initial_state),
+        contract$initial_state_digest
+      )) {
+    stop(
+      paste(
+        "The segment initialization contract violates its RNG,",
+        "parent-link, or state-digest semantics."
+      ),
+      call. = FALSE
+    )
+  }
+  digest <- .rqr_digest(contract)
+  if (!is.null(stored_digest) &&
+      (!is.character(stored_digest) ||
+       length(stored_digest) != 1L ||
+       !identical(stored_digest, digest))) {
+    stop("The segment initialization digest is invalid.",
+         call. = FALSE)
+  }
+  invisible(list(
+    digest = digest,
+    reproducibility_bound = expected_bound,
+    seed = if (is.na(contract$seed)) {
+      NULL
+    } else {
+      as.integer(contract$seed)
+    }
+  ))
+}
+
+.rqr_schema_version <- function() "rqrgibbs_fit/1.14.0"
 
 .rqr_continuation_history_schema <- function() {
-  "rqrgibbs_continuation_history/4.1.0"
+  "rqrgibbs_continuation_history/5.0.0"
+}
+
+.rqr_static_history_transition_kernel <- function() {
+  contract <- list(
+    schema_version = "rqrgibbs_fixed_design_transition/1.0.0",
+    kernel_family = "ordinary_zero_tilt_fixed_design",
+    implementation = "R_precision_cholesky",
+    scan_identity = "fixed_design_exact_gibbs"
+  )
+  list(
+    schema = contract$schema_version,
+    digest = .rqr_digest(contract),
+    contract = contract
+  )
+}
+
+.rqr_history_transition_kernel_identity <- function(
+    schema, digest, backend_requested, backend_resolved) {
+  missing_schema <- is.null(schema)
+  missing_digest <- is.null(digest)
+  if (xor(missing_schema, missing_digest)) {
+    stop(
+      paste(
+        "segment_transition_kernel_schema and",
+        "segment_transition_kernel_digest must be supplied together."
+      ),
+      call. = FALSE
+    )
+  }
+  if (missing_schema && missing_digest) {
+    static_backend <- identical(
+      as.character(backend_requested)[1L],
+      "R_precision_cholesky"
+    ) && identical(
+      as.character(backend_resolved)[1L],
+      "R_precision_cholesky"
+    )
+    if (!static_backend) {
+      stop(
+        paste(
+          "A non-static continuation segment must explicitly supply its",
+          "transition-kernel schema and digest."
+        ),
+        call. = FALSE
+      )
+    }
+    return(.rqr_static_history_transition_kernel())
+  }
+  if (!is.character(schema) || length(schema) != 1L ||
+      is.na(schema) || !nzchar(schema)) {
+    stop(
+      "segment_transition_kernel_schema must contain nonempty text.",
+      call. = FALSE
+    )
+  }
+  if (!is.character(digest) || length(digest) != 1L ||
+      is.na(digest) ||
+      !grepl("^[0-9A-Fa-f]{64}$", digest)) {
+    stop(
+      paste(
+        "segment_transition_kernel_digest must be a complete",
+        "SHA-256 digest."
+      ),
+      call. = FALSE
+    )
+  }
+  digest <- tolower(digest)
+  list(schema = schema, digest = digest, contract = NULL)
+}
+
+.rqr_object_transition_kernel_identity <- function(object) {
+  checkpoint <- object$checkpoint_state
+  model_spec <- object$model_spec
+  if (is.list(checkpoint) &&
+      !is.null(checkpoint$transition_kernel_schema) &&
+      !is.null(checkpoint$transition_kernel) &&
+      !is.null(checkpoint$transition_kernel_digest)) {
+    checkpoint_schema <- checkpoint$transition_kernel_schema
+    checkpoint_digest <- checkpoint$transition_kernel_digest
+    model_contract <- model_spec$transition_kernel
+    model_digest <- model_spec$transition_kernel_digest
+    valid <- is.character(checkpoint_schema) &&
+      length(checkpoint_schema) == 1L &&
+      !is.na(checkpoint_schema) && nzchar(checkpoint_schema) &&
+      is.list(checkpoint$transition_kernel) &&
+      identical(
+        checkpoint$transition_kernel$schema_version,
+        checkpoint_schema
+      ) &&
+      is.character(checkpoint_digest) &&
+      length(checkpoint_digest) == 1L &&
+      grepl("^[0-9a-f]{64}$", checkpoint_digest) &&
+      identical(
+        .rqr_digest(checkpoint$transition_kernel),
+        checkpoint_digest
+      ) &&
+      is.list(model_contract) &&
+      identical(model_contract, checkpoint$transition_kernel) &&
+      identical(model_digest, checkpoint_digest)
+    if (!valid) {
+      stop(
+        paste(
+          "The fitted object's transition-kernel metadata is not",
+          "internally reconstructible."
+        ),
+        call. = FALSE
+      )
+    }
+    return(list(
+      schema = checkpoint_schema,
+      digest = checkpoint_digest
+    ))
+  }
+  static <- .rqr_static_history_transition_kernel()
+  static_markers <- c(
+    checkpoint$transition_version %||% NA_character_,
+    object$misc$transition_version %||% NA_character_
+  )
+  if (identical(object$family %||% NA_character_, "rqr_fixed_design") &&
+      all(static_markers == static$schema)) {
+    return(static[c("schema", "digest")])
+  }
+  stop(
+    paste(
+      "The fitted object does not expose a reconstructible",
+      "transition-kernel identity."
+    ),
+    call. = FALSE
+  )
 }
 
 .rqr_make_continuation_history <- function(
@@ -368,7 +946,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     backend_requested, backend_resolved, parent = NULL,
     parent_checkpoint_digest = NULL,
     environment_mismatches = character(0),
-    environment_override_used = FALSE) {
+    environment_override_used = FALSE,
+    segment_transition_kernel_schema = NULL,
+    segment_transition_kernel_digest = NULL) {
   checkpoint_digest <- tolower(as.character(checkpoint_digest)[1L])
   if (!grepl("^[0-9a-f]{64}$", checkpoint_digest)) {
     stop("checkpoint_digest must be a complete SHA-256 digest.", call. = FALSE)
@@ -475,6 +1055,28 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   if (!.rqr_nonmissing_text(c(backend_requested, backend_resolved))) {
     stop("Backend values must contain nonempty text.", call. = FALSE)
   }
+  transition_kernel <- .rqr_history_transition_kernel_identity(
+    schema = segment_transition_kernel_schema,
+    digest = segment_transition_kernel_digest,
+    backend_requested = backend_requested,
+    backend_resolved = backend_resolved
+  )
+  if (!is.null(parent)) {
+    parent_segment <- utils::tail(segments, 1L)[[1L]]
+    if (!identical(
+          transition_kernel$schema,
+          parent_segment$segment_transition_kernel_schema
+        ) ||
+        !identical(
+          transition_kernel$digest,
+          parent_segment$segment_transition_kernel_digest
+        )) {
+      stop(
+        "A continuation cannot change its transition-kernel identity.",
+        call. = FALSE
+      )
+    }
+  }
   environment_override_used <- isTRUE(environment_override_used)
   backend_changed <- !is.null(parent) && (
     !identical(backend_requested, parent_backend_requested) ||
@@ -530,6 +1132,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     segment_numerical_repair_count = segment_numerical_repair_count,
     cumulative_numerical_repair_count = cumulative_repairs,
     segment_target_contract_digest = segment_target_contract_digest,
+    segment_transition_kernel_schema = transition_kernel$schema,
+    segment_transition_kernel_digest = transition_kernel$digest,
     segment_exact_joint_target = isTRUE(segment_exact_joint_target),
     segment_numerically_exact = segment_numerically_exact,
     chain_history_numerically_exact = chain_exact,
@@ -579,6 +1183,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     reproducibility_eligible = reproducibility_eligible,
     cumulative_environment_override_used = cumulative_override,
     cumulative_environment_mismatch_ledger = mismatch_ledger,
+    transition_kernel_schema = transition_kernel$schema,
+    transition_kernel_digest = transition_kernel$digest,
     segments = all_segments
   )
 }
@@ -586,7 +1192,21 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 .rqr_validate_continuation_history <- function(object) {
   contract <- object$continuation_history_contract
   stored_digest <- object$continuation_history_digest %||% NA_character_
-  if (!is.list(contract) ||
+  required_contract_fields <- c(
+    "schema_version", "generation",
+    "cumulative_numerical_repair_count",
+    "chain_history_numerically_exact",
+    "target_numerical_eligible", "promotion_eligible",
+    "reproducibility_eligible",
+    "cumulative_environment_override_used",
+    "cumulative_environment_mismatch_ledger",
+    "transition_kernel_schema", "transition_kernel_digest",
+    "segments"
+  )
+  if (!is.list(contract) || is.object(contract) ||
+      !identical(names(attributes(contract)), "names") ||
+      !identical(names(contract), required_contract_fields) ||
+      anyDuplicated(names(contract)) != 0L ||
       !identical(
         contract$schema_version %||% NA_character_,
         .rqr_continuation_history_schema()
@@ -604,6 +1224,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     "segment_numerical_repair_count",
     "cumulative_numerical_repair_count",
     "segment_target_contract_digest",
+    "segment_transition_kernel_schema",
+    "segment_transition_kernel_digest",
     "segment_exact_joint_target",
     "segment_numerically_exact",
     "chain_history_numerically_exact",
@@ -617,12 +1239,15 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     "parent_backend_requested", "parent_backend_resolved",
     "backend_requested", "backend_resolved", "backend_changed"
   )
-  if (!is.list(segments) || !length(segments) ||
+  if (!is.list(segments) || is.object(segments) ||
+      !is.null(attributes(segments)) || !length(segments) ||
       any(!vapply(
         segments,
         function(segment) {
-          is.list(segment) &&
-            all(required_segment_fields %in% names(segment))
+          is.list(segment) && !is.object(segment) &&
+            identical(names(attributes(segment)), "names") &&
+            identical(names(segment), required_segment_fields) &&
+            anyDuplicated(names(segment)) == 0L
         },
         logical(1L)
       ))) {
@@ -641,6 +1266,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     expected_generation <- as.integer(index - 1L)
     mismatches <- segment$environment_mismatches
     valid_mismatches <- is.character(mismatches) &&
+      !is.object(mismatches) && is.null(attributes(mismatches)) &&
       !anyNA(mismatches) && all(nzchar(mismatches)) &&
       identical(mismatches, sort(unique(mismatches)))
     valid_checkpoint <- is.character(segment$checkpoint_digest) &&
@@ -651,6 +1277,18 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       length(segment$segment_target_contract_digest) == 1L &&
       grepl(
         "^[0-9a-f]{64}$", segment$segment_target_contract_digest
+      )
+    valid_transition_kernel_schema <-
+      is.character(segment$segment_transition_kernel_schema) &&
+      length(segment$segment_transition_kernel_schema) == 1L &&
+      !is.na(segment$segment_transition_kernel_schema) &&
+      nzchar(segment$segment_transition_kernel_schema)
+    valid_transition_kernel_digest <-
+      is.character(segment$segment_transition_kernel_digest) &&
+      length(segment$segment_transition_kernel_digest) == 1L &&
+      grepl(
+        "^[0-9a-f]{64}$",
+        segment$segment_transition_kernel_digest
       )
     valid_parent_link <- if (index == 1L) {
       is.character(segment$parent_checkpoint_digest) &&
@@ -717,6 +1355,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     }
     if (!identical(segment_generation, expected_generation) ||
         !valid_checkpoint || !valid_target_digest ||
+        !valid_transition_kernel_schema ||
+        !valid_transition_kernel_digest ||
         !valid_parent_link || !valid_mismatches ||
         !valid_repairs || !valid_logicals || !valid_parent_backends ||
         !.rqr_nonmissing_text(c(
@@ -763,6 +1403,14 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       identical(
         segment$segment_target_contract_digest,
         segments[[1L]]$segment_target_contract_digest
+      ),
+      identical(
+        segment$segment_transition_kernel_schema,
+        segments[[1L]]$segment_transition_kernel_schema
+      ),
+      identical(
+        segment$segment_transition_kernel_digest,
+        segments[[1L]]$segment_transition_kernel_digest
       ),
       !length(mismatches) || environment_override,
       !environment_override || length(mismatches) > 0L,
@@ -831,7 +1479,30 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     }
     prior_checkpoint <- segment$checkpoint_digest
   }
-  if (!identical(
+  ledger_plain <- is.list(
+    contract$cumulative_environment_mismatch_ledger
+  ) &&
+    !is.object(contract$cumulative_environment_mismatch_ledger) &&
+    is.null(attributes(
+      contract$cumulative_environment_mismatch_ledger
+    )) &&
+    all(vapply(
+      contract$cumulative_environment_mismatch_ledger,
+      function(entry) {
+        is.list(entry) && !is.object(entry) &&
+          identical(names(attributes(entry)), "names") &&
+          identical(
+            names(entry),
+            c(
+              "generation", "checkpoint_digest",
+              "environment_mismatches",
+              "environment_override_used"
+            )
+          )
+      },
+      logical(1L)
+    ))
+  if (!ledger_plain || !identical(
         contract$cumulative_environment_mismatch_ledger,
         reconstructed_ledger
       )) {
@@ -858,6 +1529,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     )
   }
   last_segment <- utils::tail(segments, 1L)[[1L]]
+  object_transition_kernel <- .rqr_object_transition_kernel_identity(
+    object
+  )
   contract_generation <- tryCatch(
     .rqr_history_count(contract$generation, "contract$generation"),
     error = function(e) NA_integer_
@@ -904,6 +1578,20 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     cumulative_environment_override_used = identical(
       isTRUE(contract$cumulative_environment_override_used),
       cumulative_override
+    ),
+    transition_kernel_schema = identical(
+      contract$transition_kernel_schema,
+      segments[[1L]]$segment_transition_kernel_schema
+    ) && identical(
+      last_segment$segment_transition_kernel_schema,
+      object_transition_kernel$schema
+    ),
+    transition_kernel_digest = identical(
+      contract$transition_kernel_digest,
+      segments[[1L]]$segment_transition_kernel_digest
+    ) && identical(
+      last_segment$segment_transition_kernel_digest,
+      object_transition_kernel$digest
     ),
     redundant_cumulative_repairs = identical(
       cumulative_repairs,
@@ -2716,6 +3404,377 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   )
 }
 
+.rqr_repository_provenance_fields <- function() {
+  c(
+    "repo_root", "git_commit", "git_commit_available",
+    "git_status_available", "git_dirty", "expected_git_commit",
+    "expected_git_commit_match", "require_isolated_runtime",
+    "source_subdir", "provenance_complete", "runtime_package",
+    "runtime_package_available", "runtime_package_path",
+    "runtime_package_version", "source_description_version",
+    "source_package_path", "source_tree_digest",
+    "source_worktree_digest", "source_worktree_digest_exclusions",
+    "runtime_package_tree_digest",
+    "runtime_package_tree_digest_exclusions",
+    "runtime_direct_source_path_match", "runtime_attestation",
+    "runtime_attestation_available", "runtime_attestation_match",
+    "runtime_attestation_schema", "source_access_mode",
+    "source_archive_verified", "source_archive_tree_match",
+    "source_git_manifest_digest", "source_archive_manifest_digest",
+    "source_package_verified", "source_package_archive_match",
+    "build_evidence_verified", "install_evidence_verified",
+    "runtime_lineage_marker_match", "runtime_install_receipt_match",
+    "source_archive_isolated_from_source",
+    "source_checkout_unchanged", "runtime_isolated_from_source",
+    "runtime_source_match", "runtime_provenance_complete",
+    "reproducibility_eligible"
+  )
+}
+
+.rqr_validate_repository_provenance_semantics <- function(
+    state, runtime_required = NULL, name = "repository provenance") {
+  if (!is.list(state) || is.object(state) ||
+      !identical(names(attributes(state)), "names") ||
+      !identical(
+        names(state), .rqr_repository_provenance_fields()
+      ) ||
+      anyDuplicated(names(state))) {
+    stop(sprintf("%s has an invalid exact schema.", name),
+         call. = FALSE)
+  }
+  logical_fields <- c(
+    "git_commit_available", "git_status_available", "git_dirty",
+    "expected_git_commit_match", "require_isolated_runtime",
+    "provenance_complete", "runtime_package_available",
+    "runtime_direct_source_path_match",
+    "runtime_attestation_available", "runtime_attestation_match",
+    "source_archive_verified", "source_archive_tree_match",
+    "source_package_verified", "source_package_archive_match",
+    "build_evidence_verified", "install_evidence_verified",
+    "runtime_lineage_marker_match", "runtime_install_receipt_match",
+    "source_archive_isolated_from_source",
+    "source_checkout_unchanged", "runtime_isolated_from_source",
+    "runtime_source_match", "runtime_provenance_complete",
+    "reproducibility_eligible"
+  )
+  valid_logical <- function(value, allow_na = FALSE) {
+    is.logical(value) && length(value) == 1L &&
+      (allow_na || !is.na(value))
+  }
+  if (!all(vapply(
+      state[setdiff(
+        logical_fields,
+        c("git_dirty", "expected_git_commit_match")
+      )],
+      valid_logical, logical(1L)
+    )) ||
+      !valid_logical(state$git_dirty, allow_na = TRUE) ||
+      !valid_logical(
+        state$expected_git_commit_match, allow_na = TRUE
+      )) {
+    stop(sprintf("%s contains invalid logical facts.", name),
+         call. = FALSE)
+  }
+  runtime_required <- runtime_required %||%
+    .rqr_nonmissing_text(state$runtime_package)
+  runtime_required <- isTRUE(runtime_required)
+  expected_match <- if (
+      .rqr_nonmissing_text(state$expected_git_commit) &&
+        .rqr_nonmissing_text(state$git_commit)) {
+    identical(
+      tolower(state$git_commit),
+      tolower(state$expected_git_commit)
+    )
+  } else {
+    NA
+  }
+  metadata_complete <-
+    isTRUE(state$git_commit_available) &&
+    isTRUE(state$git_status_available) &&
+    .rqr_nonmissing_text(state$expected_git_commit)
+  runtime_complete <- isTRUE(state$runtime_package_available) &&
+    .rqr_nonmissing_text(c(
+      state$runtime_package_path, state$runtime_package_version,
+      state$source_description_version, state$source_tree_digest,
+      state$runtime_package_tree_digest
+    ))
+  repository_eligible <- metadata_complete &&
+    identical(state$git_dirty, FALSE) &&
+    isTRUE(expected_match)
+  accepted_binding <- if (isTRUE(
+      state$require_isolated_runtime
+    )) {
+    isTRUE(state$runtime_attestation_match)
+  } else {
+    isTRUE(state$runtime_direct_source_path_match) ||
+      isTRUE(state$runtime_attestation_match)
+  }
+  expected_runtime_match <- runtime_required &&
+    repository_eligible && runtime_complete &&
+    identical(
+      state$runtime_package_version,
+      state$source_description_version
+    ) &&
+    accepted_binding
+  expected_complete <- metadata_complete &&
+    (!runtime_required || runtime_complete)
+  expected_reproducibility <- expected_complete &&
+    identical(state$git_dirty, FALSE) &&
+    isTRUE(expected_match) &&
+    (!runtime_required || expected_runtime_match)
+  if (!identical(
+        state$expected_git_commit_match, expected_match
+      ) ||
+      !identical(
+        state$runtime_provenance_complete, runtime_complete
+      ) ||
+      !identical(
+        state$runtime_source_match, expected_runtime_match
+      ) ||
+      !identical(state$provenance_complete, expected_complete) ||
+      !identical(
+        state$reproducibility_eligible,
+        expected_reproducibility
+      )) {
+    stop(
+      sprintf("%s eligibility is not reconstructible.", name),
+      call. = FALSE
+    )
+  }
+  invisible(list(
+    provenance_complete = expected_complete,
+    reproducibility_eligible = expected_reproducibility,
+    runtime_source_match = expected_runtime_match
+  ))
+}
+
+.rqr_provenance_fields <- function() {
+  c(
+    "schema_version", "package_version", "git_commit",
+    "git_commit_available", "git_status_available", "git_dirty",
+    "expected_git_commit", "expected_git_commit_match", "repo_root",
+    "R_version", "platform", "compiler", "BLAS", "LAPACK",
+    "dependency_versions", "RNGkind", "initial_seed",
+    "initialization_required", "initialization_contract_digest",
+    "rng_initialization_bound", "numerical_policy", "backend",
+    "backend_requested", "backend_resolved", "data_digest",
+    "matrix_digests", "object_digests", "primary_repository",
+    "primary_runtime_package_path", "primary_source_commit",
+    "primary_source_tree_digest", "primary_runtime_tree_digest",
+    "primary_runtime_source_match", "primary_runtime_attestation",
+    "external_repositories", "required_external_repositories",
+    "basic_provenance_complete", "provenance_complete",
+    "reproducibility_eligible", "continued_from_checkpoint",
+    "parent_checkpoint_digest", "parent_reproducibility_eligible",
+    "environment_override_used",
+    "recorded_at"
+  )
+}
+
+.rqr_validate_provenance_semantics <- function(provenance) {
+  if (!is.list(provenance) || is.object(provenance) ||
+      !identical(names(attributes(provenance)), "names") ||
+      !identical(names(provenance), .rqr_provenance_fields()) ||
+      anyDuplicated(names(provenance)) ||
+      !identical(
+        provenance$schema_version, .rqr_schema_version()
+      )) {
+    stop("The fit provenance has an invalid exact schema.",
+         call. = FALSE)
+  }
+  valid_logical <- function(value, allow_na = FALSE) {
+    is.logical(value) && length(value) == 1L &&
+      (allow_na || !is.na(value))
+  }
+  required_logicals <- c(
+    "git_commit_available", "git_status_available",
+    "initialization_required", "basic_provenance_complete",
+    "provenance_complete", "reproducibility_eligible",
+    "primary_runtime_source_match", "continued_from_checkpoint",
+    "parent_reproducibility_eligible",
+    "environment_override_used"
+  )
+  if (!all(vapply(
+      provenance[required_logicals], valid_logical, logical(1L)
+    )) ||
+      !valid_logical(provenance$git_dirty, allow_na = TRUE) ||
+      !valid_logical(
+        provenance$expected_git_commit_match, allow_na = TRUE
+      ) ||
+      !valid_logical(
+        provenance$rng_initialization_bound, allow_na = TRUE
+      )) {
+    stop("The fit provenance contains invalid logical facts.",
+         call. = FALSE)
+  }
+  expected_match <- if (
+      .rqr_nonmissing_text(provenance$expected_git_commit) &&
+        .rqr_nonmissing_text(provenance$git_commit)) {
+    identical(
+      tolower(provenance$git_commit),
+      tolower(provenance$expected_git_commit)
+    )
+  } else {
+    NA
+  }
+  if (!identical(
+        provenance$expected_git_commit_match, expected_match
+      )) {
+    stop("The fit commit-match fact is inconsistent.", call. = FALSE)
+  }
+  continued <- provenance$continued_from_checkpoint
+  parent_digest_valid <- if (continued) {
+    is.character(provenance$parent_checkpoint_digest) &&
+      length(provenance$parent_checkpoint_digest) == 1L &&
+      grepl(
+        "^[0-9a-f]{64}$",
+        provenance$parent_checkpoint_digest
+      )
+  } else {
+    identical(provenance$parent_checkpoint_digest, NA_character_)
+  }
+  if (!parent_digest_valid ||
+      (!continued &&
+       (!provenance$parent_reproducibility_eligible ||
+        provenance$environment_override_used))) {
+    stop(
+      "Continuation provenance facts are inconsistent.",
+      call. = FALSE
+    )
+  }
+  primary <- .rqr_validate_repository_provenance_semantics(
+    provenance$primary_repository,
+    runtime_required = TRUE,
+    name = "primary repository provenance"
+  )
+  if (!identical(
+        provenance$primary_runtime_package_path,
+        provenance$primary_repository$runtime_package_path
+      ) ||
+      !identical(
+        provenance$primary_source_commit,
+        provenance$primary_repository$git_commit
+      ) ||
+      !identical(
+        provenance$primary_source_tree_digest,
+        provenance$primary_repository$source_tree_digest
+      ) ||
+      !identical(
+        provenance$primary_runtime_tree_digest,
+        provenance$primary_repository$
+          runtime_package_tree_digest
+      ) ||
+      !identical(
+        provenance$primary_runtime_source_match,
+        primary$runtime_source_match
+      ) ||
+      !identical(
+        provenance$primary_runtime_attestation,
+        provenance$primary_repository$runtime_attestation
+      )) {
+    stop(
+      "Primary runtime provenance redundancies disagree.",
+      call. = FALSE
+    )
+  }
+  external <- provenance$external_repositories
+  required <- provenance$required_external_repositories
+  if (!is.list(external) || is.object(external) ||
+      (length(external) &&
+       (is.null(names(external)) || anyNA(names(external)) ||
+        any(!nzchar(names(external))) ||
+        anyDuplicated(names(external)))) ||
+      !is.character(required) || anyNA(required) ||
+      any(!nzchar(required)) || anyDuplicated(required) ||
+      !all(required %in% names(external))) {
+    stop("External repository provenance is invalid.", call. = FALSE)
+  }
+  external_status <- lapply(names(external), function(name) {
+    .rqr_validate_repository_provenance_semantics(
+      external[[name]],
+      runtime_required =
+        .rqr_nonmissing_text(external[[name]]$runtime_package),
+      name = sprintf("external repository '%s' provenance", name)
+    )
+  })
+  names(external_status) <- names(external)
+  required_external_complete <- all(vapply(
+    required,
+    function(name) {
+      isTRUE(external_status[[name]]$provenance_complete)
+    },
+    logical(1L)
+  ))
+  required_external_eligible <- all(vapply(
+    required,
+    function(name) {
+      isTRUE(external_status[[name]]$reproducibility_eligible)
+    },
+    logical(1L)
+  ))
+  valid_digest_list <- function(value) {
+    is.list(value) && !is.object(value) &&
+      all(vapply(
+        value,
+        function(item) {
+          is.character(item) && length(item) == 1L &&
+            grepl("^[0-9a-f]{64}$", item)
+        },
+        logical(1L)
+      ))
+  }
+  basic_complete <-
+    isTRUE(provenance$git_commit_available) &&
+    isTRUE(provenance$git_status_available) &&
+    .rqr_nonmissing_text(c(
+      provenance$package_version, provenance$R_version,
+      provenance$platform
+    )) &&
+    is.character(provenance$dependency_versions) &&
+    all(!is.na(provenance$dependency_versions)) &&
+    all(nzchar(provenance$dependency_versions)) &&
+    is.character(provenance$data_digest) &&
+    length(provenance$data_digest) == 1L &&
+    grepl("^[0-9a-f]{64}$", provenance$data_digest) &&
+    valid_digest_list(provenance$matrix_digests) &&
+    valid_digest_list(provenance$object_digests) &&
+    isTRUE(
+      provenance$primary_repository$runtime_provenance_complete
+    ) &&
+    required_external_complete
+  complete <- basic_complete &&
+    .rqr_nonmissing_text(c(
+      provenance$compiler, provenance$BLAS, provenance$LAPACK,
+      provenance$backend_requested, provenance$backend_resolved,
+      provenance$RNGkind
+    ))
+  reproducible <- complete &&
+    identical(provenance$git_dirty, FALSE) &&
+    isTRUE(expected_match) &&
+    isTRUE(primary$runtime_source_match) &&
+    required_external_eligible &&
+    (!isTRUE(provenance$initialization_required) ||
+     isTRUE(provenance$rng_initialization_bound)) &&
+    isTRUE(provenance$parent_reproducibility_eligible) &&
+    !isTRUE(provenance$environment_override_used)
+  if (!identical(
+        provenance$basic_provenance_complete, basic_complete
+      ) ||
+      !identical(provenance$provenance_complete, complete) ||
+      !identical(
+        provenance$reproducibility_eligible, reproducible
+      )) {
+    stop(
+      "Fit reproducibility eligibility is not reconstructible.",
+      call. = FALSE
+    )
+  }
+  invisible(list(
+    provenance_complete = complete,
+    reproducibility_eligible = reproducible
+  ))
+}
+
 .rqr_provenance <- function(data, matrices = list(), numerical_policy = NA_character_,
                             initial_seed = NULL, repo_root = NULL,
                             expected_git_commit = NULL, backend = NA_character_,
@@ -2723,7 +3782,8 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
                             backend_resolved = backend,
                             objects = list(), external_repositories = list(),
                             required_external_repositories = character(0),
-                            primary_runtime_attestation = NULL) {
+                            primary_runtime_attestation = NULL,
+                            initialization_contract = NULL) {
   if (is.null(repo_root)) repo_root <- .rqr_find_repo_root()
   pkg_version <- tryCatch(as.character(utils::packageVersion("rqrgibbs")), error = function(e) NA_character_)
   required_external_repositories <- as.character(required_external_repositories)
@@ -2748,7 +3808,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     identical(git_commit, expected_git_commit)
   }
   ext <- extSoftVersion()
-  session <- utils::sessionInfo()
+  session <- suppressWarnings(utils::sessionInfo())
   compiler <- .rqr_compiler_info()
   BLAS <- as.character(session$BLAS %||% unname(ext["BLAS"] %||% NA_character_))
   LAPACK <- as.character(session$LAPACK %||% tryCatch(La_library(), error = function(e) NA_character_))
@@ -2759,6 +3819,28 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   matrix_digests <- lapply(matrices, .rqr_digest)
   object_digests <- lapply(objects, .rqr_digest)
   data_digest <- .rqr_digest(data)
+  initialization_required <- !is.null(initialization_contract)
+  initialization <- if (initialization_required) {
+    .rqr_validate_initialization_contract(
+      initialization_contract
+    )
+  } else {
+    list(
+      digest = NA_character_,
+      reproducibility_bound = NA,
+      seed = NULL
+    )
+  }
+  if (initialization_required &&
+      !identical(initial_seed, initialization$seed)) {
+    stop(
+      paste(
+        "initial_seed does not match the versioned segment",
+        "initialization contract."
+      ),
+      call. = FALSE
+    )
+  }
   primary_state <- .rqr_repository_provenance(list(
     repo_root = repo_root,
     expected_git_commit = if (is.na(expected_git_commit)) {
@@ -2811,7 +3893,9 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   reproducibility_eligible <- provenance_complete &&
     !is.na(git_dirty) && !git_dirty && isTRUE(commit_match) &&
     isTRUE(primary_state$runtime_source_match) &&
-    required_external_eligible
+    required_external_eligible &&
+    (!initialization_required ||
+     isTRUE(initialization$reproducibility_bound))
   list(
     schema_version = .rqr_schema_version(),
     package_version = pkg_version,
@@ -2830,6 +3914,10 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     dependency_versions = dependency_versions,
     RNGkind = rng_kind,
     initial_seed = initial_seed,
+    initialization_required = initialization_required,
+    initialization_contract_digest = initialization$digest,
+    rng_initialization_bound =
+      initialization$reproducibility_bound,
     numerical_policy = numerical_policy,
     backend = backend,
     backend_requested = backend_requested,
@@ -2850,6 +3938,10 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
     basic_provenance_complete = basic_provenance_complete,
     provenance_complete = provenance_complete,
     reproducibility_eligible = reproducibility_eligible,
+    continued_from_checkpoint = FALSE,
+    parent_checkpoint_digest = NA_character_,
+    parent_reproducibility_eligible = TRUE,
+    environment_override_used = FALSE,
     recorded_at = format(Sys.time(), tz = "UTC", usetz = TRUE)
   )
 }

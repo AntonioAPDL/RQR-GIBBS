@@ -155,7 +155,7 @@ fd_v1_expect_exact_2_plus_2_plus_2 <- function(prior, mode, seed) {
   )
   expect_identical(
     segment2$segment_schedule_contract$schema_version,
-    "rqrgibbs_static_segment_schedule/1.0.0"
+    "rqrgibbs_static_segment_schedule/2.0.0"
   )
   expect_identical(
     segment2$segment_schedule_contract$generation, 2L
@@ -195,7 +195,7 @@ test_that("ordinary fixed-design public constructors and continuation are export
   )
   expect_identical(
     fd_v1_get(".rqr_static_fit_schema")(),
-    "rqrgibbs_static_fit/1.0.0"
+    "rqrgibbs_static_fit/1.2.0"
   )
   expect_identical(
     fd_v1_get(".rqr_static_checkpoint_schema")(),
@@ -203,7 +203,7 @@ test_that("ordinary fixed-design public constructors and continuation are export
   )
   expect_identical(
     fd_v1_get(".rqr_static_schedule_schema")(),
-    "rqrgibbs_static_segment_schedule/1.0.0"
+    "rqrgibbs_static_segment_schedule/2.0.0"
   )
 })
 
@@ -218,7 +218,7 @@ test_that("complete and missing-data fixed-design fits are finite and omit NA ro
     n_mcmc = 5L, n_burn = 2L, seed = 762L
   )
   expect_s3_class(fixed, "rqr_mcmc")
-  expect_identical(fixed$schema_version, "rqrgibbs_static_fit/1.0.0")
+  expect_identical(fixed$schema_version, "rqrgibbs_static_fit/1.2.0")
   expect_identical(fixed$model_spec$tilt, 0)
   expect_identical(fixed$model_spec$learning_rate_mode, "fixed_rate")
   expect_true(all(is.finite(fixed$samp.beta_root1)))
@@ -501,6 +501,25 @@ test_that("RHS fixed target is bitwise exact under 6 versus 2+2+2", {
   )
 })
 
+test_that("RHS normalized target is bitwise exact under 6 versus 2+2+2", {
+  prior <- fd_v1_get("rqr_beta_prior")(
+    "rhs_ns",
+    rhs_ns = list(
+      intercept_name = "(Intercept)",
+      intercept_mean = -0.05,
+      intercept_precision = 0.03,
+      tau0 = 0.55,
+      a_zeta = 2.2,
+      b_zeta = 1.6
+    )
+  )
+  fd_v1_expect_exact_2_plus_2_plus_2(
+    prior = prior,
+    mode = "learned_pseudoresidual_normalized",
+    seed = 768L
+  )
+})
+
 test_that("static checkpoints and histories reject mutation", {
   prior <- fd_v1_get("rqr_beta_prior")(
     "ridge", ridge = list(tau2 = 3)
@@ -514,6 +533,26 @@ test_that("static checkpoints and histories reject mutation", {
   )
   continue_fit <- fd_v1_get("rqr_mcmc_continue")
   digest_object <- fd_v1_get(".rqr_digest")
+  expect_identical(
+    names(fit$checkpoint_state),
+    c(
+      "schema_version", "fit_schema_version", "transition_version",
+      "completed_iterations", "data_contract_digest", "data_digest",
+      "design_digest", "target_digest", "prior_digest",
+      "beta_root1", "beta_root2", "lambda", "latent_v",
+      "beta_prior_state1", "beta_prior_state2", "rng_state"
+    )
+  )
+  expect_identical(anyDuplicated(names(fit$checkpoint_state)), 0L)
+  duplicated_checkpoint <- fit
+  duplicated_checkpoint$checkpoint_state <- c(
+    fit$checkpoint_state,
+    list(lambda = fit$checkpoint_state$lambda)
+  )
+  expect_error(
+    continue_fit(duplicated_checkpoint, n_mcmc = 1L),
+    "exact versioned field schema"
+  )
 
   checkpoint_mutations <- list(
     beta_root1 = function(object) {
@@ -632,6 +671,9 @@ test_that("static checkpoints and histories reject mutation", {
     invalid_rng$continuation_history_contract
   )
   invalid_rng$segment_schedule_contract$
+    segments[[final_segment]]$checkpoint_state <-
+      invalid_rng$checkpoint_state
+  invalid_rng$segment_schedule_contract$
     segments[[final_segment]]$checkpoint_digest <-
       invalid_rng$checkpoint_digest
   invalid_rng$segment_schedule_digest <- digest_object(
@@ -652,7 +694,7 @@ test_that("static checkpoints and histories reject mutation", {
   changed_target$model_spec$coverage_level <- 0.7
   expect_error(
     continue_fit(changed_target, n_mcmc = 1L),
-    "model, target, or prior digest"
+    "segment checkpoint|model, target, or prior digest"
   )
 
   changed_mask <- fit
@@ -673,6 +715,8 @@ test_that("static checkpoints and histories reject mutation", {
     object$continuation_history_digest <- digest_object(
       object$continuation_history_contract
     )
+    object$segment_schedule_contract$segments[[last_index]]$
+      checkpoint_state <- object$checkpoint_state
     object$segment_schedule_contract$segments[[last_index]]$
       checkpoint_digest <- object$checkpoint_digest
     object$segment_schedule_digest <- digest_object(
@@ -787,7 +831,7 @@ test_that("static checkpoints and histories reject mutation", {
     fd_v1_get(".rqr_validate_static_fit_envelope")(
       recomputed_completed
     ),
-    "final segment schedule"
+    "segment schedule"
   )
 
   changed_schedule <- fit
@@ -811,7 +855,7 @@ test_that("static checkpoints and histories reject mutation", {
     fd_v1_get(".rqr_validate_static_fit_envelope")(
       changed_final_draw
     ),
-    "terminal checkpoint roots or lambda"
+    "retained draws do not match|terminal checkpoint roots or lambda"
   )
 
   changed_latent_draw <- fit
@@ -824,7 +868,7 @@ test_that("static checkpoints and histories reject mutation", {
     fd_v1_get(".rqr_validate_static_fit_envelope")(
       changed_latent_draw
     ),
-    "stored terminal latent state"
+    "retained draws do not match|stored terminal latent state"
   )
 
   changed_prior_draw <- fit
@@ -840,7 +884,10 @@ test_that("static checkpoints and histories reject mutation", {
     fd_v1_get(".rqr_validate_static_fit_envelope")(
       changed_prior_draw
     ),
-    "stored terminal coefficient-prior state"
+    paste(
+      "retained draws do not match|",
+      "stored terminal coefficient-prior state"
+    )
   )
 })
 
@@ -872,7 +919,11 @@ test_that("prediction requires exact fitted feature names and valid named draws"
   eta2 <- X_new %*% t(beta2)
   expect_identical(
     prediction$schema_version,
-    "rqrgibbs_interval_prediction/1.0.0"
+    "rqrgibbs_interval_prediction/2.0.0"
+  )
+  expect_identical(
+    class(prediction),
+    c("rqr_static_prediction", "list")
   )
   expect_identical(prediction$lower_draws, pmin(eta1, eta2))
   expect_identical(prediction$upper_draws, pmax(eta1, eta2))
@@ -881,9 +932,15 @@ test_that("prediction requires exact fitted feature names and valid named draws"
   expect_identical(prediction$fit_checkpoint_digest, fit$checkpoint_digest)
   expect_match(prediction$interpretation, "no response draw")
   expect_identical(
-    names(prediction$draws),
-    c("beta_root1", "beta_root2", "lambda", "draw_index", "nd")
+    class(prediction$draws), c("rqr_static_draws", "list")
   )
+  expect_identical(
+    prediction$draws$source$source_type, "explicit_unbound"
+  )
+  expect_false(prediction$draws$source_bound)
+  expect_false(prediction$source_bound)
+  expect_false(prediction$reproducibility_eligible)
+  expect_false(prediction$promotion_eligible)
   expect_null(prediction$draws$lambda)
   expect_identical(prediction$draws$draw_index, rep(NA_integer_, 2L))
   expect_identical(prediction$draws$nd, 2L)
@@ -984,12 +1041,27 @@ test_that("static draw extraction uses seeds only for subsampling", {
 
   all_draws <- posterior_draws(fit)
   expect_identical(
-    names(all_draws),
-    c("beta_root1", "beta_root2", "lambda", "draw_index", "nd")
+    class(all_draws), c("rqr_static_draws", "list")
+  )
+  expect_identical(
+    all_draws$schema_version,
+    "rqrgibbs_static_draws/1.0.0"
+  )
+  expect_identical(
+    all_draws$source$source_type, "native_retained_draws"
+  )
+  expect_true(all_draws$source_bound)
+  expect_identical(
+    all_draws$source$fit_checkpoint_digest,
+    fit$checkpoint_digest
+  )
+  expect_identical(
+    all_draws$source$retained_draws_digest,
+    fit$retained_draws_digest
   )
   expect_identical(all_draws$draw_index, seq_len(3L))
   expect_identical(all_draws$nd, 3L)
-  expect_silent(validate_draws(fit, all_draws))
+  expect_identical(validate_draws(fit, all_draws), all_draws)
 
   sampled <- posterior_draws(fit, nd = 5L, seed = 92L)
   expect_identical(sampled$nd, 5L)
@@ -1021,9 +1093,14 @@ test_that("static explicit draws fail closed and canonicalize minimal inputs", {
 
   canonical <- validate_draws(fit, minimal)
   expect_identical(
-    names(canonical),
-    c("beta_root1", "beta_root2", "lambda", "draw_index", "nd")
+    class(canonical), c("rqr_static_draws", "list")
   )
+  expect_identical(
+    canonical$source$source_type, "explicit_unbound"
+  )
+  expect_false(canonical$source_bound)
+  expect_false(canonical$reproducibility_eligible)
+  expect_false(canonical$promotion_eligible)
   expect_null(canonical$lambda)
   expect_identical(canonical$draw_index, rep(NA_integer_, 2L))
   expect_identical(canonical$nd, 2L)
@@ -1175,15 +1252,15 @@ test_that("static read-only consumers enforce envelope integrity without environ
     corrupt$samp.beta_root1[nrow(corrupt$samp.beta_root1), 1L] + 1
   expect_error(
     posterior_draws(corrupt),
-    "terminal checkpoint roots or lambda"
+    "retained draws|terminal checkpoint roots or lambda"
   )
   expect_error(
     predict_fit(corrupt, X_new = fixture$X[1L, , drop = FALSE]),
-    "terminal checkpoint roots or lambda"
+    "retained draws|terminal checkpoint roots or lambda"
   )
   expect_error(
     print_fit(corrupt),
-    "terminal checkpoint roots or lambda"
+    "retained draws|terminal checkpoint roots or lambda"
   )
 })
 

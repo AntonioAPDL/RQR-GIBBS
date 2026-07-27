@@ -32,7 +32,8 @@ non-promotable; use \code{future_design} for verified semantics.}
 \item{...}{Reserved.}
 }
 \value{
-Interval-root draws and summaries conditional on the future design.
+A typed and digested \code{rqr_desn_prediction} containing interval-root
+draws and summaries conditional on the future design.
 }
 \description{
 Future features must be fixed explicitly. A validated

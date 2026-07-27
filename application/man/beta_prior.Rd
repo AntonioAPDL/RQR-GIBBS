@@ -2,7 +2,7 @@
 % Please edit documentation in R/rqr_numerics.R
 \name{beta_prior}
 \alias{beta_prior}
-\title{Backward-compatible coefficient-prior constructor}
+\title{Compatibility coefficient-prior constructor}
 \usage{
 beta_prior(
   type = c("ridge", "gaussian", "rhs_ns", "rhs"),
@@ -27,6 +27,10 @@ beta_prior(
 A prior specification.
 }
 \description{
-New code should use \code{\link[=rqr_beta_prior]{rqr_beta_prior()}}. This compatibility wrapper is fully
-native and never loads an exdqlm namespace.
+New code should use \code{\link[=rqr_beta_prior]{rqr_beta_prior()}}. This exported compatibility wrapper
+remains available for pre-1.0 callers; it is not deprecated and emits no
+lifecycle warning. It is fully native and never loads an exdqlm namespace.
+}
+\seealso{
+\code{\link[=rqr_beta_prior]{rqr_beta_prior()}}
 }

@@ -44,13 +44,42 @@ materializes one D02 design without fitting a readout:
     make preflight-ordinary-v1
     make reference-ordinary-v1
     make test-ordinary-v1-dlm-companion
+    export RQR_DLM_REFERENCE_DIR="/path/to/dlm-reference"
+    export RQR_DLM_WAVE1_M01_DIR="/path/to/wave1-M01"
+    export RQR_DLM_WAVE1_M02_DIR="/path/to/wave1-M02"
+    export RQR_DLM_WAVE2_M01_DIR="/path/to/wave2-M01"
+    export RQR_DLM_WAVE2_M02_DIR="/path/to/wave2-M02"
+    export RQR_DLM_HORIZON_M03_DIR="/path/to/horizon-M03"
+    export RQR_DLM_RESOURCE_ENVELOPE_DIR="/path/to/resource-envelope"
+    export RQR_ORDINARY_V1_DLM_COMPANION_OUTPUT_DIR="/new/ignored/path"
+    make bundle-ordinary-v1-dlm-companion
     RQR_ORDINARY_V1_BENCHMARK_CONFIRM=I_CONFIRM_ORDINARY_V1_ONE_CELL_BENCHMARK \
       make benchmark-ordinary-v1-one-cell
     make test-ordinary-v1-monitor
 
+The versioned fitted/output surface is:
+
+| Family | Fit | Posterior root draws | Interval/root evaluation |
+|---|---|---|---|
+| Fixed design | `rqrgibbs_static_fit/1.2.0` | `rqrgibbs_static_draws/1.0.0` | `rqrgibbs_interval_prediction/2.0.0` |
+| Frozen-design DESN readout | `rqrgibbs_desn_fit/1.2.0` | `rqrgibbs_desn_draws/1.0.0` | `rqrgibbs_desn_prediction/1.0.0` |
+| DLM | `rqrgibbs_fit/1.14.0` | `rqrgibbs_dlm_draws/1.0.0` | `rqrgibbs_dlm_prediction/1.0.0` fitted; `rqrgibbs_dlm_forecast/1.0.0` future |
+
+Static output provenance is further typed by
+`rqrgibbs_static_draw_source/1.0.0`,
+`rqrgibbs_static_draw_selection/1.0.0`, and
+`rqrgibbs_static_prediction_source/1.0.0`. DLM output provenance is typed by
+`rqrgibbs_dlm_draw_source/1.0.0`, `rqrgibbs_dlm_rng_binding/1.0.0`,
+`rqrgibbs_dlm_forecast_source/1.0.0`, and
+`rqrgibbs_dlm_future_contract/1.0.0`. DESN draws use
+`rqrgibbs_desn_draw_source/1.0.0`. The DESN surface is deliberately a readout
+conditional on a frozen deterministic feature design; it does not construct
+or refit a reservoir during MCMC. Every listed output describes interval-root
+functionals under a loss-based generalized posterior, not response draws.
+
 The materializer loads both packages only from exact archive-built isolated
 runtimes, guards the protected exdqlm checkout including ignored files, and
-writes a receipt-v2 design plus compact hashes below ignored directories. The
+writes a receipt-v3 design plus compact hashes below ignored directories. The
 receipt explicitly records source/runtime lineage, the
 materializer-argument digest, and the complete materialized-payload digest;
 the tracked configuration and compact evidence retain the raw effective
@@ -83,6 +112,20 @@ two exact builds because its lineage records different source commits. The
 refreshed reference bundle must instead match the authorization runtime and
 toolchain exactly.
 
+The companion-v2 collector binds seven independently completed DLM evidence
+roles: the reference suite, wave-1 M01 and M02, wave-2 M01 and M02, the
+horizon-M03 checks, and the resource envelope. It validates 55 input artifacts
+against 23 semantic gates, does not fit a model or deserialize/copy heavy RDS
+inputs, and publishes exactly five compact files under the new ignored output
+directory. Each role must be supplied separately through the environment
+variables shown above; substituting one wave directory for another is rejected.
+Every M01 fit is bound to a complete independently frozen role contract. The
+static-regression and local-level full digests differ only because their
+collapsed coordinates are named `regression` and `level`; cross-wave agreement
+uses a versioned invariant that excludes only this label. The independently
+hashed resource toolchain must also match the reference
+R/compiler/BLAS/LAPACK and shared-package facts exactly.
+
 Bounded execution remains disabled in source candidates. Authorization uses
 two commits: a reviewed, fail-closed implementation commit and a later
 config-only commit that changes only the execution flag and records the
@@ -111,9 +154,9 @@ imitate atomic-manifest temporaries.
 Per-fit provenance remains strict. Native fixed-design fits bind only the
 isolated primary runtime and require no external repository. Promotion-grade
 D02 DESN fits require exactly the pinned isolated exdqlm runtime and a
-receipt-v2 design reverified against that executing runtime.
+receipt-v3 design reverified against that executing runtime.
 
-The receipt-v2 object attests the materialized training design. A versioned
+The receipt-v3 object attests the materialized training design. A versioned
 future-design object separately validates the parent feature schema, feature
 order, declared precomputed/teacher-forced/external-driver semantics, and
 future-row content digest. It does not attest the process that generated those
@@ -154,11 +197,13 @@ The default numerical policy fails on any Gaussian factorization requiring
 repair, including a negative-eigenvalue projection. The optional audit policy
 records each repair. Mathematical/numerical eligibility is separate from
 reproducibility eligibility; promotion additionally requires a clean checkout
-at an explicitly expected commit. Full state-path storage defaults to off;
-when it is enabled, exact fixed-W and frozen-template fits complete each
-retained path with a draw from the Gaussian time-zero conditional. Component-
-scale fits retain the same time-zero states because their innovation-scale
-update conditions on them. Terminal state draws remain available to
+at an explicitly expected commit. Full state-path storage defaults to off, but
+storage never changes the Markov transition or RNG stream. Every accepted
+exact DLM mode (fixed W, frozen discount template, and component scale)
+completes and retains the Gaussian time-zero state for both roots;
+`store_state_draws` controls only the full `p x T` path arrays. The
+experimental adaptive working mode omits time-zero completion and records that
+omission in its transition contract. Terminal state draws remain available to
 `rqr_forecast_roots()`, which can use
 either explicit future covariances or saved component-scale draws with fixed
 future templates. Fit objects include a versioned provenance and RNG

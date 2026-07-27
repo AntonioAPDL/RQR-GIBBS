@@ -45,7 +45,7 @@ test_that("native frozen DESN design binds aligned data and semantic metadata", 
   design <- native_desn_training_design()
 
   expect_s3_class(design, "rqr_desn_design")
-  expect_identical(design$schema_version, "rqrgibbs_desn_design/1.0.0")
+  expect_identical(design$schema_version, "rqrgibbs_desn_design/1.1.0")
   expect_identical(
     design$feature_schema$schema_version,
     "rqrgibbs_desn_feature_schema/1.0.0"

@@ -357,9 +357,137 @@ rqr_beta_prior <- function(
   if (!type %in% c("ridge", "gaussian", "rhs_ns")) {
     stop("Unsupported native coefficient-prior type.", call. = FALSE)
   }
+  expected_fields <- switch(
+    type,
+    ridge = c(
+      "schema_version", "type", "root_prior_contract",
+      "root_priors_exchangeable", "stateful", "dimension",
+      "hypers", "canonical", "design_contract", "implementation"
+    ),
+    gaussian = c(
+      "schema_version", "type", "root_prior_contract",
+      "root_priors_exchangeable", "stateful", "dimension",
+      "coefficient_binding", "coefficient_names", "hypers",
+      "canonical", "design_contract", "implementation"
+    ),
+    rhs_ns = c(
+      "schema_version", "type", "root_prior_contract",
+      "root_priors_exchangeable", "stateful", "dimension",
+      "hypers", "canonical", "design_contract", "implementation",
+      "hierarchy", "stochastic_floor"
+    )
+  )
+  expected_hypers <- switch(
+    type,
+    ridge = "tau2",
+    gaussian = c("mean", "input_parameterization"),
+    rhs_ns = c(
+      "tau0", "a_zeta", "b_zeta", "zeta2_fixed",
+      "intercept_name", "intercept_mean", "intercept_precision"
+    )
+  )
+  expected_stateful <- identical(type, "rhs_ns")
+  if (!identical(class(prior), c("rqr_beta_prior", "list")) ||
+      !identical(
+        names(attributes(prior)), c("names", "class")
+      ) ||
+      !identical(names(prior), expected_fields) ||
+      anyDuplicated(names(prior)) ||
+      !is.list(prior$hypers) || is.object(prior$hypers) ||
+      !identical(names(prior$hypers), expected_hypers) ||
+      anyDuplicated(names(prior$hypers)) ||
+      !is.logical(prior$root_priors_exchangeable) ||
+      length(prior$root_priors_exchangeable) != 1L ||
+      !identical(prior$root_priors_exchangeable, TRUE) ||
+      !is.logical(prior$stateful) ||
+      length(prior$stateful) != 1L ||
+      !identical(prior$stateful, expected_stateful) ||
+      !identical(prior$implementation, "native")) {
+    stop(
+      paste(
+        "The native coefficient prior does not have its exact",
+        "type-specific field and semantic contract."
+      ),
+      call. = FALSE
+    )
+  }
+  if (is.null(prior$dimension)) {
+    if (identical(type, "gaussian")) {
+      stop("A Gaussian prior must declare its dimension.",
+           call. = FALSE)
+    }
+  } else if (!is.numeric(prior$dimension) ||
+      length(prior$dimension) != 1L ||
+      is.na(prior$dimension) || !is.finite(prior$dimension) ||
+      prior$dimension != floor(prior$dimension) ||
+      prior$dimension < 1L) {
+    stop("The native coefficient-prior dimension is invalid.",
+         call. = FALSE)
+  }
   if (identical(type, "gaussian") &&
       !identical(as.integer(prior$dimension), as.integer(p))) {
     stop("Gaussian prior dimension does not match ncol(X).", call. = FALSE)
+  }
+  if (identical(type, "ridge")) {
+    .rqr_prior_scalar_positive(
+      prior$hypers$tau2, "prior$hypers$tau2"
+    )
+    if (!is.null(prior$canonical)) {
+      stop("A ridge prior cannot carry a canonical matrix block.",
+           call. = FALSE)
+    }
+  } else if (identical(type, "gaussian")) {
+    if (!is.numeric(prior$hypers$mean) ||
+        length(prior$hypers$mean) != p ||
+        any(!is.finite(prior$hypers$mean)) ||
+        !identical(
+          prior$hypers$input_parameterization,
+          match.arg(
+            prior$hypers$input_parameterization,
+            c("precision", "covariance")
+          )
+        ) ||
+        !is.list(prior$canonical) ||
+        !identical(
+          names(prior$canonical),
+          c("precision", "information")
+        ) ||
+        !is.numeric(prior$canonical$information) ||
+        length(prior$canonical$information) != p ||
+        any(!is.finite(prior$canonical$information))) {
+      stop("The canonical Gaussian-prior block is malformed.",
+           call. = FALSE)
+    }
+    precision <- .rqr_prior_spd_matrix(
+      prior$canonical$precision,
+      "prior$canonical$precision"
+    )$matrix
+    expected_information <- as.numeric(
+      precision %*% prior$hypers$mean
+    )
+    if (!identical(
+          as.numeric(prior$canonical$information),
+          expected_information
+        )) {
+      stop(
+        "The Gaussian prior information vector is not reconstructible.",
+        call. = FALSE
+      )
+    }
+  } else {
+    if (!is.null(prior$canonical) ||
+        !identical(
+          prior$hierarchy,
+          paste(
+            "nishimura_suchard_fictitious_normal_shoulder",
+            "with_makalic_schmidt_inverse_gamma_auxiliaries",
+            sep = "_"
+          )
+        ) ||
+        !is.null(prior$stochastic_floor)) {
+      stop("The RHS-NS hierarchy contract is malformed.",
+           call. = FALSE)
+    }
   }
   if (identical(type, "gaussian")) {
     coefficient_names <- prior$coefficient_names

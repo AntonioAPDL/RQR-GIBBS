@@ -196,9 +196,9 @@ rqr_dlm_boundary_source_runner <- function(repo_root) {
   environment <- new.env(parent = globalenv())
   sys.source(path, envir = environment)
   paths <- environment$rqr_ordinary_v1_protected_dlm_paths()
-  if (!is.character(paths) || length(paths) != 23L ||
+  if (!is.character(paths) || length(paths) != 29L ||
       anyNA(paths) || any(!nzchar(paths)) || anyDuplicated(paths)) {
-    stop("The canonical protected-DLM inventory is not the reviewed 23 paths.",
+    stop("The canonical protected-DLM inventory is not the reviewed 29 paths.",
          call. = FALSE)
   }
   paths
@@ -786,9 +786,9 @@ rqr_dlm_boundary_auth_state <- function(
     implementation_transition_or_schedule_changed =
       scalar(
         named(
-          correction, "mcmc_transition_and_standard_schedule_changed"
+          correction, "mcmc_transition_and_fixed_role_schedule_changed"
         ),
-        "mcmc_transition_and_standard_schedule_changed"
+        "mcmc_transition_and_fixed_role_schedule_changed"
       ),
     review_branch_tip = scalar(
       named(review, "review_branch_tip"), "review_branch_tip"

@@ -18,19 +18,24 @@ rqr_ffbs_smooth(
 )
 }
 \arguments{
-\item{z}{Pseudo-observation vector; \code{NA} denotes a missing observation.}
+\item{z}{Length-\code{T} pseudo-observation vector; \code{NA} alone denotes a missing
+observation.}
 
-\item{H}{State-by-time observation design.}
+\item{H}{Finite \verb{p x 1} or \verb{p x T} state-by-time observation design.}
 
-\item{V}{Positive observation variances.}
+\item{V}{Length-\code{T} finite positive observation variances.}
 
-\item{GG}{Evolution matrix or cube.}
+\item{GG}{Finite \verb{p x p} evolution matrix or \verb{p x p x T} cube.}
 
-\item{m0, C0}{Initial state prior.}
+\item{m0}{Finite length-\code{p} initial state mean.}
 
-\item{evolution}{Evolution specification.}
+\item{C0}{Symmetric positive-definite \verb{p x p} initial state covariance.}
 
-\item{backend}{One of \code{"cpp"}, \code{"R"}, or \code{"auto"}.}
+\item{evolution}{Valid RQR evolution specification with dimensions
+compatible with \code{p} and \code{T}.}
+
+\item{backend}{One of \code{"cpp"}, \code{"R"}, or \code{"auto"}; \code{"auto"} uses C++ when
+the registered native kernel is available.}
 
 \item{jitter_ladder}{Declared matrix-relative Cholesky jitter ladder. An
 exactly zero matrix uses a separately recorded absolute fallback.}
@@ -38,8 +43,58 @@ exactly zero matrix uses a separately recorded absolute fallback.}
 \item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 }
 \value{
-Filtering and smoothing moments with numerical diagnostics.
+Filtering, prior, and smoothing means and covariance arrays,
+forecast variances and residuals, a \code{NULL} \code{path}, and numerical
+diagnostics including backend, evolution mode, repair count, and repair
+records.
 }
 \description{
-Filter and smooth a scalar-observation Gaussian state-space model
+For a length-\code{T} pseudo-observation vector and state dimension \code{p}, \code{H} must
+be finite \verb{p x 1} or \verb{p x T}; \code{V} must contain \code{T} finite positive values;
+\code{GG} must be finite \verb{p x p} or \verb{p x p x T}; \code{m0} must be a finite
+length-\code{p} vector; and \code{C0} must be a symmetric positive-definite \verb{p x p}
+covariance. Fixed evolution covariance slices must be symmetric
+positive-semidefinite. Only \code{NA} in \code{z} denotes a missing measurement;
+\code{NaN} and infinite values are rejected.
 }
+\details{
+The public boundary never repairs \code{C0} or a declared evolution covariance.
+With \code{numerical_policy = "fail"}, any later covariance factorization failure
+stops. \code{"record_repair"} permits only the declared matrix-relative jitter
+ladder for eligible working or sampled covariances and returns every repair
+in \code{diagnostics$repair_records}.
+}
+\examples{
+moments <- rqr_ffbs_smooth(
+  z = c(0, NA, 0.5),
+  H = matrix(1, 1, 1),
+  V = rep(1, 3),
+  GG = matrix(1, 1, 1),
+  m0 = 0,
+  C0 = matrix(2, 1, 1),
+  evolution = rqr_evolution_fixed(matrix(0.1, 1, 1)),
+  backend = "R",
+  numerical_policy = "fail"
+)
+stopifnot(is.na(moments$forecast_variance[2]))
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

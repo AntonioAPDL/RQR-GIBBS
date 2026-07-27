@@ -18,19 +18,24 @@ rqr_ffbs_sample(
 )
 }
 \arguments{
-\item{z}{Pseudo-observation vector; \code{NA} denotes a missing observation.}
+\item{z}{Length-\code{T} pseudo-observation vector; \code{NA} alone denotes a missing
+observation.}
 
-\item{H}{State-by-time observation design.}
+\item{H}{Finite \verb{p x 1} or \verb{p x T} state-by-time observation design.}
 
-\item{V}{Positive observation variances.}
+\item{V}{Length-\code{T} finite positive observation variances.}
 
-\item{GG}{Evolution matrix or cube.}
+\item{GG}{Finite \verb{p x p} evolution matrix or \verb{p x p x T} cube.}
 
-\item{m0, C0}{Initial state prior.}
+\item{m0}{Finite length-\code{p} initial state mean.}
 
-\item{evolution}{Evolution specification.}
+\item{C0}{Symmetric positive-definite \verb{p x p} initial state covariance.}
 
-\item{backend}{One of \code{"cpp"}, \code{"R"}, or \code{"auto"}.}
+\item{evolution}{Valid RQR evolution specification with dimensions
+compatible with \code{p} and \code{T}.}
+
+\item{backend}{One of \code{"cpp"}, \code{"R"}, or \code{"auto"}; \code{"auto"} uses C++ when
+the registered native kernel is available.}
 
 \item{jitter_ladder}{Declared matrix-relative Cholesky jitter ladder. An
 exactly zero matrix uses a separately recorded absolute fallback.}
@@ -38,8 +43,45 @@ exactly zero matrix uses a separately recorded absolute fallback.}
 \item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 }
 \value{
-Filtering/smoothing moments and one sampled state path.
+The filtering and smoothing output from \code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}} plus one
+sampled \verb{p x T} state path. Numerical repairs, if permitted, are recorded
+in \code{diagnostics$repair_records}.
 }
 \description{
 Draw a Gaussian state path by FFBS
 }
+\examples{
+set.seed(1)
+draw <- rqr_ffbs_sample(
+  z = c(0, NA, 0.5),
+  H = matrix(1, 1, 1),
+  V = rep(1, 3),
+  GG = matrix(1, 1, 1),
+  m0 = 0,
+  C0 = matrix(2, 1, 1),
+  evolution = rqr_evolution_fixed(matrix(0.1, 1, 1)),
+  backend = "R",
+  numerical_policy = "fail"
+)
+stopifnot(identical(dim(draw$path), c(1L, 3L)))
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

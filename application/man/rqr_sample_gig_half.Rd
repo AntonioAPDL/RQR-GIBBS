@@ -17,4 +17,6 @@ A positive numeric vector.
 \description{
 Samples \code{GIG(1/2,a,b)} under density convention proportional to
 \verb{v^(-1/2) exp(-(a*v+b/v)/2)}. The exact \code{b=0} limit is handled separately.
+\code{a} is either shared across all entries of \code{b} or supplied entry by entry;
+other vector lengths are rejected rather than recycled.
 }

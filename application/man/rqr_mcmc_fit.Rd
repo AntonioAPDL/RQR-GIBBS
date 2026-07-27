@@ -40,8 +40,10 @@ supplied, they must be complete, nonempty, and unique.}
 \item{loss_reference_scale}{Positive fixed reference scale \code{s_L}.}
 
 \item{learning_rate_mode}{One of \code{"fixed_rate"},
-\code{"learned_pseudoresidual_normalized"}, or the backward-compatible
-diagnostic mode \code{"learned_pure"}.}
+\code{"learned_pseudoresidual_normalized"}, or \code{"learned_pure"}. The
+backward-compatible \code{"learned_pure"} target remains executable only for
+diagnostic comparison; it is outside ordinary-v1, nonpromotable, and
+noncontinuable.}
 
 \item{lambda_prior}{Gamma prior for learned \code{lambda}, with positive \code{shape}
 and \code{rate}.}

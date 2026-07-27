@@ -31,7 +31,7 @@ test_that("protected-DLM inventory and public boundary are explicit", {
   repo_root <- ordinary_v1_boundary_audit_repo()
 
   expect_identical(
-    length(audit$rqr_dlm_boundary_source_runner(repo_root)), 23L
+    length(audit$rqr_dlm_boundary_source_runner(repo_root)), 29L
   )
   expect_identical(
     length(audit$rqr_dlm_boundary_public_functions()), 18L
@@ -40,7 +40,13 @@ test_that("protected-DLM inventory and public boundary are explicit", {
     "application/DESCRIPTION", "application/NAMESPACE",
     "application/R/RcppExports.R", "application/src/RcppExports.cpp",
     "application/src/rqr_interweave.cpp",
-    "application/src/Makevars", "application/src/Makevars.win"
+    "application/src/Makevars", "application/src/Makevars.win",
+    "application/scripts/22_validate_rqr_dlm_wave1_corrections.R",
+    "application/scripts/23_validate_rqr_dlm_wave1_comparator_projection.R",
+    "application/scripts/24_validate_rqr_dlm_horizon_and_fixed_design.R",
+    "application/scripts/25_validate_rqr_dlm_resource_envelope.R",
+    "application/scripts/lib/rqr_dlm_confirmatory_simulation.R",
+    "docs/audits/rqr_dlm_main_correction_budget_20260727.csv"
   ) %in% audit$rqr_dlm_boundary_source_runner(repo_root)))
   expect_true(all(c(
     "rqr_dlm_fit", "rqr_dlm_continue", "rqr_forecast_roots",
@@ -66,7 +72,7 @@ test_that("development audit emits complete compact nonpromotion evidence", {
     promotion = FALSE
   )
 
-  expect_identical(nrow(result$tables$protected_file_comparison.csv), 23L)
+  expect_identical(nrow(result$tables$protected_file_comparison.csv), 29L)
   expect_true(all(
     result$tables$protected_file_comparison.csv$candidate_exists
   ))

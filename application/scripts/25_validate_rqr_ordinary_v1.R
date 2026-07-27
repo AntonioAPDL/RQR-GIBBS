@@ -92,7 +92,13 @@ rqr_ordinary_v1_protected_dlm_paths <- function() {
     "application/src/RcppExports.cpp",
     "application/src/rqr_interweave.cpp",
     "application/src/Makevars",
-    "application/src/Makevars.win"
+    "application/src/Makevars.win",
+    "application/scripts/22_validate_rqr_dlm_wave1_corrections.R",
+    "application/scripts/23_validate_rqr_dlm_wave1_comparator_projection.R",
+    "application/scripts/24_validate_rqr_dlm_horizon_and_fixed_design.R",
+    "application/scripts/25_validate_rqr_dlm_resource_envelope.R",
+    "application/scripts/lib/rqr_dlm_confirmatory_simulation.R",
+    "docs/audits/rqr_dlm_main_correction_budget_20260727.csv"
   )
 }
 
@@ -100,7 +106,7 @@ rqr_ordinary_v1_validate_config <- function(config) {
   fail <- function(message) stop(message, call. = FALSE)
   if (!is.list(config) ||
       !identical(
-        config$schema_version, "rqrgibbs_ordinary_v1_validation/1.0.0"
+        config$schema_version, "rqrgibbs_ordinary_v1_validation/1.1.0"
       )) {
     fail("Unsupported ordinary-v1 configuration schema.")
   }
@@ -435,17 +441,21 @@ rqr_ordinary_v1_validate_config <- function(config) {
     fail("The pinned exdqlm reference commit changed.")
   }
   expected_desn_schemas <- c(
-    design = "rqrgibbs_desn_design/1.0.0",
+    design = "rqrgibbs_desn_design/1.1.0",
     materialization_receipt =
-      "rqrgibbs_desn_materialization_receipt/2.0.0",
+      "rqrgibbs_desn_materialization_receipt/3.0.0",
+    materialization_manifest =
+      "rqrgibbs_desn_materialization_manifest/1.0.0",
     materialization_receipt_status =
-      "rqrgibbs_desn_materialization_receipt_status/1.0.0",
+      "rqrgibbs_desn_materialization_receipt_status/1.1.0",
     materialization_verification =
-      "rqrgibbs_desn_materialization_verification/1.0.0",
-    fit = "rqrgibbs_desn_fit/1.1.0",
-    future_design = "rqrgibbs_desn_future_design/1.1.0",
+      "rqrgibbs_desn_materialization_verification/1.1.0",
+    fit = "rqrgibbs_desn_fit/1.2.0",
+    draws = "rqrgibbs_desn_draws/1.0.0",
+    prediction = "rqrgibbs_desn_prediction/1.0.0",
+    future_design = "rqrgibbs_desn_future_design/1.2.0",
     future_verification =
-      "rqrgibbs_desn_future_verification/1.0.0"
+      "rqrgibbs_desn_future_verification/1.1.0"
   )
   if (!identical(config$desn_schema_contract, expected_desn_schemas)) {
     fail("The frozen DESN schema contract changed.")
@@ -556,10 +566,20 @@ rqr_ordinary_v1_validate_config <- function(config) {
       any(!is.finite(d02$response_history)) ||
       !identical(
         names(d02$effective_arguments),
-        c("D", "n", "n_tilde", "m", "washout", "seed")
+        c(
+          "D", "n", "n_tilde", "m", "washout", "seed",
+          "add_bias", "input_mode", "standardize_inputs"
+        )
       ) ||
       !identical(
         d02$effective_arguments$seed, d02$materializer_seed
+      ) ||
+      !identical(d02$effective_arguments$add_bias, TRUE) ||
+      !identical(
+        d02$effective_arguments$input_mode, "raw_y_lags"
+      ) ||
+      !identical(
+        d02$effective_arguments$standardize_inputs, FALSE
       ) ||
       "fit_readout" %in% names(d02$effective_arguments) ||
       !isTRUE(
@@ -590,7 +610,7 @@ rqr_ordinary_v1_validate_config <- function(config) {
       ) ||
       !identical(
         companion$schema_version,
-        "rqrgibbs_ordinary_v1_protected_dlm_companion/1.0.0"
+        "rqrgibbs_ordinary_v1_protected_dlm_companion/2.1.0"
       ) ||
       !identical(
         companion$collector_path,
@@ -601,9 +621,9 @@ rqr_ordinary_v1_validate_config <- function(config) {
       ) ||
       !grepl("^[0-9a-f]{64}$", companion$collector_sha256) ||
       !identical(companion$compact_files, expected_companion_files) ||
-      !identical(companion$semantic_gate_count, 16L) ||
-      !identical(companion$input_role_count, 4L) ||
-      !identical(companion$input_artifact_count, 39L) ||
+      !identical(companion$semantic_gate_count, 23L) ||
+      !identical(companion$input_role_count, 7L) ||
+      !identical(companion$input_artifact_count, 55L) ||
       !identical(
         companion$execution_environment,
         "RQR_ORDINARY_V1_DLM_COMPANION_DIR"
@@ -1267,8 +1287,30 @@ rqr_ordinary_v1_initial_state <- function(X, profile, prior) {
 
 rqr_ordinary_v1_validate_desn_prediction <- function(
     prediction, fit, schema_contract) {
+  prediction_valid <- tryCatch({
+    getFromNamespace(
+      ".rqr_validate_desn_prediction", "rqrgibbs"
+    )(fit, prediction)
+    TRUE
+  }, error = function(error) FALSE)
   if (!inherits(fit, "rqr_desn_fit") ||
       !identical(fit$schema_version, schema_contract[["fit"]]) ||
+      !prediction_valid ||
+      !identical(
+        class(prediction), c("rqr_desn_prediction", "list")
+      ) ||
+      !identical(
+        prediction$schema_version,
+        schema_contract[["prediction"]]
+      ) ||
+      !identical(
+        class(prediction$draws), c("rqr_desn_draws", "list")
+      ) ||
+      !identical(
+        prediction$draws$schema_version,
+        schema_contract[["draws"]]
+      ) ||
+      !isTRUE(prediction$draws$source_bound) ||
       !is.list(prediction) ||
       !inherits(
         prediction$future_design, "rqr_desn_future_design"
@@ -1901,6 +1943,7 @@ rqr_ordinary_v1_validate_attested_desn_design <- function(
   design <- readRDS(path)
   getExportedValue("rqrgibbs", "rqr_validate_desn_design")(design)
   receipt <- design$builder$materialization_receipt %||% NULL
+  manifest <- design$builder$materialization_manifest %||% NULL
   state <- external_runtime$state
   attestation_sha <- rqr_ordinary_v1_sha256_file(
     external_runtime$attestation
@@ -1917,6 +1960,9 @@ rqr_ordinary_v1_validate_attested_desn_design <- function(
   )
   arguments_digest <- rqr_ordinary_v1_sha256_object(
     config$fixtures$D02$effective_arguments
+  )
+  response_digest <- rqr_ordinary_v1_sha256_object(
+    as.numeric(config$fixtures$D02$response_history)
   )
   if (!identical(
         design$builder$id, "exdqlm_qdesn_fit_vb_design_adapter"
@@ -1964,6 +2010,39 @@ rqr_ordinary_v1_validate_attested_desn_design <- function(
       !identical(
         receipt$materializer_arguments_digest,
         arguments_digest
+      ) ||
+      !is.list(manifest) ||
+      !identical(
+        manifest$schema_version,
+        config$desn_schema_contract[["materialization_manifest"]]
+      ) ||
+      !identical(
+        manifest$source_response_digest, response_digest
+      ) ||
+      !identical(
+        manifest$source_response_length,
+        as.integer(length(config$fixtures$D02$response_history))
+      ) ||
+      !identical(
+        manifest$keep_idx, as.integer(design$time_index)
+      ) ||
+      !identical(
+        manifest$keep_idx_digest,
+        rqr_ordinary_v1_sha256_object(manifest$keep_idx)
+      ) ||
+      !identical(
+        receipt$source_response_digest, response_digest
+      ) ||
+      !identical(
+        receipt$source_response_length,
+        as.integer(length(config$fixtures$D02$response_history))
+      ) ||
+      !identical(
+        receipt$keep_idx_digest, manifest$keep_idx_digest
+      ) ||
+      !identical(
+        receipt$materialization_manifest_digest,
+        rqr_ordinary_v1_sha256_object(manifest)
       ) ||
       !identical(design$reservoir$source_package, "exdqlm") ||
       !identical(
@@ -2964,13 +3043,24 @@ rqr_ordinary_v1_reference_test_names <- function() {
     "test-rqr-native-beta-prior.R",
     "test-rqr-native-rhs-ns.R",
     "test-rqr-native-fixed-design-v1.R",
+    "test-rqr-native-static-output-envelopes.R",
+    "test-rqr-native-ordinary-v1-missingness.R",
+    "test-rqr-native-ordinary-v1-boundary-audit.R",
     "test-rqr-native-ordinary-v1-materializer.R",
     "test-rqr-native-ordinary-v1-reference-cells.R",
     "test-rqr-native-ordinary-v1-f01-quadrature.R",
-    "test-rqr-native-ordinary-v1-protected-dlm-companion.R",
     "test-rqr-native-desn-design.R",
     "test-rqr-native-desn-fit-v1.R",
     "test-rqr-native-desn-future-contract.R",
+    "test-rqr-native-desn-contract-hardening.R",
+    "test-rqr-evolution-numerical-contract.R",
+    "test-rqr-filter-log-marginal-hardening.R",
+    "test-rqr-public-ffbs-hardening.R",
+    "test-rqr-evolution-fit-semantic-boundary.R",
+    "test-rqr-native-history-kernel-contract.R",
+    "test-rqr-native-dlm-output-envelopes.R",
+    "test-rqr-dlm-correction-producer-static-contract.R",
+    "test-rqr-native-ordinary-v1-protected-dlm-companion.R",
     "test-rqr-native-package-integration.R",
     "test-rqr-native-model.R",
     "test-rqr-native-ffbs.R",
@@ -2985,6 +3075,13 @@ rqr_ordinary_v1_run_reference_tests <- function(repo_root) {
     stop("testthat is required for reference-only source gates.",
          call. = FALSE)
   }
+  if (!requireNamespace("rqrgibbs", quietly = TRUE)) {
+    stop("rqrgibbs must be available before running reference tests.",
+         call. = FALSE)
+  }
+  suppressPackageStartupMessages(
+    library("rqrgibbs", character.only = TRUE)
+  )
   files <- rqr_ordinary_v1_reference_test_files(repo_root)
   if (any(!file.exists(files))) {
     stop("A required ordinary-v1 reference test file is absent.",
@@ -3106,7 +3203,7 @@ rqr_ordinary_v1_reference_evidence_tables <- function(
       expectations = 1L,
       status = attested_references$status,
       detail = paste(
-        "Receipt-v2 D02 fit and continuation remained promotable; its",
+        "Receipt-v3 D02 fit and continuation remained promotable; its",
         "future contract was verified and explicitly nonpromotable."
       ),
       stringsAsFactors = FALSE
@@ -3381,8 +3478,8 @@ rqr_ordinary_v1_runtime_preflight <- function(repo_root, expected_commit) {
       compiler = getFromNamespace(
         ".rqr_compiler_info", "rqrgibbs"
       )(),
-      BLAS = as.character(utils::sessionInfo()$BLAS),
-      LAPACK = as.character(utils::sessionInfo()$LAPACK),
+      BLAS = as.character(suppressWarnings(utils::sessionInfo())$BLAS),
+      LAPACK = as.character(suppressWarnings(utils::sessionInfo())$LAPACK),
       posterior_version = as.character(utils::packageVersion("posterior")),
       stringsAsFactors = FALSE
     )
@@ -3500,8 +3597,8 @@ rqr_ordinary_v1_external_runtime_preflight <- function(
       compiler = getFromNamespace(
         ".rqr_compiler_info", "rqrgibbs"
       )(),
-      BLAS = as.character(utils::sessionInfo()$BLAS),
-      LAPACK = as.character(utils::sessionInfo()$LAPACK),
+      BLAS = as.character(suppressWarnings(utils::sessionInfo())$BLAS),
+      LAPACK = as.character(suppressWarnings(utils::sessionInfo())$LAPACK),
       posterior_version =
         as.character(utils::packageVersion("posterior")),
       stringsAsFactors = FALSE
@@ -6758,7 +6855,7 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
       )
     }
     rqr_ordinary_v1_atomic_lines(
-      c(capture.output(sessionInfo()), "", claim),
+      c(capture.output(suppressWarnings(sessionInfo())), "", claim),
       file.path(output_dir, "session_info.txt")
     )
     rqr_ordinary_v1_atomic_lines(

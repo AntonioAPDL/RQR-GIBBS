@@ -7,19 +7,54 @@
 rqr_seasonal(period, harmonics = 1L, m0 = NULL, C0 = NULL, name = "seasonal")
 }
 \arguments{
-\item{period}{Positive seasonal period.}
+\item{period}{One finite numeric scalar greater than one. Noninteger periods
+such as \code{365.25} are supported.}
 
-\item{harmonics}{Integer harmonics.}
+\item{harmonics}{A nonempty plain unique vector of positive integer
+harmonics satisfying
+\code{2 * harmonics <= period}.}
 
-\item{m0}{Prior state mean.}
+\item{m0}{Finite prior state mean with the implied seasonal dimension.}
 
-\item{C0}{Prior state covariance.}
+\item{C0}{Symmetric positive-definite prior covariance with the implied
+seasonal dimension.}
 
-\item{name}{Component name.}
+\item{name}{Unique nonempty component name.}
 }
 \value{
-An \code{rqr_dlm_model}.
+A one-component \code{rqr_dlm_model}.
 }
 \description{
-Fourier seasonal RQR-DLM component
+Each ordinary harmonic contributes a two-state rotation block. When
+\code{2 * harmonic == period}, the Nyquist harmonic contributes the one-state
+transition \code{-1}. Consequently, the state dimension is not always twice the
+number of harmonics.
 }
+\examples{
+seasonal <- rqr_seasonal(
+  period = 12,
+  harmonics = c(1L, 6L),
+  C0 = diag(3)
+)
+stopifnot(identical(seasonal$component_dims, 3L))
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}}
+}
+\concept{RQR-DLM}

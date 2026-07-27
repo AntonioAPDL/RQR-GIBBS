@@ -1,13 +1,13 @@
 # Fixed-design data and target contracts for ordinary RQR.
 
-.rqr_static_fit_schema <- function() "rqrgibbs_static_fit/1.0.0"
+.rqr_static_fit_schema <- function() "rqrgibbs_static_fit/1.2.0"
 
 .rqr_static_checkpoint_schema <- function() {
   "rqrgibbs_static_checkpoint/1.0.0"
 }
 
 .rqr_static_schedule_schema <- function() {
-  "rqrgibbs_static_segment_schedule/1.0.0"
+  "rqrgibbs_static_segment_schedule/2.0.0"
 }
 
 .rqr_static_data_schema <- function() {
@@ -22,8 +22,24 @@
   "rqrgibbs_fixed_design_transition/1.0.0"
 }
 
+.rqr_static_draws_schema <- function() {
+  "rqrgibbs_static_draws/1.0.0"
+}
+
+.rqr_static_draw_source_schema <- function() {
+  "rqrgibbs_static_draw_source/1.0.0"
+}
+
+.rqr_static_draw_selection_schema <- function() {
+  "rqrgibbs_static_draw_selection/1.0.0"
+}
+
 .rqr_static_prediction_schema <- function() {
-  "rqrgibbs_interval_prediction/1.0.0"
+  "rqrgibbs_interval_prediction/2.0.0"
+}
+
+.rqr_static_prediction_source_schema <- function() {
+  "rqrgibbs_static_prediction_source/1.0.0"
 }
 
 .rqr_fixed_design_data <- function(y, X) {

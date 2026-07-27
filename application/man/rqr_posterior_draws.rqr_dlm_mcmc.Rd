@@ -16,12 +16,34 @@
 \item{...}{Reserved; supplying an argument is an error.}
 }
 \value{
-A list containing time-by-draw matrices \code{eta_root1} and
-\code{eta_root2}, the corresponding loss-rate draws \code{lambda}, selected indices
-\code{index}, and \code{nd}.
+A typed \code{rqr_dlm_draws} object containing time-by-draw matrices
+\code{eta_root1} and \code{eta_root2}, corresponding loss-rate draws \code{lambda},
+selected indices \code{index}, \code{nd}, and exact source and RNG bindings.
 }
 \description{
 The returned matrices contain root ordinates over the fitted time range,
 rather than full state paths. These are generalized-posterior root
-functionals, not response draws.
+functionals, not response draws. Native extraction returns a typed,
+content-digested envelope bound to the exact fit checkpoint, retained-draw
+contract, target, model, evolution, and draw-selection operation.
 }
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

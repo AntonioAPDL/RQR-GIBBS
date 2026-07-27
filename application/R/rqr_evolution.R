@@ -1,16 +1,556 @@
 # Exact component-scale evolution specifications for RQR-DLM.
 
+.rqr_dlm_evolution_modes <- function() {
+  c(
+    "fixed_W", "discount_template", "component_scale",
+    "adaptive_discount"
+  )
+}
+
+.rqr_dlm_evolution_schema <- function() {
+  "rqrgibbs_dlm_evolution/1.0.0"
+}
+
+.rqr_dlm_evolution_properties <- function(mode) {
+  if (!is.character(mode) || length(mode) != 1L ||
+      is.na(mode) || !mode %in% .rqr_dlm_evolution_modes()) {
+    stop("The RQR-DLM evolution mode is missing or unsupported.",
+         call. = FALSE)
+  }
+  fixed_joint <- mode %in% c(
+    "fixed_W", "discount_template", "component_scale"
+  )
+  list(
+    exact_joint_target = fixed_joint,
+    ordinary_v1_evolution = fixed_joint,
+    continuation_supported = fixed_joint,
+    time0_state_completion = fixed_joint,
+    frozen_before_mcmc = !identical(mode, "adaptive_discount"),
+    working_sequential = identical(mode, "adaptive_discount")
+  )
+}
+
+.rqr_dlm_evolution_field_schema <- function(mode) {
+  switch(
+    mode,
+    fixed_W = c(
+      "schema_version", "mode", "W", "exact_joint_target",
+      "frozen_before_mcmc"
+    ),
+    discount_template = c(
+      "schema_version", "mode", "W", "df", "dim.df", "D",
+      "reference_variance", "reference_design",
+      "reference_variance_source", "reference_design_source",
+      "empirical_bayes", "exact_joint_target",
+      "frozen_before_mcmc", "construction_contract",
+      "construction_audit"
+    ),
+    component_scale = c(
+      "schema_version", "mode", "templates", "component_dims",
+      "component_names", "prior", "initial", "exact_joint_target",
+      "frozen_before_mcmc", "shared_across_roots"
+    ),
+    adaptive_discount = c(
+      "schema_version", "mode", "df", "dim.df", "D",
+      "exact_joint_target", "frozen_before_mcmc",
+      "working_sequential"
+    ),
+    stop("The RQR-DLM evolution mode is missing or unsupported.",
+         call. = FALSE)
+  )
+}
+
+.rqr_validate_discount_construction_audit <- function(
+    audit, n_time) {
+  expected_fields <- c(
+    "numerical_policy", "repair_count", "repair_records",
+    "repair_time", "repair_jitter", "minimum_eigenvalue"
+  )
+  if (!is.list(audit) || is.object(audit) ||
+      !identical(names(audit), expected_fields) ||
+      anyDuplicated(names(audit))) {
+    stop(
+      paste(
+        "The discount-template construction audit does not have its",
+        "exact field schema."
+      ),
+      call. = FALSE
+    )
+  }
+  policy <- .rqr_numerical_policy(audit$numerical_policy)
+  records <- audit$repair_records
+  empty_schema <- .rqr_empty_repair_records()
+  if (!is.data.frame(records) ||
+      !identical(names(records), names(empty_schema)) ||
+      anyDuplicated(names(records)) ||
+      !identical(vapply(records, typeof, character(1L)),
+                 vapply(empty_schema, typeof, character(1L)))) {
+    stop(
+      "The discount-template repair ledger has an invalid schema.",
+      call. = FALSE
+    )
+  }
+  repair_count <- .rqr_history_count(
+    audit$repair_count, "construction_audit$repair_count"
+  )
+  if (repair_count != nrow(records) ||
+      !identical(audit$repair_time, records$time) ||
+      !identical(audit$repair_jitter, records$jitter) ||
+      anyNA(records$stage) || any(!nzchar(records$stage)) ||
+      anyNA(records$time) || any(records$time < 1L) ||
+      any(records$time > n_time) || anyDuplicated(records$time) ||
+      anyNA(records$strategy) || any(!nzchar(records$strategy)) ||
+      any(!is.finite(records$jitter)) || any(records$jitter <= 0) ||
+      anyNA(records$absolute_jitter_fallback) ||
+      anyNA(records$clamped_eigenvalues) ||
+      any(records$clamped_eigenvalues != 0L)) {
+    stop(
+      "The discount-template repair ledger and summaries disagree.",
+      call. = FALSE
+    )
+  }
+  if (!is.numeric(audit$minimum_eigenvalue) ||
+      is.object(audit$minimum_eigenvalue) ||
+      !is.null(dim(audit$minimum_eigenvalue)) ||
+      length(audit$minimum_eigenvalue) != n_time ||
+      any(!is.finite(audit$minimum_eigenvalue))) {
+    stop(
+      paste(
+        "construction_audit$minimum_eigenvalue must contain one",
+        "finite value per time point."
+      ),
+      call. = FALSE
+    )
+  }
+  if (identical(policy, "fail") && repair_count != 0L) {
+    stop(
+      "A fail-policy discount template cannot report numerical repairs.",
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+.rqr_validate_discount_template_reconstruction <- function(
+    evolution, expanded) {
+  p <- expanded$p
+  n_time <- expanded$n_time
+  identity <- diag(p)
+  C <- expanded$C0
+  records <- evolution$construction_audit$repair_records
+  construction <- evolution$construction_contract
+  expected_contract_fields <- c(
+    "schema_version", "algorithm", "numerical_policy",
+    "jitter_ladder", "reference_variance_source",
+    "reference_design_source"
+  )
+  if (!is.list(construction) || is.object(construction) ||
+      !identical(names(construction), expected_contract_fields) ||
+      anyDuplicated(names(construction)) ||
+      !identical(
+        construction$schema_version,
+        "rqrgibbs_discount_template_construction/1.0.0"
+      ) ||
+      !identical(
+        construction$algorithm,
+        "reference_kalman_joseph_covariance_recursion"
+      ) ||
+      !identical(
+        construction$reference_variance_source,
+        evolution$reference_variance_source
+      ) ||
+      !identical(
+        construction$reference_design_source,
+        evolution$reference_design_source
+      )) {
+    stop(
+      "The discount-template construction contract is invalid.",
+      call. = FALSE
+    )
+  }
+  policy <- .rqr_numerical_policy(construction$numerical_policy)
+  ladder <- .rqr_jitter_ladder(
+    policy, construction$jitter_ladder
+  )
+  if (!identical(
+        evolution$construction_audit$numerical_policy,
+        policy
+      )) {
+    stop(
+      "The discount-template construction policy metadata disagrees.",
+      call. = FALSE
+    )
+  }
+  reconstructed_records <- .rqr_empty_repair_records()
+  expected_minimum <- numeric(n_time)
+  tolerance <- 1000 * .Machine$double.eps
+  for (tt in seq_len(n_time)) {
+    P <- .rqr_symmetrize(
+      expanded$GG[, , tt] %*% C %*% t(expanded$GG[, , tt])
+    )
+    expected_W <- .rqr_symmetrize(evolution$D * P)
+    supplied_W <- matrix(
+      evolution$W[, , tt], nrow = p, ncol = p
+    )
+    scale <- max(1, abs(expected_W), abs(supplied_W))
+    if (max(abs(expected_W - supplied_W)) >
+        tolerance * scale) {
+      stop(
+        paste(
+          "The discount-template W cube is not generated by its",
+          "declared frozen reference recursion."
+        ),
+        call. = FALSE
+      )
+    }
+    R <- .rqr_symmetrize(P + expected_W)
+    h <- evolution$reference_design[, tt]
+    V <- evolution$reference_variance[[tt]]
+    q <- drop(crossprod(h, R %*% h)) + V
+    if (!is.finite(q) || q <= 0) {
+      stop(
+        "The declared discount-template recursion has nonpositive variance.",
+        call. = FALSE
+      )
+    }
+    gain <- drop(R %*% h) / q
+    C <- .rqr_symmetrize(
+      (identity - tcrossprod(gain, h)) %*% R %*%
+        t(identity - tcrossprod(gain, h)) +
+        tcrossprod(gain) * V
+    )
+    expected_minimum[[tt]] <- min(
+      eigen(C, symmetric = TRUE, only.values = TRUE)$values
+    )
+    factorization <- .rqr_chol_with_jitter(C, ladder)
+    reconstructed_records <- .rqr_add_repair_record(
+      reconstructed_records,
+      stage = "discount_template_filter_covariance",
+      time = tt,
+      info = list(
+        strategy = "cholesky_jitter",
+        jitter = factorization$jitter,
+        relative_jitter = factorization$relative_jitter,
+        min_eigenvalue = factorization$min_eigenvalue,
+        matrix_scale = factorization$matrix_scale,
+        jitter_scale = factorization$jitter_scale,
+        absolute_jitter_fallback =
+          factorization$absolute_jitter_fallback,
+        clamped_eigenvalues = 0L
+      )
+    )
+    C <- factorization$matrix
+  }
+  eigen_scale <- pmax(
+    1, abs(expected_minimum),
+    abs(evolution$construction_audit$minimum_eigenvalue)
+  )
+  if (any(abs(
+      expected_minimum -
+        evolution$construction_audit$minimum_eigenvalue
+    ) > tolerance * eigen_scale)) {
+    stop(
+      paste(
+        "The discount-template minimum-eigenvalue audit is not",
+        "reconstructible from the declared recursion."
+      ),
+      call. = FALSE
+    )
+  }
+  reconstructed_audit <- list(
+    numerical_policy = policy,
+    repair_count = nrow(reconstructed_records),
+    repair_records = reconstructed_records,
+    repair_time = reconstructed_records$time,
+    repair_jitter = reconstructed_records$jitter,
+    minimum_eigenvalue = expected_minimum
+  )
+  if (!identical(
+        evolution$construction_audit,
+        reconstructed_audit
+      )) {
+    stop(
+      paste(
+        "The discount-template construction audit is not the exact",
+        "reconstruction of its declared algorithm and inputs."
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+.rqr_validate_dlm_evolution_spec <- function(
+    evolution, expanded, y = NULL) {
+  if (!is.list(evolution) ||
+      !identical(class(evolution), "rqr_evolution") ||
+      !identical(
+        names(attributes(evolution)), c("names", "class")
+      )) {
+    stop(
+      "evolution_spec must have exactly class 'rqr_evolution'.",
+      call. = FALSE
+    )
+  }
+  mode <- evolution$mode
+  properties <- .rqr_dlm_evolution_properties(mode)
+  expected_fields <- .rqr_dlm_evolution_field_schema(mode)
+  if (!identical(names(evolution), expected_fields) ||
+      anyDuplicated(names(evolution)) ||
+      !identical(
+        evolution$schema_version, .rqr_dlm_evolution_schema()
+      )) {
+    stop(
+      sprintf(
+        "The %s evolution specification does not have its exact field schema.",
+        mode
+      ),
+      call. = FALSE
+    )
+  }
+  valid_flag <- function(value) {
+    is.logical(value) && length(value) == 1L && !is.na(value)
+  }
+  if (!valid_flag(evolution$exact_joint_target) ||
+      !identical(
+        evolution$exact_joint_target,
+        properties$exact_joint_target
+      ) ||
+      !valid_flag(evolution$frozen_before_mcmc) ||
+      !identical(
+        evolution$frozen_before_mcmc,
+        properties$frozen_before_mcmc
+      )) {
+    stop(
+      paste(
+        "Evolution exactness and frozen-status metadata must be",
+        "reconstructed from the canonical mode contract."
+      ),
+      call. = FALSE
+    )
+  }
+
+  p <- expanded$p
+  n_time <- expanded$n_time
+  if (identical(mode, "fixed_W")) {
+    W <- .rqr_expand_cube(evolution$W, n_time, p, "evolution_spec$W")
+    .rqr_validate_covariance_cube(W, "evolution_spec$W")
+  } else if (identical(mode, "discount_template")) {
+    if (!is.array(evolution$W) ||
+        !identical(dim(evolution$W), c(p, p, n_time))) {
+      stop(
+        "A discount-template W must be a p x p x n_time cube.",
+        call. = FALSE
+      )
+    }
+    .rqr_validate_covariance_cube(
+      evolution$W, "evolution_spec$W"
+    )
+    dims <- .rqr_positive_integer_vector(
+      evolution$dim.df, "evolution_spec$dim.df"
+    )
+    expected_D <- rqr_discount_matrix(
+      evolution$df, dims, p
+    )
+    if (!identical(dims, expanded$component_dims) ||
+        !is.matrix(evolution$D) ||
+        !identical(dim(evolution$D), c(p, p)) ||
+        !identical(as.numeric(evolution$D), as.numeric(expected_D))) {
+      stop(
+        paste(
+          "The discount-template block dimensions or discount matrix",
+          "do not match the expanded model."
+        ),
+        call. = FALSE
+      )
+    }
+    if (!is.numeric(evolution$reference_variance) ||
+        is.object(evolution$reference_variance) ||
+        !is.null(dim(evolution$reference_variance)) ||
+        length(evolution$reference_variance) != n_time ||
+        any(!is.finite(evolution$reference_variance)) ||
+        any(evolution$reference_variance <= 0) ||
+        !is.matrix(evolution$reference_design) ||
+        !is.numeric(evolution$reference_design) ||
+        is.object(evolution$reference_design) ||
+        !identical(
+          dim(evolution$reference_design), c(p, n_time)
+        ) ||
+        any(!is.finite(evolution$reference_design))) {
+      stop(
+        "The discount-template reference recursion inputs are invalid.",
+        call. = FALSE
+      )
+    }
+    allowed_variance_sources <- c(
+      "user_supplied", "training_response_variance"
+    )
+    allowed_design_sources <- c(
+      "model_design", "user_supplied"
+    )
+    if (!is.character(evolution$reference_variance_source) ||
+        length(evolution$reference_variance_source) != 1L ||
+        is.na(evolution$reference_variance_source) ||
+        !evolution$reference_variance_source %in%
+          allowed_variance_sources ||
+        !is.character(evolution$reference_design_source) ||
+        length(evolution$reference_design_source) != 1L ||
+        is.na(evolution$reference_design_source) ||
+        !evolution$reference_design_source %in%
+          allowed_design_sources ||
+        !valid_flag(evolution$empirical_bayes) ||
+        !identical(
+          evolution$empirical_bayes,
+          identical(
+            evolution$reference_variance_source,
+            "training_response_variance"
+          )
+        )) {
+      stop(
+        "The discount-template reference-source metadata is invalid.",
+        call. = FALSE
+      )
+    }
+    if (identical(
+          evolution$reference_design_source, "model_design"
+        ) &&
+        !identical(
+          evolution$reference_design, expanded$FF
+        )) {
+      stop(
+        paste(
+          "A model-design discount template must use the expanded",
+          "model observation design exactly."
+        ),
+        call. = FALSE
+      )
+    }
+    if (identical(
+          evolution$reference_variance_source,
+          "training_response_variance"
+        )) {
+      if (!is.numeric(y) || is.object(y) || !is.null(dim(y)) ||
+          length(y) != n_time || !any(!is.na(y)) ||
+          any(is.nan(y)) || any(is.infinite(y))) {
+        stop(
+          paste(
+            "A training-response discount template requires the",
+            "complete fitted response contract."
+          ),
+          call. = FALSE
+        )
+      }
+      observed_y <- y[!is.na(y)]
+      expected_variance <- stats::var(observed_y)
+      if (!is.finite(expected_variance) ||
+          expected_variance <= 0) {
+        expected_variance <- 1
+      }
+      expected_variance <- max(
+        expected_variance, sqrt(.Machine$double.eps)
+      )
+      if (!identical(
+            evolution$reference_variance,
+            rep(expected_variance, n_time)
+          )) {
+        stop(
+          paste(
+            "The training-response reference variance is not",
+            "reconstructible from the fitted response."
+          ),
+          call. = FALSE
+        )
+      }
+    }
+    .rqr_validate_discount_construction_audit(
+      evolution$construction_audit, n_time
+    )
+    .rqr_validate_discount_template_reconstruction(
+      evolution, expanded
+    )
+  } else if (identical(mode, "component_scale")) {
+    rebuilt <- rqr_evolution_component_scale(
+      templates = evolution$templates,
+      component_dims = evolution$component_dims,
+      component_names = evolution$component_names,
+      prior = evolution$prior,
+      initial = evolution$initial
+    )
+    if (!identical(evolution, rebuilt) ||
+        !identical(
+          as.integer(evolution$component_dims),
+          as.integer(expanded$component_dims)
+        ) ||
+        !identical(
+          evolution$component_names,
+          expanded$component_names
+        )) {
+      stop(
+        paste(
+          "The component-scale evolution specification is not its",
+          "canonical reconstruction for the expanded model."
+        ),
+        call. = FALSE
+      )
+    }
+    .rqr_expand_component_templates(evolution, n_time, p)
+  } else {
+    rebuilt <- rqr_evolution_adaptive_working(
+      evolution$df, evolution$dim.df
+    )
+    if (!identical(evolution, rebuilt) ||
+        !identical(
+          as.integer(evolution$dim.df),
+          as.integer(expanded$component_dims)
+        )) {
+      stop(
+        paste(
+          "The adaptive working evolution specification is not its",
+          "canonical reconstruction for the expanded model."
+        ),
+        call. = FALSE
+      )
+    }
+  }
+  invisible(properties)
+}
+
 #' Construct a fixed-covariance RQR evolution specification
 #'
-#' @param W Evolution covariance matrix or time-varying cube. Dimensions and
-#'   positive-semidefinite validity are checked against the model at fit time.
+#' `W` is fixed before MCMC. For a state of dimension `p`, it must be a finite
+#' symmetric positive-semidefinite `p x p` matrix or a `p x p x T` cube. A
+#' matrix is reused at every time; a cube must have one or exactly `T` slices.
+#' Dimensions, symmetry, and positive-semidefinite validity are checked against
+#' the model at fit time.
+#'
+#' @param W Evolution covariance matrix or time-varying covariance cube.
 #' @return An exact fixed-prior `rqr_evolution` specification.
+#' @examples
+#' evolution <- rqr_evolution_fixed(diag(c(0.04, 0.01)))
+#' @family RQR-DLM
 #' @export
 rqr_evolution_fixed <- function(W) {
-  if (is.null(W) || !is.numeric(W) || !length(W) || any(!is.finite(W))) {
-    stop("W must be a finite numeric covariance matrix or cube.", call. = FALSE)
+  dW <- dim(W)
+  if (!is.numeric(W) || is.object(W) ||
+      !length(dW) %in% c(2L, 3L) ||
+      dW[1L] != dW[2L] || dW[1L] < 1L ||
+      (length(dW) == 3L && dW[3L] < 1L) ||
+      any(!is.finite(W))) {
+    stop(
+      "W must be a plain finite numeric square covariance matrix or cube.",
+      call. = FALSE
+    )
   }
+  W <- if (length(dW) == 2L) {
+    .rqr_validate_covariance_cube(
+      array(W, c(dW, 1L)), "W"
+    )[, , 1L, drop = FALSE]
+  } else {
+    .rqr_validate_covariance_cube(W, "W")
+  }
+  if (length(dW) == 2L) W <- matrix(W[, , 1L], dW[1L], dW[2L])
   structure(list(
+    schema_version = .rqr_dlm_evolution_schema(),
     mode = "fixed_W", W = W, exact_joint_target = TRUE,
     frozen_before_mcmc = TRUE
   ), class = "rqr_evolution")
@@ -20,15 +560,26 @@ rqr_evolution_fixed <- function(W) {
 #'
 #' This constructor preserves the exdqlm component-discount matrix interface
 #' while making the non-joint-target status explicit in its name and metadata.
+#' The covariance recursion adapts within the scan; it is an experimental
+#' working/sequential method, not an exact fixed-joint ordinary-v1 target and
+#' not eligible for ordinary-v1 promotion.
 #'
 #' @param df Component discounts in `(0,1]`.
 #' @param component_dims Positive state-block dimensions.
 #' @return An experimental working/sequential `rqr_evolution` specification.
+#' @examples
+#' working <- rqr_evolution_adaptive_working(
+#'   df = c(0.95, 0.90),
+#'   component_dims = c(2L, 1L)
+#' )
+#' stopifnot(!working$exact_joint_target)
+#' @family RQR-DLM
 #' @export
 rqr_evolution_adaptive_working <- function(df, component_dims) {
   component_dims <- .rqr_positive_integer_vector(component_dims, "component_dims")
   D <- rqr_discount_matrix(df, component_dims, sum(component_dims))
   structure(list(
+    schema_version = .rqr_dlm_evolution_schema(),
     mode = "adaptive_discount",
     df = as.numeric(df),
     dim.df = component_dims,
@@ -47,7 +598,13 @@ rqr_evolution_adaptive_working <- function(df, component_dims) {
 
 .rqr_validate_spd_template <- function(x, d, name) {
   dx <- dim(x)
-  if (length(dx) == 2L) x <- array(as.matrix(x), c(d, d, 1L))
+  if (!is.numeric(x) || is.object(x) || !length(dx) %in% c(2L, 3L)) {
+    stop(
+      sprintf("%s must be a plain numeric matrix or cube.", name),
+      call. = FALSE
+    )
+  }
+  if (length(dx) == 2L) x <- array(x, c(d, d, 1L))
   dx <- dim(x)
   if (length(dx) != 3L || !all(dx[1:2] == c(d, d)) || dx[3L] < 1L ||
       any(!is.finite(x))) {
@@ -67,21 +624,49 @@ rqr_evolution_adaptive_working <- function(df, component_dims) {
 #' Defines `W_t = blockdiag(q_1 Q_1t, ..., q_J Q_Jt)` with fixed positive-
 #' definite templates and shared inverse-Gamma component multipliers across the
 #' two exchangeable roots. This is distinct from adaptive discount recursion.
+#' Each component template is a symmetric positive-definite `d_j x d_j`
+#' matrix or `d_j x d_j x T` cube. All nonconstant cubes must have the same
+#' number of slices; one-slice templates are reused over time. Component order
+#' is part of the transition contract.
 #'
-#' @param templates List of component covariance matrices or time-varying cubes.
-#' @param component_dims Positive component dimensions summing to the state size.
-#' @param prior Inverse-Gamma shape and rate/scale lists or vectors.
-#' @param initial Positive initial component multipliers.
-#' @param component_names Optional component names.
-#' @return An `rqr_evolution` specification.
+#' @param templates Plain list of plain numeric component covariance matrices
+#'   or time-varying cubes.
+#' @param component_dims Plain positive-integer component dimensions summing to
+#'   the state size.
+#' @param prior Fully named list with inverse-Gamma `shape` and `rate` entries,
+#'   each a plain positive numeric scalar or one value per component. Legacy
+#'   aliases `a` for `shape` and either `scale` or `b` for `rate` remain
+#'   accepted, but ambiguous or unknown fields are rejected.
+#' @param initial Plain positive numeric component multipliers, scalar or one
+#'   per component.
+#' @param component_names Optional plain character vector of unique nonempty
+#'   component names.
+#' @return An exact fixed-template `rqr_evolution` specification. The component
+#'   multipliers are subsequently learned by [rqr_dlm_fit()].
+#' @examples
+#' evolution <- rqr_evolution_component_scale(
+#'   templates = list(diag(2), matrix(1, 1, 1)),
+#'   component_dims = c(2L, 1L),
+#'   prior = list(shape = c(2, 3), rate = c(1, 1)),
+#'   component_names = c("trend", "regression")
+#' )
+#' @family RQR-DLM
 #' @export
 rqr_evolution_component_scale <- function(
     templates, component_dims, prior = list(shape = 2, rate = 1),
     initial = 1, component_names = NULL) {
+  if (!is.numeric(component_dims) || is.object(component_dims) ||
+      !is.null(dim(component_dims))) {
+    stop("component_dims must be a plain positive-integer vector.", call. = FALSE)
+  }
   component_dims <- .rqr_positive_integer_vector(component_dims, "component_dims")
   J <- length(component_dims)
-  if (!is.list(templates) || length(templates) != J) {
-    stop("templates must be a list with one matrix or cube per component.", call. = FALSE)
+  if (!is.list(templates) || is.object(templates) ||
+      length(templates) != J) {
+    stop(
+      "templates must be a plain list with one matrix or cube per component.",
+      call. = FALSE
+    )
   }
   templates <- lapply(seq_len(J), function(j) {
     .rqr_validate_spd_template(templates[[j]], component_dims[j], sprintf("templates[[%d]]", j))
@@ -91,9 +676,34 @@ rqr_evolution_component_scale <- function(
   if (length(nonconstant) > 1L) {
     stop("Time-varying component templates must have a common number of slices.", call. = FALSE)
   }
-  if (!is.list(prior)) stop("prior must be a list with shape and rate.", call. = FALSE)
-  shape <- as.numeric(prior$shape %||% prior$a %||% 2)
-  rate <- as.numeric(prior$rate %||% prior$scale %||% prior$b %||% 1)
+  .rqr_validate_named_list_fields(
+    prior, "prior", c("shape", "a", "rate", "scale", "b")
+  )
+  shape_fields <- intersect(names(prior), c("shape", "a"))
+  rate_fields <- intersect(names(prior), c("rate", "scale", "b"))
+  if (length(shape_fields) > 1L || length(rate_fields) > 1L) {
+    stop(
+      paste(
+        "prior must supply at most one shape field ('shape' or 'a') and",
+        "at most one rate field ('rate', 'scale', or 'b')."
+      ),
+      call. = FALSE
+    )
+  }
+  shape <- if (length(shape_fields)) prior[[shape_fields]] else 2
+  rate <- if (length(rate_fields)) prior[[rate_fields]] else 1
+  if (!is.numeric(shape) || is.object(shape) || !is.null(dim(shape)) ||
+      !is.numeric(rate) || is.object(rate) || !is.null(dim(rate))) {
+    stop(
+      paste(
+        "Component-scale inverse-Gamma shape and rate must be plain",
+        "numeric vectors."
+      ),
+      call. = FALSE
+    )
+  }
+  shape <- as.numeric(shape)
+  rate <- as.numeric(rate)
   if (!length(shape) %in% c(1L, J) || !length(rate) %in% c(1L, J)) {
     stop("Component-scale inverse-Gamma shape and rate must be scalar or length J.", call. = FALSE)
   }
@@ -102,6 +712,9 @@ rqr_evolution_component_scale <- function(
   if (any(!is.finite(shape)) ||
       any(!is.finite(rate)) || any(shape <= 0) || any(rate <= 0)) {
     stop("Component-scale inverse-Gamma shape and rate must be positive.", call. = FALSE)
+  }
+  if (!is.numeric(initial) || is.object(initial) || !is.null(dim(initial))) {
+    stop("initial must be a plain numeric vector.", call. = FALSE)
   }
   initial <- as.numeric(initial)
   if (!length(initial) %in% c(1L, J)) {
@@ -112,12 +725,20 @@ rqr_evolution_component_scale <- function(
     stop("initial must contain positive component multipliers.", call. = FALSE)
   }
   if (is.null(component_names)) component_names <- paste0("component", seq_len(J))
-  component_names <- as.character(component_names)
-  if (length(component_names) != J || anyNA(component_names) || any(!nzchar(component_names)) ||
+  if (!is.character(component_names) || is.object(component_names) ||
+      length(component_names) != J || anyNA(component_names) ||
+      any(!nzchar(component_names)) ||
       anyDuplicated(component_names)) {
-    stop("component_names must be unique nonempty names matching component_dims.", call. = FALSE)
+    stop(
+      paste(
+        "component_names must be a plain character vector of unique",
+        "nonempty names matching component_dims."
+      ),
+      call. = FALSE
+    )
   }
   structure(list(
+    schema_version = .rqr_dlm_evolution_schema(),
     mode = "component_scale",
     templates = templates,
     component_dims = component_dims,
@@ -187,17 +808,27 @@ rqr_evolution_component_scale <- function(
   W
 }
 
-.rqr_draw_initial_state <- function(theta1, G1, m0, C0, W1) {
+.rqr_draw_initial_state <- function(
+    theta1, G1, m0, C0, W1,
+    numerical_policy = c("fail", "record_repair"),
+    jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6)) {
   theta1 <- as.numeric(theta1)
   m0 <- as.numeric(m0)
   p <- length(m0)
   G1 <- as.matrix(G1)
-  C0 <- .rqr_validate_symmetric_matrix(C0, "C0")
-  W1 <- .rqr_validate_symmetric_matrix(W1, "W1")
+  C0 <- .rqr_validate_filter_covariance(C0, "C0")
+  W1 <- .rqr_validate_filter_covariance(W1, "W1")
+  numerical_policy <- .rqr_numerical_policy(numerical_policy)
+  jitter_ladder <- .rqr_jitter_ladder(
+    numerical_policy, jitter_ladder
+  )
+  repair_records <- .rqr_empty_repair_records()
+  roundoff_psd_count <- 0L
   if (length(theta1) != p ||
       !identical(dim(G1), c(p, p)) ||
       !identical(dim(C0), c(p, p)) ||
-      !identical(dim(W1), c(p, p))) {
+      !identical(dim(W1), c(p, p)) ||
+      any(!is.finite(c(theta1, G1, m0, C0, W1)))) {
     stop(
       "The time-zero conditional inputs have incompatible dimensions.",
       call. = FALSE
@@ -209,27 +840,96 @@ rqr_evolution_component_scale <- function(
   forecast_factor <- tryCatch(
     chol(forecast_covariance), error = function(error) NULL
   )
+  forecast_info <- list(
+    strategy = "cholesky", jitter = 0, relative_jitter = 0,
+    min_eigenvalue = NA_real_, clamped_eigenvalues = 0L,
+    matrix_scale = max(abs(forecast_covariance)),
+    jitter_scale = max(abs(forecast_covariance)),
+    absolute_jitter_fallback = FALSE
+  )
+  forecast_singular <- FALSE
   if (is.null(forecast_factor)) {
     forecast_eigen <- eigen(forecast_covariance, symmetric = TRUE)
     forecast_scale <- max(abs(forecast_eigen$values))
-    if (forecast_scale > 0 &&
-        min(forecast_eigen$values) / forecast_scale < -1e-10) {
+    negative <- forecast_eigen$values < 0
+    near_psd <- forecast_scale == 0 ||
+      min(forecast_eigen$values) / forecast_scale >=
+        -100 * .Machine$double.eps
+    if (any(negative) &&
+        identical(numerical_policy, "fail") &&
+        !near_psd) {
       stop(
-        "The time-zero forecast covariance is materially indefinite.",
+        paste(
+          "The time-zero forecast covariance has a negative eigenvalue,",
+          "and projection is disabled under numerical_policy='fail'."
+        ),
         call. = FALSE
       )
     }
-    rank_tolerance <- 100 * .Machine$double.eps *
-      max(1, p) * forecast_scale
-    positive <- forecast_eigen$values > rank_tolerance
-    forecast_inverse <- if (any(positive)) {
-      forecast_eigen$vectors[, positive, drop = FALSE] %*%
-        (t(forecast_eigen$vectors[, positive, drop = FALSE]) /
-          forecast_eigen$values[positive])
+    if (any(negative) && !near_psd) {
+      repaired <- .rqr_chol_with_jitter(
+        forecast_covariance, jitter_ladder
+      )
+      forecast_factor <- repaired$chol
+      forecast_covariance <- repaired$matrix
+      forecast_info <- list(
+        strategy = "cholesky_jitter",
+        jitter = repaired$jitter,
+        relative_jitter = repaired$relative_jitter,
+        min_eigenvalue = repaired$min_eigenvalue,
+        clamped_eigenvalues = 0L,
+        matrix_scale = repaired$matrix_scale,
+        jitter_scale = repaired$jitter_scale,
+        absolute_jitter_fallback =
+          repaired$absolute_jitter_fallback
+      )
+      repair_records <- .rqr_add_repair_record(
+        repair_records, "time_zero_forecast_covariance", 0L,
+        forecast_info
+      )
+      solve_forecast <- function(value) {
+        backsolve(
+          forecast_factor,
+          forwardsolve(t(forecast_factor), value)
+        )
+      }
     } else {
-      matrix(0, p, p)
+      values <- if (any(negative)) {
+        pmax(forecast_eigen$values, 0)
+      } else {
+        forecast_eigen$values
+      }
+      forecast_singular <- any(values == 0)
+      positive <- values > 0
+      forecast_inverse <- if (any(positive)) {
+        forecast_eigen$vectors[, positive, drop = FALSE] %*%
+          (t(forecast_eigen$vectors[, positive, drop = FALSE]) /
+            values[positive])
+      } else {
+        matrix(0, p, p)
+      }
+      if (any(negative)) {
+        forecast_covariance <- .rqr_symmetrize(
+          forecast_eigen$vectors %*%
+            (values * t(forecast_eigen$vectors))
+        )
+      }
+      forecast_info <- list(
+        strategy = "psd_eigen",
+        jitter = 0, relative_jitter = 0,
+        min_eigenvalue = min(forecast_eigen$values),
+        clamped_eigenvalues = 0L,
+        matrix_scale = max(abs(forecast_covariance)),
+        jitter_scale = max(abs(forecast_covariance)),
+        absolute_jitter_fallback = FALSE
+      )
+      roundoff_psd_count <- roundoff_psd_count + sum(negative)
+      repair_records <- .rqr_add_repair_record(
+        repair_records, "time_zero_forecast_covariance", 0L,
+        forecast_info
+      )
+      solve_forecast <- function(value) forecast_inverse %*% value
     }
-    solve_forecast <- function(value) forecast_inverse %*% value
   } else {
     solve_forecast <- function(value) {
       backsolve(
@@ -238,52 +938,198 @@ rqr_evolution_component_scale <- function(
       )
     }
   }
-  gain <- C0 %*% t(G1)
+  cross_covariance <- C0 %*% t(G1)
   innovation <- theta1 - drop(G1 %*% m0)
-  if (is.null(forecast_factor)) {
-    range_residual <- innovation -
-      drop(forecast_covariance %*% solve_forecast(innovation))
-    residual_scale <- max(
-      abs(innovation), sqrt(forecast_scale), .Machine$double.xmin
+  if (forecast_singular) {
+    projected_innovation <- drop(
+      forecast_covariance %*% solve_forecast(innovation)
     )
-    if (max(abs(range_residual)) / residual_scale > 1e-8) {
-      stop(
-        "The time-one state is outside the singular forecast support.",
-        call. = FALSE
+    range_residual <- innovation - projected_innovation
+    residual_scale <- max(
+      abs(innovation), sqrt(max(abs(forecast_covariance))),
+      .Machine$double.xmin
+    )
+    support_residual_ratio <-
+      max(abs(range_residual)) / residual_scale
+    if (support_residual_ratio > 1e-8) {
+      support_repair_limit <- max(
+        1e-8, jitter_ladder
+      )
+      if (identical(numerical_policy, "fail") ||
+          support_residual_ratio > support_repair_limit) {
+        stop(
+          "The time-one state is outside the singular forecast support.",
+          call. = FALSE
+        )
+      }
+      innovation <- projected_innovation
+      support_info <- list(
+        strategy = "support_projection",
+        jitter = 0,
+        relative_jitter = support_residual_ratio,
+        min_eigenvalue = forecast_info$min_eigenvalue,
+        clamped_eigenvalues = sum(
+          abs(range_residual) >
+            1e-8 * residual_scale
+        ),
+        matrix_scale = max(abs(forecast_covariance)),
+        jitter_scale = residual_scale,
+        absolute_jitter_fallback = FALSE
+      )
+      repair_records <- .rqr_add_repair_record(
+        repair_records, "time_zero_forecast_support", 0L,
+        support_info
       )
     }
   }
-  conditional_mean <- m0 + drop(
-    gain %*% solve_forecast(innovation)
-  )
+  conditional_gain <- cross_covariance %*%
+    solve_forecast(diag(1, p))
+  conditional_mean <- m0 + drop(conditional_gain %*% innovation)
+  conditional_update <- diag(1, p) - conditional_gain %*% G1
   conditional_covariance <- .rqr_symmetrize(
-    C0 - gain %*% solve_forecast(G1 %*% C0)
+    conditional_update %*% C0 %*% t(conditional_update) +
+      conditional_gain %*% W1 %*% t(conditional_gain)
   )
   conditional_factor <- tryCatch(
-    chol(conditional_covariance), error = function(error) NULL
+    chol(conditional_covariance),
+    error = function(error) NULL
+  )
+  conditional_info <- list(
+    strategy = "cholesky", jitter = 0, relative_jitter = 0,
+    min_eigenvalue = NA_real_, clamped_eigenvalues = 0L,
+    matrix_scale = max(abs(conditional_covariance)),
+    jitter_scale = max(abs(conditional_covariance)),
+    absolute_jitter_fallback = FALSE
   )
   if (!is.null(conditional_factor)) {
-    return(as.numeric(
+    conditional_draw <- as.numeric(
       conditional_mean +
         t(conditional_factor) %*% stats::rnorm(p)
-    ))
-  }
-  conditional_eigen <- eigen(
-    conditional_covariance, symmetric = TRUE
-  )
-  conditional_scale <- max(abs(conditional_eigen$values))
-  if (conditional_scale > 0 &&
-      min(conditional_eigen$values) / conditional_scale < -1e-10) {
-    stop(
-      "The time-zero conditional covariance is materially indefinite.",
-      call. = FALSE
     )
+  } else {
+    conditional_eigen <- eigen(
+      conditional_covariance, symmetric = TRUE
+    )
+    conditional_reference_scale <- max(
+      abs(C0),
+      abs(conditional_update %*% C0 %*% t(conditional_update)),
+      abs(conditional_gain %*% W1 %*% t(conditional_gain)),
+      abs(conditional_covariance)
+    )
+    conditional_negative <- conditional_eigen$values < 0
+    conditional_near_psd <- conditional_reference_scale == 0 ||
+      min(conditional_eigen$values) /
+        conditional_reference_scale >=
+          -100 * .Machine$double.eps
+    if (any(conditional_negative) &&
+        identical(numerical_policy, "fail") &&
+        !conditional_near_psd) {
+      stop(
+        paste(
+          "The time-zero conditional covariance has a negative",
+          "eigenvalue, and projection is disabled under",
+          "numerical_policy='fail'."
+        ),
+        call. = FALSE
+      )
+    }
+    if (!any(conditional_negative) ||
+        conditional_near_psd) {
+      conditional_values <- if (any(conditional_negative)) {
+        pmax(conditional_eigen$values, 0)
+      } else {
+        conditional_eigen$values
+      }
+      conditional_draw <- as.numeric(
+        conditional_mean +
+          conditional_eigen$vectors %*%
+            (sqrt(conditional_values) * stats::rnorm(p))
+      )
+      conditional_info <- list(
+        strategy = "psd_eigen",
+        jitter = 0, relative_jitter = 0,
+        min_eigenvalue = min(conditional_eigen$values),
+        clamped_eigenvalues = 0L,
+        matrix_scale = max(abs(conditional_covariance)),
+        jitter_scale = conditional_reference_scale,
+        absolute_jitter_fallback = FALSE
+      )
+      roundoff_psd_count <- roundoff_psd_count +
+        sum(conditional_negative)
+    } else {
+      repaired_factor <- NULL
+      applied_relative_jitter <- NA_real_
+      applied_jitter <- NA_real_
+      for (relative_jitter in jitter_ladder) {
+        jitter <- relative_jitter *
+          conditional_reference_scale
+        if (relative_jitter > 0 && jitter == 0) {
+          stop(
+            paste(
+              "Relative time-zero conditional-covariance jitter",
+              "underflowed to zero at the reference scale."
+            ),
+            call. = FALSE
+          )
+        }
+        candidate <- conditional_covariance +
+          diag(jitter, p)
+        candidate_factor <- tryCatch(
+          chol(candidate), error = function(error) NULL
+        )
+        if (!is.null(candidate_factor)) {
+          repaired_factor <- candidate_factor
+          applied_relative_jitter <- relative_jitter
+          applied_jitter <- jitter
+          break
+        }
+      }
+      if (is.null(repaired_factor)) {
+        stop(
+          paste(
+            "The time-zero conditional covariance could not be",
+            "repaired by the declared jitter ladder."
+          ),
+          call. = FALSE
+        )
+      }
+      conditional_draw <- as.numeric(
+        conditional_mean +
+          t(repaired_factor) %*% stats::rnorm(p)
+      )
+      conditional_info <- list(
+        strategy = "cholesky_jitter",
+        jitter = applied_jitter,
+        relative_jitter = applied_relative_jitter,
+        min_eigenvalue = min(conditional_eigen$values),
+        clamped_eigenvalues = 0L,
+        matrix_scale = max(abs(conditional_covariance)),
+        jitter_scale = conditional_reference_scale,
+        absolute_jitter_fallback =
+          conditional_reference_scale == 0 &&
+            applied_jitter > 0
+      )
+    }
   }
-  as.numeric(
-    conditional_mean +
-      conditional_eigen$vectors %*%
-        (sqrt(pmax(conditional_eigen$values, 0)) *
-          stats::rnorm(p))
+  repair_records <- .rqr_add_repair_record(
+    repair_records, "time_zero_conditional_covariance", 0L,
+    conditional_info
+  )
+  numerical_exact <- nrow(repair_records) == 0L
+  list(
+    draw = as.numeric(conditional_draw),
+    diagnostics = list(
+      numerical_policy = numerical_policy,
+      mathematically_exact_conditional = TRUE,
+      numerically_exact = numerical_exact,
+      exact_transition =
+        isTRUE(numerical_exact),
+      repair_count = nrow(repair_records),
+      repair_records = repair_records,
+      roundoff_psd_count = roundoff_psd_count,
+      forecast_strategy = forecast_info$strategy,
+      conditional_strategy = conditional_info$strategy
+    )
   )
 }
 
@@ -386,26 +1232,32 @@ rqr_evolution_component_scale <- function(
       length(z), length(m0)
     )
   }
-  log_marginal <- tryCatch(
-    if (identical(backend, "cpp") &&
-        !is.null(expanded_templates)) {
-      as.numeric(rqr_filter_log_marginal_cpp(
-        z, H, obs_variance, GG, m0, C0, candidate_W
-      ))
-    } else {
-      .rqr_filter_log_marginal(
-        z = z, H = H, V = obs_variance, GG = GG,
-        m0 = m0, C0 = C0,
-        evolution = structure(
-          list(mode = "component_scale", W = candidate_W),
-          class = "rqr_evolution"
-        ),
-        backend = backend
-      )
-    },
-    error = function(error) -Inf
-  )
-  if (!is.finite(log_marginal)) return(-Inf)
+  log_marginal <- if (identical(backend, "cpp") &&
+      !is.null(expanded_templates)) {
+    as.numeric(rqr_filter_log_marginal_cpp(
+      z, H, obs_variance, GG, m0, C0, candidate_W
+    ))
+  } else {
+    .rqr_filter_log_marginal(
+      z = z, H = H, V = obs_variance, GG = GG,
+      m0 = m0, C0 = C0,
+      evolution = structure(
+        list(mode = "component_scale", W = candidate_W),
+        class = "rqr_evolution"
+      ),
+      backend = backend
+    )
+  }
+  if (length(log_marginal) != 1L ||
+      !is.finite(log_marginal)) {
+    stop(
+      paste(
+        "The collapsed component-scale filter returned a nonfinite",
+        "log marginal at a representable scale."
+      ),
+      call. = FALSE
+    )
+  }
   sum(
     -(as.numeric(evolution$prior$shape) +
         conditioned_kernel$log_scale_power) * log_q -
@@ -485,6 +1337,9 @@ rqr_evolution_component_scale <- function(
         shrink_count[[j]] + update$shrink_steps
     }
   }
+  numerical_repair_records <- .rqr_empty_repair_records()
+  mathematically_exact <- isTRUE(evolution$exact_joint_target)
+  numerically_exact <- nrow(numerical_repair_records) == 0L
   list(
     q = exp(log_q),
     diagnostics = list(
@@ -493,7 +1348,16 @@ rqr_evolution_component_scale <- function(
       sweeps = sweeps,
       integrated_root_path = TRUE,
       conditioned_root_path = TRUE,
-      exact_partially_collapsed = TRUE
+      mathematically_exact_partially_collapsed =
+        mathematically_exact,
+      numerically_exact_partially_collapsed =
+        numerically_exact,
+      numerical_repair_count =
+        nrow(numerical_repair_records),
+      numerical_repair_records =
+        numerical_repair_records,
+      exact_partially_collapsed =
+        mathematically_exact && numerically_exact
     ),
     conditioned_kernel = conditioned_kernel
   )

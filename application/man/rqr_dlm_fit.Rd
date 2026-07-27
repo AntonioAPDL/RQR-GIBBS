@@ -82,11 +82,14 @@ and attestation fields.}
 
 \item{mcmc_control}{A fully named list containing supported iteration, seed,
 storage, backend, progress, jitter, and optional exact partially
-collapsed/interwoven component-scale controls. Unknown fields and coercive
-scalar values are rejected.}
+collapsed/interwoven component-scale controls. Unknown fields and
+coercive scalar values are rejected.}
 
 \item{init}{A fully named list of optional initial state paths, latent
 scales, lambda, evolution scales, time-zero states, and RNG state.
+Latent scales may be scalar, observed-site length, or response length;
+missing-site entries are ignored and replaced by the canonical inverse
+loss-rate placeholder.
 \code{theta1} and \code{theta2} remain supported as legacy aliases for
 \code{state_root1} and \code{state_root2}; supplying both forms is an error.
 Continuation-history fields are private to \code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}}.}
@@ -101,3 +104,60 @@ frozen discount templates, and component-scale evolution priors define exact
 generalized-posterior samplers when no numerical repair is used. Adaptive
 discount recursion is an explicitly experimental working update.
 }
+\details{
+\code{mcmc_control} accepts the usual iteration, seed, storage, backend, progress,
+and jitter fields plus seven controls that change the component-scale
+transition kernel:
+\itemize{
+\item \code{component_scale_collapsed_update} (\code{FALSE}) enables the exact one-root
+partially collapsed log-scale slice update;
+\item \code{component_scale_interweave} (\code{FALSE}) enables exact centered/noncentered
+scale interweaving;
+\item \code{component_scale_slice_width} (\code{1}) is the positive log-scale slice width;
+\item \code{component_scale_slice_max_steps} (\code{100}) bounds slice stepping out;
+\item \code{component_scale_slice_max_shrink} (\code{1000}) bounds slice shrinkage;
+\item \code{component_scale_slice_sweeps} (\code{1}) gives the coordinate sweeps per slice
+update; and
+\item \code{component_scale_interweave_cycles} (\code{1}) gives the number of
+centered/noncentered cycles.
+}
+
+These seven fields are valid only with \code{evolution_mode = "component_scale"}
+when they enable a component-scale operation. Slice tuning fields are used
+by whichever collapsed or interwoven slice update is enabled. The default
+component-scale scan uses the centered inverse-Gamma update.
+
+The versioned transition contract records the complete scan. It updates a
+learned loss rate when requested, refreshes the pseudo-AL scales, optionally
+integrates \code{root1} while conditioning on \code{root2} in the partially collapsed
+scale step, draws \code{root1} and then \code{root2} by conditional FFBS, completes
+their time-zero states, applies the declared component-scale update, and
+finishes with a global root-label swap of probability \code{0.5}. Time-zero
+completion is part of every accepted exact DLM transition (fixed covariance,
+frozen discount template, and component scale), independently of whether
+state paths are stored. The experimental adaptive working transition omits
+time-zero completion and records that omission in its kernel contract.
+Component order, root orientation, all seven controls, and this scan order
+are checkpoint- and continuation-bound; changing any of them requires a new
+fit rather than continuation.
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

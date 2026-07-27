@@ -42,8 +42,9 @@ package under **application/**:
   but are excluded from the package source where appropriate; `R CMD check`
   runs the native package contract.
 - **application/vignettes/ordinary-rqr-v1.Rmd** gives a lightweight,
-  executable introduction to native fixed-design RQR and an RQR-DESN readout
-  conditional on an already frozen feature design.
+  executable introduction to native fixed-design RQR, an RQR-DESN readout
+  conditional on an already frozen feature design, and dynamic linear
+  interval-root models.
 - **docs/implementation_notes/rqr_dlm_native_design_20260722.md** freezes the
   exact and experimental evolution-mode contracts.
 
@@ -55,11 +56,25 @@ validator has four separate modes: `preflight`,
 bounded configuration is deliberately disabled; no ordinary-v1 validation
 result is claimed merely from source completion.
 
+The candidate uses separate, exact public-output envelopes for each model
+family. Fixed-design draws and interval evaluations use
+`rqrgibbs_static_draws/1.0.0` and
+`rqrgibbs_interval_prediction/2.0.0`; frozen-design DESN readout outputs use
+`rqrgibbs_desn_draws/1.0.0` and `rqrgibbs_desn_prediction/1.0.0`; and DLM
+draws, fitted interval evaluations, and future roots use
+`rqrgibbs_dlm_draws/1.0.0`, `rqrgibbs_dlm_prediction/1.0.0`, and
+`rqrgibbs_dlm_forecast/1.0.0`. These objects bind interval-root functionals
+and their source contracts. They are not posterior-predictive response
+objects. The DESN schemas qualify a readout conditional on an already frozen
+feature design, not native reservoir construction or re-estimation during
+MCMC.
+
 The reference stage includes a separate four-chain learned-rate F01 sampler
 oracle against deterministic collapsed quadrature. Protected RQR-DLM evidence
-is consumed through a compact five-file companion generated from fresh DLM
-reference and correction bundles; neither gate is counted inside the final
-48-fit static/DESN grid.
+is consumed through a compact five-file companion generated from seven fresh,
+hash-bound DLM roles: reference, two M01 waves, two M02 waves, horizon/M03,
+and the resource envelope. Neither gate is counted inside the final 48-fit
+static/DESN grid.
 
 Fixed evolution covariances, frozen discount templates, and shared
 component-specific inverse-Gamma evolution scales define exact samplers for

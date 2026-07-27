@@ -223,9 +223,14 @@ no-extension rule and does not modify exdqlm.
 
 The fit, checkpoint, and continuation metadata record these choices. The
 checkpoint digest binds the transition-kernel contract, and continuation
-rejects a mismatch between checkpoint, fit metadata, and requested resumed
-kernel. Fit schema `rqrgibbs_fit/1.11.0` and development package version
-`0.1.0.9023` identify the partially collapsed checkpoint contract.
+rejects a mismatch between checkpoint, fit metadata, history, and requested
+resumed kernel. Fit schema `rqrgibbs_fit/1.14.0`, continuation-history schema
+`rqrgibbs_continuation_history/5.0.0`, transition schema
+`rqrgibbs_dlm_transition_kernel/1.0.0`, and development package version
+`0.1.0.9026` identify the partially collapsed checkpoint contract. The fit
+stores this identity under `model_spec$transition_kernel` and
+`model_spec$transition_kernel_digest` for fixed-\(W_t\), frozen-template, and
+component-scale evolutions alike.
 
 ## Provenance-cost boundary
 

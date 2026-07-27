@@ -105,9 +105,71 @@ wave_id <- Sys.getenv(
   "RQR_CORRECTION_WAVE_ID",
   unset = "static_gaussian_T200__target0200__sentinel"
 )
-wave_tag <- if (identical(
-    wave_id, "static_gaussian_T200__target0200__sentinel"
-  )) "wave1" else "wave2"
+reviewed_waves <- c(
+  wave1 = "static_gaussian_T200__target0200__sentinel",
+  wave2 = "local_level_gaussian_T200__target0200__sentinel"
+)
+if (!wave_id %in% unname(reviewed_waves)) {
+  stop(
+    "RQR_CORRECTION_WAVE_ID is not one of the two reviewed waves.",
+    call. = FALSE
+  )
+}
+wave_tag <- names(reviewed_waves)[match(wave_id, reviewed_waves)]
+expected_component_name <- switch(
+  wave_tag, wave1 = "regression", wave2 = "level"
+)
+
+# This is intentionally reconstructed from the frozen M01 protocol rather
+# than copied from a fitted object.  It is duplicated in the compact evidence
+# collector so that a producer-side implementation drift cannot redefine its
+# own acceptance boundary.
+expected_transition_kernel <- list(
+  schema_version = "rqrgibbs_dlm_transition_kernel/1.0.0",
+  evolution_mode = "component_scale",
+  learning_rate_mode = "fixed_rate",
+  time0_state_completion = TRUE,
+  one_root_partially_collapsed = TRUE,
+  collapsed_integrated_root = "root1",
+  collapsed_conditioned_root = "root2",
+  collapsed_log_q_coordinate_order = expected_component_name,
+  scan_order = c(
+    "lambda_fixed", "latent_v_refresh",
+    "component_scale_root1_collapsed", "root1_ffbs",
+    "root1_time0", "root2_ffbs", "root2_time0",
+    "component_scale_centered_noncentered_cycles_1",
+    "global_root_swap"
+  ),
+  collapsed_slice_width = 1,
+  collapsed_slice_sweeps = 3L,
+  collapsed_slice_max_steps = 100L,
+  collapsed_slice_max_shrink = 1000L,
+  centered_inverse_gamma = TRUE,
+  noncentered_slice_interweave = TRUE,
+  interweave_cycles = 1L,
+  interweave_slice_width = 1,
+  interweave_slice_sweeps_per_cycle = 3L,
+  interweave_slice_max_steps = 100L,
+  interweave_slice_max_shrink = 1000L,
+  global_root_swap_probability = 0.5,
+  target_change = FALSE
+)
+expected_transition_kernel_digest <- digest::digest(
+  expected_transition_kernel, algo = "sha256", serialize = TRUE
+)
+expected_transition_kernel_invariant <- list(
+  schema_version = "rqrgibbs_dlm_transition_kernel_invariant/1.0.0",
+  transition_kernel = expected_transition_kernel[
+    setdiff(
+      names(expected_transition_kernel),
+      "collapsed_log_q_coordinate_order"
+    )
+  ]
+)
+expected_transition_kernel_invariant_digest <- digest::digest(
+  expected_transition_kernel_invariant,
+  algo = "sha256", serialize = TRUE
+)
 wave_plan <- rqr_confirm_wave_plan(contract, planning = "maximum")
 wave_tasks <- wave_plan[
   wave_plan$wave_id == wave_id &
@@ -195,6 +257,30 @@ results <- parallel::mclapply(
         provenance_control = provenance_control,
         profile_name = job$profile
       )
+      observed_transition_kernel <-
+        value$fit$checkpoint_state$transition_kernel
+      observed_transition_kernel_digest <- digest::digest(
+        observed_transition_kernel, algo = "sha256", serialize = TRUE
+      )
+      transition_kernel_contract_match <-
+        identical(observed_transition_kernel, expected_transition_kernel) &&
+        identical(
+          value$fit$checkpoint_state$transition_kernel_digest,
+          expected_transition_kernel_digest
+        ) &&
+        identical(
+          observed_transition_kernel_digest,
+          expected_transition_kernel_digest
+        )
+      if (!isTRUE(transition_kernel_contract_match)) {
+        stop(
+          paste(
+            "The fitted M01 transition kernel does not match the",
+            "independently frozen complete role contract."
+          ),
+          call. = FALSE
+        )
+      }
       scalars <- rqr_confirm_scalar_draws(
         value, generated, contract, "M01"
       )
@@ -207,6 +293,30 @@ results <- parallel::mclapply(
           isTRUE(value$fit$provenance$reproducibility_eligible),
         runtime_tree_digest =
           value$fit$provenance$primary_runtime_tree_digest,
+        numerical_repair_count =
+          value$fit$model_spec$numerical_repair_count,
+        cumulative_numerical_repair_count =
+          value$fit$model_spec$cumulative_numerical_repair_count,
+        exact_joint_target =
+          isTRUE(value$fit$model_spec$exact_joint_target),
+        target_numerical_eligible =
+          isTRUE(value$fit$model_spec$target_numerical_eligible),
+        transition_kernel_schema =
+          value$fit$checkpoint_state$transition_kernel_schema,
+        transition_kernel_digest =
+          value$fit$checkpoint_state$transition_kernel_digest,
+        transition_kernel_contract = observed_transition_kernel,
+        transition_kernel_contract_digest =
+          observed_transition_kernel_digest,
+        transition_kernel_contract_match =
+          transition_kernel_contract_match,
+        one_root_partially_collapsed = isTRUE(
+          value$fit$checkpoint_state$transition_kernel$
+            one_root_partially_collapsed
+        ),
+        collapsed_integrated_root =
+          value$fit$checkpoint_state$transition_kernel$
+            collapsed_integrated_root,
         scalars = scalars,
         peak_RSS_KiB = rqr_confirm_process_peak_rss_kib()
       )
@@ -229,6 +339,25 @@ result_keys <- vapply(
   results, function(result) job_key(result$job), character(1L)
 )
 task_keys <- unique(result_keys)
+collapse_result_field <- function(selected, field, default = "") {
+  paste(
+    vapply(
+      selected,
+      function(result) {
+        value <- result[[field]] %||% default
+        if (is.logical(value)) {
+          if (length(value) != 1L || is.na(value)) {
+            return(default)
+          }
+          return(if (isTRUE(value)) "TRUE" else "FALSE")
+        }
+        as.character(value)[[1L]]
+      },
+      character(1L)
+    ),
+    collapse = "|"
+  )
+}
 peak_values <- vapply(
   results,
   function(result) as.numeric(result$peak_RSS_KiB %||% NA_real_),
@@ -306,11 +435,99 @@ for (index in seq_along(task_keys)) {
       if (nrow(q_row)) q_row$ess_tail[[1L]] else NA_real_,
     log_q_1_mcse_over_sd =
       if (nrow(q_row)) q_row$mcse_over_sd[[1L]] else NA_real_,
+    transition_kernel_fit_count = length(selected),
+    transition_kernel_schemas = collapse_result_field(
+      selected, "transition_kernel_schema"
+    ),
+    transition_kernel_digests = collapse_result_field(
+      selected, "transition_kernel_digest"
+    ),
+    transition_kernel_contract_digests = collapse_result_field(
+      selected, "transition_kernel_contract_digest"
+    ),
+    transition_kernel_contract_matches = collapse_result_field(
+      selected, "transition_kernel_contract_match"
+    ),
     stringsAsFactors = FALSE
   )
 }
 diagnostics <- do.call(rbind, diagnostics)
 summary <- do.call(rbind, summary_rows)
+successful_results <- results[
+  vapply(results, function(result) isTRUE(result$ok), logical(1L))
+]
+all_fits_exact_target_preserving <-
+  length(successful_results) == length(results) &&
+  all(vapply(
+    successful_results,
+    function(result) {
+      identical(result$numerical_repair_count, 0L) &&
+        identical(result$cumulative_numerical_repair_count, 0L) &&
+        isTRUE(result$exact_joint_target) &&
+        isTRUE(result$target_numerical_eligible) &&
+        identical(
+          result$transition_kernel_schema,
+          "rqrgibbs_dlm_transition_kernel/1.0.0"
+        ) &&
+        grepl(
+          "^[0-9a-f]{64}$",
+          result$transition_kernel_digest %||% ""
+        ) &&
+        identical(
+          result$transition_kernel_contract,
+          expected_transition_kernel
+        ) &&
+        identical(
+          result$transition_kernel_contract_digest,
+          expected_transition_kernel_digest
+        ) &&
+        isTRUE(result$transition_kernel_contract_match) &&
+        isTRUE(result$one_root_partially_collapsed) &&
+        identical(result$collapsed_integrated_root, "root1")
+    },
+    logical(1L)
+  ))
+transition_kernel_digests <- unique(vapply(
+  successful_results,
+  function(result) {
+    as.character(result$transition_kernel_digest %||% NA_character_)
+  },
+  character(1L)
+))
+all_fit_transition_contracts_complete <-
+  length(successful_results) == length(results) &&
+  all(vapply(
+    successful_results,
+    function(result) {
+      is.list(result$transition_kernel_contract) &&
+        identical(
+          names(result$transition_kernel_contract),
+          names(expected_transition_kernel)
+        ) &&
+        grepl(
+          "^[0-9a-f]{64}$",
+          result$transition_kernel_contract_digest %||% ""
+        )
+    },
+    logical(1L)
+  ))
+all_fit_transition_contracts_match_expected <-
+  all_fit_transition_contracts_complete &&
+  all(vapply(
+    successful_results,
+    function(result) {
+      isTRUE(result$transition_kernel_contract_match) &&
+        identical(
+          result$transition_kernel_contract,
+          expected_transition_kernel
+        ) &&
+        identical(
+          result$transition_kernel_contract_digest,
+          expected_transition_kernel_digest
+        )
+    },
+    logical(1L)
+  ))
 
 atomic_rds <- function(value, path) {
   temporary <- tempfile(
@@ -335,7 +552,7 @@ rqr_confirm_atomic_write_csv(
   summary, file.path(output_root, paste0(wave_tag, "_M01_summary.csv"))
 )
 manifest <- list(
-  schema_version = "rqrgibbs_dlm_wave_correction_validation/2.0.0",
+  schema_version = "rqrgibbs_dlm_wave_correction_validation/2.2.0",
   source_commit = source_commit,
   source_clean = !nzchar(source_status),
   package_version = as.character(utils::packageVersion("rqrgibbs")),
@@ -366,7 +583,23 @@ manifest <- list(
     contract$config$schedules$dynamic_rqr_component_scale_standard,
   sentinel_component_scale_schedule =
     contract$config$schedules$dynamic_rqr_component_scale_sentinel,
-  exact_target_preserving_kernel = TRUE,
+  exact_target_preserving_kernel = all_fits_exact_target_preserving,
+  transition_kernel_schema =
+    "rqrgibbs_dlm_transition_kernel/1.0.0",
+  unique_transition_kernel_digests = transition_kernel_digests,
+  expected_transition_kernel_contract = expected_transition_kernel,
+  expected_transition_kernel_contract_digest =
+    expected_transition_kernel_digest,
+  transition_kernel_invariant_schema =
+    "rqrgibbs_dlm_transition_kernel_invariant/1.0.0",
+  expected_transition_kernel_invariant =
+    expected_transition_kernel_invariant,
+  expected_transition_kernel_invariant_digest =
+    expected_transition_kernel_invariant_digest,
+  all_fit_transition_contracts_complete =
+    all_fit_transition_contracts_complete,
+  all_fit_transition_contracts_match_expected =
+    all_fit_transition_contracts_match_expected,
   comparative_simulation_metrics_used = FALSE,
   failed_outputs_reused = FALSE,
   all_fits_succeeded = all(vapply(results, `[[`, logical(1L), "ok")),
@@ -425,6 +658,16 @@ cat(sprintf(
   nrow(diagnostics)
 ))
 if (!isTRUE(manifest$all_fits_succeeded) ||
+    !isTRUE(manifest$exact_target_preserving_kernel) ||
+    length(manifest$unique_transition_kernel_digests) != 1L ||
+    !identical(
+      manifest$unique_transition_kernel_digests,
+      manifest$expected_transition_kernel_contract_digest
+    ) ||
+    !isTRUE(manifest$all_fit_transition_contracts_complete) ||
+    !isTRUE(
+      manifest$all_fit_transition_contracts_match_expected
+    ) ||
     !isTRUE(manifest$all_diagnostics_passed) ||
     !isTRUE(manifest$resource_margin_pass) ||
     (nzchar(expected_commit) &&

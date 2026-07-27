@@ -1,11 +1,19 @@
 # Frozen-design ordinary RQR-DESN integration.
 
 .rqr_desn_fit_schema <- function() {
-  "rqrgibbs_desn_fit/1.1.0"
+  "rqrgibbs_desn_fit/1.2.0"
 }
 
 .rqr_desn_materialization_verification_schema <- function() {
-  "rqrgibbs_desn_materialization_verification/1.0.0"
+  "rqrgibbs_desn_materialization_verification/1.1.0"
+}
+
+.rqr_desn_draws_schema <- function() {
+  "rqrgibbs_desn_draws/1.0.0"
+}
+
+.rqr_desn_prediction_schema <- function() {
+  "rqrgibbs_desn_prediction/1.0.0"
 }
 
 .rqr_desn_materialization_state_matches <- function(receipt, state) {
@@ -265,7 +273,18 @@
   } else {
     "verified_current_isolated_materialization"
   }
+  verification_fields <- c(
+    "schema_version", "reference_materializer",
+    "receipt_valid", "receipt_digest",
+    "materialized_design_payload_digest",
+    "external_state_present", "external_state_digest",
+    "external_state_match", "runtime_attestation_sha256",
+    "runtime_attestation_sha256_verified",
+    "materialization_reproducibility_eligible", "status"
+  )
   verification_valid <- is.list(verification) &&
+    !is.object(verification) &&
+    identical(names(verification), verification_fields) &&
     identical(
       verification$schema_version,
       .rqr_desn_materialization_verification_schema()
@@ -432,13 +451,25 @@
 }
 
 .rqr_validate_desn_fit_envelope <- function(object) {
-  if (!inherits(object, "rqr_desn_fit") ||
+  .rqr_desn_assert_exact_list_object(
+    object, c("rqr_desn_fit", "rqr_fit"),
+    "RQR-DESN fit"
+  )
+  expected_outer_fields <- c(
+    "schema_version", "fit", "design", "X", "y_fit",
+    "reservoir", "states", "reference_shell", "meta",
+    "model_spec", "summary", "note"
+  )
+  if (!identical(names(object), expected_outer_fields) ||
       !identical(
         object$schema_version, .rqr_desn_fit_schema()
-      ) ||
-      !inherits(object$fit, "rqr_mcmc")) {
+      )) {
     stop("Expected a supported rqr_desn_fit object.", call. = FALSE)
   }
+  .rqr_desn_assert_exact_list_object(
+    object$fit, c("rqr_mcmc", "rqr_fit"),
+    "embedded fixed-design RQR fit"
+  )
   rqr_validate_desn_design(object$design)
   fit <- object$fit
   .rqr_validate_static_fit_envelope(fit)
@@ -542,6 +573,32 @@
   invisible(TRUE)
 }
 
+.rqr_desn_validate_rhs_intercept <- function(design, prior) {
+  if (!identical(prior$type, "rhs_ns")) return(invisible(TRUE))
+  intercept <- design$feature_schema$intercept
+  exact_one <- which(vapply(
+    seq_len(ncol(design$X)),
+    function(index) all(design$X[, index] == 1),
+    logical(1L)
+  ))
+  if (!isTRUE(intercept$present) ||
+      length(exact_one) != 1L ||
+      !identical(exact_one, intercept$index) ||
+      !identical(
+        prior$hypers$intercept_name,
+        intercept$name
+      )) {
+    stop(
+      paste(
+        "RHS-NS requires exactly one constant-one column and its",
+        "intercept_name must equal the DESN design declaration."
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
 .rqr_desn_adapter_feature_names <- function(X) {
   feature_names <- colnames(X)
   if (is.null(feature_names) ||
@@ -591,6 +648,113 @@
   y
 }
 
+.rqr_desn_reference_materializer_arguments <- function(args) {
+  allowed <- c(
+    "D", "n", "n_tilde", "m", "input_mode",
+    "standardize_inputs", "input_bound",
+    "win_scale_global", "win_scale_bias", "win_scale_lags",
+    "alpha", "rho", "act_f", "act_k", "pi_w", "pi_in",
+    "washout", "add_bias", "seed"
+  )
+  if (!is.list(args) || is.object(args)) {
+    stop(
+      "Reference DESN materializer arguments must be a plain named list.",
+      call. = FALSE
+    )
+  }
+  .rqr_validate_named_list_fields(
+    args, "reference DESN materializer arguments", allowed
+  )
+  .rqr_desn_assert_plain(
+    args, "reference DESN materializer arguments"
+  )
+  if ("input_mode" %in% names(args) &&
+      !identical(args$input_mode, "raw_y_lags")) {
+    stop(
+      paste(
+        "The ordinary-v1 reference materializer permits only",
+        "the causal raw_y_lags input mode."
+      ),
+      call. = FALSE
+    )
+  }
+  if ("standardize_inputs" %in% names(args) &&
+      !identical(args$standardize_inputs, FALSE)) {
+    stop(
+      paste(
+        "The reference materializer forbids full-history input",
+        "standardization because it is not prefix-safe."
+      ),
+      call. = FALSE
+    )
+  }
+  for (field in intersect(c("act_f", "act_k"), names(args))) {
+    value <- args[[field]]
+    if (!is.character(value) || length(value) != 1L ||
+        is.na(value) ||
+        !tolower(value) %in% c("tanh", "relu", "identity")) {
+      stop(
+        sprintf(
+          "Reference materializer %s must be a whitelisted activation name.",
+          field
+        ),
+        call. = FALSE
+      )
+    }
+    args[[field]] <- tolower(value)
+  }
+  if ("input_bound" %in% names(args)) {
+    if (!is.character(args$input_bound) ||
+        length(args$input_bound) != 1L ||
+        is.na(args$input_bound) ||
+        !args$input_bound %in% c("none", "tanh")) {
+      stop(
+        "input_bound must be exactly 'none' or 'tanh'.",
+        call. = FALSE
+      )
+    }
+  }
+  if ("add_bias" %in% names(args)) {
+    args$add_bias <- .rqr_scalar_logical(
+      args$add_bias, "reference materializer add_bias"
+    )
+  }
+  if ("seed" %in% names(args)) {
+    args$seed <- .rqr_scalar_integer(
+      args$seed, "reference materializer seed", 0L
+    )
+  }
+  numeric_finite <- intersect(
+    c(
+      "D", "n", "n_tilde", "m", "win_scale_global",
+      "win_scale_bias", "win_scale_lags", "alpha", "rho",
+      "pi_w", "pi_in", "washout"
+    ),
+    names(args)
+  )
+  for (field in numeric_finite) {
+    value <- args[[field]]
+    if (!is.numeric(value) || is.object(value) ||
+        !is.null(dim(value)) || anyNA(value) ||
+        any(!is.finite(value))) {
+      stop(
+        sprintf(
+          "Reference materializer %s must be a plain finite numeric vector.",
+          field
+        ),
+        call. = FALSE
+      )
+    }
+  }
+  if (!"seed" %in% names(args)) {
+    stop(
+      "Reference DESN materialization requires an explicit seed.",
+      call. = FALSE
+    )
+  }
+  args
+}
+
 .rqr_materialize_exdqlm_desn_design <- function(
     y, args, provenance_control, design_metadata = list()) {
   y <- .rqr_desn_response_vector(
@@ -600,10 +764,7 @@
     design_metadata, "design_metadata",
     c("builder", "reservoir", "driver", "causal", "time", "terminal")
   )
-  .rqr_validate_named_list_fields(
-    args, "reservoir arguments",
-    unique(names(args) %||% character(0))
-  )
+  args <- .rqr_desn_reference_materializer_arguments(args)
   provenance_control <- .rqr_require_external_repository(
     provenance_control, "exdqlm",
     .rqr_pinned_exdqlm_commit(), runtime_package = "exdqlm"
@@ -619,7 +780,8 @@
   }
   protected_builder <- c(
     "id", "version", "source_commit", "arguments_digest",
-    "adapter", "materialization_receipt"
+    "adapter", "materialization_manifest",
+    "materialization_receipt"
   )
   protected_reservoir <- c(
     "digest", "source_package", "source_commit"
@@ -658,8 +820,11 @@
     )
   }
   attestation_path <- exdqlm_spec$runtime_attestation
+  qdesn_design_builder <- getExportedValue(
+    "exdqlm", "qdesn_fit_vb"
+  )
   shell <- do.call(
-    qdesn_fit_vb,
+    qdesn_design_builder,
     c(
       list(
         y = as.numeric(y), p0 = 0.5,
@@ -682,6 +847,21 @@
   feature_names <- .rqr_desn_adapter_feature_names(X)
   colnames(X) <- feature_names
   intercept <- .rqr_desn_adapter_intercept(X, feature_names)
+  keep_idx <- shell$meta$keep_idx %||% NULL
+  if (!is.integer(keep_idx) ||
+      length(keep_idx) != nrow(X) ||
+      anyNA(keep_idx) || any(keep_idx < 1L) ||
+      any(keep_idx > length(y)) ||
+      any(diff(keep_idx) <= 0L) ||
+      !identical(y_fit, y[keep_idx])) {
+    stop(
+      paste(
+        "The exdqlm adapter must expose the actual strictly increasing",
+        "keep_idx, aligned exactly with y_fit."
+      ),
+      call. = FALSE
+    )
+  }
   arguments_digest <- .rqr_digest(args)
   builder <- utils::modifyList(list(
     id = .rqr_desn_reference_builder_id(),
@@ -695,29 +875,88 @@
     source_package = "exdqlm",
     source_commit = .rqr_pinned_exdqlm_commit()
   ), reservoir_overrides)
-  original_index <- shell$meta$fit_time_index %||%
-    shell$meta$time_index %||% NULL
-  if (is.null(original_index) ||
-      length(original_index) != nrow(X) ||
-      any(!is.finite(original_index)) ||
-      any(diff(original_index) <= 0)) {
-    original_index <- seq_len(nrow(X))
-  }
-  driver <- design_metadata$driver %||% list(
+  materialization_manifest <-
+    .rqr_desn_materialization_manifest(
+      source_response = y,
+      keep_idx = keep_idx,
+      X = X,
+      y_fit = y_fit,
+      feature_names = feature_names,
+      reservoir_digest = reservoir$digest
+    )
+  builder$materialization_manifest <-
+    materialization_manifest
+  canonical_driver <- list(
     type = "observed_lagged_response_history",
-    response_simulation = FALSE
+    response_simulation = FALSE,
+    source_response_digest =
+      materialization_manifest$source_response_digest,
+    source_response_length =
+      materialization_manifest$source_response_length
   )
-  causal <- design_metadata$causal %||% list(
+  driver_overrides <- design_metadata$driver %||% list()
+  if (!is.list(driver_overrides) ||
+      is.object(driver_overrides)) {
+    stop(
+      "design_metadata$driver must be a plain named list.",
+      call. = FALSE
+    )
+  }
+  protected_driver <- names(canonical_driver)
+  supplied_protected <- intersect(
+    names(driver_overrides) %||% character(0),
+    protected_driver
+  )
+  if (length(supplied_protected) &&
+      any(!vapply(
+        supplied_protected,
+        function(field) identical(
+          driver_overrides[[field]],
+          canonical_driver[[field]]
+        ),
+        logical(1L)
+      ))) {
+    stop(
+      paste(
+        "design_metadata cannot override the reference materializer's",
+        "causal driver or source-response binding."
+      ),
+      call. = FALSE
+    )
+  }
+  driver <- utils::modifyList(
+    canonical_driver, driver_overrides, keep.null = TRUE
+  )
+  canonical_causal <- .rqr_desn_causal(list(
     uses_current_response = FALSE,
     uses_future_response = FALSE,
+    minimum_response_lag = 1L,
+    prefix_safe = TRUE,
     contract =
-      "row_t_uses_only_information_available_before_t"
-  )
+      "row_t_uses_only_response_information_strictly_before_t"
+  ))
+  causal <- if (is.null(design_metadata$causal)) {
+    canonical_causal
+  } else {
+    candidate_causal <- .rqr_desn_causal(
+      design_metadata$causal
+    )
+    if (!identical(candidate_causal, canonical_causal)) {
+      stop(
+        paste(
+          "design_metadata$causal must equal the reference",
+          "materializer's strict-prefix causal contract."
+        ),
+        call. = FALSE
+      )
+    }
+    candidate_causal
+  }
   time <- design_metadata$time %||% list()
   terminal <- design_metadata$terminal %||%
     list(available = FALSE)
   preliminary_design <- rqr_desn_design(
-    X = X, y = y_fit, time_index = original_index,
+    X = X, y = y_fit, time_index = keep_idx,
     feature_names = feature_names, intercept = intercept,
     builder = builder, reservoir = reservoir,
     driver = driver, causal = causal, time = time,
@@ -743,6 +982,14 @@
     materialized_design_payload_digest = .rqr_desn_sha256(
       .rqr_desn_materialization_payload(preliminary_design)
     ),
+    source_response_digest =
+      materialization_manifest$source_response_digest,
+    source_response_length =
+      materialization_manifest$source_response_length,
+    keep_idx_digest =
+      materialization_manifest$keep_idx_digest,
+    materialization_manifest_digest =
+      .rqr_desn_sha256(materialization_manifest),
     runtime_source_match =
       exdqlm_state$runtime_source_match,
     reproducibility_eligible =
@@ -750,7 +997,7 @@
   )
   builder$materialization_receipt <- materialization_receipt
   design <- rqr_desn_design(
-    X = X, y = y_fit, time_index = original_index,
+    X = X, y = y_fit, time_index = keep_idx,
     feature_names = feature_names, intercept = intercept,
     builder = builder, reservoir = reservoir,
     driver = driver, causal = causal, time = time,
@@ -1044,8 +1291,17 @@ rqr_desn_fit <- function(
           )
         }
         rhs <- mcmc_args$beta_rhs %||% list()
-        rhs$intercept_name <- rhs$intercept_name %||%
-          intercept$name
+        if (!is.null(rhs$intercept_name) &&
+            !identical(rhs$intercept_name, intercept$name)) {
+          stop(
+            paste(
+              "mcmc_args$beta_rhs$intercept_name must exactly",
+              "equal the DESN design-declared intercept."
+            ),
+            call. = FALSE
+          )
+        }
+        rhs$intercept_name <- intercept$name
         beta_prior_obj <- rqr_beta_prior(
           "rhs_ns", rhs_ns = rhs
         )
@@ -1069,6 +1325,12 @@ rqr_desn_fit <- function(
         )
       }
     }
+    beta_prior_obj <- .rqr_beta_prior_coerce(
+      beta_prior_obj, X = design$X
+    )
+    .rqr_desn_validate_rhs_intercept(
+      design, beta_prior_obj
+    )
     fit <- rqr_mcmc_fit(
       y = design$y, X = design$X,
       coverage_level = coverage_level,
@@ -1104,47 +1366,315 @@ rqr_desn_continue <- function(object, ...) {
 
 #' Extract root-coefficient draws from a frozen RQR-DESN fit
 #'
-#' Draw extraction delegates to the validated fixed-design readout while
-#' preserving the frozen-design envelope.
+#' Draw extraction reads the already validated fixed-design payload directly
+#' and returns a versioned envelope bound to the exact fit checkpoint, target,
+#' retained draws, and frozen design. Bare or foreign coefficient matrices are
+#' not interchangeable with this envelope.
 #'
 #' @param object An `rqr_desn_fit`.
 #' @param nd Number of retained draws to return. `NULL` keeps all draws.
 #' @param seed Optional seed used only when draws are subsampled.
-#' @param ... Reserved; passed to the fixed-design extraction method.
-#' @return A list containing root-coefficient, loss-rate, and draw-index
-#'   quantities from the fitted readout.
+#' @param ... Reserved; supplying an argument is an error.
+#' @return A source-bound `rqr_desn_draws` object containing root-coefficient,
+#'   loss-rate, and draw-index quantities from the fitted readout.
 #' @export
 rqr_posterior_draws.rqr_desn_fit <- function(
     object, nd = NULL, seed = NULL, ...) {
+  .rqr_reject_dots(
+    list(...), "rqr_posterior_draws.rqr_desn_fit"
+  )
   .rqr_validate_desn_fit_envelope(object)
-  rqr_posterior_draws(
-    object$fit, nd = nd, seed = seed, ...
+  n_save <- nrow(object$fit$samp.beta_root1)
+  index <- if (is.null(nd)) {
+    if (!is.null(seed)) {
+      stop(
+        "seed must be NULL when nd is NULL because no subsampling occurs.",
+        call. = FALSE
+      )
+    }
+    seq_len(n_save)
+  } else {
+    nd <- .rqr_scalar_integer(nd, "nd", 1L)
+    if (!is.null(seed)) {
+      seed <- .rqr_scalar_integer(seed, "seed", 0L)
+      set.seed(seed)
+    }
+    sample.int(n_save, nd, replace = nd > n_save)
+  }
+  out <- list(
+    schema_version = .rqr_desn_draws_schema(),
+    beta_root1 = object$fit$samp.beta_root1[
+      index, , drop = FALSE
+    ],
+    beta_root2 = object$fit$samp.beta_root2[
+      index, , drop = FALSE
+    ],
+    lambda = as.numeric(object$fit$samp.lambda[index]),
+    draw_index = as.integer(index),
+    nd = as.integer(length(index)),
+    source = .rqr_desn_draw_source(object),
+    source_bound = TRUE,
+    reproducibility_eligible =
+      isTRUE(object$model_spec$reproducibility_eligible),
+    promotion_eligible =
+      isTRUE(object$model_spec$promotion_eligible),
+    response_predictive_draws = FALSE
+  )
+  out$semantic_digest <- .rqr_desn_sha256(out)
+  class(out) <- c("rqr_desn_draws", "list")
+  .rqr_validate_desn_draws(object, out)
+  out
+}
+
+.rqr_desn_draw_source <- function(object) {
+  list(
+    schema_version = "rqrgibbs_desn_draw_source/1.0.0",
+    fit_checkpoint_digest = object$fit$checkpoint_digest,
+    retained_draws_digest =
+      object$fit$retained_draws_digest,
+    static_target_digest =
+      object$fit$checkpoint_state$target_digest,
+    design_semantic_digest = object$design$semantic_digest,
+    embedding_contract_digest =
+      .rqr_digest(object$fit$embedding_contract)
   )
 }
 
-#' Evaluate interval roots from a frozen RQR-DESN fit
-#'
-#' Prefer a validated [rqr_desn_future_design()] so that feature order,
-#' parentage, and evaluation semantics are explicit. The legacy `X_new` route
-#' accepts an explicit feature matrix but is labeled non-promotable. Neither
-#' route simulates a response.
-#'
-#' @param object An `rqr_desn_fit`.
-#' @param X_new Optional legacy explicit feature matrix in the exact fitted
-#'   feature order.
-#' @param future_design Preferred validated future-design contract.
-#' @param nd Number of retained readout draws to use when `draws` is `NULL`.
-#' @param draws Optional output from [rqr_posterior_draws()] for this fit.
-#' @param seed Optional seed used only when draws are subsampled.
-#' @param ... Reserved; passed to the fixed-design evaluation method.
-#' @return A fixed-design interval-root evaluation augmented with frozen-design
-#'   parentage, semantics, and eligibility metadata.
-#' @export
-predict_interval.rqr_desn_fit <- function(
-    object, X_new = NULL, future_design = NULL,
-    nd = NULL, draws = NULL, seed = NULL, ...) {
+.rqr_validate_desn_draws <- function(object, draws) {
   .rqr_validate_desn_fit_envelope(object)
+  .rqr_desn_assert_exact_list_object(
+    draws, c("rqr_desn_draws", "list"),
+    "RQR-DESN posterior draws"
+  )
+  expected_fields <- c(
+    "schema_version", "beta_root1", "beta_root2",
+    "lambda", "draw_index", "nd", "source", "source_bound",
+    "reproducibility_eligible", "promotion_eligible",
+    "response_predictive_draws", "semantic_digest"
+  )
+  payload <- draws[setdiff(expected_fields, "semantic_digest")]
+  static_payload <- list(
+    beta_root1 = draws$beta_root1,
+    beta_root2 = draws$beta_root2,
+    lambda = draws$lambda,
+    draw_index = draws$draw_index,
+    nd = draws$nd
+  )
+  if (!identical(names(draws), expected_fields) ||
+      !identical(draws$schema_version, .rqr_desn_draws_schema()) ||
+      !is.list(draws$source) || is.object(draws$source) ||
+      !identical(
+        names(draws$source),
+        names(.rqr_desn_draw_source(object))
+      ) ||
+      !identical(draws$source, .rqr_desn_draw_source(object)) ||
+      !identical(draws$source_bound, TRUE) ||
+      !identical(
+        draws$reproducibility_eligible,
+        isTRUE(object$model_spec$reproducibility_eligible)
+      ) ||
+      !identical(
+        draws$promotion_eligible,
+        isTRUE(object$model_spec$promotion_eligible)
+      ) ||
+      !identical(draws$response_predictive_draws, FALSE) ||
+      !identical(
+        draws$semantic_digest,
+        .rqr_desn_sha256(payload)
+      )) {
+    stop(
+      paste(
+        "RQR-DESN posterior draws are not bound to the exact",
+        "source fit, design, target, and retained-draw contract."
+      ),
+      call. = FALSE
+    )
+  }
+  canonical <- .rqr_validate_static_draws(
+    object$fit, static_payload
+  )
+  if (!identical(draws$beta_root1, canonical$beta_root1) ||
+      !identical(draws$beta_root2, canonical$beta_root2) ||
+      !identical(draws$lambda, canonical$lambda) ||
+      !identical(draws$draw_index, canonical$draw_index) ||
+      !identical(draws$nd, canonical$nd)) {
+    stop(
+      "The RQR-DESN draw payload is not canonical for its source fit.",
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+.rqr_desn_build_prediction <- function(
+    object, X_evaluation, future_design, draws,
+    evaluation_api) {
   legacy_matrix <- is.null(future_design)
+  eta1 <- X_evaluation %*% t(draws$beta_root1)
+  eta2 <- X_evaluation %*% t(draws$beta_root2)
+  lower <- pmin(eta1, eta2)
+  upper <- pmax(eta1, eta2)
+  future_semantics <- if (legacy_matrix) {
+    "legacy_explicit_matrix"
+  } else {
+    future_design$semantics
+  }
+  out <- list(
+    schema_version = .rqr_desn_prediction_schema(),
+    evaluation_api = evaluation_api,
+    X_evaluation = X_evaluation,
+    lower_draws = lower,
+    upper_draws = upper,
+    midpoint_draws = 0.5 * (lower + upper),
+    width_draws = upper - lower,
+    lower_mean = rowMeans(lower),
+    upper_mean = rowMeans(upper),
+    midpoint_mean = rowMeans(0.5 * (lower + upper)),
+    width_mean = rowMeans(upper - lower),
+    draws = draws,
+    model_spec = object$model_spec,
+    fit_checkpoint_digest = object$fit$checkpoint_digest,
+    new_design_digest = .rqr_digest(list(
+      X_new = X_evaluation,
+      column_names = colnames(X_evaluation),
+      fit_design_digest =
+        object$fit$data_contract$design_digest,
+      desn_design_digest = object$design$semantic_digest
+    )),
+    draw_index = draws$draw_index,
+    future_design = future_design,
+    future_semantics = future_semantics,
+    design_parent_digest = object$design$semantic_digest,
+    future_contract_verified = !legacy_matrix,
+    legacy_future_matrix = legacy_matrix,
+    parent_design_materialization_external_binding_verified =
+      isTRUE(
+        object$model_spec$
+          design_materialization_external_binding_verified
+      ),
+    parent_fit_reproducibility_eligible =
+      isTRUE(object$model_spec$reproducibility_eligible),
+    parent_fit_promotion_eligible =
+      isTRUE(object$model_spec$promotion_eligible),
+    future_external_provenance_bound = FALSE,
+    future_reproducibility_eligible = FALSE,
+    reproducibility_eligible = FALSE,
+    promotion_eligible = FALSE,
+    promotion_status = if (legacy_matrix) {
+      "legacy_explicit_matrix_nonpromotable"
+    } else {
+      "verified_future_contract_unattested_materialization"
+    },
+    response_predictive_draws = FALSE,
+    H = as.integer(nrow(X_evaluation)),
+    evaluation_semantics = future_semantics,
+    origin_fixed = if (legacy_matrix) {
+      NA
+    } else {
+      isTRUE(future_design$driver$origin_fixed)
+    },
+    interpretation = if (legacy_matrix) {
+      paste(
+        "Future interval-root functions conditional on a legacy explicit",
+        "feature matrix; this path is non-promotable and defines no future",
+        "response distribution."
+      )
+    } else {
+      paste(
+        "Future interval-root functions conditional on a verified frozen",
+        "future-design contract; no future response distribution is defined."
+      )
+    }
+  )
+  out$semantic_digest <- .rqr_desn_sha256(out)
+  class(out) <- c("rqr_desn_prediction", "list")
+  out
+}
+
+.rqr_validate_desn_prediction <- function(object, prediction) {
+  .rqr_validate_desn_fit_envelope(object)
+  .rqr_desn_assert_exact_list_object(
+    prediction, c("rqr_desn_prediction", "list"),
+    "RQR-DESN prediction"
+  )
+  expected_fields <- c(
+    "schema_version", "evaluation_api", "X_evaluation",
+    "lower_draws", "upper_draws", "midpoint_draws",
+    "width_draws", "lower_mean", "upper_mean",
+    "midpoint_mean", "width_mean", "draws", "model_spec",
+    "fit_checkpoint_digest", "new_design_digest",
+    "draw_index", "future_design", "future_semantics",
+    "design_parent_digest", "future_contract_verified",
+    "legacy_future_matrix",
+    "parent_design_materialization_external_binding_verified",
+    "parent_fit_reproducibility_eligible",
+    "parent_fit_promotion_eligible",
+    "future_external_provenance_bound",
+    "future_reproducibility_eligible",
+    "reproducibility_eligible", "promotion_eligible",
+    "promotion_status", "response_predictive_draws", "H",
+    "evaluation_semantics", "origin_fixed", "interpretation",
+    "semantic_digest"
+  )
+  if (!identical(names(prediction), expected_fields) ||
+      !identical(
+        prediction$schema_version,
+        .rqr_desn_prediction_schema()
+      ) ||
+      !is.character(prediction$evaluation_api) ||
+      length(prediction$evaluation_api) != 1L ||
+      is.na(prediction$evaluation_api) ||
+      !prediction$evaluation_api %in%
+        c("predict_interval", "forecast_paths")) {
+    stop(
+      "The RQR-DESN prediction envelope is noncanonical.",
+      call. = FALSE
+    )
+  }
+  .rqr_validate_desn_draws(object, prediction$draws)
+  future <- prediction$future_design
+  if (is.null(future)) {
+    X <- .rqr_desn_explicit_future_matrix(
+      prediction$X_evaluation,
+      object$design,
+      "prediction$X_evaluation"
+    )
+  } else {
+    rqr_validate_desn_future_design(
+      future, parent_design = object$design
+    )
+    X <- future$X
+    if (!identical(X, prediction$X_evaluation)) {
+      stop(
+        "The prediction matrix differs from its future-design contract.",
+        call. = FALSE
+      )
+    }
+  }
+  expected <- .rqr_desn_build_prediction(
+    object = object,
+    X_evaluation = X,
+    future_design = future,
+    draws = prediction$draws,
+    evaluation_api = prediction$evaluation_api
+  )
+  if (!identical(prediction, expected)) {
+    stop(
+      paste(
+        "The RQR-DESN prediction digest, roots, source binding,",
+        "or no-response-prediction semantics are inconsistent."
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+.rqr_desn_predict_impl <- function(
+    object, X_new = NULL, future_design = NULL,
+    nd = NULL, draws = NULL, seed = NULL,
+    evaluation_api = "predict_interval") {
+  .rqr_validate_desn_fit_envelope(object)
   if (!is.null(future_design)) {
     if (!is.null(X_new)) {
       stop("Supply future_design or X_new, not both.", call. = FALSE)
@@ -1167,45 +1697,70 @@ predict_interval.rqr_desn_fit <- function(
       call. = FALSE
     )
   }
-  result <- predict_interval(
-    object$fit, X_new = X_new, nd = nd,
-    draws = draws, seed = seed, ...
-  )
-  result$future_design <- future_design
-  result$future_semantics <- if (legacy_matrix) {
-    "legacy_explicit_matrix"
-  } else {
-    future_design$semantics
-  }
-  result$design_parent_digest <- object$design$semantic_digest
-  result$future_contract_verified <- !legacy_matrix
-  result$legacy_future_matrix <- legacy_matrix
-  result$parent_design_materialization_external_binding_verified <-
-    isTRUE(
-      object$model_spec$
-        design_materialization_external_binding_verified
+  if (is.null(draws)) {
+    draws <- rqr_posterior_draws.rqr_desn_fit(
+      object, nd = nd, seed = seed
     )
-  result$parent_fit_reproducibility_eligible <-
-    isTRUE(object$model_spec$reproducibility_eligible)
-  result$parent_fit_promotion_eligible <-
-    isTRUE(object$model_spec$promotion_eligible)
-  # A semantic future-design contract proves alignment, causality
-  # declarations, and content integrity. It does not prove how the supplied
-  # future feature rows were materialized. In particular, a verified
-  # training-design receipt cannot be inherited by arbitrary future rows.
-  # A future-specific materialization receipt is deliberately outside v1, so
-  # both versioned and legacy future evaluations remain non-promotable.
-  result$future_external_provenance_bound <- FALSE
-  result$future_reproducibility_eligible <- FALSE
-  result$reproducibility_eligible <- FALSE
-  result$promotion_eligible <- FALSE
-  result$promotion_status <- if (legacy_matrix) {
-    "legacy_explicit_matrix_nonpromotable"
   } else {
-    "verified_future_contract_unattested_materialization"
+    if (!is.null(nd) || !is.null(seed)) {
+      stop(
+        "nd and seed must be NULL when explicit draws are supplied.",
+        call. = FALSE
+      )
+    }
+    if (!identical(class(draws), c("rqr_desn_draws", "list"))) {
+      stop(
+        paste(
+          "Explicit DESN draws must be a source-bound",
+          "rqr_desn_draws envelope; bare foreign matrices are rejected."
+        ),
+        call. = FALSE
+      )
+    }
+    .rqr_validate_desn_draws(object, draws)
   }
-  result$response_predictive_draws <- FALSE
-  result
+  out <- .rqr_desn_build_prediction(
+    object = object,
+    X_evaluation = X_new,
+    future_design = future_design,
+    draws = draws,
+    evaluation_api = evaluation_api
+  )
+  .rqr_validate_desn_prediction(object, out)
+  out
+}
+
+#' Evaluate interval roots from a frozen RQR-DESN fit
+#'
+#' Prefer a validated [rqr_desn_future_design()] so that feature order,
+#' parentage, and evaluation semantics are explicit. The legacy `X_new` route
+#' accepts an explicit feature matrix but is labeled non-promotable. Neither
+#' route simulates a response.
+#'
+#' @param object An `rqr_desn_fit`.
+#' @param X_new Optional legacy explicit feature matrix in the exact fitted
+#'   feature order.
+#' @param future_design Preferred validated future-design contract.
+#' @param nd Number of retained readout draws to use when `draws` is `NULL`.
+#' @param draws Optional output from [rqr_posterior_draws()] for this fit.
+#' @param seed Optional seed used only when draws are subsampled.
+#' @param ... Reserved; supplying an argument is an error.
+#' @return A typed and digested `rqr_desn_prediction` containing interval-root
+#'   evaluations, frozen-design parentage, semantics, and eligibility metadata.
+#' @export
+predict_interval.rqr_desn_fit <- function(
+    object, X_new = NULL, future_design = NULL,
+    nd = NULL, draws = NULL, seed = NULL, ...) {
+  .rqr_reject_dots(
+    list(...), "predict_interval.rqr_desn_fit"
+  )
+  .rqr_validate_desn_fit_envelope(object)
+  .rqr_desn_predict_impl(
+    object = object, X_new = X_new,
+    future_design = future_design, nd = nd,
+    draws = draws, seed = seed,
+    evaluation_api = "predict_interval"
+  )
 }
 
 #' Print a frozen RQR-DESN summary

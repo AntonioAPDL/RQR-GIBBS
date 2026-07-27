@@ -13,13 +13,15 @@
 
 \item{seed}{Optional seed used only when draws are subsampled.}
 
-\item{...}{Reserved; passed to the fixed-design extraction method.}
+\item{...}{Reserved; supplying an argument is an error.}
 }
 \value{
-A list containing root-coefficient, loss-rate, and draw-index
-quantities from the fitted readout.
+A source-bound \code{rqr_desn_draws} object containing root-coefficient,
+loss-rate, and draw-index quantities from the fitted readout.
 }
 \description{
-Draw extraction delegates to the validated fixed-design readout while
-preserving the frozen-design envelope.
+Draw extraction reads the already validated fixed-design payload directly
+and returns a versioned envelope bound to the exact fit checkpoint, target,
+retained draws, and frozen design. Bare or foreign coefficient matrices are
+not interchangeable with this envelope.
 }

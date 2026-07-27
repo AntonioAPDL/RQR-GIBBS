@@ -40,6 +40,13 @@ test_that("ordinary-v1 materializer freezes the exact D02 seed contract", {
 
   expect_identical(d02$materializer_seed, 82701L)
   expect_identical(d02$effective_arguments$seed, 82701L)
+  expect_identical(d02$effective_arguments$add_bias, TRUE)
+  expect_identical(
+    d02$effective_arguments$input_mode, "raw_y_lags"
+  )
+  expect_identical(
+    d02$effective_arguments$standardize_inputs, FALSE
+  )
   expect_identical(length(d02$response_history), 48L)
   expect_false(anyNA(d02$response_history))
   expect_true(all(is.finite(d02$response_history)))

@@ -9,11 +9,11 @@ if (!exists("%||%", mode = "function")) {
 }
 
 .rqr_desn_design_schema <- function() {
-  "rqrgibbs_desn_design/1.0.0"
+  "rqrgibbs_desn_design/1.1.0"
 }
 
 .rqr_desn_future_design_schema <- function() {
-  "rqrgibbs_desn_future_design/1.1.0"
+  "rqrgibbs_desn_future_design/1.2.0"
 }
 
 .rqr_desn_feature_schema <- function() {
@@ -21,7 +21,11 @@ if (!exists("%||%", mode = "function")) {
 }
 
 .rqr_desn_materialization_receipt_schema <- function() {
-  "rqrgibbs_desn_materialization_receipt/2.0.0"
+  "rqrgibbs_desn_materialization_receipt/3.0.0"
+}
+
+.rqr_desn_materialization_manifest_schema <- function() {
+  "rqrgibbs_desn_materialization_manifest/1.0.0"
 }
 
 .rqr_desn_reference_builder_id <- function() {
@@ -29,7 +33,7 @@ if (!exists("%||%", mode = "function")) {
 }
 
 .rqr_desn_future_verification_schema <- function() {
-  "rqrgibbs_desn_future_verification/1.0.0"
+  "rqrgibbs_desn_future_verification/1.1.0"
 }
 
 .rqr_desn_sha256 <- function(x) {
@@ -41,6 +45,22 @@ if (!exists("%||%", mode = "function")) {
     length(x) == 1L &&
     !is.na(x) &&
     grepl("^[0-9a-f]{64}$", tolower(x))
+}
+
+.rqr_desn_assert_exact_list_object <- function(
+    object, expected_class, name) {
+  if (!is.list(object) ||
+      !identical(class(object), expected_class) ||
+      !identical(names(attributes(object)), c("names", "class"))) {
+    stop(
+      sprintf(
+        "%s must have the exact canonical class and attributes.",
+        name
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
 }
 
 .rqr_desn_assert_named_list <- function(x, name, allow_empty = FALSE) {
@@ -126,7 +146,7 @@ if (!exists("%||%", mode = "function")) {
         key
       ) && isTRUE(item)) {
         stop(
-          sprintf("%s cannot authorize response simulation or predictive response draws.", context),
+          sprintf("%s cannot enable or authorize response simulation or predictive response draws.", context),
           call. = FALSE
         )
       }
@@ -285,6 +305,21 @@ if (!exists("%||%", mode = "function")) {
       call. = FALSE
     )
   }
+  exact_one_columns <- which(vapply(
+    seq_len(ncol(X)),
+    function(column) all(X[, column] == 1),
+    logical(1L)
+  ))
+  if (length(exact_one_columns) != 1L ||
+      !identical(exact_one_columns, index)) {
+    stop(
+      paste(
+        "A declared DESN intercept requires exactly one",
+        "constant-one design column, at the declared index."
+      ),
+      call. = FALSE
+    )
+  }
   list(
     present = TRUE,
     index = index,
@@ -345,29 +380,68 @@ if (!exists("%||%", mode = "function")) {
   if (is.null(causal)) causal <- list()
   .rqr_desn_assert_named_list(causal, "causal", allow_empty = TRUE)
   .rqr_desn_assert_plain(causal, "causal")
-  causal <- utils::modifyList(
-    list(
-      uses_current_response = FALSE,
-      uses_future_response = FALSE,
-      contract = "row_t_uses_only_information_available_before_t"
-    ),
-    utils::modifyList(defaults, causal, keep.null = TRUE),
-    keep.null = TRUE
+  allowed <- c(
+    "uses_current_response", "uses_future_response",
+    "minimum_response_lag", "prefix_safe", "contract"
   )
+  .rqr_validate_named_list_fields(causal, "causal", allowed)
+  .rqr_validate_named_list_fields(defaults, "causal defaults", allowed)
+  causal <- utils::modifyList(defaults, causal, keep.null = TRUE)
+  causal <- utils::modifyList(list(
+    uses_current_response = FALSE,
+    uses_future_response = FALSE,
+    minimum_response_lag = 1L,
+    prefix_safe = TRUE,
+    contract =
+      "row_t_uses_only_response_information_strictly_before_t"
+  ), causal, keep.null = TRUE)
   causal$uses_current_response <- .rqr_desn_logical_scalar(
     causal$uses_current_response, "causal$uses_current_response"
   )
   causal$uses_future_response <- .rqr_desn_logical_scalar(
     causal$uses_future_response, "causal$uses_future_response"
   )
-  if (isTRUE(causal$uses_current_response) || isTRUE(causal$uses_future_response)) {
+  causal$prefix_safe <- .rqr_desn_logical_scalar(
+    causal$prefix_safe, "causal$prefix_safe"
+  )
+  lag <- causal$minimum_response_lag
+  if (!is.numeric(lag) || length(lag) != 1L ||
+      is.na(lag) || !is.finite(lag) ||
+      lag != floor(lag) || lag < 1L ||
+      lag > .Machine$integer.max) {
     stop(
-      "A frozen DESN design cannot claim a causal contract while using the current or a future response.",
+      "causal$minimum_response_lag must be one positive integer.",
+      call. = FALSE
+    )
+  }
+  causal$minimum_response_lag <- as.integer(lag)
+  expected_contract <-
+    "row_t_uses_only_response_information_strictly_before_t"
+  if (!is.character(causal$contract) ||
+      length(causal$contract) != 1L ||
+      is.na(causal$contract) ||
+      !identical(causal$contract, expected_contract)) {
+    stop(
+      "causal$contract must state the canonical strict-prefix contract.",
+      call. = FALSE
+    )
+  }
+  if (isTRUE(causal$uses_current_response) ||
+      isTRUE(causal$uses_future_response) ||
+      !isTRUE(causal$prefix_safe)) {
+    stop(
+      paste(
+        "A frozen DESN design must be prefix-safe and cannot use",
+        "the current or a future response."
+      ),
       call. = FALSE
     )
   }
   .rqr_desn_reject_response_simulation(causal, "causal")
-  causal
+  causal[c(
+    "uses_current_response", "uses_future_response",
+    "minimum_response_lag", "prefix_safe", "contract"
+  )]
 }
 
 .rqr_desn_time_metadata <- function(time, time_index, role, origin_time = NULL) {
@@ -460,6 +534,140 @@ if (!exists("%||%", mode = "function")) {
   )
 }
 
+.rqr_desn_materialization_manifest <- function(
+    source_response, keep_idx, X, y_fit, feature_names,
+    reservoir_digest) {
+  if (!is.numeric(source_response) || !is.null(dim(source_response)) ||
+      !length(source_response) || anyNA(source_response) ||
+      any(!is.finite(source_response))) {
+    stop(
+      "The materialization source response must be complete and finite.",
+      call. = FALSE
+    )
+  }
+  source_response <- as.numeric(source_response)
+  if (!is.integer(keep_idx) || !length(keep_idx) ||
+      anyNA(keep_idx) || any(keep_idx < 1L) ||
+      any(keep_idx > length(source_response)) ||
+      any(diff(keep_idx) <= 0L)) {
+    stop(
+      "The materialization keep_idx must be a strictly increasing integer subset of the source response.",
+      call. = FALSE
+    )
+  }
+  X <- .rqr_desn_assert_matrix(X, "materialized X")
+  y_fit <- as.numeric(y_fit)
+  if (nrow(X) != length(keep_idx) ||
+      length(y_fit) != length(keep_idx) ||
+      !identical(y_fit, source_response[keep_idx])) {
+    stop(
+      paste(
+        "The materialized rows, aligned response, and actual keep_idx",
+        "must identify the same source-response subset."
+      ),
+      call. = FALSE
+    )
+  }
+  if (!identical(feature_names, colnames(X))) {
+    stop(
+      "The materialization feature names must exactly match X.",
+      call. = FALSE
+    )
+  }
+  if (!.rqr_desn_is_sha256(reservoir_digest)) {
+    stop(
+      "The materialization reservoir digest must be SHA-256.",
+      call. = FALSE
+    )
+  }
+  list(
+    schema_version =
+      .rqr_desn_materialization_manifest_schema(),
+    source_response_digest =
+      .rqr_desn_sha256(source_response),
+    source_response_length = as.integer(length(source_response)),
+    keep_idx = keep_idx,
+    keep_idx_digest = .rqr_desn_sha256(keep_idx),
+    design_matrix_digest = .rqr_desn_sha256(X),
+    aligned_response_digest = .rqr_desn_sha256(y_fit),
+    feature_names_digest = .rqr_desn_sha256(feature_names),
+    reservoir_digest = tolower(reservoir_digest)
+  )
+}
+
+.rqr_desn_validate_materialization_manifest <- function(
+    manifest, object = NULL) {
+  expected_fields <- c(
+    "schema_version", "source_response_digest",
+    "source_response_length", "keep_idx", "keep_idx_digest",
+    "design_matrix_digest", "aligned_response_digest",
+    "feature_names_digest", "reservoir_digest"
+  )
+  if (!is.list(manifest) || is.object(manifest) ||
+      !identical(names(manifest), expected_fields) ||
+      !identical(
+        manifest$schema_version,
+        .rqr_desn_materialization_manifest_schema()
+      ) ||
+      !all(vapply(
+        manifest[c(
+          "source_response_digest", "keep_idx_digest",
+          "design_matrix_digest", "aligned_response_digest",
+          "feature_names_digest", "reservoir_digest"
+        )],
+        .rqr_desn_is_sha256, logical(1L)
+      ))) {
+    stop(
+      "The DESN materialization manifest is malformed.",
+      call. = FALSE
+    )
+  }
+  n_source <- manifest$source_response_length
+  keep_idx <- manifest$keep_idx
+  if (!is.integer(n_source) || length(n_source) != 1L ||
+      is.na(n_source) || n_source < 1L ||
+      !is.integer(keep_idx) || !length(keep_idx) ||
+      anyNA(keep_idx) || any(keep_idx < 1L) ||
+      any(keep_idx > n_source) || any(diff(keep_idx) <= 0L) ||
+      !identical(
+        manifest$keep_idx_digest,
+        .rqr_desn_sha256(keep_idx)
+      )) {
+    stop(
+      "The DESN materialization manifest has invalid source or keep-index metadata.",
+      call. = FALSE
+    )
+  }
+  if (!is.null(object)) {
+    expected <- c(
+      design_matrix_digest = .rqr_desn_sha256(object$X),
+      aligned_response_digest = .rqr_desn_sha256(object$y),
+      feature_names_digest = .rqr_desn_sha256(
+        object$feature_schema$feature_names
+      ),
+      reservoir_digest = object$reservoir$digest
+    )
+    if (!identical(as.numeric(object$time_index), as.numeric(keep_idx)) ||
+        length(keep_idx) != nrow(object$X) ||
+        any(!vapply(
+          names(expected),
+          function(field) identical(
+            manifest[[field]], unname(expected[[field]])
+          ),
+          logical(1L)
+        ))) {
+      stop(
+        paste(
+          "The DESN materialization manifest does not bind the",
+          "stored design payload and actual keep_idx."
+        ),
+        call. = FALSE
+      )
+    }
+  }
+  invisible(TRUE)
+}
+
 .rqr_desn_materialization_receipt_status <- function(object) {
   reference_materializer <- is.list(object$builder) &&
     identical(
@@ -481,19 +689,30 @@ if (!exists("%||%", mode = "function")) {
     "source_commit", "source_tree_digest", "runtime_tree_digest",
     "runtime_attestation_schema", "runtime_attestation_sha256",
     "materializer_arguments_digest", "materialized_design_payload_digest",
+    "source_response_digest", "source_response_length",
+    "keep_idx_digest", "materialization_manifest_digest",
     "runtime_source_match", "reproducibility_eligible"
   )
   sha_fields <- c(
     "runtime_tree_digest",
     "runtime_attestation_sha256", "materializer_arguments_digest",
-    "materialized_design_payload_digest"
+    "materialized_design_payload_digest", "source_response_digest",
+    "keep_idx_digest", "materialization_manifest_digest"
   )
   payload_digest <- .rqr_desn_sha256(
     .rqr_desn_materialization_payload(object)
   )
+  manifest <- object$builder$materialization_manifest %||% NULL
+  manifest_valid <- tryCatch({
+    .rqr_desn_validate_materialization_manifest(
+      manifest, object = object
+    )
+    TRUE
+  }, error = function(error) FALSE)
   valid <- reference_materializer &&
     is.list(receipt) &&
-    all(required %in% names(receipt)) &&
+    !is.object(receipt) &&
+    identical(names(receipt), required) &&
     identical(
       receipt$schema_version,
       .rqr_desn_materialization_receipt_schema()
@@ -519,6 +738,27 @@ if (!exists("%||%", mode = "function")) {
       function(field) .rqr_desn_is_sha256(receipt[[field]]),
       logical(1L)
     )) &&
+    is.integer(receipt$source_response_length) &&
+    length(receipt$source_response_length) == 1L &&
+    !is.na(receipt$source_response_length) &&
+    receipt$source_response_length >= 1L &&
+    manifest_valid &&
+    identical(
+      receipt$source_response_digest,
+      manifest$source_response_digest
+    ) &&
+    identical(
+      receipt$source_response_length,
+      manifest$source_response_length
+    ) &&
+    identical(
+      receipt$keep_idx_digest,
+      manifest$keep_idx_digest
+    ) &&
+    identical(
+      receipt$materialization_manifest_digest,
+      .rqr_desn_sha256(manifest)
+    ) &&
     is.character(receipt$runtime_attestation_schema) &&
     length(receipt$runtime_attestation_schema) == 1L &&
     !is.na(receipt$runtime_attestation_schema) &&
@@ -552,7 +792,7 @@ if (!exists("%||%", mode = "function")) {
     )
   list(
     schema_version =
-      "rqrgibbs_desn_materialization_receipt_status/1.0.0",
+      "rqrgibbs_desn_materialization_receipt_status/1.1.0",
     reference_materializer = reference_materializer,
     receipt_valid = isTRUE(valid),
     receipt_digest = receipt_digest,
@@ -654,9 +894,10 @@ rqr_desn_design <- function(
 #' @return `TRUE` invisibly; errors on semantic or digest mismatch.
 #' @export
 rqr_validate_desn_design <- function(object) {
-  if (!inherits(object, "rqr_desn_design") || !is.list(object)) {
-    stop("Expected an rqr_desn_design object.", call. = FALSE)
-  }
+  .rqr_desn_assert_exact_list_object(
+    object, c("rqr_desn_design", "list"),
+    "RQR-DESN design"
+  )
   expected_fields <- c(
     "schema_version", "X", "y", "time_index", "feature_schema",
     "builder", "reservoir", "driver", "causal", "time", "terminal",
@@ -670,6 +911,26 @@ rqr_validate_desn_design <- function(object) {
   }
   if (!identical(object$schema_version, .rqr_desn_design_schema())) {
     stop("Unsupported or altered RQR-DESN design schema.", call. = FALSE)
+  }
+  if (!is.list(object$feature_schema) ||
+      is.object(object$feature_schema) ||
+      !identical(
+        names(object$feature_schema),
+        c(
+          "schema_version", "n_features", "feature_names",
+          "intercept"
+        )
+      ) ||
+      !is.list(object$feature_schema$intercept) ||
+      is.object(object$feature_schema$intercept) ||
+      !identical(
+        names(object$feature_schema$intercept),
+        c("present", "index", "name", "verified_constant_one")
+      )) {
+    stop(
+      "Stored DESN feature/intercept schemas are noncanonical.",
+      call. = FALSE
+    )
   }
   X <- .rqr_desn_assert_matrix(object$X)
   names_now <- .rqr_desn_feature_names(X, object$feature_schema$feature_names)
@@ -728,6 +989,15 @@ rqr_validate_desn_design <- function(object) {
       !identical(object$causal, expected_causal)) {
     stop("Stored DESN metadata are not in canonical contract form.", call. = FALSE)
   }
+  if (identical(
+        object$builder$id,
+        .rqr_desn_reference_builder_id()
+      )) {
+    .rqr_desn_validate_materialization_manifest(
+      object$builder$materialization_manifest %||% NULL,
+      object = object
+    )
+  }
   expected_time <- .rqr_desn_time_metadata(
     object$time,
     time_index,
@@ -743,7 +1013,9 @@ rqr_validate_desn_design <- function(object) {
 
   payload <- .rqr_desn_design_payload(object)
   expected_digests <- .rqr_desn_design_digests(payload)
-  if (!identical(object$digests, expected_digests) ||
+  if (!is.list(object$digests) || is.object(object$digests) ||
+      !identical(names(object$digests), names(expected_digests)) ||
+      !identical(object$digests, expected_digests) ||
       !identical(object$semantic_digest, expected_digests$semantic)) {
     stop("RQR-DESN design semantic digest mismatch.", call. = FALSE)
   }
@@ -751,12 +1023,34 @@ rqr_validate_desn_design <- function(object) {
 }
 
 .rqr_desn_future_driver <- function(semantics, driver) {
+  if (is.null(driver)) driver <- list()
+  .rqr_desn_assert_named_list(
+    driver, "future driver", allow_empty = TRUE
+  )
+  .rqr_desn_assert_plain(driver, "future driver")
+  .rqr_desn_reject_response_simulation(
+    driver, "future driver"
+  )
+  allowed_supplied <- c(
+    "type", "origin_fixed",
+    "uses_realized_post_origin_history", "evaluation_mode",
+    "path_digest", "source", "generator_id",
+    "construction_digest", "response_simulation"
+  )
+  .rqr_validate_named_list_fields(
+    driver, "future driver", allowed_supplied
+  )
   defaults <- switch(
     semantics,
     precomputed_design = list(
       type = "precomputed_feature_design",
       origin_fixed = TRUE,
       uses_realized_post_origin_history = FALSE,
+      evaluation_mode = "origin_fixed",
+      path_digest = NA_character_,
+      source = "explicit_precomputed_feature_matrix",
+      generator_id = NA_character_,
+      construction_digest = NA_character_,
       response_simulation = FALSE
     ),
     teacher_forced_one_step = list(
@@ -764,12 +1058,21 @@ rqr_validate_desn_design <- function(object) {
       origin_fixed = FALSE,
       uses_realized_post_origin_history = TRUE,
       evaluation_mode = "rolling_one_step",
+      path_digest = NA_character_,
+      source = "realized_lagged_response_history",
+      generator_id = NA_character_,
+      construction_digest = NA_character_,
       response_simulation = FALSE
     ),
     external_driver_path = list(
       type = "external_driver_path",
       origin_fixed = TRUE,
       uses_realized_post_origin_history = FALSE,
+      evaluation_mode = "origin_fixed_external_path",
+      path_digest = NA_character_,
+      source = "external_driver",
+      generator_id = NA_character_,
+      construction_digest = NA_character_,
       response_simulation = FALSE
     )
   )
@@ -788,9 +1091,66 @@ rqr_validate_desn_design <- function(object) {
       call. = FALSE
     )
   }
+  expected_type <- switch(
+    semantics,
+    precomputed_design = "precomputed_feature_design",
+    teacher_forced_one_step = "observed_history",
+    external_driver_path = "external_driver_path"
+  )
+  expected_mode <- switch(
+    semantics,
+    precomputed_design = "origin_fixed",
+    teacher_forced_one_step = "rolling_one_step",
+    external_driver_path = "origin_fixed_external_path"
+  )
+  if (!identical(driver$type, expected_type) ||
+      !identical(driver$evaluation_mode, expected_mode)) {
+    stop(
+      sprintf(
+        "Future-driver type/evaluation_mode must exactly match %s semantics.",
+        semantics
+      ),
+      call. = FALSE
+    )
+  }
+  scalar_text <- function(value, name, allow_na = FALSE) {
+    valid_na <- allow_na && is.character(value) &&
+      length(value) == 1L && is.na(value)
+    if (!valid_na &&
+        (!is.character(value) || length(value) != 1L ||
+          is.na(value) || !nzchar(value))) {
+      stop(
+        sprintf("future driver$%s is malformed.", name),
+        call. = FALSE
+      )
+    }
+    invisible(TRUE)
+  }
+  scalar_text(driver$source, "source")
+  scalar_text(driver$generator_id, "generator_id", allow_na = TRUE)
+  if (!(is.character(driver$path_digest) &&
+      length(driver$path_digest) == 1L &&
+      (is.na(driver$path_digest) ||
+        .rqr_desn_is_sha256(driver$path_digest)))) {
+    stop(
+      "future driver$path_digest must be SHA-256 or NA.",
+      call. = FALSE
+    )
+  }
+  if (!(is.character(driver$construction_digest) &&
+      length(driver$construction_digest) == 1L &&
+      (is.na(driver$construction_digest) ||
+        .rqr_desn_is_sha256(driver$construction_digest)))) {
+    stop(
+      "future driver$construction_digest must be SHA-256 or NA.",
+      call. = FALSE
+    )
+  }
   if (identical(semantics, "precomputed_design")) {
     if (!isTRUE(driver$origin_fixed) ||
-        isTRUE(driver$uses_realized_post_origin_history)) {
+        isTRUE(driver$uses_realized_post_origin_history) ||
+        !is.na(driver$path_digest) ||
+        !is.na(driver$generator_id)) {
       stop(
         paste(
           "precomputed_design must be fixed at the origin and",
@@ -803,7 +1163,9 @@ rqr_validate_desn_design <- function(object) {
   if (identical(semantics, "teacher_forced_one_step")) {
     if (isTRUE(driver$origin_fixed) ||
         !isTRUE(driver$uses_realized_post_origin_history) ||
-        !identical(driver$evaluation_mode, "rolling_one_step")) {
+        !identical(driver$evaluation_mode, "rolling_one_step") ||
+        !is.na(driver$generator_id) ||
+        !is.na(driver$construction_digest)) {
       stop(
         "teacher_forced_one_step must be rolling one-step evaluation using realized post-origin history.",
         call. = FALSE
@@ -812,7 +1174,8 @@ rqr_validate_desn_design <- function(object) {
   }
   if (identical(semantics, "external_driver_path")) {
     if (!isTRUE(driver$origin_fixed) ||
-        isTRUE(driver$uses_realized_post_origin_history)) {
+        isTRUE(driver$uses_realized_post_origin_history) ||
+        !is.na(driver$construction_digest)) {
       stop(
         "external_driver_path must be fixed at the origin and independent of realized post-origin responses.",
         call. = FALSE
@@ -826,8 +1189,24 @@ rqr_validate_desn_design <- function(object) {
       call. = FALSE
     )
   }
-  if (!is.null(driver$path_digest)) driver$path_digest <- tolower(driver$path_digest)
-  driver
+  if (identical(semantics, "external_driver_path") &&
+      (!is.character(driver$generator_id) ||
+        length(driver$generator_id) != 1L ||
+        is.na(driver$generator_id) ||
+        !nzchar(driver$generator_id))) {
+    stop(
+      "external_driver_path requires one nonempty generator_id.",
+      call. = FALSE
+    )
+  }
+  if (!is.na(driver$path_digest)) {
+    driver$path_digest <- tolower(driver$path_digest)
+  }
+  driver[c(
+    "type", "origin_fixed", "uses_realized_post_origin_history",
+    "evaluation_mode", "path_digest", "source", "generator_id",
+    "construction_digest", "response_simulation"
+  )]
 }
 
 .rqr_desn_future_payload <- function(object) {
@@ -1022,9 +1401,10 @@ rqr_desn_future_design <- function(
 #' @return `TRUE` invisibly; errors on semantic, linkage, or digest mismatch.
 #' @export
 rqr_validate_desn_future_design <- function(object, parent_design = NULL) {
-  if (!inherits(object, "rqr_desn_future_design") || !is.list(object)) {
-    stop("Expected an rqr_desn_future_design object.", call. = FALSE)
-  }
+  .rqr_desn_assert_exact_list_object(
+    object, c("rqr_desn_future_design", "list"),
+    "future RQR-DESN design"
+  )
   expected_fields <- c(
     "schema_version", "parent", "verification", "semantics", "X",
     "time_index", "feature_schema", "reservoir", "driver", "causal",
@@ -1039,9 +1419,13 @@ rqr_validate_desn_future_design <- function(object, parent_design = NULL) {
   if (!identical(object$schema_version, .rqr_desn_future_design_schema())) {
     stop("Unsupported or altered future RQR-DESN design schema.", call. = FALSE)
   }
-  if (!object$semantics %in% c(
-    "precomputed_design", "teacher_forced_one_step", "external_driver_path"
-  )) {
+  if (!is.character(object$semantics) ||
+      length(object$semantics) != 1L ||
+      is.na(object$semantics) ||
+      !object$semantics %in% c(
+        "precomputed_design", "teacher_forced_one_step",
+        "external_driver_path"
+      )) {
     stop("Unsupported or altered future-design semantics.", call. = FALSE)
   }
   X <- .rqr_desn_assert_matrix(object$X, "future X")
@@ -1074,7 +1458,14 @@ rqr_validate_desn_future_design <- function(object, parent_design = NULL) {
     object$time_index, nrow(X), "future time_index"
   )
   reservoir <- .rqr_desn_reservoir(object$reservoir)
-  if (!is.list(object$parent) ||
+  if (!is.list(object$parent) || is.object(object$parent) ||
+      !identical(
+        names(object$parent),
+        c(
+          "semantic_digest", "feature_schema_digest",
+          "reservoir_digest", "terminal_digest"
+        )
+      ) ||
       !.rqr_desn_is_sha256(object$parent$semantic_digest) ||
       !.rqr_desn_is_sha256(object$parent$feature_schema_digest) ||
       !.rqr_desn_is_sha256(object$parent$reservoir_digest) ||
@@ -1087,7 +1478,17 @@ rqr_validate_desn_future_design <- function(object, parent_design = NULL) {
     NULL
   }
   verification <- object$verification
-  if (!is.list(verification) ||
+  expected_verification_fields <- c(
+    "schema_version", "contract_verified",
+    "legacy_explicit_matrix",
+    "parent_materialization_receipt_valid",
+    "parent_materialization_receipt_digest",
+    "external_provenance_bound",
+    "promotion_evidence_complete", "promotion_eligible",
+    "promotion_status"
+  )
+  if (!is.list(verification) || is.object(verification) ||
+      !identical(names(verification), expected_verification_fields) ||
       !identical(
         verification$schema_version,
         .rqr_desn_future_verification_schema()
@@ -1168,7 +1569,9 @@ rqr_validate_desn_future_design <- function(object, parent_design = NULL) {
 
   payload <- .rqr_desn_future_payload(object)
   expected_digests <- .rqr_desn_future_digests(payload)
-  if (!identical(object$digests, expected_digests) ||
+  if (!is.list(object$digests) || is.object(object$digests) ||
+      !identical(names(object$digests), names(expected_digests)) ||
+      !identical(object$digests, expected_digests) ||
       !identical(object$semantic_digest, expected_digests$semantic)) {
     stop("Future RQR-DESN design semantic digest mismatch.", call. = FALSE)
   }

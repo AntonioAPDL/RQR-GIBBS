@@ -2,14 +2,103 @@
 
 # Bind the protected RQR-DLM reference and correction evidence required by the
 # ordinary-RQR version-1 release gate.  This collector does not fit a model,
-# load a chain object, or rerun any source calculation.  It validates four
+# load a chain object, or rerun any source calculation.  It validates seven
 # already completed, exact-commit input directories and publishes only compact
 # semantic summaries and hashes below an ignored output root.
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
 rqr_dlm_companion_schema <- function() {
-  "rqrgibbs_ordinary_v1_protected_dlm_companion/1.0.0"
+  "rqrgibbs_ordinary_v1_protected_dlm_companion/2.1.0"
+}
+
+rqr_dlm_companion_roles <- function() {
+  c(
+    "dlm_reference",
+    "wave1_M01_static_gaussian",
+    "wave1_M02_static_gaussian",
+    "wave2_M01_local_level",
+    "wave2_M02_local_level",
+    "horizon_M03",
+    "resource_envelope"
+  )
+}
+
+rqr_dlm_companion_wave_spec <- function(role) {
+  values <- list(
+    wave1_M01_static_gaussian = list(
+      kind = "M01", tag = "wave1",
+      wave_id = "static_gaussian_T200__target0200__sentinel",
+      DGP = c("S01", "S02"), task_count = 20L, chain_count = 44L,
+      endpoint_count = NA_integer_, sentinel_count = 8L
+    ),
+    wave1_M02_static_gaussian = list(
+      kind = "M02", tag = "wave1",
+      wave_id = "static_gaussian_T200__target0200__sentinel",
+      DGP = c("S01", "S02"), task_count = 20L, chain_count = 44L,
+      endpoint_count = 88L, sentinel_count = 8L
+    ),
+    wave2_M01_local_level = list(
+      kind = "M01", tag = "wave2",
+      wave_id = "local_level_gaussian_T200__target0200__sentinel",
+      DGP = c("S03", "S04"), task_count = 25L, chain_count = 49L,
+      endpoint_count = NA_integer_, sentinel_count = 8L
+    ),
+    wave2_M02_local_level = list(
+      kind = "M02", tag = "wave2",
+      wave_id = "local_level_gaussian_T200__target0200__sentinel",
+      DGP = c("S03", "S04"), task_count = 25L, chain_count = 49L,
+      endpoint_count = 98L, sentinel_count = 8L
+    )
+  )
+  value <- values[[role]]
+  if (is.null(value)) {
+    rqr_dlm_companion_fail("Unknown companion wave role: ", role)
+  }
+  value
+}
+
+rqr_dlm_companion_protected_source_paths <- function() {
+  c(
+    "application/R/rqr_dlm_fit.R",
+    "application/R/rqr_dlm_model.R",
+    "application/R/rqr_evolution.R",
+    "application/R/rqr_ffbs.R",
+    "application/R/rqr_utils.R",
+    "application/R/rqr_numerics.R",
+    "application/src/rqr_ffbs.cpp",
+    "application/config/rqr_dlm/rqr_dlm_bounded_dynamic_fixtures_20260723.R",
+    "application/config/rqr_dlm/rqr_dlm_main_simulation_20260724.R",
+    "application/config/rqr_dlm/rqr_dlm_main_simulation_preliminary_20260724.R",
+    paste0(
+      "application/config/rqr_dlm/",
+      "rqr_dlm_main_simulation_preliminary_methods_20260724.csv"
+    ),
+    paste0(
+      "application/config/rqr_dlm/",
+      "rqr_dlm_main_simulation_preliminary_scenarios_20260724.csv"
+    ),
+    paste0(
+      "application/config/rqr_dlm/",
+      "rqr_dlm_output13_bounded_expected_bundle_20260724.json"
+    ),
+    "application/scripts/15_run_rqr_dlm_confirmatory_simulation.R",
+    "application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh",
+    "application/scripts/17_launch_rqr_dlm_confirmatory_wave.R",
+    "application/DESCRIPTION",
+    "application/NAMESPACE",
+    "application/R/RcppExports.R",
+    "application/src/RcppExports.cpp",
+    "application/src/rqr_interweave.cpp",
+    "application/src/Makevars",
+    "application/src/Makevars.win",
+    "application/scripts/22_validate_rqr_dlm_wave1_corrections.R",
+    "application/scripts/23_validate_rqr_dlm_wave1_comparator_projection.R",
+    "application/scripts/24_validate_rqr_dlm_horizon_and_fixed_design.R",
+    "application/scripts/25_validate_rqr_dlm_resource_envelope.R",
+    "application/scripts/lib/rqr_dlm_confirmatory_simulation.R",
+    "docs/audits/rqr_dlm_main_correction_budget_20260727.csv"
+  )
 }
 
 rqr_dlm_companion_fail <- function(...) {
@@ -77,6 +166,36 @@ rqr_dlm_companion_sha256 <- function(path) {
   ))
 }
 
+rqr_dlm_companion_protected_source_inventory <- function(repo_root) {
+  paths <- rqr_dlm_companion_protected_source_paths()
+  if (length(paths) != 29L || anyDuplicated(paths) ||
+      !identical(paths, unique(paths))) {
+    rqr_dlm_companion_fail(
+      "The protected source inventory is not the reviewed 29-file set."
+    )
+  }
+  absolute <- file.path(repo_root, paths)
+  if (any(!file.exists(absolute)) ||
+      any(!utils::file_test("-f", absolute)) ||
+      any(rqr_dlm_companion_is_symlink(absolute))) {
+    rqr_dlm_companion_fail(
+      "A protected DLM source/config/helper file is absent or nonregular."
+    )
+  }
+  value <- data.frame(
+    relative_path = paths,
+    byte_count = as.numeric(file.info(absolute)$size),
+    sha256 = vapply(
+      absolute, rqr_dlm_companion_sha256, character(1L)
+    ),
+    stringsAsFactors = FALSE
+  )
+  list(
+    files = value,
+    digest = digest::digest(value, algo = "sha256", serialize = TRUE)
+  )
+}
+
 rqr_dlm_companion_read_json <- function(path, fields, label) {
   if (!requireNamespace("jsonlite", quietly = TRUE)) {
     rqr_dlm_companion_fail("The jsonlite package is required.")
@@ -99,7 +218,7 @@ rqr_dlm_companion_read_csv <- function(path, fields, label) {
   value <- tryCatch(
     utils::read.csv(
       path, stringsAsFactors = FALSE, check.names = FALSE,
-      na.strings = "NA"
+      na.strings = "NA", numerals = "no.loss"
     ),
     error = function(error) {
       rqr_dlm_companion_fail(
@@ -114,6 +233,28 @@ rqr_dlm_companion_read_csv <- function(path, fields, label) {
 }
 
 rqr_dlm_companion_input_files <- function(role) {
+  if (role %in% c(
+      "wave1_M01_static_gaussian", "wave2_M01_local_level"
+    )) {
+    tag <- rqr_dlm_companion_wave_spec(role)$tag
+    return(c(
+      "artifact_hashes.csv", "validation_manifest.json",
+      paste0(tag, "_M01_chain_evidence.rds"),
+      paste0(tag, "_M01_diagnostics.csv"),
+      paste0(tag, "_M01_summary.csv")
+    ))
+  }
+  if (role %in% c(
+      "wave1_M02_static_gaussian", "wave2_M02_local_level"
+    )) {
+    tag <- rqr_dlm_companion_wave_spec(role)$tag
+    return(c(
+      "artifact_hashes.csv", "validation_manifest.json",
+      paste0(tag, "_M02_chain_evidence.rds"),
+      paste0(tag, "_M02_diagnostics.csv"),
+      paste0(tag, "_M02_summary.csv")
+    ))
+  }
   switch(
     role,
     dlm_reference = c(
@@ -131,21 +272,16 @@ rqr_dlm_companion_input_files <- function(role) {
       "varying_component_scale_future_checks.csv",
       "wrapper_closeout.csv"
     ),
-    M01 = c(
-      "artifact_hashes.csv", "validation_manifest.json",
-      "wave1_M01_chain_evidence.rds", "wave1_M01_diagnostics.csv",
-      "wave1_M01_summary.csv"
-    ),
-    M02 = c(
-      "artifact_hashes.csv", "validation_manifest.json",
-      "wave1_M02_chain_evidence.rds", "wave1_M02_diagnostics.csv",
-      "wave1_M02_summary.csv"
-    ),
     horizon_M03 = c(
       "artifact_hashes.csv", "dynamic_endpoint_check.csv",
       "fixed_design_chain_evidence.rds",
       "fixed_design_diagnostics.csv", "fixed_design_summary.csv",
       "horizon_checks.csv", "validation_manifest.json"
+    ),
+    resource_envelope = c(
+      "artifact_hashes.csv", "fit_shape_contract.csv",
+      "resource_closeout.csv", "resource_envelope.csv",
+      "toolchain_manifest.csv", "validation_manifest.json"
     ),
     rqr_dlm_companion_fail("Unknown companion input role: ", role)
   )
@@ -442,6 +578,85 @@ rqr_dlm_companion_reference_bundle_file_names <- function() {
   )
 }
 
+rqr_dlm_companion_normalize_reference_toolchain <- function(runtime) {
+  scalar <- function(value, label, null_value = NULL) {
+    if (is.null(value) && !is.null(null_value)) {
+      return(null_value)
+    }
+    if (!is.character(value) || length(value) != 1L ||
+        is.na(value) || !nzchar(value)) {
+      rqr_dlm_companion_fail(
+        "DLM reference runtime toolchain has invalid ", label, "."
+      )
+    }
+    value
+  }
+  dependencies <- c("digest", "jsonlite", "posterior", "rqrgibbs")
+  if (!is.list(runtime$dependency_versions) ||
+      !identical(names(runtime$dependency_versions), dependencies)) {
+    rqr_dlm_companion_fail(
+      "DLM reference dependency-version contract changed."
+    )
+  }
+  dependency_versions <- setNames(
+    lapply(dependencies, function(package) {
+      scalar(
+        runtime$dependency_versions[[package]],
+        paste0("dependency_versions$", package)
+      )
+    }),
+    dependencies
+  )
+  list(
+    R_version = scalar(runtime$R_version, "R_version"),
+    platform = scalar(runtime$platform, "platform"),
+    compiler = scalar(
+      runtime$compiler, "compiler", null_value = "unavailable"
+    ),
+    BLAS = scalar(runtime$BLAS, "BLAS"),
+    LAPACK = scalar(runtime$LAPACK, "LAPACK"),
+    dependency_versions = dependency_versions
+  )
+}
+
+rqr_dlm_companion_normalize_resource_toolchain <- function(toolchain) {
+  required <- c(
+    "R_version", "platform", "R_compiler", "BLAS", "LAPACK",
+    "package_digest", "package_jsonlite", "package_posterior",
+    "package_rqrgibbs"
+  )
+  if (anyDuplicated(toolchain$key) ||
+      any(!required %in% toolchain$key)) {
+    rqr_dlm_companion_fail(
+      "Resource-envelope toolchain keys are missing or duplicated."
+    )
+  }
+  value <- function(key) {
+    observed <- as.character(toolchain$value[toolchain$key == key])
+    if (length(observed) != 1L || is.na(observed) ||
+        !nzchar(observed)) {
+      rqr_dlm_companion_fail(
+        "Resource-envelope toolchain value is invalid: ", key
+      )
+    }
+    observed
+  }
+  dependencies <- c("digest", "jsonlite", "posterior", "rqrgibbs")
+  list(
+    R_version = value("R_version"),
+    platform = value("platform"),
+    compiler = value("R_compiler"),
+    BLAS = value("BLAS"),
+    LAPACK = value("LAPACK"),
+    dependency_versions = setNames(
+      lapply(dependencies, function(package) {
+        value(paste0("package_", package))
+      }),
+      dependencies
+    )
+  )
+}
+
 rqr_dlm_companion_assert_thread_environment <- function(value, label) {
   expected <- c(
     "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
@@ -478,6 +693,8 @@ rqr_dlm_companion_validate_reference <- function(
     rqr_dlm_companion_reference_bundle_fields(),
     "DLM reference reference_bundle.json"
   )
+  runtime_toolchain_facts <-
+    rqr_dlm_companion_normalize_reference_toolchain(runtime)
   runtime_gate_names <- c(
     "runtime_attestation_match", "source_archive_tree_match",
     "source_package_verified", "source_package_archive_match",
@@ -1130,11 +1347,207 @@ rqr_dlm_companion_validate_reference <- function(
       run$primary_runtime_attestation_sha256,
     config_digest = run$config_digest,
     incidence_digest = NA_character_, seed_ledger_digest = NA_character_,
+    runtime_toolchain_digest = run$runtime_toolchain_digest,
+    runtime_toolchain_facts = runtime_toolchain_facts,
     semantic_counts = c(
       reference_gates = nrow(gates), continuation_cells = nrow(continuation),
       history_mutations = nrow(mutations)
     )
   )
+}
+
+rqr_dlm_companion_transition_kernel_fields <- function() {
+  c(
+    "schema_version", "evolution_mode", "learning_rate_mode",
+    "time0_state_completion", "one_root_partially_collapsed",
+    "collapsed_integrated_root", "collapsed_conditioned_root",
+    "collapsed_log_q_coordinate_order", "scan_order",
+    "collapsed_slice_width", "collapsed_slice_sweeps",
+    "collapsed_slice_max_steps", "collapsed_slice_max_shrink",
+    "centered_inverse_gamma", "noncentered_slice_interweave",
+    "interweave_cycles", "interweave_slice_width",
+    "interweave_slice_sweeps_per_cycle",
+    "interweave_slice_max_steps", "interweave_slice_max_shrink",
+    "global_root_swap_probability", "target_change"
+  )
+}
+
+rqr_dlm_companion_expected_m01_transition_kernel <- function(role) {
+  component_name <- switch(
+    role,
+    wave1_M01_static_gaussian = "regression",
+    wave2_M01_local_level = "level",
+    rqr_dlm_companion_fail(
+      "No frozen M01 transition contract exists for role: ", role
+    )
+  )
+  list(
+    schema_version = "rqrgibbs_dlm_transition_kernel/1.0.0",
+    evolution_mode = "component_scale",
+    learning_rate_mode = "fixed_rate",
+    time0_state_completion = TRUE,
+    one_root_partially_collapsed = TRUE,
+    collapsed_integrated_root = "root1",
+    collapsed_conditioned_root = "root2",
+    collapsed_log_q_coordinate_order = component_name,
+    scan_order = c(
+      "lambda_fixed", "latent_v_refresh",
+      "component_scale_root1_collapsed", "root1_ffbs",
+      "root1_time0", "root2_ffbs", "root2_time0",
+      "component_scale_centered_noncentered_cycles_1",
+      "global_root_swap"
+    ),
+    collapsed_slice_width = 1,
+    collapsed_slice_sweeps = 3L,
+    collapsed_slice_max_steps = 100L,
+    collapsed_slice_max_shrink = 1000L,
+    centered_inverse_gamma = TRUE,
+    noncentered_slice_interweave = TRUE,
+    interweave_cycles = 1L,
+    interweave_slice_width = 1,
+    interweave_slice_sweeps_per_cycle = 3L,
+    interweave_slice_max_steps = 100L,
+    interweave_slice_max_shrink = 1000L,
+    global_root_swap_probability = 0.5,
+    target_change = FALSE
+  )
+}
+
+rqr_dlm_companion_normalize_transition_kernel <- function(value, label) {
+  fields <- rqr_dlm_companion_transition_kernel_fields()
+  if (!is.list(value) || !identical(names(value), fields)) {
+    rqr_dlm_companion_fail(label, " has an incomplete transition contract.")
+  }
+  strings <- c(
+    "schema_version", "evolution_mode", "learning_rate_mode",
+    "collapsed_integrated_root", "collapsed_conditioned_root"
+  )
+  if (any(!vapply(value[strings], function(x) {
+      is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)
+    }, logical(1L)))) {
+    rqr_dlm_companion_fail(label, " has malformed transition strings.")
+  }
+  coordinate_order <- unname(unlist(
+    value$collapsed_log_q_coordinate_order, use.names = FALSE
+  ))
+  scan_order <- unname(unlist(value$scan_order, use.names = FALSE))
+  if (!is.character(coordinate_order) || anyNA(coordinate_order) ||
+      any(!nzchar(coordinate_order)) || anyDuplicated(coordinate_order) ||
+      !is.character(scan_order) || !length(scan_order) ||
+      anyNA(scan_order) || any(!nzchar(scan_order))) {
+    rqr_dlm_companion_fail(label, " has malformed transition ordering.")
+  }
+  logicals <- c(
+    "time0_state_completion", "one_root_partially_collapsed",
+    "centered_inverse_gamma", "noncentered_slice_interweave",
+    "target_change"
+  )
+  if (any(!vapply(value[logicals], function(x) {
+      is.logical(x) && length(x) == 1L && !is.na(x)
+    }, logical(1L)))) {
+    rqr_dlm_companion_fail(label, " has malformed transition flags.")
+  }
+  integer_fields <- c(
+    "collapsed_slice_sweeps", "collapsed_slice_max_steps",
+    "collapsed_slice_max_shrink", "interweave_cycles",
+    "interweave_slice_sweeps_per_cycle",
+    "interweave_slice_max_steps", "interweave_slice_max_shrink"
+  )
+  if (any(!vapply(
+      value[integer_fields],
+      rqr_dlm_companion_is_integerish, logical(1L), minimum = 0
+    ))) {
+    rqr_dlm_companion_fail(label, " has malformed transition counts.")
+  }
+  numeric_fields <- c(
+    "collapsed_slice_width", "interweave_slice_width",
+    "global_root_swap_probability"
+  )
+  if (any(!vapply(value[numeric_fields], function(x) {
+      is.numeric(x) && length(x) == 1L && !is.na(x) && is.finite(x)
+    }, logical(1L)))) {
+    rqr_dlm_companion_fail(label, " has malformed transition scalars.")
+  }
+  list(
+    schema_version = value$schema_version,
+    evolution_mode = value$evolution_mode,
+    learning_rate_mode = value$learning_rate_mode,
+    time0_state_completion = value$time0_state_completion,
+    one_root_partially_collapsed =
+      value$one_root_partially_collapsed,
+    collapsed_integrated_root = value$collapsed_integrated_root,
+    collapsed_conditioned_root = value$collapsed_conditioned_root,
+    collapsed_log_q_coordinate_order = coordinate_order,
+    scan_order = scan_order,
+    collapsed_slice_width = as.numeric(value$collapsed_slice_width),
+    collapsed_slice_sweeps =
+      as.integer(value$collapsed_slice_sweeps),
+    collapsed_slice_max_steps =
+      as.integer(value$collapsed_slice_max_steps),
+    collapsed_slice_max_shrink =
+      as.integer(value$collapsed_slice_max_shrink),
+    centered_inverse_gamma = value$centered_inverse_gamma,
+    noncentered_slice_interweave =
+      value$noncentered_slice_interweave,
+    interweave_cycles = as.integer(value$interweave_cycles),
+    interweave_slice_width =
+      as.numeric(value$interweave_slice_width),
+    interweave_slice_sweeps_per_cycle =
+      as.integer(value$interweave_slice_sweeps_per_cycle),
+    interweave_slice_max_steps =
+      as.integer(value$interweave_slice_max_steps),
+    interweave_slice_max_shrink =
+      as.integer(value$interweave_slice_max_shrink),
+    global_root_swap_probability =
+      as.numeric(value$global_root_swap_probability),
+    target_change = value$target_change
+  )
+}
+
+rqr_dlm_companion_transition_kernel_invariant <- function(contract) {
+  list(
+    schema_version =
+      "rqrgibbs_dlm_transition_kernel_invariant/1.0.0",
+    transition_kernel = contract[
+      setdiff(
+        names(contract), "collapsed_log_q_coordinate_order"
+      )
+    ]
+  )
+}
+
+rqr_dlm_companion_normalize_transition_invariant <- function(
+    value, expected_contract, label) {
+  expected_fields <- setdiff(
+    rqr_dlm_companion_transition_kernel_fields(),
+    "collapsed_log_q_coordinate_order"
+  )
+  if (!is.list(value) ||
+      !identical(
+        names(value), c("schema_version", "transition_kernel")
+      ) ||
+      !identical(
+        value$schema_version,
+        "rqrgibbs_dlm_transition_kernel_invariant/1.0.0"
+      ) ||
+      !is.list(value$transition_kernel) ||
+      !identical(names(value$transition_kernel), expected_fields)) {
+    rqr_dlm_companion_fail(label, " has a malformed kernel invariant.")
+  }
+  complete <- setNames(
+    lapply(rqr_dlm_companion_transition_kernel_fields(), function(field) {
+      if (identical(field, "collapsed_log_q_coordinate_order")) {
+        expected_contract[[field]]
+      } else {
+        value$transition_kernel[[field]]
+      }
+    }),
+    rqr_dlm_companion_transition_kernel_fields()
+  )
+  normalized <- rqr_dlm_companion_normalize_transition_kernel(
+    complete, paste0(label, " transition_kernel")
+  )
+  rqr_dlm_companion_transition_kernel_invariant(normalized)
 }
 
 rqr_dlm_companion_m01_manifest_fields <- function() {
@@ -1147,9 +1560,19 @@ rqr_dlm_companion_m01_manifest_fields <- function() {
     "standard_component_scale_schedule",
     "sentinel_component_scale_schedule",
     "exact_target_preserving_kernel",
+    "transition_kernel_schema", "unique_transition_kernel_digests",
+    "expected_transition_kernel_contract",
+    "expected_transition_kernel_contract_digest",
+    "transition_kernel_invariant_schema",
+    "expected_transition_kernel_invariant",
+    "expected_transition_kernel_invariant_digest",
+    "all_fit_transition_contracts_complete",
+    "all_fit_transition_contracts_match_expected",
     "comparative_simulation_metrics_used", "failed_outputs_reused",
     "all_fits_succeeded", "all_fits_reproducibility_eligible",
     "unique_runtime_tree_digests", "total_fit_elapsed_seconds",
+    "maximum_process_peak_RSS_KiB",
+    "declared_worker_memory_ceiling_KiB", "resource_margin_pass",
     "all_diagnostics_passed", "started_at_utc", "completed_at_utc"
   )
 }
@@ -1159,14 +1582,23 @@ rqr_dlm_companion_m02_manifest_fields <- function() {
     "schema_version", "source_commit", "source_clean",
     "package_version", "primary_runtime_attestation_sha256",
     "primary_reproducibility_eligible",
+    "primary_runtime_tree_digest",
     "exdqlm_runtime_attestation_sha256",
     "exdqlm_runtime_tree_digest", "exdqlm_source_package_sha256",
     "config_digest", "incidence_digest", "seed_ledger_digest",
     "wave_id", "wave_task_count", "interval_chain_job_count",
     "logical_endpoint_fit_count", "workers", "thread_environment",
-    "comparator_projection", "comparative_simulation_metrics_used",
+    "comparator_projection",
+    "common_target_across_initialization_profiles",
+    "overdispersed_initialization_profiles_verified",
+    "frozen_schedules", "applied_schedule_evidence",
+    "all_applied_schedules_verified", "schedule_evidence_fields",
+    "initialization_contract", "target_fields_held_fixed",
+    "comparative_simulation_metrics_used",
     "failed_outputs_reused", "all_fits_succeeded",
     "all_diagnostics_passed", "total_fit_elapsed_seconds",
+    "maximum_process_peak_RSS_KiB",
+    "declared_worker_memory_ceiling_KiB", "resource_margin_pass",
     "started_at_utc", "completed_at_utc"
   )
 }
@@ -1188,26 +1620,391 @@ rqr_dlm_companion_horizon_manifest_fields <- function() {
   )
 }
 
-rqr_dlm_companion_validate_m01 <- function(
+rqr_dlm_companion_resource_manifest_fields <- function() {
+  c(
+    "schema_version", "source_commit", "source_clean",
+    "package_version", "expected_commit", "config_digest",
+    "incidence_digest", "maximum_seed_ledger_digest",
+    "primary_runtime_attestation_sha256",
+    "primary_runtime_tree_digest", "primary_runtime_source_match",
+    "primary_reproducibility_eligible",
+    "exact_commit_attestation_pair_verified",
+    "promotion_evidence_eligible", "development_execution",
+    "configured_workers", "configured_sentinel_workers",
+    "resource_gate_worker_processes", "modeled_chains_per_worker",
+    "thread_environment", "toolchain_manifest_digest",
+    "toolchain_manifest_complete", "scientific_metrics_used",
+    "response_prediction_contract", "fit_shape_contract",
+    "synthetic_heavy_objects_retained", "writer_measurement_process",
+    "reader_measurement_process", "distinct_clean_processes_verified",
+    "telemetry_complete",
+    "maximum_writer_or_clean_reader_peak_RSS_KiB",
+    "declared_worker_memory_ceiling_KiB",
+    "required_margin_fraction", "resource_margin_pass",
+    "all_writer_shapes_valid", "all_clean_deserializations_valid",
+    "completed_at_utc"
+  )
+}
+
+rqr_dlm_companion_validate_resource <- function(
     directory, expected_commit, reference) {
-  directory <- rqr_dlm_companion_validate_directory(directory, "M01")
+  role <- "resource_envelope"
+  directory <- rqr_dlm_companion_validate_directory(directory, role)
   artifacts <- rqr_dlm_companion_verify_artifact_manifest(
-    directory, "M01", c("path", "bytes", "sha256")
+    directory, role, c("path", "bytes", "sha256")
+  )
+  manifest <- rqr_dlm_companion_read_json(
+    file.path(directory, "validation_manifest.json"),
+    rqr_dlm_companion_resource_manifest_fields(),
+    "resource-envelope validation_manifest.json"
+  )
+  rqr_dlm_companion_assert_thread_environment(
+    manifest$thread_environment, "resource envelope"
+  )
+  digest_fields <- c(
+    "config_digest", "incidence_digest", "maximum_seed_ledger_digest",
+    "primary_runtime_attestation_sha256",
+    "primary_runtime_tree_digest", "toolchain_manifest_digest"
+  )
+  if (!identical(
+        manifest$schema_version,
+        "rqrgibbs_dlm_resource_envelope_validation/2.0.0"
+      ) ||
+      !identical(tolower(manifest$source_commit), expected_commit) ||
+      !identical(tolower(manifest$expected_commit), expected_commit) ||
+      !rqr_dlm_companion_scalar_true(manifest$source_clean) ||
+      !identical(manifest$package_version, reference$package_version) ||
+      any(!vapply(
+        manifest[digest_fields],
+        rqr_dlm_companion_is_hex, logical(1L)
+      )) ||
+      !identical(
+        manifest$primary_runtime_attestation_sha256,
+        reference$runtime_attestation_sha256
+      ) ||
+      !identical(
+        manifest$primary_runtime_tree_digest,
+        reference$runtime_tree_digest
+      ) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$primary_runtime_source_match
+      ) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$primary_reproducibility_eligible
+      ) ||
+      !identical(
+        manifest$primary_runtime_tree_digest,
+        reference$runtime_tree_digest
+      ) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$exact_commit_attestation_pair_verified
+      ) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$promotion_evidence_eligible
+      ) ||
+      !rqr_dlm_companion_scalar_false(manifest$development_execution) ||
+      !rqr_dlm_companion_is_integerish(
+        manifest$configured_workers, 1, 64
+      ) ||
+      !rqr_dlm_companion_is_integerish(
+        manifest$configured_sentinel_workers, 1, 64
+      ) ||
+      !rqr_dlm_companion_is_integerish(
+        manifest$resource_gate_worker_processes, 1, 1
+      ) ||
+      !identical(
+        unname(as.numeric(unlist(
+          manifest$modeled_chains_per_worker, use.names = FALSE
+        ))),
+        4
+      ) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$toolchain_manifest_complete
+      ) ||
+      !rqr_dlm_companion_scalar_false(manifest$scientific_metrics_used) ||
+      !rqr_dlm_companion_scalar_false(
+        manifest$response_prediction_contract
+      ) ||
+      !identical(
+        manifest$fit_shape_contract,
+        "p_by_T_by_draw;T_by_draw;p_by_draw;draw_by_component"
+      ) ||
+      !rqr_dlm_companion_scalar_false(
+        manifest$synthetic_heavy_objects_retained
+      ) ||
+      !identical(manifest$writer_measurement_process, "fresh_Rscript") ||
+      !identical(manifest$reader_measurement_process, "fresh_Rscript") ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$distinct_clean_processes_verified
+      ) ||
+      !rqr_dlm_companion_scalar_true(manifest$telemetry_complete) ||
+      !rqr_dlm_companion_finite_column(
+        manifest$maximum_writer_or_clean_reader_peak_RSS_KiB,
+        1L, minimum = 1
+      ) ||
+      !rqr_dlm_companion_finite_column(
+        manifest$declared_worker_memory_ceiling_KiB, 1L, minimum = 1
+      ) ||
+      !identical(as.numeric(manifest$required_margin_fraction), 0.8) ||
+      manifest$maximum_writer_or_clean_reader_peak_RSS_KiB >
+        manifest$required_margin_fraction *
+          manifest$declared_worker_memory_ceiling_KiB ||
+      !rqr_dlm_companion_scalar_true(manifest$resource_margin_pass) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$all_writer_shapes_valid
+      ) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$all_clean_deserializations_valid
+      )) {
+    rqr_dlm_companion_fail(
+      "Resource-envelope source/runtime/telemetry gate failed."
+    )
+  }
+
+  shape <- rqr_dlm_companion_read_csv(
+    file.path(directory, "fit_shape_contract.csv"),
+    c("field", "orientation", "dimension_formula"),
+    "resource-envelope fit_shape_contract.csv"
+  )
+  expected_shape <- data.frame(
+    field = c(
+      "samp.theta_root1", "samp.theta_root2",
+      "samp.theta_terminal_root1", "samp.theta_terminal_root2",
+      "samp.theta0_root1", "samp.theta0_root2",
+      "samp.eta_root1", "samp.eta_root2", "samp.lambda",
+      "samp.evolution_scale", "samp.evolution_scale_shape",
+      "samp.evolution_scale_rate"
+    ),
+    orientation = c(
+      "state_by_time_by_draw", "state_by_time_by_draw",
+      "state_by_draw", "state_by_draw",
+      "state_by_draw", "state_by_draw", "time_by_draw", "time_by_draw",
+      "draw", "draw_by_component", "draw_by_component",
+      "draw_by_component"
+    ),
+    dimension_formula = c(
+      "p x T x retained", "p x T x retained",
+      "p x retained", "p x retained",
+      "p x retained", "p x retained", "T x retained", "T x retained",
+      "retained", "retained x components", "retained x components",
+      "retained x components"
+    ),
+    stringsAsFactors = FALSE
+  )
+  if (!identical(shape, expected_shape)) {
+    rqr_dlm_companion_fail("The resource fit-shape contract changed.")
+  }
+
+  envelope <- rqr_dlm_companion_read_csv(
+    file.path(directory, "resource_envelope.csv"),
+    c(
+      "case", "state_dimension", "training_horizon", "retained_draws",
+      "component_count", "chains", "writer_peak_RSS_KiB",
+      "clean_reader_peak_RSS_KiB", "bytes", "sha256",
+      "writer_shape_valid", "clean_deserialization_valid",
+      "declared_worker_memory_ceiling_KiB",
+      "eighty_percent_margin_KiB", "serialization_margin_pass"
+    ),
+    "resource-envelope resource_envelope.csv"
+  )
+  if (nrow(envelope) != 3L ||
+      !identical(
+        as.character(envelope$case),
+        c(
+          "four_state_component_scale",
+          "three_state_learned_component_scale",
+          "long_horizon_single_state"
+        )
+      ) ||
+      !identical(as.numeric(envelope$state_dimension), c(4, 3, 1)) ||
+      !identical(as.numeric(envelope$training_horizon), c(200, 200, 400)) ||
+      !identical(as.numeric(envelope$retained_draws), c(6000, 9000, 6000)) ||
+      !identical(as.numeric(envelope$component_count), c(2, 2, 1)) ||
+      !identical(as.numeric(envelope$chains), rep(4, 3)) ||
+      !rqr_dlm_companion_finite_column(
+        envelope$writer_peak_RSS_KiB, 3L, minimum = 1
+      ) ||
+      !rqr_dlm_companion_finite_column(
+        envelope$clean_reader_peak_RSS_KiB, 3L, minimum = 1
+      ) ||
+      !rqr_dlm_companion_integer_column(envelope$bytes, 3L, minimum = 1) ||
+      any(!vapply(
+        as.character(envelope$sha256),
+        rqr_dlm_companion_is_hex, logical(1L)
+      )) ||
+      !rqr_dlm_companion_logical_column(
+        envelope$writer_shape_valid, 3L
+      ) ||
+      !all(envelope$writer_shape_valid) ||
+      !rqr_dlm_companion_logical_column(
+        envelope$clean_deserialization_valid, 3L
+      ) ||
+      !all(envelope$clean_deserialization_valid) ||
+      any(envelope$declared_worker_memory_ceiling_KiB !=
+            manifest$declared_worker_memory_ceiling_KiB) ||
+      any(envelope$eighty_percent_margin_KiB !=
+            0.8 * manifest$declared_worker_memory_ceiling_KiB) ||
+      !rqr_dlm_companion_logical_column(
+        envelope$serialization_margin_pass, 3L
+      ) ||
+      !all(envelope$serialization_margin_pass) ||
+      !identical(
+        max(c(
+          envelope$writer_peak_RSS_KiB,
+          envelope$clean_reader_peak_RSS_KiB
+        )),
+        as.numeric(
+          manifest$maximum_writer_or_clean_reader_peak_RSS_KiB
+        )
+      )) {
+    rqr_dlm_companion_fail(
+      "Resource-envelope shape, deserialization, or margin evidence failed."
+    )
+  }
+
+  toolchain <- rqr_dlm_companion_read_csv(
+    file.path(directory, "toolchain_manifest.csv"),
+    c("key", "value"), "resource-envelope toolchain_manifest.csv"
+  )
+  if (nrow(toolchain) < 10L || anyNA(toolchain) ||
+      any(!nzchar(toolchain$key)) || any(!nzchar(toolchain$value)) ||
+      !identical(
+        digest::digest(toolchain, algo = "sha256", serialize = TRUE),
+        manifest$toolchain_manifest_digest
+      )) {
+    rqr_dlm_companion_fail(
+      "Resource-envelope toolchain manifest is incomplete or unbound."
+    )
+  }
+  resource_toolchain_facts <-
+    rqr_dlm_companion_normalize_resource_toolchain(toolchain)
+
+  closeout <- rqr_dlm_companion_read_csv(
+    file.path(directory, "resource_closeout.csv"),
+    c(
+      "schema_version", "source_commit", "package_version",
+      "primary_runtime_tree_digest",
+      "primary_runtime_attestation_sha256", "config_digest",
+      "incidence_digest", "maximum_seed_ledger_digest",
+      "toolchain_manifest_digest",
+      "exact_commit_attestation_pair_verified",
+      "promotion_evidence_eligible", "telemetry_complete",
+      "resource_margin_pass", "all_writer_shapes_valid",
+      "all_clean_deserializations_valid",
+      "maximum_writer_or_clean_reader_peak_RSS_KiB", "status"
+    ),
+    "resource-envelope resource_closeout.csv"
+  )
+  binding <- c(
+    source_commit = manifest$source_commit,
+    package_version = manifest$package_version,
+    primary_runtime_tree_digest = manifest$primary_runtime_tree_digest,
+    primary_runtime_attestation_sha256 =
+      manifest$primary_runtime_attestation_sha256,
+    config_digest = manifest$config_digest,
+    incidence_digest = manifest$incidence_digest,
+    maximum_seed_ledger_digest = manifest$maximum_seed_ledger_digest,
+    toolchain_manifest_digest = manifest$toolchain_manifest_digest
+  )
+  if (nrow(closeout) != 1L ||
+      !identical(
+        closeout$schema_version[[1L]],
+        "rqrgibbs_dlm_resource_envelope_closeout/1.0.0"
+      ) ||
+      !identical(
+        as.character(unlist(closeout[1L, names(binding)])),
+        unname(binding)
+      ) ||
+      !all(vapply(
+        closeout[1L, c(
+          "exact_commit_attestation_pair_verified",
+          "promotion_evidence_eligible", "telemetry_complete",
+          "resource_margin_pass", "all_writer_shapes_valid",
+          "all_clean_deserializations_valid"
+        )],
+        rqr_dlm_companion_scalar_true, logical(1L)
+      )) ||
+      !identical(
+        as.numeric(
+          closeout$maximum_writer_or_clean_reader_peak_RSS_KiB[[1L]]
+        ),
+        as.numeric(
+          manifest$maximum_writer_or_clean_reader_peak_RSS_KiB
+        )
+      ) ||
+      !identical(closeout$status[[1L]], "passed")) {
+    rqr_dlm_companion_fail(
+      "Resource-envelope closeout is not bound to the passing manifest."
+    )
+  }
+
+  list(
+    role = role, directory = directory, artifacts = artifacts,
+    schema_version = manifest$schema_version,
+    source_commit = expected_commit,
+    package_version = manifest$package_version,
+    runtime_tree_digest = reference$runtime_tree_digest,
+    runtime_attestation_sha256 =
+      manifest$primary_runtime_attestation_sha256,
+    config_digest = manifest$config_digest,
+    incidence_digest = manifest$incidence_digest,
+    seed_ledger_digest = manifest$maximum_seed_ledger_digest,
+    toolchain_digest = manifest$toolchain_manifest_digest,
+    runtime_toolchain_facts = resource_toolchain_facts,
+    semantic_counts = c(
+      cases = nrow(envelope), shape_fields = nrow(shape),
+      toolchain_fields = nrow(toolchain)
+    )
+  )
+}
+
+rqr_dlm_companion_validate_m01 <- function(
+    directory, expected_commit, reference, role) {
+  spec <- rqr_dlm_companion_wave_spec(role)
+  if (!identical(spec$kind, "M01")) {
+    rqr_dlm_companion_fail(role, " is not an M01 role.")
+  }
+  directory <- rqr_dlm_companion_validate_directory(directory, role)
+  artifacts <- rqr_dlm_companion_verify_artifact_manifest(
+    directory, role, c("path", "bytes", "sha256")
   )
   manifest <- rqr_dlm_companion_read_json(
     file.path(directory, "validation_manifest.json"),
     rqr_dlm_companion_m01_manifest_fields(),
-    "M01 validation_manifest.json"
+    paste0(role, " validation_manifest.json")
   )
   rqr_dlm_companion_assert_thread_environment(
-    manifest$thread_environment, "M01"
+    manifest$thread_environment, role
   )
   kernel <- manifest$component_scale_kernel
   standard <- manifest$standard_component_scale_schedule
   sentinel <- manifest$sentinel_component_scale_schedule
+  expected_transition_kernel <-
+    rqr_dlm_companion_expected_m01_transition_kernel(role)
+  observed_expected_transition_kernel <-
+    rqr_dlm_companion_normalize_transition_kernel(
+      manifest$expected_transition_kernel_contract,
+      paste0(role, " expected transition contract")
+    )
+  expected_transition_kernel_digest <- digest::digest(
+    expected_transition_kernel, algo = "sha256", serialize = TRUE
+  )
+  expected_transition_invariant <-
+    rqr_dlm_companion_transition_kernel_invariant(
+      expected_transition_kernel
+    )
+  observed_expected_transition_invariant <-
+    rqr_dlm_companion_normalize_transition_invariant(
+      manifest$expected_transition_kernel_invariant,
+      expected_transition_kernel,
+      paste0(role, " expected transition invariant")
+    )
+  expected_transition_invariant_digest <- digest::digest(
+    expected_transition_invariant, algo = "sha256", serialize = TRUE
+  )
   if (!identical(
         manifest$schema_version,
-        "rqrgibbs_dlm_wave1_correction_validation/1.0.0"
+        "rqrgibbs_dlm_wave_correction_validation/2.2.0"
       ) ||
       !identical(tolower(manifest$source_commit), expected_commit) ||
       !rqr_dlm_companion_scalar_true(manifest$source_clean) ||
@@ -1221,17 +2018,57 @@ rqr_dlm_companion_validate_m01 <- function(
         reference$runtime_tree_digest
       ) ||
       !identical(
-        manifest$wave_id,
-        "static_gaussian_T200__target0200__sentinel"
+        manifest$wave_id, spec$wave_id
       ) ||
-      !rqr_dlm_companion_is_integerish(manifest$wave_task_count, 20, 20) ||
-      !rqr_dlm_companion_is_integerish(manifest$chain_job_count, 44, 44) ||
+      !rqr_dlm_companion_is_integerish(
+        manifest$wave_task_count, spec$task_count, spec$task_count
+      ) ||
+      !rqr_dlm_companion_is_integerish(
+        manifest$chain_job_count, spec$chain_count, spec$chain_count
+      ) ||
       !rqr_dlm_companion_is_integerish(manifest$workers, 8, 8) ||
       !rqr_dlm_companion_finite_column(
         manifest$total_fit_elapsed_seconds, 1L, minimum = 0
       ) ||
       !rqr_dlm_companion_scalar_true(
         manifest$exact_target_preserving_kernel
+      ) ||
+      !identical(
+        manifest$transition_kernel_schema,
+        "rqrgibbs_dlm_transition_kernel/1.0.0"
+      ) ||
+      !rqr_dlm_companion_is_hex(
+        manifest$unique_transition_kernel_digests
+      ) ||
+      !identical(
+        observed_expected_transition_kernel,
+        expected_transition_kernel
+      ) ||
+      !identical(
+        manifest$expected_transition_kernel_contract_digest,
+        expected_transition_kernel_digest
+      ) ||
+      !identical(
+        manifest$unique_transition_kernel_digests,
+        expected_transition_kernel_digest
+      ) ||
+      !identical(
+        manifest$transition_kernel_invariant_schema,
+        "rqrgibbs_dlm_transition_kernel_invariant/1.0.0"
+      ) ||
+      !identical(
+        observed_expected_transition_invariant,
+        expected_transition_invariant
+      ) ||
+      !identical(
+        manifest$expected_transition_kernel_invariant_digest,
+        expected_transition_invariant_digest
+      ) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$all_fit_transition_contracts_complete
+      ) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$all_fit_transition_contracts_match_expected
       ) ||
       !rqr_dlm_companion_scalar_false(
         manifest$comparative_simulation_metrics_used
@@ -1242,15 +2079,30 @@ rqr_dlm_companion_validate_m01 <- function(
         manifest$all_fits_reproducibility_eligible
       ) ||
       !rqr_dlm_companion_scalar_true(manifest$all_diagnostics_passed) ||
+      !rqr_dlm_companion_finite_column(
+        manifest$maximum_process_peak_RSS_KiB, 1L, minimum = 1
+      ) ||
+      !rqr_dlm_companion_finite_column(
+        manifest$declared_worker_memory_ceiling_KiB, 1L, minimum = 1
+      ) ||
+      manifest$maximum_process_peak_RSS_KiB >
+        0.80 * manifest$declared_worker_memory_ceiling_KiB ||
+      !rqr_dlm_companion_scalar_true(manifest$resource_margin_pass) ||
       !is.list(kernel) ||
       !identical(
         names(kernel),
         c(
+          "one_root_partially_collapsed",
+          "collapsed_integrated_root",
           "centered_inverse_gamma", "noncentered_slice_interweave",
           "interweave_cycles", "slice_width", "slice_sweeps_per_cycle",
           "slice_max_steps", "slice_max_shrink", "target_change"
         )
       ) ||
+      !rqr_dlm_companion_scalar_true(
+        kernel$one_root_partially_collapsed
+      ) ||
+      !identical(kernel$collapsed_integrated_root, "root1") ||
       !rqr_dlm_companion_scalar_true(kernel$centered_inverse_gamma) ||
       !rqr_dlm_companion_scalar_true(
         kernel$noncentered_slice_interweave
@@ -1260,7 +2112,7 @@ rqr_dlm_companion_validate_m01 <- function(
       ) ||
       !rqr_dlm_companion_is_integerish(kernel$slice_width, 1, 1) ||
       !rqr_dlm_companion_is_integerish(
-        kernel$slice_sweeps_per_cycle, 2, 2
+        kernel$slice_sweeps_per_cycle, 3, 3
       ) ||
       !rqr_dlm_companion_is_integerish(
         kernel$slice_max_steps, 100, 100
@@ -1287,14 +2139,14 @@ rqr_dlm_companion_validate_m01 <- function(
       )) ||
       !identical(
         unname(as.numeric(unlist(sentinel))),
-        c(1000, 2000, 1)
+        c(1000, 6000, 1)
       )) {
     rqr_dlm_companion_fail(
       "M01 source, runtime, target, fit, diagnostic, or interweaving gate failed."
     )
   }
   diagnostics <- rqr_dlm_companion_read_csv(
-    file.path(directory, "wave1_M01_diagnostics.csv"),
+    file.path(directory, paste0(spec$tag, "_M01_diagnostics.csv")),
     c(
       "estimand", "chains", "rhat", "ess_bulk", "ess_tail",
       "mcse_mean", "mcse_over_sd", "pass", "DGP", "replication",
@@ -1303,42 +2155,90 @@ rqr_dlm_companion_validate_m01 <- function(
     "M01 diagnostics"
   )
   summary <- rqr_dlm_companion_read_csv(
-    file.path(directory, "wave1_M01_summary.csv"),
+    file.path(directory, paste0(spec$tag, "_M01_summary.csv")),
     c(
       "DGP", "replication", "sentinel", "chains", "diagnostics",
       "diagnostics_passed", "all_pass", "fit_elapsed_seconds",
+      "maximum_peak_RSS_KiB",
       "log_q_1_rhat", "log_q_1_ess_bulk", "log_q_1_ess_tail",
-      "log_q_1_mcse_over_sd"
+      "log_q_1_mcse_over_sd", "transition_kernel_fit_count",
+      "transition_kernel_schemas", "transition_kernel_digests",
+      "transition_kernel_contract_digests",
+      "transition_kernel_contract_matches"
     ),
     "M01 summary"
   )
-  if (nrow(summary) != 20L ||
-      any(!summary$DGP %in% c("S01", "S02")) ||
+  if (nrow(summary) != spec$task_count ||
+      any(!summary$DGP %in% spec$DGP) ||
       !rqr_dlm_companion_integer_column(
-        summary$replication, 20L, minimum = 1
+        summary$replication, spec$task_count, minimum = 1
       ) ||
-      !rqr_dlm_companion_logical_column(summary$sentinel, 20L) ||
-      sum(summary$sentinel) != 8L ||
+      !rqr_dlm_companion_logical_column(
+        summary$sentinel, spec$task_count
+      ) ||
+      sum(summary$sentinel) != spec$sentinel_count ||
       !rqr_dlm_companion_integer_column(
-        summary$chains, 20L, minimum = 1
+        summary$chains, spec$task_count, minimum = 1
       ) ||
       any(summary$chains != ifelse(summary$sentinel, 4, 1)) ||
-      sum(summary$chains) != 44L ||
+      sum(summary$chains) != spec$chain_count ||
       !rqr_dlm_companion_integer_column(
-        summary$diagnostics, 20L, minimum = 46, maximum = 46
+        summary$diagnostics, spec$task_count,
+        minimum = 46, maximum = 46
       ) ||
       !rqr_dlm_companion_integer_column(
-        summary$diagnostics_passed, 20L, minimum = 46, maximum = 46
+        summary$diagnostics_passed, spec$task_count,
+        minimum = 46, maximum = 46
       ) ||
-      !rqr_dlm_companion_logical_column(summary$all_pass, 20L) ||
+      !rqr_dlm_companion_logical_column(
+        summary$all_pass, spec$task_count
+      ) ||
       !all(summary$all_pass) ||
       !rqr_dlm_companion_finite_column(
-        summary$fit_elapsed_seconds, 20L, minimum = 0
+        summary$fit_elapsed_seconds, spec$task_count, minimum = 0
       ) ||
+      !rqr_dlm_companion_finite_column(
+        summary$maximum_peak_RSS_KiB, spec$task_count, minimum = 1
+      ) ||
+      !rqr_dlm_companion_integer_column(
+        summary$transition_kernel_fit_count, spec$task_count,
+        minimum = 1, maximum = 4
+      ) ||
+      any(summary$transition_kernel_fit_count != summary$chains) ||
       any(summary$diagnostics_passed != summary$diagnostics)) {
     rqr_dlm_companion_fail(
       "M01 diagnostic and summary tables are incomplete or failed."
     )
+  }
+  split_fit_values <- function(value) {
+    strsplit(as.character(value), "|", fixed = TRUE)[[1L]]
+  }
+  for (row in seq_len(nrow(summary))) {
+    expected_count <- as.integer(summary$chains[[row]])
+    schemas <- split_fit_values(
+      summary$transition_kernel_schemas[[row]]
+    )
+    digests <- split_fit_values(
+      summary$transition_kernel_digests[[row]]
+    )
+    contract_digests <- split_fit_values(
+      summary$transition_kernel_contract_digests[[row]]
+    )
+    matches <- split_fit_values(
+      summary$transition_kernel_contract_matches[[row]]
+    )
+    if (length(schemas) != expected_count ||
+        length(digests) != expected_count ||
+        length(contract_digests) != expected_count ||
+        length(matches) != expected_count ||
+        any(schemas != "rqrgibbs_dlm_transition_kernel/1.0.0") ||
+        any(digests != expected_transition_kernel_digest) ||
+        any(contract_digests != expected_transition_kernel_digest) ||
+        any(matches != "TRUE")) {
+      rqr_dlm_companion_fail(
+        "M01 per-fit transition-contract evidence is incomplete or changed."
+      )
+    }
   }
   rqr_dlm_companion_validate_diagnostic_grid(
     diagnostics, summary, "M01", has_sentinel = TRUE
@@ -1367,7 +2267,7 @@ rqr_dlm_companion_validate_m01 <- function(
     )
   }
   list(
-    role = "M01", directory = directory, artifacts = artifacts,
+    role = role, directory = directory, artifacts = artifacts,
     schema_version = manifest$schema_version,
     source_commit = expected_commit,
     package_version = manifest$package_version,
@@ -1377,31 +2277,89 @@ rqr_dlm_companion_validate_m01 <- function(
     config_digest = manifest$config_digest,
     incidence_digest = manifest$incidence_digest,
     seed_ledger_digest = manifest$seed_ledger_digest,
+    transition_kernel_schema = manifest$transition_kernel_schema,
+    transition_kernel_digest =
+      manifest$unique_transition_kernel_digests,
+    transition_kernel_contract = expected_transition_kernel,
+    transition_kernel_invariant_schema =
+      manifest$transition_kernel_invariant_schema,
+    transition_kernel_invariant =
+      expected_transition_invariant,
+    transition_kernel_invariant_digest =
+      manifest$expected_transition_kernel_invariant_digest,
     task_keys = sort(paste(summary$DGP, summary$replication, sep = "::")),
     semantic_counts = c(
-      wave_tasks = 20, chain_jobs = 44,
+      wave_tasks = spec$task_count, chain_jobs = spec$chain_count,
       diagnostics = nrow(diagnostics)
     )
   )
 }
 
 rqr_dlm_companion_validate_m02 <- function(
-    directory, expected_commit, reference) {
-  directory <- rqr_dlm_companion_validate_directory(directory, "M02")
+    directory, expected_commit, reference, role) {
+  spec <- rqr_dlm_companion_wave_spec(role)
+  if (!identical(spec$kind, "M02")) {
+    rqr_dlm_companion_fail(role, " is not an M02 role.")
+  }
+  directory <- rqr_dlm_companion_validate_directory(directory, role)
   artifacts <- rqr_dlm_companion_verify_artifact_manifest(
-    directory, "M02", c("path", "bytes", "sha256")
+    directory, role, c("path", "bytes", "sha256")
   )
   manifest <- rqr_dlm_companion_read_json(
     file.path(directory, "validation_manifest.json"),
     rqr_dlm_companion_m02_manifest_fields(),
-    "M02 validation_manifest.json"
+    paste0(role, " validation_manifest.json")
   )
   rqr_dlm_companion_assert_thread_environment(
-    manifest$thread_environment, "M02"
+    manifest$thread_environment, role
   )
+  schedules <- manifest$frozen_schedules
+  schedule_evidence <- manifest$applied_schedule_evidence
+  valid_schedule <- function(value) {
+    is.list(value) &&
+      identical(names(value), c("burn", "retain", "thin")) &&
+      all(vapply(
+        value, rqr_dlm_companion_is_integerish, logical(1L),
+        minimum = 1
+      )) &&
+      identical(
+        unname(as.numeric(unlist(value))), c(1000, 4000, 1)
+      )
+  }
+  expected_schedule_jobs <- c(
+    standard = spec$chain_count - 4L * spec$sentinel_count,
+    sentinel = 4L * spec$sentinel_count
+  )
+  valid_schedule_evidence <- is.list(schedule_evidence) &&
+    identical(names(schedule_evidence), c("standard", "sentinel")) &&
+    all(vapply(names(schedule_evidence), function(name) {
+      value <- schedule_evidence[[name]]
+      is.list(value) &&
+        identical(
+          names(value),
+          c(
+            "configured_schedule", "interval_chain_job_count",
+            "realized_state_draw_dimensions",
+            "realized_scale_draw_lengths", "all_applied"
+          )
+        ) &&
+        valid_schedule(value$configured_schedule) &&
+        rqr_dlm_companion_is_integerish(
+          value$interval_chain_job_count,
+          expected_schedule_jobs[[name]], expected_schedule_jobs[[name]]
+        ) &&
+        is.character(value$realized_state_draw_dimensions) &&
+        length(value$realized_state_draw_dimensions) >= 1L &&
+        all(grepl("^[1-9][0-9]*x[1-9][0-9]*x4000$",
+                  value$realized_state_draw_dimensions)) &&
+        is.numeric(value$realized_scale_draw_lengths) &&
+        length(value$realized_scale_draw_lengths) >= 1L &&
+        all(value$realized_scale_draw_lengths == 4000) &&
+        rqr_dlm_companion_scalar_true(value$all_applied)
+    }, logical(1L)))
   if (!identical(
         manifest$schema_version,
-        "rqrgibbs_dlm_wave1_comparator_projection_validation/1.0.0"
+        "rqrgibbs_dlm_wave_comparator_projection_validation/2.1.0"
       ) ||
       !identical(tolower(manifest$source_commit), expected_commit) ||
       !rqr_dlm_companion_scalar_true(manifest$source_clean) ||
@@ -1421,15 +2379,18 @@ rqr_dlm_companion_validate_m02 <- function(
         manifest$exdqlm_source_package_sha256
       ) ||
       !identical(
-        manifest$wave_id,
-        "static_gaussian_T200__target0200__sentinel"
-      ) ||
-      !rqr_dlm_companion_is_integerish(manifest$wave_task_count, 20, 20) ||
-      !rqr_dlm_companion_is_integerish(
-        manifest$interval_chain_job_count, 44, 44
+        manifest$wave_id, spec$wave_id
       ) ||
       !rqr_dlm_companion_is_integerish(
-        manifest$logical_endpoint_fit_count, 88, 88
+        manifest$wave_task_count, spec$task_count, spec$task_count
+      ) ||
+      !rqr_dlm_companion_is_integerish(
+        manifest$interval_chain_job_count,
+        spec$chain_count, spec$chain_count
+      ) ||
+      !rqr_dlm_companion_is_integerish(
+        manifest$logical_endpoint_fit_count,
+        spec$endpoint_count, spec$endpoint_count
       ) ||
       !rqr_dlm_companion_is_integerish(manifest$workers, 8, 8) ||
       !rqr_dlm_companion_finite_column(
@@ -1439,18 +2400,60 @@ rqr_dlm_companion_validate_m02 <- function(
         manifest$comparator_projection,
         "colSums(FF * posterior_state_mean_or_draw)"
       ) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$common_target_across_initialization_profiles
+      ) ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$overdispersed_initialization_profiles_verified
+      ) ||
+      !is.list(schedules) ||
+      !identical(names(schedules), c("standard", "sentinel")) ||
+      !all(vapply(schedules, valid_schedule, logical(1L))) ||
+      !valid_schedule_evidence ||
+      !rqr_dlm_companion_scalar_true(
+        manifest$all_applied_schedules_verified
+      ) ||
+      !identical(
+        unname(unlist(
+          manifest$schedule_evidence_fields, use.names = FALSE
+        )),
+        c(
+          "schedule_role", "applied_schedule", "schedule_applied",
+          "state_draw_dimensions", "scale_draw_lengths"
+        )
+      ) ||
+      !identical(
+        manifest$initialization_contract,
+        "target_preserving_precomputed_mcmc_state"
+      ) ||
+      !identical(
+        manifest$target_fields_held_fixed,
+        paste0(
+          "y;m0;C0;FF;GG;discounts;component_dimensions;",
+          "dqlm_ind;fix_sigma;PriorSigma;quantile_probability"
+        )
+      ) ||
       !rqr_dlm_companion_scalar_false(
         manifest$comparative_simulation_metrics_used
       ) ||
       !rqr_dlm_companion_scalar_false(manifest$failed_outputs_reused) ||
       !rqr_dlm_companion_scalar_true(manifest$all_fits_succeeded) ||
-      !rqr_dlm_companion_scalar_true(manifest$all_diagnostics_passed)) {
+      !rqr_dlm_companion_scalar_true(manifest$all_diagnostics_passed) ||
+      !rqr_dlm_companion_finite_column(
+        manifest$maximum_process_peak_RSS_KiB, 1L, minimum = 1
+      ) ||
+      !rqr_dlm_companion_finite_column(
+        manifest$declared_worker_memory_ceiling_KiB, 1L, minimum = 1
+      ) ||
+      manifest$maximum_process_peak_RSS_KiB >
+        0.80 * manifest$declared_worker_memory_ceiling_KiB ||
+      !rqr_dlm_companion_scalar_true(manifest$resource_margin_pass)) {
     rqr_dlm_companion_fail(
       "M02 source, runtime, projection, fit, or diagnostic gate failed."
     )
   }
   diagnostics <- rqr_dlm_companion_read_csv(
-    file.path(directory, "wave1_M02_diagnostics.csv"),
+    file.path(directory, paste0(spec$tag, "_M02_diagnostics.csv")),
     c(
       "estimand", "chains", "rhat", "ess_bulk", "ess_tail",
       "mcse_mean", "mcse_over_sd", "pass", "DGP", "replication",
@@ -1459,36 +2462,92 @@ rqr_dlm_companion_validate_m02 <- function(
     "M02 diagnostics"
   )
   summary <- rqr_dlm_companion_read_csv(
-    file.path(directory, "wave1_M02_summary.csv"),
+    file.path(directory, paste0(spec$tag, "_M02_summary.csv")),
     c(
-      "DGP", "replication", "sentinel", "chains", "diagnostics",
+      "DGP", "replication", "sentinel", "schedule_role",
+      "configured_burn", "configured_retain", "configured_thin",
+      "applied_burn", "applied_retain", "applied_thin",
+      "realized_state_draw_dimensions", "realized_scale_draw_lengths",
+      "schedule_contract_pass", "chains", "diagnostics",
       "diagnostics_passed", "all_pass", "fit_elapsed_seconds",
+      "maximum_peak_RSS_KiB",
       "minimum_bulk_ess", "minimum_tail_ess", "maximum_mcse_over_sd"
     ),
     "M02 summary"
   )
-  if (nrow(summary) != 20L ||
-      any(!summary$DGP %in% c("S01", "S02")) ||
+  if (nrow(summary) != spec$task_count ||
+      any(!summary$DGP %in% spec$DGP) ||
       !rqr_dlm_companion_integer_column(
-        summary$replication, 20L, minimum = 1
+        summary$replication, spec$task_count, minimum = 1
       ) ||
-      !rqr_dlm_companion_logical_column(summary$sentinel, 20L) ||
-      sum(summary$sentinel) != 8L ||
+      !rqr_dlm_companion_logical_column(
+        summary$sentinel, spec$task_count
+      ) ||
+      sum(summary$sentinel) != spec$sentinel_count ||
+      !identical(
+        as.character(summary$schedule_role),
+        ifelse(summary$sentinel, "sentinel", "standard")
+      ) ||
+      !identical(
+        as.numeric(summary$configured_burn),
+        rep(1000, spec$task_count)
+      ) ||
+      !identical(
+        as.numeric(summary$configured_retain),
+        rep(4000, spec$task_count)
+      ) ||
+      !identical(
+        as.numeric(summary$configured_thin),
+        rep(1, spec$task_count)
+      ) ||
+      !identical(
+        as.numeric(summary$applied_burn),
+        rep(1000, spec$task_count)
+      ) ||
+      !identical(
+        as.numeric(summary$applied_retain),
+        rep(4000, spec$task_count)
+      ) ||
+      !identical(
+        as.numeric(summary$applied_thin),
+        rep(1, spec$task_count)
+      ) ||
+      any(!grepl(
+        paste0(
+          "^[1-9][0-9]*x[1-9][0-9]*x4000",
+          "(;[1-9][0-9]*x[1-9][0-9]*x4000)*$"
+        ),
+        summary$realized_state_draw_dimensions
+      )) ||
+      any(!grepl(
+        "^4000(;4000)*$", summary$realized_scale_draw_lengths
+      )) ||
+      !rqr_dlm_companion_logical_column(
+        summary$schedule_contract_pass, spec$task_count
+      ) ||
+      !all(summary$schedule_contract_pass) ||
       !rqr_dlm_companion_integer_column(
-        summary$chains, 20L, minimum = 1
+        summary$chains, spec$task_count, minimum = 1
       ) ||
       any(summary$chains != ifelse(summary$sentinel, 4, 1)) ||
-      sum(summary$chains) != 44L ||
+      sum(summary$chains) != spec$chain_count ||
       !rqr_dlm_companion_integer_column(
-        summary$diagnostics, 20L, minimum = 45, maximum = 45
+        summary$diagnostics, spec$task_count,
+        minimum = 45, maximum = 45
       ) ||
       !rqr_dlm_companion_integer_column(
-        summary$diagnostics_passed, 20L, minimum = 45, maximum = 45
+        summary$diagnostics_passed, spec$task_count,
+        minimum = 45, maximum = 45
       ) ||
-      !rqr_dlm_companion_logical_column(summary$all_pass, 20L) ||
+      !rqr_dlm_companion_logical_column(
+        summary$all_pass, spec$task_count
+      ) ||
       !all(summary$all_pass) ||
       !rqr_dlm_companion_finite_column(
-        summary$fit_elapsed_seconds, 20L, minimum = 0
+        summary$fit_elapsed_seconds, spec$task_count, minimum = 0
+      ) ||
+      !rqr_dlm_companion_finite_column(
+        summary$maximum_peak_RSS_KiB, spec$task_count, minimum = 1
       ) ||
       any(summary$diagnostics_passed != summary$diagnostics)) {
     rqr_dlm_companion_fail(
@@ -1526,20 +2585,34 @@ rqr_dlm_companion_validate_m02 <- function(
     )
   }
   list(
-    role = "M02", directory = directory, artifacts = artifacts,
+    role = role, directory = directory, artifacts = artifacts,
     schema_version = manifest$schema_version,
     source_commit = expected_commit,
     package_version = manifest$package_version,
-    runtime_tree_digest = reference$runtime_tree_digest,
+    runtime_tree_digest = manifest$primary_runtime_tree_digest,
     runtime_attestation_sha256 =
       manifest$primary_runtime_attestation_sha256,
     config_digest = manifest$config_digest,
     incidence_digest = manifest$incidence_digest,
     seed_ledger_digest = manifest$seed_ledger_digest,
+    exdqlm_runtime_attestation_sha256 =
+      manifest$exdqlm_runtime_attestation_sha256,
+    exdqlm_runtime_tree_digest = manifest$exdqlm_runtime_tree_digest,
+    exdqlm_source_package_sha256 =
+      manifest$exdqlm_source_package_sha256,
+    schedule_contract_digest = digest::digest(
+      list(
+        configured = manifest$frozen_schedules,
+        fields = manifest$schedule_evidence_fields
+      ),
+      algo = "sha256", serialize = TRUE
+    ),
     task_keys = sort(paste(summary$DGP, summary$replication, sep = "::")),
     semantic_counts = c(
-      wave_tasks = 20, interval_chains = 44,
-      endpoint_fits = 88, diagnostics = nrow(diagnostics)
+      wave_tasks = spec$task_count,
+      interval_chains = spec$chain_count,
+      endpoint_fits = spec$endpoint_count, diagnostics = nrow(diagnostics),
+      schedule_roles = 2
     )
   )
 }
@@ -1799,9 +2872,8 @@ rqr_dlm_companion_validate_horizon <- function(
 }
 
 rqr_dlm_companion_cross_validate <- function(inputs, expected_commit) {
-  if (!identical(names(inputs), c(
-        "dlm_reference", "M01", "M02", "horizon_M03"
-      ))) {
+  roles <- rqr_dlm_companion_roles()
+  if (!identical(names(inputs), roles)) {
     rqr_dlm_companion_fail("The companion input-role set is incomplete.")
   }
   if (any(vapply(
@@ -1823,7 +2895,19 @@ rqr_dlm_companion_cross_validate <- function(inputs, expected_commit) {
       "The protected-DLM inputs do not share one exact primary runtime."
     )
   }
-  correction <- inputs[c("M01", "M02", "horizon_M03")]
+  if (!identical(
+      inputs$resource_envelope$runtime_toolchain_facts,
+      inputs$dlm_reference$runtime_toolchain_facts
+    )) {
+    rqr_dlm_companion_fail(
+      paste(
+        "The resource-envelope toolchain facts do not match the",
+        "reference runtime toolchain."
+      )
+    )
+  }
+  correction_roles <- setdiff(roles, "dlm_reference")
+  correction <- inputs[correction_roles]
   for (field in c(
       "config_digest", "incidence_digest", "seed_ledger_digest"
     )) {
@@ -1831,21 +2915,79 @@ rqr_dlm_companion_cross_validate <- function(inputs, expected_commit) {
     if (any(!grepl("^[0-9a-f]{64}$", values)) ||
         length(unique(values)) != 1L) {
       rqr_dlm_companion_fail(
-        "The M01/M02/horizon-M03 ", field, " values do not match."
+        "The M01/M02/horizon/resource ", field, " values do not match."
       )
     }
   }
-  if (!identical(inputs$M01$task_keys, inputs$M02$task_keys) ||
-      any(!inputs$horizon_M03$task_keys %in% inputs$M01$task_keys)) {
+  wave_pairs <- list(
+    c("wave1_M01_static_gaussian", "wave1_M02_static_gaussian"),
+    c("wave2_M01_local_level", "wave2_M02_local_level")
+  )
+  if (any(vapply(wave_pairs, function(pair) {
+      !identical(inputs[[pair[[1L]]]]$task_keys,
+                 inputs[[pair[[2L]]]]$task_keys)
+    }, logical(1L))) ||
+      any(!inputs$horizon_M03$task_keys %in%
+            inputs$wave1_M01_static_gaussian$task_keys)) {
     rqr_dlm_companion_fail(
-      "The M01, M02, and M03 task-key evidence is inconsistent."
+      "The wave-specific M01/M02 and M03 task-key evidence is inconsistent."
     )
+  }
+  m01 <- inputs[c(
+    "wave1_M01_static_gaussian", "wave2_M01_local_level"
+  )]
+  if (!identical(
+        m01[[1L]]$transition_kernel_contract$
+          collapsed_log_q_coordinate_order,
+        "regression"
+      ) ||
+      !identical(
+        m01[[2L]]$transition_kernel_contract$
+          collapsed_log_q_coordinate_order,
+        "level"
+      ) ||
+      !identical(
+        m01[[1L]]$transition_kernel_invariant_schema,
+        m01[[2L]]$transition_kernel_invariant_schema
+      ) ||
+      !identical(
+        m01[[1L]]$transition_kernel_invariant,
+        m01[[2L]]$transition_kernel_invariant
+      ) ||
+      !identical(
+        m01[[1L]]$transition_kernel_invariant_digest,
+        m01[[2L]]$transition_kernel_invariant_digest
+      ) ||
+      identical(
+        m01[[1L]]$transition_kernel_digest,
+        m01[[2L]]$transition_kernel_digest
+      )) {
+    rqr_dlm_companion_fail(
+      paste(
+        "The two M01 waves do not share the exact versioned transition",
+        "invariant with their frozen regression/level coordinate labels."
+      )
+    )
+  }
+  m02 <- inputs[c(
+    "wave1_M02_static_gaussian", "wave2_M02_local_level"
+  )]
+  for (field in c(
+      "exdqlm_runtime_attestation_sha256",
+      "exdqlm_runtime_tree_digest", "exdqlm_source_package_sha256",
+      "schedule_contract_digest"
+    )) {
+    if (length(unique(vapply(m02, `[[`, character(1L), field))) != 1L) {
+      rqr_dlm_companion_fail(
+        "The two M02 waves do not share one exact ", field, "."
+      )
+    }
   }
   invisible(TRUE)
 }
 
 rqr_dlm_companion_capture_input_ledger <- function(directories) {
-  roles <- c("dlm_reference", "M01", "M02", "horizon_M03")
+  roles <- rqr_dlm_companion_roles()
   if (!identical(names(directories), roles)) {
     rqr_dlm_companion_fail(
       "Cannot capture an incomplete protected-DLM input-role set."
@@ -1980,14 +3122,23 @@ rqr_dlm_companion_recursive_manifest <- function(directory) {
 rqr_dlm_companion_semantic_gate_names <- function() {
   c(
     "exact_source_commit", "exact_primary_runtime",
+    "protected_source_inventory",
     "reference_artifact_closure", "reference_R_cpp_parity",
     "reference_missing_future", "reference_component_scale",
     "reference_six_continuation_cells", "reference_history_mutations",
-    "reference_process_monitor", "M01_fits_and_diagnostics",
-    "M01_interweaving_kernel",
-    "M02_fits_diagnostics_and_projection", "horizon_scenarios",
-    "M03_fits_and_diagnostics", "dynamic_endpoint_boundary",
-    "confirmatory_contract_digests"
+    "reference_process_monitor",
+    "wave1_M01_fits_and_diagnostics",
+    "wave1_M01_transition_kernel",
+    "wave1_M02_fits_diagnostics_and_projection",
+    "wave1_M02_schedule_contract",
+    "wave2_M01_fits_and_diagnostics",
+    "wave2_M01_transition_kernel",
+    "wave2_M02_fits_diagnostics_and_projection",
+    "wave2_M02_schedule_contract",
+    "cross_wave_transition_kernel",
+    "cross_wave_exdqlm_runtime_and_schedules",
+    "horizon_scenarios_and_M03", "dynamic_endpoint_boundary",
+    "resource_envelope_and_confirmatory_contract"
   )
 }
 
@@ -2006,10 +3157,23 @@ rqr_dlm_companion_compact_manifest_fields <- function() {
     "primary_runtime_attestation_sha256", "package_version",
     "reference_config_digest", "confirmatory_config_digest",
     "confirmatory_incidence_digest",
-    "confirmatory_seed_ledger_digest", "input_roles",
+    "confirmatory_seed_ledger_digest",
+    "protected_source_inventory_count",
+    "protected_source_inventory_digest",
+    "wave1_transition_kernel_digest",
+    "wave2_transition_kernel_digest",
+    "transition_kernel_invariant_schema",
+    "transition_kernel_invariant_digest",
+    "exdqlm_runtime_attestation_sha256",
+    "exdqlm_runtime_tree_digest", "exdqlm_source_package_sha256",
+    "comparator_schedule_contract_digest",
+    "reference_runtime_toolchain_digest",
+    "resource_toolchain_manifest_digest", "input_roles",
     "input_artifact_count", "semantic_gate_count",
     "semantic_gate_pass_count", "all_semantic_gates_passed",
-    "fits_executed_by_collector", "heavy_input_artifacts_copied",
+    "heavy_input_artifact_count", "fits_executed_by_collector",
+    "heavy_input_artifacts_deserialized",
+    "heavy_input_artifacts_copied",
     "generalized_bayes", "response_likelihood",
     "response_prediction_contract", "created_at_utc"
   )
@@ -2110,12 +3274,41 @@ rqr_dlm_companion_validate_compact <- function(
     rqr_dlm_companion_compact_manifest_fields(),
     "compact companion bundle_manifest.json"
   )
-  roles <- c("dlm_reference", "M01", "M02", "horizon_M03")
+  roles <- rqr_dlm_companion_roles()
   manifest_roles <- unname(unlist(manifest$input_roles, use.names = FALSE))
+  compact_wave1_kernel <-
+    rqr_dlm_companion_expected_m01_transition_kernel(
+      "wave1_M01_static_gaussian"
+    )
+  compact_wave2_kernel <-
+    rqr_dlm_companion_expected_m01_transition_kernel(
+      "wave2_M01_local_level"
+    )
+  compact_wave1_kernel_digest <- digest::digest(
+    compact_wave1_kernel, algo = "sha256", serialize = TRUE
+  )
+  compact_wave2_kernel_digest <- digest::digest(
+    compact_wave2_kernel, algo = "sha256", serialize = TRUE
+  )
+  compact_kernel_invariant_digest <- digest::digest(
+    rqr_dlm_companion_transition_kernel_invariant(
+      compact_wave1_kernel
+    ),
+    algo = "sha256", serialize = TRUE
+  )
   digest_fields <- c(
     "reference_config_digest", "confirmatory_config_digest",
     "confirmatory_incidence_digest",
-    "confirmatory_seed_ledger_digest"
+    "confirmatory_seed_ledger_digest",
+    "protected_source_inventory_digest",
+    "wave1_transition_kernel_digest",
+    "wave2_transition_kernel_digest",
+    "transition_kernel_invariant_digest",
+    "exdqlm_runtime_attestation_sha256",
+    "exdqlm_runtime_tree_digest", "exdqlm_source_package_sha256",
+    "comparator_schedule_contract_digest",
+    "reference_runtime_toolchain_digest",
+    "resource_toolchain_manifest_digest"
   )
   if (!identical(manifest$schema_version, rqr_dlm_companion_schema()) ||
       !identical(
@@ -2140,19 +3333,44 @@ rqr_dlm_companion_validate_compact <- function(
         rqr_dlm_companion_is_hex, logical(1L)
       )) ||
       !rqr_dlm_companion_is_integerish(
-        manifest$input_artifact_count, 39, 39
+        manifest$protected_source_inventory_count, 29, 29
+      ) ||
+      !identical(
+        manifest$transition_kernel_invariant_schema,
+        "rqrgibbs_dlm_transition_kernel_invariant/1.0.0"
+      ) ||
+      !identical(
+        manifest$wave1_transition_kernel_digest,
+        compact_wave1_kernel_digest
+      ) ||
+      !identical(
+        manifest$wave2_transition_kernel_digest,
+        compact_wave2_kernel_digest
+      ) ||
+      !identical(
+        manifest$transition_kernel_invariant_digest,
+        compact_kernel_invariant_digest
       ) ||
       !rqr_dlm_companion_is_integerish(
-        manifest$semantic_gate_count, 16, 16
+        manifest$input_artifact_count, 55, 55
       ) ||
       !rqr_dlm_companion_is_integerish(
-        manifest$semantic_gate_pass_count, 16, 16
+        manifest$semantic_gate_count, 23, 23
+      ) ||
+      !rqr_dlm_companion_is_integerish(
+        manifest$semantic_gate_pass_count, 23, 23
       ) ||
       !rqr_dlm_companion_scalar_true(
         manifest$all_semantic_gates_passed
       ) ||
+      !rqr_dlm_companion_is_integerish(
+        manifest$heavy_input_artifact_count, 7, 7
+      ) ||
       !rqr_dlm_companion_scalar_false(
         manifest$fits_executed_by_collector
+      ) ||
+      !rqr_dlm_companion_scalar_false(
+        manifest$heavy_input_artifacts_deserialized
       ) ||
       !rqr_dlm_companion_scalar_false(
         manifest$heavy_input_artifacts_copied
@@ -2183,20 +3401,26 @@ rqr_dlm_companion_validate_compact <- function(
   )
   expected_input_schemas <- c(
     "rqrgibbs_dlm_bounded_run/3.0.0",
-    "rqrgibbs_dlm_wave1_correction_validation/1.0.0",
-    "rqrgibbs_dlm_wave1_comparator_projection_validation/1.0.0",
-    "rqrgibbs_dlm_horizon_fixed_design_validation/1.0.0"
+    "rqrgibbs_dlm_wave_correction_validation/2.2.0",
+    "rqrgibbs_dlm_wave_comparator_projection_validation/2.1.0",
+    "rqrgibbs_dlm_wave_correction_validation/2.2.0",
+    "rqrgibbs_dlm_wave_comparator_projection_validation/2.1.0",
+    "rqrgibbs_dlm_horizon_fixed_design_validation/1.0.0",
+    "rqrgibbs_dlm_resource_envelope_validation/2.0.0"
   )
   expected_binding <- c(
     "direct_runtime_tree_and_attestation",
     "direct_tree_plus_matching_reference_attestation",
     "matching_reference_attestation",
-    "matching_reference_attestation"
+    "direct_tree_plus_matching_reference_attestation",
+    "matching_reference_attestation",
+    "matching_reference_attestation",
+    "direct_runtime_tree_and_attestation"
   )
-  if (nrow(summary) != 4L ||
+  if (nrow(summary) != 7L ||
       !identical(
         as.character(summary$schema_version),
-        rep(rqr_dlm_companion_schema(), 4L)
+        rep(rqr_dlm_companion_schema(), 7L)
       ) ||
       !identical(as.character(summary$input_role), roles) ||
       !identical(
@@ -2204,38 +3428,40 @@ rqr_dlm_companion_validate_compact <- function(
       ) ||
       !identical(
         tolower(as.character(summary$source_commit)),
-        rep(expected_commit, 4L)
+        rep(expected_commit, 7L)
       ) ||
       !identical(
         as.character(summary$package_version),
-        rep(expected_package_version, 4L)
+        rep(expected_package_version, 7L)
       ) ||
       !identical(
         tolower(as.character(summary$primary_runtime_tree_digest)),
-        rep(expected_runtime_tree_digest, 4L)
+        rep(expected_runtime_tree_digest, 7L)
       ) ||
       !identical(
         tolower(as.character(
           summary$primary_runtime_attestation_sha256
         )),
-        rep(expected_runtime_attestation_sha256, 4L)
+        rep(expected_runtime_attestation_sha256, 7L)
       ) ||
       !identical(
         as.character(summary$runtime_binding_basis), expected_binding
       ) ||
       !rqr_dlm_companion_integer_column(
-        summary$artifact_count, 4L, minimum = 0
+        summary$artifact_count, 7L, minimum = 0
       ) ||
-      !identical(as.numeric(summary$artifact_count), c(22, 5, 5, 7)) ||
+      !identical(
+        as.numeric(summary$artifact_count), c(22, 5, 5, 5, 5, 7, 6)
+      ) ||
       !rqr_dlm_companion_integer_column(
-        summary$artifact_bytes, 4L, minimum = 0
+        summary$artifact_bytes, 7L, minimum = 0
       ) ||
       any(!vapply(
         as.character(summary$artifact_manifest_sha256),
         rqr_dlm_companion_is_hex, logical(1L)
       )) ||
       !identical(
-        as.character(summary$semantic_status), rep("pass", 4L)
+        as.character(summary$semantic_status), rep("pass", 7L)
       )) {
     rqr_dlm_companion_fail(
       "Compact companion input summary is incomplete or inconsistent."
@@ -2256,29 +3482,31 @@ rqr_dlm_companion_validate_compact <- function(
   expected_relative <- unlist(lapply(roles, function(role) {
     sort(rqr_dlm_companion_input_files(role))
   }), use.names = FALSE)
-  if (nrow(input_artifacts) != 39L ||
+  if (nrow(input_artifacts) != 55L ||
       !identical(
         as.character(input_artifacts$schema_version),
-        rep(rqr_dlm_companion_schema(), 39L)
+        rep(rqr_dlm_companion_schema(), 55L)
       ) ||
       !identical(as.character(input_artifacts$input_role), expected_role) ||
       !identical(
         as.character(input_artifacts$relative_path), expected_relative
       ) ||
       !rqr_dlm_companion_integer_column(
-        input_artifacts$byte_count, 39L, minimum = 0
+        input_artifacts$byte_count, 55L, minimum = 0
       ) ||
       any(!vapply(
         as.character(input_artifacts$sha256),
         rqr_dlm_companion_is_hex, logical(1L)
       )) ||
       !rqr_dlm_companion_logical_column(
-        input_artifacts$listed_in_source_manifest, 39L
+        input_artifacts$listed_in_source_manifest, 55L
       ) ||
       !identical(
         input_artifacts$listed_in_source_manifest,
         input_artifacts$relative_path != "artifact_hashes.csv"
-      )) {
+      ) ||
+      sum(grepl("\\.rds$", input_artifacts$relative_path)) !=
+        manifest$heavy_input_artifact_count) {
     rqr_dlm_companion_fail(
       "Compact companion input-artifact ledger is incomplete or invalid."
     )
@@ -2309,19 +3537,47 @@ rqr_dlm_companion_validate_compact <- function(
     c("schema_version", "gate_id", "status", "detail"),
     "compact companion semantic_gates.csv"
   )
-  if (nrow(semantic) != 16L ||
+  if (nrow(semantic) != 23L ||
       !identical(
         as.character(semantic$schema_version),
-        rep(rqr_dlm_companion_schema(), 16L)
+        rep(rqr_dlm_companion_schema(), 23L)
       ) ||
       !identical(
         as.character(semantic$gate_id),
         rqr_dlm_companion_semantic_gate_names()
       ) ||
-      !identical(as.character(semantic$status), rep("pass", 16L)) ||
+      !identical(as.character(semantic$status), rep("pass", 23L)) ||
       anyNA(semantic$detail) || any(!nzchar(semantic$detail))) {
     rqr_dlm_companion_fail(
       "Compact companion semantic gate table is incomplete or failed."
+    )
+  }
+  semantic_detail <- stats::setNames(
+    as.character(semantic$detail), as.character(semantic$gate_id)
+  )
+  expected_bound_details <- c(
+    wave1_M01_transition_kernel = paste(
+      "rqrgibbs_dlm_transition_kernel/1.0.0",
+      manifest$wave1_transition_kernel_digest, sep = "|"
+    ),
+    wave2_M01_transition_kernel = paste(
+      "rqrgibbs_dlm_transition_kernel/1.0.0",
+      manifest$wave2_transition_kernel_digest, sep = "|"
+    ),
+    cross_wave_transition_kernel =
+      manifest$transition_kernel_invariant_digest,
+    resource_envelope_and_confirmatory_contract = paste(
+      manifest$reference_runtime_toolchain_digest,
+      manifest$resource_toolchain_manifest_digest,
+      3L, manifest$confirmatory_config_digest, sep = "|"
+    )
+  )
+  if (!identical(
+      unname(semantic_detail[names(expected_bound_details)]),
+      unname(expected_bound_details)
+    )) {
+    rqr_dlm_companion_fail(
+      "Compact companion semantic details are not manifest-bound."
     )
   }
   invisible(list(
@@ -2375,8 +3631,10 @@ rqr_dlm_companion_prepare_output <- function(
 }
 
 rqr_dlm_companion_bundle <- function(
-    repo_root, expected_commit, reference_directory, m01_directory,
-    m02_directory, horizon_directory, output_directory,
+    repo_root, expected_commit, reference_directory,
+    wave1_m01_directory, wave1_m02_directory,
+    wave2_m01_directory, wave2_m02_directory,
+    horizon_directory, resource_directory, output_directory,
     collector_source_commit = expected_commit,
     require_ignored_output = TRUE) {
   if (!rqr_dlm_companion_is_hex(expected_commit, 40L) ||
@@ -2388,8 +3646,13 @@ rqr_dlm_companion_bundle <- function(
   expected_commit <- tolower(expected_commit)
   collector_source_commit <- tolower(collector_source_commit)
   directories <- c(
-    dlm_reference = reference_directory, M01 = m01_directory,
-    M02 = m02_directory, horizon_M03 = horizon_directory
+    dlm_reference = reference_directory,
+    wave1_M01_static_gaussian = wave1_m01_directory,
+    wave1_M02_static_gaussian = wave1_m02_directory,
+    wave2_M01_local_level = wave2_m01_directory,
+    wave2_M02_local_level = wave2_m02_directory,
+    horizon_M03 = horizon_directory,
+    resource_envelope = resource_directory
   )
   normalized_inputs <- vapply(
     directories,
@@ -2417,22 +3680,43 @@ rqr_dlm_companion_bundle <- function(
   reference <- rqr_dlm_companion_validate_reference(
     reference_directory, expected_commit
   )
-  m01 <- rqr_dlm_companion_validate_m01(
-    m01_directory, expected_commit, reference
+  wave1_m01 <- rqr_dlm_companion_validate_m01(
+    wave1_m01_directory, expected_commit, reference,
+    "wave1_M01_static_gaussian"
   )
-  m02 <- rqr_dlm_companion_validate_m02(
-    m02_directory, expected_commit, reference
+  wave1_m02 <- rqr_dlm_companion_validate_m02(
+    wave1_m02_directory, expected_commit, reference,
+    "wave1_M02_static_gaussian"
+  )
+  wave2_m01 <- rqr_dlm_companion_validate_m01(
+    wave2_m01_directory, expected_commit, reference,
+    "wave2_M01_local_level"
+  )
+  wave2_m02 <- rqr_dlm_companion_validate_m02(
+    wave2_m02_directory, expected_commit, reference,
+    "wave2_M02_local_level"
   )
   horizon <- rqr_dlm_companion_validate_horizon(
     horizon_directory, expected_commit, reference
   )
+  resource <- rqr_dlm_companion_validate_resource(
+    resource_directory, expected_commit, reference
+  )
   inputs <- list(
-    dlm_reference = reference, M01 = m01, M02 = m02,
-    horizon_M03 = horizon
+    dlm_reference = reference,
+    wave1_M01_static_gaussian = wave1_m01,
+    wave1_M02_static_gaussian = wave1_m02,
+    wave2_M01_local_level = wave2_m01,
+    wave2_M02_local_level = wave2_m02,
+    horizon_M03 = horizon,
+    resource_envelope = resource
   )
   rqr_dlm_companion_cross_validate(inputs, expected_commit)
   rqr_dlm_companion_assert_input_closure(inputs)
   rqr_dlm_companion_assert_input_ledger(inputs, initial_input_ledger)
+  protected_source <- rqr_dlm_companion_protected_source_inventory(
+    repo_root
+  )
 
   semantic_gates <- data.frame(
     schema_version = rqr_dlm_companion_schema(),
@@ -2444,6 +3728,9 @@ rqr_dlm_companion_bundle <- function(
         reference$runtime_tree_digest,
         reference$runtime_attestation_sha256, sep = "|"
       ),
+      paste0(
+        nrow(protected_source$files), " files|", protected_source$digest
+      ),
       "22 exact regular artifacts; recursive manifest verified",
       "dense conditional, full cross-time covariance, and R/C++ parity",
       "canonical missingness and public future-root checks",
@@ -2451,13 +3738,50 @@ rqr_dlm_companion_bundle <- function(
       "3 fixtures x 2 rate modes; every saved field and checkpoint",
       "27 rehashed raw/semantic mutations rejected",
       "wrapper, resource, fault, final-PGID, and zero-failure gates",
-      paste0(m01$semantic_counts[["chain_jobs"]], " exact M01 chains"),
-      "centered inverse-Gamma plus noncentered slice interweaving",
-      paste0(m02$semantic_counts[["endpoint_fits"]], " M02 endpoint fits"),
-      paste0(horizon$semantic_counts[["horizon_scenarios"]], " scenarios"),
-      paste0(horizon$semantic_counts[["M03_tasks"]], " M03 standard tasks"),
+      paste0(
+        wave1_m01$semantic_counts[["chain_jobs"]],
+        " exact wave-1 M01 chains"
+      ),
+      paste(
+        wave1_m01$transition_kernel_schema,
+        wave1_m01$transition_kernel_digest, sep = "|"
+      ),
+      paste0(
+        wave1_m02$semantic_counts[["endpoint_fits"]],
+        " exact wave-1 M02 endpoint fits"
+      ),
+      wave1_m02$schedule_contract_digest,
+      paste0(
+        wave2_m01$semantic_counts[["chain_jobs"]],
+        " exact wave-2 M01 chains"
+      ),
+      paste(
+        wave2_m01$transition_kernel_schema,
+        wave2_m01$transition_kernel_digest, sep = "|"
+      ),
+      paste0(
+        wave2_m02$semantic_counts[["endpoint_fits"]],
+        " exact wave-2 M02 endpoint fits"
+      ),
+      wave2_m02$schedule_contract_digest,
+      wave1_m01$transition_kernel_invariant_digest,
+      paste(
+        wave1_m02$exdqlm_runtime_tree_digest,
+        wave1_m02$exdqlm_runtime_attestation_sha256,
+        wave1_m02$schedule_contract_digest, sep = "|"
+      ),
+      paste0(
+        horizon$semantic_counts[["horizon_scenarios"]],
+        " horizon scenarios|",
+        horizon$semantic_counts[["M03_tasks"]], " M03 tasks"
+      ),
       "one exact M01 training/future endpoint check",
-      m01$config_digest
+      paste(
+        reference$runtime_toolchain_digest,
+        resource$toolchain_digest,
+        resource$semantic_counts[["cases"]],
+        resource$config_digest, sep = "|"
+      )
     ),
     stringsAsFactors = FALSE
   )
@@ -2477,8 +3801,10 @@ rqr_dlm_companion_bundle <- function(
         input$role, "dlm_reference"
       )) {
         "direct_runtime_tree_and_attestation"
-      } else if (identical(input$role, "M01")) {
+      } else if (grepl("_M01_", input$role, fixed = TRUE)) {
         "direct_tree_plus_matching_reference_attestation"
+      } else if (identical(input$role, "resource_envelope")) {
+        "direct_runtime_tree_and_attestation"
       } else {
         "matching_reference_attestation"
       },
@@ -2507,15 +3833,39 @@ rqr_dlm_companion_bundle <- function(
       reference$runtime_attestation_sha256,
     package_version = reference$package_version,
     reference_config_digest = reference$config_digest,
-    confirmatory_config_digest = m01$config_digest,
-    confirmatory_incidence_digest = m01$incidence_digest,
-    confirmatory_seed_ledger_digest = m01$seed_ledger_digest,
+    confirmatory_config_digest = wave1_m01$config_digest,
+    confirmatory_incidence_digest = wave1_m01$incidence_digest,
+    confirmatory_seed_ledger_digest = wave1_m01$seed_ledger_digest,
+    protected_source_inventory_count = nrow(protected_source$files),
+    protected_source_inventory_digest = protected_source$digest,
+    wave1_transition_kernel_digest =
+      wave1_m01$transition_kernel_digest,
+    wave2_transition_kernel_digest =
+      wave2_m01$transition_kernel_digest,
+    transition_kernel_invariant_schema =
+      wave1_m01$transition_kernel_invariant_schema,
+    transition_kernel_invariant_digest =
+      wave1_m01$transition_kernel_invariant_digest,
+    exdqlm_runtime_attestation_sha256 =
+      wave1_m02$exdqlm_runtime_attestation_sha256,
+    exdqlm_runtime_tree_digest =
+      wave1_m02$exdqlm_runtime_tree_digest,
+    exdqlm_source_package_sha256 =
+      wave1_m02$exdqlm_source_package_sha256,
+    comparator_schedule_contract_digest =
+      wave1_m02$schedule_contract_digest,
+    reference_runtime_toolchain_digest =
+      reference$runtime_toolchain_digest,
+    resource_toolchain_manifest_digest = resource$toolchain_digest,
     input_roles = names(inputs),
     input_artifact_count = nrow(input_artifacts),
     semantic_gate_count = nrow(semantic_gates),
     semantic_gate_pass_count = sum(semantic_gates$status == "pass"),
     all_semantic_gates_passed = TRUE,
+    heavy_input_artifact_count =
+      sum(grepl("\\.rds$", initial_input_ledger$relative_path)),
     fits_executed_by_collector = FALSE,
+    heavy_input_artifacts_deserialized = FALSE,
     heavy_input_artifacts_copied = FALSE,
     generalized_bayes = TRUE,
     response_likelihood = FALSE,
@@ -2613,12 +3963,15 @@ rqr_dlm_companion_validate_repository <- function(
 
 rqr_dlm_companion_main <- function(
     arguments = commandArgs(trailingOnly = TRUE)) {
-  if (length(arguments) != 6L) {
+  if (length(arguments) != 9L) {
     rqr_dlm_companion_fail(
       paste(
         "Usage: 30_bundle_rqr_ordinary_v1_protected_dlm_evidence.R",
-        "<expected-commit> <reference-dir> <M01-dir> <M02-dir>",
-        "<horizon-M03-dir> <new-ignored-output-dir>"
+        "<expected-commit> <reference-dir>",
+        "<wave1-M01-dir> <wave1-M02-dir>",
+        "<wave2-M01-dir> <wave2-M02-dir>",
+        "<horizon-M03-dir> <resource-envelope-dir>",
+        "<new-ignored-output-dir>"
       )
     )
   }
@@ -2634,10 +3987,13 @@ rqr_dlm_companion_main <- function(
     repo_root = repo_root,
     expected_commit = expected_commit,
     reference_directory = arguments[[2L]],
-    m01_directory = arguments[[3L]],
-    m02_directory = arguments[[4L]],
-    horizon_directory = arguments[[5L]],
-    output_directory = arguments[[6L]],
+    wave1_m01_directory = arguments[[3L]],
+    wave1_m02_directory = arguments[[4L]],
+    wave2_m01_directory = arguments[[5L]],
+    wave2_m02_directory = arguments[[6L]],
+    horizon_directory = arguments[[7L]],
+    resource_directory = arguments[[8L]],
+    output_directory = arguments[[9L]],
     collector_source_commit = expected_commit,
     require_ignored_output = TRUE
   )

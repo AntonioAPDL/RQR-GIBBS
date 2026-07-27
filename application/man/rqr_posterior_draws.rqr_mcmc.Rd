@@ -2,7 +2,7 @@
 % Please edit documentation in R/rqr_mcmc_fit.R
 \name{rqr_posterior_draws.rqr_mcmc}
 \alias{rqr_posterior_draws.rqr_mcmc}
-\title{Extract root-coefficient draws from fixed-design RQR MCMC}
+\title{Extract source-bound root-coefficient draws from fixed-design RQR MCMC}
 \usage{
 \method{rqr_posterior_draws}{rqr_mcmc}(object, nd = NULL, seed = NULL, ...)
 }
@@ -11,15 +11,21 @@
 
 \item{nd}{Number of retained draws to return. \code{NULL} keeps all draws.}
 
-\item{seed}{Optional seed used only when draws are subsampled.}
+\item{seed}{Optional seed used only when draws are subsampled. When omitted,
+the complete available ambient RNG state is recorded; a previously
+uninitialized ambient RNG makes the extracted selection non-promotable.}
 
 \item{...}{Reserved; supplying an argument is an error.}
 }
 \value{
-A list containing draw-by-coefficient matrices \code{beta_root1} and
-\code{beta_root2}, the corresponding loss-rate draws \code{lambda}, the selected
-\code{draw_index}, and \code{nd}.
+An exact \code{rqr_static_draws} envelope containing draw-by-coefficient
+matrices, loss-rate draws, selected indices, source hashes, selection
+semantics, and explicit no-response-prediction metadata.
 }
 \description{
-Extract root-coefficient draws from fixed-design RQR MCMC
+Native extraction returns a versioned, tamper-evident object bound to the
+exact fit checkpoint, retained-draw contract, generalized-Bayes target,
+data, fitted design, selected indices, and draw-selection RNG semantics.
+The extracted roots are interval-function parameters, not
+posterior-predictive response draws.
 }

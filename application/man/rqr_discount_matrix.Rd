@@ -7,15 +7,43 @@
 rqr_discount_matrix(df, dim.df, p = sum(dim.df))
 }
 \arguments{
-\item{df}{Component-specific discounts in \verb{(0,1]}.}
+\item{df}{Plain numeric vector of component-specific discounts in \verb{(0,1]}.}
 
-\item{dim.df}{State dimensions for those components.}
+\item{dim.df}{Plain vector of positive-integer state dimensions for those
+components.}
 
 \item{p}{Total state dimension; defaults to \code{sum(dim.df)}.}
 }
 \value{
-A \verb{p x p} block matrix.
+A symmetric positive-semidefinite \verb{p x p} block matrix whose
+component-\code{j} diagonal block is \code{(1 - df[j]) / df[j]}.
 }
 \description{
 Build an exdqlm-compatible component discount matrix
 }
+\examples{
+rqr_discount_matrix(
+  df = c(0.95, 0.90),
+  dim.df = c(2L, 1L)
+)
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

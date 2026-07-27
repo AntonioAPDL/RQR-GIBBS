@@ -2,7 +2,7 @@
 % Please edit documentation in R/rqr_vb_fit.R
 \name{rqr_vb_fit}
 \alias{rqr_vb_fit}
-\title{Fit fixed-design RQR with a coordinate-Gaussian VB approximation}
+\title{Experimental fixed-design coordinate-Gaussian VB prototype}
 \usage{
 rqr_vb_fit(
   y,
@@ -38,7 +38,9 @@ ridge priors.}
 An \code{rqr_vb} object.
 }
 \description{
-This is a fast approximation to the RQR generalized posterior. MCMC remains
-the reference backend; VB uncertainty should not be treated as calibrated
-unless separately validated.
+This unexported research prototype is outside the ordinary-v1 interface and
+promotion contract. It is a fast approximation to the RQR generalized
+posterior. MCMC remains the reference backend; VB uncertainty should not be
+treated as calibrated unless separately validated.
 }
+\keyword{internal}

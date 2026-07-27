@@ -129,16 +129,27 @@ native_desn_v1_reference_design <- function(
   reservoir <- ordinary$reservoir
   reservoir$source_package <- "exdqlm"
   reservoir$source_commit <- rqrgibbs:::.rqr_pinned_exdqlm_commit()
+  source_response <- ordinary$y
+  keep_idx <- seq_along(source_response)
+  manifest <- rqrgibbs:::.rqr_desn_materialization_manifest(
+    source_response = source_response,
+    keep_idx = keep_idx,
+    X = ordinary$X,
+    y_fit = ordinary$y,
+    feature_names = colnames(ordinary$X),
+    reservoir_digest = reservoir$digest
+  )
+  builder$materialization_manifest <- manifest
   preliminary <- rqrgibbs:::rqr_desn_design(
     X = ordinary$X,
     y = ordinary$y,
-    time_index = ordinary$time_index,
+    time_index = keep_idx,
     intercept = ordinary$feature_schema$intercept$name,
     builder = builder,
     reservoir = reservoir,
     driver = ordinary$driver,
     causal = ordinary$causal,
-    time = ordinary$time,
+    time = list(),
     terminal = ordinary$terminal
   )
   attestation_path <- tempfile(fileext = ".rds")
@@ -159,6 +170,11 @@ native_desn_v1_reference_design <- function(
     materialized_design_payload_digest = native_desn_v1_sha(
       rqrgibbs:::.rqr_desn_materialization_payload(preliminary)
     ),
+    source_response_digest = manifest$source_response_digest,
+    source_response_length = manifest$source_response_length,
+    keep_idx_digest = manifest$keep_idx_digest,
+    materialization_manifest_digest =
+      native_desn_v1_sha(manifest),
     runtime_source_match = TRUE,
     reproducibility_eligible = TRUE
   )
@@ -166,13 +182,13 @@ native_desn_v1_reference_design <- function(
   design <- rqrgibbs:::rqr_desn_design(
     X = ordinary$X,
     y = ordinary$y,
-    time_index = ordinary$time_index,
+    time_index = keep_idx,
     intercept = ordinary$feature_schema$intercept$name,
     builder = builder,
     reservoir = reservoir,
     driver = ordinary$driver,
     causal = ordinary$causal,
-    time = ordinary$time,
+    time = list(),
     terminal = ordinary$terminal
   )
   state <- list(
@@ -908,7 +924,7 @@ test_that("DESN fit, future, and continuation reject semantic mutation", {
     rqrgibbs:::rqr_desn_continue(
       altered_embedding, n_mcmc = 1L
     ),
-    "target|digest"
+    "target|digest|semantically invalid"
   )
 
   altered_envelope <- fit
@@ -978,7 +994,7 @@ test_that("all DESN consumers validate the embedded static fit envelope", {
   ] + 0.25
   expect_error(
     rqr_posterior_draws(altered_terminal),
-    "terminal checkpoint roots"
+    "terminal checkpoint roots|retained draws|content digests"
   )
 
   altered_schedule <- fit
@@ -1009,7 +1025,7 @@ test_that("all DESN consumers validate the embedded static fit envelope", {
   altered_draw$fit$samp.beta_root2[1L, 1L] <- NaN
   expect_error(
     print(altered_draw),
-    "retained static root or lambda draws"
+    "retained static root or lambda draws|retained draws|content digests"
   )
 })
 
@@ -1053,6 +1069,11 @@ test_that("DESN draw APIs inherit strict static argument contracts", {
 
   invalid_draws <- draws
   invalid_draws$lambda[1L] <- -1
+  invalid_draws$semantic_digest <- rqrgibbs:::.rqr_desn_sha256(
+    invalid_draws[
+      setdiff(names(invalid_draws), "semantic_digest")
+    ]
+  )
   expect_error(
     predict_interval(
       fit, future_design = future, draws = invalid_draws

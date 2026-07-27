@@ -32,7 +32,10 @@ evolution multipliers.}
 
 \item{nd}{Number of saved MCMC draws to use.}
 
-\item{seed}{Optional seed.}
+\item{seed}{Optional seed binding draw selection and all future state
+innovations. An omitted seed consumes ambient RNG and makes the forecast
+envelope non-reproducible and non-promotable even when the parent fit is
+eligible.}
 
 \item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 
@@ -40,11 +43,32 @@ evolution multipliers.}
 An exactly zero matrix uses a separately recorded absolute fallback.}
 }
 \value{
-Future root and ordered endpoint draws with repair diagnostics and
-an explicit retained-draw binding status. Hand-built state-only fixtures
-are marked unbound rather than being represented as fitted-draw indices.
+A typed, content-digested \code{rqr_dlm_forecast} containing future root
+and ordered endpoint draws, exact future-input and RNG contracts, repair
+diagnostics, and an explicit retained-draw binding status. Hand-built
+state-only fixtures remain unbound and non-promotable.
 }
 \description{
 These are state-evolution draws for interval roots, not predictive response
 draws. Future evolution covariances are explicit and validated.
 }
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

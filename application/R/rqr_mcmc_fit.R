@@ -36,8 +36,10 @@
 #' @param lambda_initial Positive initial inverse loss scale for learned mode.
 #' @param loss_reference_scale Positive fixed reference scale `s_L`.
 #' @param learning_rate_mode One of `"fixed_rate"`,
-#'   `"learned_pseudoresidual_normalized"`, or the backward-compatible
-#'   diagnostic mode `"learned_pure"`.
+#'   `"learned_pseudoresidual_normalized"`, or `"learned_pure"`. The
+#'   backward-compatible `"learned_pure"` target remains executable only for
+#'   diagnostic comparison; it is outside ordinary-v1, nonpromotable, and
+#'   noncontinuable.
 #' @param lambda_prior Gamma prior for learned `lambda`, with positive `shape`
 #'   and `rate`.
 #' @param beta_prior_obj A closure-free prior from [rqr_beta_prior()] or a
@@ -373,6 +375,21 @@ rqr_mcmc_fit <- function(
       }
     }
   }
+  initialization_contract <- .rqr_make_initialization_contract(
+    family = "rqr_fixed_design",
+    initial_state = state,
+    seed = seed,
+    rng_state = init$rng_state %||% NULL,
+    continued = continued,
+    parent_checkpoint_digest = if (continued) {
+      init$continuation_control$parent_checkpoint_digest
+    } else {
+      NULL
+    }
+  )
+  initialization_digest <- .rqr_digest(
+    initialization_contract
+  )
 
   total_iter <- n_burn + n_keep * thin
   beta1_draws <- matrix(
@@ -538,7 +555,8 @@ rqr_mcmc_fit <- function(
     required_external_repositories =
       provenance_control$required_external_repositories,
     primary_runtime_attestation =
-      provenance_control$primary_runtime_attestation
+      provenance_control$primary_runtime_attestation,
+    initialization_contract = initialization_contract
   )
   checkpoint <- .rqr_static_checkpoint(
     state = state, completed_iterations = completed_iterations,
@@ -557,7 +575,10 @@ rqr_mcmc_fit <- function(
     n_burn = n_burn,
     n_retained_draws = n_keep,
     thin = thin,
+    initialization_contract = initialization_contract,
+    initialization_digest = initialization_digest,
     checkpoint_digest = checkpoint_digest,
+    checkpoint_state = checkpoint,
     parent = continuation$parent_schedule_contract %||% NULL,
     parent_digest = continuation$parent_schedule_digest %||% NULL
   )
@@ -600,7 +621,7 @@ rqr_mcmc_fit <- function(
       } else {
         learning_rate
       },
-      lambda_initial = lambda_initial,
+      lambda_initial = lambda_current,
       loss_reference_scale = loss_reference_scale,
       effective_learning_rate = effective_rate_summary$mean,
       effective_learning_rate_summary = effective_rate_summary,
@@ -676,6 +697,8 @@ rqr_mcmc_fit <- function(
       )
     ),
     beta_prior = prior,
+    initialization_contract = initialization_contract,
+    initialization_digest = initialization_digest,
     provenance = provenance,
     checkpoint_state = checkpoint,
     checkpoint_digest = checkpoint_digest,
@@ -697,6 +720,21 @@ rqr_mcmc_fit <- function(
         "not a response likelihood or response simulator."
       )
     )
+  )
+  out$retained_draws_contract <- .rqr_make_retained_draws_contract(
+    family = "rqr_fixed_design",
+    draws = .rqr_static_retained_draws(out)
+  )
+  out$retained_draws_digest <- .rqr_digest(
+    out$retained_draws_contract
+  )
+  out$retained_evidence_contract <-
+    .rqr_make_retained_evidence_contract(
+      family = "rqr_fixed_design",
+      evidence = .rqr_static_retained_evidence(out)
+    )
+  out$retained_evidence_digest <- .rqr_digest(
+    out$retained_evidence_contract
   )
 
   if (ordinary_v1_scope) {
@@ -740,13 +778,38 @@ rqr_mcmc_fit <- function(
       out$continuation_history_contract$
         reproducibility_eligible
   } else {
-    out$continuation_history_contract <- NULL
+    out["continuation_history_contract"] <- list(NULL)
     out$continuation_history_digest <- NA_character_
     out$model_spec$promotion_eligible <- FALSE
   }
   class(out) <- c("rqr_mcmc", "rqr_fit")
-  .rqr_validate_static_fit_envelope(out)
+  if (!continued) {
+    .rqr_validate_static_fit_envelope(out)
+  }
   out
+}
+
+.rqr_static_retained_draws <- function(object) {
+  list(
+    samp.beta_root1 = object$samp.beta_root1,
+    samp.beta_root2 = object$samp.beta_root2,
+    samp.lambda = object$samp.lambda,
+    samp.latent_v = object$samp.latent_v,
+    samp.beta_prior_state_root1 =
+      object$samp.beta_prior_state_root1,
+    samp.beta_prior_state_root2 =
+      object$samp.beta_prior_state_root2
+  )
+}
+
+.rqr_static_retained_evidence <- function(object) {
+  list(
+    summary = object$summary,
+    diagnostics = object$diagnostics,
+    lambda_summary = object$model_spec$lambda_summary,
+    effective_learning_rate_summary =
+      object$model_spec$effective_learning_rate_summary
+  )
 }
 
 #' Continue an ordinary fixed-design RQR chain
@@ -762,7 +825,9 @@ rqr_mcmc_fit <- function(
 #'   returned segment.
 #' @param allow_environment_mismatch Permit a recorded non-bitwise portability
 #'   continuation. Model, data, target, prior, and checkpoint mismatches always
-#'   stop.
+#'   stop. An accepted override is persisted in continuation history and
+#'   removes reproducibility and promotion eligibility from the returned
+#'   segment and its descendants.
 #' @return A new `rqr_mcmc` segment.
 #' @export
 rqr_mcmc_continue <- function(
@@ -892,6 +957,8 @@ rqr_mcmc_continue <- function(
   segment$provenance$continued_from_checkpoint <- TRUE
   segment$provenance$parent_checkpoint_digest <-
     validation$checkpoint_digest
+  segment$provenance$parent_reproducibility_eligible <-
+    validation$history$reproducibility_eligible
   segment$provenance$environment_override_used <-
     environment_override_used
   .rqr_validate_static_fit_envelope(segment)
@@ -937,160 +1004,269 @@ rqr_mcmc_continue <- function(
   )
 }
 
-#' Extract root-coefficient draws from fixed-design RQR MCMC
-#'
-#' @param object An `rqr_mcmc` fit.
-#' @param nd Number of retained draws to return. `NULL` keeps all draws.
-#' @param seed Optional seed used only when draws are subsampled.
-#' @param ... Reserved; supplying an argument is an error.
-#' @return A list containing draw-by-coefficient matrices `beta_root1` and
-#'   `beta_root2`, the corresponding loss-rate draws `lambda`, the selected
-#'   `draw_index`, and `nd`.
-#' @export
-rqr_posterior_draws.rqr_mcmc <- function(
-    object, nd = NULL, seed = NULL, ...) {
-  .rqr_reject_dots(list(...), "rqr_posterior_draws.rqr_mcmc")
-  .rqr_validate_static_fit_envelope(object)
-  beta1 <- object$samp.beta_root1
-  beta2 <- object$samp.beta_root2
-  n_save <- nrow(beta1)
-  lambda <- object$samp.lambda
-  index <- if (is.null(nd)) {
-    if (!is.null(seed)) {
-      stop(
-        "seed must be NULL when nd is NULL because no subsampling occurs.",
-        call. = FALSE
-      )
-    }
-    seq_len(n_save)
-  } else {
-    nd <- .rqr_scalar_integer(nd, "nd", 1L)
-    if (!is.null(seed)) {
-      seed <- .rqr_scalar_integer(seed, "seed", 0L)
-      set.seed(seed)
-    }
-    sample.int(n_save, nd, replace = nd > n_save)
-  }
-  list(
-    beta_root1 = beta1[index, , drop = FALSE],
-    beta_root2 = beta2[index, , drop = FALSE],
-    lambda = lambda[index],
-    draw_index = index,
-    nd = length(index)
-  )
-}
-
-#' Evaluate fixed-design RQR interval roots
-#'
-#' The two raw linear predictors are ordered at every supplied row. The result
-#' contains interval-root functions conditional on `X_new`; it does not
-#' contain posterior-predictive response draws.
-#'
-#' @param object An `rqr_mcmc` fit.
-#' @param X_new A finite numeric matrix with the fitted columns in their exact
-#'   order. Named fitted designs require identical column names; unnamed
-#'   fitted designs require an unnamed matrix.
-#' @param nd Number of retained draws to use when `draws` is `NULL`.
-#' @param draws Optional output from [rqr_posterior_draws()] for this fit. A
-#'   plain list containing only `beta_root1` and `beta_root2` matrices is also
-#'   accepted for explicit evaluation; missing draw metadata is then recorded
-#'   as unknown rather than inferred.
-#' @param seed Optional seed used only when draws are subsampled.
-#' @param ... Reserved; supplying an argument is an error.
-#' @return A list of ordered endpoint, midpoint, and width draws and their row
-#'   summaries, together with design and checkpoint metadata.
-#' @export
-predict_interval.rqr_mcmc <- function(
-    object, X_new, nd = NULL, draws = NULL, seed = NULL, ...) {
-  .rqr_reject_dots(list(...), "predict_interval.rqr_mcmc")
-  .rqr_validate_static_fit_envelope(object)
-  X_new <- .rqr_validate_prediction_design(object, X_new)
-  if (is.null(draws)) {
-    draws <- rqr_posterior_draws(
-      object, nd = nd, seed = seed
-    )
-  } else {
-    if (!is.null(nd) || !is.null(seed)) {
-      stop(
-        "nd and seed must be NULL when explicit draws are supplied.",
-        call. = FALSE
-      )
-    }
-    draws <- .rqr_validate_static_draws(object, draws)
-  }
-  eta1 <- X_new %*% t(draws$beta_root1)
-  eta2 <- X_new %*% t(draws$beta_root2)
-  lower <- pmin(eta1, eta2)
-  upper <- pmax(eta1, eta2)
-  list(
-    schema_version = .rqr_static_prediction_schema(),
-    lower_draws = lower,
-    upper_draws = upper,
-    midpoint_draws = 0.5 * (lower + upper),
-    width_draws = upper - lower,
-    lower_mean = rowMeans(lower),
-    upper_mean = rowMeans(upper),
-    midpoint_mean = rowMeans(0.5 * (lower + upper)),
-    width_mean = rowMeans(upper - lower),
-    draws = draws,
-    model_spec = object$model_spec,
-    fit_checkpoint_digest = object$checkpoint_digest,
-    new_design_digest = .rqr_digest(list(
-      X_new = X_new, column_names = colnames(X_new),
-      fit_design_digest = object$data_contract$design_digest
-    )),
-    draw_index = draws$draw_index %||% NA_integer_,
-    response_predictive_draws = FALSE,
-    interpretation = paste(
-      "Interval-root functionals conditional on X_new;",
-      "no response draw is defined."
-    )
-  )
-}
-
-.rqr_validate_prediction_design <- function(object, X_new) {
-  if (!is.matrix(X_new) || !is.numeric(X_new)) {
+.rqr_static_assert_exact_list_object <- function(
+    object, expected_class, name) {
+  if (!is.list(object) ||
+      !identical(class(object), expected_class) ||
+      !identical(
+        names(attributes(object)), c("names", "class")
+      )) {
     stop(
-      paste(
-        "X_new must be a nonempty finite numeric matrix with",
-        "the fitted number of columns."
+      sprintf(
+        "%s must have the exact canonical class and attributes.",
+        name
       ),
       call. = FALSE
     )
   }
-  supplied_names <- colnames(X_new)
-  if (!nrow(X_new) ||
-      ncol(X_new) != ncol(object$X) ||
-      any(!is.finite(X_new))) {
-    stop(
-      paste(
-        "X_new must be a nonempty finite numeric matrix with",
-        "the fitted number of columns."
-      ),
-      call. = FALSE
-    )
-  }
-  storage.mode(X_new) <- "double"
-  fitted_names <- object$data_contract$column_names
-  if (!is.null(fitted_names)) {
-    if (is.null(supplied_names) ||
-        !identical(as.character(supplied_names), fitted_names)) {
-      stop(
-        "Named fitted designs require X_new columns in the exact fitted order.",
-        call. = FALSE
-      )
-    }
-    colnames(X_new) <- supplied_names
-  } else if (!is.null(supplied_names)) {
-    stop(
-      "Unnamed fitted designs require unnamed X_new columns.",
-      call. = FALSE
-    )
-  }
-  X_new
+  invisible(TRUE)
 }
 
-.rqr_validate_static_draws <- function(object, draws) {
+.rqr_static_draw_source <- function(
+    object, source_type = c(
+      "native_retained_draws", "explicit_unbound"
+    )) {
+  source_type <- match.arg(source_type)
+  native <- identical(source_type, "native_retained_draws")
+  list(
+    schema_version = .rqr_static_draw_source_schema(),
+    source_type = source_type,
+    source_fit_schema_version = if (native) {
+      object$schema_version
+    } else {
+      NA_character_
+    },
+    fit_checkpoint_digest = if (native) {
+      object$checkpoint_digest
+    } else {
+      NA_character_
+    },
+    retained_draws_digest = if (native) {
+      object$retained_draws_digest
+    } else {
+      NA_character_
+    },
+    target_digest = if (native) {
+      object$checkpoint_state$target_digest
+    } else {
+      NA_character_
+    },
+    data_digest = if (native) {
+      object$data_contract$data_digest
+    } else {
+      NA_character_
+    },
+    design_digest = if (native) {
+      object$data_contract$design_digest
+    } else {
+      NA_character_
+    },
+    compatibility_fit_schema_version = object$schema_version,
+    compatibility_design_digest =
+      object$data_contract$design_digest
+  )
+}
+
+.rqr_static_draw_selection <- function(
+    method, n_available, nd_requested, replacement,
+    seed, rng_state_before, rng_state_after,
+    reproducibility_bound) {
+  list(
+    schema_version = .rqr_static_draw_selection_schema(),
+    method = method,
+    n_available = n_available,
+    nd_requested = nd_requested,
+    replacement = replacement,
+    seed_supplied = !is.na(seed),
+    seed = seed,
+    rng_state_before = rng_state_before,
+    rng_state_after = rng_state_after,
+    reproducibility_bound = reproducibility_bound
+  )
+}
+
+.rqr_static_with_rng_state <- function(state, expression) {
+  old_kind <- RNGkind()
+  old_exists <- exists(
+    ".Random.seed", envir = .GlobalEnv, inherits = FALSE
+  )
+  old_state <- if (old_exists) {
+    get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  } else {
+    NULL
+  }
+  on.exit({
+    do.call(RNGkind, as.list(unname(old_kind)))
+    if (old_exists) {
+      assign(".Random.seed", old_state, envir = .GlobalEnv)
+    } else if (exists(
+      ".Random.seed", envir = .GlobalEnv, inherits = FALSE
+    )) {
+      rm(".Random.seed", envir = .GlobalEnv)
+    }
+  }, add = TRUE)
+  assign(
+    ".Random.seed", .rqr_canonical_rng_state(state),
+    envir = .GlobalEnv
+  )
+  force(expression)
+}
+
+.rqr_static_seed_rng_state <- function(seed) {
+  old_kind <- RNGkind()
+  old_exists <- exists(
+    ".Random.seed", envir = .GlobalEnv, inherits = FALSE
+  )
+  old_state <- if (old_exists) {
+    get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  } else {
+    NULL
+  }
+  on.exit({
+    do.call(RNGkind, as.list(unname(old_kind)))
+    if (old_exists) {
+      assign(".Random.seed", old_state, envir = .GlobalEnv)
+    } else if (exists(
+      ".Random.seed", envir = .GlobalEnv, inherits = FALSE
+    )) {
+      rm(".Random.seed", envir = .GlobalEnv)
+    }
+  }, add = TRUE)
+  set.seed(seed)
+  .rqr_rng_state()
+}
+
+.rqr_validate_static_draw_selection <- function(
+    selection, source_type, draw_index) {
+  n_draw <- length(draw_index)
+  fields <- c(
+    "schema_version", "method", "n_available",
+    "nd_requested", "replacement", "seed_supplied", "seed",
+    "rng_state_before", "rng_state_after",
+    "reproducibility_bound"
+  )
+  if (!is.list(selection) || is.object(selection) ||
+      !identical(names(attributes(selection)), "names") ||
+      !identical(names(selection), fields) ||
+      !identical(
+        selection$schema_version,
+        .rqr_static_draw_selection_schema()
+      ) ||
+      !is.character(selection$method) ||
+      length(selection$method) != 1L ||
+      is.na(selection$method) ||
+      !selection$method %in% c(
+        "all_retained", "random_subsample",
+        "explicit_unbound"
+      ) ||
+      !is.logical(selection$seed_supplied) ||
+      length(selection$seed_supplied) != 1L ||
+      is.na(selection$seed_supplied) ||
+      !is.logical(selection$reproducibility_bound) ||
+      length(selection$reproducibility_bound) != 1L ||
+      is.na(selection$reproducibility_bound)) {
+    stop(
+      "The static draw-selection contract is noncanonical.",
+      call. = FALSE
+    )
+  }
+  seed <- selection$seed
+  seed_valid <- is.integer(seed) && length(seed) == 1L &&
+    (is.na(seed) ||
+      is.finite(seed) && seed == floor(seed) &&
+        seed >= 0 && seed <= .Machine$integer.max)
+  if (!seed_valid ||
+      !identical(selection$seed_supplied, !is.na(seed))) {
+    stop(
+      "The static draw-selection seed semantics are invalid.",
+      call. = FALSE
+    )
+  }
+  before <- .rqr_canonical_rng_state(selection$rng_state_before)
+  after <- .rqr_canonical_rng_state(selection$rng_state_after)
+  if (!identical(selection$rng_state_before, before) ||
+      !identical(selection$rng_state_after, after)) {
+    stop(
+      "The static draw-selection RNG states are noncanonical.",
+      call. = FALSE
+    )
+  }
+  if (identical(selection$method, "explicit_unbound")) {
+    valid <- identical(source_type, "explicit_unbound") &&
+      identical(selection$n_available, NA_integer_) &&
+      identical(selection$nd_requested, as.integer(n_draw)) &&
+      identical(selection$replacement, NA) &&
+      identical(selection$seed_supplied, FALSE) &&
+      identical(selection$seed, NA_integer_) &&
+      is.null(before) && is.null(after) &&
+      identical(selection$reproducibility_bound, FALSE)
+  } else if (identical(selection$method, "all_retained")) {
+    valid <- identical(source_type, "native_retained_draws") &&
+      is.integer(selection$n_available) &&
+      length(selection$n_available) == 1L &&
+      identical(selection$n_available, as.integer(n_draw)) &&
+      identical(selection$nd_requested, NA_integer_) &&
+      identical(selection$replacement, FALSE) &&
+      identical(selection$seed_supplied, FALSE) &&
+      identical(selection$seed, NA_integer_) &&
+      is.null(before) && is.null(after) &&
+      identical(selection$reproducibility_bound, TRUE)
+  } else {
+    valid <- identical(source_type, "native_retained_draws") &&
+      is.integer(selection$n_available) &&
+      length(selection$n_available) == 1L &&
+      !is.na(selection$n_available) &&
+      selection$n_available >= 1L &&
+      is.integer(selection$nd_requested) &&
+      length(selection$nd_requested) == 1L &&
+      identical(selection$nd_requested, as.integer(n_draw)) &&
+      is.logical(selection$replacement) &&
+      length(selection$replacement) == 1L &&
+      !is.na(selection$replacement) &&
+      identical(
+        selection$replacement,
+        n_draw > selection$n_available
+      ) &&
+      !is.null(after) &&
+      identical(
+        selection$reproducibility_bound,
+        !is.null(before)
+      )
+    if (isTRUE(valid) && !is.null(before)) {
+      replay <- .rqr_static_with_rng_state(
+        before,
+        {
+          replay_index <- sample.int(
+            selection$n_available,
+            selection$nd_requested,
+            replace = selection$replacement
+          )
+          list(
+            draw_index = as.integer(replay_index),
+            rng_state_after = .rqr_rng_state()
+          )
+        }
+      )
+      valid <- identical(replay$draw_index, draw_index) &&
+        identical(replay$rng_state_after, after)
+    }
+    if (isTRUE(valid) && isTRUE(selection$seed_supplied)) {
+      valid <- identical(
+        .rqr_static_seed_rng_state(selection$seed),
+        before
+      )
+    }
+  }
+  if (!isTRUE(valid)) {
+    stop(
+      "The static draw-selection contract violates its source or RNG semantics.",
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+.rqr_validate_static_draw_payload <- function(object, draws) {
   allowed_fields <- c(
     "beta_root1", "beta_root2", "lambda", "draw_index", "nd"
   )
@@ -1101,8 +1277,10 @@ predict_interval.rqr_mcmc <- function(
     draws, "draws", allowed = allowed_fields
   )
   if (!all(c("beta_root1", "beta_root2") %in% names(draws))) {
-    stop("draws must contain both root-coefficient matrices.",
-         call. = FALSE)
+    stop(
+      "draws must contain both root-coefficient matrices.",
+      call. = FALSE
+    )
   }
 
   beta1 <- draws$beta_root1
@@ -1118,8 +1296,10 @@ predict_interval.rqr_mcmc <- function(
       nrow(beta1) < 1L ||
       ncol(beta1) != ncol(object$X) ||
       any(!is.finite(beta1)) || any(!is.finite(beta2))) {
-    stop("The supplied root-coefficient draws are invalid.",
-         call. = FALSE)
+    stop(
+      "The supplied root-coefficient draws are invalid.",
+      call. = FALSE
+    )
   }
   fitted_names <- object$data_contract$column_names
   if (!is.null(fitted_names) &&
@@ -1139,6 +1319,19 @@ predict_interval.rqr_mcmc <- function(
 
   storage.mode(beta1) <- "double"
   storage.mode(beta2) <- "double"
+  if (is.null(fitted_names)) {
+    attributes(beta1) <- list(dim = dim(beta1))
+    attributes(beta2) <- list(dim = dim(beta2))
+  } else {
+    attributes(beta1) <- list(
+      dim = dim(beta1),
+      dimnames = list(NULL, fitted_names)
+    )
+    attributes(beta2) <- list(
+      dim = dim(beta2),
+      dimnames = list(NULL, fitted_names)
+    )
+  }
   n_draw <- nrow(beta1)
   n_save <- nrow(object$samp.beta_root1)
 
@@ -1167,8 +1360,10 @@ predict_interval.rqr_mcmc <- function(
     n_draw
   }
   if (!identical(nd, n_draw)) {
-    stop("draws$nd must equal the number of coefficient draws.",
-         call. = FALSE)
+    stop(
+      "draws$nd must equal the number of coefficient draws.",
+      call. = FALSE
+    )
   }
 
   draw_index <- if ("draw_index" %in% names(draws)) {
@@ -1188,13 +1383,19 @@ predict_interval.rqr_mcmc <- function(
     if (anyNA(draw_index) ||
         any(draw_index < 1L) || any(draw_index > n_save)) {
       stop(
-        "Known draws$draw_index values must lie within the fitted retained-draw range.",
+        paste(
+          "Known draws$draw_index values must lie within the fitted",
+          "retained-draw range."
+        ),
         call. = FALSE
       )
     }
     if (n_draw <= n_save && anyDuplicated(draw_index)) {
       stop(
-        "draws$draw_index must be unique when sampling no more than the fitted retained draws.",
+        paste(
+          "draws$draw_index must be unique when sampling no more than",
+          "the fitted retained draws."
+        ),
         call. = FALSE
       )
     }
@@ -1230,8 +1431,6 @@ predict_interval.rqr_mcmc <- function(
   }
   names(draw_index) <- NULL
 
-  # A minimal two-matrix input remains supported for explicit evaluation.
-  # Missing optional metadata is made explicit in this canonical public shape.
   list(
     beta_root1 = beta1,
     beta_root2 = beta2,
@@ -1239,6 +1438,506 @@ predict_interval.rqr_mcmc <- function(
     draw_index = draw_index,
     nd = nd
   )
+}
+
+.rqr_static_build_draws <- function(
+    object, payload, source_type, selection) {
+  payload <- .rqr_validate_static_draw_payload(object, payload)
+  source <- .rqr_static_draw_source(object, source_type)
+  source_bound <- identical(
+    source_type, "native_retained_draws"
+  )
+  selection_bound <- isTRUE(selection$reproducibility_bound)
+  out <- list(
+    schema_version = .rqr_static_draws_schema(),
+    beta_root1 = payload$beta_root1,
+    beta_root2 = payload$beta_root2,
+    lambda = payload$lambda,
+    draw_index = payload$draw_index,
+    nd = payload$nd,
+    source = source,
+    selection = selection,
+    source_bound = source_bound,
+    reproducibility_eligible =
+      source_bound && selection_bound &&
+        isTRUE(object$model_spec$reproducibility_eligible),
+    promotion_eligible =
+      source_bound && selection_bound &&
+        isTRUE(object$model_spec$promotion_eligible),
+    response_predictive_draws = FALSE,
+    payload_digest = .rqr_digest(payload)
+  )
+  out$semantic_digest <- .rqr_digest(out)
+  class(out) <- c("rqr_static_draws", "list")
+  out
+}
+
+#' Extract source-bound root-coefficient draws from fixed-design RQR MCMC
+#'
+#' Native extraction returns a versioned, tamper-evident object bound to the
+#' exact fit checkpoint, retained-draw contract, generalized-Bayes target,
+#' data, fitted design, selected indices, and draw-selection RNG semantics.
+#' The extracted roots are interval-function parameters, not
+#' posterior-predictive response draws.
+#'
+#' @param object An `rqr_mcmc` fit.
+#' @param nd Number of retained draws to return. `NULL` keeps all draws.
+#' @param seed Optional seed used only when draws are subsampled. When omitted,
+#'   the complete available ambient RNG state is recorded; a previously
+#'   uninitialized ambient RNG makes the extracted selection non-promotable.
+#' @param ... Reserved; supplying an argument is an error.
+#' @return An exact `rqr_static_draws` envelope containing draw-by-coefficient
+#'   matrices, loss-rate draws, selected indices, source hashes, selection
+#'   semantics, and explicit no-response-prediction metadata.
+#' @export
+rqr_posterior_draws.rqr_mcmc <- function(
+    object, nd = NULL, seed = NULL, ...) {
+  .rqr_reject_dots(list(...), "rqr_posterior_draws.rqr_mcmc")
+  .rqr_validate_static_fit_envelope(object)
+  beta1 <- object$samp.beta_root1
+  beta2 <- object$samp.beta_root2
+  n_save <- nrow(beta1)
+  lambda <- object$samp.lambda
+  if (is.null(nd)) {
+    if (!is.null(seed)) {
+      stop(
+        "seed must be NULL when nd is NULL because no subsampling occurs.",
+        call. = FALSE
+      )
+    }
+    index <- seq_len(n_save)
+    selection <- .rqr_static_draw_selection(
+      method = "all_retained",
+      n_available = as.integer(n_save),
+      nd_requested = NA_integer_,
+      replacement = FALSE,
+      seed = NA_integer_,
+      rng_state_before = NULL,
+      rng_state_after = NULL,
+      reproducibility_bound = TRUE
+    )
+  } else {
+    nd <- .rqr_scalar_integer(nd, "nd", 1L)
+    seed <- if (is.null(seed)) {
+      NA_integer_
+    } else {
+      .rqr_scalar_integer(seed, "seed", 0L)
+    }
+    if (!is.na(seed)) set.seed(seed)
+    rng_before <- .rqr_rng_state()
+    index <- sample.int(
+      n_save, nd, replace = nd > n_save
+    )
+    rng_after <- .rqr_rng_state()
+    selection <- .rqr_static_draw_selection(
+      method = "random_subsample",
+      n_available = as.integer(n_save),
+      nd_requested = as.integer(nd),
+      replacement = nd > n_save,
+      seed = seed,
+      rng_state_before = rng_before,
+      rng_state_after = rng_after,
+      reproducibility_bound = !is.null(rng_before)
+    )
+  }
+  out <- .rqr_static_build_draws(
+    object = object,
+    payload = list(
+      beta_root1 = beta1[index, , drop = FALSE],
+      beta_root2 = beta2[index, , drop = FALSE],
+      lambda = as.numeric(lambda[index]),
+      draw_index = as.integer(index),
+      nd = as.integer(length(index))
+    ),
+    source_type = "native_retained_draws",
+    selection = selection
+  )
+  .rqr_validate_static_draws(object, out)
+}
+
+#' Evaluate fixed-design RQR interval roots
+#'
+#' The two raw linear predictors are ordered at every supplied row. The result
+#' contains interval-root functions conditional on `X_new`; it does not
+#' contain posterior-predictive response draws.
+#'
+#' @param object An `rqr_mcmc` fit.
+#' @param X_new A finite numeric matrix with the fitted columns in their exact
+#'   order. Named fitted designs require identical column names; unnamed
+#'   fitted designs require an unnamed matrix.
+#' @param nd Number of retained draws to use when `draws` is `NULL`.
+#' @param draws Optional exact output from [rqr_posterior_draws()] for this fit.
+#'   A plain list containing `beta_root1` and `beta_root2` is retained as an
+#'   explicit-evaluation compatibility route, but is normalized to a typed
+#'   `explicit_unbound` draw envelope and can never become reproducibility- or
+#'   promotion-eligible.
+#' @param seed Optional seed used only when draws are subsampled.
+#' @param ... Reserved; supplying an argument is an error.
+#' @return An exact `rqr_static_prediction` envelope containing ordered
+#'   endpoint, midpoint, and width draws and summaries. It binds the complete
+#'   evaluation design and numerical content; source and promotion status
+#'   distinguish native retained draws from explicit unbound coefficients.
+#' @export
+predict_interval.rqr_mcmc <- function(
+    object, X_new, nd = NULL, draws = NULL, seed = NULL, ...) {
+  .rqr_reject_dots(list(...), "predict_interval.rqr_mcmc")
+  .rqr_validate_static_fit_envelope(object)
+  X_new <- .rqr_validate_prediction_design(object, X_new)
+  if (is.null(draws)) {
+    draws <- rqr_posterior_draws(
+      object, nd = nd, seed = seed
+    )
+  } else {
+    if (!is.null(nd) || !is.null(seed)) {
+      stop(
+        "nd and seed must be NULL when explicit draws are supplied.",
+        call. = FALSE
+      )
+    }
+    draws <- .rqr_validate_static_draws(object, draws)
+  }
+  out <- .rqr_static_build_prediction(object, X_new, draws)
+  .rqr_validate_static_prediction(object, out)
+  out
+}
+
+.rqr_validate_prediction_design <- function(object, X_new) {
+  if (!is.matrix(X_new) || !is.numeric(X_new)) {
+    stop(
+      paste(
+        "X_new must be a nonempty finite numeric matrix with",
+        "the fitted number of columns."
+      ),
+      call. = FALSE
+    )
+  }
+  supplied_names <- colnames(X_new)
+  supplied_rows <- rownames(X_new)
+  if (!nrow(X_new) ||
+      ncol(X_new) != ncol(object$X) ||
+      any(!is.finite(X_new))) {
+    stop(
+      paste(
+        "X_new must be a nonempty finite numeric matrix with",
+        "the fitted number of columns."
+      ),
+      call. = FALSE
+    )
+  }
+  storage.mode(X_new) <- "double"
+  fitted_names <- object$data_contract$column_names
+  if (!is.null(fitted_names)) {
+    if (is.null(supplied_names) ||
+        !identical(as.character(supplied_names), fitted_names)) {
+      stop(
+        "Named fitted designs require X_new columns in the exact fitted order.",
+        call. = FALSE
+      )
+    }
+  } else if (!is.null(supplied_names)) {
+    stop(
+      "Unnamed fitted designs require unnamed X_new columns.",
+      call. = FALSE
+    )
+  }
+  attributes(X_new) <- if (is.null(supplied_rows) &&
+      is.null(supplied_names)) {
+    list(dim = dim(X_new))
+  } else {
+    list(
+      dim = dim(X_new),
+      dimnames = list(supplied_rows, supplied_names)
+    )
+  }
+  X_new
+}
+
+.rqr_validate_static_draws <- function(object, draws) {
+  .rqr_validate_static_fit_envelope(object)
+  if (inherits(draws, "rqr_static_draws")) {
+    .rqr_static_assert_exact_list_object(
+      draws, c("rqr_static_draws", "list"),
+      "Fixed-design RQR posterior draws"
+    )
+    fields <- c(
+      "schema_version", "beta_root1", "beta_root2", "lambda",
+      "draw_index", "nd", "source", "selection", "source_bound",
+      "reproducibility_eligible", "promotion_eligible",
+      "response_predictive_draws", "payload_digest",
+      "semantic_digest"
+    )
+    if (!identical(names(draws), fields) ||
+        !identical(
+          draws$schema_version, .rqr_static_draws_schema()
+        )) {
+      stop(
+        "The fixed-design RQR draw envelope is noncanonical.",
+        call. = FALSE
+      )
+    }
+    payload <- .rqr_validate_static_draw_payload(
+      object,
+      draws[c(
+        "beta_root1", "beta_root2", "lambda",
+        "draw_index", "nd"
+      )]
+    )
+    source <- draws$source
+    source_fields <- names(.rqr_static_draw_source(
+      object, "native_retained_draws"
+    ))
+    if (!is.list(source) || is.object(source) ||
+        !identical(names(attributes(source)), "names") ||
+        !identical(names(source), source_fields) ||
+        !identical(
+          source$schema_version,
+          .rqr_static_draw_source_schema()
+        ) ||
+        !is.character(source$source_type) ||
+        length(source$source_type) != 1L ||
+        is.na(source$source_type) ||
+        !source$source_type %in% c(
+          "native_retained_draws", "explicit_unbound"
+        ) ||
+        !identical(
+          source,
+          .rqr_static_draw_source(object, source$source_type)
+        )) {
+      stop(
+        paste(
+          "The fixed-design RQR draws are not bound to their",
+          "declared source and compatibility design."
+        ),
+        call. = FALSE
+      )
+    }
+    .rqr_validate_static_draw_selection(
+      draws$selection, source$source_type, payload$draw_index
+    )
+    source_bound <- identical(
+      source$source_type, "native_retained_draws"
+    )
+    if (source_bound &&
+        (!identical(
+          draws$selection$n_available,
+          as.integer(nrow(object$samp.beta_root1))
+        ) ||
+        identical(draws$selection$method, "all_retained") &&
+          !identical(
+            payload$draw_index,
+            seq_len(nrow(object$samp.beta_root1))
+          ))) {
+      stop(
+        paste(
+          "The native draw selection is inconsistent with the",
+          "fit retained-draw population."
+        ),
+        call. = FALSE
+      )
+    }
+    expected_reproducible <- source_bound &&
+      isTRUE(draws$selection$reproducibility_bound) &&
+      isTRUE(object$model_spec$reproducibility_eligible)
+    expected_promotable <- source_bound &&
+      isTRUE(draws$selection$reproducibility_bound) &&
+      isTRUE(object$model_spec$promotion_eligible)
+    semantic_payload <- draws[
+      setdiff(fields, "semantic_digest")
+    ]
+    if (!identical(draws$source_bound, source_bound) ||
+        !identical(
+          draws$reproducibility_eligible,
+          expected_reproducible
+        ) ||
+        !identical(
+          draws$promotion_eligible, expected_promotable
+        ) ||
+        !identical(draws$response_predictive_draws, FALSE) ||
+        !identical(draws$payload_digest, .rqr_digest(payload)) ||
+        !identical(
+          draws$semantic_digest, .rqr_digest(semantic_payload)
+        )) {
+      stop(
+        paste(
+          "The fixed-design RQR draw payload, digest,",
+          "eligibility, or no-response semantics are inconsistent."
+        ),
+        call. = FALSE
+      )
+    }
+    return(draws)
+  }
+  if (is.object(draws)) {
+    stop(
+      paste(
+        "Explicit draws must be a source-bound rqr_static_draws",
+        "object or a plain unbound coefficient list."
+      ),
+      call. = FALSE
+    )
+  }
+  payload <- .rqr_validate_static_draw_payload(object, draws)
+  selection <- .rqr_static_draw_selection(
+    method = "explicit_unbound",
+    n_available = NA_integer_,
+    nd_requested = as.integer(payload$nd),
+    replacement = NA,
+    seed = NA_integer_,
+    rng_state_before = NULL,
+    rng_state_after = NULL,
+    reproducibility_bound = FALSE
+  )
+  out <- .rqr_static_build_draws(
+    object = object,
+    payload = payload,
+    source_type = "explicit_unbound",
+    selection = selection
+  )
+  .rqr_validate_static_draws(object, out)
+}
+
+.rqr_static_prediction_source <- function(
+    object, draws, new_design_digest) {
+  list(
+    schema_version = .rqr_static_prediction_source_schema(),
+    evaluation_fit_checkpoint_digest =
+      object$checkpoint_digest,
+    evaluation_retained_draws_digest =
+      object$retained_draws_digest,
+    evaluation_target_digest =
+      object$checkpoint_state$target_digest,
+    fitted_data_digest = object$data_contract$data_digest,
+    fitted_design_digest = object$data_contract$design_digest,
+    new_design_digest = new_design_digest,
+    draw_semantic_digest = draws$semantic_digest,
+    draw_source_type = draws$source$source_type
+  )
+}
+
+.rqr_static_build_prediction <- function(
+    object, X_new, draws) {
+  X_new <- .rqr_validate_prediction_design(object, X_new)
+  draws <- .rqr_validate_static_draws(object, draws)
+  eta1 <- X_new %*% t(draws$beta_root1)
+  eta2 <- X_new %*% t(draws$beta_root2)
+  lower <- pmin(eta1, eta2)
+  upper <- pmax(eta1, eta2)
+  midpoint <- 0.5 * (lower + upper)
+  width <- upper - lower
+  new_design_digest <- .rqr_digest(list(
+    X_new = X_new,
+    column_names = colnames(X_new),
+    row_names = rownames(X_new),
+    fit_design_digest = object$data_contract$design_digest
+  ))
+  source <- .rqr_static_prediction_source(
+    object, draws, new_design_digest
+  )
+  source_bound <- isTRUE(draws$source_bound)
+  out <- list(
+    schema_version = .rqr_static_prediction_schema(),
+    X_new = X_new,
+    lower_draws = lower,
+    upper_draws = upper,
+    midpoint_draws = midpoint,
+    width_draws = width,
+    lower_mean = rowMeans(lower),
+    upper_mean = rowMeans(upper),
+    midpoint_mean = rowMeans(midpoint),
+    width_mean = rowMeans(width),
+    draws = draws,
+    model_spec = object$model_spec,
+    source = source,
+    fit_checkpoint_digest = object$checkpoint_digest,
+    new_design_digest = new_design_digest,
+    draw_index = draws$draw_index,
+    source_bound = source_bound,
+    reproducibility_eligible =
+      source_bound &&
+        isTRUE(draws$reproducibility_eligible),
+    promotion_eligible =
+      source_bound && isTRUE(draws$promotion_eligible),
+    promotion_status = if (source_bound) {
+      "native_source_bound_interval_roots"
+    } else {
+      "explicit_coefficients_unbound_nonpromotable"
+    },
+    response_predictive_draws = FALSE,
+    interpretation = if (source_bound) {
+      paste(
+        "Source-bound interval-root functionals conditional on X_new;",
+        "no response draw is defined."
+      )
+    } else {
+      paste(
+        "Interval-root functionals from explicit unbound coefficients;",
+        "the result is non-promotable and no response draw is defined."
+      )
+    },
+    content_digest = .rqr_digest(list(
+      X_new = X_new,
+      lower_draws = lower,
+      upper_draws = upper,
+      midpoint_draws = midpoint,
+      width_draws = width,
+      lower_mean = rowMeans(lower),
+      upper_mean = rowMeans(upper),
+      midpoint_mean = rowMeans(midpoint),
+      width_mean = rowMeans(width)
+    ))
+  )
+  out$semantic_digest <- .rqr_digest(out)
+  class(out) <- c("rqr_static_prediction", "list")
+  out
+}
+
+.rqr_validate_static_prediction <- function(
+    object, prediction) {
+  .rqr_validate_static_fit_envelope(object)
+  .rqr_static_assert_exact_list_object(
+    prediction, c("rqr_static_prediction", "list"),
+    "Fixed-design RQR prediction"
+  )
+  fields <- c(
+    "schema_version", "X_new", "lower_draws", "upper_draws",
+    "midpoint_draws", "width_draws", "lower_mean",
+    "upper_mean", "midpoint_mean", "width_mean", "draws",
+    "model_spec", "source", "fit_checkpoint_digest",
+    "new_design_digest", "draw_index", "source_bound",
+    "reproducibility_eligible", "promotion_eligible",
+    "promotion_status", "response_predictive_draws",
+    "interpretation", "content_digest", "semantic_digest"
+  )
+  if (!identical(names(prediction), fields) ||
+      !identical(
+        prediction$schema_version,
+        .rqr_static_prediction_schema()
+      )) {
+    stop(
+      "The fixed-design RQR prediction envelope is noncanonical.",
+      call. = FALSE
+    )
+  }
+  X_new <- .rqr_validate_prediction_design(
+    object, prediction$X_new
+  )
+  draws <- .rqr_validate_static_draws(
+    object, prediction$draws
+  )
+  expected <- .rqr_static_build_prediction(
+    object, X_new, draws
+  )
+  if (!identical(prediction, expected)) {
+    stop(
+      paste(
+        "The fixed-design RQR prediction roots, input design,",
+        "source binding, content digest, or no-response semantics",
+        "are inconsistent."
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
 }
 
 #' Print a fixed-design RQR MCMC summary

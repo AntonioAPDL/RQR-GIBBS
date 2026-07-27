@@ -539,7 +539,7 @@ internal functions:
 | `rqr_posterior_draws()` | Root-coefficient and declared hyperparameter draws |
 | `predict_interval()` | Ordered root, midpoint, and width functionals |
 | `application/scripts/28_materialize_rqr_ordinary_v1_desn_design.R` | Promotion-grade design-only materialization from exact isolated runtimes |
-| `rqr_desn_fit(..., fit_readout=FALSE)` | Low-level design return; promotion still requires receipt-v2 orchestration and live revalidation |
+| `rqr_desn_fit(..., fit_readout=FALSE)` | Low-level design return; promotion still requires receipt-v3 orchestration and live revalidation |
 | `rqr_desn_fit(..., fit_readout=TRUE)` | Native ordinary-RQR fit on that design |
 | `forecast_paths()` | Root functionals from an explicit future design |
 
@@ -563,32 +563,54 @@ implemented on the isolated branch:
 | RHS-NS state | `rqrgibbs_rhs_ns_state/1.0.0` |
 | Fixed-design data | `rqrgibbs_fixed_design_data/1.0.0` |
 | Fixed-design transition | `rqrgibbs_fixed_design_transition/1.0.0` |
-| Static fit | `rqrgibbs_static_fit/1.0.0` |
+| Static fit | `rqrgibbs_static_fit/1.2.0` |
 | Static checkpoint | `rqrgibbs_static_checkpoint/1.0.0` |
-| Interval prediction | `rqrgibbs_interval_prediction/1.0.0` |
-| Frozen DESN design | `rqrgibbs_desn_design/1.0.0` |
+| Static segment schedule | `rqrgibbs_static_segment_schedule/2.0.0` |
+| Static posterior-draw envelope | `rqrgibbs_static_draws/1.0.0` |
+| Static draw source | `rqrgibbs_static_draw_source/1.0.0` |
+| Static draw selection | `rqrgibbs_static_draw_selection/1.0.0` |
+| Static interval-evaluation envelope | `rqrgibbs_interval_prediction/2.0.0` |
+| Static prediction source | `rqrgibbs_static_prediction_source/1.0.0` |
+| Frozen DESN design | `rqrgibbs_desn_design/1.1.0` |
 | DESN feature schema | `rqrgibbs_desn_feature_schema/1.0.0` |
-| Frozen future DESN design | `rqrgibbs_desn_future_design/1.1.0` |
-| DESN materialization receipt | `rqrgibbs_desn_materialization_receipt/2.0.0` |
-| DESN receipt validation status | `rqrgibbs_desn_materialization_receipt_status/1.0.0` |
-| DESN materialization verification | `rqrgibbs_desn_materialization_verification/1.0.0` |
-| DESN fit envelope | `rqrgibbs_desn_fit/1.1.0` |
-| DESN future verification | `rqrgibbs_desn_future_verification/1.0.0` |
+| Frozen future DESN design | `rqrgibbs_desn_future_design/1.2.0` |
+| DESN materialization receipt | `rqrgibbs_desn_materialization_receipt/3.0.0` |
+| DESN materialization manifest | `rqrgibbs_desn_materialization_manifest/1.0.0` |
+| DESN receipt validation status | `rqrgibbs_desn_materialization_receipt_status/1.1.0` |
+| DESN materialization verification | `rqrgibbs_desn_materialization_verification/1.1.0` |
+| DESN fit envelope | `rqrgibbs_desn_fit/1.2.0` |
+| DESN posterior-draw envelope | `rqrgibbs_desn_draws/1.0.0` |
+| DESN draw source | `rqrgibbs_desn_draw_source/1.0.0` |
+| DESN interval-evaluation envelope | `rqrgibbs_desn_prediction/1.0.0` |
+| DESN future verification | `rqrgibbs_desn_future_verification/1.1.0` |
+| DLM fit envelope | `rqrgibbs_fit/1.14.0` |
+| DLM segment schedule | `rqrgibbs_dlm_segment_schedule/2.0.0` |
+| DLM posterior-draw envelope | `rqrgibbs_dlm_draws/1.0.0` |
+| DLM draw source | `rqrgibbs_dlm_draw_source/1.0.0` |
+| DLM RNG binding | `rqrgibbs_dlm_rng_binding/1.0.0` |
+| DLM fitted interval-evaluation envelope | `rqrgibbs_dlm_prediction/1.0.0` |
+| DLM future-root envelope | `rqrgibbs_dlm_forecast/1.0.0` |
+| DLM future-root source | `rqrgibbs_dlm_forecast_source/1.0.0` |
+| DLM future contract | `rqrgibbs_dlm_future_contract/1.0.0` |
 
 The tracked validation configuration and compact evidence use
-`rqrgibbs_ordinary_v1_validation/1.0.0` and
+`rqrgibbs_ordinary_v1_validation/1.1.0` and
 `rqrgibbs_ordinary_v1_evidence/1.0.0`; the process wrapper reports
 `rqrgibbs_ordinary_v1_wrapper/1.0.0`.
 
 The candidate DLM fit and continuation schemas are
-`rqrgibbs_fit/1.11.0` and
-`rqrgibbs_continuation_history/4.1.0`. The fit schema is incremented because
-the ordinary-v1 integration adds explicit scope/continuation fields and
-hardens fitted-draw and forecast boundaries; the target and transition
-mathematics are unchanged. The history structure remains version 4.1.0.
-Schema identifiers must not be changed merely to make static names match.
-Reuse of the continuation-history schema is permitted only if the static
-object satisfies its complete validator without weakening any DLM invariant.
+`rqrgibbs_fit/1.14.0` and
+`rqrgibbs_continuation_history/5.0.0`. The fit schema binds the versioned
+`rqrgibbs_dlm_transition_kernel/1.0.0` contract and its SHA-256 digest in the
+checkpoint, fit metadata, and continuation history. The history validator
+reconstructs numerical and target eligibility and requires one constant
+transition-kernel identity across every generation. Static fits retain their
+own narrowly scoped transition identity; they do not weaken any DLM
+invariant. The general fitted-object fields are
+`model_spec$transition_kernel` and
+`model_spec$transition_kernel_digest` for every accepted DLM evolution mode;
+the metadata do not use a component-scale-specific field name for
+fixed-\(W_t\) or frozen-template fits.
 
 Every promotable fit must bind:
 
@@ -601,6 +623,14 @@ Every promotable fit must bind:
 - RNG and initialization contracts;
 - numerical policy and complete repair ledger; and
 - continuation history and checkpoint digests.
+
+The DESN rows in this table qualify only inference conditional on a frozen,
+deterministic feature design and its declared materialization evidence. They
+do not qualify a native reservoir generator, re-estimation of reservoir
+parameters during MCMC, or a response-simulation distribution. Static,
+frozen-DESN, and DLM draw/evaluation envelopes contain interval-root
+functionals under the generalized loss update; none is a
+posterior-predictive response object.
 
 For static fits, the external-materializer item is absent and the required
 external-repository set is empty. For D02 DESN fits, the required set is
@@ -689,6 +719,9 @@ eligible.
   joint targets with zero numerical repairs in promotion runs.
 - Missing-measurement omission, future-root moments, component-scale
   conditionals, interweaving, and exact continuation remain covered.
+- Leading, trailing, interior, and multiple missing masks are crossed with
+  all three exact evolution modes and both promoted loss-rate modes; an
+  all-missing response is rejected.
 - The six fixture-by-rate continuation cells remain bitwise identical under
   uninterrupted and segmented execution.
 - The 24-fit bounded evidence remains reproducible from a newly attested
@@ -772,21 +805,28 @@ the relevant regression gates pass.
 | Static ridge, both rates | Implemented | Exact isolated reference and 48-fit gates |
 | Static full Gaussian | Implemented | Dense-reference and bounded-chain gates |
 | Static RHS-NS | Native implementation | Conditional/parity and bounded-chain gates |
-| Static missing responses | Implemented | Complete mask/RNG mutation matrix |
+| Static missing responses | Implemented and source-tested | Exact isolated 27-test reference evidence |
 | Static exact continuation | Implemented | Full `6` versus `2+2+2` and mutation matrix |
 | Frozen-design RQR-DESN | Implemented | Attested D02 end-to-end reference and 16 fits |
-| RQR-DLM fixed \(W_t\) | Implemented and bounded-validated | Preserve active confirmatory evidence |
-| RQR-DLM frozen discount | Implemented and bounded-validated | Adaptive recursion remains excluded |
-| RQR-DLM component scale | Implemented and bounded-validated | Preserve component-scale/interweaving gates |
+| RQR-DLM fixed \(W_t\) | Implemented with storage-invariant time-zero completion | Fresh exact-runtime reference and protected validation |
+| RQR-DLM frozen discount | Implemented with a pre-frozen template | Fresh exact-runtime reference; adaptive recursion remains excluded |
+| RQR-DLM component scale | Implemented with collapsed/centered/interwoven exact kernels | Fresh component-scale, continuation, and mixing gates |
 | Root/interval prediction | Implemented | Package/reference checks and no-response flags; DESN future outputs remain nonpromotable pending a future-specific receipt |
 
 Thus, the ordinary fixed-design and frozen-DESN source surface is implemented
-on the isolated branch. The exact RQR-DLM target and transition remain
-unchanged, while its fitted-draw public boundary is intentionally hardened;
-that interface correction requires regenerated protected hashes and the
-mandatory DLM regression matrix before merge. The family is not yet
-release-complete: generated documentation, package checking, isolated-runtime
-reference evidence, monitor fault tests, the representative one-cell
-benchmark, the disabled 48-fit mechanics grid, and final DLM compatibility
-and regression checks remain mandatory. Mean-tilted RQR stays deferred until
-those gates close.
+on the isolated branch. The DLM generalized target is unchanged, but the
+integrated Markov transition and numerical boundary have changed
+intentionally: fixed-\(W_t\) and frozen-template fits always complete the
+time-zero state so storage cannot alter RNG consumption; component-scale fits
+bind the reviewed one-root partial collapse; and the filter/time-zero
+covariance boundary records or rejects every repair. Fit schema
+`rqrgibbs_fit/1.14.0`, transition schema
+`rqrgibbs_dlm_transition_kernel/1.0.0`, and continuation-history schema
+`rqrgibbs_continuation_history/5.0.0` make that change explicit. Earlier DLM
+evidence cannot be transferred automatically; exact-runtime reference,
+continuation, mixing, resource, and companion gates must be regenerated.
+The family is not yet release-complete: generated documentation, package
+checking, isolated-runtime reference evidence, monitor fault tests, the
+representative one-cell benchmark, the disabled 48-fit mechanics grid, and
+final DLM compatibility and regression checks remain mandatory. Mean-tilted
+RQR stays deferred until those gates close.

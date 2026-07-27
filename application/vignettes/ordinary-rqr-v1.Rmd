@@ -78,6 +78,7 @@ fixed_fit <- rqr_mcmc_fit(
 rows. The output flag makes the interpretation explicit.
 
 ```{r fixed-summary}
+fixed_draws <- rqr_posterior_draws(fixed_fit)
 fixed_interval <- predict_interval(fixed_fit, X_new = X)
 
 head(data.frame(
@@ -87,10 +88,17 @@ head(data.frame(
   width = fixed_interval$width_mean
 ), 4)
 
-stopifnot(identical(
-  fixed_interval$response_predictive_draws,
-  FALSE
-))
+stopifnot(
+  identical(
+    fixed_draws$schema_version,
+    "rqrgibbs_static_draws/1.0.0"
+  ),
+  identical(
+    fixed_interval$schema_version,
+    "rqrgibbs_interval_prediction/2.0.0"
+  ),
+  identical(fixed_interval$response_predictive_draws, FALSE)
+)
 ```
 
 Exact same-environment continuation restores the complete checkpoint and RNG
@@ -259,7 +267,16 @@ desn_fit <- rqr_desn_fit(
   )
 )
 
+desn_draws <- rqr_posterior_draws(desn_fit)
 stopifnot(
+  identical(
+    desn_fit$schema_version,
+    "rqrgibbs_desn_fit/1.2.0"
+  ),
+  identical(
+    desn_draws$schema_version,
+    "rqrgibbs_desn_draws/1.0.0"
+  ),
   identical(
     desn_fit$model_spec$
       design_materialization_reproducibility_eligible,
@@ -284,9 +301,9 @@ future_design <- rqr_desn_future_design(
   time_index = n + seq_len(3L),
   semantics = "precomputed_design",
   driver = list(
-    type = "known_deterministic_driver",
     origin_fixed = TRUE,
     uses_realized_post_origin_history = FALSE,
+    source = "known_deterministic_driver",
     response_simulation = FALSE
   )
 )
@@ -305,6 +322,10 @@ data.frame(
 )
 
 stopifnot(
+  identical(
+    future_interval$schema_version,
+    "rqrgibbs_desn_prediction/1.0.0"
+  ),
   identical(future_interval$evaluation_semantics, "precomputed_design"),
   identical(future_interval$response_predictive_draws, FALSE)
 )
@@ -356,6 +377,22 @@ dynamic_fit <- rqr_dlm_fit(
 )
 
 dynamic_interval <- predict_interval(dynamic_fit)
+
+dynamic_draws <- rqr_posterior_draws(dynamic_fit)
+stopifnot(
+  identical(
+    dynamic_fit$provenance$schema_version,
+    "rqrgibbs_fit/1.14.0"
+  ),
+  identical(
+    dynamic_draws$schema_version,
+    "rqrgibbs_dlm_draws/1.0.0"
+  ),
+  identical(
+    dynamic_interval$schema_version,
+    "rqrgibbs_dlm_prediction/1.0.0"
+  )
+)
 ```
 
 Three evolution specifications define exact fixed-joint generalized-posterior
@@ -370,6 +407,59 @@ samplers when the numerical policy records no repair:
 By contrast, `rqr_evolution_adaptive_working()` recomputes a conditional
 discount evolution during the scan. That recursion is explicitly experimental
 and does not define the same fixed joint target as the three modes above.
+
+The component-scale constructor and its kernel controls can be checked without
+running a chain. Components are stacked into a single state, while their
+evolution templates and names retain the same order.
+
+```{r dynamic-component-scale-contract}
+component_model <- rqr_polytrend(
+  order = 1L,
+  C0 = matrix(4, 1, 1),
+  name = "level"
+) + rqr_regression(
+  X = cbind(x = x),
+  C0 = matrix(2, 1, 1),
+  name = "regression"
+)
+
+component_evolution <- rqr_evolution_component_scale(
+  templates = list(
+    matrix(1, 1, 1),
+    matrix(1, 1, 1)
+  ),
+  component_dims = component_model$component_dims,
+  component_names = component_model$component_names,
+  prior = list(shape = c(2, 2), rate = c(1, 1))
+)
+
+component_kernel_control <- list(
+  component_scale_collapsed_update = TRUE,
+  component_scale_interweave = TRUE,
+  component_scale_slice_width = 1,
+  component_scale_slice_max_steps = 100L,
+  component_scale_slice_max_shrink = 1000L,
+  component_scale_slice_sweeps = 1L,
+  component_scale_interweave_cycles = 1L
+)
+
+stopifnot(
+  identical(component_model$component_names, c("level", "regression")),
+  identical(component_evolution$component_names, c("level", "regression"))
+)
+```
+
+Those seven controls change the transition kernel. Their values, the
+component order, the fixed one-root collapsed orientation, time-zero state
+completion, scan order, and the final probability-0.5 global root swap are
+bound into checkpoints and continuation history. They cannot be changed by
+continuing an existing fit. The default component-scale transition uses the
+centered inverse-Gamma update; collapsed and interwoven updates are optional
+exact alternatives. Every accepted exact DLM mode completes the time-zero
+state for both roots whether or not full state paths are stored; storage
+therefore does not change the transition or RNG stream. The experimental
+adaptive working mode omits time-zero completion and records that omission in
+its transition contract.
 
 Future evaluation propagates only the root states. It requires an explicit
 future observation design, transition specification, and either fixed future
@@ -388,6 +478,10 @@ stopifnot(grepl(
   "no response simulation",
   future_roots$interpretation,
   fixed = TRUE
+))
+stopifnot(identical(
+  future_roots$schema_version,
+  "rqrgibbs_dlm_forecast/1.0.0"
 ))
 ```
 

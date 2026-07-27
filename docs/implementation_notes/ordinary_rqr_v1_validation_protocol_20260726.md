@@ -117,7 +117,7 @@ execute-bounded
   sets `ordinary_v1_execute_enabled=TRUE` and records the reviewed
   implementation SHA in the frozen config;
 - an isolated primary-runtime attestation for that commit;
-- the pinned isolated exdqlm runtime and one receipt-v2 D02 design
+- the pinned isolated exdqlm runtime and one receipt-v3 D02 design
   materialized from the same current primary source;
 - the exact hashed output and process-monitor bundles from the reviewed
   implementation commit's passing `benchmark-one-cell` run;
@@ -198,16 +198,34 @@ exactly one source-SHA-specific D02 object. Runtime roots and attestations use
 The frozen runner schemas are:
 
 ```text
-configuration              rqrgibbs_ordinary_v1_validation/1.0.0
+configuration              rqrgibbs_ordinary_v1_validation/1.1.0
 compact R evidence         rqrgibbs_ordinary_v1_evidence/1.0.0
 process-wrapper closeout   rqrgibbs_ordinary_v1_wrapper/1.0.0
-DESN design                rqrgibbs_desn_design/1.0.0
-DESN receipt               rqrgibbs_desn_materialization_receipt/2.0.0
-DESN receipt status        rqrgibbs_desn_materialization_receipt_status/1.0.0
-DESN live verification     rqrgibbs_desn_materialization_verification/1.0.0
-DESN fit                   rqrgibbs_desn_fit/1.1.0
-DESN future design         rqrgibbs_desn_future_design/1.1.0
-DESN future verification   rqrgibbs_desn_future_verification/1.0.0
+static fit                 rqrgibbs_static_fit/1.2.0
+static posterior draws     rqrgibbs_static_draws/1.0.0
+static draw source         rqrgibbs_static_draw_source/1.0.0
+static draw selection      rqrgibbs_static_draw_selection/1.0.0
+static interval evaluation rqrgibbs_interval_prediction/2.0.0
+static prediction source   rqrgibbs_static_prediction_source/1.0.0
+DESN design                rqrgibbs_desn_design/1.1.0
+DESN receipt               rqrgibbs_desn_materialization_receipt/3.0.0
+DESN materialization map   rqrgibbs_desn_materialization_manifest/1.0.0
+DESN receipt status        rqrgibbs_desn_materialization_receipt_status/1.1.0
+DESN live verification     rqrgibbs_desn_materialization_verification/1.1.0
+DESN fit                   rqrgibbs_desn_fit/1.2.0
+DESN posterior draws       rqrgibbs_desn_draws/1.0.0
+DESN draw source           rqrgibbs_desn_draw_source/1.0.0
+DESN interval evaluation   rqrgibbs_desn_prediction/1.0.0
+DESN future design         rqrgibbs_desn_future_design/1.2.0
+DESN future verification   rqrgibbs_desn_future_verification/1.1.0
+DLM fit                    rqrgibbs_fit/1.14.0
+DLM posterior draws        rqrgibbs_dlm_draws/1.0.0
+DLM draw source            rqrgibbs_dlm_draw_source/1.0.0
+DLM RNG binding            rqrgibbs_dlm_rng_binding/1.0.0
+DLM fitted evaluation      rqrgibbs_dlm_prediction/1.0.0
+DLM future roots           rqrgibbs_dlm_forecast/1.0.0
+DLM future-root source     rqrgibbs_dlm_forecast_source/1.0.0
+DLM future contract        rqrgibbs_dlm_future_contract/1.0.0
 ```
 
 Every R-generated CSV is atomically written, read back, and assigned the
@@ -215,6 +233,13 @@ compact-evidence schema unless it already carries a more specific schema.
 The materializer publishes only validated regular files through a
 same-directory rename, rejects symbolic-link and nonregular destinations, and
 never unlinks prior evidence before replacement.
+
+The DESN identifiers qualify only the readout conditional on one frozen
+deterministic feature design and its independently verified materialization.
+They do not authorize reservoir fitting during MCMC or response simulation.
+All three families' draw and evaluation objects contain interval-root
+functionals under the declared loss update, not posterior-predictive response
+draws.
 
 ## Deterministic seed ledger
 
@@ -395,17 +420,22 @@ for an attested materialization in a promotion run.
 ### D02: pinned exdqlm materializer
 
 Use a minimal reservoir configuration and seed `82701`.
+The effective arguments explicitly fix `add_bias=TRUE`,
+`input_mode="raw_y_lags"`, and `standardize_inputs=FALSE`; this gives the
+RHS-NS readout exactly one declared intercept and prevents package defaults
+from silently changing the frozen feature contract.
 `application/scripts/28_materialize_rqr_ordinary_v1_desn_design.R`
 materializes the design once from exact isolated primary and pinned exdqlm
 runtimes. It writes only below ignored cache/output roots under evidence
 schema `rqrgibbs_ordinary_v1_desn_materialization/1.0.0`; it cannot fit a
-readout, run MCMC or VB, or simulate a response. The receipt-v2 object
+readout, run MCMC or VB, or simulate a response. The receipt-v3 object
 explicitly records:
 
 - pinned package version and source commit/tree digest;
 - isolated runtime-tree digest;
 - runtime-attestation schema and SHA-256;
 - materializer-argument digest;
+- source-response, retained-row-index, and materialization-manifest digests;
 - materialized-design-payload digest; and
 - runtime-source-match and reproducibility-eligibility flags.
 
@@ -524,6 +554,15 @@ The canonical data object and every derived field must be reconstructed during
 continuation. Mutating `observed_index`, `n_observed`, row identifiers, or
 column order must be rejected even if an attacker recomputes an ordinary
 outer digest.
+
+The source-bound missingness suite additionally crosses leading, trailing,
+interior, and multiple-`NA` masks with all three exact DLM evolution modes
+(fixed covariance, frozen discount template, and shared component scale) and
+both promoted loss-rate modes. It requires finite root functionals, zero
+repairs, the exact missing mask, and rejection of an all-missing DLM response.
+The frozen-discount case also has an independent scalar Joseph-filter
+calculation verifying that a missing measurement leaves prior and filtered
+moments identical at that time.
 
 ### Exact continuation
 
@@ -741,6 +780,12 @@ application/src/RcppExports.cpp
 application/src/rqr_interweave.cpp
 application/src/Makevars
 application/src/Makevars.win
+application/scripts/22_validate_rqr_dlm_wave1_corrections.R
+application/scripts/23_validate_rqr_dlm_wave1_comparator_projection.R
+application/scripts/24_validate_rqr_dlm_horizon_and_fixed_design.R
+application/scripts/25_validate_rqr_dlm_resource_envelope.R
+application/scripts/lib/rqr_dlm_confirmatory_simulation.R
+docs/audits/rqr_dlm_main_correction_budget_20260727.csv
 ```
 
 Before merge, record a baseline-versus-candidate table containing:
@@ -748,8 +793,12 @@ Before merge, record a baseline-versus-candidate table containing:
 - file SHA-256 for every protected DLM source/config/launcher;
 - formals and body digests for each exported DLM constructor, fit,
   continuation, and forecast function;
-- `rqrgibbs_fit/1.11.0`;
-- `rqrgibbs_continuation_history/4.1.0`;
+- `rqrgibbs_fit/1.14.0`;
+- `rqrgibbs_continuation_history/5.0.0`;
+- `rqrgibbs_dlm_transition_kernel/1.0.0` and its SHA-256 digest;
+- each M01 fit's complete role-specific transition contract and digest, plus
+  the `rqrgibbs_dlm_transition_kernel_invariant/1.0.0` cross-wave projection
+  that excludes only the `regression` versus `level` component label;
 - R/C++ registration symbols; and
 - the active confirmatory authorization state.
 
@@ -772,7 +821,7 @@ candidate `HEAD`, and a strict ancestral baseline. During implementation only,
 or bounded execution. An output directory inside the repository must be
 ignored; an external temporary directory is also accepted.
 
-The auditor emits compact, schema-tagged comparisons for all 23 exact file
+The auditor emits compact, schema-tagged comparisons for all 29 exact file
 bytes and SHA-256 values, the 18 public DLM function formals and bodies,
 schema strings, every NAMESPACE directive, compiled registration symbols,
 DESCRIPTION metadata, and confirmatory-authorization fields. It also writes a
@@ -819,18 +868,29 @@ assertion. Before merge it must rebuild the exact isolated runtime and pass:
 - monitor and fail-closed launcher tests; and
 - current M01, M02, horizon, and M03 correction gates.
 
-The four fresh protected evidence directories are then reduced by
+The seven fresh protected evidence roles are then reduced by
 `30_bundle_rqr_ordinary_v1_protected_dlm_evidence.R` to one closed five-file
-companion. The collector performs no fit and copies no heavy model object. Its
-consumer validator must rehash the recursive manifest, verify the exact
-emitted sixteen-gate table, reconcile the four input roles and their artifact
-ledger, and bind the reviewed disabled-candidate commit, primary runtime tree,
-runtime attestation, package version, and collector commit. Before the first
+companion. The roles are the DLM reference suite, wave-1 and wave-2 M01,
+wave-1 and wave-2 M02, horizon/M03, and the resource envelope. Their frozen
+inventory contains 55 compact inputs: 22, 5, 5, 5, 5, 7, and 6 files,
+respectively. The collector performs no fit and neither deserializes nor
+copies any heavy model object; heavy RDS bytes are represented only through
+the producer's recursive hash contract. Its consumer validator must rehash
+the recursive manifest, verify the exact emitted 23-gate table, reconcile all
+seven roles and their artifact ledger, and bind the reviewed
+disabled-candidate commit, primary runtime tree, runtime attestation, package
+version, transition-kernel identity, and collector commit. Before the first
 bounded fit, the runner atomically copies those same five validated files into
 `protected_dlm_companion/`, revalidates the copy, and includes every byte in
 the top-level recursive manifest. `execute-bounded` requires this compact
 companion in addition to BENCH01 and the refreshed authorization-commit
 reference bundle.
+
+The resource-envelope role must independently record `R_compiler` in its
+toolchain table. The collector normalizes that table and the reference
+`runtime_toolchain.json`, then requires exact agreement in R version, platform,
+compiler, BLAS, LAPACK, and the four shared package versions. Internally
+consistent rehashing of a mismatched resource toolchain remains a failure.
 
 If a target, transition, FFBS, evolution, or component-scale function changes,
 the complete 24-fit bounded DLM validation and a new independent audit are
@@ -1070,6 +1130,7 @@ The ordinary version-1 implementation passes only if:
 - ridge, full Gaussian, and native RHS-NS targets pass their independent
   oracles;
 - missing responses are omitted exactly;
+- all 27 source-bound hardened reference test files pass;
 - all static and DESN continuation cells are bitwise exact;
 - all checkpoint, history, design, and future-link mutations are rejected;
 - the native static/DESN path does not call private exdqlm sampling functions;
@@ -1093,7 +1154,7 @@ the final release claim still requires the exact-runtime validation matrix:
 2. `application/R/README.md` identifies `rqrgibbs` as the native authority.
 3. Shared-helper edits trigger the complete protected-DLM hash and regression
    matrix.
-4. Receipt v2 records lineage and argument/payload digests, and live
+4. Receipt v3 records lineage and argument/payload digests, and live
    verification rechecks them against the executing isolated runtime.
 5. Protected materializer fields cannot be overridden.
 6. Fits retain the frozen data-only design contract, not a heavy reference

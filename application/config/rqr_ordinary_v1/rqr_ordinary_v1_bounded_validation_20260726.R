@@ -217,7 +217,7 @@ y_d02 <- 0.35 * sin(seq_len(48L) / 4) +
   0.01 * seq_len(48L)
 
 rqr_ordinary_v1_bounded_validation <- list(
-  schema_version = "rqrgibbs_ordinary_v1_validation/1.0.0",
+  schema_version = "rqrgibbs_ordinary_v1_validation/1.1.0",
   config_id = "rqr_ordinary_v1_bounded_validation_20260726",
   scope = "ordinary_zero_tilt_target_and_computation_validation",
   generalized_bayes = TRUE,
@@ -247,17 +247,21 @@ rqr_ordinary_v1_bounded_validation <- list(
     checkout_role = "read_only_reference_never_loaded_or_built_in_place"
   ),
   desn_schema_contract = c(
-    design = "rqrgibbs_desn_design/1.0.0",
+    design = "rqrgibbs_desn_design/1.1.0",
     materialization_receipt =
-      "rqrgibbs_desn_materialization_receipt/2.0.0",
+      "rqrgibbs_desn_materialization_receipt/3.0.0",
+    materialization_manifest =
+      "rqrgibbs_desn_materialization_manifest/1.0.0",
     materialization_receipt_status =
-      "rqrgibbs_desn_materialization_receipt_status/1.0.0",
+      "rqrgibbs_desn_materialization_receipt_status/1.1.0",
     materialization_verification =
-      "rqrgibbs_desn_materialization_verification/1.0.0",
-    fit = "rqrgibbs_desn_fit/1.1.0",
-    future_design = "rqrgibbs_desn_future_design/1.1.0",
+      "rqrgibbs_desn_materialization_verification/1.1.0",
+    fit = "rqrgibbs_desn_fit/1.2.0",
+    draws = "rqrgibbs_desn_draws/1.0.0",
+    prediction = "rqrgibbs_desn_prediction/1.0.0",
+    future_design = "rqrgibbs_desn_future_design/1.2.0",
     future_verification =
-      "rqrgibbs_desn_future_verification/1.0.0"
+      "rqrgibbs_desn_future_verification/1.1.0"
   ),
   f01_reference_contract = list(
     schema_version =
@@ -448,7 +452,8 @@ rqr_ordinary_v1_bounded_validation <- list(
       response_history = y_d02,
       effective_arguments = list(
         D = 1L, n = 4L, n_tilde = integer(0), m = 2L,
-        washout = 3L, seed = 82701L
+        washout = 3L, seed = 82701L, add_bias = TRUE,
+        input_mode = "raw_y_lags", standardize_inputs = FALSE
       ),
       promotion_requires_isolated_attested_exdqlm_runtime = TRUE,
       bounded_grid_role =
@@ -470,21 +475,21 @@ rqr_ordinary_v1_bounded_validation <- list(
   ),
   protected_dlm_companion = list(
     schema_version =
-      "rqrgibbs_ordinary_v1_protected_dlm_companion/1.0.0",
+      "rqrgibbs_ordinary_v1_protected_dlm_companion/2.1.0",
     collector_path = paste0(
       "application/scripts/",
       "30_bundle_rqr_ordinary_v1_protected_dlm_evidence.R"
     ),
     collector_sha256 =
-      "eba18d34f7b50a9166d4991fafcaa1ae669e0dd0eba3ca0d4c9d3416d0be0f88",
+      "bd29584acdff3ee5f6da4cbe52860e874105115ccbbed2ef6aee06a714e75fc7",
     compact_files = c(
       "artifact_hashes.csv", "bundle_manifest.json",
       "input_artifact_hashes.csv", "input_bundle_summary.csv",
       "semantic_gates.csv"
     ),
-    semantic_gate_count = 16L,
-    input_role_count = 4L,
-    input_artifact_count = 39L,
+    semantic_gate_count = 23L,
+    input_role_count = 7L,
+    input_artifact_count = 55L,
     execution_environment =
       "RQR_ORDINARY_V1_DLM_COMPANION_DIR",
     source_state_role =
@@ -492,23 +497,23 @@ rqr_ordinary_v1_bounded_validation <- list(
   ),
   protected_dlm_sha256 = c(
     "application/R/rqr_dlm_fit.R" =
-      "3bfc0daa937dbd17d0cfa867829c5c03aa243b709b48a3a34679ce188b3b4d73",
+      "e67aaa2c13eb41e1bde511ab9f7ae34eeccf4cf348e01c2eb420afbf060a25bf",
     "application/R/rqr_dlm_model.R" =
-      "753a2b5c4abaec188735cf28d4490d85043a09983d5f6ef19c9501b86c902c44",
+      "6afb90229951f0a9f270f64a807e329f900816abfdebaea84e2ad49e88954f3b",
     "application/R/rqr_evolution.R" =
-      "d73aeaf24ec830ac18c771aafff383953e472fe813d65c3e4331991a19355ee1",
+      "5c4ef00abb3d182c22e53cd6cdf74d6f6692186cc331ae5859cf27e0694b49ce",
     "application/R/rqr_ffbs.R" =
-      "18396d7e1b59a216676aefea5690a1a59f6afa42371108f9bc88e41e40735438",
+      "30f0d2cd87bd64d06e0d1cfc58a2170cc333c697c7d867435f28b386ddb29a7b",
     "application/R/rqr_utils.R" =
-      "657d08b36464f96158f4d1fa481dff298b84b19efdc9f5b4647006ce8df281b8",
+      "633c788bf27e63c9666996ebaa9be72b1a30c220d3e36e41f73cd92b56fe7371",
     "application/R/rqr_numerics.R" =
-      "0a1308ef56e987d802044448d7a61433eda5ae9677aa9a2b2b30a183a730268a",
+      "754027e8403b958f4fd474de9bb3a78c1bfb8e2459ea04d1bee464d1bf44312a",
     "application/src/rqr_ffbs.cpp" =
-      "e14848e8fd3dabaa7be5b55d568cb85ac634df98a9b5cd20673a567a9bbfa0de",
+      "fe8f3b2fabbf14a9b729c2396815c8b3e7b645f60d805bb8bae6d27f050d4dd0",
     "application/config/rqr_dlm/rqr_dlm_bounded_dynamic_fixtures_20260723.R" =
       "f74e2becb1148c92ef37a7fa61e3d467d3b74d13f5199c3a5a7d4c9405ad46b6",
     "application/config/rqr_dlm/rqr_dlm_main_simulation_20260724.R" =
-      "f44ec8d5bce3a264faaf2381b92ad2e678ab8eb0f18cc5c1c5d25c5a9bee750a",
+      "03e4a5a2a5172d46785268da5c68a69d3b40cfe20a480cff037ea778c10cc3f9",
     "application/config/rqr_dlm/rqr_dlm_main_simulation_preliminary_20260724.R" =
       "8aa1da4174134a5d1945bd3e7f5bfbb96b1d93d1b5b16896d4939f5362bd0dd4",
     "application/config/rqr_dlm/rqr_dlm_main_simulation_preliminary_methods_20260724.csv" =
@@ -518,25 +523,37 @@ rqr_ordinary_v1_bounded_validation <- list(
     "application/config/rqr_dlm/rqr_dlm_output13_bounded_expected_bundle_20260724.json" =
       "0c66e12b580b382d2eb5543b0fa758a1839f43a3529ed0740c15d2bf925ac1dd",
     "application/scripts/15_run_rqr_dlm_confirmatory_simulation.R" =
-      "83645e83706a2f9b5933d605455016a6e22e379ac8c70bbc1c41621fef28ea9b",
+      "c908b00c3800d9735cf2086a7be3f2febf5d4955f346e8ef0b42e717187ee421",
     "application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh" =
       "bb9de87021432f5cb38b7e8dfe89f3266b88570153d8512f4ae032e415119bef",
     "application/scripts/17_launch_rqr_dlm_confirmatory_wave.R" =
       "643c3908feeb52d4ffb4af406ab6fdfaa07a93b286af6722ec0d12d465bf5f16",
     "application/DESCRIPTION" =
-      "1d9d9218915eaed659cd93ae373f433fe96bb20822b93426a481cfaff644a494",
+      "906b3b2eba065097359461ddf91ffeef3cedb86b714bff75d3a5a45f417231de",
     "application/NAMESPACE" =
-      "27d4e8f2dd18692b2a0af3be61c421ee1246c20bf52216ad2d0faa58701ea950",
+      "e327b5e066be5b0042e0b3c3e5498823bae1ea4027be3f8fd7ae9e8e6ae18fb1",
     "application/R/RcppExports.R" =
-      "99c796cbf443f71e62dd2997e31d841af08908db38287481fe2cafc7895d4e61",
+      "bd263dd6ca738990aff6c750cf71c13089404db84ff52adeb9f65bd9ff4cd864",
     "application/src/RcppExports.cpp" =
-      "727fcc6758bc6a3d617eef1e6444690c874cf93495ba00f2f630b7d2941c7e7a",
+      "e2673a07a2244c2f54d8961f95cb92ac557ae6be3e50f7075ebd94506eeb5161",
     "application/src/rqr_interweave.cpp" =
       "6a71e8cb2de83d912946924b1f90cc8c4290517e465d13faec9b5e178c49b077",
     "application/src/Makevars" =
       "3b8ad3ea8672999f60077c4aef88c24d39c2854efd8858532d7f86351948ff37",
     "application/src/Makevars.win" =
-      "3b8ad3ea8672999f60077c4aef88c24d39c2854efd8858532d7f86351948ff37"
+      "3b8ad3ea8672999f60077c4aef88c24d39c2854efd8858532d7f86351948ff37",
+    "application/scripts/22_validate_rqr_dlm_wave1_corrections.R" =
+      "8ab2c45ca78a1db7562f55b2fcdaf12e80d109ee73ad4b00fd3f0989f56ad3e7",
+    "application/scripts/23_validate_rqr_dlm_wave1_comparator_projection.R" =
+      "4dfedc2ed8991fb3b9c7d4b5b50c59e03b1cc9facf15f09effba9ca3ab02e326",
+    "application/scripts/24_validate_rqr_dlm_horizon_and_fixed_design.R" =
+      "0c959eb81b9fcab499f2718416e70d173a2a8462d8732e1cd02860066cdef8ef",
+    "application/scripts/25_validate_rqr_dlm_resource_envelope.R" =
+      "bba0c284bbbedcb1c9456d5f72e15961af44318ddd778e1f13981206ef954f51",
+    "application/scripts/lib/rqr_dlm_confirmatory_simulation.R" =
+      "401e49f982a86dc9b832955a28683d4597db54f7b1c33cb76c97e006eb0ed345",
+    "docs/audits/rqr_dlm_main_correction_budget_20260727.csv" =
+      "68e8cbdee5736d8cd85978300eea92753c081ecad8edb5c6afde9c2a9b0e33d8"
   ),
   evidence_schema_version = "rqrgibbs_ordinary_v1_evidence/1.0.0",
   compact_evidence_files = c(

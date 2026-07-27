@@ -21,6 +21,33 @@ test_that("native GIG half sampler has the declared limiting and mean contracts"
   expect_lte(abs(empirical - probability), 4 * empirical_mcse + 1 / length(draw))
 })
 
+test_that("native GIG half sampler rejects ambiguous vector recycling", {
+  expect_error(
+    rqr_sample_gig_half(c(1, 2, 3), c(1, 2)),
+    "scalar or a vector with the same length"
+  )
+  expect_error(
+    rqr_sample_gig_half(matrix(1:4, nrow = 2), 1),
+    "nonempty numeric vector"
+  )
+  expect_error(
+    rqr_sample_gig_half(c(1, 2), matrix(1, nrow = 1)),
+    "numeric scalar or a vector"
+  )
+  expect_error(
+    rqr_sample_gig_half(numeric(0), 1),
+    "nonempty numeric vector"
+  )
+  expect_length(rqr_sample_gig_half(c(0, 1), c(2, 3)), 2L)
+
+  expect_error(
+    rqrgibbs:::.sample_gig_devroye_required(
+      n_draws = 1.5, p = 0.5, a = 2, b_vec = 1
+    ),
+    "implements only GIG p=1/2"
+  )
+})
+
 test_that("GIG half sampler remains finite across representable extreme scales", {
   set.seed(1202)
   grid <- expand.grid(
@@ -81,7 +108,9 @@ test_that("dynamic learned-scale sampler follows the partially collapsed contrac
   expect_identical(
     fit$diagnostics$partial_collapse_order,
     c(
-      "lambda_collapsed", "latent_v_refresh", "root1_ffbs", "root2_ffbs",
+      "lambda_collapsed", "latent_v_refresh",
+      "root1_ffbs", "root1_time0",
+      "root2_ffbs", "root2_time0",
       "global_root_swap"
     )
   )
@@ -139,27 +168,20 @@ test_that("dynamic learned_pure is executable diagnostic compatibility only", {
 })
 
 test_that("RQR-DLM draw and fitted-interval boundaries fail closed", {
-  fit <- structure(
-    list(
-      y = c(-0.5, NA_real_, 0.75),
-      samp.eta_root1 = matrix(
-        c(-1.2, -0.9, -0.6, -1.0, -0.7, -0.4),
-        nrow = 3L
-      ),
-      samp.eta_root2 = matrix(
-        c(0.4, 0.7, 1.0, 0.6, 0.9, 1.2),
-        nrow = 3L
-      ),
-      samp.lambda = c(1.5, 2.0),
-      model_spec = list(
-        coverage_level = 0.8,
-        evolution_mode = "fixed_W",
-        target_contract = "fixed_joint_exact",
-        numerical_repair_count = 0L,
-        promotion_eligible = FALSE
-      )
+  fit <- rqr_dlm_fit(
+    y = c(-0.5, NA_real_, 0.75),
+    model = rqr_polytrend(
+      1L, m0 = 0, C0 = matrix(2, 1L, 1L)
     ),
-    class = c("rqr_dlm_mcmc", "rqr_fit")
+    coverage_level = 0.8,
+    evolution_spec = rqr_evolution_fixed(
+      matrix(0.04, 1L, 1L)
+    ),
+    learning_rate_mode = "fixed_rate",
+    mcmc_control = list(
+      n_burn = 0L, n_mcmc = 2L, thin = 1L,
+      seed = 1210L, backend = "R"
+    )
   )
 
   set.seed(1211)
@@ -168,8 +190,18 @@ test_that("RQR-DLM draw and fitted-interval boundaries fail closed", {
   expect_identical(.Random.seed, rng_before)
   expect_identical(
     names(all_draws),
-    c("eta_root1", "eta_root2", "lambda", "index", "nd")
+    c(
+      "schema_version", "eta_root1", "eta_root2", "lambda",
+      "index", "nd", "source", "selection", "source_bound",
+      "reproducibility_eligible", "promotion_eligible",
+      "response_predictive_draws", "semantic_digest"
+    )
   )
+  expect_identical(class(all_draws), c("rqr_dlm_draws", "list"))
+  expect_identical(
+    all_draws$schema_version, "rqrgibbs_dlm_draws/1.0.0"
+  )
+  expect_false(all_draws$response_predictive_draws)
   expect_identical(all_draws$index, 1:2)
   expect_identical(all_draws$nd, 2L)
   expect_silent(rqrgibbs:::.rqr_validate_dlm_draws(fit, all_draws))
@@ -206,26 +238,44 @@ test_that("RQR-DLM draw and fitted-interval boundaries fail closed", {
   bad$samp.eta_root2 <- bad$samp.eta_root2[-1L, , drop = FALSE]
   expect_error(
     rqr_posterior_draws(bad),
-    "matching nonempty finite plain numeric matrices"
+    "retained draws do not match their content digests"
   )
   bad <- fit
   bad$samp.eta_root1[1L, 1L] <- Inf
-  expect_error(rqr_posterior_draws(bad), "finite plain numeric matrices")
+  expect_error(
+    rqr_posterior_draws(bad),
+    "retained draws do not match their content digests"
+  )
   bad <- fit
   class(bad$samp.eta_root1) <- c("custom_matrix", "matrix")
-  expect_error(rqr_posterior_draws(bad), "plain numeric matrices")
+  expect_error(
+    rqr_posterior_draws(bad),
+    "retained draws do not match their content digests"
+  )
   bad <- fit
   bad$y <- matrix(bad$y, ncol = 1L)
-  expect_error(rqr_posterior_draws(bad), "fitted response length")
+  expect_error(
+    rqr_posterior_draws(bad),
+    "fitted DLM response|fitted response length"
+  )
   bad <- fit
   bad$y[] <- NA_real_
-  expect_error(rqr_posterior_draws(bad), "fitted response length")
+  expect_error(
+    rqr_posterior_draws(bad),
+    "fitted DLM response|fitted response length"
+  )
   bad <- fit
   bad$samp.lambda <- matrix(bad$samp.lambda, nrow = 1L)
-  expect_error(rqr_posterior_draws(bad), "lambda draws")
+  expect_error(
+    rqr_posterior_draws(bad),
+    "retained draws do not match their content digests"
+  )
   bad <- fit
   bad$samp.lambda[1L] <- 0
-  expect_error(rqr_posterior_draws(bad), "finite, positive")
+  expect_error(
+    rqr_posterior_draws(bad),
+    "retained draws do not match their content digests"
+  )
 
   known <- all_draws
   canonical_known <- rqrgibbs:::.rqr_validate_dlm_draws(fit, known)
@@ -251,8 +301,20 @@ test_that("RQR-DLM draw and fitted-interval boundaries fail closed", {
   canonical_external <- rqrgibbs:::.rqr_validate_dlm_draws(fit, external)
   expect_identical(
     names(canonical_external),
-    c("eta_root1", "eta_root2", "lambda", "index", "nd")
+    c(
+      "schema_version", "eta_root1", "eta_root2", "lambda",
+      "index", "nd", "source", "selection", "source_bound",
+      "reproducibility_eligible", "promotion_eligible",
+      "response_predictive_draws", "semantic_digest"
+    )
   )
+  expect_identical(
+    class(canonical_external), c("rqr_dlm_draws", "list")
+  )
+  expect_false(canonical_external$source_bound)
+  expect_false(canonical_external$reproducibility_eligible)
+  expect_false(canonical_external$promotion_eligible)
+  expect_false(canonical_external$response_predictive_draws)
   expect_type(canonical_external$eta_root1, "double")
   expect_null(canonical_external$lambda)
   expect_identical(
@@ -374,18 +436,27 @@ test_that("RQR-DLM draw and fitted-interval boundaries fail closed", {
   invalid$eta_root1 <- fit$samp.eta_root1[, c(1L, 1L), drop = FALSE]
   invalid$eta_root2 <- fit$samp.eta_root2[, c(1L, 1L), drop = FALSE]
   invalid$lambda <- fit$samp.lambda[c(1L, 1L)]
-  expect_error(predict_interval(fit, draws = invalid), "must be unique")
+  expect_error(
+    predict_interval(fit, draws = invalid),
+    "RNG binding|must be unique"
+  )
   invalid <- known
   invalid$eta_root1[1L, 1L] <- invalid$eta_root1[1L, 1L] + 0.1
   expect_error(
     predict_interval(fit, draws = invalid),
-    "do not identify the supplied DLM root-ordinate draws"
+    paste(
+      "not bound to the exact source fit|",
+      "do not identify the supplied DLM root-ordinate draws"
+    )
   )
   invalid <- known
   invalid$lambda[1L] <- invalid$lambda[1L] + 0.1
   expect_error(
     predict_interval(fit, draws = invalid),
-    "do not identify the supplied DLM lambda draws"
+    paste(
+      "not bound to the exact source fit|",
+      "do not identify the supplied DLM lambda draws"
+    )
   )
   invalid <- external
   invalid$nd <- 1L
@@ -414,7 +485,10 @@ test_that("RQR-DLM draw and fitted-interval boundaries fail closed", {
   expect_output(print(fit), "RQR dynamic MCMC fit")
   corrupt <- fit
   corrupt$samp.eta_root1[1L, 1L] <- NA_real_
-  expect_error(print(corrupt), "finite plain numeric matrices")
+  expect_error(
+    print(corrupt),
+    "retained draws do not match|finite plain numeric matrices"
+  )
 })
 
 test_that("native fixed-design ridge MCMC has no private exdqlm dependency", {
@@ -484,7 +558,9 @@ test_that("frozen discount templates remain exact during MCMC", {
   expect_true(fit$model_spec$exact_joint_target)
   expect_true(fit$evolution$frozen_before_mcmc)
   expect_identical(fit$evolution$mode, "discount_template")
-  expect_identical(fit$evolution$reference_source, "user_supplied")
+  expect_identical(
+    fit$evolution$reference_variance_source, "user_supplied"
+  )
   expect_false(fit$evolution$empirical_bayes)
 })
 
@@ -883,7 +959,7 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
   expect_identical(
     fit$diagnostics$partial_collapse_order,
     c(
-      "lambda_collapsed", "latent_v_refresh",
+      "lambda_fixed", "latent_v_refresh",
       "component_scale_root1_collapsed",
       "root1_ffbs",
       "root1_time0", "root2_ffbs", "root2_time0",
@@ -902,6 +978,18 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
   expect_true(all(
     fit$diagnostics$component_scale_collapsed$
       exact_partially_collapsed
+  ))
+  expect_true(all(
+    fit$diagnostics$component_scale_collapsed$
+      mathematically_exact_partially_collapsed
+  ))
+  expect_true(all(
+    fit$diagnostics$component_scale_collapsed$
+      numerically_exact_partially_collapsed
+  ))
+  expect_true(all(
+    fit$diagnostics$component_scale_collapsed$
+      numerical_repair_count == 0L
   ))
   expect_true(all(
     fit$diagnostics$component_scale_interweave$
@@ -1016,6 +1104,69 @@ test_that("fixed-W state storage completes retained paths at time zero", {
   expect_true(all(is.finite(fit$samp.theta0_root2)))
 })
 
+test_that("fixed-W storage choice does not change the transition kernel", {
+  arguments <- list(
+    y = c(-1, -0.2, 0.5, 1.1),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "fixed_W",
+    W = 0.05,
+    numerical_policy = "fail"
+  )
+  compact <- do.call(
+    rqr_dlm_fit,
+    c(arguments, list(mcmc_control = list(
+      n_burn = 1, n_mcmc = 4, seed = 1210,
+      backend = "cpp", store_state_draws = FALSE
+    )))
+  )
+  stored <- do.call(
+    rqr_dlm_fit,
+    c(arguments, list(mcmc_control = list(
+      n_burn = 1, n_mcmc = 4, seed = 1210,
+      backend = "cpp", store_state_draws = TRUE
+    )))
+  )
+  expect_identical(compact$samp.eta_root1, stored$samp.eta_root1)
+  expect_identical(compact$samp.eta_root2, stored$samp.eta_root2)
+  expect_identical(compact$samp.lambda, stored$samp.lambda)
+  expect_identical(compact$checkpoint_state, stored$checkpoint_state)
+  expect_identical(
+    compact$model_spec$transition_kernel_digest,
+    stored$model_spec$transition_kernel_digest
+  )
+  expect_identical(
+    compact$model_spec$transition_kernel,
+    compact$checkpoint_state$transition_kernel
+  )
+  expect_identical(anyDuplicated(names(compact$checkpoint_state)), 0L)
+  expect_identical(
+    names(compact$checkpoint_state),
+    c(
+      "schema_version", "completed_iterations",
+      "theta_root1", "theta_root2",
+      "theta0_root1", "theta0_root2",
+      "latent_v", "lambda", "evolution_scale",
+      "transition_kernel_schema", "transition_kernel",
+      "transition_kernel_digest", "rng_state"
+    )
+  )
+  ambiguous_checkpoint <- compact
+  ambiguous_checkpoint$checkpoint_state <- c(
+    compact$checkpoint_state,
+    list(lambda = compact$checkpoint_state$lambda)
+  )
+  expect_error(
+    rqrgibbs:::.rqr_validate_dlm_fit_envelope(
+      ambiguous_checkpoint
+    ),
+    "exact versioned field schema"
+  )
+  expect_false(
+    "component_scale_transition_kernel" %in% names(compact$model_spec)
+  )
+})
+
 test_that("time-zero completion supports an exact singular transition", {
   set.seed(1209)
   draw <- rqrgibbs:::.rqr_draw_initial_state(
@@ -1025,8 +1176,9 @@ test_that("time-zero completion supports an exact singular transition", {
     C0 = diag(2),
     W1 = matrix(0, 2, 2)
   )
-  expect_equal(draw[1L], 1, tolerance = 1e-12)
-  expect_true(all(is.finite(draw)))
+  expect_equal(draw$draw[1L], 1, tolerance = 1e-12)
+  expect_true(all(is.finite(draw$draw)))
+  expect_identical(draw$diagnostics$repair_count, 0L)
 })
 
 test_that("component-scale root forecasts match analytic state moments", {
@@ -1150,7 +1302,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.11.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.14.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
@@ -1219,6 +1371,76 @@ test_that("DLM checkpoints continue with the same RNG stream", {
   expect_false(portable$model_spec$promotion_eligible)
 })
 
+test_that("learned-scale DLM continuation preserves the exact parent state", {
+  y <- c(-1, -0.2, 0.1, 0.7, 1.1, 1.6)
+  common <- list(
+    y = y,
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "fixed_W",
+    W = 0.02,
+    learning_rate_mode = "learned_scale",
+    lambda_prior = list(shape = 4, rate = 3)
+  )
+  control <- function(n_mcmc) {
+    list(
+      n_burn = 0L, n_mcmc = n_mcmc, seed = 91231L,
+      backend = "R", store_state_draws = TRUE,
+      store_latent_draws = TRUE
+    )
+  }
+  full <- do.call(
+    rqr_dlm_fit, c(common, list(mcmc_control = control(3L)))
+  )
+  first <- do.call(
+    rqr_dlm_fit, c(common, list(mcmc_control = control(1L)))
+  )
+  second <- rqr_dlm_continue(
+    first, n_mcmc = 2L, thin = 1L,
+    store_state_draws = TRUE, store_latent_draws = TRUE
+  )
+
+  for (field in c(
+      "samp.eta_root1", "samp.eta_root2", "samp.latent_v"
+    )) {
+    expect_identical(
+      full[[field]], cbind(first[[field]], second[[field]]),
+      info = field
+    )
+  }
+  expect_identical(
+    full$samp.lambda,
+    c(first$samp.lambda, second$samp.lambda)
+  )
+  for (field in c(
+      "samp.theta_root1", "samp.theta_root2"
+    )) {
+    combined <- array(
+      c(first[[field]], second[[field]]),
+      dim = dim(full[[field]])
+    )
+    expect_identical(full[[field]], combined, info = field)
+  }
+  for (field in c(
+      "samp.theta0_root1", "samp.theta0_root2"
+    )) {
+    expect_identical(
+      full[[field]], cbind(first[[field]], second[[field]]),
+      info = field
+    )
+  }
+  expect_identical(
+    second$initialization_contract$initial_state$latent_v,
+    first$checkpoint_state$latent_v
+  )
+  expect_identical(
+    second$initialization_contract$initial_state_digest,
+    rqrgibbs:::.rqr_digest(
+      second$initialization_contract$initial_state
+    )
+  )
+})
+
 test_that("continuation inherits numerical and source history cumulatively", {
   skip_if(Sys.which("git") == "", "git is required for provenance fixtures")
   primary <- tempfile("rqr-primary-")
@@ -1257,7 +1479,7 @@ test_that("continuation inherits numerical and source history cumulatively", {
   altered_history$model_spec$cumulative_numerical_repair_count <- 1L
   expect_error(
     rqr_dlm_continue(altered_history, n_mcmc = 1),
-    "history contract"
+    "history contract|model specification"
   )
 
   child <- rqr_dlm_continue(fit, n_mcmc = 1)
@@ -1327,7 +1549,7 @@ test_that("continuation inherits numerical and source history cumulatively", {
   )
   expect_error(
     rqr_dlm_continue(impossible_repairs, n_mcmc = 1),
-    "derived-status semantics"
+    "derived-status semantics|model specification"
   )
 
   impossible_mismatch <- grandchild
@@ -1390,7 +1612,10 @@ test_that("continuation inherits numerical and source history cumulatively", {
   )
   expect_error(
     rqr_dlm_continue(impossible_target, n_mcmc = 1),
-    "conflicts with redundant fit metadata"
+    paste(
+      "conflicts with redundant fit metadata|",
+      "conflicts with canonical target"
+    )
   )
 
   invalid_counts <- c(0.5, -0.5, Inf, .Machine$integer.max + 1)
@@ -1509,7 +1734,11 @@ test_that("DLM continuation rejects every target and checkpoint mutation", {
     altered <- target_mutations[[name]](fit)
     expect_error(
       rqr_dlm_continue(altered, 1),
-      "model, target, or evolution digest",
+      paste(
+        "model, target, or evolution digest|",
+        "evolution specification|expanded (DLM )?model|",
+        "jitter ladder"
+      ),
       info = name
     )
   }
@@ -1666,6 +1895,11 @@ test_that("DLM continuation rejects every target and checkpoint mutation", {
       x$samp.theta0_root2 <- NULL
       x
     },
+    missing_time0 = function(x) {
+      x$samp.theta0_root1 <- NULL
+      x$samp.theta0_root2 <- NULL
+      x
+    },
     schedule_digest = function(x) {
       x$segment_schedule_digest <- strrep("0", 64L)
       x
@@ -1686,12 +1920,12 @@ test_that("DLM continuation rejects every target and checkpoint mutation", {
     altered <- envelope_mutations[[name]](fit)
     expect_error(
       rqr_posterior_draws(altered),
-      "DLM|checkpoint|schedule|retained|state|scale|latent",
+      "DLM|rqr_dlm_mcmc|checkpoint|schedule|retained|state|scale|latent",
       info = paste("read", name)
     )
     expect_error(
       rqr_dlm_continue(altered, 1L),
-      "DLM|checkpoint|schedule|retained|state|scale|latent",
+      "DLM|rqr_dlm_mcmc|checkpoint|schedule|retained|state|scale|latent",
       info = paste("continue", name)
     )
   }
@@ -1723,7 +1957,7 @@ test_that("DLM continuation rejects every target and checkpoint mutation", {
   fixed_fit$samp.lambda[1L] <- fixed_fit$samp.lambda[1L] + 1
   expect_error(
     rqr_posterior_draws(fixed_fit),
-    "Fixed-rate DLM lambda"
+    "retained draws do not match|Fixed-rate DLM lambda"
   )
 })
 
@@ -1919,10 +2153,12 @@ test_that("future roots validate stored states and draw bindings", {
   full_only <- fit
   full_only$samp.theta_terminal_root1 <- NULL
   full_only$samp.theta_terminal_root2 <- NULL
-  fallback <- do.call(
-    rqr_forecast_roots, c(list(object = full_only), forecast_args)
+  expect_error(
+    do.call(
+      rqr_forecast_roots, c(list(object = full_only), forecast_args)
+    ),
+    "Expected an rqr_dlm_mcmc object"
   )
-  expect_identical(fallback$draw_index, seq_len(3L))
 
   mutations <- list(
     missing_second_terminal = function(x) {
@@ -2014,7 +2250,7 @@ test_that("future roots validate stored states and draw bindings", {
       rqr_forecast_roots,
       c(list(object = transposed), component_args)
     ),
-    "retained-draw-by-component"
+    "retained draws do not match|retained-draw-by-component"
   )
   unnamed <- component_fit
   colnames(unnamed$samp.evolution_scale) <- NULL
@@ -2023,7 +2259,7 @@ test_that("future roots validate stored states and draw bindings", {
       rqr_forecast_roots,
       c(list(object = unnamed), component_args)
     ),
-    "component-name order"
+    "retained draws do not match|component-name order"
   )
   nonfinite_scale <- component_fit
   nonfinite_scale$samp.evolution_scale[1L, 1L] <- Inf
@@ -2032,7 +2268,7 @@ test_that("future roots validate stored states and draw bindings", {
       rqr_forecast_roots,
       c(list(object = nonfinite_scale), component_args)
     ),
-    "finite positive"
+    "retained draws do not match|finite positive"
   )
 })
 
@@ -2563,14 +2799,17 @@ test_that("DESN forecast horizon rejects fractional values", {
 test_that("VB draw and iteration controls reject fractional values", {
   X <- cbind(1, seq(-1, 1, length.out = 8))
   y <- seq(-0.5, 0.5, length.out = 8)
-  fit <- rqr_vb_fit(
+  fit <- rqrgibbs:::rqr_vb_fit(
     y, X, 0.8,
     vb_control = list(max_iter = 2, n_draws = 20, seed = 1208)
   )
   expect_error(rqr_posterior_draws(fit, nd = 2.5), "nd")
   expect_error(rqr_posterior_draws(fit, seed = 1.5), "seed")
   expect_error(
-    rqr_vb_fit(y, X, 0.8, vb_control = list(max_iter = 2.5, n_draws = 20)),
+    rqrgibbs:::rqr_vb_fit(
+      y, X, 0.8,
+      vb_control = list(max_iter = 2.5, n_draws = 20)
+    ),
     "max_iter"
   )
 })

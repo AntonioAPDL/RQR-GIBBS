@@ -10,6 +10,42 @@ The package implements fixed-design and dynamic samplers for the RQR
 residual-product loss. Its pseudo-AL representation is a computational
 augmentation of a loss kernel, not a response likelihood.
 }
+\section{Ordinary version-1 interfaces}{
+
+\itemize{
+\item Fixed-design regression uses \code{\link[=rqr_beta_prior]{rqr_beta_prior()}}, \code{\link[=rqr_mcmc_fit]{rqr_mcmc_fit()}},
+\code{\link[=rqr_mcmc_continue]{rqr_mcmc_continue()}}, and \code{\link[=predict_interval]{predict_interval()}}.
+\item Frozen-feature RQR-DESN uses \code{\link[=rqr_desn_design]{rqr_desn_design()}}, \code{\link[=rqr_desn_fit]{rqr_desn_fit()}},
+\code{\link[=rqr_desn_continue]{rqr_desn_continue()}}, and \code{\link[=forecast_paths]{forecast_paths()}}. The feature contract is
+fixed before the readout update.
+\item Dynamic interval roots use \code{\link[=rqr_polytrend]{rqr_polytrend()}}, \code{\link[=rqr_seasonal]{rqr_seasonal()}},
+\code{\link[=rqr_regression]{rqr_regression()}}, \code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}}, \code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}}, and
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}}. Low-level state calculations are available through
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}} and \code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}}.
+\item Loss and population-oracle utilities include \code{\link[=rqr_check_loss]{rqr_check_loss()}},
+\code{\link[=rqr_residual_product]{rqr_residual_product()}}, and \code{\link[=rqr_oracle_certificate]{rqr_oracle_certificate()}}.
+}
+
+Every fitted value above describes interval-root functionals under a
+generalized-Bayes loss update. No interface supplies posterior-predictive
+response draws.
+}
+
+\section{Compatibility and experimental code}{
+
+
+\code{\link[=beta_prior]{beta_prior()}} is a compatibility wrapper for \code{\link[=rqr_beta_prior]{rqr_beta_prior()}}; it is not
+the preferred constructor for new code. \code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}}
+is an exported experimental working recursion and is not an exact
+fixed-joint ordinary-v1 target. The unexported \code{rqr_vb_fit()} implementation
+is an experimental research prototype outside ordinary-v1 promotion.
+Nonzero mean tilt, CAVI/ELBO, and response simulation are outside this
+version-1 package surface.
+
+See \code{vignette("ordinary-rqr-v1", package = "rqrgibbs")} for a compact
+executable introduction.
+}
+
 \seealso{
 Useful links:
 \itemize{

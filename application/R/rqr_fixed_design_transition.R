@@ -37,7 +37,7 @@
     precision_beta_cfg = precision_beta_cfg,
     context = list(
       iteration = iteration,
-      likelihood_family = "rqr_generalized_bayes",
+      update_family = "rqr_generalized_bayes_loss",
       beta_prior_type = prior$type,
       root = root
     )

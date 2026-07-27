@@ -313,7 +313,8 @@ ordinary_v1_dlm_companion_make_reference <- function(
   runtime <- list(
     schema_version = "rqrgibbs_runtime_toolchain/1.0.0",
     R_version = "R synthetic", platform = "synthetic",
-    compiler = NULL, BLAS = "synthetic", LAPACK = "synthetic",
+    compiler = "compiler synthetic",
+    BLAS = "synthetic", LAPACK = "synthetic",
     dependency_versions = list(
       digest = "0.6.39", jsonlite = "2.0.0",
       posterior = "1.7.0", rqrgibbs = contract$package_version
@@ -420,12 +421,25 @@ ordinary_v1_dlm_companion_thread_environment <- function() {
 }
 
 ordinary_v1_dlm_companion_make_m01 <- function(
-    environment, directory, contract) {
+    environment, directory, contract, role) {
+  spec <- environment$rqr_dlm_companion_wave_spec(role)
+  transition_kernel <-
+    environment$rqr_dlm_companion_expected_m01_transition_kernel(role)
+  transition_kernel_digest <- digest::digest(
+    transition_kernel, algo = "sha256", serialize = TRUE
+  )
+  transition_invariant <-
+    environment$rqr_dlm_companion_transition_kernel_invariant(
+      transition_kernel
+    )
+  transition_invariant_digest <- digest::digest(
+    transition_invariant, algo = "sha256", serialize = TRUE
+  )
   dir.create(directory, recursive = TRUE, showWarnings = FALSE)
-  tasks <- seq_len(20)
-  sentinel <- tasks > 12
+  tasks <- seq_len(spec$task_count)
+  sentinel <- tasks > spec$task_count - spec$sentinel_count
   chains <- ifelse(sentinel, 4L, 1L)
-  DGP <- rep(c("S01", "S02"), 10)
+  DGP <- rep(spec$DGP, length.out = spec$task_count)
   estimands <- environment$rqr_dlm_companion_estimand_names("M01")
   diagnostics <- do.call(rbind, lapply(tasks, function(task) {
     data.frame(
@@ -446,51 +460,96 @@ ordinary_v1_dlm_companion_make_m01 <- function(
     diagnostics = length(estimands),
     diagnostics_passed = length(estimands), all_pass = TRUE,
     fit_elapsed_seconds = 1,
+    maximum_peak_RSS_KiB = 1000,
     log_q_1_rhat = ifelse(sentinel, 1, NA_real_),
     log_q_1_ess_bulk = 2000, log_q_1_ess_tail = 2000,
     log_q_1_mcse_over_sd = ifelse(sentinel, 0.1, 0.01),
+    transition_kernel_fit_count = chains,
+    transition_kernel_schemas = vapply(
+      chains, function(count) {
+        paste(
+          rep("rqrgibbs_dlm_transition_kernel/1.0.0", count),
+          collapse = "|"
+        )
+      }, character(1L)
+    ),
+    transition_kernel_digests = vapply(
+      chains, function(count) {
+        paste(rep(transition_kernel_digest, count), collapse = "|")
+      }, character(1L)
+    ),
+    transition_kernel_contract_digests = vapply(
+      chains, function(count) {
+        paste(rep(transition_kernel_digest, count), collapse = "|")
+      }, character(1L)
+    ),
+    transition_kernel_contract_matches = vapply(
+      chains, function(count) {
+        paste(rep("TRUE", count), collapse = "|")
+      }, character(1L)
+    ),
     stringsAsFactors = FALSE
   )
   ordinary_v1_dlm_companion_write_csv(
-    diagnostics, file.path(directory, "wave1_M01_diagnostics.csv")
+    diagnostics,
+    file.path(directory, paste0(spec$tag, "_M01_diagnostics.csv"))
   )
   ordinary_v1_dlm_companion_write_csv(
-    summary, file.path(directory, "wave1_M01_summary.csv")
+    summary, file.path(directory, paste0(spec$tag, "_M01_summary.csv"))
   )
   saveRDS(
     list(kind = "synthetic M01 evidence"),
-    file.path(directory, "wave1_M01_chain_evidence.rds")
+    file.path(directory, paste0(spec$tag, "_M01_chain_evidence.rds"))
   )
   manifest <- list(
     schema_version =
-      "rqrgibbs_dlm_wave1_correction_validation/1.0.0",
+      "rqrgibbs_dlm_wave_correction_validation/2.2.0",
     source_commit = contract$commit, source_clean = TRUE,
     package_version = contract$package_version,
     primary_runtime_attestation_sha256 = contract$attestation,
     config_digest = contract$confirmatory_config,
     incidence_digest = contract$incidence,
     seed_ledger_digest = contract$seed,
-    wave_id = "static_gaussian_T200__target0200__sentinel",
-    wave_task_count = 20L, chain_job_count = 44L, workers = 8L,
+    wave_id = spec$wave_id,
+    wave_task_count = spec$task_count,
+    chain_job_count = spec$chain_count, workers = 8L,
     thread_environment =
       ordinary_v1_dlm_companion_thread_environment(),
     component_scale_kernel = list(
+      one_root_partially_collapsed = TRUE,
+      collapsed_integrated_root = "root1",
       centered_inverse_gamma = TRUE,
       noncentered_slice_interweave = TRUE,
       interweave_cycles = 1L, slice_width = 1,
-      slice_sweeps_per_cycle = 2L, slice_max_steps = 100L,
+      slice_sweeps_per_cycle = 3L, slice_max_steps = 100L,
       slice_max_shrink = 1000L, target_change = FALSE
     ),
     standard_component_scale_schedule =
       list(burn = 1000L, retain = 6000L, thin = 1L),
     sentinel_component_scale_schedule =
-      list(burn = 1000L, retain = 2000L, thin = 1L),
+      list(burn = 1000L, retain = 6000L, thin = 1L),
     exact_target_preserving_kernel = TRUE,
+    transition_kernel_schema =
+      "rqrgibbs_dlm_transition_kernel/1.0.0",
+    unique_transition_kernel_digests = transition_kernel_digest,
+    expected_transition_kernel_contract = transition_kernel,
+    expected_transition_kernel_contract_digest =
+      transition_kernel_digest,
+    transition_kernel_invariant_schema =
+      "rqrgibbs_dlm_transition_kernel_invariant/1.0.0",
+    expected_transition_kernel_invariant = transition_invariant,
+    expected_transition_kernel_invariant_digest =
+      transition_invariant_digest,
+    all_fit_transition_contracts_complete = TRUE,
+    all_fit_transition_contracts_match_expected = TRUE,
     comparative_simulation_metrics_used = FALSE,
     failed_outputs_reused = FALSE, all_fits_succeeded = TRUE,
     all_fits_reproducibility_eligible = TRUE,
     unique_runtime_tree_digests = contract$runtime_tree,
-    total_fit_elapsed_seconds = 20,
+    total_fit_elapsed_seconds = spec$task_count,
+    maximum_process_peak_RSS_KiB = 1000,
+    declared_worker_memory_ceiling_KiB = 1048576,
+    resource_margin_pass = TRUE,
     all_diagnostics_passed = TRUE,
     started_at_utc = "2026-07-26T00:00:00Z",
     completed_at_utc = "2026-07-26T00:01:00Z"
@@ -499,18 +558,19 @@ ordinary_v1_dlm_companion_make_m01 <- function(
     manifest, file.path(directory, "validation_manifest.json")
   )
   ordinary_v1_dlm_companion_refresh_artifacts(
-    environment, directory, "M01"
+    environment, directory, role
   )
   invisible(directory)
 }
 
 ordinary_v1_dlm_companion_make_m02 <- function(
-    environment, directory, contract) {
+    environment, directory, contract, role) {
+  spec <- environment$rqr_dlm_companion_wave_spec(role)
   dir.create(directory, recursive = TRUE, showWarnings = FALSE)
-  tasks <- seq_len(20)
-  sentinel <- tasks > 12
+  tasks <- seq_len(spec$task_count)
+  sentinel <- tasks > spec$task_count - spec$sentinel_count
   chains <- ifelse(sentinel, 4L, 1L)
-  DGP <- rep(c("S01", "S02"), 10)
+  DGP <- rep(spec$DGP, length.out = spec$task_count)
   estimands <- environment$rqr_dlm_companion_estimand_names("M02")
   diagnostics <- do.call(rbind, lapply(tasks, function(task) {
     data.frame(
@@ -525,46 +585,97 @@ ordinary_v1_dlm_companion_make_m02 <- function(
   rownames(diagnostics) <- NULL
   summary <- data.frame(
     DGP = DGP, replication = tasks,
-    sentinel = sentinel, chains = chains,
+    sentinel = sentinel,
+    schedule_role = ifelse(sentinel, "sentinel", "standard"),
+    configured_burn = 1000L, configured_retain = 4000L,
+    configured_thin = 1L, applied_burn = 1000L,
+    applied_retain = 4000L, applied_thin = 1L,
+    realized_state_draw_dimensions = "1x200x4000",
+    realized_scale_draw_lengths = "4000",
+    schedule_contract_pass = TRUE, chains = chains,
     diagnostics = length(estimands),
     diagnostics_passed = length(estimands), all_pass = TRUE,
-    fit_elapsed_seconds = 1, minimum_bulk_ess = 2000,
+    fit_elapsed_seconds = 1, maximum_peak_RSS_KiB = 1000,
+    minimum_bulk_ess = 2000,
     minimum_tail_ess = 2000, maximum_mcse_over_sd = 0.01,
     stringsAsFactors = FALSE
   )
   ordinary_v1_dlm_companion_write_csv(
-    diagnostics, file.path(directory, "wave1_M02_diagnostics.csv")
+    diagnostics,
+    file.path(directory, paste0(spec$tag, "_M02_diagnostics.csv"))
   )
   ordinary_v1_dlm_companion_write_csv(
-    summary, file.path(directory, "wave1_M02_summary.csv")
+    summary, file.path(directory, paste0(spec$tag, "_M02_summary.csv"))
   )
   saveRDS(
     list(kind = "synthetic M02 evidence"),
-    file.path(directory, "wave1_M02_chain_evidence.rds")
+    file.path(directory, paste0(spec$tag, "_M02_chain_evidence.rds"))
   )
   manifest <- list(
     schema_version =
-      "rqrgibbs_dlm_wave1_comparator_projection_validation/1.0.0",
+      "rqrgibbs_dlm_wave_comparator_projection_validation/2.1.0",
     source_commit = contract$commit, source_clean = TRUE,
     package_version = contract$package_version,
     primary_runtime_attestation_sha256 = contract$attestation,
     primary_reproducibility_eligible = TRUE,
+    primary_runtime_tree_digest = contract$runtime_tree,
     exdqlm_runtime_attestation_sha256 = contract$exdqlm_attestation,
     exdqlm_runtime_tree_digest = contract$exdqlm_tree,
     exdqlm_source_package_sha256 = contract$exdqlm_package,
     config_digest = contract$confirmatory_config,
     incidence_digest = contract$incidence,
     seed_ledger_digest = contract$seed,
-    wave_id = "static_gaussian_T200__target0200__sentinel",
-    wave_task_count = 20L, interval_chain_job_count = 44L,
-    logical_endpoint_fit_count = 88L, workers = 8L,
+    wave_id = spec$wave_id,
+    wave_task_count = spec$task_count,
+    interval_chain_job_count = spec$chain_count,
+    logical_endpoint_fit_count = spec$endpoint_count, workers = 8L,
     thread_environment =
       ordinary_v1_dlm_companion_thread_environment(),
     comparator_projection =
       "colSums(FF * posterior_state_mean_or_draw)",
+    common_target_across_initialization_profiles = TRUE,
+    overdispersed_initialization_profiles_verified = TRUE,
+    frozen_schedules = list(
+      standard = list(burn = 1000L, retain = 4000L, thin = 1L),
+      sentinel = list(burn = 1000L, retain = 4000L, thin = 1L)
+    ),
+    applied_schedule_evidence = list(
+      standard = list(
+        configured_schedule =
+          list(burn = 1000L, retain = 4000L, thin = 1L),
+        interval_chain_job_count =
+          spec$chain_count - 4L * spec$sentinel_count,
+        realized_state_draw_dimensions = "1x200x4000",
+        realized_scale_draw_lengths = 4000L,
+        all_applied = TRUE
+      ),
+      sentinel = list(
+        configured_schedule =
+          list(burn = 1000L, retain = 4000L, thin = 1L),
+        interval_chain_job_count = 4L * spec$sentinel_count,
+        realized_state_draw_dimensions = "1x200x4000",
+        realized_scale_draw_lengths = 4000L,
+        all_applied = TRUE
+      )
+    ),
+    all_applied_schedules_verified = TRUE,
+    schedule_evidence_fields = c(
+      "schedule_role", "applied_schedule", "schedule_applied",
+      "state_draw_dimensions", "scale_draw_lengths"
+    ),
+    initialization_contract =
+      "target_preserving_precomputed_mcmc_state",
+    target_fields_held_fixed = paste0(
+      "y;m0;C0;FF;GG;discounts;component_dimensions;",
+      "dqlm_ind;fix_sigma;PriorSigma;quantile_probability"
+    ),
     comparative_simulation_metrics_used = FALSE,
     failed_outputs_reused = FALSE, all_fits_succeeded = TRUE,
-    all_diagnostics_passed = TRUE, total_fit_elapsed_seconds = 20,
+    all_diagnostics_passed = TRUE,
+    total_fit_elapsed_seconds = spec$task_count,
+    maximum_process_peak_RSS_KiB = 1000,
+    declared_worker_memory_ceiling_KiB = 1048576,
+    resource_margin_pass = TRUE,
     started_at_utc = "2026-07-26T00:00:00Z",
     completed_at_utc = "2026-07-26T00:01:00Z"
   )
@@ -572,7 +683,7 @@ ordinary_v1_dlm_companion_make_m02 <- function(
     manifest, file.path(directory, "validation_manifest.json")
   )
   ordinary_v1_dlm_companion_refresh_artifacts(
-    environment, directory, "M02"
+    environment, directory, role
   )
   invisible(directory)
 }
@@ -675,6 +786,151 @@ ordinary_v1_dlm_companion_make_horizon <- function(
   invisible(directory)
 }
 
+ordinary_v1_dlm_companion_make_resource <- function(
+    environment, directory, contract) {
+  dir.create(directory, recursive = TRUE, showWarnings = FALSE)
+  shape <- data.frame(
+    field = c(
+      "samp.theta_root1", "samp.theta_root2",
+      "samp.theta_terminal_root1", "samp.theta_terminal_root2",
+      "samp.theta0_root1", "samp.theta0_root2",
+      "samp.eta_root1", "samp.eta_root2", "samp.lambda",
+      "samp.evolution_scale", "samp.evolution_scale_shape",
+      "samp.evolution_scale_rate"
+    ),
+    orientation = c(
+      "state_by_time_by_draw", "state_by_time_by_draw",
+      "state_by_draw", "state_by_draw",
+      "state_by_draw", "state_by_draw", "time_by_draw", "time_by_draw",
+      "draw", "draw_by_component", "draw_by_component",
+      "draw_by_component"
+    ),
+    dimension_formula = c(
+      "p x T x retained", "p x T x retained",
+      "p x retained", "p x retained",
+      "p x retained", "p x retained", "T x retained", "T x retained",
+      "retained", "retained x components", "retained x components",
+      "retained x components"
+    ),
+    stringsAsFactors = FALSE
+  )
+  envelope <- data.frame(
+    case = c(
+      "four_state_component_scale",
+      "three_state_learned_component_scale",
+      "long_horizon_single_state"
+    ),
+    state_dimension = c(4L, 3L, 1L),
+    training_horizon = c(200L, 200L, 400L),
+    retained_draws = c(6000L, 9000L, 6000L),
+    component_count = c(2L, 2L, 1L), chains = 4L,
+    writer_peak_RSS_KiB = c(500000, 600000, 400000),
+    clean_reader_peak_RSS_KiB = c(510000, 610000, 410000),
+    bytes = c(100L, 200L, 300L),
+    sha256 = c(contract$digest_a, contract$digest_b, contract$digest_c),
+    writer_shape_valid = TRUE, clean_deserialization_valid = TRUE,
+    declared_worker_memory_ceiling_KiB = 1048576,
+    eighty_percent_margin_KiB = 0.8 * 1048576,
+    serialization_margin_pass = TRUE,
+    stringsAsFactors = FALSE
+  )
+  toolchain <- data.frame(
+    key = c(
+      "R_version", "platform", "R_compiler", "architecture",
+      "operating_system", "CC", "CXX17", "R_Makeconf_sha256",
+      "BLAS", "LAPACK", "package_rqrgibbs", "package_posterior",
+      "package_digest", "package_jsonlite", "package_Rcpp",
+      "package_RcppArmadillo"
+    ),
+    value = c(
+      "R synthetic", "synthetic", "compiler synthetic",
+      "synthetic architecture", "synthetic operating system",
+      "synthetic CC", "synthetic CXX17", contract$digest_a,
+      "synthetic", "synthetic", contract$package_version,
+      "1.7.0", "0.6.39", "2.0.0", "1.1.0", "14.6.3-1"
+    ),
+    stringsAsFactors = FALSE
+  )
+  toolchain_digest <- digest::digest(
+    toolchain, algo = "sha256", serialize = TRUE
+  )
+  ordinary_v1_dlm_companion_write_csv(
+    shape, file.path(directory, "fit_shape_contract.csv")
+  )
+  ordinary_v1_dlm_companion_write_csv(
+    envelope, file.path(directory, "resource_envelope.csv")
+  )
+  ordinary_v1_dlm_companion_write_csv(
+    toolchain, file.path(directory, "toolchain_manifest.csv")
+  )
+  manifest <- list(
+    schema_version =
+      "rqrgibbs_dlm_resource_envelope_validation/2.0.0",
+    source_commit = contract$commit, source_clean = TRUE,
+    package_version = contract$package_version,
+    expected_commit = contract$commit,
+    config_digest = contract$confirmatory_config,
+    incidence_digest = contract$incidence,
+    maximum_seed_ledger_digest = contract$seed,
+    primary_runtime_attestation_sha256 = contract$attestation,
+    primary_runtime_tree_digest = contract$runtime_tree,
+    primary_runtime_source_match = TRUE,
+    primary_reproducibility_eligible = TRUE,
+    exact_commit_attestation_pair_verified = TRUE,
+    promotion_evidence_eligible = TRUE, development_execution = FALSE,
+    configured_workers = 32L, configured_sentinel_workers = 8L,
+    resource_gate_worker_processes = 1L,
+    modeled_chains_per_worker = 4L,
+    thread_environment =
+      ordinary_v1_dlm_companion_thread_environment(),
+    toolchain_manifest_digest = toolchain_digest,
+    toolchain_manifest_complete = TRUE,
+    scientific_metrics_used = FALSE,
+    response_prediction_contract = FALSE,
+    fit_shape_contract =
+      "p_by_T_by_draw;T_by_draw;p_by_draw;draw_by_component",
+    synthetic_heavy_objects_retained = FALSE,
+    writer_measurement_process = "fresh_Rscript",
+    reader_measurement_process = "fresh_Rscript",
+    distinct_clean_processes_verified = TRUE,
+    telemetry_complete = TRUE,
+    maximum_writer_or_clean_reader_peak_RSS_KiB = 610000,
+    declared_worker_memory_ceiling_KiB = 1048576,
+    required_margin_fraction = 0.8, resource_margin_pass = TRUE,
+    all_writer_shapes_valid = TRUE,
+    all_clean_deserializations_valid = TRUE,
+    completed_at_utc = "2026-07-26T00:01:00Z"
+  )
+  ordinary_v1_dlm_companion_write_json(
+    manifest, file.path(directory, "validation_manifest.json")
+  )
+  closeout <- data.frame(
+    schema_version =
+      "rqrgibbs_dlm_resource_envelope_closeout/1.0.0",
+    source_commit = contract$commit,
+    package_version = contract$package_version,
+    primary_runtime_tree_digest = contract$runtime_tree,
+    primary_runtime_attestation_sha256 = contract$attestation,
+    config_digest = contract$confirmatory_config,
+    incidence_digest = contract$incidence,
+    maximum_seed_ledger_digest = contract$seed,
+    toolchain_manifest_digest = toolchain_digest,
+    exact_commit_attestation_pair_verified = TRUE,
+    promotion_evidence_eligible = TRUE, telemetry_complete = TRUE,
+    resource_margin_pass = TRUE, all_writer_shapes_valid = TRUE,
+    all_clean_deserializations_valid = TRUE,
+    maximum_writer_or_clean_reader_peak_RSS_KiB = 610000,
+    status = "passed", stringsAsFactors = FALSE
+  )
+  ordinary_v1_dlm_companion_write_csv(
+    closeout, file.path(directory, "resource_closeout.csv")
+  )
+  ordinary_v1_dlm_companion_refresh_artifacts(
+    environment, directory, "resource_envelope"
+  )
+  invisible(directory)
+}
+
 ordinary_v1_dlm_companion_contract <- function() {
   list(
     commit = paste(rep("a", 40), collapse = ""),
@@ -690,6 +946,7 @@ ordinary_v1_dlm_companion_contract <- function() {
     exdqlm_attestation = paste(rep("6", 64), collapse = ""),
     exdqlm_tree = paste(rep("7", 64), collapse = ""),
     exdqlm_package = paste(rep("8", 64), collapse = ""),
+    transition_kernel = paste(rep("9", 64), collapse = ""),
     digest_a = paste(rep("d", 64), collapse = ""),
     digest_b = paste(rep("e", 64), collapse = ""),
     digest_c = paste(rep("f", 64), collapse = ""),
@@ -704,22 +961,38 @@ ordinary_v1_dlm_companion_fixture <- function(
   paths <- list(
     root = root,
     reference = file.path(root, "reference"),
-    M01 = file.path(root, "M01"),
-    M02 = file.path(root, "M02"),
+    wave1_M01 = file.path(root, "wave1_M01"),
+    wave1_M02 = file.path(root, "wave1_M02"),
+    wave2_M01 = file.path(root, "wave2_M01"),
+    wave2_M02 = file.path(root, "wave2_M02"),
     horizon = file.path(root, "horizon_M03"),
+    resource = file.path(root, "resource_envelope"),
     output = file.path(root, "output")
   )
   ordinary_v1_dlm_companion_make_reference(
     environment, paths$reference, contract
   )
   ordinary_v1_dlm_companion_make_m01(
-    environment, paths$M01, contract
+    environment, paths$wave1_M01, contract,
+    "wave1_M01_static_gaussian"
   )
   ordinary_v1_dlm_companion_make_m02(
-    environment, paths$M02, contract
+    environment, paths$wave1_M02, contract,
+    "wave1_M02_static_gaussian"
+  )
+  ordinary_v1_dlm_companion_make_m01(
+    environment, paths$wave2_M01, contract,
+    "wave2_M01_local_level"
+  )
+  ordinary_v1_dlm_companion_make_m02(
+    environment, paths$wave2_M02, contract,
+    "wave2_M02_local_level"
   )
   ordinary_v1_dlm_companion_make_horizon(
     environment, paths$horizon, contract
+  )
+  ordinary_v1_dlm_companion_make_resource(
+    environment, paths$resource, contract
   )
   list(paths = paths, contract = contract)
 }
@@ -733,9 +1006,12 @@ ordinary_v1_dlm_companion_run_fixture <- function(
     ),
     expected_commit = fixture$contract$commit,
     reference_directory = fixture$paths$reference,
-    m01_directory = fixture$paths$M01,
-    m02_directory = fixture$paths$M02,
+    wave1_m01_directory = fixture$paths$wave1_M01,
+    wave1_m02_directory = fixture$paths$wave1_M02,
+    wave2_m01_directory = fixture$paths$wave2_M01,
+    wave2_m02_directory = fixture$paths$wave2_M02,
     horizon_directory = fixture$paths$horizon,
+    resource_directory = fixture$paths$resource,
     output_directory = fixture$paths$output,
     collector_source_commit = fixture$contract$commit,
     require_ignored_output = FALSE
@@ -772,6 +1048,9 @@ testthat::test_that(
     fixture <- ordinary_v1_dlm_companion_fixture(environment)
     on.exit(unlink(fixture$paths$root, recursive = TRUE, force = TRUE))
 
+    environment$readRDS <- function(...) {
+      stop("The companion collector must not deserialize heavy RDS inputs.")
+    }
     result <- ordinary_v1_dlm_companion_run_fixture(environment, fixture)
     expected <- c(
       "artifact_hashes.csv", "bundle_manifest.json",
@@ -790,7 +1069,12 @@ testthat::test_that(
     )
     testthat::expect_true(manifest$all_semantic_gates_passed)
     testthat::expect_false(manifest$fits_executed_by_collector)
+    testthat::expect_false(manifest$heavy_input_artifacts_deserialized)
     testthat::expect_false(manifest$heavy_input_artifacts_copied)
+    testthat::expect_identical(manifest$heavy_input_artifact_count, 7L)
+    testthat::expect_identical(
+      manifest$protected_source_inventory_count, 29L
+    )
     testthat::expect_true(manifest$generalized_bayes)
     testthat::expect_false(manifest$response_likelihood)
     testthat::expect_false(manifest$response_prediction_contract)
@@ -798,7 +1082,7 @@ testthat::test_that(
       file.path(result$output_directory, "input_artifact_hashes.csv"),
       stringsAsFactors = FALSE
     )
-    testthat::expect_equal(nrow(input_hashes), 39L)
+    testthat::expect_equal(nrow(input_hashes), 55L)
     testthat::expect_true(any(grepl("\\.rds$", input_hashes$relative_path)))
     testthat::expect_false(any(grepl(
       "\\.rds$", list.files(result$output_directory)
@@ -807,7 +1091,7 @@ testthat::test_that(
       file.path(result$output_directory, "semantic_gates.csv"),
       stringsAsFactors = FALSE
     )
-    testthat::expect_equal(nrow(gates), 16L)
+    testthat::expect_equal(nrow(gates), 23L)
     testthat::expect_true(all(gates$status == "pass"))
     compact <- environment$rqr_dlm_companion_validate_compact(
       result$output_directory, fixture$contract$commit,
@@ -833,6 +1117,15 @@ testthat::test_that(
       envir = runner
     )
     config <- runner$rqr_ordinary_v1_load_config(repo_root)
+    config$protected_dlm_companion$schema_version <-
+      environment$rqr_dlm_companion_schema()
+    config$protected_dlm_companion$collector_sha256 <-
+      ordinary_v1_dlm_companion_hash(file.path(
+        repo_root, config$protected_dlm_companion$collector_path
+      ))
+    config$protected_dlm_companion$semantic_gate_count <- 23L
+    config$protected_dlm_companion$input_role_count <- 7L
+    config$protected_dlm_companion$input_artifact_count <- 55L
     config$ordinary_v1_execute_enabled <- TRUE
     config$reviewed_implementation_commit <- fixture$contract$commit
     benchmark_directory <- file.path(fixture$paths$root, "benchmark")
@@ -999,7 +1292,7 @@ testthat::test_that(
 
     fixture <- make_case()
     m01_manifest_path <- file.path(
-      fixture$paths$M01, "validation_manifest.json"
+      fixture$paths$wave1_M01, "validation_manifest.json"
     )
     m01_manifest <- jsonlite::read_json(
       m01_manifest_path, simplifyVector = FALSE
@@ -1010,7 +1303,7 @@ testthat::test_that(
       m01_manifest, m01_manifest_path
     )
     ordinary_v1_dlm_companion_refresh_artifacts(
-      environment, fixture$paths$M01, "M01"
+      environment, fixture$paths$wave1_M01, "wave1_M01_static_gaussian"
     )
     testthat::expect_error(
       ordinary_v1_dlm_companion_run_fixture(environment, fixture),
@@ -1019,7 +1312,7 @@ testthat::test_that(
 
     fixture <- make_case()
     m01_manifest_path <- file.path(
-      fixture$paths$M01, "validation_manifest.json"
+      fixture$paths$wave1_M01, "validation_manifest.json"
     )
     m01_manifest <- jsonlite::read_json(
       m01_manifest_path, simplifyVector = FALSE
@@ -1032,7 +1325,7 @@ testthat::test_that(
       m01_manifest, m01_manifest_path
     )
     ordinary_v1_dlm_companion_refresh_artifacts(
-      environment, fixture$paths$M01, "M01"
+      environment, fixture$paths$wave1_M01, "wave1_M01_static_gaussian"
     )
     testthat::expect_error(
       ordinary_v1_dlm_companion_run_fixture(environment, fixture),
@@ -1041,7 +1334,7 @@ testthat::test_that(
 
     fixture <- make_case()
     m01_diagnostics_path <- file.path(
-      fixture$paths$M01, "wave1_M01_diagnostics.csv"
+      fixture$paths$wave1_M01, "wave1_M01_diagnostics.csv"
     )
     m01_diagnostics <- utils::read.csv(
       m01_diagnostics_path, stringsAsFactors = FALSE
@@ -1050,7 +1343,7 @@ testthat::test_that(
       m01_diagnostics[-1L, ], m01_diagnostics_path
     )
     ordinary_v1_dlm_companion_refresh_artifacts(
-      environment, fixture$paths$M01, "M01"
+      environment, fixture$paths$wave1_M01, "wave1_M01_static_gaussian"
     )
     testthat::expect_error(
       ordinary_v1_dlm_companion_run_fixture(environment, fixture),
@@ -1059,7 +1352,7 @@ testthat::test_that(
 
     fixture <- make_case()
     m01_diagnostics_path <- file.path(
-      fixture$paths$M01, "wave1_M01_diagnostics.csv"
+      fixture$paths$wave1_M01, "wave1_M01_diagnostics.csv"
     )
     m01_diagnostics <- utils::read.csv(
       m01_diagnostics_path, stringsAsFactors = FALSE
@@ -1072,7 +1365,7 @@ testthat::test_that(
       m01_diagnostics, m01_diagnostics_path
     )
     ordinary_v1_dlm_companion_refresh_artifacts(
-      environment, fixture$paths$M01, "M01"
+      environment, fixture$paths$wave1_M01, "wave1_M01_static_gaussian"
     )
     testthat::expect_error(
       ordinary_v1_dlm_companion_run_fixture(environment, fixture),
@@ -1081,7 +1374,7 @@ testthat::test_that(
 
     fixture <- make_case()
     m01_summary_path <- file.path(
-      fixture$paths$M01, "wave1_M01_summary.csv"
+      fixture$paths$wave1_M01, "wave1_M01_summary.csv"
     )
     m01_summary <- utils::read.csv(
       m01_summary_path, stringsAsFactors = FALSE
@@ -1089,7 +1382,7 @@ testthat::test_that(
     m01_summary$log_q_1_ess_bulk[[1L]] <- 999
     ordinary_v1_dlm_companion_write_csv(m01_summary, m01_summary_path)
     ordinary_v1_dlm_companion_refresh_artifacts(
-      environment, fixture$paths$M01, "M01"
+      environment, fixture$paths$wave1_M01, "wave1_M01_static_gaussian"
     )
     testthat::expect_error(
       ordinary_v1_dlm_companion_run_fixture(environment, fixture),
@@ -1097,8 +1390,92 @@ testthat::test_that(
     )
 
     fixture <- make_case()
+    wave2_m01_manifest_path <- file.path(
+      fixture$paths$wave2_M01, "validation_manifest.json"
+    )
+    wave2_m01_manifest <- jsonlite::read_json(
+      wave2_m01_manifest_path, simplifyVector = FALSE
+    )
+    wave2_m01_manifest$unique_transition_kernel_digests <-
+      paste(rep("f", 64), collapse = "")
+    ordinary_v1_dlm_companion_write_json(
+      wave2_m01_manifest, wave2_m01_manifest_path
+    )
+    ordinary_v1_dlm_companion_refresh_artifacts(
+      environment, fixture$paths$wave2_M01,
+      "wave2_M01_local_level"
+    )
+    testthat::expect_error(
+      ordinary_v1_dlm_companion_run_fixture(environment, fixture),
+      "M01 source"
+    )
+
+    fixture <- make_case()
+    m01_manifest_path <- file.path(
+      fixture$paths$wave1_M01, "validation_manifest.json"
+    )
+    m01_manifest <- jsonlite::read_json(
+      m01_manifest_path, simplifyVector = FALSE
+    )
+    changed_kernel <- m01_manifest$expected_transition_kernel_contract
+    changed_kernel$scan_order[[2L]] <- "latent_v_refresh_changed"
+    changed_kernel_digest <- digest::digest(
+      changed_kernel, algo = "sha256", serialize = TRUE
+    )
+    changed_invariant <-
+      environment$rqr_dlm_companion_transition_kernel_invariant(
+        environment$rqr_dlm_companion_normalize_transition_kernel(
+          changed_kernel, "test changed kernel"
+        )
+      )
+    changed_invariant_digest <- digest::digest(
+      changed_invariant, algo = "sha256", serialize = TRUE
+    )
+    m01_manifest$unique_transition_kernel_digests <-
+      changed_kernel_digest
+    m01_manifest$expected_transition_kernel_contract <- changed_kernel
+    m01_manifest$expected_transition_kernel_contract_digest <-
+      changed_kernel_digest
+    m01_manifest$expected_transition_kernel_invariant <-
+      changed_invariant
+    m01_manifest$expected_transition_kernel_invariant_digest <-
+      changed_invariant_digest
+    ordinary_v1_dlm_companion_write_json(
+      m01_manifest, m01_manifest_path
+    )
+    m01_summary_path <- file.path(
+      fixture$paths$wave1_M01, "wave1_M01_summary.csv"
+    )
+    m01_summary <- utils::read.csv(
+      m01_summary_path, stringsAsFactors = FALSE
+    )
+    rewrite_fit_digests <- function(value) {
+      count <- length(strsplit(value, "|", fixed = TRUE)[[1L]])
+      paste(rep(changed_kernel_digest, count), collapse = "|")
+    }
+    m01_summary$transition_kernel_digests <- vapply(
+      m01_summary$transition_kernel_digests,
+      rewrite_fit_digests, character(1L)
+    )
+    m01_summary$transition_kernel_contract_digests <- vapply(
+      m01_summary$transition_kernel_contract_digests,
+      rewrite_fit_digests, character(1L)
+    )
+    ordinary_v1_dlm_companion_write_csv(
+      m01_summary, m01_summary_path
+    )
+    ordinary_v1_dlm_companion_refresh_artifacts(
+      environment, fixture$paths$wave1_M01,
+      "wave1_M01_static_gaussian"
+    )
+    testthat::expect_error(
+      ordinary_v1_dlm_companion_run_fixture(environment, fixture),
+      "M01 source"
+    )
+
+    fixture <- make_case()
     m02_diagnostics_path <- file.path(
-      fixture$paths$M02, "wave1_M02_diagnostics.csv"
+      fixture$paths$wave1_M02, "wave1_M02_diagnostics.csv"
     )
     m02_diagnostics <- utils::read.csv(
       m02_diagnostics_path, stringsAsFactors = FALSE
@@ -1108,7 +1485,7 @@ testthat::test_that(
       m02_diagnostics, m02_diagnostics_path
     )
     ordinary_v1_dlm_companion_refresh_artifacts(
-      environment, fixture$paths$M02, "M02"
+      environment, fixture$paths$wave1_M02, "wave1_M02_static_gaussian"
     )
     testthat::expect_error(
       ordinary_v1_dlm_companion_run_fixture(environment, fixture),
@@ -1117,7 +1494,7 @@ testthat::test_that(
 
     fixture <- make_case()
     m02_summary_path <- file.path(
-      fixture$paths$M02, "wave1_M02_summary.csv"
+      fixture$paths$wave1_M02, "wave1_M02_summary.csv"
     )
     m02_summary <- utils::read.csv(
       m02_summary_path, stringsAsFactors = FALSE
@@ -1125,7 +1502,7 @@ testthat::test_that(
     m02_summary$minimum_bulk_ess[[1L]] <- 999
     ordinary_v1_dlm_companion_write_csv(m02_summary, m02_summary_path)
     ordinary_v1_dlm_companion_refresh_artifacts(
-      environment, fixture$paths$M02, "M02"
+      environment, fixture$paths$wave1_M02, "wave1_M02_static_gaussian"
     )
     testthat::expect_error(
       ordinary_v1_dlm_companion_run_fixture(environment, fixture),
@@ -1134,10 +1511,10 @@ testthat::test_that(
 
     fixture <- make_case()
     m02_summary_path <- file.path(
-      fixture$paths$M02, "wave1_M02_summary.csv"
+      fixture$paths$wave1_M02, "wave1_M02_summary.csv"
     )
     m02_diagnostics_path <- file.path(
-      fixture$paths$M02, "wave1_M02_diagnostics.csv"
+      fixture$paths$wave1_M02, "wave1_M02_diagnostics.csv"
     )
     m02_summary <- utils::read.csv(
       m02_summary_path, stringsAsFactors = FALSE
@@ -1157,7 +1534,7 @@ testthat::test_that(
       m02_diagnostics, m02_diagnostics_path
     )
     ordinary_v1_dlm_companion_refresh_artifacts(
-      environment, fixture$paths$M02, "M02"
+      environment, fixture$paths$wave1_M02, "wave1_M02_static_gaussian"
     )
     testthat::expect_error(
       ordinary_v1_dlm_companion_run_fixture(environment, fixture),
@@ -1166,7 +1543,7 @@ testthat::test_that(
 
     fixture <- make_case()
     m02_manifest_path <- file.path(
-      fixture$paths$M02, "validation_manifest.json"
+      fixture$paths$wave1_M02, "validation_manifest.json"
     )
     m02_manifest <- jsonlite::read_json(
       m02_manifest_path, simplifyVector = FALSE
@@ -1177,11 +1554,32 @@ testthat::test_that(
       m02_manifest, m02_manifest_path
     )
     ordinary_v1_dlm_companion_refresh_artifacts(
-      environment, fixture$paths$M02, "M02"
+      environment, fixture$paths$wave1_M02, "wave1_M02_static_gaussian"
     )
     testthat::expect_error(
       ordinary_v1_dlm_companion_run_fixture(environment, fixture),
       "runtime"
+    )
+
+    fixture <- make_case()
+    wave2_m02_manifest_path <- file.path(
+      fixture$paths$wave2_M02, "validation_manifest.json"
+    )
+    wave2_m02_manifest <- jsonlite::read_json(
+      wave2_m02_manifest_path, simplifyVector = FALSE
+    )
+    wave2_m02_manifest$applied_schedule_evidence$standard$
+      interval_chain_job_count <- 16L
+    ordinary_v1_dlm_companion_write_json(
+      wave2_m02_manifest, wave2_m02_manifest_path
+    )
+    ordinary_v1_dlm_companion_refresh_artifacts(
+      environment, fixture$paths$wave2_M02,
+      "wave2_M02_local_level"
+    )
+    testthat::expect_error(
+      ordinary_v1_dlm_companion_run_fixture(environment, fixture),
+      "projection, fit, or diagnostic gate failed"
     )
 
     fixture <- make_case()
@@ -1251,6 +1649,94 @@ testthat::test_that(
     )
 
     fixture <- make_case()
+    closeout_path <- file.path(
+      fixture$paths$resource, "resource_closeout.csv"
+    )
+    closeout <- utils::read.csv(
+      closeout_path, stringsAsFactors = FALSE
+    )
+    closeout$promotion_evidence_eligible <- FALSE
+    ordinary_v1_dlm_companion_write_csv(closeout, closeout_path)
+    ordinary_v1_dlm_companion_refresh_artifacts(
+      environment, fixture$paths$resource, "resource_envelope"
+    )
+    testthat::expect_error(
+      ordinary_v1_dlm_companion_run_fixture(environment, fixture),
+      "closeout is not bound"
+    )
+
+    fixture <- make_case()
+    resource_toolchain_path <- file.path(
+      fixture$paths$resource, "toolchain_manifest.csv"
+    )
+    resource_toolchain <- utils::read.csv(
+      resource_toolchain_path, stringsAsFactors = FALSE
+    )
+    resource_toolchain$value[
+      resource_toolchain$key == "R_version"
+    ] <- "different R build"
+    ordinary_v1_dlm_companion_write_csv(
+      resource_toolchain, resource_toolchain_path
+    )
+    resource_toolchain <- utils::read.csv(
+      resource_toolchain_path, stringsAsFactors = FALSE
+    )
+    changed_toolchain_digest <- digest::digest(
+      resource_toolchain, algo = "sha256", serialize = TRUE
+    )
+    resource_manifest_path <- file.path(
+      fixture$paths$resource, "validation_manifest.json"
+    )
+    resource_manifest <- jsonlite::read_json(
+      resource_manifest_path, simplifyVector = FALSE
+    )
+    resource_manifest$toolchain_manifest_digest <-
+      changed_toolchain_digest
+    ordinary_v1_dlm_companion_write_json(
+      resource_manifest, resource_manifest_path
+    )
+    resource_closeout_path <- file.path(
+      fixture$paths$resource, "resource_closeout.csv"
+    )
+    resource_closeout <- utils::read.csv(
+      resource_closeout_path, stringsAsFactors = FALSE,
+      numerals = "no.loss"
+    )
+    resource_closeout$toolchain_manifest_digest <-
+      changed_toolchain_digest
+    ordinary_v1_dlm_companion_write_csv(
+      resource_closeout, resource_closeout_path
+    )
+    ordinary_v1_dlm_companion_refresh_artifacts(
+      environment, fixture$paths$resource, "resource_envelope"
+    )
+    testthat::expect_error(
+      ordinary_v1_dlm_companion_run_fixture(environment, fixture),
+      "toolchain facts do not match"
+    )
+
+    fixture <- make_case()
+    transition_summary_path <- file.path(
+      fixture$paths$wave1_M01, "wave1_M01_summary.csv"
+    )
+    transition_summary <- utils::read.csv(
+      transition_summary_path, stringsAsFactors = FALSE
+    )
+    transition_summary$transition_kernel_contract_digests[[1L]] <-
+      paste(rep("f", 64), collapse = "")
+    ordinary_v1_dlm_companion_write_csv(
+      transition_summary, transition_summary_path
+    )
+    ordinary_v1_dlm_companion_refresh_artifacts(
+      environment, fixture$paths$wave1_M01,
+      "wave1_M01_static_gaussian"
+    )
+    testthat::expect_error(
+      ordinary_v1_dlm_companion_run_fixture(environment, fixture),
+      "per-fit transition-contract evidence"
+    )
+
+    fixture <- make_case()
     fixture$paths$output <- file.path(
       fixture$paths$reference, "nested-output"
     )
@@ -1261,7 +1747,7 @@ testthat::test_that(
 
     fixture <- make_case()
     m01_manifest_path <- file.path(
-      fixture$paths$M01, "validation_manifest.json"
+      fixture$paths$wave1_M01, "validation_manifest.json"
     )
     m01_manifest <- jsonlite::read_json(
       m01_manifest_path, simplifyVector = FALSE
@@ -1271,7 +1757,7 @@ testthat::test_that(
       m01_manifest, m01_manifest_path
     )
     ordinary_v1_dlm_companion_refresh_artifacts(
-      environment, fixture$paths$M01, "M01"
+      environment, fixture$paths$wave1_M01, "wave1_M01_static_gaussian"
     )
     testthat::expect_error(
       ordinary_v1_dlm_companion_run_fixture(environment, fixture),
@@ -1348,6 +1834,15 @@ testthat::test_that(
     ordinary_v1_dlm_companion_refresh_compact(environment, directory)
     testthat::expect_error(validate(directory), "scope, or count gate")
 
+    directory <- copy_case("compact-transition-contract")
+    path <- file.path(directory, "bundle_manifest.json")
+    manifest <- jsonlite::read_json(path, simplifyVector = FALSE)
+    manifest$wave1_transition_kernel_digest <-
+      paste(rep("f", 64), collapse = "")
+    ordinary_v1_dlm_companion_write_json(manifest, path)
+    ordinary_v1_dlm_companion_refresh_compact(environment, directory)
+    testthat::expect_error(validate(directory), "scope, or count gate")
+
     directory <- copy_case("compact-summary")
     path <- file.path(directory, "input_bundle_summary.csv")
     summary <- utils::read.csv(path, stringsAsFactors = FALSE)
@@ -1379,6 +1874,86 @@ testthat::test_that(
         fixture$contract$attestation, fixture$contract$package_version
       ),
       "source, runtime"
+    )
+  }
+)
+
+testthat::test_that(
+  "Makefile wires all seven companion roles in collector order", {
+    repo_root <- normalizePath(
+      testthat::test_path("..", "..", ".."),
+      winslash = "/", mustWork = TRUE
+    )
+    lines <- readLines(file.path(repo_root, "Makefile"), warn = FALSE)
+    guard_start <- grep(
+      "^guard-bundle-ordinary-v1-dlm-companion:", lines
+    )
+    bundle_start <- grep(
+      "^bundle-ordinary-v1-dlm-companion:", lines
+    )
+    benchmark_start <- grep("^guard-benchmark-ordinary-v1:", lines)
+    testthat::expect_length(guard_start, 1L)
+    testthat::expect_length(bundle_start, 1L)
+    testthat::expect_length(benchmark_start, 1L)
+    guard_block <- paste(
+      lines[guard_start:(bundle_start - 1L)],
+      collapse = " "
+    )
+    recipe <- paste(
+      lines[(bundle_start + 1L):(benchmark_start - 1L)],
+      collapse = " "
+    )
+    roles <- c(
+      "RQR_DLM_REFERENCE_DIR",
+      "RQR_DLM_WAVE1_M01_DIR", "RQR_DLM_WAVE1_M02_DIR",
+      "RQR_DLM_WAVE2_M01_DIR", "RQR_DLM_WAVE2_M02_DIR",
+      "RQR_DLM_HORIZON_M03_DIR", "RQR_DLM_RESOURCE_ENVELOPE_DIR",
+      "RQR_ORDINARY_V1_DLM_COMPANION_OUTPUT_DIR"
+    )
+    positions <- vapply(
+      roles,
+      function(role) regexpr(
+        paste0("\\$\\$\\{", role, "\\}"),
+        recipe, perl = TRUE
+      )[[1L]],
+      integer(1L)
+    )
+    testthat::expect_true(all(vapply(
+      roles,
+      grepl, logical(1L), x = guard_block, fixed = TRUE
+    )))
+    testthat::expect_true(all(positions > 0L))
+    testthat::expect_true(all(diff(positions) > 0L))
+    testthat::expect_false(grepl(
+      "RQR_DLM_M01_DIR|RQR_DLM_M02_DIR",
+      paste(guard_block, recipe)
+    ))
+  }
+)
+
+testthat::test_that(
+  "M01 role labels differ while the versioned invariant is exact", {
+    environment <- ordinary_v1_dlm_companion_environment()
+    wave1 <- environment$rqr_dlm_companion_expected_m01_transition_kernel(
+      "wave1_M01_static_gaussian"
+    )
+    wave2 <- environment$rqr_dlm_companion_expected_m01_transition_kernel(
+      "wave2_M01_local_level"
+    )
+    testthat::expect_identical(
+      wave1$collapsed_log_q_coordinate_order, "regression"
+    )
+    testthat::expect_identical(
+      wave2$collapsed_log_q_coordinate_order, "level"
+    )
+    testthat::expect_false(identical(wave1, wave2))
+    testthat::expect_false(identical(
+      digest::digest(wave1, algo = "sha256", serialize = TRUE),
+      digest::digest(wave2, algo = "sha256", serialize = TRUE)
+    ))
+    testthat::expect_identical(
+      environment$rqr_dlm_companion_transition_kernel_invariant(wave1),
+      environment$rqr_dlm_companion_transition_kernel_invariant(wave2)
     )
   }
 )

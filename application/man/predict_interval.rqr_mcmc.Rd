@@ -15,18 +15,21 @@ fitted designs require an unnamed matrix.}
 
 \item{nd}{Number of retained draws to use when \code{draws} is \code{NULL}.}
 
-\item{draws}{Optional output from \code{\link[=rqr_posterior_draws]{rqr_posterior_draws()}} for this fit. A
-plain list containing only \code{beta_root1} and \code{beta_root2} matrices is also
-accepted for explicit evaluation; missing draw metadata is then recorded
-as unknown rather than inferred.}
+\item{draws}{Optional exact output from \code{\link[=rqr_posterior_draws]{rqr_posterior_draws()}} for this fit.
+A plain list containing \code{beta_root1} and \code{beta_root2} is retained as an
+explicit-evaluation compatibility route, but is normalized to a typed
+\code{explicit_unbound} draw envelope and can never become reproducibility- or
+promotion-eligible.}
 
 \item{seed}{Optional seed used only when draws are subsampled.}
 
 \item{...}{Reserved; supplying an argument is an error.}
 }
 \value{
-A list of ordered endpoint, midpoint, and width draws and their row
-summaries, together with design and checkpoint metadata.
+An exact \code{rqr_static_prediction} envelope containing ordered
+endpoint, midpoint, and width draws and summaries. It binds the complete
+evaluation design and numerical content; source and promotion status
+distinguish native retained draws from explicit unbound coefficients.
 }
 \description{
 The two raw linear predictors are ordered at every supplied row. The result

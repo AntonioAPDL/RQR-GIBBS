@@ -7,12 +7,51 @@
 rqr_as_dlm_model(model)
 }
 \arguments{
-\item{model}{A model list or exdqlm-compatible object.}
+\item{model}{A model list or exdqlm-compatible object containing \code{FF}, \code{GG},
+\code{m0}, and \code{C0}, with optional component metadata.}
 }
 \value{
-An \code{rqr_dlm_model}.
+A validated \code{rqr_dlm_model} retaining the observation, transition,
+prior, and component contracts.
 }
 \description{
 The list contract (\code{FF}, \code{GG}, \code{m0}, and \code{C0}) is compatible with exdqlm
-1.1.0 model objects.
+1.1.0 model objects. For state dimension \code{p}, \code{FF} is a finite \verb{p x 1}
+time-constant observation design or a finite \verb{p x T} design; \code{GG} is a
+finite \verb{p x p} transition or a finite \verb{p x p x T} cube; \code{m0} has length
+\code{p}; and \code{C0} is a symmetric positive-definite \verb{p x p} prior covariance.
+A fit expands one-slice designs and transitions and otherwise requires their
+time dimensions to match the response length.
 }
+\details{
+Optional \code{component_dims} must be positive integers summing to \code{p}, and
+\code{component_names} must contain one unique nonempty name per component.
+}
+\examples{
+local_level <- rqr_as_dlm_model(list(
+  FF = matrix(1, 1, 1),
+  GG = matrix(1, 1, 1),
+  m0 = 0,
+  C0 = matrix(4, 1, 1)
+))
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

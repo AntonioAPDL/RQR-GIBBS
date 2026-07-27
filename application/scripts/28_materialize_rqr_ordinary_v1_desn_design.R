@@ -96,7 +96,7 @@ rqr_ordinary_v1_materializer_load_config <- function(repo_root) {
   if (!is.list(config) ||
       !identical(
         config$schema_version,
-        "rqrgibbs_ordinary_v1_validation/1.0.0"
+        "rqrgibbs_ordinary_v1_validation/1.1.0"
       )) {
     stop("The ordinary-v1 configuration schema is invalid.", call. = FALSE)
   }
@@ -118,17 +118,21 @@ rqr_ordinary_v1_materializer_integer <- function(x, name, minimum = 0L) {
 
 rqr_ordinary_v1_materializer_validate_d02 <- function(config) {
   expected_schemas <- c(
-    design = "rqrgibbs_desn_design/1.0.0",
+    design = "rqrgibbs_desn_design/1.1.0",
     materialization_receipt =
-      "rqrgibbs_desn_materialization_receipt/2.0.0",
+      "rqrgibbs_desn_materialization_receipt/3.0.0",
+    materialization_manifest =
+      "rqrgibbs_desn_materialization_manifest/1.0.0",
     materialization_receipt_status =
-      "rqrgibbs_desn_materialization_receipt_status/1.0.0",
+      "rqrgibbs_desn_materialization_receipt_status/1.1.0",
     materialization_verification =
-      "rqrgibbs_desn_materialization_verification/1.0.0",
-    fit = "rqrgibbs_desn_fit/1.1.0",
-    future_design = "rqrgibbs_desn_future_design/1.1.0",
+      "rqrgibbs_desn_materialization_verification/1.1.0",
+    fit = "rqrgibbs_desn_fit/1.2.0",
+    draws = "rqrgibbs_desn_draws/1.0.0",
+    prediction = "rqrgibbs_desn_prediction/1.0.0",
+    future_design = "rqrgibbs_desn_future_design/1.2.0",
     future_verification =
-      "rqrgibbs_desn_future_verification/1.0.0"
+      "rqrgibbs_desn_future_verification/1.1.0"
   )
   if (!identical(config$desn_schema_contract, expected_schemas)) {
     stop("The frozen DESN schema contract changed.", call. = FALSE)
@@ -584,6 +588,7 @@ rqr_ordinary_v1_materializer_validate_design <- function(
     )
   }
   receipt <- design$builder$materialization_receipt %||% NULL
+  manifest <- design$builder$materialization_manifest %||% NULL
   attestation_sha256 <-
     rqr_ordinary_v1_materializer_sha256_file(exdqlm_attestation)
   status_function <- getFromNamespace(
@@ -605,7 +610,7 @@ rqr_ordinary_v1_materializer_validate_design <- function(
     builder_source_commit = config$pinned_exdqlm$commit,
     builder_arguments_digest = d02$arguments_digest,
     builder_adapter = "rqrgibbs_frozen_design_materializer/2.0.0",
-    receipt_schema = "rqrgibbs_desn_materialization_receipt/2.0.0",
+    receipt_schema = "rqrgibbs_desn_materialization_receipt/3.0.0",
     receipt_package = "exdqlm",
     receipt_package_version =
       as.character(runtime$external$runtime_package_version),
@@ -619,10 +624,28 @@ rqr_ordinary_v1_materializer_validate_design <- function(
     receipt_materializer_arguments_digest = d02$arguments_digest,
     receipt_materialized_design_payload_digest =
       receipt_status$materialized_design_payload_digest,
+    manifest_schema =
+      "rqrgibbs_desn_materialization_manifest/1.0.0",
+    receipt_source_response_digest = d02$response_digest,
+    receipt_source_response_length =
+      as.integer(length(d02$response_history)),
+    receipt_keep_idx_digest = if (is.list(manifest)) {
+      digest::digest(
+        manifest$keep_idx, algo = "sha256", serialize = TRUE
+      )
+    } else {
+      NA_character_
+    },
+    receipt_materialization_manifest_digest =
+      if (is.list(manifest)) {
+        digest::digest(manifest, algo = "sha256", serialize = TRUE)
+      } else {
+        NA_character_
+      },
     receipt_status_schema =
-      "rqrgibbs_desn_materialization_receipt_status/1.0.0",
+      "rqrgibbs_desn_materialization_receipt_status/1.1.0",
     materialization_verification_schema =
-      "rqrgibbs_desn_materialization_verification/1.0.0",
+      "rqrgibbs_desn_materialization_verification/1.1.0",
     reservoir_source_package = "exdqlm",
     reservoir_source_commit = config$pinned_exdqlm$commit
   )
@@ -649,6 +672,16 @@ rqr_ordinary_v1_materializer_validate_design <- function(
       receipt$materializer_arguments_digest %||% NA_character_,
     receipt_materialized_design_payload_digest =
       receipt$materialized_design_payload_digest %||% NA_character_,
+    manifest_schema =
+      manifest$schema_version %||% NA_character_,
+    receipt_source_response_digest =
+      receipt$source_response_digest %||% NA_character_,
+    receipt_source_response_length =
+      receipt$source_response_length %||% NA_integer_,
+    receipt_keep_idx_digest =
+      receipt$keep_idx_digest %||% NA_character_,
+    receipt_materialization_manifest_digest =
+      receipt$materialization_manifest_digest %||% NA_character_,
     receipt_status_schema =
       receipt_status$schema_version %||% NA_character_,
     materialization_verification_schema =
@@ -688,6 +721,22 @@ rqr_ordinary_v1_materializer_validate_design <- function(
           "D02$effective_arguments$seed"
         ),
         d02$materializer_seed
+      ),
+    source_response_bound =
+      is.list(manifest) &&
+      identical(manifest$source_response_digest, d02$response_digest) &&
+      identical(
+        manifest$source_response_length,
+        as.integer(length(d02$response_history))
+      ),
+    retained_rows_bound =
+      is.list(manifest) &&
+      identical(manifest$keep_idx, as.integer(design$time_index)) &&
+      identical(
+        manifest$keep_idx_digest,
+        digest::digest(
+          manifest$keep_idx, algo = "sha256", serialize = TRUE
+        )
       )
   )
   if (!all(comparisons$pass) || !all(semantic_flags)) {

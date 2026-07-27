@@ -25,7 +25,9 @@ returned segment.}
 
 \item{allow_environment_mismatch}{Permit a recorded non-bitwise portability
 continuation. Model, data, target, prior, and checkpoint mismatches always
-stop.}
+stop. An accepted override is persisted in continuation history and
+removes reproducibility and promotion eligibility from the returned
+segment and its descendants.}
 }
 \value{
 A new \code{rqr_mcmc} segment.

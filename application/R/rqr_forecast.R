@@ -24,7 +24,8 @@ forecast_paths <- function(object, ...) {
 #' @param nd Number of coefficient draws.
 #' @param seed Optional draw-selection seed.
 #' @param ... Reserved.
-#' @return Interval-root draws and summaries conditional on the future design.
+#' @return A typed and digested `rqr_desn_prediction` containing interval-root
+#'   draws and summaries conditional on the future design.
 #' @export
 forecast_paths.rqr_desn_fit <- function(
     object, H = NULL, future_design = NULL,
@@ -37,7 +38,6 @@ forecast_paths.rqr_desn_fit <- function(
   if (!is.null(future_design) && !is.null(X_future)) {
     stop("Supply future_design or X_future, not both.", call. = FALSE)
   }
-  legacy_matrix <- is.null(future_design)
   if (is.null(future_design)) {
     if (is.null(X_future)) {
       stop(
@@ -56,7 +56,7 @@ forecast_paths.rqr_desn_fit <- function(
       future_design, parent_design = object$design
     )
   }
-  horizon <- if (legacy_matrix) {
+  horizon <- if (is.null(future_design)) {
     nrow(X_future)
   } else {
     nrow(future_design$X)
@@ -67,39 +67,14 @@ forecast_paths.rqr_desn_fit <- function(
            call. = FALSE)
     }
   }
-  out <- if (legacy_matrix) {
-    predict_interval(
-      object, X_new = X_future, nd = nd, seed = seed
-    )
-  } else {
-    predict_interval(
-      object, future_design = future_design,
-      nd = nd, seed = seed
-    )
-  }
-  out$H <- horizon
-  out$evaluation_semantics <- if (legacy_matrix) {
-    "legacy_explicit_matrix"
-  } else {
-    future_design$semantics
-  }
-  out$origin_fixed <- if (legacy_matrix) {
-    NA
-  } else {
-    isTRUE(future_design$driver$origin_fixed)
-  }
-  out$response_predictive_draws <- FALSE
-  out$interpretation <- if (legacy_matrix) {
-    paste(
-      "Future interval-root functions conditional on a legacy explicit",
-      "feature matrix; this path is non-promotable and defines no future",
-      "response distribution."
-    )
-  } else {
-    paste(
-      "Future interval-root functions conditional on a verified frozen",
-      "future-design contract; no future response distribution is defined."
-    )
-  }
+  out <- .rqr_desn_predict_impl(
+    object = object,
+    X_new = X_future,
+    future_design = future_design,
+    nd = nd,
+    seed = seed,
+    evaluation_api = "forecast_paths"
+  )
+  .rqr_validate_desn_prediction(object, out)
   out
 }

@@ -1,4 +1,38 @@
-# rqrgibbs 0.1.0.9023
+# rqrgibbs 0.1.0.9026
+
+- Added a versioned, exact-field RQR-DLM evolution contract and made
+  exact-target, ordinary-v1, continuation, time-zero, and promotion semantics
+  reconstructible from the canonical evolution mode rather than mutable fit
+  metadata.
+- Made frozen discount-template provenance reconstructible from its declared
+  reference variance, reference design, numerical policy, jitter ladder, and
+  Joseph-form covariance recursion.
+- Hardened fitted DLM and fixed-design envelopes, coefficient-prior contracts,
+  and loss-rate priors against digest-consistent semantic mutation.
+- Advanced the static fit envelope to `rqrgibbs_static_fit/1.2.0` and the DLM
+  fit envelope to `rqrgibbs_fit/1.14.0`.
+- Added exact, content-digested static draw and interval-evaluation envelopes
+  (`rqrgibbs_static_draws/1.0.0` and
+  `rqrgibbs_interval_prediction/2.0.0`). Native outputs bind the retained fit,
+  target, design, draw-selection operation, and RNG state; explicit coefficient
+  matrices remain deliberately unbound and nonpromotable.
+- Added the corresponding frozen-design DESN output envelopes
+  (`rqrgibbs_desn_draws/1.0.0` and
+  `rqrgibbs_desn_prediction/1.0.0`). These qualify a readout conditional on an
+  already materialized deterministic feature design; they do not qualify a
+  native reservoir generator, reservoir re-estimation during MCMC, or a
+  response-simulation distribution.
+- Restricted fitted-time DLM extraction and prediction to complete validated
+  fits and introduced typed draw, fitted-evaluation, and future-root envelopes
+  (`rqrgibbs_dlm_draws/1.0.0`, `rqrgibbs_dlm_prediction/1.0.0`, and
+  `rqrgibbs_dlm_forecast/1.0.0`). Explicit state-only forecast fixtures remain
+  unbound and nonpromotable.
+- Canonicalized DLM missing-site latent placeholders and numerical jitter
+  ladders. Learned-scale continuation now restores latent checkpoints without
+  an unintended second division, and inactive or altered numerical controls
+  cannot silently change a continued transition.
+
+# rqrgibbs 0.1.0.9024
 
 ## Ordinary RQR version-1 candidate
 
@@ -29,12 +63,13 @@
   probabilities, then four native chains must agree within maintained Monte
   Carlo error. Superseded Output-6 CDF values are retained only as historical
   audit evidence.
-- Added a compact protected-DLM companion contract that validates the fresh
-  reference, M01, M02, and horizon/M03 evidence without rerunning or copying
-  fitted dynamic objects. The bounded ordinary grid cannot be authorized
-  without that closed five-file companion. On execution, the five validated
-  files are retained under a namespaced compact output and rehashed after the
-  R process exits.
+- Added a compact protected-DLM companion contract that validates fresh
+  reference, two-wave M01/M02, horizon/M03, and resource-envelope evidence
+  without rerunning, deserializing, or copying fitted dynamic objects. The
+  bounded ordinary grid cannot be authorized without that closed five-file
+  receipt backed by 55 hash-bound inputs and 23 semantic gates. On execution,
+  the five validated receipt files are retained under a namespaced compact
+  output and rehashed after the R process exits.
 - Closed every successful mode to an exact compact file set, including hidden
   entries, and rejected symbolic links, unexpected directories, nonregular
   files, and residual progress files. The process wrapper now binds every
@@ -46,12 +81,23 @@
 - Added bitwise end-to-end ridge/full-Gaussian transition equivalence checks
   in both accepted rate modes and exact three-segment continuation checks with
   thinning greater than one.
-- Preserved the existing RQR-DLM transition and its interpretation. The
-  pseudo-AL variables augment a generalized-Bayes loss and do not define a
-  response likelihood or posterior-predictive response distribution.
-- Advanced the shared fit envelope to `rqrgibbs_fit/1.11.0` for the added
-  scope/continuation fields and hardened fitted-draw and forecast boundaries;
-  the DLM target, blocked transition, FFBS, and evolution laws are unchanged.
+- Preserved the RQR-DLM target and its interpretation. The pseudo-AL variables
+  augment a generalized-Bayes loss and do not define a response likelihood or
+  posterior-predictive response distribution.
+- Hardened the exact RQR-DLM implementation: filter inputs and recursive
+  covariances now fail closed at the R/C++ boundary; time-zero conditional
+  state completion and the one-root partially collapsed component-scale step
+  contribute to the repair ledger; and the complete transition kernel is
+  checkpoint-, history-, and continuation-bound. Fixed-W state storage no
+  longer changes the transition.
+- Advanced the shared fit envelope to `rqrgibbs_fit/1.12.0` and continuation
+  history to `rqrgibbs_continuation_history/5.0.0` for the versioned DLM
+  transition-kernel identity and reconstructed exactness contract.
+- Standardized the fitted DLM metadata as `model_spec$transition_kernel` and
+  `model_spec$transition_kernel_digest` for fixed-covariance,
+  frozen-discount-template, and component-scale evolutions alike. Objects
+  from earlier development schemas must be refit; they are intentionally not
+  coerced into the version-1 continuation contract.
 
 Nonzero mean tilt, CAVI/ELBO, response simulation, adaptive conditional
 discounting as exact Gibbs, and matched scientific simulations remain outside
@@ -62,6 +108,11 @@ this version-1 candidate.
 - Removed DESN variational Bayes from the ordinary-v1 interface. DESN fitting
   now accepts MCMC only; experimental VB code is outside the version-1
   contract.
+- Removed the unfinished fixed-design `rqr_vb_fit()` prototype from the public
+  namespace. Its implementation and S3 methods remain internal for bounded
+  research checks, but it is experimental and outside ordinary-v1 promotion.
+- Retained `beta_prior()` as a nondeprecated compatibility wrapper for
+  `rqr_beta_prior()`; new code should use the native constructor directly.
 - `rqr_desn_fit(..., fit_readout = FALSE)` now returns the validated frozen
   design rather than a fitted readout.
 - Static and DESN fits now use versioned fit envelopes, integrity-digested

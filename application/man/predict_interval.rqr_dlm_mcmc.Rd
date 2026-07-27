@@ -13,19 +13,40 @@
 
 \item{draws}{Optional output from \code{\link[=rqr_posterior_draws]{rqr_posterior_draws()}} for this fit. A
 plain list containing only the two time-by-draw root-ordinate matrices is
-also accepted for fitted-time evaluation; its draw indices are then
-retained as explicitly unknown rather than inferred.}
+also accepted for fitted-time evaluation, but is normalized to an
+explicitly unbound, non-reproducible, and non-promotable draw envelope.}
 
 \item{seed}{Optional seed used only when draws are subsampled.}
 
 \item{...}{Reserved; supplying an argument is an error.}
 }
 \value{
-A list of fitted-time lower, upper, midpoint, and width draws and
-their row summaries, together with canonical draw metadata.
+A typed, content-digested \code{rqr_dlm_prediction} containing fitted-time
+lower, upper, midpoint, and width root functionals and canonical source
+metadata. It never contains response-predictive draws.
 }
 \description{
 The method orders the two fitted root ordinates at every training time. It
 does not propagate future states and does not define response-predictive
 draws; use \code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}} for explicit future root evolution.
 }
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}
