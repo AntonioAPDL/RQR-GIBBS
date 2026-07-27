@@ -31,7 +31,9 @@ package under **application/**:
 - **application/R/** contains fixed-design ridge and RHS-NS adapters,
   frozen-feature DESN utilities, exdqlm-compatible DLM model builders, pure-R
   FFBS, exact component-scale evolution, the RQR-DLM sampler, and restart
-  helpers.
+  helpers. It also contains deterministic Cornish--Fisher and empirical
+  shortest-window pilots for future fixed mean-tilt screening; these pilots do
+  not enable nonzero-tilt Gibbs sampling.
 - **application/src/** contains the C++17/RcppArmadillo FFBS kernel and the
   noncentered component-path basis used by exact scale interweaving.
 - **application/tests/** contains native package gates, standalone workflow
@@ -69,6 +71,13 @@ is declared, promotion binds the executing `rqrgibbs` namespace to a verified
 isolated-runtime attestation of that exact commit, not merely to a clean
 checkout path or installed version string. Direct source loading remains
 exploratory/test-only.
+
+Mean-tilt initialization is deliberately separate from mean-tilt inference.
+The Cornish--Fisher pilot is a near-Normal skewness approximation and the
+empirical shortest-window pilot is a shape-robust diagnostic anchor. Each
+candidate tilt is a fixed estimand for external validation, not an in-chain
+posterior parameter. Ordinary RQR with zero tilt remains the implemented
+default, and learned-scale updates are not reused at nonzero tilt.
 The version-5 attestation links the exact Git archive to the built source
 package, rehashes the actual command receipts and logs, and requires a lineage
 marker in the executing installed runtime. Continuation history derives

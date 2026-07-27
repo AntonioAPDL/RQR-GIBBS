@@ -16,7 +16,8 @@ layer for the standalone article.
 - **R/rqr_numerics.R** provides Cholesky diagnostics and the native GIG(1/2)
   sampler.
 - The remaining R files provide fixed-design, DESN, forecasting, VB-screening,
-  and oracle routines promoted from the implementation seed.
+  oracle, and mean-tilt-initialization routines promoted from the implementation
+  seed.
 - **tests/** contains native package gates and copied pinned-exdqlm reference
   tests.
 - **scripts/** contains preflight, manifest, simulation, collection, and audit
@@ -28,6 +29,10 @@ Install and run the native gates from the repository root:
     make test-native
 
 The pseudo-AL representation augments a loss and is not a response likelihood.
+The mean-tilt initializer functions build deterministic fixed-tilt anchors
+from Cornish--Fisher skewness approximations and empirical order-statistic
+windows. They do not sample the tilt, do not alter the Gibbs kernels, and do
+not authorize learned-scale updates or RQR-DLM/RQR-DESN runs at nonzero tilt.
 The fixed-W, discount-template, and component-scale modes are exact for their
 declared Gaussian evolution priors. Adaptive conditional discounting is
 mathematically incompatible in general with the advertised pair of simple
