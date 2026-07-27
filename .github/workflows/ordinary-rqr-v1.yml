@@ -1,0 +1,201 @@
+name: ordinary-rqr-v1
+
+"on":
+  pull_request:
+    paths:
+      - ".github/workflows/ordinary-rqr-v1.yml"
+      - "Makefile"
+      - "README.md"
+      - "STYLE_PROFILE.md"
+      - "application/.Rbuildignore"
+      - "application/DESCRIPTION"
+      - "application/LICENSE"
+      - "application/NEWS.md"
+      - "application/NAMESPACE"
+      - "application/README.md"
+      - "application/R/**"
+      - "application/config/rqr_dlm/**"
+      - "application/config/rqr_ordinary_v1/**"
+      - "application/man/**"
+      - "application/scripts/15_run_rqr_dlm_confirmatory_simulation.R"
+      - "application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh"
+      - "application/scripts/17_launch_rqr_dlm_confirmatory_wave.R"
+      - "application/scripts/22_validate_rqr_dlm_wave1_corrections.R"
+      - "application/scripts/23_validate_rqr_dlm_wave1_comparator_projection.R"
+      - "application/scripts/24_validate_rqr_dlm_horizon_and_fixed_design.R"
+      - "application/scripts/25_validate_rqr_dlm_resource_envelope.R"
+      - "application/scripts/25_validate_rqr_ordinary_v1.R"
+      - "application/scripts/26_run_rqr_ordinary_v1_validation.sh"
+      - "application/scripts/27_test_rqr_ordinary_v1_monitor.sh"
+      - "application/scripts/28_materialize_rqr_ordinary_v1_desn_design.R"
+      - "application/scripts/29_audit_rqr_ordinary_v1_dlm_boundary.R"
+      - "application/scripts/30_bundle_rqr_ordinary_v1_protected_dlm_evidence.R"
+      - "application/scripts/30_generate_ordinary_v1_f01_references.R"
+      - "application/scripts/lib/**"
+      - "application/src/**"
+      - "application/tests/**"
+      - "application/vignettes/**"
+      - "docs/audits/rqr_dlm_main_correction_budget_*.csv"
+      - "docs/implementation_notes/ordinary_rqr_v1_*.md"
+      - "docs/implementation_notes/rqr_article_implementation_status_20260726.md"
+      - "docs/implementation_notes/rqr_dlm_component_scale_interweaving_20260726.md"
+      - "figures/**"
+      - "main.tex"
+      - "refs.bib"
+      - "rqr-gibbs-supplement.tex"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ordinary-rqr-v1.yml"
+      - "Makefile"
+      - "README.md"
+      - "STYLE_PROFILE.md"
+      - "application/.Rbuildignore"
+      - "application/DESCRIPTION"
+      - "application/LICENSE"
+      - "application/NEWS.md"
+      - "application/NAMESPACE"
+      - "application/README.md"
+      - "application/R/**"
+      - "application/config/rqr_dlm/**"
+      - "application/config/rqr_ordinary_v1/**"
+      - "application/man/**"
+      - "application/scripts/15_run_rqr_dlm_confirmatory_simulation.R"
+      - "application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh"
+      - "application/scripts/17_launch_rqr_dlm_confirmatory_wave.R"
+      - "application/scripts/22_validate_rqr_dlm_wave1_corrections.R"
+      - "application/scripts/23_validate_rqr_dlm_wave1_comparator_projection.R"
+      - "application/scripts/24_validate_rqr_dlm_horizon_and_fixed_design.R"
+      - "application/scripts/25_validate_rqr_dlm_resource_envelope.R"
+      - "application/scripts/25_validate_rqr_ordinary_v1.R"
+      - "application/scripts/26_run_rqr_ordinary_v1_validation.sh"
+      - "application/scripts/27_test_rqr_ordinary_v1_monitor.sh"
+      - "application/scripts/28_materialize_rqr_ordinary_v1_desn_design.R"
+      - "application/scripts/29_audit_rqr_ordinary_v1_dlm_boundary.R"
+      - "application/scripts/30_bundle_rqr_ordinary_v1_protected_dlm_evidence.R"
+      - "application/scripts/30_generate_ordinary_v1_f01_references.R"
+      - "application/scripts/lib/**"
+      - "application/src/**"
+      - "application/tests/**"
+      - "application/vignettes/**"
+      - "docs/audits/rqr_dlm_main_correction_budget_*.csv"
+      - "docs/implementation_notes/ordinary_rqr_v1_*.md"
+      - "docs/implementation_notes/rqr_article_implementation_status_20260726.md"
+      - "docs/implementation_notes/rqr_dlm_component_scale_interweaving_20260726.md"
+      - "figures/**"
+      - "main.tex"
+      - "refs.bib"
+      - "rqr-gibbs-supplement.tex"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ordinary-rqr-v1-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bounded-native-checks:
+    name: R 4.5.3 / bounded native checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      VECLIB_MAXIMUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      R_KEEP_PKG_SOURCE: "yes"
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: "true"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install R
+        uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2
+        with:
+          r-version: "4.5.3"
+          use-public-rspm: true
+
+      - name: Install package dependencies
+        uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2
+        with:
+          working-directory: application
+          dependencies: '"hard"'
+          extra-packages: |
+            any::testthat
+            any::knitr
+            any::posterior
+            any::pracma
+            any::rmarkdown
+            any::withr
+
+      - name: Run ordinary-RQR version-1 checks
+        run: make ordinary-v1-ci
+
+  package-documentation-check:
+    name: R 4.5.3 / roxygen drift and R CMD check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      VECLIB_MAXIMUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      R_KEEP_PKG_SOURCE: "yes"
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: "true"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install R
+        uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2
+        with:
+          r-version: "4.5.3"
+          use-public-rspm: true
+
+      - name: Install Pandoc
+        uses: r-lib/actions/setup-pandoc@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2
+
+      - name: Install package and documentation dependencies
+        uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6 # v2
+        with:
+          working-directory: application
+          dependencies: '"hard"'
+          extra-packages: |
+            any::coda
+            any::exdqlm
+            any::knitr
+            any::posterior
+            any::pracma
+            any::rmarkdown
+            any::roxygen2
+            any::testthat
+            any::withr
+
+      - name: Regenerate package interfaces and documentation
+        run: make package-document
+
+      - name: Reject generated-interface and documentation drift
+        shell: bash
+        run: |
+          git diff --exit-code -- \
+            application/DESCRIPTION \
+            application/NAMESPACE \
+            application/R/RcppExports.R \
+            application/man \
+            application/src/RcppExports.cpp
+          test -z "$(git status --porcelain -- \
+            application/DESCRIPTION \
+            application/NAMESPACE \
+            application/R/RcppExports.R \
+            application/man \
+            application/src/RcppExports.cpp)"
+
+      - name: Run source-package check
+        run: make ordinary-v1-package-check

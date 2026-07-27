@@ -7,11 +7,11 @@
 rqr_oracle_roots(family, coverage_level, params = list(), tol = 1e-08)
 }
 \arguments{
-\item{family}{Innovation family. Supported values are `"gaussian"`,
-`"laplace"`, `"student_t"`, `"centered_gamma"`,
-`"asymmetric_laplace"`, and `"gaussian_mixture"`.}
+\item{family}{Innovation family. Supported values are \code{"gaussian"},
+\code{"laplace"}, \code{"student_t"}, \code{"centered_gamma"},
+\code{"asymmetric_laplace"}, and \code{"gaussian_mixture"}.}
 
-\item{coverage_level}{Target interval coverage in `(0, 1)`.}
+\item{coverage_level}{Target interval coverage in \verb{(0, 1)}.}
 
 \item{params}{Optional family parameters.}
 
@@ -21,10 +21,10 @@ rqr_oracle_roots(family, coverage_level, params = list(), tol = 1e-08)
 A list with roots, coverage/moment residuals, and family metadata.
 }
 \description{
-The RQR interval roots `(a_c, b_c)` are defined by the coverage and
+The RQR interval roots \verb{(a_c, b_c)} are defined by the coverage and
 first-moment balance equations
-`F(b_c) - F(a_c) = c` and
-`M(b_c) - M(a_c) = c * E(E)`, where
-`M(z) = E[E 1(E <= z)]`.  The helper is intended for simulation design and
+\code{F(b_c) - F(a_c) = c} and
+\code{M(b_c) - M(a_c) = c * E(E)}, where
+\verb{M(z) = E[E 1(E <= z)]}.  The helper is intended for simulation design and
 endpoint-recovery audits; it is not used as a fitted model.
 }

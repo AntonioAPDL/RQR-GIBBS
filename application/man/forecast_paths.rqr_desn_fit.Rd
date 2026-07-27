@@ -2,42 +2,42 @@
 % Please edit documentation in R/rqr_forecast.R
 \name{forecast_paths.rqr_desn_fit}
 \alias{forecast_paths.rqr_desn_fit}
-\title{Forecast interval paths from an RQR-DESN fit}
+\title{Evaluate future interval-root paths from an RQR-DESN fit}
 \usage{
-forecast_paths.rqr_desn_fit(
+\method{forecast_paths}{rqr_desn_fit}(
   object,
-  H,
+  H = NULL,
+  future_design = NULL,
   X_future = NULL,
-  history_driver = c("none", "teacher_forced", "companion_fit", "plugin"),
-  plugin = NULL,
   nd = NULL,
   seed = NULL,
   ...
 )
 }
 \arguments{
-\item{object}{An `rqr_desn_fit` object.}
+\item{object}{An \code{rqr_desn_fit}.}
 
-\item{H}{Forecast horizon.}
+\item{H}{Optional horizon; checked against the supplied future design.}
 
-\item{X_future}{Optional explicit future design matrix with `H` rows.}
+\item{future_design}{Preferred validated future-design contract.}
 
-\item{history_driver}{One of `"none"`, `"teacher_forced"`, `"companion_fit"`,
-or `"plugin"`.}
+\item{X_future}{Backward-compatible explicit feature matrix with the exact
+parent feature names and order. This legacy path is always labeled
+non-promotable; use \code{future_design} for verified semantics.}
 
-\item{plugin}{Optional function returning an explicit future design matrix.}
+\item{nd}{Number of coefficient draws.}
 
-\item{nd}{Number of posterior draws.}
-
-\item{seed}{Optional RNG seed.}
+\item{seed}{Optional draw-selection seed.}
 
 \item{...}{Reserved.}
 }
 \value{
-A list with interval draws and summaries.
+A typed and digested \code{rqr_desn_prediction} containing interval-root
+draws and summaries conditional on the future design.
 }
 \description{
-RQR-DESN does not define response predictive draws. This method therefore
-works only with an explicit future design matrix or a declared driver that
-supplies such a design matrix. It refuses silent recursive response sampling.
+Future features must be fixed explicitly. A validated
+\code{\link[=rqr_desn_future_design]{rqr_desn_future_design()}} records whether they are precomputed,
+teacher-forced for rolling one-step evaluation, or conditional on an
+external driver path. The function never generates or samples a response.
 }

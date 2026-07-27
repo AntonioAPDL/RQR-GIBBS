@@ -12,7 +12,7 @@ rqr_pseudo_residual(y, eta1, eta2)
 \item{eta1, eta2}{Numeric root ordinates.}
 }
 \value{
-Numeric vector `y^2 - y * (eta1 + eta2) + eta1 * eta2`.
+Numeric vector \code{y^2 - y * (eta1 + eta2) + eta1 * eta2}.
 }
 \description{
 RQR pseudo residual from the transformed AL representation

@@ -16,11 +16,12 @@
   list(mean = mean, precision = Prec, rhs = rhs)
 }
 
-#' Fit fixed-design RQR with a coordinate-Gaussian VB approximation
+#' Experimental fixed-design coordinate-Gaussian VB prototype
 #'
-#' This is a fast approximation to the RQR generalized posterior. MCMC remains
-#' the reference backend; VB uncertainty should not be treated as calibrated
-#' unless separately validated.
+#' This unexported research prototype is outside the ordinary-v1 interface and
+#' promotion contract. It is a fast approximation to the RQR generalized
+#' posterior. MCMC remains the reference backend; VB uncertainty should not be
+#' treated as calibrated unless separately validated.
 #'
 #' @param y Response vector.
 #' @param X Design matrix.
@@ -33,7 +34,7 @@
 #' @param init Optional initial values.
 #' @param ... Reserved.
 #' @return An `rqr_vb` object.
-#' @export
+#' @keywords internal
 rqr_vb_fit <- function(y, X, coverage_level, learning_rate = 1,
                        beta_prior_obj = NULL,
                        vb_control = list(),

@@ -2,18 +2,20 @@
 % Please edit documentation in R/rqr_desn_fit.R
 \name{rqr_desn_fit}
 \alias{rqr_desn_fit}
-\title{Fit an RQR-DESN interval readout}
+\title{Fit ordinary RQR on a frozen DESN feature design}
 \usage{
 rqr_desn_fit(
-  y,
+  y = NULL,
   coverage_level,
   ...,
-  inference = c("mcmc", "vb"),
+  design = NULL,
+  design_engine = c("auto", "frozen", "exdqlm_reference"),
+  design_metadata = list(),
+  inference = "mcmc",
   learning_rate = 1,
   lambda_initial = 1,
   loss_reference_scale = 1,
-  learning_rate_mode = c("fixed_rate", "learned_pseudoresidual_normalized",
-    "learned_pure"),
+  learning_rate_mode = "fixed_rate",
   lambda_prior = list(shape = 4, rate = 4),
   numerical_policy = c("fail", "record_repair"),
   provenance_control = list(),
@@ -23,49 +25,56 @@ rqr_desn_fit(
 )
 }
 \arguments{
-\item{y}{Response vector.}
+\item{y}{Optional response history for the legacy reference adapter. A
+supplied frozen \code{design} already contains its aligned response.}
 
-\item{coverage_level}{Interval coverage level in `(0, 1)`.}
+\item{coverage_level}{Interval coverage level in \verb{(0, 1)}.}
 
-\item{...}{Arguments forwarded to `qdesn_fit_vb()` for design construction.}
+\item{...}{Reservoir arguments used only by
+\code{design_engine="exdqlm_reference"}.}
 
-\item{inference}{One of `"mcmc"` or `"vb"`.}
+\item{design}{Optional validated \code{rqr_desn_design}.}
 
-\item{learning_rate}{Positive generalized-Bayes learning rate.}
+\item{design_engine}{\code{"frozen"} or \code{"exdqlm_reference"}. \code{"auto"} chooses
+\code{"frozen"} when \code{design} is supplied.}
 
-\item{lambda_initial}{Positive initial inverse scale for learned MCMC modes.}
+\item{design_metadata}{Plain metadata overrides used only while
+materializing a reference design.}
 
-\item{loss_reference_scale}{Positive reference scale `s_L`. It does not
-alter fixed `learning_rate`; learned modes use `lambda/s_L`. Passed to
-[rqr_mcmc_fit()].}
+\item{inference}{Ordinary v1 accepts only \code{"mcmc"}.}
 
-\item{learning_rate_mode}{Learning-rate treatment passed to
-[rqr_mcmc_fit()]. Learned-scale inference is currently available for MCMC.}
+\item{learning_rate}{Positive fixed generalized-Bayes rate.}
 
-\item{lambda_prior}{Gamma prior for learned `lambda`, passed to
-[rqr_mcmc_fit()].}
+\item{lambda_initial}{Positive initial inverse loss scale in learned mode.}
 
-\item{numerical_policy}{Numerical factorization policy for MCMC.}
+\item{loss_reference_scale}{Positive fixed reference scale.}
 
-\item{provenance_control}{Provenance gate passed to [rqr_mcmc_fit()]. For
-MCMC, the executing exdqlm namespace must come from an isolated runtime
-attestation for the exact pinned checkout because exdqlm constructs the
-DESN design. Direct source-tree loading is ineligible.}
+\item{learning_rate_mode}{Fixed or normalized learned-rate target.}
 
-\item{mcmc_args}{Named list for [rqr_mcmc_fit()].}
+\item{lambda_prior}{Gamma prior for the normalized learned rate.}
 
-\item{vb_args}{Named list for [rqr_vb_fit()].}
+\item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 
-\item{fit_readout}{If `FALSE`, return the design shell before fitting RQR.}
+\item{provenance_control}{Provenance controls. The reference adapter binds
+the pinned exdqlm source/runtime; a supplied frozen design needs no
+executing exdqlm namespace.}
+
+\item{mcmc_args}{MCMC controls, prior selection, initialization, and the
+root-swap probability. Target and provenance controls belong to their
+named top-level arguments and cannot be overridden here.}
+
+\item{vb_args}{Reserved compatibility argument; it must remain empty.}
+
+\item{fit_readout}{If \code{FALSE}, return the validated frozen design without
+fitting its readout.}
 }
 \value{
-An `rqr_desn_fit` object.
+An \code{rqr_desn_fit} or \code{rqr_desn_design}.
 }
 \description{
-The DESN reservoir/design is built once through the existing
-`qdesn_fit_vb(..., fit_readout = FALSE)` shell. The RQR readout is then fit
-on the shared fixed design. The result is a generalized-Bayes interval model,
-not a response predictive likelihood.
-RQR uses `coverage_level` for its interval target; `p0` and `target_p` are
-therefore rejected when supplied through `...`.
+The preferred interface supplies a validated \code{\link[=rqr_desn_design]{rqr_desn_design()}} object.
+The legacy adapter can materialize that object once through the pinned,
+isolated exdqlm reference runtime. In either case, the fitted stochastic
+model is the native ordinary-RQR fixed-design Gibbs sampler conditional on
+the frozen features. No response-simulation distribution is introduced.
 }

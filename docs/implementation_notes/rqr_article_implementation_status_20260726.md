@@ -8,21 +8,24 @@ separates the population functional, generalized-Bayes computation, dynamic
 model, and evaluation strategy from repository governance. This file is a
 status record, not statistical evidence.
 
-The reader-facing model hierarchy is static interval-root regression,
-an ordinary-only regularized-horseshoe adapter based on the
-Nishimura–Suchard augmentation (RHS-NS), frozen-feature DESN as a
-static-design specialization, and dynamic linear root states. DESN reuses the
-static coefficient sampler; the DLM is the first architecture that replaces it
-with root-specific FFBS.
+The reader-facing model hierarchy is static interval-root regression, an
+ordinary-only native regularized-horseshoe implementation based on the
+Nishimura–Suchard augmentation (RHS-NS), frozen-feature DESN as a static-design
+specialization, and dynamic linear root states. DESN reuses the static
+coefficient sampler; the DLM is the first architecture that replaces it with
+root-specific FFBS. The pinned exdqlm runtime remains a read-only design
+materializer and parity reference; it is not the ordinary RHS-NS inference
+engine.
 
 ## Scope ledger at the editorial freeze
 
 | Component | Mathematical scope | Software status | Article evidence status |
 |---|---|---|---|
 | Ordinary static ridge RQR | Loss target and Gaussian/GIG coefficient blocks | Implemented natively | Small target checks exist; matched results are not reported in the manuscript |
-| Ordinary static RHS-NS RQR | Conditional-Gaussian regularization with separate root-specific prior states; fixed or declared learned \(\kappa\) | Implemented through the pinned, isolated exdqlm adapter | Adapter tests exist; no nonzero-tilt or standalone native-RHS claim |
-| Ordinary RQR-DESN | Frozen deterministic-feature specialization of static regression | Implemented | Design/readout checks exist; matched DESN evidence remains deferred |
-| Ordinary RQR-DLM | Alternating root-specific FFBS for declared fixed-joint modes | Implemented | Reference and bounded checks exist; comparative results remain governed by the simulation protocol |
+| Ordinary static full-Gaussian RQR | Proper multivariate Gaussian coefficient prior with a declared mean and positive-definite precision | Implemented natively; ridge is recovered by zero mean and scalar precision | Dense conditional and ridge-equivalence checks exist; matched results are not reported in the manuscript |
+| Ordinary static RHS-NS RQR | Conditional-Gaussian regularization with separate root-specific prior states; fixed or declared learned \(\kappa\) | Implemented natively under the declared RHS-NS joint kernel | Conditional, parity, continuation, and bounded release gates are defined; no nonzero-tilt RHS-NS claim |
+| Ordinary RQR-DESN | Frozen deterministic-feature specialization of static regression | Native readout implemented; the promotion fixture is materialized through a pinned isolated exdqlm reference runtime | Design/readout checks exist; matched DESN evidence remains deferred |
+| Ordinary RQR-DLM | Alternating root-specific FFBS for declared fixed-joint modes | Implemented; the integrated transition/numerical schemas require fresh exact-runtime evidence | Historical reference and bounded checks exist but do not transfer automatically to the new transition digest; comparative results remain governed by the simulation protocol |
 | Static mean-tilted RQR | Population target and fixed-rate information shift under proper Gaussian/ridge priors | Derived, not implemented | No empirical evidence |
 | DESN mean-tilted RQR | Frozen-feature specialization under a proper Gaussian/ridge readout | Not implemented | No empirical evidence; RHS-NS propriety remains unresolved |
 | Dynamic mean-tilted RQR | Conditional information-shift algebra only | Not implemented | No empirical evidence |

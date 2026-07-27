@@ -35,10 +35,28 @@
 #' Validate or convert an RQR-DLM model
 #'
 #' The list contract (`FF`, `GG`, `m0`, and `C0`) is compatible with exdqlm
-#' 1.1.0 model objects.
+#' 1.1.0 model objects. For state dimension `p`, `FF` is a finite `p x 1`
+#' time-constant observation design or a finite `p x T` design; `GG` is a
+#' finite `p x p` transition or a finite `p x p x T` cube; `m0` has length
+#' `p`; and `C0` is a symmetric positive-definite `p x p` prior covariance.
+#' A fit expands one-slice designs and transitions and otherwise requires their
+#' time dimensions to match the response length.
 #'
-#' @param model A model list or exdqlm-compatible object.
-#' @return An `rqr_dlm_model`.
+#' Optional `component_dims` must be positive integers summing to `p`, and
+#' `component_names` must contain one unique nonempty name per component.
+#'
+#' @param model A model list or exdqlm-compatible object containing `FF`, `GG`,
+#'   `m0`, and `C0`, with optional component metadata.
+#' @return A validated `rqr_dlm_model` retaining the observation, transition,
+#'   prior, and component contracts.
+#' @examples
+#' local_level <- rqr_as_dlm_model(list(
+#'   FF = matrix(1, 1, 1),
+#'   GG = matrix(1, 1, 1),
+#'   m0 = 0,
+#'   C0 = matrix(4, 1, 1)
+#' ))
+#' @family RQR-DLM
 #' @export
 rqr_as_dlm_model <- function(model) {
   if (!is.list(model) || !all(c("FF", "GG", "m0", "C0") %in% names(model))) {
@@ -88,11 +106,22 @@ rqr_as_dlm_model <- function(model) {
 
 #' Polynomial-trend RQR-DLM component
 #'
-#' @param order Positive polynomial order.
-#' @param m0 Prior state mean.
-#' @param C0 Prior state covariance.
-#' @param name Component name.
-#' @return An `rqr_dlm_model`.
+#' Constructs the standard order-`d` polynomial block with observation vector
+#' `(1, 0, ..., 0)` and an upper-unit transition. Components can be combined
+#' with the `+` method documented at [Ops.rqr_dlm_model()].
+#'
+#' @param order Positive integer state dimension/order.
+#' @param m0 Finite prior state mean of length `order`.
+#' @param C0 Symmetric positive-definite `order x order` prior covariance.
+#' @param name Unique nonempty component name.
+#' @return A one-component `rqr_dlm_model`.
+#' @examples
+#' trend <- rqr_polytrend(
+#'   order = 2L,
+#'   m0 = c(0, 0),
+#'   C0 = diag(c(4, 1))
+#' )
+#' @family RQR-DLM
 #' @export
 rqr_polytrend <- function(order = 1L, m0 = NULL, C0 = NULL, name = "trend") {
   order <- .rqr_scalar_integer(order, "order", 1L)
@@ -109,24 +138,63 @@ rqr_polytrend <- function(order = 1L, m0 = NULL, C0 = NULL, name = "trend") {
 
 #' Fourier seasonal RQR-DLM component
 #'
-#' @param period Positive seasonal period.
-#' @param harmonics Integer harmonics.
-#' @param m0 Prior state mean.
-#' @param C0 Prior state covariance.
-#' @param name Component name.
-#' @return An `rqr_dlm_model`.
+#' Each ordinary harmonic contributes a two-state rotation block. When
+#' `2 * harmonic == period`, the Nyquist harmonic contributes the one-state
+#' transition `-1`. Consequently, the state dimension is not always twice the
+#' number of harmonics.
+#'
+#' @param period One finite numeric scalar greater than one. Noninteger periods
+#'   such as `365.25` are supported.
+#' @param harmonics A nonempty plain unique vector of positive integer
+#'   harmonics satisfying
+#'   `2 * harmonics <= period`.
+#' @param m0 Finite prior state mean with the implied seasonal dimension.
+#' @param C0 Symmetric positive-definite prior covariance with the implied
+#'   seasonal dimension.
+#' @param name Unique nonempty component name.
+#' @return A one-component `rqr_dlm_model`.
+#' @examples
+#' seasonal <- rqr_seasonal(
+#'   period = 12,
+#'   harmonics = c(1L, 6L),
+#'   C0 = diag(3)
+#' )
+#' stopifnot(identical(seasonal$component_dims, 3L))
+#' @family RQR-DLM
 #' @export
 rqr_seasonal <- function(period, harmonics = 1L, m0 = NULL, C0 = NULL, name = "seasonal") {
-  period <- as.numeric(period)[1L]
-  if (!is.numeric(harmonics) || !length(harmonics) || anyNA(harmonics) ||
-      any(!is.finite(harmonics)) || any(harmonics != floor(harmonics))) {
-    stop("period and harmonics define an invalid Fourier component.", call. = FALSE)
+  if (!is.numeric(period) || is.object(period) || length(period) != 1L ||
+      is.na(period) || !is.finite(period) || period <= 1) {
+    stop(
+      paste(
+        "period defines an invalid Fourier component;",
+        "it must be one finite numeric scalar greater than one."
+      ),
+      call. = FALSE
+    )
+  }
+  period <- as.numeric(period)
+  if (!is.numeric(harmonics) || is.object(harmonics) ||
+      !length(harmonics) || anyNA(harmonics) ||
+      any(!is.finite(harmonics)) || any(harmonics != floor(harmonics)) ||
+      anyDuplicated(harmonics)) {
+    stop(
+      paste(
+        "harmonics define an invalid Fourier component;",
+        "they must be a nonempty plain unique integer vector."
+      ),
+      call. = FALSE
+    )
   }
   harmonics <- as.integer(harmonics)
-  if (!is.finite(period) || period <= 1 || !length(harmonics) ||
-      any(!is.finite(harmonics)) || any(harmonics < 1L) ||
-      any(2 * harmonics > period)) {
-    stop("period and harmonics define an invalid Fourier component.", call. = FALSE)
+  if (any(harmonics < 1L) || any(2 * harmonics > period)) {
+    stop(
+      paste(
+        "harmonics define an invalid Fourier component;",
+        "each must be positive and no greater than period / 2."
+      ),
+      call. = FALSE
+    )
   }
   blocks <- vector("list", length(harmonics))
   fblocks <- vector("list", length(harmonics))
@@ -154,16 +222,29 @@ rqr_seasonal <- function(period, harmonics = 1L, m0 = NULL, C0 = NULL, name = "s
 
 #' Regression-state RQR-DLM component
 #'
-#' @param X Time-by-regressor design matrix.
-#' @param m0 Prior state mean.
-#' @param C0 Prior state covariance.
-#' @param name Component name.
-#' @return An `rqr_dlm_model`.
+#' The rows of `X` define the time-varying observation design, while the
+#' regression-state transition is the identity.
+#'
+#' @param X Plain finite numeric `T x p` time-by-regressor design matrix.
+#' @param m0 Finite prior state mean of length `p`.
+#' @param C0 Symmetric positive-definite `p x p` prior covariance.
+#' @param name Unique nonempty component name.
+#' @return A one-component `rqr_dlm_model` with `FF = t(X)`.
+#' @examples
+#' regression <- rqr_regression(
+#'   X = cbind(x = seq(-1, 1, length.out = 6)),
+#'   C0 = matrix(2, 1, 1)
+#' )
+#' @family RQR-DLM
 #' @export
 rqr_regression <- function(X, m0 = NULL, C0 = NULL, name = "regression") {
-  X <- as.matrix(X)
+  if (!is.matrix(X) || !is.numeric(X) || is.object(X)) {
+    stop("X must be a plain finite numeric T x p matrix.", call. = FALSE)
+  }
   storage.mode(X) <- "double"
-  if (!nrow(X) || !ncol(X) || any(!is.finite(X))) stop("X must be a finite T x p matrix.", call. = FALSE)
+  if (!nrow(X) || !ncol(X) || any(!is.finite(X))) {
+    stop("X must be a plain finite numeric T x p matrix.", call. = FALSE)
+  }
   p <- ncol(X)
   if (is.null(m0)) m0 <- numeric(p)
   if (is.null(C0)) C0 <- diag(1e3, p)
@@ -173,6 +254,26 @@ rqr_regression <- function(X, m0 = NULL, C0 = NULL, name = "regression") {
   ))
 }
 
+#' Combine RQR-DLM components
+#'
+#' Components are stacked into one state vector. Their observation designs are
+#' row-bound, while `GG` and `C0` are block diagonal and `m0`, component
+#' dimensions, and component names are concatenated. A one-column `FF` or
+#' one-slice `GG` is expanded to the other component's time dimension. Two
+#' nonconstant time dimensions must agree.
+#'
+#' @param e1,e2 Valid `rqr_dlm_model` components.
+#' @return A validated combined `rqr_dlm_model`.
+#' @examples
+#' trend <- rqr_polytrend(order = 1L, C0 = matrix(4, 1, 1))
+#' regression <- rqr_regression(
+#'   X = cbind(x = seq(-1, 1, length.out = 5)),
+#'   C0 = matrix(2, 1, 1)
+#' )
+#' combined <- trend + regression
+#' stopifnot(identical(combined$component_dims, c(1L, 1L)))
+#' @name Ops.rqr_dlm_model
+#' @family RQR-DLM
 #' @export
 `+.rqr_dlm_model` <- function(e1, e2) {
   e1 <- rqr_as_dlm_model(e1)
@@ -205,12 +306,26 @@ rqr_regression <- function(X, m0 = NULL, C0 = NULL, name = "regression") {
 
 #' Build an exdqlm-compatible component discount matrix
 #'
-#' @param df Component-specific discounts in `(0,1]`.
-#' @param dim.df State dimensions for those components.
+#' @param df Plain numeric vector of component-specific discounts in `(0,1]`.
+#' @param dim.df Plain vector of positive-integer state dimensions for those
+#'   components.
 #' @param p Total state dimension; defaults to `sum(dim.df)`.
-#' @return A `p x p` block matrix.
+#' @return A symmetric positive-semidefinite `p x p` block matrix whose
+#'   component-`j` diagonal block is `(1 - df[j]) / df[j]`.
+#' @examples
+#' rqr_discount_matrix(
+#'   df = c(0.95, 0.90),
+#'   dim.df = c(2L, 1L)
+#' )
+#' @family RQR-DLM
 #' @export
 rqr_discount_matrix <- function(df, dim.df, p = sum(dim.df)) {
+  if (!is.numeric(df) || is.object(df) || !is.null(dim(df))) {
+    stop("df must be a plain numeric vector.", call. = FALSE)
+  }
+  if (!is.numeric(dim.df) || is.object(dim.df) || !is.null(dim(dim.df))) {
+    stop("dim.df must be a plain vector of positive integers.", call. = FALSE)
+  }
   df <- as.numeric(df)
   dim.df <- .rqr_positive_integer_vector(dim.df, "dim.df")
   p <- .rqr_scalar_integer(p, "p", 1L)
@@ -243,23 +358,71 @@ rqr_discount_matrix <- function(df, dim.df, p = sum(dim.df)) {
 
 #' Freeze a component-discount covariance template
 #'
-#' @param model RQR-DLM model.
-#' @param n_time Number of time points.
+#' Runs a declared reference Kalman covariance recursion once, before MCMC, and
+#' freezes the resulting `p x p x n_time` covariance cube. The frozen object is
+#' an exact fixed-joint evolution specification; it is distinct from
+#' [rqr_evolution_adaptive_working()], which changes its working covariance
+#' during a scan.
+#'
+#' @param model Valid RQR-DLM model.
+#' @param n_time One positive integer number of time points.
 #' @param df,dim.df exdqlm-compatible component discounts and dimensions.
-#' @param reference_variance Positive scalar or length-`n_time` vector.
-#' @param reference_design Optional `p x n_time` pseudo-design; defaults to FF.
+#' @param reference_variance Plain positive numeric scalar or length-`n_time`
+#'   vector.
+#' @param reference_design Optional plain finite numeric `p x n_time` reference
+#'   design; defaults to the model's expanded `FF`.
 #' @param numerical_policy Either `"fail"` or `"record_repair"`.
-#' @param jitter_ladder Matrix-relative jitter ladder used only under
-#'   record-repair. An exactly zero matrix uses a separately recorded absolute
-#'   fallback.
+#' @param jitter_ladder Plain nonempty numeric matrix-relative jitter ladder
+#'   used only under record-repair. An exactly zero matrix uses a separately
+#'   recorded absolute fallback.
 #' @return An evolution specification containing a fixed `W` cube and a
-#'   construction audit.
+#'   construction audit with repair count, repair records, and minimum
+#'   eigenvalues.
+#' @examples
+#' model <- rqr_polytrend(order = 1L, C0 = matrix(4, 1, 1))
+#' frozen <- rqr_freeze_discount_template(
+#'   model = model,
+#'   n_time = 4L,
+#'   df = 0.95,
+#'   dim.df = 1L,
+#'   reference_variance = 1,
+#'   numerical_policy = "fail"
+#' )
+#' stopifnot(identical(dim(frozen$W), c(1L, 1L, 4L)))
+#' @family RQR-DLM
 #' @export
 rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
                                           reference_variance,
                                           reference_design = NULL,
                                           numerical_policy = c("fail", "record_repair"),
                                           jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6)) {
+  n_time <- .rqr_scalar_integer(n_time, "n_time", 1L)
+  if (!is.numeric(reference_variance) || is.object(reference_variance) ||
+      !is.null(dim(reference_variance))) {
+    stop("reference_variance must be a plain numeric vector.", call. = FALSE)
+  }
+  if (!is.null(reference_design) &&
+      (!is.matrix(reference_design) || !is.numeric(reference_design) ||
+        is.object(reference_design))) {
+    stop(
+      "reference_design must be a plain finite numeric p x n_time matrix.",
+      call. = FALSE
+    )
+  }
+  if (!is.numeric(jitter_ladder) || is.object(jitter_ladder) ||
+      !is.null(dim(jitter_ladder)) || !length(jitter_ladder) ||
+      anyNA(jitter_ladder) || any(!is.finite(jitter_ladder)) ||
+      any(jitter_ladder < 0)) {
+    stop(
+      "jitter_ladder must be a plain nonempty finite nonnegative numeric vector.",
+      call. = FALSE
+    )
+  }
+  reference_design_source <- if (is.null(reference_design)) {
+    "model_design"
+  } else {
+    "user_supplied"
+  }
   ex <- .rqr_expand_model(model, n_time)
   D <- rqr_discount_matrix(df, dim.df, ex$p)
   reference_variance <- as.numeric(reference_variance)
@@ -268,7 +431,7 @@ rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
     stop("reference_variance must be positive and have length 1 or n_time.", call. = FALSE)
   }
   V <- rep_len(reference_variance, n_time)
-  H <- if (is.null(reference_design)) ex$FF else as.matrix(reference_design)
+  H <- if (is.null(reference_design)) ex$FF else reference_design
   if (!all(dim(H) == c(ex$p, n_time)) || any(!is.finite(H))) {
     stop("reference_design must be finite p x n_time.", call. = FALSE)
   }
@@ -312,6 +475,7 @@ rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
     C <- fac$matrix
   }
   structure(list(
+    schema_version = .rqr_dlm_evolution_schema(),
     mode = "discount_template",
     W = W,
     df = as.numeric(df),
@@ -319,8 +483,21 @@ rqr_freeze_discount_template <- function(model, n_time, df, dim.df,
     D = D,
     reference_variance = V,
     reference_design = H,
+    reference_variance_source = "user_supplied",
+    reference_design_source = reference_design_source,
+    empirical_bayes = FALSE,
     exact_joint_target = TRUE,
     frozen_before_mcmc = TRUE,
+    construction_contract = list(
+      schema_version =
+        "rqrgibbs_discount_template_construction/1.0.0",
+      algorithm =
+        "reference_kalman_joseph_covariance_recursion",
+      numerical_policy = numerical_policy,
+      jitter_ladder = ladder,
+      reference_variance_source = "user_supplied",
+      reference_design_source = reference_design_source
+    ),
     construction_audit = list(
       numerical_policy = numerical_policy,
       repair_count = nrow(repair_records),

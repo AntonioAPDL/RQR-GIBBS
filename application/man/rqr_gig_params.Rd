@@ -14,9 +14,9 @@ rqr_gig_params(e, coverage_level, learning_rate = 1)
 \item{learning_rate}{Positive generalized-Bayes learning rate.}
 }
 \value{
-A list with `p`, `a`, and `b`.
+A list with \code{p}, \code{a}, and \code{b}.
 }
 \description{
-The returned `a` and `b` match the package GIG convention proportional to
-`x^(p - 1) exp(-(a * x + b / x) / 2)`.
+The returned \code{a} and \code{b} match the package GIG convention proportional to
+\verb{x^(p - 1) exp(-(a * x + b / x) / 2)}.
 }

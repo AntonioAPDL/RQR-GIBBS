@@ -139,9 +139,20 @@ wave_id <- Sys.getenv(
   "RQR_CORRECTION_WAVE_ID",
   unset = "static_gaussian_T200__target0200__sentinel"
 )
-wave_tag <- if (identical(
-    wave_id, "static_gaussian_T200__target0200__sentinel"
-  )) "wave1" else "wave2"
+allowed_waves <- c(
+  wave1 = "static_gaussian_T200__target0200__sentinel",
+  wave2 = "local_level_gaussian_T200__target0200__sentinel"
+)
+if (!wave_id %in% unname(allowed_waves)) {
+  stop(
+    paste0(
+      "RQR_CORRECTION_WAVE_ID must be one of the two frozen M02 waves: ",
+      paste(unname(allowed_waves), collapse = ", "), "."
+    ),
+    call. = FALSE
+  )
+}
+wave_tag <- names(allowed_waves)[match(wave_id, allowed_waves)]
 wave_plan <- rqr_confirm_wave_plan(contract, planning = "maximum")
 wave_tasks <- wave_plan[
   wave_plan$wave_id == wave_id &
@@ -182,6 +193,17 @@ for (row in seq_len(nrow(wave_tasks))) {
       }
     )
   }
+}
+job_schedule_roles <- vapply(
+  jobs,
+  function(job) if (isTRUE(job$sentinel)) "sentinel" else "standard",
+  character(1L)
+)
+if (!setequal(unique(job_schedule_roles), c("standard", "sentinel"))) {
+  stop(
+    "Each frozen M02 wave must contain standard and sentinel schedule roles.",
+    call. = FALSE
+  )
 }
 expected_jobs <- sum(vapply(
   seq_len(nrow(wave_tasks)),
@@ -246,6 +268,18 @@ results <- parallel::mclapply(
           value$diagnostics$initialization_digest,
         profile_changed_target =
           value$diagnostics$profile_changed_target,
+        schedule_role = if (isTRUE(job$sentinel)) {
+          "sentinel"
+        } else {
+          "standard"
+        },
+        applied_schedule = value$diagnostics$schedule,
+        schedule_applied = value$diagnostics$schedule_applied,
+        state_draw_dimensions =
+          value$diagnostics$state_draw_dimensions,
+        scale_draw_lengths =
+          value$diagnostics$scale_draw_lengths,
+        training_horizon = as.integer(generated$T),
         scalars = scalars,
         peak_RSS_KiB = rqr_confirm_process_peak_rss_kib()
       )
@@ -315,6 +349,129 @@ overdispersed_initialization_pass <- all(vapply(
   },
   logical(1L)
 ))
+frozen_schedules <- list(
+  standard =
+    contract$config$schedules$dynamic_quantile_endpoint_standard,
+  sentinel =
+    contract$config$schedules$dynamic_quantile_endpoint_sentinel
+)
+valid_nonnegative_integer <- function(value) {
+  is.numeric(value) &&
+    !is.object(value) &&
+    is.null(dim(value)) &&
+    length(value) == 1L &&
+    !is.na(value) &&
+    is.finite(value) &&
+    value == floor(value) &&
+    value >= 0 &&
+    value <= .Machine$integer.max
+}
+valid_schedule <- function(value) {
+  is.list(value) &&
+    identical(names(value), c("burn", "retain", "thin")) &&
+    all(vapply(value, valid_nonnegative_integer, logical(1L))) &&
+    value$retain >= 1 &&
+    value$thin >= 1
+}
+if (!identical(names(frozen_schedules), c("standard", "sentinel")) ||
+    !all(vapply(frozen_schedules, valid_schedule, logical(1L)))) {
+  stop("The two frozen M02 endpoint schedules are malformed.", call. = FALSE)
+}
+schedule_result_pass <- function(result) {
+  if (!isTRUE(result$ok) ||
+      !is.character(result$schedule_role) ||
+      length(result$schedule_role) != 1L ||
+      is.na(result$schedule_role) ||
+      !result$schedule_role %in% names(frozen_schedules) ||
+      !valid_schedule(result$applied_schedule) ||
+      !valid_nonnegative_integer(result$training_horizon) ||
+      result$training_horizon < 1L) {
+    return(FALSE)
+  }
+  expected <- frozen_schedules[[result$schedule_role]]
+  observed <- result$applied_schedule
+  isTRUE(result$schedule_applied) &&
+    identical(
+      unname(unlist(observed[c("burn", "retain", "thin")])),
+      unname(unlist(expected[c("burn", "retain", "thin")]))
+    ) &&
+    length(result$state_draw_dimensions) == 2L &&
+    all(vapply(
+      result$state_draw_dimensions,
+      function(dimensions) {
+        is.numeric(dimensions) &&
+          length(dimensions) == 3L &&
+          all(vapply(
+            as.list(dimensions),
+            valid_nonnegative_integer,
+            logical(1L)
+          )) &&
+          all(dimensions >= 1L) &&
+          identical(
+            dimensions[[2L]], result$training_horizon
+          ) &&
+          identical(
+            dimensions[[3L]], as.integer(expected$retain)
+          )
+      },
+      logical(1L)
+    )) &&
+    identical(
+      result$state_draw_dimensions[[1L]],
+      result$state_draw_dimensions[[2L]]
+    ) &&
+    is.numeric(result$scale_draw_lengths) &&
+    length(result$scale_draw_lengths) == 2L &&
+    all(vapply(
+      as.list(result$scale_draw_lengths),
+      valid_nonnegative_integer,
+      logical(1L)
+    )) &&
+    all(
+      result$scale_draw_lengths == as.integer(expected$retain)
+    )
+}
+schedule_contract_pass <- all(vapply(
+  results, schedule_result_pass, logical(1L)
+))
+schedule_evidence <- setNames(
+  lapply(names(frozen_schedules), function(role) {
+    selected <- results[vapply(
+      results,
+      function(result) {
+        isTRUE(result$ok) && identical(result$schedule_role, role)
+      },
+      logical(1L)
+    )]
+    dimension_text <- if (length(selected)) {
+      sort(unique(unlist(lapply(selected, function(result) {
+        vapply(
+          result$state_draw_dimensions,
+          function(value) paste(value, collapse = "x"),
+          character(1L)
+        )
+      }))), method = "radix")
+    } else {
+      character()
+    }
+    scale_lengths <- if (length(selected)) {
+      sort(unique(unlist(lapply(
+        selected, `[[`, "scale_draw_lengths"
+      ))), method = "radix")
+    } else {
+      integer()
+    }
+    list(
+      configured_schedule = frozen_schedules[[role]],
+      interval_chain_job_count = length(selected),
+      realized_state_draw_dimensions = dimension_text,
+      realized_scale_draw_lengths = as.integer(scale_lengths),
+      all_applied = length(selected) > 0L &&
+        all(vapply(selected, schedule_result_pass, logical(1L)))
+    )
+  }),
+  names(frozen_schedules)
+)
 diagnostics <- vector("list", length(task_keys))
 summary_rows <- vector("list", length(task_keys))
 for (index in seq_along(task_keys)) {
@@ -347,10 +504,78 @@ for (index in seq_along(task_keys)) {
     diagnostics[[index]] <- value
   }
   value <- diagnostics[[index]]
+  schedule_roles <- unique(vapply(
+    selected,
+    function(result) {
+      if (isTRUE(result$job$sentinel)) "sentinel" else "standard"
+    },
+    character(1L)
+  ))
+  schedule_role <- if (length(schedule_roles) == 1L) {
+    schedule_roles[[1L]]
+  } else {
+    NA_character_
+  }
+  configured_schedule <- if (!is.na(schedule_role)) {
+    frozen_schedules[[schedule_role]]
+  } else {
+    list(burn = NA_integer_, retain = NA_integer_, thin = NA_integer_)
+  }
+  successful_results <- selected[vapply(
+    selected, function(result) isTRUE(result$ok), logical(1L)
+  )]
+  applied_schedule <- if (length(successful_results) &&
+      all(vapply(
+        successful_results,
+        function(result) {
+          identical(
+            result$applied_schedule,
+            successful_results[[1L]]$applied_schedule
+          )
+        },
+        logical(1L)
+      ))) {
+    successful_results[[1L]]$applied_schedule
+  } else {
+    list(burn = NA_integer_, retain = NA_integer_, thin = NA_integer_)
+  }
+  realized_state_dimensions <- if (length(successful_results)) {
+    paste(sort(unique(unlist(lapply(
+      successful_results,
+      function(result) {
+        vapply(
+          result$state_draw_dimensions,
+          function(dimensions) paste(dimensions, collapse = "x"),
+          character(1L)
+        )
+      }
+    ))), method = "radix"), collapse = ";")
+  } else {
+    NA_character_
+  }
+  realized_scale_lengths <- if (length(successful_results)) {
+    paste(sort(unique(unlist(lapply(
+      successful_results, `[[`, "scale_draw_lengths"
+    ))), method = "radix"), collapse = ";")
+  } else {
+    NA_character_
+  }
   summary_rows[[index]] <- data.frame(
     DGP = first$scenario_id,
     replication = first$replication,
     sentinel = first$sentinel,
+    schedule_role = schedule_role,
+    configured_burn = as.integer(configured_schedule$burn),
+    configured_retain = as.integer(configured_schedule$retain),
+    configured_thin = as.integer(configured_schedule$thin),
+    applied_burn = as.integer(applied_schedule$burn),
+    applied_retain = as.integer(applied_schedule$retain),
+    applied_thin = as.integer(applied_schedule$thin),
+    realized_state_draw_dimensions = realized_state_dimensions,
+    realized_scale_draw_lengths = realized_scale_lengths,
+    schedule_contract_pass = all(vapply(
+      selected, schedule_result_pass, logical(1L)
+    )),
     chains = length(selected),
     diagnostics = nrow(value),
     diagnostics_passed = sum(value$pass),
@@ -418,7 +643,7 @@ rqr_confirm_atomic_write_csv(
 )
 manifest <- list(
   schema_version =
-    "rqrgibbs_dlm_wave_comparator_projection_validation/2.0.0",
+    "rqrgibbs_dlm_wave_comparator_projection_validation/2.1.0",
   source_commit = source_commit,
   source_clean = !nzchar(source_status),
   package_version = as.character(utils::packageVersion("rqrgibbs")),
@@ -434,6 +659,9 @@ manifest <- list(
     } else {
       isTRUE(primary_provenance$reproducibility_eligible)
     },
+  primary_runtime_tree_digest =
+    primary_provenance$primary_runtime_tree_digest %||%
+      NA_character_,
   exdqlm_runtime_attestation_sha256 =
     rqr_confirm_sha256(exdqlm_attestation),
   exdqlm_runtime_tree_digest =
@@ -461,6 +689,13 @@ manifest <- list(
   common_target_across_initialization_profiles = common_target_pass,
   overdispersed_initialization_profiles_verified =
     overdispersed_initialization_pass,
+  frozen_schedules = frozen_schedules,
+  applied_schedule_evidence = schedule_evidence,
+  all_applied_schedules_verified = schedule_contract_pass,
+  schedule_evidence_fields = c(
+    "schedule_role", "applied_schedule", "schedule_applied",
+    "state_draw_dimensions", "scale_draw_lengths"
+  ),
   initialization_contract =
     "target_preserving_precomputed_mcmc_state",
   target_fields_held_fixed =
@@ -509,6 +744,7 @@ if (!isTRUE(manifest$all_fits_succeeded) ||
     !isTRUE(manifest$all_diagnostics_passed) ||
     !isTRUE(manifest$common_target_across_initialization_profiles) ||
     !isTRUE(manifest$overdispersed_initialization_profiles_verified) ||
+    !isTRUE(manifest$all_applied_schedules_verified) ||
     !isTRUE(manifest$resource_margin_pass) ||
     (nzchar(expected_commit) &&
       !isTRUE(manifest$primary_reproducibility_eligible))) {

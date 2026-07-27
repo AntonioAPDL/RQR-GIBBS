@@ -7,17 +7,46 @@
 rqr_polytrend(order = 1L, m0 = NULL, C0 = NULL, name = "trend")
 }
 \arguments{
-\item{order}{Positive polynomial order.}
+\item{order}{Positive integer state dimension/order.}
 
-\item{m0}{Prior state mean.}
+\item{m0}{Finite prior state mean of length \code{order}.}
 
-\item{C0}{Prior state covariance.}
+\item{C0}{Symmetric positive-definite \verb{order x order} prior covariance.}
 
-\item{name}{Component name.}
+\item{name}{Unique nonempty component name.}
 }
 \value{
-An `rqr_dlm_model`.
+A one-component \code{rqr_dlm_model}.
 }
 \description{
-Polynomial-trend RQR-DLM component
+Constructs the standard order-\code{d} polynomial block with observation vector
+\verb{(1, 0, ..., 0)} and an upper-unit transition. Components can be combined
+with the \code{+} method documented at \code{\link[=Ops.rqr_dlm_model]{Ops.rqr_dlm_model()}}.
 }
+\examples{
+trend <- rqr_polytrend(
+  order = 2L,
+  m0 = c(0, 0),
+  C0 = diag(c(4, 1))
+)
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

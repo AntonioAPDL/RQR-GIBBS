@@ -13,21 +13,61 @@ rqr_evolution_component_scale(
 )
 }
 \arguments{
-\item{templates}{List of component covariance matrices or time-varying cubes.}
+\item{templates}{Plain list of plain numeric component covariance matrices
+or time-varying cubes.}
 
-\item{component_dims}{Positive component dimensions summing to the state size.}
+\item{component_dims}{Plain positive-integer component dimensions summing to
+the state size.}
 
-\item{prior}{Inverse-Gamma shape and rate/scale lists or vectors.}
+\item{prior}{Fully named list with inverse-Gamma \code{shape} and \code{rate} entries,
+each a plain positive numeric scalar or one value per component. Legacy
+aliases \code{a} for \code{shape} and either \code{scale} or \code{b} for \code{rate} remain
+accepted, but ambiguous or unknown fields are rejected.}
 
-\item{initial}{Positive initial component multipliers.}
+\item{initial}{Plain positive numeric component multipliers, scalar or one
+per component.}
 
-\item{component_names}{Optional component names.}
+\item{component_names}{Optional plain character vector of unique nonempty
+component names.}
 }
 \value{
-An `rqr_evolution` specification.
+An exact fixed-template \code{rqr_evolution} specification. The component
+multipliers are subsequently learned by \code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}}.
 }
 \description{
-Defines `W_t = blockdiag(q_1 Q_1t, ..., q_J Q_Jt)` with fixed positive-
+Defines \verb{W_t = blockdiag(q_1 Q_1t, ..., q_J Q_Jt)} with fixed positive-
 definite templates and shared inverse-Gamma component multipliers across the
 two exchangeable roots. This is distinct from adaptive discount recursion.
+Each component template is a symmetric positive-definite \verb{d_j x d_j}
+matrix or \verb{d_j x d_j x T} cube. All nonconstant cubes must have the same
+number of slices; one-slice templates are reused over time. Component order
+is part of the transition contract.
 }
+\examples{
+evolution <- rqr_evolution_component_scale(
+  templates = list(diag(2), matrix(1, 1, 1)),
+  component_dims = c(2L, 1L),
+  prior = list(shape = c(2, 3), rate = c(1, 1)),
+  component_names = c("trend", "regression")
+)
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

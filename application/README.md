@@ -24,8 +24,161 @@ layer for the standalone article.
 
 Install and run the native gates from the repository root:
 
+    make package-document
     make package-install
     make test-native
+
+`make package-document` regenerates both the Rcpp registration wrappers and
+the roxygen2 namespace/help files. Commit those generated files with their
+source changes; CI reruns the target and rejects any drift.
+
+## Ordinary zero-tilt RQR version 1
+
+The fixed-design sampler, ridge/full-Gaussian/RHS-NS priors, missing-response
+contract, checkpoint continuation, frozen-DESN wrapper, and future-design
+contracts are native to `rqrgibbs`. Promotion-grade DESN validation first
+materializes one D02 design without fitting a readout:
+
+    export RQR_EXPECTED_PRIMARY_COMMIT="$(git rev-parse HEAD)"
+    make materialize-ordinary-v1-desn
+    make preflight-ordinary-v1
+    make reference-ordinary-v1
+    make test-ordinary-v1-dlm-companion
+    export RQR_DLM_REFERENCE_DIR="/path/to/dlm-reference"
+    export RQR_DLM_WAVE1_M01_DIR="/path/to/wave1-M01"
+    export RQR_DLM_WAVE1_M02_DIR="/path/to/wave1-M02"
+    export RQR_DLM_WAVE2_M01_DIR="/path/to/wave2-M01"
+    export RQR_DLM_WAVE2_M02_DIR="/path/to/wave2-M02"
+    export RQR_DLM_HORIZON_M03_DIR="/path/to/horizon-M03"
+    export RQR_DLM_RESOURCE_ENVELOPE_DIR="/path/to/resource-envelope"
+    export RQR_ORDINARY_V1_DLM_COMPANION_OUTPUT_DIR="/new/ignored/path"
+    make bundle-ordinary-v1-dlm-companion
+    RQR_ORDINARY_V1_BENCHMARK_CONFIRM=I_CONFIRM_ORDINARY_V1_ONE_CELL_BENCHMARK \
+      make benchmark-ordinary-v1-one-cell
+    make test-ordinary-v1-monitor
+
+The versioned fitted/output surface is:
+
+| Family | Fit | Posterior root draws | Interval/root evaluation |
+|---|---|---|---|
+| Fixed design | `rqrgibbs_static_fit/1.2.0` | `rqrgibbs_static_draws/1.0.0` | `rqrgibbs_interval_prediction/2.0.0` |
+| Frozen-design DESN readout | `rqrgibbs_desn_fit/1.2.0` | `rqrgibbs_desn_draws/1.0.0` | `rqrgibbs_desn_prediction/1.0.0` |
+| DLM | `rqrgibbs_fit/1.14.0` | `rqrgibbs_dlm_draws/1.0.0` | `rqrgibbs_dlm_prediction/1.0.0` fitted; `rqrgibbs_dlm_forecast/1.0.0` future |
+
+Static output provenance is further typed by
+`rqrgibbs_static_draw_source/1.0.0`,
+`rqrgibbs_static_draw_selection/1.0.0`, and
+`rqrgibbs_static_prediction_source/1.0.0`. DLM output provenance is typed by
+`rqrgibbs_dlm_draw_source/1.0.0`, `rqrgibbs_dlm_rng_binding/1.0.0`,
+`rqrgibbs_dlm_forecast_source/1.0.0`, and
+`rqrgibbs_dlm_future_contract/1.0.0`. DESN draws use
+`rqrgibbs_desn_draw_source/1.0.0`. The DESN surface is deliberately a readout
+conditional on a frozen deterministic feature design; it does not construct
+or refit a reservoir during MCMC. Every listed output describes interval-root
+functionals under a loss-based generalized posterior, not response draws.
+
+The materializer loads both packages only from exact archive-built isolated
+runtimes, guards the protected exdqlm checkout including ignored files, and
+writes a receipt-v3 design plus compact hashes below ignored directories. The
+receipt explicitly records source/runtime lineage, the
+materializer-argument digest, and the complete materialized-payload digest;
+the tracked configuration and compact evidence retain the raw effective
+arguments and seed. The wrapper discovers the unique design for the current
+source SHA in `reference-only`, `benchmark-one-cell`, and `execute-bounded`;
+an explicit `RQR_ORDINARY_V1_ATTESTED_DESN_DESIGN_RDS` can override discovery.
+
+The four validator modes are `preflight`, `reference-only`,
+`benchmark-one-cell`, and `execute-bounded`. BENCH01 is exactly four D02 DESN
+fixed-shoulder RHS-NS chains under the normalized learned rate. It is a
+resource/mechanics benchmark, not part of the 48-fit grid or a scientific
+pilot, and it requires the exact confirmation shown above while bounded
+execution remains disabled.
+
+`reference-only` makes eight explicit top-level fit calls: four learned-rate
+F01 ridge chains for the sampler-to-quadrature oracle and four tiny attested
+DESN reference fits. Source-bound test files also exercise additional tiny
+fits and continuations; those internal calls are intentionally identified as
+uninstrumented rather than folded into the top-level fit count.
+
+BENCH01 and the protected-DLM companion are generated from the reviewed,
+execution-disabled source candidate. A later authorization commit may change
+only the execution flag and the recorded reviewed SHA, after which the exact
+primary runtime is rebuilt and `reference-only` is regenerated at that
+authorization commit. Before the 48-fit grid starts, the runner verifies the
+candidate benchmark through the strict flag-only source delta, unchanged
+package/toolchain contract, exact pinned exdqlm runtime, hashes, and attested
+D02 design. The primary runtime-tree digest is allowed to change across the
+two exact builds because its lineage records different source commits. The
+refreshed reference bundle must instead match the authorization runtime and
+toolchain exactly.
+
+The companion-v2 collector binds seven independently completed DLM evidence
+roles: the reference suite, wave-1 M01 and M02, wave-2 M01 and M02, the
+horizon-M03 checks, and the resource envelope. It validates 55 input artifacts
+against 23 semantic gates, does not fit a model or deserialize/copy heavy RDS
+inputs, and publishes exactly five compact files under the new ignored output
+directory. Each role must be supplied separately through the environment
+variables shown above; substituting one wave directory for another is rejected.
+Every M01 fit is bound to a complete independently frozen role contract. The
+static-regression and local-level full digests differ only because their
+collapsed coordinates are named `regression` and `level`; cross-wave agreement
+uses a versioned invariant that excludes only this label. The independently
+hashed resource toolchain must also match the reference
+R/compiler/BLAS/LAPACK and shared-package facts exactly.
+
+Bounded execution remains disabled in source candidates. Authorization uses
+two commits: a reviewed, fail-closed implementation commit and a later
+config-only commit that changes only the execution flag and records the
+reviewed implementation SHA. The runner reconstructs and verifies that entire
+delta before it can accept `RQR_ORDINARY_V1_CONFIRM=YES`.
+
+Final authorization also requires the exact hashed reference bundle and both
+benchmark bundles, together with the compact protected-DLM companion. Their
+locations are supplied through
+`RQR_ORDINARY_V1_REFERENCE_DIR`, `RQR_ORDINARY_V1_BENCHMARK_DIR`, and
+`RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR`; the companion is supplied through
+`RQR_ORDINARY_V1_DLM_COMPANION_DIR`. The benchmark output binds four
+passing fits, diagnostics, DESN training provenance, conditional future-root
+contract evidence, and local chain hashes; its monitor bundle binds sampled
+resources, wrapper closeout, and the wrapper artifact manifest.
+Bounded execution retains an exact validated copy of the companion's five
+compact files under `protected_dlm_companion/`. Successful mode outputs use
+closed filename sets, and the wrapper rehashes every R-output byte after the R
+process exits. Failed modes may publish only a mode-specific compact subset
+with valid terminal failure/status rows; approved progress tables and partial
+companion bytes remain recursively hash-bound. The monitor directory itself
+is closed to five declared pre-manifest files plus its final wrapper manifest,
+and the ten-scenario fault suite rejects hidden additions and filenames that
+imitate atomic-manifest temporaries.
+
+Per-fit provenance remains strict. Native fixed-design fits bind only the
+isolated primary runtime and require no external repository. Promotion-grade
+D02 DESN fits require exactly the pinned isolated exdqlm runtime and a
+receipt-v3 design reverified against that executing runtime.
+
+The receipt-v3 object attests the materialized training design. A versioned
+future-design object separately validates the parent feature schema, feature
+order, declared precomputed/teacher-forced/external-driver semantics, and
+future-row content digest. It does not attest the process that generated those
+future rows, and the training receipt does not transfer to them. Until a
+future-specific materialization receipt is available, returned DESN
+future-root functionals are nonpromotable even when their future contract
+validates. Bounded future checks concern conditional root propagation on
+frozen rows, not scientific forecast provenance and not future responses.
+
+Exact static continuation is available through `rqr_mcmc_continue()`.
+Continuation-only initialization fields cannot be injected through
+`rqr_mcmc_fit()`: a private token-bound worker is reached only after checkpoint
+and continuation-history validation. Unknown or ambiguous `init` and
+`mcmc_control` fields fail instead of being silently ignored.
+
+`lambda_initial` and fresh observed-site `latent_v` values initialize a valid
+scan but are not separate overdispersed-start dimensions. The mandatory
+learned-rate sweep first redraws the rate from its collapsed conditional and
+then refreshes every observed latent scale; fixed-rate sweeps also refresh
+those scales before the first root update. The four-chain initialization
+profiles therefore disperse root coefficients and, where applicable, complete
+RHS-NS prior states.
 
 The pseudo-AL representation augments a loss and is not a response likelihood.
 The fixed-W, discount-template, and component-scale modes are exact for their
@@ -44,12 +197,14 @@ The default numerical policy fails on any Gaussian factorization requiring
 repair, including a negative-eigenvalue projection. The optional audit policy
 records each repair. Mathematical/numerical eligibility is separate from
 reproducibility eligibility; promotion additionally requires a clean checkout
-at an explicitly expected commit. Full state-path storage defaults to off;
-when it is enabled, exact fixed-W and frozen-template fits complete each
-retained path with a draw from the Gaussian time-zero conditional. Component-
-scale fits retain the same time-zero states because their innovation-scale
-update conditions on them.
-terminal state draws remain available to `rqr_forecast_roots()`, which can use
+at an explicitly expected commit. Full state-path storage defaults to off, but
+storage never changes the Markov transition or RNG stream. Every accepted
+exact DLM mode (fixed W, frozen discount template, and component scale)
+completes and retains the Gaussian time-zero state for both roots;
+`store_state_draws` controls only the full `p x T` path arrays. The
+experimental adaptive working mode omits time-zero completion and records that
+omission in its transition contract. Terminal state draws remain available to
+`rqr_forecast_roots()`, which can use
 either explicit future covariances or saved component-scale draws with fixed
 future templates. Fit objects include a versioned provenance and RNG
 checkpoint. `rqr_dlm_continue()` verifies schema, checkpoint integrity,
@@ -64,12 +219,14 @@ repair totals, exactness, reproducibility, promotion, and the mismatch ledger
 across every generation. `backend="auto"` records both the requested and
 resolved backend. Promotion requires the executing `rqrgibbs` namespace to
 come from a verified isolated-runtime attestation; direct `pkgload` execution
-is exploratory or test-only.
-RQR-DESN and RHS promotion also requires the executing exdqlm namespace to
-match an isolated-library attestation for the clean pinned source. A direct
-source-tree namespace is intentionally ineligible. Run `make
-prepare-primary-runtime` and `make prepare-exdqlm-runtime` with the reviewed
-primary commit in `RQR_EXPECTED_PRIMARY_COMMIT`. Version-5 attestations
+is exploratory or test-only. Native fixed-design inference, native RHS-NS
+updates, and a fit conditional on a serialized `rqr_desn_design` do not load
+exdqlm. Only the optional exdqlm reference materializer requires an
+isolated-library attestation for the clean pinned source; a namespace loaded
+from that source checkout is intentionally ineligible. Run `make
+prepare-primary-runtime` and, when using that materializer,
+`make prepare-exdqlm-runtime` with the reviewed primary commit in
+`RQR_EXPECTED_PRIMARY_COMMIT`. Version-5 attestations
 reconstruct and compare each archive entry's Git mode, blob identifier, and
 path with the declared commit tree, compare the complete expected and built
 source-package file sets, rehash post-command build and installation receipts

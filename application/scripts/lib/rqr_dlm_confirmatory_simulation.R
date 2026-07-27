@@ -2561,6 +2561,7 @@ rqr_confirm_toolchain_manifest <- function() {
   values <- c(
     R_version = R.version.string,
     platform = R.version$platform,
+    R_compiler = as.character(R.version$compiler %||% "unavailable"),
     architecture = R.version$arch,
     operating_system = R.version$os,
     CC = r_config("CC"),
@@ -3480,9 +3481,43 @@ rqr_confirm_dynamic_fit <- function(
     )
   )
   interval <- predict_interval(fit)
+  transition_kernel <- fit$checkpoint_state$transition_kernel
+  transition_kernel_digest <- fit$checkpoint_state$transition_kernel_digest
+  expected_partial_collapse <- component_evolution_method &&
+    isTRUE(
+      contract$config$frozen_tuning$
+        component_scale_kernel$one_root_partially_collapsed
+    )
+  transition_contract_valid <-
+    identical(
+      fit$checkpoint_state$transition_kernel_schema,
+      "rqrgibbs_dlm_transition_kernel/1.0.0"
+    ) &&
+    is.character(transition_kernel_digest) &&
+    length(transition_kernel_digest) == 1L &&
+    grepl("^[0-9a-f]{64}$", transition_kernel_digest) &&
+    identical(
+      transition_kernel_digest,
+      fit$model_spec$transition_kernel_digest
+    ) &&
+    identical(
+      transition_kernel,
+      fit$model_spec$transition_kernel
+    ) &&
+    identical(
+      isTRUE(transition_kernel$one_root_partially_collapsed),
+      expected_partial_collapse
+    ) &&
+    identical(
+      transition_kernel$collapsed_integrated_root,
+      if (expected_partial_collapse) "root1" else "none"
+    )
   if (fit$model_spec$numerical_repair_count != 0L ||
+      fit$model_spec$cumulative_numerical_repair_count != 0L ||
       forecast$diagnostics$repair_count != 0L ||
       !isTRUE(fit$model_spec$exact_joint_target) ||
+      !isTRUE(fit$model_spec$target_numerical_eligible) ||
+      !isTRUE(transition_contract_valid) ||
       any(!is.finite(c(
         interval$lower_mean, interval$upper_mean,
         forecast$lower_mean, forecast$upper_mean
@@ -3497,8 +3532,17 @@ rqr_confirm_dynamic_fit <- function(
     future_upper = forecast$upper_mean,
     fit = fit, forecast = forecast,
     diagnostics = list(
-      numerical_repairs = 0L,
-      exact_joint_target = TRUE,
+      numerical_repairs = fit$model_spec$numerical_repair_count,
+      cumulative_numerical_repairs =
+        fit$model_spec$cumulative_numerical_repair_count,
+      exact_joint_target = isTRUE(fit$model_spec$exact_joint_target),
+      target_numerical_eligible =
+        isTRUE(fit$model_spec$target_numerical_eligible),
+      transition_kernel_schema =
+        fit$checkpoint_state$transition_kernel_schema,
+      transition_kernel_digest = transition_kernel_digest,
+      one_root_partially_collapsed =
+        isTRUE(transition_kernel$one_root_partially_collapsed),
       promotion_eligible =
         isTRUE(fit$provenance$reproducibility_eligible),
       profile = profile_name,
@@ -3570,6 +3614,16 @@ rqr_confirm_fixed_design <- function(
   )
   training <- predict_interval(fit, X_new = X)
   future <- predict_interval(fit, X_new = X_future)
+  fixed_exact <- identical(fit$model_spec$numerical_repair_count, 0L) &&
+    identical(fit$model_spec$cumulative_numerical_repair_count, 0L) &&
+    isTRUE(fit$model_spec$exact_joint_target) &&
+    isTRUE(fit$model_spec$target_numerical_eligible)
+  if (!fixed_exact) {
+    stop(
+      "The fixed-design RQR fit failed its exact numerical contract.",
+      call. = FALSE
+    )
+  }
   list(
     training_lower = training$lower_mean,
     training_upper = training$upper_mean,
@@ -3578,7 +3632,11 @@ rqr_confirm_fixed_design <- function(
     fit = fit,
     diagnostics = list(
       numerical_repairs = fit$model_spec$numerical_repair_count,
-      exact_joint_target = TRUE,
+      cumulative_numerical_repairs =
+        fit$model_spec$cumulative_numerical_repair_count,
+      exact_joint_target = isTRUE(fit$model_spec$exact_joint_target),
+      target_numerical_eligible =
+        isTRUE(fit$model_spec$target_numerical_eligible),
       promotion_eligible =
         isTRUE(fit$provenance$reproducibility_eligible)
     )
@@ -3839,6 +3897,31 @@ rqr_confirm_dynamic_quantile <- function(
     lower = as.numeric(forecasts[[1L]]$ff),
     upper = as.numeric(forecasts[[2L]]$ff)
   )
+  state_dimensions <- lapply(fits, function(fit) {
+    as.integer(dim(unclass(fit$samp.theta)))
+  })
+  scale_draw_lengths <- vapply(
+    fits, function(fit) length(fit$samp.sigma), integer(1L)
+  )
+  schedule_applied <- all(vapply(
+    seq_along(fits),
+    function(index) {
+      dimensions <- state_dimensions[[index]]
+      length(dimensions) == 3L &&
+        identical(dimensions[[2L]], as.integer(generated$T)) &&
+        identical(dimensions[[3L]], as.integer(schedule$retain)) &&
+        identical(
+          scale_draw_lengths[[index]], as.integer(schedule$retain)
+        )
+    },
+    logical(1L)
+  )) && identical(as.integer(schedule$thin), 1L)
+  if (!schedule_applied) {
+    stop(
+      "The exdqlm fit did not realize the frozen endpoint schedule.",
+      call. = FALSE
+    )
+  }
   list(
     training_raw_lower = raw_training[, 1L],
     training_raw_upper = raw_training[, 2L],
@@ -3862,6 +3945,14 @@ rqr_confirm_dynamic_quantile <- function(
       ),
       initialization_contract =
         "target_preserving_precomputed_mcmc_state",
+      schedule = list(
+        burn = as.integer(schedule$burn),
+        retain = as.integer(schedule$retain),
+        thin = as.integer(schedule$thin)
+      ),
+      schedule_applied = schedule_applied,
+      state_draw_dimensions = state_dimensions,
+      scale_draw_lengths = scale_draw_lengths,
       common_target_digest = common_target_digest,
       profile_changed_target = FALSE,
       response_predictive_draws = FALSE

@@ -12,7 +12,7 @@ rqr_residual_product(y, eta1, eta2)
 \item{eta1, eta2}{Numeric root ordinates.}
 }
 \value{
-Numeric vector `(y - eta1) * (y - eta2)`.
+Numeric vector \code{(y - eta1) * (y - eta2)}.
 }
 \description{
 RQR root residual product

@@ -36,15 +36,156 @@
   }
 }
 
-.rqr_filter_log_marginal_r <- function(
+.rqr_resolve_filter_backend <- function(backend = c("cpp", "R", "auto")) {
+  backend <- match.arg(backend)
+  cpp_available <- exists("rqr_filter_log_marginal_cpp", mode = "function")
+  if (identical(backend, "cpp") && !cpp_available) {
+    stop("Compiled filter-log-marginal backend is unavailable.", call. = FALSE)
+  }
+  if (identical(backend, "auto")) {
+    if (cpp_available) "cpp" else "R"
+  } else {
+    backend
+  }
+}
+
+.rqr_validate_filter_covariance <- function(
+    x, name, tolerance = 100 * .Machine$double.eps) {
+  x <- .rqr_validate_symmetric_matrix(x, name, tolerance)
+  eigenvalues <- tryCatch(
+    eigen(x, symmetric = TRUE, only.values = TRUE)$values,
+    error = function(e) {
+      stop(
+        sprintf("Symmetric eigendecomposition failed for %s.", name),
+        call. = FALSE
+      )
+    }
+  )
+  eigen_scale <- max(abs(eigenvalues))
+  if (eigen_scale > 0 &&
+      min(eigenvalues) / eigen_scale < -tolerance) {
+    stop(sprintf("%s is materially indefinite.", name), call. = FALSE)
+  }
+  x
+}
+
+.rqr_ffbs_validate_covariance <- function(
+    x, name, numerical_policy, jitter_ladder,
+    reference_scale = NULL,
+    tolerance = 100 * .Machine$double.eps) {
+  x <- .rqr_validate_symmetric_matrix(x, name, tolerance)
+  eig <- tryCatch(
+    eigen(x, symmetric = TRUE),
+    error = function(e) {
+      stop(
+        sprintf("Symmetric eigendecomposition failed for %s.", name),
+        call. = FALSE
+      )
+    }
+  )
+  values <- eig$values
+  eigen_scale <- max(abs(values))
+  if (is.null(reference_scale)) {
+    reference_scale <- eigen_scale
+  } else {
+    reference_scale <- as.numeric(reference_scale)
+    if (length(reference_scale) != 1L || !is.finite(reference_scale) ||
+        reference_scale < 0) {
+      stop("Covariance reference_scale must be finite and nonnegative.",
+           call. = FALSE)
+    }
+    reference_scale <- max(reference_scale, eigen_scale)
+  }
+  minimum <- min(values)
+  base_info <- list(
+    strategy = "validated_psd",
+    jitter = 0,
+    relative_jitter = 0,
+    min_eigenvalue = minimum,
+    clamped_eigenvalues = 0L,
+    roundoff_clamped_eigenvalues = 0L,
+    matrix_scale = max(abs(x)),
+    jitter_scale = max(abs(x)),
+    absolute_jitter_fallback = FALSE
+  )
+  if (minimum >= 0) {
+    return(list(matrix = x, info = base_info))
+  }
+  near_psd <- reference_scale == 0 ||
+    minimum / reference_scale >= -tolerance
+  if (near_psd) {
+    clamped <- pmax(values, 0)
+    normalized <- .rqr_symmetrize(
+      eig$vectors %*% (clamped * t(eig$vectors))
+    )
+    base_info$strategy <- "psd_roundoff"
+    base_info$roundoff_clamped_eigenvalues <- sum(values < 0)
+    return(list(matrix = normalized, info = base_info))
+  }
+  if (identical(numerical_policy, "fail")) {
+    stop(
+      sprintf(
+        paste0(
+          "%s has a negative eigenvalue, and covariance repair is ",
+          "disabled under numerical_policy='fail'."
+        ),
+        name
+      ),
+      call. = FALSE
+    )
+  }
+  factor <- .rqr_chol_with_jitter(x, jitter_ladder)
+  list(
+    matrix = factor$matrix,
+    info = list(
+      strategy = "cholesky_jitter",
+      jitter = factor$jitter,
+      relative_jitter = factor$relative_jitter,
+      min_eigenvalue = factor$min_eigenvalue,
+      clamped_eigenvalues = 0L,
+      roundoff_clamped_eigenvalues = 0L,
+      matrix_scale = factor$matrix_scale,
+      jitter_scale = factor$jitter_scale,
+      absolute_jitter_fallback = factor$absolute_jitter_fallback
+    )
+  )
+}
+
+.rqr_prepare_filter_log_marginal <- function(
     z, H, V, GG, m0, C0, evolution) {
   z <- as.numeric(z)
-  H <- as.matrix(H)
-  V <- as.numeric(V)
+  if (!length(z) || any(is.nan(z)) || any(is.infinite(z))) {
+    stop(
+      "z must be nonempty and may contain finite values or NA only.",
+      call. = FALSE
+    )
+  }
   m0 <- as.numeric(m0)
+  if (!length(m0) || any(!is.finite(m0))) {
+    stop("m0 must be a nonempty finite vector.", call. = FALSE)
+  }
   p <- length(m0)
   n_time <- length(z)
+  H <- .rqr_expand_columns(H, n_time, "H")
+  if (!identical(dim(H), c(p, n_time)) || any(!is.finite(H))) {
+    stop(
+      "H must be a finite p x length(z) matrix after expansion.",
+      call. = FALSE
+    )
+  }
+  V <- as.numeric(V)
+  if (length(V) != n_time || any(!is.finite(V)) || any(V <= 0)) {
+    stop("V must be finite, positive, and length(z).", call. = FALSE)
+  }
   GG <- .rqr_expand_cube(GG, n_time, p, "GG")
+  if (any(!is.finite(GG))) {
+    stop("GG must contain only finite values.", call. = FALSE)
+  }
+  C0 <- as.matrix(C0)
+  if (!identical(dim(C0), c(p, p))) {
+    stop("C0 dimensions must match length(m0).", call. = FALSE)
+  }
+  C0 <- .rqr_validate_filter_covariance(C0, "C0")
   evo <- .rqr_prepare_evolution(evolution, p, n_time)
   if (!identical(evo$mode_code, 0L)) {
     stop(
@@ -52,14 +193,39 @@
       call. = FALSE
     )
   }
+  list(
+    z = z,
+    H = H,
+    V = V,
+    GG = GG,
+    m0 = m0,
+    C0 = C0,
+    W = evo$W
+  )
+}
+
+.rqr_filter_log_marginal_r_prepared <- function(prepared) {
+  z <- prepared$z
+  H <- prepared$H
+  V <- prepared$V
+  GG <- prepared$GG
+  m0 <- prepared$m0
+  C0 <- prepared$C0
+  W <- prepared$W
+  p <- length(m0)
+  n_time <- length(z)
+  identity <- diag(1, p)
   m_previous <- m0
-  C_previous <- .rqr_symmetrize(C0)
+  C_previous <- C0
   log_marginal <- 0
   for (tt in seq_len(n_time)) {
     a <- drop(GG[, , tt] %*% m_previous)
-    R <- .rqr_symmetrize(
-      GG[, , tt] %*% C_previous %*% t(GG[, , tt]) +
-        evo$W[, , tt]
+    R <- .rqr_validate_filter_covariance(
+      .rqr_symmetrize(
+        GG[, , tt] %*% C_previous %*% t(GG[, , tt]) +
+          W[, , tt]
+      ),
+      sprintf("forecast covariance at time %d", tt)
     )
     m <- a
     C <- R
@@ -78,7 +244,15 @@
         log(2 * pi) + log(q) + residual^2 / q
       )
       m <- a + rh * residual / q
-      C <- .rqr_symmetrize(R - tcrossprod(rh) / q)
+      gain <- rh / q
+      update <- identity - tcrossprod(gain, h)
+      C <- .rqr_validate_filter_covariance(
+        .rqr_symmetrize(
+          update %*% R %*% t(update) +
+            V[[tt]] * tcrossprod(gain)
+        ),
+        sprintf("filtered covariance at time %d", tt)
+      )
     }
     if (any(!is.finite(c(m, C)))) {
       stop("Nonfinite filter-log-marginal recursion.", call. = FALSE)
@@ -92,52 +266,28 @@
   as.numeric(log_marginal)
 }
 
+.rqr_filter_log_marginal_r <- function(
+    z, H, V, GG, m0, C0, evolution) {
+  prepared <- .rqr_prepare_filter_log_marginal(
+    z, H, V, GG, m0, C0, evolution
+  )
+  .rqr_filter_log_marginal_r_prepared(prepared)
+}
+
 .rqr_filter_log_marginal <- function(
     z, H, V, GG, m0, C0, evolution,
     backend = c("cpp", "R", "auto")) {
-  backend <- .rqr_resolve_ffbs_backend(match.arg(backend))
-  z <- as.numeric(z)
-  if (!length(z) || any(is.nan(z)) || any(is.infinite(z))) {
-    stop(
-      "z must be nonempty and may contain finite values or NA only.",
-      call. = FALSE
-    )
-  }
-  m0 <- as.numeric(m0)
-  if (!length(m0) || any(!is.finite(m0))) {
-    stop("m0 must be a nonempty finite vector.", call. = FALSE)
-  }
-  p <- length(m0)
-  n_time <- length(z)
-  H <- .rqr_expand_columns(H, n_time, "H")
-  V <- as.numeric(V)
-  if (length(V) != n_time || any(!is.finite(V)) || any(V <= 0)) {
-    stop("V must be finite, positive, and length(z).", call. = FALSE)
-  }
-  GG <- .rqr_expand_cube(GG, n_time, p, "GG")
-  if (any(!is.finite(GG))) {
-    stop("GG must contain only finite values.", call. = FALSE)
-  }
-  C0 <- .rqr_validate_symmetric_matrix(C0, "C0")
-  if (!all(dim(C0) == c(p, p))) {
-    stop("C0 dimensions must match length(m0).", call. = FALSE)
-  }
-  .rqr_chol_with_jitter(C0, jitter_ladder = 0)
-  evo <- .rqr_prepare_evolution(evolution, p, n_time)
-  if (!identical(evo$mode_code, 0L)) {
-    stop(
-      "The filter log marginal requires a fixed covariance cube.",
-      call. = FALSE
-    )
-  }
-  if (identical(backend, "cpp")) {
-    return(as.numeric(rqr_filter_log_marginal_cpp(
-      z, H, V, GG, m0, C0, evo$W
-    )))
-  }
-  .rqr_filter_log_marginal_r(
+  backend <- .rqr_resolve_filter_backend(match.arg(backend))
+  prepared <- .rqr_prepare_filter_log_marginal(
     z, H, V, GG, m0, C0, evolution
   )
+  if (identical(backend, "cpp")) {
+    return(as.numeric(rqr_filter_log_marginal_cpp(
+      prepared$z, prepared$H, prepared$V, prepared$GG,
+      prepared$m0, prepared$C0, prepared$W
+    )))
+  }
+  .rqr_filter_log_marginal_r_prepared(prepared)
 }
 
 .rqr_ffbs_r <- function(z, H, V, GG, m0, C0, evolution, sample = FALSE,
@@ -164,6 +314,8 @@
   jitter_ladder <- .rqr_jitter_ladder(numerical_policy, jitter_ladder)
   repair_records <- .rqr_empty_repair_records()
   jitter_used <- numeric(0)
+  roundoff_psd_count <- 0L
+  identity <- diag(1, p)
   m_prev <- as.numeric(m0)
   C_prev <- .rqr_symmetrize(C0)
   for (tt in seq_len(n_time)) {
@@ -171,34 +323,46 @@
     a[, tt] <- drop(gt %*% m_prev)
     P <- .rqr_symmetrize(gt %*% C_prev %*% t(gt))
     Wt <- if (evo$mode_code == 0L) evo$W[, , tt] else .rqr_symmetrize(evo$D * P)
-    R[, , tt] <- .rqr_symmetrize(P + Wt)
+    forecast <- .rqr_ffbs_validate_covariance(
+      .rqr_symmetrize(P + Wt),
+      sprintf("forecast covariance at time %d", tt),
+      numerical_policy, jitter_ladder
+    )
+    R[, , tt] <- forecast$matrix
+    jitter_used <- c(jitter_used, forecast$info$jitter)
+    roundoff_psd_count <- roundoff_psd_count +
+      forecast$info$roundoff_clamped_eigenvalues
+    repair_records <- .rqr_add_repair_record(
+      repair_records, "forecast_covariance", tt, forecast$info
+    )
     if (!is.na(z[tt])) {
       h <- H[, tt]
       rh <- drop(R[, , tt] %*% h)
       q[tt] <- drop(crossprod(h, rh)) + V[tt]
       if (!is.finite(q[tt]) || q[tt] <= 0) stop(sprintf("Nonpositive forecast variance at time %d.", tt), call. = FALSE)
       residual[tt] <- z[tt] - drop(crossprod(h, a[, tt]))
-      m[, tt] <- a[, tt] + rh * residual[tt] / q[tt]
-      C[, , tt] <- .rqr_symmetrize(R[, , tt] - tcrossprod(rh) / q[tt])
+      gain <- rh / q[tt]
+      m[, tt] <- a[, tt] + gain * residual[tt]
+      update <- identity - tcrossprod(gain, h)
+      filtered <- .rqr_ffbs_validate_covariance(
+        .rqr_symmetrize(
+          update %*% R[, , tt] %*% t(update) +
+            V[tt] * tcrossprod(gain)
+        ),
+        sprintf("filtered covariance at time %d", tt),
+        numerical_policy, jitter_ladder
+      )
+      C[, , tt] <- filtered$matrix
+      jitter_used <- c(jitter_used, filtered$info$jitter)
+      roundoff_psd_count <- roundoff_psd_count +
+        filtered$info$roundoff_clamped_eigenvalues
+      repair_records <- .rqr_add_repair_record(
+        repair_records, "filter_covariance", tt, filtered$info
+      )
     } else {
       m[, tt] <- a[, tt]
       C[, , tt] <- R[, , tt]
     }
-    # Fail early on a materially indefinite covariance.
-    fac <- .rqr_chol_with_jitter(C[, , tt], jitter_ladder)
-    jitter_used <- c(jitter_used, fac$jitter)
-    repair_records <- .rqr_add_repair_record(
-      repair_records, "filter_covariance", tt,
-      list(
-        strategy = "cholesky_jitter", jitter = fac$jitter,
-        relative_jitter = fac$relative_jitter,
-        min_eigenvalue = fac$min_eigenvalue, matrix_scale = fac$matrix_scale,
-        jitter_scale = fac$jitter_scale,
-        absolute_jitter_fallback = fac$absolute_jitter_fallback,
-        clamped_eigenvalues = 0L
-      )
-    )
-    C[, , tt] <- fac$matrix
     m_prev <- m[, tt]
     C_prev <- C[, , tt]
   }
@@ -223,7 +387,23 @@
       )
       B <- C[, , tt] %*% t(GG[, , tt + 1L]) %*% invR
       sm[, tt] <- m[, tt] + B %*% (sm[, tt + 1L] - a[, tt + 1L])
-      sC[, , tt] <- .rqr_symmetrize(C[, , tt] + B %*% (sC[, , tt + 1L] - Rstar) %*% t(B))
+      smoother_increment <-
+        B %*% (sC[, , tt + 1L] - Rstar) %*% t(B)
+      smoother <- .rqr_ffbs_validate_covariance(
+        .rqr_symmetrize(C[, , tt] + smoother_increment),
+        sprintf("smoother covariance at time %d", tt),
+        numerical_policy, jitter_ladder,
+        reference_scale = max(
+          abs(C[, , tt]), abs(smoother_increment)
+        )
+      )
+      sC[, , tt] <- smoother$matrix
+      jitter_used <- c(jitter_used, smoother$info$jitter)
+      roundoff_psd_count <- roundoff_psd_count +
+        smoother$info$roundoff_clamped_eigenvalues
+      repair_records <- .rqr_add_repair_record(
+        repair_records, "smoother_covariance", tt, smoother$info
+      )
     }
   }
   path <- NULL
@@ -235,6 +415,8 @@
     )
     path[, n_time] <- last_draw$draw
     jitter_used <- c(jitter_used, last_draw$info$jitter)
+    roundoff_psd_count <- roundoff_psd_count +
+      last_draw$info$roundoff_clamped_eigenvalues
     repair_records <- .rqr_add_repair_record(
       repair_records, "terminal_draw_covariance", n_time, last_draw$info
     )
@@ -257,12 +439,29 @@
         )
         B <- C[, , tt] %*% t(GG[, , tt + 1L]) %*% chol2inv(facR$chol)
         h <- m[, tt] + B %*% (path[, tt + 1L] - a[, tt + 1L])
-        HC <- .rqr_symmetrize(C[, , tt] - B %*% Rstar %*% t(B))
+        backward_reduction <- B %*% Rstar %*% t(B)
+        backward <- .rqr_ffbs_validate_covariance(
+          .rqr_symmetrize(C[, , tt] - backward_reduction),
+          sprintf("backward conditional covariance at time %d", tt),
+          numerical_policy, jitter_ladder,
+          reference_scale = max(
+            abs(C[, , tt]), abs(backward_reduction)
+          )
+        )
+        HC <- backward$matrix
+        jitter_used <- c(jitter_used, backward$info$jitter)
+        roundoff_psd_count <- roundoff_psd_count +
+          backward$info$roundoff_clamped_eigenvalues
+        repair_records <- .rqr_add_repair_record(
+          repair_records, "backward_draw_covariance", tt, backward$info
+        )
         state_draw <- .rqr_sample_mvnorm_covariance(
           h, HC, jitter_ladder, numerical_policy
         )
         path[, tt] <- state_draw$draw
         jitter_used <- c(jitter_used, state_draw$info$jitter)
+        roundoff_psd_count <- roundoff_psd_count +
+          state_draw$info$roundoff_clamped_eigenvalues
         repair_records <- .rqr_add_repair_record(
           repair_records, "backward_draw_covariance", tt, state_draw$info
         )
@@ -279,6 +478,7 @@
       backend = "R", evolution_mode = evo$mode,
       max_jitter = max(jitter_used, 0), jitter_count = sum(jitter_used > 0),
       psd_draw_count = psd_draw_count,
+      roundoff_psd_count = roundoff_psd_count,
       numerical_policy = numerical_policy,
       repair_count = nrow(repair_records),
       repair_records = repair_records,
@@ -352,17 +552,52 @@
 
 #' Filter and smooth a scalar-observation Gaussian state-space model
 #'
-#' @param z Pseudo-observation vector; `NA` denotes a missing observation.
-#' @param H State-by-time observation design.
-#' @param V Positive observation variances.
-#' @param GG Evolution matrix or cube.
-#' @param m0,C0 Initial state prior.
-#' @param evolution Evolution specification.
-#' @param backend One of `"cpp"`, `"R"`, or `"auto"`.
+#' For a length-`T` pseudo-observation vector and state dimension `p`, `H` must
+#' be finite `p x 1` or `p x T`; `V` must contain `T` finite positive values;
+#' `GG` must be finite `p x p` or `p x p x T`; `m0` must be a finite
+#' length-`p` vector; and `C0` must be a symmetric positive-definite `p x p`
+#' covariance. Fixed evolution covariance slices must be symmetric
+#' positive-semidefinite. Only `NA` in `z` denotes a missing measurement;
+#' `NaN` and infinite values are rejected.
+#'
+#' The public boundary never repairs `C0` or a declared evolution covariance.
+#' With `numerical_policy = "fail"`, any later covariance factorization failure
+#' stops. `"record_repair"` permits only the declared matrix-relative jitter
+#' ladder for eligible working or sampled covariances and returns every repair
+#' in `diagnostics$repair_records`.
+#'
+#' @param z Length-`T` pseudo-observation vector; `NA` alone denotes a missing
+#'   observation.
+#' @param H Finite `p x 1` or `p x T` state-by-time observation design.
+#' @param V Length-`T` finite positive observation variances.
+#' @param GG Finite `p x p` evolution matrix or `p x p x T` cube.
+#' @param m0 Finite length-`p` initial state mean.
+#' @param C0 Symmetric positive-definite `p x p` initial state covariance.
+#' @param evolution Valid RQR evolution specification with dimensions
+#'   compatible with `p` and `T`.
+#' @param backend One of `"cpp"`, `"R"`, or `"auto"`; `"auto"` uses C++ when
+#'   the registered native kernel is available.
 #' @param jitter_ladder Declared matrix-relative Cholesky jitter ladder. An
 #'   exactly zero matrix uses a separately recorded absolute fallback.
 #' @param numerical_policy Either `"fail"` or `"record_repair"`.
-#' @return Filtering and smoothing moments with numerical diagnostics.
+#' @return Filtering, prior, and smoothing means and covariance arrays,
+#'   forecast variances and residuals, a `NULL` `path`, and numerical
+#'   diagnostics including backend, evolution mode, repair count, and repair
+#'   records.
+#' @examples
+#' moments <- rqr_ffbs_smooth(
+#'   z = c(0, NA, 0.5),
+#'   H = matrix(1, 1, 1),
+#'   V = rep(1, 3),
+#'   GG = matrix(1, 1, 1),
+#'   m0 = 0,
+#'   C0 = matrix(2, 1, 1),
+#'   evolution = rqr_evolution_fixed(matrix(0.1, 1, 1)),
+#'   backend = "R",
+#'   numerical_policy = "fail"
+#' )
+#' stopifnot(is.na(moments$forecast_variance[2]))
+#' @family RQR-DLM
 #' @export
 rqr_ffbs_smooth <- function(z, H, V, GG, m0, C0, evolution,
                             backend = c("cpp", "R", "auto"),
@@ -377,7 +612,24 @@ rqr_ffbs_smooth <- function(z, H, V, GG, m0, C0, evolution,
 #' Draw a Gaussian state path by FFBS
 #'
 #' @inheritParams rqr_ffbs_smooth
-#' @return Filtering/smoothing moments and one sampled state path.
+#' @return The filtering and smoothing output from [rqr_ffbs_smooth()] plus one
+#'   sampled `p x T` state path. Numerical repairs, if permitted, are recorded
+#'   in `diagnostics$repair_records`.
+#' @examples
+#' set.seed(1)
+#' draw <- rqr_ffbs_sample(
+#'   z = c(0, NA, 0.5),
+#'   H = matrix(1, 1, 1),
+#'   V = rep(1, 3),
+#'   GG = matrix(1, 1, 1),
+#'   m0 = 0,
+#'   C0 = matrix(2, 1, 1),
+#'   evolution = rqr_evolution_fixed(matrix(0.1, 1, 1)),
+#'   backend = "R",
+#'   numerical_policy = "fail"
+#' )
+#' stopifnot(identical(dim(draw$path), c(1L, 3L)))
+#' @family RQR-DLM
 #' @export
 rqr_ffbs_sample <- function(z, H, V, GG, m0, C0, evolution,
                             backend = c("cpp", "R", "auto"),

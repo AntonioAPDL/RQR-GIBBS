@@ -32,14 +32,14 @@ rqr_dlm_fit(
 )
 }
 \arguments{
-\item{y}{Response vector. `NA` values are treated as missing observations.}
+\item{y}{Response vector. \code{NA} values are treated as missing observations.}
 
-\item{model}{An [rqr_as_dlm_model()] or exdqlm-compatible model.}
+\item{model}{An \code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}} or exdqlm-compatible model.}
 
-\item{coverage_level}{Interval coverage target in `(0,1)`.}
+\item{coverage_level}{Interval coverage target in \verb{(0,1)}.}
 
-\item{evolution_mode}{One of `"fixed_W"`, `"discount_template"`,
-`"component_scale"`, or `"adaptive_discount"`.}
+\item{evolution_mode}{One of \code{"fixed_W"}, \code{"discount_template"},
+\code{"component_scale"}, or \code{"adaptive_discount"}.}
 
 \item{evolution_spec}{Optional previously constructed evolution object. Used
 for exact continuation and overrides the other evolution arguments.}
@@ -58,40 +58,106 @@ evolution multipliers.}
 
 \item{evolution_scale_initial}{Initial positive component multipliers.}
 
-\item{learning_rate}{Fixed generalized-Bayes learning rate `omega_R`.}
+\item{learning_rate}{Fixed generalized-Bayes learning rate \code{omega_R}.}
 
 \item{lambda_initial}{Initial inverse loss scale for learned modes.}
 
-\item{loss_reference_scale}{Positive reference scale `s_L`. It does not
-alter fixed `learning_rate`; learned modes use `lambda/s_L`.}
+\item{loss_reference_scale}{Positive reference scale \code{s_L}. It does not
+alter fixed \code{learning_rate}; learned modes use \code{lambda/s_L}.}
 
-\item{learning_rate_mode}{One of `"fixed_rate"`,
-`"learned_pseudoresidual_normalized"`, or `"learned_pure"`. Legacy mode
-spellings are accepted and normalized to these names.}
+\item{learning_rate_mode}{One of \code{"fixed_rate"},
+\code{"learned_pseudoresidual_normalized"}, or \code{"learned_pure"}. Legacy mode
+spellings are accepted and normalized to these names. \code{"learned_pure"}
+remains executable only for diagnostic compatibility; it is outside the
+ordinary-v1 scope, nonpromotable, and noncontinuable.}
 
 \item{lambda_prior}{Gamma shape--rate prior without a custom power field.}
 
-\item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
+\item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 
 \item{provenance_control}{Optional primary-repository provenance plus named
-`external_repositories`. Repository specifications contain `repo_root`, a
-complete 40-character `expected_git_commit`, and optional runtime package
+\code{external_repositories}. Repository specifications contain \code{repo_root}, a
+complete 40-character \code{expected_git_commit}, and optional runtime package
 and attestation fields.}
 
-\item{mcmc_control}{Iteration, seed, storage, backend, progress, jitter, and
-optional exact partially collapsed and interwoven component-scale
-controls.}
+\item{mcmc_control}{A fully named list containing supported iteration, seed,
+storage, backend, progress, jitter, and optional exact partially
+collapsed/interwoven component-scale controls. Unknown fields and
+coercive scalar values are rejected.}
 
-\item{init}{Optional initial states, latent scales, lambda, evolution scales,
-time-zero states, and RNG state.}
+\item{init}{A fully named list of optional initial state paths, latent
+scales, lambda, evolution scales, time-zero states, and RNG state.
+Latent scales may be scalar, observed-site length, or response length;
+missing-site entries are ignored and replaced by the canonical inverse
+loss-rate placeholder.
+\code{theta1} and \code{theta2} remain supported as legacy aliases for
+\code{state_root1} and \code{state_root2}; supplying both forms is an error.
+Continuation-history fields are private to \code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}}.}
 }
 \value{
-An `rqr_dlm_mcmc` object.
+An \code{rqr_dlm_mcmc} object.
 }
 \description{
 This sampler targets root trajectories under an exponentiated RQR loss and
-Gaussian state priors. It does not define a response likelihood. Fixed `W`,
+Gaussian state priors. It does not define a response likelihood. Fixed \code{W},
 frozen discount templates, and component-scale evolution priors define exact
 generalized-posterior samplers when no numerical repair is used. Adaptive
 discount recursion is an explicitly experimental working update.
 }
+\details{
+\code{mcmc_control} accepts the usual iteration, seed, storage, backend, progress,
+and jitter fields plus seven controls that change the component-scale
+transition kernel:
+\itemize{
+\item \code{component_scale_collapsed_update} (\code{FALSE}) enables the exact one-root
+partially collapsed log-scale slice update;
+\item \code{component_scale_interweave} (\code{FALSE}) enables exact centered/noncentered
+scale interweaving;
+\item \code{component_scale_slice_width} (\code{1}) is the positive log-scale slice width;
+\item \code{component_scale_slice_max_steps} (\code{100}) bounds slice stepping out;
+\item \code{component_scale_slice_max_shrink} (\code{1000}) bounds slice shrinkage;
+\item \code{component_scale_slice_sweeps} (\code{1}) gives the coordinate sweeps per slice
+update; and
+\item \code{component_scale_interweave_cycles} (\code{1}) gives the number of
+centered/noncentered cycles.
+}
+
+These seven fields are valid only with \code{evolution_mode = "component_scale"}
+when they enable a component-scale operation. Slice tuning fields are used
+by whichever collapsed or interwoven slice update is enabled. The default
+component-scale scan uses the centered inverse-Gamma update.
+
+The versioned transition contract records the complete scan. It updates a
+learned loss rate when requested, refreshes the pseudo-AL scales, optionally
+integrates \code{root1} while conditioning on \code{root2} in the partially collapsed
+scale step, draws \code{root1} and then \code{root2} by conditional FFBS, completes
+their time-zero states, applies the declared component-scale update, and
+finishes with a global root-label swap of probability \code{0.5}. Time-zero
+completion is part of every accepted exact DLM transition (fixed covariance,
+frozen discount template, and component scale), independently of whether
+state paths are stored. The experimental adaptive working transition omits
+time-zero completion and records that omission in its kernel contract.
+Component order, root orientation, all seven controls, and this scan order
+are checkpoint- and continuation-bound; changing any of them requires a new
+fit rather than continuation.
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

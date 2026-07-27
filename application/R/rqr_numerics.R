@@ -8,7 +8,14 @@
 }
 
 .rqr_numerical_policy <- function(policy = c("fail", "record_repair")) {
-  match.arg(as.character(policy)[1L], c("fail", "record_repair"))
+  choices <- c("fail", "record_repair")
+  if (identical(policy, choices)) policy <- policy[[1L]]
+  if (!is.character(policy) || length(policy) != 1L ||
+      is.na(policy) || !nzchar(policy)) {
+    stop("numerical_policy must be exactly 'fail' or 'record_repair'.",
+         call. = FALSE)
+  }
+  match.arg(policy, choices)
 }
 
 .rqr_jitter_ladder <- function(policy, jitter_ladder) {
@@ -30,6 +37,74 @@
     clamped_eigenvalues = integer(0),
     stringsAsFactors = FALSE
   )
+}
+
+.rqr_empty_dlm_repair_records <- function() {
+  base <- .rqr_empty_repair_records()
+  data.frame(
+    iteration = integer(0),
+    root = character(0),
+    base,
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+}
+
+.rqr_validate_repair_records <- function(
+    records, name = "numerical repair ledger",
+    dlm = FALSE, max_iteration = NULL) {
+  expected <- if (dlm) {
+    .rqr_empty_dlm_repair_records()
+  } else {
+    .rqr_empty_repair_records()
+  }
+  if (!is.data.frame(records) ||
+      !identical(names(records), names(expected)) ||
+      anyDuplicated(names(records)) ||
+      !identical(
+        vapply(records, typeof, character(1L)),
+        vapply(expected, typeof, character(1L))
+      )) {
+    stop(sprintf("%s has an invalid exact schema.", name),
+         call. = FALSE)
+  }
+  if (!nrow(records)) return(invisible(records))
+  if (anyNA(records$stage) || any(!nzchar(records$stage)) ||
+      anyNA(records$time) || any(records$time < 0L) ||
+      anyNA(records$strategy) || any(!nzchar(records$strategy)) ||
+      any(!is.finite(records$jitter)) || any(records$jitter < 0) ||
+      anyNA(records$absolute_jitter_fallback) ||
+      anyNA(records$clamped_eigenvalues) ||
+      any(records$clamped_eigenvalues < 0L) ||
+      any(
+        records$jitter <= 0 &
+          records$clamped_eigenvalues <= 0L
+      )) {
+    stop(sprintf("%s contains invalid repair evidence.", name),
+         call. = FALSE)
+  }
+  numeric_fields <- c(
+    "relative_jitter", "min_eigenvalue", "matrix_scale",
+    "jitter_scale"
+  )
+  if (any(vapply(
+      records[numeric_fields],
+      function(value) any(is.infinite(value)),
+      logical(1L)
+    ))) {
+    stop(sprintf("%s contains infinite numerical metadata.", name),
+         call. = FALSE)
+  }
+  if (dlm) {
+    if (anyNA(records$iteration) || any(records$iteration < 1L) ||
+        anyNA(records$root) || any(!nzchar(records$root)) ||
+        (!is.null(max_iteration) &&
+         any(records$iteration > max_iteration))) {
+      stop(sprintf("%s contains invalid iteration or root labels.", name),
+           call. = FALSE)
+    }
+  }
+  invisible(records)
 }
 
 .rqr_add_repair_record <- function(records, stage, time, info) {
@@ -169,6 +244,7 @@
       info = list(
         strategy = "cholesky", jitter = 0, relative_jitter = 0,
         min_eigenvalue = NA_real_, clamped_eigenvalues = 0L,
+        roundoff_clamped_eigenvalues = 0L,
         matrix_scale = max(abs(covariance)),
         jitter_scale = max(abs(covariance)),
         absolute_jitter_fallback = FALSE
@@ -179,8 +255,11 @@
   ee <- eigen(covariance, symmetric = TRUE)
   scale <- max(abs(ee$values))
   near_psd <- scale == 0 || min(ee$values) / scale >= -1e-10
+  roundoff_psd <- scale == 0 ||
+    min(ee$values) / scale >= -100 * .Machine$double.eps
   if (near_psd) {
-    if (identical(numerical_policy, "fail") && any(ee$values < 0)) {
+    if (identical(numerical_policy, "fail") &&
+        any(ee$values < 0) && !roundoff_psd) {
       stop(
         paste(
           "Gaussian covariance has a negative eigenvalue, and projection is",
@@ -190,13 +269,17 @@
       )
     }
     values <- pmax(ee$values, 0)
+    negative_count <- sum(ee$values < 0)
     return(list(
       draw = as.numeric(mean + ee$vectors %*% (sqrt(values) * stats::rnorm(length(mean)))),
       info = list(
         strategy = "psd_eigen",
         jitter = 0, relative_jitter = 0,
         min_eigenvalue = min(ee$values),
-        clamped_eigenvalues = sum(ee$values < 0),
+        clamped_eigenvalues =
+          if (roundoff_psd) 0L else negative_count,
+        roundoff_clamped_eigenvalues =
+          if (roundoff_psd) negative_count else 0L,
         matrix_scale = max(abs(covariance)),
         jitter_scale = max(abs(covariance)),
         absolute_jitter_fallback = FALSE
@@ -220,6 +303,7 @@
       relative_jitter = fac$relative_jitter,
       min_eigenvalue = fac$min_eigenvalue,
       clamped_eigenvalues = 0L,
+      roundoff_clamped_eigenvalues = 0L,
       matrix_scale = fac$matrix_scale,
       jitter_scale = fac$jitter_scale,
       absolute_jitter_fallback = fac$absolute_jitter_fallback
@@ -237,13 +321,45 @@
 
 .exal_normalize_mcmc_precision_beta_cfg <- function(precision_cfg = NULL) {
   precision_cfg <- precision_cfg %||% list()
-  if (!is.list(precision_cfg)) stop("precision configuration must be a list.", call. = FALSE)
+  .rqr_validate_named_list_fields(
+    precision_cfg, "precision configuration",
+    c(
+      "enabled", "symmetrize", "jitter_ladder",
+      "eigen_fallback", "trace"
+    )
+  )
+  enabled <- .rqr_scalar_logical(
+    precision_cfg$enabled %||% TRUE,
+    "precision configuration$enabled"
+  )
+  symmetrize <- .rqr_scalar_logical(
+    precision_cfg$symmetrize %||% TRUE,
+    "precision configuration$symmetrize"
+  )
+  eigen_fallback <- .rqr_scalar_logical(
+    precision_cfg$eigen_fallback %||% FALSE,
+    "precision configuration$eigen_fallback"
+  )
+  trace <- .rqr_scalar_logical(
+    precision_cfg$trace %||% TRUE,
+    "precision configuration$trace"
+  )
+  if (!enabled || !symmetrize || eigen_fallback) {
+    stop(
+      paste(
+        "Ordinary RQR v1 requires enabled=TRUE, symmetrize=TRUE,",
+        "and eigen_fallback=FALSE in the precision configuration."
+      ),
+      call. = FALSE
+    )
+  }
   list(
-    enabled = TRUE,
-    symmetrize = TRUE,
-    jitter_ladder = precision_cfg$jitter_ladder %||% c(0, 1e-12, 1e-10, 1e-8, 1e-6),
-    eigen_fallback = FALSE,
-    trace = isTRUE(precision_cfg$trace %||% TRUE)
+    enabled = enabled,
+    symmetrize = symmetrize,
+    jitter_ladder = precision_cfg$jitter_ladder %||%
+      c(0, 1e-12, 1e-10, 1e-8, 1e-6),
+    eigen_fallback = eigen_fallback,
+    trace = trace
   )
 }
 
@@ -303,15 +419,28 @@
 #'
 #' Samples `GIG(1/2,a,b)` under density convention proportional to
 #' `v^(-1/2) exp(-(a*v+b/v)/2)`. The exact `b=0` limit is handled separately.
+#' `a` is either shared across all entries of `b` or supplied entry by entry;
+#' other vector lengths are rejected rather than recycled.
 #'
 #' @param b Nonnegative vector.
 #' @param a Positive scalar or vector.
 #' @return A positive numeric vector.
 #' @export
 rqr_sample_gig_half <- function(b, a) {
+  if (!is.numeric(b) || !is.null(dim(b)) || !length(b) ||
+      !is.numeric(a) || !is.null(dim(a)) ||
+      !(length(a) %in% c(1L, length(b)))) {
+    stop(
+      paste(
+        "b must be a nonempty numeric vector and a must be a numeric",
+        "scalar or a vector with the same length as b."
+      ),
+      call. = FALSE
+    )
+  }
   b <- as.numeric(b)
   a <- rep_len(as.numeric(a), length(b))
-  if (!length(b) || any(!is.finite(a)) || any(a <= 0) ||
+  if (any(!is.finite(a)) || any(a <= 0) ||
       any(!is.finite(b)) || any(b < 0)) {
     stop("a must be positive and b must be nonnegative.", call. = FALSE)
   }
@@ -334,33 +463,51 @@ rqr_sample_gig_half <- function(b, a) {
 }
 
 .sample_gig_devroye_required <- function(n_draws, p, a, b_vec, context = "RQR") {
-  if (as.integer(n_draws)[1L] < 1L || abs(as.numeric(p)[1L] - 0.5) > 1e-12) {
+  if (!is.numeric(n_draws) || length(n_draws) != 1L ||
+      is.na(n_draws) || !is.finite(n_draws) ||
+      n_draws != floor(n_draws) || n_draws < 1 ||
+      n_draws > .Machine$integer.max ||
+      !is.numeric(p) || length(p) != 1L || is.na(p) || !is.finite(p) ||
+      abs(p - 0.5) > 1e-12) {
     stop("The native RQR sampler currently implements only GIG p=1/2.", call. = FALSE)
   }
-  ans <- replicate(as.integer(n_draws)[1L], rqr_sample_gig_half(b_vec, a))
+  ans <- replicate(as.integer(n_draws), rqr_sample_gig_half(b_vec, a))
   t(as.matrix(ans))
 }
 
-#' Construct a standalone beta-prior specification
+#' Compatibility coefficient-prior constructor
 #'
-#' Ridge is native. RHS-family objects may be constructed by an installed
-#' `exdqlm` reference package, but their MCMC state remains an explicit adapter
-#' rather than part of the native DLM core.
+#' New code should use [rqr_beta_prior()]. This exported compatibility wrapper
+#' remains available for pre-1.0 callers; it is not deprecated and emits no
+#' lifecycle warning. It is fully native and never loads an exdqlm namespace.
 #'
 #' @param type Prior type.
 #' @param ridge Ridge controls, including `tau2`.
-#' @param rhs RHS controls forwarded to `exdqlm::beta_prior()`.
+#' @param rhs Legacy controls for `"rhs_ns"`.
+#' @param gaussian Full-Gaussian controls.
+#' @param rhs_ns Native RHS-NS controls. When omitted, `rhs` is used.
 #' @return A prior specification.
+#' @seealso [rqr_beta_prior()]
 #' @export
-beta_prior <- function(type = c("ridge", "rhs", "rhs_ns"), ridge = list(), rhs = list()) {
+beta_prior <- function(
+    type = c("ridge", "gaussian", "rhs_ns", "rhs"),
+    ridge = list(), rhs = list(), gaussian = list(),
+    rhs_ns = NULL) {
   type <- match.arg(type)
-  if (identical(type, "ridge")) {
-    tau2 <- as.numeric(ridge$tau2 %||% 1e4)[1L]
-    if (!is.finite(tau2) || tau2 <= 0) stop("ridge$tau2 must be positive.", call. = FALSE)
-    return(list(type = "ridge", hypers = list(tau2 = tau2)))
+  if (identical(type, "rhs")) {
+    stop(
+      paste(
+        "The generic legacy 'rhs' prior is not an ordinary-RQR v1 target.",
+        "Use type='rhs_ns' with an explicit intercept_name."
+      ),
+      call. = FALSE
+    )
   }
-  .rqr_installed_namespace("exdqlm", "RHS-family construction")
-  getExportedValue("exdqlm", "beta_prior")(type = type, ridge = ridge, rhs = rhs)
+  if (is.null(rhs_ns)) rhs_ns <- rhs
+  rqr_beta_prior(
+    type = type, ridge = ridge, gaussian = gaussian,
+    rhs_ns = rhs_ns
+  )
 }
 
 .rqr_installed_namespace <- function(package, context) {
@@ -389,6 +536,9 @@ beta_prior <- function(type = c("ridge", "rhs", "rhs_ns"), ridge = list(), rhs =
   namespace
 }
 
+# Deprecated compatibility adapters retained only for old serialized/reference
+# workflows. Ordinary-RQR v1 inference uses the native prior interface and
+# never calls these functions.
 .rqr_exdqlm_internal <- function(name) {
   .rqr_installed_namespace(
     "exdqlm", sprintf("The '%s' compatibility adapter", name)
@@ -397,10 +547,14 @@ beta_prior <- function(type = c("ridge", "rhs", "rhs_ns"), ridge = list(), rhs =
 }
 
 .qdesn_assert_rhs_prior_obj_intercept_policy <- function(...) {
-  .rqr_exdqlm_internal(".qdesn_assert_rhs_prior_obj_intercept_policy")(...)
+  .rqr_exdqlm_internal(
+    ".qdesn_assert_rhs_prior_obj_intercept_policy"
+  )(...)
 }
 .exal_mcmc_rhs_ns_prepare_state <- function(...) {
-  .rqr_exdqlm_internal(".exal_mcmc_rhs_ns_prepare_state")(...)
+  .rqr_exdqlm_internal(
+    ".exal_mcmc_rhs_ns_prepare_state"
+  )(...)
 }
 .exal_mcmc_rhs_ns_precisions <- function(...) {
   .rqr_exdqlm_internal(".exal_mcmc_rhs_ns_precisions")(...)

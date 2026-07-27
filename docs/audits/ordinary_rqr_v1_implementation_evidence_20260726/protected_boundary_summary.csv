@@ -1,0 +1,8 @@
+"schema_version","comparison","total","changed","disposition"
+"rqrgibbs_ordinary_v1_dlm_boundary/1.0.0","protected_files",23,5,"intentional public-boundary and package-integration changes"
+"rqrgibbs_ordinary_v1_dlm_boundary/1.0.0","public_functions",18,6,"intentional fitted-object, continuation, prediction, and print hardening"
+"rqrgibbs_ordinary_v1_dlm_boundary/1.0.0","schema_occurrences",29,3,"versioned fit/history/schedule integrity updates"
+"rqrgibbs_ordinary_v1_dlm_boundary/1.0.0","namespace_directives",56,10,"ordinary-v1 API and S3 wiring"
+"rqrgibbs_ordinary_v1_dlm_boundary/1.0.0","compiled_registrations",8,0,"unchanged"
+"rqrgibbs_ordinary_v1_dlm_boundary/1.0.0","package_metadata",19,7,"package version, dependencies, description, and documentation scope"
+"rqrgibbs_ordinary_v1_dlm_boundary/1.0.0","confirmatory_authorization",15,0,"unchanged"

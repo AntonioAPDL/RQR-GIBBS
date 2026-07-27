@@ -10,7 +10,7 @@ rqr_order_endpoints(eta1, eta2)
 \item{eta1, eta2}{Numeric root ordinates.}
 }
 \value{
-A list with `lower`, `upper`, `midpoint`, and `width`.
+A list with \code{lower}, \code{upper}, \code{midpoint}, and \code{width}.
 }
 \description{
 RQR ordered endpoints

@@ -2,18 +2,21 @@
 % Please edit documentation in R/rqr_utils.R
 \name{predict_interval}
 \alias{predict_interval}
-\title{Predict RQR intervals}
+\title{Evaluate fitted RQR interval roots}
 \usage{
 predict_interval(object, ...)
 }
 \arguments{
-\item{object}{An RQR fit object.}
+\item{object}{A fitted RQR model.}
 
 \item{...}{Method-specific arguments.}
 }
 \value{
-A list of interval draws and summaries.
+A model-specific list of interval-root draws and summaries.
 }
 \description{
-Predict RQR intervals
+Methods order the two exchangeable raw roots pointwise and return lower,
+upper, midpoint, and width functionals. Evaluation is conditional on the
+method-specific design or fitted state path. It does not define or sample a
+response distribution.
 }

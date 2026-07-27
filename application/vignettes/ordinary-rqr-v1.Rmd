@@ -1,0 +1,489 @@
+---
+title: "Ordinary RQR v1: fixed, frozen-feature, and dynamic models"
+author: "Antonio De Leon, Raquel Prado, and Bruno Sanso"
+date: "2026-07-26"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Ordinary RQR v1: fixed, frozen-feature, and dynamic models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 6,
+  fig.height = 3.5
+)
+library(rqrgibbs)
+```
+
+Ordinary relaxed quantile regression (RQR) updates two interval-root
+functions under the residual-product loss. The resulting distribution is a
+loss-based generalized posterior. It is not an ordinary likelihood for the
+response, and its endpoint draws are not posterior-predictive response draws.
+
+This vignette illustrates three native interfaces:
+
+1. fixed-design regression;
+2. a readout conditional on a frozen deep echo-state-network (DESN) feature
+   design; and
+3. dynamic linear interval-root states.
+
+The deliberately short chains below exercise the interfaces. They are not
+sufficient for scientific inference or convergence assessment.
+
+## Fixed-design interval-root regression
+
+The response may contain `NA`; those rows remain in the design but are omitted
+from the loss and latent-scale updates.
+
+```{r fixed-data}
+set.seed(260726)
+n <- 24L
+x <- seq(-1, 1, length.out = n)
+X <- cbind(intercept = 1, x = x)
+y <- 0.4 - 0.6 * x + 0.15 * stats::rt(n, df = 5)
+y[c(7, 18)] <- NA_real_
+```
+
+A ridge prior is a proper Gaussian prior shared by the two exchangeable raw
+roots. Here the generalized-Bayes learning rate is fixed in advance.
+
+```{r fixed-fit}
+ridge_prior <- rqr_beta_prior(
+  "ridge",
+  ridge = list(tau2 = 10)
+)
+
+fixed_fit <- rqr_mcmc_fit(
+  y = y,
+  X = X,
+  coverage_level = 0.80,
+  learning_rate = 1,
+  learning_rate_mode = "fixed_rate",
+  beta_prior_obj = ridge_prior,
+  numerical_policy = "fail",
+  mcmc_control = list(
+    n_burn = 40L,
+    n_mcmc = 80L,
+    thin = 1L,
+    seed = 260727L
+  )
+)
+```
+
+`predict_interval()` evaluates ordered endpoint functionals at supplied design
+rows. The output flag makes the interpretation explicit.
+
+```{r fixed-summary}
+fixed_draws <- rqr_posterior_draws(fixed_fit)
+fixed_interval <- predict_interval(fixed_fit, X_new = X)
+
+head(data.frame(
+  x = x,
+  lower = fixed_interval$lower_mean,
+  upper = fixed_interval$upper_mean,
+  width = fixed_interval$width_mean
+), 4)
+
+stopifnot(
+  identical(
+    fixed_draws$schema_version,
+    "rqrgibbs_static_draws/1.0.0"
+  ),
+  identical(
+    fixed_interval$schema_version,
+    "rqrgibbs_interval_prediction/2.0.0"
+  ),
+  identical(fixed_interval$response_predictive_draws, FALSE)
+)
+```
+
+Exact same-environment continuation restores the complete checkpoint and RNG
+state. Burn-in cannot be added during continuation.
+
+```{r fixed-continuation}
+continued_fit <- rqr_mcmc_continue(
+  fixed_fit,
+  n_mcmc = 20L
+)
+
+continued_fit$checkpoint_state$completed_iterations
+```
+
+The alternative promoted rate mode is
+`"learned_pseudoresidual_normalized"`. Its Gamma update uses the observed-row
+count and the declared loss reference scale. The sampled rate is an inverse
+loss scale, not a response variance or coverage-calibration parameter.
+
+```{r learned-rate-interface, eval=FALSE}
+learned_fit <- rqr_mcmc_fit(
+  y = y,
+  X = X,
+  coverage_level = 0.80,
+  learning_rate_mode = "learned_pseudoresidual_normalized",
+  loss_reference_scale = 1,
+  lambda_prior = list(shape = 4, rate = 4),
+  beta_prior_obj = ridge_prior,
+  numerical_policy = "fail",
+  mcmc_control = list(
+    n_burn = 1000L,
+    n_mcmc = 3000L,
+    seed = 260729L
+  )
+)
+```
+
+Full-Gaussian and native shrunken-shoulder horseshoe priors use the same
+fixed-design sampler. The latter requires an explicitly named constant-one
+intercept and is available only for ordinary, zero-tilt RQR.
+Gaussian coefficient binding is deliberately unambiguous: if either the prior
+mean or prior matrix is named, complete identical names are required on both
+matrix axes and on a supplied mean, and their order must exactly match
+`colnames(X)`. If every Gaussian-prior input is unnamed, binding is explicitly
+positional.
+
+```{r prior-contracts}
+gaussian_prior <- rqr_beta_prior(
+  "gaussian",
+  gaussian = list(
+    mean = c(0, 0),
+    covariance = diag(c(10, 2))
+  )
+)
+
+rhs_ns_prior <- rqr_beta_prior(
+  "rhs_ns",
+  rhs_ns = list(
+    intercept_name = "intercept",
+    tau0 = 0.5,
+    zeta2_fixed = 4
+  )
+)
+
+c(gaussian_prior$type, rhs_ns_prior$type)
+```
+
+## Ordinary RQR conditional on frozen DESN features
+
+RQR-DESN uses the same coefficient sampler after a deterministic feature
+matrix has been constructed and frozen. The feature-design contract records
+its ordered columns, builder, reservoir digest, time alignment, and causal
+semantics. It does not run or refit a reservoir during MCMC.
+
+For a self-contained example, the next helper materializes two fixed recurrent
+features from a known driver. In an application, an upstream DESN workflow
+would supply the corresponding feature matrix and metadata.
+
+```{r frozen-feature-builder}
+reservoir_spec <- list(
+  layer1_memory = 0.45,
+  layer1_input = 0.65,
+  layer2_memory = 0.30,
+  layer2_input = 0.70
+)
+
+materialize_features <- function(driver, initial_state = c(0, 0)) {
+  state <- matrix(NA_real_, nrow = length(driver), ncol = 2L)
+  previous <- initial_state
+  for (tt in seq_along(driver)) {
+    layer1 <- tanh(
+      reservoir_spec$layer1_memory * previous[1] +
+        reservoir_spec$layer1_input * driver[tt]
+    )
+    layer2 <- tanh(
+      reservoir_spec$layer2_memory * previous[2] +
+        reservoir_spec$layer2_input * layer1
+    )
+    state[tt, ] <- c(layer1, layer2)
+    previous <- state[tt, ]
+  }
+  list(
+    X = cbind(
+      intercept = 1,
+      driver = driver,
+      layer1 = state[, 1],
+      layer2 = state[, 2]
+    ),
+    terminal_state = previous
+  )
+}
+
+driver <- sin(seq_len(n + 3L) / 4)
+training_features <- materialize_features(driver[seq_len(n)])
+reservoir_metadata <- list(
+  digest = digest::digest(
+    reservoir_spec,
+    algo = "sha256",
+    serialize = TRUE
+  ),
+  architecture = "illustrative_two_layer_fixed_reservoir",
+  fixed = TRUE
+)
+```
+
+The frozen interface needs no executing `exdqlm` namespace. A hand-built
+design such as this one is deliberately non-promotable. Promotion-grade
+reference materialization is a separate design-only route, orchestrated by
+`application/scripts/28_materialize_rqr_ordinary_v1_desn_design.R` from exact
+isolated `rqrgibbs` and pinned `exdqlm` runtimes.
+
+```{r frozen-design-fit}
+desn_design <- rqr_desn_design(
+  X = training_features$X,
+  y = y,
+  time_index = seq_len(n),
+  intercept = "intercept",
+  builder = list(
+    id = "vignette_deterministic_feature_builder",
+    version = "1.0.0"
+  ),
+  reservoir = reservoir_metadata,
+  driver = list(
+    type = "known_deterministic_driver",
+    response_simulation = FALSE
+  )
+)
+
+desn_fit <- rqr_desn_fit(
+  design = desn_design,
+  design_engine = "frozen",
+  coverage_level = 0.80,
+  learning_rate = 1,
+  learning_rate_mode = "fixed_rate",
+  mcmc_args = list(
+    beta_prior_obj = rqr_beta_prior(
+      "ridge",
+      ridge = list(tau2 = 10)
+    ),
+    mcmc_control = list(
+      n_burn = 40L,
+      n_mcmc = 80L,
+      thin = 1L,
+      seed = 260728L
+    )
+  )
+)
+
+desn_draws <- rqr_posterior_draws(desn_fit)
+stopifnot(
+  identical(
+    desn_fit$schema_version,
+    "rqrgibbs_desn_fit/1.2.0"
+  ),
+  identical(
+    desn_draws$schema_version,
+    "rqrgibbs_desn_draws/1.0.0"
+  ),
+  identical(
+    desn_fit$model_spec$
+      design_materialization_reproducibility_eligible,
+    FALSE
+  )
+)
+```
+
+Future features require their own versioned contract. The following rows are
+precomputed at the forecast origin by continuing the fixed feature recursion
+along the known future driver path.
+
+```{r frozen-future}
+future_features <- materialize_features(
+  driver[n + seq_len(3L)],
+  initial_state = training_features$terminal_state
+)
+
+future_design <- rqr_desn_future_design(
+  parent_design = desn_design,
+  X = future_features$X,
+  time_index = n + seq_len(3L),
+  semantics = "precomputed_design",
+  driver = list(
+    origin_fixed = TRUE,
+    uses_realized_post_origin_history = FALSE,
+    source = "known_deterministic_driver",
+    response_simulation = FALSE
+  )
+)
+
+future_interval <- forecast_paths(
+  desn_fit,
+  H = 3L,
+  future_design = future_design
+)
+
+data.frame(
+  time = future_design$time_index,
+  lower = future_interval$lower_mean,
+  upper = future_interval$upper_mean,
+  width = future_interval$width_mean
+)
+
+stopifnot(
+  identical(
+    future_interval$schema_version,
+    "rqrgibbs_desn_prediction/1.0.0"
+  ),
+  identical(future_interval$evaluation_semantics, "precomputed_design"),
+  identical(future_interval$response_predictive_draws, FALSE)
+)
+```
+
+The future contract also distinguishes rolling teacher-forced one-step
+evaluation from an origin-fixed external-driver path. Those semantics must be
+declared when the feature rows are constructed; neither mode creates a
+response-simulation distribution.
+
+## Dynamic linear interval roots
+
+RQR-DLM replaces static root coefficients with two exchangeable state paths.
+The paths share the same observation design, state evolution, and prior
+specification. Although their stacked state prior is Gaussian, the augmented
+observation kernel is not jointly quadratic in both root paths. The sampler
+therefore alternates two root-specific Gaussian FFBS updates, each conditional
+on the current opposing path. These are exact blocked Gibbs updates for a
+declared fixed joint target; they are not one simultaneous Gaussian FFBS draw.
+
+The following interface uses an explicit fixed evolution covariance. It is
+shown without evaluation because the short chains elsewhere in this vignette
+are intended only as interface checks.
+
+```{r dynamic-fixed-w, eval=FALSE}
+dynamic_model <- rqr_polytrend(
+  order = 2L,
+  m0 = c(0, 0),
+  C0 = diag(c(4, 1))
+)
+
+dynamic_fit <- rqr_dlm_fit(
+  y = y,
+  model = dynamic_model,
+  coverage_level = 0.80,
+  evolution_spec = rqr_evolution_fixed(
+    diag(c(0.04, 0.01))
+  ),
+  learning_rate = 1,
+  learning_rate_mode = "fixed_rate",
+  numerical_policy = "fail",
+  mcmc_control = list(
+    n_burn = 1000L,
+    n_mcmc = 3000L,
+    thin = 1L,
+    seed = 260730L,
+    backend = "cpp"
+  )
+)
+
+dynamic_interval <- predict_interval(dynamic_fit)
+
+dynamic_draws <- rqr_posterior_draws(dynamic_fit)
+stopifnot(
+  identical(
+    dynamic_fit$provenance$schema_version,
+    "rqrgibbs_fit/1.14.0"
+  ),
+  identical(
+    dynamic_draws$schema_version,
+    "rqrgibbs_dlm_draws/1.0.0"
+  ),
+  identical(
+    dynamic_interval$schema_version,
+    "rqrgibbs_dlm_prediction/1.0.0"
+  )
+)
+```
+
+Three evolution specifications define exact fixed-joint generalized-posterior
+samplers when the numerical policy records no repair:
+
+1. `rqr_evolution_fixed()` supplies an explicit fixed covariance;
+2. `rqr_freeze_discount_template()` constructs component-specific discount
+   covariances before MCMC and then holds that template fixed; and
+3. `rqr_evolution_component_scale()` uses fixed component templates with
+   shared inverse-Gamma evolution multipliers learned across the two roots.
+
+By contrast, `rqr_evolution_adaptive_working()` recomputes a conditional
+discount evolution during the scan. That recursion is explicitly experimental
+and does not define the same fixed joint target as the three modes above.
+
+The component-scale constructor and its kernel controls can be checked without
+running a chain. Components are stacked into a single state, while their
+evolution templates and names retain the same order.
+
+```{r dynamic-component-scale-contract}
+component_model <- rqr_polytrend(
+  order = 1L,
+  C0 = matrix(4, 1, 1),
+  name = "level"
+) + rqr_regression(
+  X = cbind(x = x),
+  C0 = matrix(2, 1, 1),
+  name = "regression"
+)
+
+component_evolution <- rqr_evolution_component_scale(
+  templates = list(
+    matrix(1, 1, 1),
+    matrix(1, 1, 1)
+  ),
+  component_dims = component_model$component_dims,
+  component_names = component_model$component_names,
+  prior = list(shape = c(2, 2), rate = c(1, 1))
+)
+
+component_kernel_control <- list(
+  component_scale_collapsed_update = TRUE,
+  component_scale_interweave = TRUE,
+  component_scale_slice_width = 1,
+  component_scale_slice_max_steps = 100L,
+  component_scale_slice_max_shrink = 1000L,
+  component_scale_slice_sweeps = 1L,
+  component_scale_interweave_cycles = 1L
+)
+
+stopifnot(
+  identical(component_model$component_names, c("level", "regression")),
+  identical(component_evolution$component_names, c("level", "regression"))
+)
+```
+
+Those seven controls change the transition kernel. Their values, the
+component order, the fixed one-root collapsed orientation, time-zero state
+completion, scan order, and the final probability-0.5 global root swap are
+bound into checkpoints and continuation history. They cannot be changed by
+continuing an existing fit. The default component-scale transition uses the
+centered inverse-Gamma update; collapsed and interwoven updates are optional
+exact alternatives. Every accepted exact DLM mode completes the time-zero
+state for both roots whether or not full state paths are stored; storage
+therefore does not change the transition or RNG stream. The experimental
+adaptive working mode omits time-zero completion and records that omission in
+its transition contract.
+
+Future evaluation propagates only the root states. It requires an explicit
+future observation design, transition specification, and either fixed future
+covariances or fixed future component templates.
+
+```{r dynamic-future-roots, eval=FALSE}
+future_roots <- rqr_forecast_roots(
+  dynamic_fit,
+  FF_future = matrix(c(1, 0), nrow = 2L, ncol = 4L),
+  GG_future = matrix(c(1, 1, 0, 1), 2L, 2L, byrow = TRUE),
+  W_future = diag(c(0.04, 0.01)),
+  seed = 260731L
+)
+
+stopifnot(grepl(
+  "no response simulation",
+  future_roots$interpretation,
+  fixed = TRUE
+))
+stopifnot(identical(
+  future_roots$schema_version,
+  "rqrgibbs_dlm_forecast/1.0.0"
+))
+```
+
+The returned trajectories are interval-root state draws conditional on the
+declared future evolution. They are not posterior-predictive response draws.

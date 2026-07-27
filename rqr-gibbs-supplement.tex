@@ -780,10 +780,10 @@ The conditional draw is
 \]
 The second root uses the same update after exchanging labels. A proper ridge
 prior enters through the same Gaussian canonical form. The current ordinary
-conditional-Gaussian shrinkage support is an external regularized-horseshoe
-adapter using the Nishimura--Suchard augmentation (RHS-NS), with separate
-states for the two roots; this supplement does not assert a standalone native
-RHS-NS hierarchy or nonzero-tilt propriety for that random-scale adapter.
+conditional-Gaussian shrinkage support is a native shrunken-shoulder horseshoe
+using the Nishimura--Suchard augmentation (RHS-NS), with separate states for
+the two roots. The complete augmented hierarchy and its scale conditionals are
+stated below. No nonzero-tilt RHS-NS implementation claim is made.
 
 \subsection{Fixed-rate mean-tilt consequence}
 
@@ -818,45 +818,108 @@ root priors, the nonzero-tilt kernel is proper. Indeed, the ordinary loss
 factor is at most one and the remaining tilt factor is the exponential of a
 finite linear functional of \((\vect\beta_1,\vect\beta_2)\); a Gaussian prior
 has a finite moment-generating function in every finite direction. This
-argument covers ridge priors. It does not establish the corresponding result
-for the external horseshoe-family adapter.
+argument covers ridge priors. It does not by itself establish the corresponding
+result for the RHS-NS random-scale hierarchy.
 
-\subsection{Ordinary-only RHS-NS adapter contract}
+\subsection{Ordinary-only native RHS-NS hierarchy}
 \label{sec:supp-rhs-ns}
 
-The ordinary fixed-design MCMC implementation also exposes a
-conditional-Gaussian RHS-NS adapter
+The ordinary fixed-design MCMC implementation includes a native
+conditional-Gaussian RHS-NS prior
 \citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS,
-NishimuraSuchard2023SSS}. For root \(k\), let
+MakalicSchmidt2016SimpleSampler,NishimuraSuchard2023SSS}. Let
+\(\mathcal A\) index the \(m\) active, non-intercept coefficients. For each
+root \(k\) and \(j\in\mathcal A\), the augmented prior kernel contains
+\begin{align}
+\beta_{kj}\mid\tau_k^2,\lambda_{kj}^2
+&\sim \Normal(0,\tau_k^2\lambda_{kj}^2),\\
+\lambda_{kj}^2\mid\nu_{kj}
+&\sim \operatorname{IG}\!\left(\frac12,\frac1{\nu_{kj}}\right),
+&
+\nu_{kj}
+&\sim \operatorname{IG}\!\left(\frac12,1\right),\\
+\tau_k^2\mid\xi_k
+&\sim \operatorname{IG}\!\left(\frac12,\frac1{\xi_k}\right),
+&
+\xi_k
+&\sim \operatorname{IG}\!\left(\frac12,\frac1{\tau_0^2}\right).
+\end{align}
+Here \(\operatorname{IG}(a,b)\) uses shape \(a\) and rate \(b\). The
+shrunken shoulder is introduced through the fictitious observation
 \[
-\vect\psi_k
-=\{\vect\lambda_k^2,\vect\nu_k,\tau_k^2,\xi_k,\zeta_k^2\}
+z_{kj}=0,\qquad
+z_{kj}\mid\beta_{kj},\zeta_k^2
+\sim \Normal(\beta_{kj},\zeta_k^2).
 \]
-denote its current local, auxiliary, global, and shoulder-scale state. The
-current adapter requires the first design column to be a declared intercept
-and excludes its coefficient from shrinkage. For each remaining coefficient,
-\(j=2,\ldots,p\), the adapter supplies the diagonal conditional prior precision
+The shoulder variance is either fixed and positive or has
+\[
+\zeta_k^2\sim\operatorname{IG}(a_\zeta,b_\zeta),
+\qquad a_\zeta,b_\zeta>0.
+\]
+The uniquely named constant-one intercept has the separate proper prior
+\(\Normal(m_{\mathrm{int}},q_{\mathrm{int}}^{-1})\) and is absent from
+\(\mathcal A\).
+
+Consequently, for \(j\in\mathcal A\), the coefficient block receives
 \begin{equation}
 d_{kj}
 =\frac{1}{\tau_k^2\lambda_{kj}^2}+\frac{1}{\zeta_k^2}.
 \label{eq:supp-rhs-ns-precision}
 \end{equation}
-The first coefficient instead receives its separately declared fixed Gaussian
-precision. Substituting the resulting
-\(\mat Q_{0k}(\vect\psi_k)\) into the Gaussian block above gives the
-coefficient conditional; the adapter then updates \(\vect\psi_k\) conditional
-on the newly drawn \(\vect\beta_k\). Root 1 and root 2 have separate,
-identically specified states. Any exchangeable label swap must therefore move
-\((\vect\beta_k,\vect\psi_k)\) together.
+The intercept diagonal and information entries are
+\(q_{\mathrm{int}}\) and \(q_{\mathrm{int}}m_{\mathrm{int}}\);
+active information entries are zero. The full prior precision and information
+therefore enter the same Gaussian root system used by ridge and general
+proper-Gaussian priors.
 
-Equation~\eqref{eq:supp-rhs-ns-precision} is the verified conditional adapter
-contract, not a new standalone derivation of the marginal RHS-NS prior. The
-implementation delegates prior-state construction and updating to the pinned,
-archive-attested reference runtime and accepts the \texttt{rhs\_ns} mode, not
-its distinct generic \texttt{rhs} mode. It is MCMC-only and restricted here to
-ordinary RQR, \(\vect\delta=\vect 0\). The proper-Gaussian argument for the
-nonzero-tilt kernel does not extend automatically through its random-scale
-mixture, so neither MT-RQR-RHS-NS propriety nor implementation is claimed.
+After drawing \(\vect\beta_k\), one native prior-state sweep uses
+\begin{align}
+\lambda_{kj}^2\mid\cdot
+&\sim
+\operatorname{IG}\!\left(
+1,\frac{\beta_{kj}^2}{2\tau_k^2}+\frac1{\nu_{kj}}
+\right),\\
+\nu_{kj}\mid\cdot
+&\sim
+\operatorname{IG}\!\left(1,1+\frac1{\lambda_{kj}^2}\right),\\
+\tau_k^2\mid\cdot
+&\sim
+\operatorname{IG}\!\left(
+\frac{m+1}{2},
+\frac12\sum_{j\in\mathcal A}
+\frac{\beta_{kj}^2}{\lambda_{kj}^2}
++\frac1{\xi_k}
+\right),\\
+\xi_k\mid\cdot
+&\sim
+\operatorname{IG}\!\left(
+1,\frac1{\tau_0^2}+\frac1{\tau_k^2}
+\right).
+\end{align}
+When the shoulder is random,
+\[
+\zeta_k^2\mid\cdot
+\sim
+\operatorname{IG}\!\left(
+a_\zeta+\frac m2,\,
+b_\zeta+\frac12\sum_{j\in\mathcal A}\beta_{kj}^2
+\right).
+\]
+These updates preserve the normalization factors in the declared fictitious
+Normal construction; they are not obtained by normalizing only the combined
+coefficient variance. Root 1 and root 2 have independent states from one
+shared exchangeable specification. Any label swap therefore moves
+\((\vect\beta_k,\vect\lambda_k^2,\vect\nu_k,\tau_k^2,\xi_k,\zeta_k^2)\)
+as one block. The implemented ordinary shared-prior transition attempts this
+acceptance-one complete-block swap with probability \(1/2\).
+
+The implementation stores closure-free prior and state contracts, requires the
+intercept name rather than assuming a column position, and applies no
+stochastic scale floor. A nonfinite or unrepresentable draw stops. The native
+API accepts \texttt{rhs\_ns}, not the distinct generic \texttt{rhs} mode.
+This branch is MCMC-only and restricted here to ordinary RQR,
+\(\vect\delta=\vect 0\); neither MT-RQR-RHS-NS implementation nor validation
+is claimed.
 
 \subsection{Frozen-feature DESN specialization}
 \label{sec:supp-desn}
@@ -870,17 +933,27 @@ decisions, and feature reducers are design variables, not posterior unknowns.
 With \(\mat X=\mat X_{\mathrm{DESN}}\), the RQR-DESN readout is exactly the
 static target and coefficient block above. It introduces neither a new loss
 nor a separate Gibbs sampler. A proper ridge prior supports the proposed
-fixed-rate nonzero-tilt block; the external RHS-NS adapter and all current
-evidence are ordinary-RQR only.
+fixed-rate nonzero-tilt block; the native RHS-NS readout and all current
+evidence for that hierarchy are ordinary-RQR only.
 
-A future design \(\mat X_{\mathrm{DESN,fut}}\) must be generated by the same
-frozen reservoir contract, without using held-out responses to refit the
-features. Posterior summaries are ordered endpoint functions, widths, and
-midpoints formed from readout draws. Neither the training nor future feature
-matrix defines a response-simulation distribution. Nonzero mean tilt is
-derived at the conditional-Gaussian level but is not implemented or validated;
-reservoir tuning and any tilt selection belong to an external, recorded
-validation layer.
+A versioned future-design contract for
+\(\mat X_{\mathrm{DESN,fut}}\) preserves the parent feature schema and verifies
+feature order, the parent-design link, declared forecast semantics, and a
+digest of the supplied rows. It does not independently regenerate or attest
+those rows. A receipt that verifies the training design therefore cannot be
+transferred to the future design. Future-root objects remain nonpromotable
+until a future-specific materialization receipt is implemented and verified.
+The contract declares one of: an origin-fixed precomputed design; rolling
+teacher-forced one-step evaluation using realized post-origin history; or an
+origin-fixed external driver path. The second is not an origin-fixed
+multi-step forecast. An explicitly named matrix remains a compatibility-only
+path. Bounded checks of these objects establish conditional root mechanics for
+frozen features, not scientific forecast provenance. Posterior summaries are
+ordered endpoint functions, widths, and midpoints formed from readout draws.
+Neither the training nor future feature matrix defines a response-simulation
+distribution. Nonzero mean tilt is derived at the conditional-Gaussian level
+but is not implemented or validated; reservoir tuning and any tilt selection
+belong to an external, recorded validation layer.
 
 \section{Learned Inverse-Loss Scale}
 
@@ -911,9 +984,9 @@ target in \eqref{eq:normalized-scale-target} is integrable. Indeed,
 \(\mathcal L_{n,c}(\vartheta)\geq0\), so its exponential factor is at most one,
 and the remaining upper bound integrates to the finite
 \(n_{\mathrm{obs}}\)th moment of the Gamma prior. This argument includes the
-declared ordinary RHS-NS adapter when its complete prior-state law and update
-are retained. It does not cover nonzero mean tilt, whose tilted loss need not
-be nonnegative.
+declared ordinary native RHS-NS hierarchy when its complete prior-state law
+and update are retained. It does not cover nonzero mean tilt, whose tilted
+loss need not be nonnegative.
 
 We call \eqref{eq:normalized-scale-target} the
 \emph{pseudo-residual-normalized learned-scale target}. The factor
@@ -959,25 +1032,31 @@ implementations of the same posterior.
 \item \textbf{Declared target and applicability.} Target
 \eqref{eq:normalized-scale-target}, restricted to ordinary RQR
 \((\delta=0)\). It applies to a proper Gaussian/ridge fixed design, the
-ordinary RHS-NS adapter defined above, or a declared fixed-joint dynamic mode
-whose root and prior-state updates are otherwise valid.
+ordinary native RHS-NS hierarchy defined above, or a declared fixed-joint
+dynamic mode whose root and prior-state updates are otherwise valid.
 \item \textbf{Inputs and fixed quantities.} Freeze
 \(c,s_L,a_\kappa,b_\kappa,\mathcal O\), the root priors, all design or
 evolution quantities, iteration controls, and the label-swap rule.
 \item \textbf{Initialization.} Choose finite raw roots, \(\kappa>0\), positive
 placeholder latent scales at observed sites, and valid ordinary-only prior or
-evolution states.
+evolution states. The starting \(\kappa\) and latent scales ensure a valid
+state but are not independent overdispersed-start dimensions: steps (a)--(b)
+replace them before either root update. Disperse chains through the raw roots
+and, for RHS-NS, their complete root-specific prior states.
 \item \textbf{One complete sweep.} Repeat the following mandatory
 partial-collapse order for every warm-up and sampling iteration:
 \begin{enumerate}[label=(\alph*),leftmargin=1.8em,itemsep=0.15em,topsep=0.15em]
 \item draw \(\kappa\) from \eqref{eq:kappa-collapsed} using the current roots;
 \item immediately refresh every \(v_i\), \(i\in\mathcal O\), from its GIG
 conditional using the new \(\kappa\);
-\item update root 1 conditional on root 2 and the refreshed scales;
-\item update root 2 conditional on the new root 1 and refreshed scales;
-\item update every declared ordinary-only prior or evolution state; and
+\item update root 1 conditional on root 2 and the refreshed scales, followed
+immediately by its declared root-specific prior state;
+\item update root 2 conditional on the new root 1 and refreshed scales,
+followed immediately by its declared root-specific prior state;
+\item update any remaining shared evolution state; and
 \item if exchangeability permits, swap the two complete raw-root blocks and
-their associated states together.
+their associated states together; the implemented ordinary shared-prior
+transition does so with probability \(1/2\).
 \end{enumerate}
 \item \textbf{Stored quantities and label handling.} Retain ordered
 endpoints, widths, midpoints, losses, \(\kappa\), and complete target,
@@ -987,9 +1066,10 @@ root-specific blocks are exchangeable.
 scale convention. Its \(\kappa\) is neither a response variance nor an
 automatic coverage-calibration parameter.
 \item \textbf{Exact, implementation, and validation status.} The displayed
-order is an exact partially collapsed scan for the declared target in its
-validated fixed-joint modes. It is implemented for ordinary RQR and must not
-be generalized to nonzero tilt by copying the Gamma update.
+order is an exact partially collapsed scan for the declared fixed-joint
+ordinary target. It is implemented for ordinary RQR; validation claims are
+restricted to modes and fixtures with a recorded passing gate. The scan must
+not be generalized to nonzero tilt by copying the Gamma update.
 \end{algorithmblock}
 Store draws only according to the declared retention policy. The collapsed
 \(\kappa\) draw must be followed immediately by the latent-scale refresh;
@@ -1004,7 +1084,7 @@ For root \(k=1,2\), consider the DLM representation
 \eta_{kt}=f_t^\top\theta_{kt},\qquad
 \theta_{k0}\sim\Normal(m_0,C_0),\qquad
 \theta_{kt}=G_t\theta_{k,t-1}+\epsilon_{kt},\qquad
-\epsilon_{kt}\sim\Normal(0,W_{kt}).
+\epsilon_{kt}\sim\Normal(0,W_t).
 \]
 Equivalently, define
 \[
@@ -1015,7 +1095,7 @@ Equivalently, define
 \begin{pmatrix}G_t&0\\0&G_t\end{pmatrix},
 \qquad
 \mathcal W_t=
-\begin{pmatrix}W_{1t}&0\\0&W_{2t}\end{pmatrix}.
+\begin{pmatrix}W_t&0\\0&W_t\end{pmatrix}.
 \]
 Then \(\alpha_t=\mathcal G_t\alpha_{t-1}+\varepsilon_t\) is one stacked
 Gaussian state prior. It does not induce one conditionally Gaussian
@@ -1163,8 +1243,9 @@ The current alternating kernel omits terms that would generally arise from
 such dependence in a fixed joint density. This mode is therefore experimental
 and is not described as exact Gibbs for the stated generalized posterior.
 \end{enumerate}
-The same discounts are used for both roots unless a future model deliberately
-breaks their prior exchangeability.
+The current training and future contracts use the same discounts and evolution
+covariances for both roots. Root-specific future evolution would break this
+ordinary-v1 exchangeable-prior contract and is not implemented.
 
 \subsection{Incompatibility of adaptive conditional discounts}
 

@@ -2,22 +2,25 @@
 % Please edit documentation in R/rqr_utils.R
 \name{rqr_posterior_draws}
 \alias{rqr_posterior_draws}
-\title{Draw posterior beta samples from an RQR fit}
+\title{Extract interval-root draws from a fitted RQR model}
 \usage{
 rqr_posterior_draws(object, nd = NULL, seed = NULL, ...)
 }
 \arguments{
-\item{object}{An RQR fit object.}
+\item{object}{A fitted RQR model.}
 
-\item{nd}{Number of draws. `NULL` keeps all available MCMC draws.}
+\item{nd}{Number of draws to return. \code{NULL} keeps all available draws.}
 
-\item{seed}{Optional RNG seed.}
+\item{seed}{Optional seed used only when draws are subsampled.}
 
-\item{...}{Reserved.}
+\item{...}{Method-specific arguments.}
 }
 \value{
-A list with `beta_root1`, `beta_root2`, and `nd`.
+A model-specific list of draws and their retained-draw indices.
 }
 \description{
-Draw posterior beta samples from an RQR fit
+Methods preserve the fitted model's root parameterization. Fixed-design and
+frozen-DESN methods return root-coefficient draws, whereas the RQR-DLM
+method returns time-indexed root-ordinate draws. These are draws under a
+loss-based generalized update, not posterior-predictive response draws.
 }

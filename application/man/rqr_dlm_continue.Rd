@@ -14,7 +14,7 @@ rqr_dlm_continue(
 )
 }
 \arguments{
-\item{object}{An `rqr_dlm_mcmc` fit.}
+\item{object}{An \code{rqr_dlm_mcmc} fit.}
 
 \item{n_mcmc}{Positive number of additional retained draws.}
 
@@ -22,18 +22,39 @@ rqr_dlm_continue(
 
 \item{store_state_draws, store_latent_draws}{Storage choices for new draws.}
 
-\item{allow_environment_mismatch}{If `TRUE`, continue after an explicit
+\item{allow_environment_mismatch}{If \code{TRUE}, continue after an explicit
 warning when package, R, platform, BLAS/LAPACK, dependency, or source-commit
 metadata differ. Schema, checkpoint, data, model, target, and evolution
 digest mismatches always stop. The override is persisted and removes
 reproducibility and promotion eligibility from the returned segment.}
 }
 \value{
-A new `rqr_dlm_mcmc` segment beginning at the checkpoint.
+A new \code{rqr_dlm_mcmc} segment beginning at the checkpoint.
 }
 \description{
 Continuation restores the full RNG state and every Markov state required by
 the native sampler. Numerical repair and promotion eligibility are inherited
 cumulatively, and the requested and resolved FFBS backends are checked
-separately. The function returns only the newly requested draws.
+separately. The function returns only the newly requested draws. Diagnostic
+\code{"learned_pure"} fits are deliberately not continuable.
 }
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_freeze_discount_template]{rqr_freeze_discount_template()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}

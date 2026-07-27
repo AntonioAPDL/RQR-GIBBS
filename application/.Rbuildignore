@@ -9,4 +9,7 @@
 ^outputs$
 ^runs$
 ^scripts$
-^tests/testthat/test-rqr-(algebra|contracts|desn-.*|forecast-contract|learned-scale-mcmc|mcmc-fixed-design|rhs-ns|vb-fixed-design)\.R$
+^tests/testthat/test-rqr-(algebra|contracts|desn-.*|dlm-.*|forecast-contract|learned-scale-mcmc|mcmc-fixed-design|rhs-ns|vb-fixed-design)\.R$
+^tests/testthat/test-rqr-native-ordinary-v1-(boundary-audit|f01-quadrature|materializer|protected-dlm-companion|reference-cells|validation-runner)\.R$
+^vignettes/.*[.]html$
+^vignettes/.*_files$

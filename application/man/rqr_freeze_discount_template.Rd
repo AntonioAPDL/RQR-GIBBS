@@ -16,26 +16,65 @@ rqr_freeze_discount_template(
 )
 }
 \arguments{
-\item{model}{RQR-DLM model.}
+\item{model}{Valid RQR-DLM model.}
 
-\item{n_time}{Number of time points.}
+\item{n_time}{One positive integer number of time points.}
 
 \item{df, dim.df}{exdqlm-compatible component discounts and dimensions.}
 
-\item{reference_variance}{Positive scalar or length-`n_time` vector.}
+\item{reference_variance}{Plain positive numeric scalar or length-\code{n_time}
+vector.}
 
-\item{reference_design}{Optional `p x n_time` pseudo-design; defaults to FF.}
+\item{reference_design}{Optional plain finite numeric \verb{p x n_time} reference
+design; defaults to the model's expanded \code{FF}.}
 
-\item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
+\item{numerical_policy}{Either \code{"fail"} or \code{"record_repair"}.}
 
-\item{jitter_ladder}{Matrix-relative jitter ladder used only under
-record-repair. An exactly zero matrix uses a separately recorded absolute
-fallback.}
+\item{jitter_ladder}{Plain nonempty numeric matrix-relative jitter ladder
+used only under record-repair. An exactly zero matrix uses a separately
+recorded absolute fallback.}
 }
 \value{
-An evolution specification containing a fixed `W` cube and a
-  construction audit.
+An evolution specification containing a fixed \code{W} cube and a
+construction audit with repair count, repair records, and minimum
+eigenvalues.
 }
 \description{
-Freeze a component-discount covariance template
+Runs a declared reference Kalman covariance recursion once, before MCMC, and
+freezes the resulting \verb{p x p x n_time} covariance cube. The frozen object is
+an exact fixed-joint evolution specification; it is distinct from
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}}, which changes its working covariance
+during a scan.
 }
+\examples{
+model <- rqr_polytrend(order = 1L, C0 = matrix(4, 1, 1))
+frozen <- rqr_freeze_discount_template(
+  model = model,
+  n_time = 4L,
+  df = 0.95,
+  dim.df = 1L,
+  reference_variance = 1,
+  numerical_policy = "fail"
+)
+stopifnot(identical(dim(frozen$W), c(1L, 1L, 4L)))
+}
+\seealso{
+Other RQR-DLM:
+\code{\link{Ops.rqr_dlm_model}},
+\code{\link[=predict_interval.rqr_dlm_mcmc]{predict_interval.rqr_dlm_mcmc()}},
+\code{\link[=rqr_as_dlm_model]{rqr_as_dlm_model()}},
+\code{\link[=rqr_discount_matrix]{rqr_discount_matrix()}},
+\code{\link[=rqr_dlm_continue]{rqr_dlm_continue()}},
+\code{\link[=rqr_dlm_fit]{rqr_dlm_fit()}},
+\code{\link[=rqr_evolution_adaptive_working]{rqr_evolution_adaptive_working()}},
+\code{\link[=rqr_evolution_component_scale]{rqr_evolution_component_scale()}},
+\code{\link[=rqr_evolution_fixed]{rqr_evolution_fixed()}},
+\code{\link[=rqr_ffbs_sample]{rqr_ffbs_sample()}},
+\code{\link[=rqr_ffbs_smooth]{rqr_ffbs_smooth()}},
+\code{\link[=rqr_forecast_roots]{rqr_forecast_roots()}},
+\code{\link[=rqr_polytrend]{rqr_polytrend()}},
+\code{\link[=rqr_posterior_draws.rqr_dlm_mcmc]{rqr_posterior_draws.rqr_dlm_mcmc()}},
+\code{\link[=rqr_regression]{rqr_regression()}},
+\code{\link[=rqr_seasonal]{rqr_seasonal()}}
+}
+\concept{RQR-DLM}
