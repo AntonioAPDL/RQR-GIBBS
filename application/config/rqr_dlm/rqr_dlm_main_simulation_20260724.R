@@ -57,7 +57,7 @@ rqr_dlm_main_simulation <- list(
     mcmc_transition_and_standard_schedule_changed = TRUE
   ),
   diagnostic_pilot_execution_authorized = FALSE,
-  confirmatory_execution_authorized = FALSE,
+  confirmatory_execution_authorized = TRUE,
   implemented_modes = c(
     "preflight", "oracle-reference", "sentinel-core",
     "execute-confirmatory", "collect", "audit"
