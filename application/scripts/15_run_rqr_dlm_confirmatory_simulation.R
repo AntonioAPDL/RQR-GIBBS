@@ -1172,8 +1172,13 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           "provenance|runtime|source|seed|artifact|exact joint target",
           failure_message, ignore.case = TRUE
         )
-        nonfinite_cell_stop <- grepl(
-          "nonfinite primary outputs|unordered interval",
+        endpoint_contract_stop <- grepl(
+          paste(
+            "endpoint lengths do not match|",
+            "nonfinite primary interval endpoints|",
+            "unordered primary interval endpoints",
+            sep = ""
+          ),
           failure_message, ignore.case = TRUE
         )
         if (isTRUE(global_stop)) {
@@ -1188,10 +1193,10 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           stage_exit_status <- 1L
           break
         }
-        if (isTRUE(nonfinite_cell_stop)) {
+        if (isTRUE(endpoint_contract_stop)) {
           cell_stop <- TRUE
           cell_stop_message <- paste(
-            "nonfinite cell failure:", method,
+            "endpoint-contract cell failure:", method,
             digest::digest(
               failure_message, algo = "sha256", serialize = FALSE
             )

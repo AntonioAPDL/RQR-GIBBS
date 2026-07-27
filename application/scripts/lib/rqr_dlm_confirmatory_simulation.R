@@ -137,7 +137,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$implementation_correction,
         list(
-          schema_version = "rqrgibbs_dlm_main_correction/1.1.0",
+          schema_version = "rqrgibbs_dlm_main_correction/1.2.0",
           failed_authorization_commit =
             "b8b7748ab181a006611b602f64d4edf5be591de6",
           failed_wave_id =
@@ -161,10 +161,24 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
             "exclude declared local output roots from the source-worktree sidecar digest",
           comparator_standard_schedule_correction =
             "retain_4000_after_projection_correct_full_wave_diagnostic_gate",
+          second_failed_authorization_commit =
+            "bb966299bb298ee31ec65d167edf53c44ce48b03",
+          second_failed_wave_id =
+            "local_level_gaussian_T200__target0200__sentinel",
+          second_failed_outputs_reused = FALSE,
+          second_failed_scientific_metrics_used = FALSE,
+          forecast_horizon_correction =
+            "materialize FF at T, H, and T_plus_H before fitting or forecasting",
+          health_state_correction =
+            "validate unname predecessor digests and report failed runs as terminal",
+          fixed_design_standard_schedule_correction =
+            "retain_3000_for_one_chain_standard_fits_after_computational_diagnostic_gate",
+          script_invocation_correction =
+            "invoke monitored shell workers through bash independent of Git mode transport",
           correction_budget_path =
             "docs/audits/rqr_dlm_main_correction_budget_20260726.csv",
           correction_budget_sha256 =
-            "1c8a80e2d1b764a031afbec89b7a5447f6233cc63de138b3dcc94aa9d650db2e",
+            "fe6239069a95e75285448ec01d40752c9bcb96bbecf182fdc239a6d3a1757969",
           target_prior_seed_or_diagnostic_threshold_changed = FALSE,
           mcmc_transition_and_standard_schedule_changed = TRUE
         )
@@ -195,6 +209,10 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$schedules$dynamic_quantile_endpoint_standard,
         list(burn = 1000L, retain = 4000L, thin = 1L)
+      ) ||
+      !identical(
+        config$schedules$fixed_design_rqr_standard,
+        list(burn = 500L, retain = 3000L, thin = 1L)
       ) ||
       !identical(
         config$authorization_contract$schema_version,
@@ -592,7 +610,9 @@ rqr_confirm_method_iteration_cost <- function(
     M02 = rqr_confirm_dynamic_quantile_schedule(
       contract, profile_name
     ),
-    M03 = contract$config$schedules$fixed_design_rqr,
+    M03 = rqr_confirm_fixed_design_schedule(
+      contract, profile_name
+    ),
     M06 = rqr_confirm_dynamic_schedule(
       contract, method, FALSE, profile_name
     ),
@@ -623,29 +643,39 @@ rqr_confirm_iteration_budget_summary <- function(
   planning <- match.arg(planning, c("initial", "central", "maximum"))
   plan <- rqr_confirm_fit_plan(contract, planning)
   sentinels <- rqr_confirm_sentinel_map(contract, planning)
+  sentinel_count <- vapply(
+    plan$cell_id,
+    function(cell_id) sum(sentinels$cell_id == cell_id),
+    integer(1L)
+  )
+  standard_count <- plan$replications - sentinel_count
+  if (any(standard_count < 0L)) {
+    stop("A method has more sentinels than planned replications.",
+         call. = FALSE)
+  }
   standard <- sum(mapply(
     function(method, replications) {
       replications * rqr_confirm_method_iteration_cost(
         contract, method, "standard"
       )
     },
-    plan$method, plan$replications,
+    plan$method, standard_count,
     USE.NAMES = FALSE
   ))
-  extra_sentinel <- sum(vapply(
+  sentinel <- sum(vapply(
     sentinels$method,
     function(method) {
-      3 * rqr_confirm_method_iteration_cost(contract, method, "A")
+      4 * rqr_confirm_method_iteration_cost(contract, method, "A")
     },
     numeric(1L)
   ))
   data.frame(
     item = c(
       "standard_MCMC_iterations",
-      "extra_preselected_sentinel_iterations",
+      "preselected_sentinel_iterations",
       "total_MCMC_iterations"
     ),
-    value = c(standard, extra_sentinel, standard + extra_sentinel),
+    value = c(standard, sentinel, standard + sentinel),
     stringsAsFactors = FALSE
   )
 }
@@ -2796,6 +2826,51 @@ rqr_confirm_quantreg_reference <- function(contract, attestation_path) {
   )
 }
 
+rqr_confirm_materialize_model_horizon <- function(
+    model, n_time, role) {
+  n_time <- rqr_confirm_strict_integer(
+    n_time, paste(role, "model horizon"), 1L
+  )
+  model <- rqr_as_dlm_model(model)
+  FF <- as.matrix(model$FF)
+  if (ncol(FF) == 1L && n_time > 1L) {
+    FF <- matrix(
+      rep(FF[, 1L], n_time), nrow = nrow(FF), ncol = n_time
+    )
+  } else if (ncol(FF) != n_time) {
+    stop(
+      sprintf(
+        "The %s observation design does not match its exact horizon.",
+        role
+      ),
+      call. = FALSE
+    )
+  }
+  dimensions <- dim(model$GG)
+  if (length(dimensions) == 3L &&
+      !dimensions[[3L]] %in% c(1L, n_time)) {
+    stop(
+      sprintf(
+        "The %s evolution design does not match its exact horizon.",
+        role
+      ),
+      call. = FALSE
+    )
+  }
+  materialized <- rqr_as_dlm_model(list(
+    FF = FF, GG = model$GG, m0 = model$m0, C0 = model$C0,
+    component_dims = model$component_dims,
+    component_names = model$component_names
+  ))
+  if (!identical(ncol(materialized$FF), n_time)) {
+    stop(
+      sprintf("The %s model horizon was not materialized.", role),
+      call. = FALSE
+    )
+  }
+  materialized
+}
+
 rqr_confirm_model_bundle <- function(generated) {
   T <- generated$T
   H <- generated$H
@@ -2804,21 +2879,27 @@ rqr_confirm_model_bundle <- function(generated) {
   future_x <- generated$future_predictor
   build <- function(n_time, x, role) {
     if (dgp == "static_gaussian") {
-      return(rqr_regression(
-        cbind(intercept = 1, predictor = x),
-        m0 = c(0, 0), C0 = diag(4, 2), name = "regression"
+      return(rqr_confirm_materialize_model_horizon(
+        rqr_regression(
+          cbind(intercept = 1, predictor = x),
+          m0 = c(0, 0), C0 = diag(4, 2), name = "regression"
+        ),
+        n_time, role
       ))
     }
     if (dgp %in% c(
         "local_level_gaussian", "local_level_skewed",
         "heteroscedastic_t5", "root_alignment")) {
-      return(rqr_polytrend(
-        1L, m0 = 0, C0 = matrix(4, 1L, 1L), name = "level"
+      return(rqr_confirm_materialize_model_horizon(
+        rqr_polytrend(
+          1L, m0 = 0, C0 = matrix(4, 1L, 1L), name = "level"
+        ),
+        n_time, role
       ))
     }
     if (dgp %in% c(
         "trend_seasonal_gaussian", "trend_seasonal_skewed")) {
-      return(
+      return(rqr_confirm_materialize_model_horizon(
         rqr_polytrend(
           2L, m0 = c(0, 0), C0 = diag(c(4, 1)),
           name = "trend"
@@ -2826,11 +2907,12 @@ rqr_confirm_model_bundle <- function(generated) {
           rqr_seasonal(
             12L, 1L, m0 = c(0, 0), C0 = diag(2, 2),
             name = "seasonal"
-          )
-      )
+          ),
+        n_time, role
+      ))
     }
     if (dgp == "trend_regression_unequal") {
-      return(
+      return(rqr_confirm_materialize_model_horizon(
         rqr_polytrend(
           2L, m0 = c(0, 0), C0 = diag(c(4, 1)),
           name = "trend"
@@ -2838,19 +2920,21 @@ rqr_confirm_model_bundle <- function(generated) {
           rqr_regression(
             matrix(x, n_time, 1L), m0 = 0, C0 = matrix(2, 1L, 1L),
             name = "regression"
-          )
-      )
+          ),
+        n_time, role
+      ))
     }
     if (dgp == "break_heavy_tail") {
-      return(
+      return(rqr_confirm_materialize_model_horizon(
         rqr_polytrend(
           1L, m0 = 0, C0 = matrix(4, 1L, 1L), name = "level"
         ) +
           rqr_regression(
             matrix(x, n_time, 1L), m0 = 0, C0 = matrix(2, 1L, 1L),
             name = "regression"
-          )
-      )
+          ),
+        n_time, role
+      ))
     }
     stop(sprintf("No %s model exists for %s.", role, dgp),
          call. = FALSE)
@@ -2858,6 +2942,22 @@ rqr_confirm_model_bundle <- function(generated) {
   training <- build(T, train_x, "training")
   future <- build(H, future_x, "future")
   full <- build(T + H, c(train_x, future_x), "full")
+  if (!identical(
+      training$FF,
+      full$FF[, seq_len(T), drop = FALSE]
+    ) ||
+      !identical(
+        future$FF,
+        full$FF[, T + seq_len(H), drop = FALSE]
+      )) {
+    stop(
+      paste(
+        "Training and future observation designs do not partition",
+        "the full model."
+      ),
+      call. = FALSE
+    )
+  }
   list(training = training, future = future, full = full)
 }
 
@@ -2963,6 +3063,15 @@ rqr_confirm_dynamic_quantile_schedule <- function(
     contract$config$schedules$dynamic_quantile_endpoint_standard
   } else {
     contract$config$schedules$dynamic_quantile_endpoint
+  }
+}
+
+rqr_confirm_fixed_design_schedule <- function(
+    contract, profile_name) {
+  if (identical(profile_name, "standard")) {
+    contract$config$schedules$fixed_design_rqr_standard
+  } else {
+    contract$config$schedules$fixed_design_rqr
   }
 }
 
@@ -3240,7 +3349,9 @@ rqr_confirm_fixed_design <- function(
       sep = "|"
     )
   )
-  schedule <- contract$config$schedules$fixed_design_rqr
+  schedule <- rqr_confirm_fixed_design_schedule(
+    contract, profile_name
+  )
   fit <- rqr_mcmc_fit(
     generated$training_y, X,
     coverage_level = generated$coverage_level,
@@ -3623,12 +3734,25 @@ rqr_confirm_execute_method <- function(
   if (length(result$training_lower) != generated$T ||
       length(result$training_upper) != generated$T ||
       length(result$future_lower) != generated$H ||
-      length(result$future_upper) != generated$H ||
-      any(!is.finite(endpoint_values)) ||
-      any(result$training_upper < result$training_lower) ||
+      length(result$future_upper) != generated$H) {
+    stop(
+      paste(
+        "Primary endpoint lengths do not match the training",
+        "and forecast horizons."
+      ),
+      call. = FALSE
+    )
+  }
+  if (any(!is.finite(endpoint_values))) {
+    stop(
+      "Nonfinite primary interval endpoints were produced.",
+      call. = FALSE
+    )
+  }
+  if (any(result$training_upper < result$training_lower) ||
       any(result$future_upper < result$future_lower)) {
     stop(
-      "Nonfinite primary outputs or unordered interval endpoints.",
+      "Unordered primary interval endpoints were produced.",
       call. = FALSE
     )
   }
@@ -4279,15 +4403,15 @@ rqr_confirm_wave_state_records <- function(
       character()
     }
     expected_predecessor_hashes <- if (index > 1L) {
-      vapply(
+      unname(vapply(
         completion_paths[seq_len(index - 1L)],
         rqr_confirm_sha256, character(1L)
-      )
+      ))
     } else {
       character()
     }
     expected_predecessor_artifact_hashes <- if (index > 1L) {
-      vapply(
+      unname(vapply(
         completion_paths[seq_len(index - 1L)],
         function(previous_path) {
           previous <- jsonlite::read_json(
@@ -4296,7 +4420,7 @@ rqr_confirm_wave_state_records <- function(
           as.character(previous$wave_artifact_hashes_sha256)
         },
         character(1L)
-      )
+      ))
     } else {
       character()
     }
@@ -4581,20 +4705,20 @@ rqr_confirm_wave_state_records <- function(
       character()
     }
     expected_predecessor_hashes <- if (active_index > 1L) {
-      vapply(
+      unname(vapply(
         completion_paths, rqr_confirm_sha256, character(1L)
-      )
+      ))
     } else {
       character()
     }
     expected_predecessor_artifact_hashes <- if (active_index > 1L) {
-      vapply(
+      unname(vapply(
         completion_values,
         function(value) {
           as.character(value$wave_artifact_hashes_sha256)
         },
         character(1L)
-      )
+      ))
     } else {
       character()
     }

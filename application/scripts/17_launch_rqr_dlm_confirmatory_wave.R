@@ -419,7 +419,7 @@ wrapper <- file.path(
   repo_root, "application", "scripts",
   "15_run_rqr_dlm_confirmatory_simulation.sh"
 )
-if (!file.exists(wrapper) || file.access(wrapper, mode = 1L) != 0L) {
+if (!file.exists(wrapper)) {
   stop("The monitored confirmatory worker wrapper is unavailable.",
        call. = FALSE)
 }
@@ -455,7 +455,7 @@ run_worker <- function(worker_slot) {
     monitor_root, sprintf("worker-%02d", worker_slot)
   )
   status <- system2(
-    wrapper, c(mode, worker_output),
+    "bash", c(wrapper, mode, worker_output),
     stdout = stdout_path, stderr = stderr_path,
     env = c(
       sprintf("RQR_CONFIRM_TASK_FILE=%s", shard_path),

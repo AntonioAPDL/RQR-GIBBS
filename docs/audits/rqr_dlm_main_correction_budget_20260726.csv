@@ -2,27 +2,29 @@ section,planning,item,original_value,corrected_value,unit,multiplier,basis
 design,maximum,canonical_waves,110,110,waves,1.000000,Output-15 incidence and canonical wave plan unchanged
 design,maximum,replication_tasks,8400,8400,tasks,1.000000,maximum plan unchanged
 design,maximum,total_MCMC_chain_executions,40938,40938,chains,1.000000,chain and sentinel incidence unchanged
-mcmc,initial,total_MCMC_iterations,43332000,72132000,iterations,1.664636,fixed role-specific schedules reproduced from the incidence and sentinel plans
-mcmc,central,total_MCMC_iterations,80484000,132484000,iterations,1.646091,fixed role-specific schedules reproduced from the incidence and sentinel plans
-mcmc,maximum,total_MCMC_iterations,117636000,192836000,iterations,1.639260,fixed role-specific schedules reproduced from the incidence and sentinel plans
+mcmc,initial,total_MCMC_iterations,43332000,74182000,iterations,1.711945,fixed role-specific schedules reproduced from the incidence and sentinel plans
+mcmc,central,total_MCMC_iterations,80484000,136640000,iterations,1.697729,fixed role-specific schedules reproduced from the incidence and sentinel plans
+mcmc,maximum,total_MCMC_iterations,117636000,199098000,iterations,1.692492,fixed role-specific schedules reproduced from the incidence and sentinel plans
 schedule,standard,M01_M07_M09_M10_retained_draws,2000,6000,draws,3.000000,one-chain component-scale diagnostic correction
 schedule,sentinel,M01_M07_M09_M10_retained_draws,2000,2000,draws,1.000000,four-chain sentinel schedule unchanged
 schedule,standard,M11_retained_draws,3000,9000,draws,3.000000,one-chain learned-scale component diagnostic correction
 schedule,sentinel,M11_retained_draws,3000,3000,draws,1.000000,four-chain sentinel schedule unchanged
 schedule,standard,M02_retained_draws_per_endpoint,2000,4000,draws,2.000000,projection-correct one-chain comparator diagnostic correction
 schedule,sentinel,M02_retained_draws_per_endpoint,2000,2000,draws,1.000000,four-chain sentinel schedule unchanged
+schedule,standard,M03_retained_draws,1500,3000,draws,2.000000,one-chain fixed-design diagnostic correction
+schedule,sentinel,M03_retained_draws,1500,1500,draws,1.000000,four-chain sentinel schedule unchanged
 benchmark,development,M01_S01_rep0114_fit_elapsed,330.876,496.814,seconds,1.501511,identical 3000-iteration seed stream before versus after exact ASIS
 benchmark,development,M01_S01_rep0114_standard_fit_elapsed,,1083.578,seconds,,7000 total iterations under corrected standard schedule
 benchmark,development,M01_S01_rep0114_peak_RSS,,762672,KiB,,GNU time maximum resident set
-projection,initial,safeguarded_upper_CPU_hours_optimistic,947,2367.0,CPU hours,2.499469,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
-projection,initial,safeguarded_upper_CPU_hours_central,1458,3644.2,CPU hours,2.499469,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
-projection,initial,safeguarded_upper_CPU_hours_conservative,2551,6376.1,CPU hours,2.499469,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
-projection,central,safeguarded_upper_CPU_hours_optimistic,1731,4278.4,CPU hours,2.471624,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
-projection,central,safeguarded_upper_CPU_hours_central,2663,6581.9,CPU hours,2.471624,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
-projection,central,safeguarded_upper_CPU_hours_conservative,4660,11517.8,CPU hours,2.471624,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
-projection,maximum,safeguarded_upper_CPU_hours_optimistic,2514,6187.9,CPU hours,2.461367,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
-projection,maximum,safeguarded_upper_CPU_hours_central,3868,9520.6,CPU hours,2.461367,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
-projection,maximum,safeguarded_upper_CPU_hours_conservative,6768,16658.5,CPU hours,2.461367,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
-projection,initial,safeguarded_upper_wall_hours_32_workers,53,132.5,hours,2.499469,upper envelope rather than a completion-time promise
-projection,central,safeguarded_upper_wall_hours_32_workers,96,237.3,hours,2.471624,upper envelope rather than a completion-time promise
-projection,maximum,safeguarded_upper_wall_hours_32_workers,140,344.6,hours,2.461367,upper envelope rather than a completion-time promise
+projection,initial,safeguarded_upper_CPU_hours_optimistic,947,2434.3,CPU hours,2.570504,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
+projection,initial,safeguarded_upper_CPU_hours_central,1458,3747.8,CPU hours,2.570504,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
+projection,initial,safeguarded_upper_CPU_hours_conservative,2551,6557.3,CPU hours,2.570504,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
+projection,central,safeguarded_upper_CPU_hours_optimistic,1731,4412.6,CPU hours,2.549158,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
+projection,central,safeguarded_upper_CPU_hours_central,2663,6788.4,CPU hours,2.549158,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
+projection,central,safeguarded_upper_CPU_hours_conservative,4660,11879.1,CPU hours,2.549158,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
+projection,maximum,safeguarded_upper_CPU_hours_optimistic,2514,6388.8,CPU hours,2.541295,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
+projection,maximum,safeguarded_upper_CPU_hours_central,3868,9829.8,CPU hours,2.541295,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
+projection,maximum,safeguarded_upper_CPU_hours_conservative,6768,17199.5,CPU hours,2.541295,iteration ratio times maximum measured ASIS per-iteration factor applied to the full workload
+projection,initial,safeguarded_upper_wall_hours_32_workers,53,136.3,hours,2.570504,upper envelope rather than a completion-time promise
+projection,central,safeguarded_upper_wall_hours_32_workers,96,244.7,hours,2.549158,upper envelope rather than a completion-time promise
+projection,maximum,safeguarded_upper_wall_hours_32_workers,140,355.8,hours,2.541295,upper envelope rather than a completion-time promise

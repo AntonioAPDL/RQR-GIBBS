@@ -9,3 +9,5 @@ development_full_wave,M01 20 tasks and 44 chains,one_ASIS_cycle_two_slice_sweeps
 development_full_wave,M02 20 tasks 44 interval chains and 88 endpoint fits,projection_correct_standard_retain2000,885,900,108.4209,223.9167,0.09451272,failed,fixed_schedule_selection
 fixed_schedule_check,M02 five failed standard seed streams,projection_correct_standard_retain4000,225,225,247.6298,417.5410,0.0633538,passed,fixed_schedule_selection
 development_full_wave,M02 20 tasks 44 interval chains and 88 endpoint fits,projection_correct_fixed_role_schedules,900,900,247.6298,417.5410,0.0633538,passed,precommit_complete_gate
+failed_authorized_wave,M03 12 first-wave tasks,fixed_design_retain1500,456,492,120.6337,210.2207,0.0934892,failed,computational_diagnosis_only
+fixed_schedule_check,M03 eight one-chain standard seed streams,fixed_design_retain3000,328,328,316.1908,572.9115,0.05737623,passed,precommit_complete_gate

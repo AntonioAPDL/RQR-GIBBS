@@ -61,13 +61,16 @@ decisions <- if (length(values)) {
   character()
 }
 completed <- length(values)
+failed <- any(decisions == "failed")
 active_wave <- if (!is.null(active_start)) {
   as.character(active_start$wave_id)
 } else {
   "none"
 }
 next_index <- completed + if (is.null(active_start)) 1L else 2L
-next_wave <- if (next_index <= nrow(catalog)) {
+next_wave <- if (failed) {
+  "blocked_by_failed_wave"
+} else if (next_index <= nrow(catalog)) {
   catalog$wave_id[[next_index]]
 } else {
   "none"
@@ -89,6 +92,15 @@ if (nzchar(log_root)) {
       )
     }
   }
+}
+run_state <- if (failed) {
+  "stopped_after_failed_wave"
+} else if (!is.null(active_start) || running) {
+  "running_or_active"
+} else if (completed == nrow(catalog)) {
+  "all_waves_terminal"
+} else {
+  "stopped_before_next_wave"
 }
 wave_files <- list.files(
   file.path(run_root, "waves"), recursive = TRUE,
@@ -112,6 +124,7 @@ latest_collection <- if (length(latest_collection)) {
   "none"
 }
 cat("RQR-DLM confirmatory health check\n")
+cat("  state:", run_state, "\n")
 cat("  run ID:", binding$run_id, "\n")
 cat("  authorization commit:", binding$authorization_commit, "\n")
 if (!is.na(pid)) {

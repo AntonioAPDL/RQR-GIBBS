@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.1.0"
+    "rqrgibbs_dlm_main_correction/1.2.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -130,6 +130,23 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     "retain_4000_after_projection_correct_full_wave_diagnostic_gate"
   )
   expect_identical(
+    contract$config$implementation_correction$
+      second_failed_authorization_commit,
+    "bb966299bb298ee31ec65d167edf53c44ce48b03"
+  )
+  expect_identical(
+    contract$config$implementation_correction$second_failed_wave_id,
+    "local_level_gaussian_T200__target0200__sentinel"
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      second_failed_outputs_reused
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      second_failed_scientific_metrics_used
+  )
+  expect_identical(
     contract$config$implementation_correction$correction_budget_sha256,
     environment$rqr_confirm_sha256(file.path(
       contract$repo_root,
@@ -149,7 +166,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
       correction_budget$section == "mcmc" &
         correction_budget$planning == "maximum"
     ],
-    192836000
+    199098000
   )
   expect_false(
     contract$config$implementation_correction$
@@ -184,6 +201,10 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_identical(
     contract$config$schedules$dynamic_quantile_endpoint_standard,
     list(burn = 1000L, retain = 4000L, thin = 1L)
+  )
+  expect_identical(
+    contract$config$schedules$fixed_design_rqr_standard,
+    list(burn = 500L, retain = 3000L, thin = 1L)
   )
   expect_identical(
     environment$rqr_confirm_dynamic_schedule(
@@ -221,6 +242,18 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
       contract, "A"
     ),
     contract$config$schedules$dynamic_quantile_endpoint
+  )
+  expect_identical(
+    environment$rqr_confirm_fixed_design_schedule(
+      contract, "standard"
+    ),
+    contract$config$schedules$fixed_design_rqr_standard
+  )
+  expect_identical(
+    environment$rqr_confirm_fixed_design_schedule(
+      contract, "A"
+    ),
+    contract$config$schedules$fixed_design_rqr
   )
   expect_identical(contract$config$resources$threads_per_worker, 1L)
   expect_identical(
@@ -388,9 +421,9 @@ test_that("all Output-15 budgets and sentinel counts are reproduced", {
     expect_identical(as.numeric(actual$value), expected[[planning]])
   }
   expected_iterations <- c(
-    initial = 72132000,
-    central = 132484000,
-    maximum = 192836000
+    initial = 74182000,
+    central = 136640000,
+    maximum = 199098000
   )
   for (planning in names(expected_iterations)) {
     actual <- environment$rqr_confirm_iteration_budget_summary(
@@ -593,6 +626,34 @@ test_that("canonical DGPs separate state, response, and oracle quantities", {
       ) &&
       identical(dim(draw$generated_future_response), c(20L, 20L))
   }, logical(1L))))
+  for (scenario in names(draws)) {
+    draw <- draws[[scenario]]
+    bundle <- environment$rqr_confirm_model_bundle(draw)
+    expect_identical(
+      ncol(bundle$training$FF), draw$T,
+      info = paste(scenario, "training horizon")
+    )
+    expect_identical(
+      ncol(bundle$future$FF), draw$H,
+      info = paste(scenario, "future horizon")
+    )
+    expect_identical(
+      ncol(bundle$full$FF), draw$T + draw$H,
+      info = paste(scenario, "full horizon")
+    )
+    expect_identical(
+      bundle$training$FF,
+      bundle$full$FF[, seq_len(draw$T), drop = FALSE],
+      info = paste(scenario, "training/full partition")
+    )
+    expect_identical(
+      bundle$future$FF,
+      bundle$full$FF[
+        , draw$T + seq_len(draw$H), drop = FALSE
+      ],
+      info = paste(scenario, "future/full partition")
+    )
+  }
   expect_identical(
     draws$S07$latent$seasonal,
     draws$S08$latent$seasonal
@@ -1400,7 +1461,107 @@ test_that("append-only wave records reject incomplete or altered history", {
     )$completions),
     1L
   )
-  unlink(c(start_path, completion_path))
+  second_wave <- catalog[2L, , drop = FALSE]
+  second_filename <- sprintf("0002__%s.json", second_wave$wave_id)
+  second_start_path <- file.path(
+    root, "starts", second_filename
+  )
+  second_completion_path <- file.path(
+    root, "completions", second_filename
+  )
+  second_output_root <- file.path(
+    wave_output_base, sprintf("0002__%s", second_wave$wave_id)
+  )
+  dir.create(second_output_root)
+  second_manifest_path <- file.path(
+    second_output_root, "wave_artifact_hashes.csv"
+  )
+  environment$rqr_confirm_atomic_write_csv(
+    data.frame(
+      path = "failed-fixture.txt", bytes = 1,
+      sha256 = paste(rep("b", 64L), collapse = "")
+    ),
+    second_manifest_path
+  )
+  predecessor_completion <- environment$rqr_confirm_sha256(
+    completion_path
+  )
+  second_started <- list(
+    schema_version = "rqrgibbs_dlm_wave_start/1.0.0",
+    canonical_wave_index = 2L,
+    wave_id = second_wave$wave_id,
+    mode = second_wave$mode, phase = second_wave$phase,
+    batch_group = second_wave$batch_group,
+    batch_target = second_wave$batch_target,
+    binding_digest = binding$binding_digest,
+    action = "launch",
+    required_predecessor_wave_ids = wave$wave_id,
+    predecessor_completion_sha256 = predecessor_completion,
+    predecessor_artifact_manifest_sha256 =
+      wave_manifest_digest,
+    same_batch_sentinel_pass = NA,
+    prior_batch_decision_sha256 = "",
+    prior_batch_next_action = "",
+    worker_limit = second_wave$worker_limit,
+    task_count = second_wave$task_count,
+    wave_task_plan_sha256 = paste(rep("5", 64L), collapse = ""),
+    output_root = second_output_root,
+    started_at_utc = "2026-07-25 12:02:00 UTC"
+  )
+  environment$rqr_confirm_atomic_write_json(
+    second_started, second_start_path
+  )
+  second_completed <- c(
+    second_started[c(
+      "canonical_wave_index", "wave_id", "mode", "phase",
+      "batch_group", "batch_target", "binding_digest", "action"
+    )],
+    list(
+      schema_version =
+        "rqrgibbs_dlm_wave_completion/1.0.0",
+      decision = "failed",
+      start_sha256 =
+        environment$rqr_confirm_sha256(second_start_path)
+    ),
+    second_started[c(
+      "required_predecessor_wave_ids",
+      "predecessor_completion_sha256",
+      "predecessor_artifact_manifest_sha256",
+      "same_batch_sentinel_pass",
+      "prior_batch_decision_sha256", "prior_batch_next_action",
+      "worker_limit", "task_count",
+      "wave_task_plan_sha256", "output_root"
+    )],
+    list(
+      workers_used = 1L,
+      wave_artifact_hashes_sha256 =
+        environment$rqr_confirm_sha256(second_manifest_path),
+      all_workers_passed = FALSE,
+      completed_at_utc = "2026-07-25 12:03:00 UTC"
+    )
+  )
+  environment$rqr_confirm_atomic_write_json(
+    second_completed, second_completion_path
+  )
+  failed_records <- environment$rqr_confirm_wave_state_records(
+    root, catalog, binding
+  )
+  expect_identical(nrow(failed_records$completions), 2L)
+  expect_identical(
+    failed_records$completions$decision,
+    c("passed", "failed")
+  )
+  expect_error(
+    environment$rqr_confirm_wave_state_transition(
+      catalog, failed_records$completions,
+      catalog$wave_id[[3L]], binding$binding_digest
+    ),
+    "failed wave permanently blocks"
+  )
+  unlink(c(
+    start_path, completion_path,
+    second_start_path, second_completion_path
+  ))
   expect_error(
     environment$rqr_confirm_wave_state_records(
       root, catalog, binding
@@ -1461,6 +1622,32 @@ test_that("the direct wave launcher rejects alternate output before publication"
   expect_true(any(grepl(
     "primary_attestation$runtime_package_tree_digest",
     launcher, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    '"bash", c(wrapper, mode, worker_output)',
+    launcher, fixed = TRUE
+  )))
+  expect_false(any(grepl(
+    "file.access(wrapper", launcher, fixed = TRUE
+  )))
+})
+
+test_that("the coordinator invokes monitored shell stages through bash", {
+  coordinator_path <- testthat::test_path(
+    "..", "..", "scripts",
+    "18_orchestrate_rqr_dlm_confirmatory_simulation.R"
+  )
+  coordinator <- readLines(coordinator_path, warn = FALSE)
+  expect_true(any(grepl(
+    '"bash", c(wrapper, "collect", output)',
+    coordinator, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    '"bash", c(wrapper, "audit", final_audit)',
+    coordinator, fixed = TRUE
+  )))
+  expect_false(any(grepl(
+    "file.access(wrapper", coordinator, fixed = TRUE
   )))
 })
 

@@ -147,24 +147,29 @@ must remain unchanged across the final validation and launch.
 
 The canonical design remains 110 waves, 8,400 replication tasks, and 40,938
 MCMC chain executions at its maximum plan. Fixed schedule changes increase
-the maximum MCMC iterations from 117,636,000 to 192,836,000. The complete
+the maximum MCMC iterations from 117,636,000 to 199,098,000. The complete
 overlay is
 `docs/audits/rqr_dlm_main_correction_budget_20260726.csv`; its SHA-256 is
 bound by the simulation configuration. The total is also independently
 reconstructed from the incidence, sentinel, method-chain, and role-specific
 schedule contracts before any runner mode starts.
 
-This reconstruction corrected an earlier hand calculation that omitted the
-600 maximum-plan M07 common-scale ablation fits and their 12 selected
-sentinels from the longer component-scale schedule. The machine-derived
-maximum is 1,640,000 iterations larger than that draft calculation. The
-validation function now fails before preflight, orchestration, or execution if
-any of the initial, central, or maximum totals differs from the tracked
+This reconstruction incorporates two successive audit corrections. First, an
+earlier hand calculation omitted the 600 maximum-plan M07 common-scale
+ablation fits and their 12 selected sentinels. Second, the first authorized
+wave showed that four of eight one-chain M03 standard fits did not meet the
+fixed ESS and MCSE gates at 1,500 retained draws. All four M03-specific
+four-chain sentinels passed at the original schedule. The standard role is
+therefore fixed at 3,000 retained draws, while the sentinel role remains at
+1,500. The budget helper now assigns every task to exactly one role instead of
+counting a sentinel first as a standard chain and then as three additional
+chains. The validation function fails before preflight, orchestration, or
+execution if any initial, central, or maximum total differs from the tracked
 overlay.
 
 Applying the largest measured ASIS per-iteration factor to the entire
 corrected maximum budget gives an intentionally conservative upper envelope
-of 344.6 hours at 32 workers. This is a safeguard, not a completion-time
+of 355.8 hours at 32 workers. This is a safeguard, not a completion-time
 forecast. The runner retains compact standard-fit evidence rather than full
 standard chains, so the storage contract is unchanged.
 
@@ -177,6 +182,7 @@ the clean implementation commit:
 |---|---:|---:|---:|
 | M01 component-scale | 44 chains in 20 tasks | 920/920 passed | bulk ESS 263.644; tail ESS 318.597; MCSE/SD 0.0628 |
 | M02 dynamic quantile | 44 interval chains, 88 endpoint fits in 20 tasks | 900/900 passed | bulk ESS 247.630; tail ESS 417.541; MCSE/SD 0.0634 |
+| M03 fixed design | eight one-chain standard tasks | 328/328 passed | bulk ESS 316.191; tail ESS 572.912; MCSE/SD 0.0574 |
 
 The M02 gate used the isolated attested CRAN `exdqlm` 1.1.0 runtime. The M01
 and primary side of the M02 gate were intentionally classified as development
@@ -193,8 +199,10 @@ clean implementation commit:
 
 1. native R/C++ tests, standalone contracts, package check, manuscript builds,
    exdqlm smoke tests, and source formatting checks pass;
-2. exact isolated-runtime reruns of the complete first-wave M01 and M02 gates
-   pass with all diagnostics and zero repairs;
+2. exact isolated-runtime reruns of the complete first-wave M01 and M02 gates,
+   the eight M03 standard streams, all 16 horizon contracts, and one complete
+   second-wave dynamic fit-and-forecast path pass with all diagnostics and zero
+   repairs;
 3. fresh confirmatory preflight and oracle/reference evidence passes and is
    bound to the exact source, runtime, comparator runtimes, config, incidence
    matrix, seed ledger, and budget overlay;

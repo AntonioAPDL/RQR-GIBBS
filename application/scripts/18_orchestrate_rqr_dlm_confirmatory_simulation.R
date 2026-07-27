@@ -161,8 +161,7 @@ wrapper <- file.path(
   repo_root, "application", "scripts",
   "15_run_rqr_dlm_confirmatory_simulation.sh"
 )
-if (!file.exists(launcher) || !file.exists(wrapper) ||
-    file.access(wrapper, mode = 1L) != 0L) {
+if (!file.exists(launcher) || !file.exists(wrapper)) {
   stop("The reviewed launcher or monitored wrapper is unavailable.",
        call. = FALSE)
 }
@@ -259,7 +258,7 @@ run_collection <- function(batch_sequence) {
     )
   )
   status <- system2(
-    wrapper, c("collect", output),
+    "bash", c(wrapper, "collect", output),
     stdout = "", stderr = "", wait = TRUE
   )
   if (!identical(as.integer(status), 0L)) {
@@ -370,7 +369,7 @@ Sys.setenv(
 )
 if (!dir.exists(final_audit)) {
   audit_status <- system2(
-    wrapper, c("audit", final_audit),
+    "bash", c(wrapper, "audit", final_audit),
     stdout = "", stderr = "", wait = TRUE
   )
   if (!identical(as.integer(audit_status), 0L)) {

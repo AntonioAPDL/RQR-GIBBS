@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   implementation_correction = list(
-    schema_version = "rqrgibbs_dlm_main_correction/1.1.0",
+    schema_version = "rqrgibbs_dlm_main_correction/1.2.0",
     failed_authorization_commit =
       "b8b7748ab181a006611b602f64d4edf5be591de6",
     failed_wave_id =
@@ -35,15 +35,29 @@ rqr_dlm_main_simulation <- list(
       "exclude declared local output roots from the source-worktree sidecar digest",
     comparator_standard_schedule_correction =
       "retain_4000_after_projection_correct_full_wave_diagnostic_gate",
+    second_failed_authorization_commit =
+      "bb966299bb298ee31ec65d167edf53c44ce48b03",
+    second_failed_wave_id =
+      "local_level_gaussian_T200__target0200__sentinel",
+    second_failed_outputs_reused = FALSE,
+    second_failed_scientific_metrics_used = FALSE,
+    forecast_horizon_correction =
+      "materialize FF at T, H, and T_plus_H before fitting or forecasting",
+    health_state_correction =
+      "validate unname predecessor digests and report failed runs as terminal",
+    fixed_design_standard_schedule_correction =
+      "retain_3000_for_one_chain_standard_fits_after_computational_diagnostic_gate",
+    script_invocation_correction =
+      "invoke monitored shell workers through bash independent of Git mode transport",
     correction_budget_path =
       "docs/audits/rqr_dlm_main_correction_budget_20260726.csv",
     correction_budget_sha256 =
-      "1c8a80e2d1b764a031afbec89b7a5447f6233cc63de138b3dcc94aa9d650db2e",
+      "fe6239069a95e75285448ec01d40752c9bcb96bbecf182fdc239a6d3a1757969",
     target_prior_seed_or_diagnostic_threshold_changed = FALSE,
     mcmc_transition_and_standard_schedule_changed = TRUE
   ),
   diagnostic_pilot_execution_authorized = FALSE,
-  confirmatory_execution_authorized = TRUE,
+  confirmatory_execution_authorized = FALSE,
   implemented_modes = c(
     "preflight", "oracle-reference", "sentinel-core",
     "execute-confirmatory", "collect", "audit"
@@ -209,7 +223,9 @@ rqr_dlm_main_simulation <- list(
       list(burn = 1000L, retain = 2000L, thin = 1L),
     dynamic_quantile_endpoint_standard =
       list(burn = 1000L, retain = 4000L, thin = 1L),
-    fixed_design_rqr = list(burn = 500L, retain = 1500L, thin = 1L)
+    fixed_design_rqr = list(burn = 500L, retain = 1500L, thin = 1L),
+    fixed_design_rqr_standard =
+      list(burn = 500L, retain = 3000L, thin = 1L)
   ),
   batching = list(
     core = list(initial = 200L, increment = 100L, maximum = 600L),
