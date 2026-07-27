@@ -148,6 +148,19 @@ rownames(.rqr_ordinary_v1_fit_plan) <- NULL
     stringsAsFactors = FALSE
   ),
   data.frame(
+    seed_id = sprintf("f01_sampler_quadrature_chain_%02d", 1:4),
+    stage = rep("reference-only", 4),
+    purpose = rep("f01_sampler_quadrature", 4),
+    fixture_id = rep("F01", 4),
+    prior_id = rep("ridge", 4),
+    learning_rate_mode = rep(
+      "learned_pseudoresidual_normalized", 4
+    ),
+    chain = 1:4,
+    seed = as.integer(82931:82934),
+    stringsAsFactors = FALSE
+  ),
+  data.frame(
     seed_id = c(
       "loss_sign_partition", "pseudo_al_kernel", "gig_parameters",
       "lambda_power", "gaussian_conditional", "protected_dlm_hashes"
@@ -246,6 +259,68 @@ rqr_ordinary_v1_bounded_validation <- list(
     future_verification =
       "rqrgibbs_desn_future_verification/1.0.0"
   ),
+  f01_reference_contract = list(
+    schema_version =
+      "rqrgibbs_ordinary_v1_f01_quadrature/1.0.0",
+    generator_path =
+      "application/scripts/30_generate_ordinary_v1_f01_references.R",
+    generator_sha256 =
+      "e7ca4f6e4976181278d5d517208079b298a167439f9c011617ad1ae6091c510d",
+    artifact_path = paste0(
+      "application/inst/extdata/",
+      "ordinary_v1_f01_quadrature_references.csv"
+    ),
+    artifact_sha256 =
+      "d791576df8836a2fde2e59bc9be19bafac390abead8d24b5319b23de73a12459",
+    mean_source_path =
+      paste0(
+        "application/inst/extdata/",
+        "ordinary_v1_f01_independent_mean_references.csv"
+      ),
+    mean_source_sha256 =
+      "6eb163ceb7838c215774fe0a47e7f83c6a79bf1cc2091762ccdb211eeb097613",
+    mean_provenance_sha256 =
+      "413148d9da9cd15ba9714edbe350762e915874eee27cfeb9c9b280e3ac585b9a",
+    cdf_source_path =
+      "application/inst/extdata/output7_corrected_cdf_references.csv",
+    cdf_source_sha256 =
+      "60e76a362952d3cc3c3aecb1f57722c033f016baf70f426212e60c752d9d62fe",
+    cdf_provenance_sha256 =
+      "f27a07c0747abe43451ec59d286f6b5c4c4e4a91207a1dced6d4140af8de0fba",
+    tracked_mean_values = c(
+      lambda = 1.1347690848653513,
+      lower_root = -1.4295614449618761,
+      upper_root = 2.4442393354324303,
+      width = 3.8738007803943084,
+      midpoint = 0.50733894523527689,
+      total_loss = 10.163729538711271
+    ),
+    tracked_cdf_values = c(
+      lambda = 0.34724758430380498,
+      lower_root = 0.40819300327404501,
+      upper_root = 0.56214056814096802,
+      width = 0.57300384946857796,
+      midpoint = 0.48905951933756098
+    ),
+    comparison_rows = 11L,
+    quadrature_order = 80L,
+    previous_order = 64L,
+    mean_comparison_tolerance = 1e-9,
+    cdf_comparison_tolerance = 5e-11,
+    order_convergence_tolerance = 5e-11,
+    sampler = list(
+      schema_version =
+        "rqrgibbs_ordinary_v1_f01_sampler_oracle/1.0.0",
+      learning_rate_mode =
+        "learned_pseudoresidual_normalized",
+      chains = 4L,
+      burn_in = 5000L,
+      retained_per_chain = 20000L,
+      thin = 1L,
+      seeds = as.integer(82931:82934),
+      mcse_multiplier = 4
+    )
+  ),
   mcmc = list(
     chains = 4L,
     burn_in = 1000L,
@@ -268,7 +343,7 @@ rqr_ordinary_v1_bounded_validation <- list(
     )
   ),
   resources = list(
-    hard_timeout_minutes = 45L,
+    hard_timeout_minutes = 240L,
     maximum_processes = 3L,
     maximum_threads = 4L,
     maximum_artifact_bytes = 1024^3,
@@ -296,7 +371,9 @@ rqr_ordinary_v1_bounded_validation <- list(
     "although it requires two rate modes and forbids duplicate seed uses.",
     "Prospective, previously unused ranges 82731:82734 and 82741:82744",
     "complete the learned-rate DESN cells. Their use requires independent",
-    "review before execution; execution remains disabled."
+    "review before execution. The separate 82931:82934 range is frozen for",
+    "the reference-only learned-rate F01 sampler-to-quadrature oracle;",
+    "bounded execution remains disabled."
   ),
   seed_ledger = .rqr_ordinary_v1_seed_ledger,
   benchmark_plan = .rqr_ordinary_v1_benchmark_plan,
@@ -391,6 +468,28 @@ rqr_ordinary_v1_bounded_validation <- list(
       horizon = 2L
     )
   ),
+  protected_dlm_companion = list(
+    schema_version =
+      "rqrgibbs_ordinary_v1_protected_dlm_companion/1.0.0",
+    collector_path = paste0(
+      "application/scripts/",
+      "30_bundle_rqr_ordinary_v1_protected_dlm_evidence.R"
+    ),
+    collector_sha256 =
+      "eba18d34f7b50a9166d4991fafcaa1ae669e0dd0eba3ca0d4c9d3416d0be0f88",
+    compact_files = c(
+      "artifact_hashes.csv", "bundle_manifest.json",
+      "input_artifact_hashes.csv", "input_bundle_summary.csv",
+      "semantic_gates.csv"
+    ),
+    semantic_gate_count = 16L,
+    input_role_count = 4L,
+    input_artifact_count = 39L,
+    execution_environment =
+      "RQR_ORDINARY_V1_DLM_COMPANION_DIR",
+    source_state_role =
+      "reviewed_disabled_candidate_runtime_bound_to_benchmark"
+  ),
   protected_dlm_sha256 = c(
     "application/R/rqr_dlm_fit.R" =
       "3bfc0daa937dbd17d0cfa867829c5c03aa243b709b48a3a34679ce188b3b4d73",
@@ -425,7 +524,7 @@ rqr_ordinary_v1_bounded_validation <- list(
     "application/scripts/17_launch_rqr_dlm_confirmatory_wave.R" =
       "643c3908feeb52d4ffb4af406ab6fdfaa07a93b286af6722ec0d12d465bf5f16",
     "application/DESCRIPTION" =
-      "9fa186954e850c81ffb420ecaf96ea6293c5ba06539a4285bbb29c0b3ea30f8a",
+      "1d9d9218915eaed659cd93ae373f433fe96bb20822b93426a481cfaff644a494",
     "application/NAMESPACE" =
       "27d4e8f2dd18692b2a0af3be61c421ee1246c20bf52216ad2d0faa58701ea950",
     "application/R/RcppExports.R" =
@@ -444,10 +543,17 @@ rqr_ordinary_v1_bounded_validation <- list(
     "source_state.csv", "runtime_attestations.csv",
     "validation_config_digest.csv", "fixture_manifest.csv",
     "seed_ledger.csv", "reference_gates.csv", "oracle_comparisons.csv",
+    "f01_quadrature_checks.csv", "f01_sampler_checks.csv",
     "missingness_checks.csv", "rhs_ns_conditional_checks.csv",
     "continuation_checks.csv", "history_mutation_checks.csv",
     "desn_design_checks.csv", "desn_future_checks.csv",
-    "protected_dlm_hashes.csv", "package_checks.csv",
+    "protected_dlm_hashes.csv",
+    "protected_dlm_companion_checks.csv", "package_checks.csv",
+    "protected_dlm_companion/artifact_hashes.csv",
+    "protected_dlm_companion/bundle_manifest.json",
+    "protected_dlm_companion/input_artifact_hashes.csv",
+    "protected_dlm_companion/input_bundle_summary.csv",
+    "protected_dlm_companion/semantic_gates.csv",
     "fit_plan.csv", "initialization_manifest.csv",
     "fit_plan_status.csv", "bounded_diagnostics.csv",
     "compact_posterior_summaries.csv",

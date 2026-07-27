@@ -58,7 +58,7 @@ verify_wrapper_manifest() {
   local output_dir="$2"
   local monitor_dir="$3"
   local manifest="$monitor_dir/wrapper_artifact_hashes.csv"
-  local expected_set actual_set output_name header
+  local expected_set actual_set header
   local role relative bytes digest_value actual_path actual_bytes actual_digest
   if [[ ! -f "$manifest" || -L "$manifest" ]]; then
     echo "$scenario omitted wrapper_artifact_hashes.csv." >&2
@@ -66,21 +66,16 @@ verify_wrapper_manifest() {
   fi
   expected_set="$(mktemp "$test_root/${scenario}.expected_manifest.XXXXXX")"
   actual_set="$(mktemp "$test_root/${scenario}.actual_manifest.XXXXXX")"
-  find "$monitor_dir" -mindepth 1 -maxdepth 1 -type f \
-    ! -name 'wrapper_artifact_hashes.csv' \
-    ! -name '.wrapper_artifact_hashes.*' \
-    ! -name '.wrapper_manifest_paths.*' \
-    -printf 'monitor_evidence,monitor/%f\n' |
-    LC_ALL=C sort >"$expected_set"
-  for output_name in \
-      artifact_hashes.csv run_status.csv source_state.csv \
-      validation_config_digest.csv; do
-    if [[ -f "$output_dir/$output_name" &&
-          ! -L "$output_dir/$output_name" ]]; then
-      printf '%s\n' \
-        "r_evidence_binding,output/$output_name" >>"$expected_set"
-    fi
-  done
+  printf '%s\n' \
+    monitor_evidence,monitor/process_group_monitor.csv \
+    monitor_evidence,monitor/process_group_resource_summary.csv \
+    monitor_evidence,monitor/runner.stderr.log \
+    monitor_evidence,monitor/runner.stdout.log \
+    monitor_evidence,monitor/wrapper_closeout.csv \
+    >"$expected_set"
+  { find "$output_dir" -mindepth 1 -type f \
+      -printf 'r_evidence_binding,output/%P\n' 2>/dev/null || true; } |
+    LC_ALL=C sort >>"$expected_set"
   LC_ALL=C sort -o "$expected_set" "$expected_set"
   awk -F, 'NR > 1 { print $1 "," $2 }' "$manifest" |
     LC_ALL=C sort >"$actual_set"
@@ -156,7 +151,8 @@ verify_common_evidence() {
     echo "$scenario retained a live process-group member." >&2
     return 1
   fi
-  if find "$monitor_dir" -maxdepth 1 -type f \
+  if [[ "$scenario" != monitor-temporary-lookalike ]] &&
+      find "$monitor_dir" -maxdepth 1 -type f \
       \( -name '.resource_summary.*' -o -name '.wrapper_closeout.*' \
          -o -name '.wrapper_artifact_hashes.*' \
          -o -name '.wrapper_manifest_paths.*' \) |
@@ -285,6 +281,32 @@ run_scenario() {
         return 1
       fi
       ;;
+    monitor-hidden)
+      if [[ "$(csv_field "$monitor_dir/process_group_resource_summary.csv" \
+          monitor_error)" != TRUE ||
+            ! -f "$monitor_dir/.unexpected-monitor" ]]; then
+        echo "monitor-hidden did not reject and preserve the unexpected entry." >&2
+        return 1
+      fi
+      if grep -q 'monitor/\\.unexpected-monitor' \
+          "$monitor_dir/wrapper_artifact_hashes.csv"; then
+        echo "monitor-hidden incorrectly bound an undeclared monitor artifact." >&2
+        return 1
+      fi
+      ;;
+    monitor-temporary-lookalike)
+      if [[ "$(csv_field "$monitor_dir/process_group_resource_summary.csv" \
+          monitor_error)" != TRUE ||
+            ! -f "$monitor_dir/.wrapper_artifact_hashes.injected" ]]; then
+        echo "monitor-temporary-lookalike did not reject the injected entry." >&2
+        return 1
+      fi
+      if grep -q 'monitor/\\.wrapper_artifact_hashes\\.injected' \
+          "$monitor_dir/wrapper_artifact_hashes.csv"; then
+        echo "monitor-temporary-lookalike bound an undeclared entry." >&2
+        return 1
+      fi
+      ;;
   esac
 }
 
@@ -355,6 +377,8 @@ run_scenario artifact-limit FALSE
 run_scenario process-limit FALSE
 run_scenario thread-limit FALSE
 run_scenario monitor-error FALSE
+run_scenario monitor-hidden FALSE
+run_scenario monitor-temporary-lookalike FALSE
 run_signal_scenario
 
-echo "ordinary-v1 monitor fault suite passed: 8/8 scenarios."
+echo "ordinary-v1 monitor fault suite passed: 10/10 scenarios."

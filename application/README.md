@@ -43,6 +43,7 @@ materializes one D02 design without fitting a readout:
     make materialize-ordinary-v1-desn
     make preflight-ordinary-v1
     make reference-ordinary-v1
+    make test-ordinary-v1-dlm-companion
     RQR_ORDINARY_V1_BENCHMARK_CONFIRM=I_CONFIRM_ORDINARY_V1_ONE_CELL_BENCHMARK \
       make benchmark-ordinary-v1-one-cell
     make test-ordinary-v1-monitor
@@ -64,12 +65,23 @@ resource/mechanics benchmark, not part of the 48-fit grid or a scientific
 pilot, and it requires the exact confirmation shown above while bounded
 execution remains disabled.
 
-Both BENCH01 and the complete `reference-only` bundle are generated from the
-reviewed, execution-disabled source candidate. A later authorization commit
-may change only the execution flag and the recorded reviewed SHA. Before the
-48-fit grid starts, the runner verifies those candidate bundles against the
-flag-only commit's source ancestry, exact runtime content, toolchain, hashes,
-and attested D02 design.
+`reference-only` makes eight explicit top-level fit calls: four learned-rate
+F01 ridge chains for the sampler-to-quadrature oracle and four tiny attested
+DESN reference fits. Source-bound test files also exercise additional tiny
+fits and continuations; those internal calls are intentionally identified as
+uninstrumented rather than folded into the top-level fit count.
+
+BENCH01 and the protected-DLM companion are generated from the reviewed,
+execution-disabled source candidate. A later authorization commit may change
+only the execution flag and the recorded reviewed SHA, after which the exact
+primary runtime is rebuilt and `reference-only` is regenerated at that
+authorization commit. Before the 48-fit grid starts, the runner verifies the
+candidate benchmark through the strict flag-only source delta, unchanged
+package/toolchain contract, exact pinned exdqlm runtime, hashes, and attested
+D02 design. The primary runtime-tree digest is allowed to change across the
+two exact builds because its lineage records different source commits. The
+refreshed reference bundle must instead match the authorization runtime and
+toolchain exactly.
 
 Bounded execution remains disabled in source candidates. Authorization uses
 two commits: a reviewed, fail-closed implementation commit and a later
@@ -78,12 +90,23 @@ reviewed implementation SHA. The runner reconstructs and verifies that entire
 delta before it can accept `RQR_ORDINARY_V1_CONFIRM=YES`.
 
 Final authorization also requires the exact hashed reference bundle and both
-benchmark bundles. Their locations are supplied through
+benchmark bundles, together with the compact protected-DLM companion. Their
+locations are supplied through
 `RQR_ORDINARY_V1_REFERENCE_DIR`, `RQR_ORDINARY_V1_BENCHMARK_DIR`, and
-`RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR`. The benchmark output binds four
+`RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR`; the companion is supplied through
+`RQR_ORDINARY_V1_DLM_COMPANION_DIR`. The benchmark output binds four
 passing fits, diagnostics, DESN training provenance, conditional future-root
 contract evidence, and local chain hashes; its monitor bundle binds sampled
 resources, wrapper closeout, and the wrapper artifact manifest.
+Bounded execution retains an exact validated copy of the companion's five
+compact files under `protected_dlm_companion/`. Successful mode outputs use
+closed filename sets, and the wrapper rehashes every R-output byte after the R
+process exits. Failed modes may publish only a mode-specific compact subset
+with valid terminal failure/status rows; approved progress tables and partial
+companion bytes remain recursively hash-bound. The monitor directory itself
+is closed to five declared pre-manifest files plus its final wrapper manifest,
+and the ten-scenario fault suite rejects hidden additions and filenames that
+imitate atomic-manifest temporaries.
 
 Per-fit provenance remains strict. Native fixed-design fits bind only the
 isolated primary runtime and require no external repository. Promotion-grade

@@ -45,11 +45,14 @@ The supplied local files matched the reported SHA-256 values:
 | `chatgpt_pro_output6_audit_20260722.md` | `413148d9da9cd15ba9714edbe350762e915874eee27cfeb9c9b280e3ac585b9a` |
 | `output6_independent_quadrature_check.csv` | `f08f0f8fa9ae8f81fd06a29ffdd8f0d6f595d1b64e6b9dba64dbac6594ac0b17` |
 
-The raw files remain local and ignored. The independently reported means and
-CDF probabilities are tracked as a compact machine-readable validation
-contract in
-`application/inst/extdata/output6_independent_references.csv`, with the audit
-hash recorded on every row.
+The raw files remain local and ignored. The independently reported means were
+subsequently separated into the current mean-only contract
+`application/inst/extdata/ordinary_v1_f01_independent_mean_references.csv`.
+The five CDF values reported at Output 6 were later found to use insufficient
+event-boundary splitting and are not authoritative; their corrected contract
+is `application/inst/extdata/output7_corrected_cdf_references.csv`. The
+original combined Output-6 table is retained only under
+`docs/audits/historical/` to preserve the audit trail.
 
 The protected checkouts were read only throughout:
 
@@ -183,14 +186,22 @@ Tests cover public `C0`, `m0`, and `GG` rejection in both backends,
 near-maximum symmetrization, subnormal jitter underflow, actual-scale symmetry
 and definiteness from `1e-300` through `1e300`, and R/C++ repair-ledger parity.
 
-### Pilot corrections
+### Historical pilot corrections (superseded CDF reference values)
 
-The bounded launcher now:
+This subsection preserves what the Output-6 reconciliation reported at that
+time. Four of its five root/width/midpoint CDF reference values were later
+shown to use insufficient event-boundary splitting. They must not be used as
+current independent references or as evidence for a present validation gate.
+The corrected values and integration contract are recorded in
+`application/inst/extdata/output7_corrected_cdf_references.csv`; the original
+combined Output-6 table is retained only in `docs/audits/historical/`.
+
+At Output 6, the bounded launcher was reported to:
 
 - uses `estimated_relative_error`, not “relative error bound,” for
   `pracma::integral2()`;
-- gates collapsed and fully augmented CDF estimates separately against all
-  five independent Output-6 quadrature probabilities;
+- gate collapsed and fully augmented CDF estimates separately against all
+  five then-reported Output-6 quadrature probabilities;
 - cross-checks the custom rank-normalized diagnostics with maintained `coda`
   R-hat and ESS implementations;
 - distinguishes primary reproducibility from promotion in its continuation
@@ -204,7 +215,12 @@ The `coda` cross-check is deliberately independent but not a replacement for
 rank-normalized split R-hat and bulk/tail ESS. The latter remain the primary
 modern gates; `coda` provides a maintained classical diagnostic sanity check.
 
-## Stronger bounded-pilot result
+## Historical bounded-pilot result
+
+The run record below is retained for provenance. Its sampler draws and
+diagnostics were not invalidated, but the displayed four non-lambda
+“Independent” CDF values are superseded by the corrected Output-7 contract.
+Accordingly, this historical table is not a current CDF validation artifact.
 
 Run:
 
@@ -223,7 +239,7 @@ recomputed and matched the manifest. The failure log is empty.
 | Minimum bulk ESS | 15,743.75 |
 | Minimum tail ESS | 25,966.30 |
 | Numerical repairs | 0 |
-| Independent CDF gates | 10/10 sampler-reference comparisons pass |
+| Then-reported CDF gates | 10/10 sampler-reference comparisons passed under the superseded Output-6 values |
 | Maintained diagnostic rows | 14/14 pass |
 | Primary runtime/source match | TRUE |
 | exdqlm runtime/source match | TRUE |
@@ -232,7 +248,7 @@ recomputed and matched the manifest. The failure log is empty.
 | Wall time | 8.59 minutes |
 | Artifact size before manifest | 0.012 MB |
 
-The five CDF comparisons were:
+The five CDF comparisons reported at Output 6 were:
 
 | Estimand/threshold | Independent | Collapsed | Fully augmented |
 |---|---:|---:|---:|
@@ -242,9 +258,10 @@ The five CDF comparisons were:
 | width `<= 4` | 0.572676 | 0.569588 | 0.573050 |
 | midpoint `<= 0.5` | 0.489019 | 0.491425 | 0.494300 |
 
-Every collapsed-versus-augmented, collapsed-versus-independent, and
-augmented-versus-independent CDF comparison passed its predeclared four-MCSE
-gate.
+Every collapsed-versus-augmented and then-reported sampler-versus-reference
+comparison passed its predeclared four-MCSE gate. The non-lambda reference
+values shown here are historical and superseded; current validation must use
+the corrected Output-7/current ordinary-v1 reference contract.
 
 ## Next RQR-DLM stage
 

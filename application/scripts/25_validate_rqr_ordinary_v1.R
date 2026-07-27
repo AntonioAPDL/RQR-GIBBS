@@ -125,6 +125,34 @@ rqr_ordinary_v1_validate_config <- function(config) {
       )) {
     fail("The accepted learning-rate modes changed.")
   }
+  expected_f01_response <- c(
+    -2.0, -1.3, -0.8, -0.4, -0.1, 0.1,
+    0.35, 0.7, 1.1, 1.6, 2.2, 3.0
+  )
+  f01_fixture <- config$fixtures$F01
+  if (!identical(config$coverage_level, 0.80) ||
+      !identical(config$fixed_learning_rate, 1) ||
+      !identical(config$loss_reference_scale, 1) ||
+      !identical(config$lambda_prior, list(shape = 4, rate = 4)) ||
+      !is.list(f01_fixture) ||
+      !identical(names(f01_fixture), c("y", "X", "prior")) ||
+      !identical(f01_fixture$y, expected_f01_response) ||
+      !is.matrix(f01_fixture$X) ||
+      !identical(dim(f01_fixture$X), c(12L, 1L)) ||
+      any(!is.finite(f01_fixture$X)) ||
+      any(f01_fixture$X != 1) ||
+      !identical(colnames(f01_fixture$X), "intercept") ||
+      !identical(
+        f01_fixture$prior,
+        list(type = "ridge", tau2 = 25)
+      )) {
+    fail(
+      paste(
+        "The ordinary-v1 target or F01 quadrature fixture no longer",
+        "matches the frozen deterministic reference."
+      )
+    )
+  }
   plan <- config$fit_plan
   required_plan <- c(
     "cell_id", "family", "fixture_id", "prior_id",
@@ -285,16 +313,39 @@ rqr_ordinary_v1_validate_config <- function(config) {
   observed_benchmark_ledger <- ledger[
     ledger$purpose == "benchmark_chain", required_ledger, drop = FALSE
   ]
+  expected_f01_sampler_ledger <- data.frame(
+    seed_id = sprintf("f01_sampler_quadrature_chain_%02d", 1:4),
+    stage = rep("reference-only", 4L),
+    purpose = rep("f01_sampler_quadrature", 4L),
+    fixture_id = rep("F01", 4L),
+    prior_id = rep("ridge", 4L),
+    learning_rate_mode = rep(
+      "learned_pseudoresidual_normalized", 4L
+    ),
+    chain = 1:4,
+    seed = as.integer(82931:82934),
+    stringsAsFactors = FALSE
+  )
+  observed_f01_sampler_ledger <- ledger[
+    ledger$purpose == "f01_sampler_quadrature",
+    required_ledger,
+    drop = FALSE
+  ]
   rownames(expected_bounded_ledger) <- NULL
   rownames(expected_benchmark_ledger) <- NULL
+  rownames(expected_f01_sampler_ledger) <- NULL
   rownames(observed_bounded_ledger) <- NULL
   rownames(observed_benchmark_ledger) <- NULL
+  rownames(observed_f01_sampler_ledger) <- NULL
   if (!identical(observed_bounded_ledger, expected_bounded_ledger) ||
-      !identical(observed_benchmark_ledger, expected_benchmark_ledger)) {
+      !identical(observed_benchmark_ledger, expected_benchmark_ledger) ||
+      !identical(
+        observed_f01_sampler_ledger, expected_f01_sampler_ledger
+      )) {
     fail(
       paste(
-        "Bounded and benchmark seed-ledger rows must preserve the exact",
-        "plan, purpose, stage, chain, and seed mapping."
+        "Bounded, benchmark, and F01 sampler seed-ledger rows must",
+        "preserve the exact plan, purpose, stage, chain, and seed mapping."
       )
     )
   }
@@ -348,7 +399,7 @@ rqr_ordinary_v1_validate_config <- function(config) {
     fail("The four overdispersed initialization profiles are malformed.")
   }
   resources <- config$resources
-  if (!identical(resources$hard_timeout_minutes, 45L) ||
+  if (!identical(resources$hard_timeout_minutes, 240L) ||
       !identical(resources$maximum_processes, 3L) ||
       !identical(resources$maximum_threads, 4L) ||
       !identical(resources$maximum_artifact_bytes, 1024^3) ||
@@ -399,6 +450,102 @@ rqr_ordinary_v1_validate_config <- function(config) {
   if (!identical(config$desn_schema_contract, expected_desn_schemas)) {
     fail("The frozen DESN schema contract changed.")
   }
+  f01 <- config$f01_reference_contract
+  expected_f01_names <- c(
+    "schema_version", "generator_path", "generator_sha256",
+    "artifact_path", "artifact_sha256", "mean_source_path",
+    "mean_source_sha256", "mean_provenance_sha256",
+    "cdf_source_path", "cdf_source_sha256",
+    "cdf_provenance_sha256", "tracked_mean_values",
+    "tracked_cdf_values", "comparison_rows",
+    "quadrature_order", "previous_order",
+    "mean_comparison_tolerance", "cdf_comparison_tolerance",
+    "order_convergence_tolerance", "sampler"
+  )
+  if (!is.list(f01) ||
+      !identical(names(f01), expected_f01_names) ||
+      !identical(
+        f01$schema_version,
+        "rqrgibbs_ordinary_v1_f01_quadrature/1.0.0"
+      ) ||
+      !identical(
+        f01$generator_path,
+        "application/scripts/30_generate_ordinary_v1_f01_references.R"
+      ) ||
+      !identical(
+        f01$artifact_path,
+        paste0(
+          "application/inst/extdata/",
+          "ordinary_v1_f01_quadrature_references.csv"
+        )
+      ) ||
+      !identical(
+        f01$mean_source_path,
+        paste0(
+          "application/inst/extdata/",
+          "ordinary_v1_f01_independent_mean_references.csv"
+        )
+      ) ||
+      !identical(
+        f01$cdf_source_path,
+        "application/inst/extdata/output7_corrected_cdf_references.csv"
+      ) ||
+      any(!grepl("^[0-9a-f]{64}$", unlist(
+        f01[c(
+          "generator_sha256", "artifact_sha256",
+          "mean_source_sha256", "mean_provenance_sha256",
+          "cdf_source_sha256", "cdf_provenance_sha256"
+        )],
+        use.names = FALSE
+      ))) ||
+      !identical(
+        names(f01$tracked_mean_values),
+        c(
+          "lambda", "lower_root", "upper_root", "width", "midpoint",
+          "total_loss"
+        )
+      ) ||
+      !identical(
+        names(f01$tracked_cdf_values),
+        c("lambda", "lower_root", "upper_root", "width", "midpoint")
+      ) ||
+      any(!is.finite(f01$tracked_mean_values)) ||
+      any(!is.finite(f01$tracked_cdf_values)) ||
+      !identical(f01$comparison_rows, 11L) ||
+      !identical(f01$quadrature_order, 80L) ||
+      !identical(f01$previous_order, 64L) ||
+      !identical(f01$mean_comparison_tolerance, 1e-9) ||
+      !identical(f01$cdf_comparison_tolerance, 5e-11) ||
+      !identical(f01$order_convergence_tolerance, 5e-11) ||
+      !is.list(f01$sampler) ||
+      !identical(
+        names(f01$sampler),
+        c(
+          "schema_version", "learning_rate_mode", "chains",
+          "burn_in", "retained_per_chain", "thin", "seeds",
+          "mcse_multiplier"
+        )
+      ) ||
+      !identical(
+        f01$sampler$schema_version,
+        "rqrgibbs_ordinary_v1_f01_sampler_oracle/1.0.0"
+      ) ||
+      !identical(
+        f01$sampler$learning_rate_mode,
+        "learned_pseudoresidual_normalized"
+      ) ||
+      !identical(f01$sampler$chains, 4L) ||
+      !identical(f01$sampler$burn_in, 5000L) ||
+      !identical(f01$sampler$retained_per_chain, 20000L) ||
+      !identical(f01$sampler$thin, 1L) ||
+      !identical(f01$sampler$seeds, as.integer(82931:82934)) ||
+      !identical(f01$sampler$mcse_multiplier, 4) ||
+      !identical(
+        f01$sampler$seeds,
+        as.integer(observed_f01_sampler_ledger$seed)
+      )) {
+    fail("The deterministic F01 quadrature contract changed.")
+  }
   d02 <- config$fixtures$D02
   if (!is.list(d02) ||
       !rqr_ordinary_v1_is_integer_scalar(
@@ -425,6 +572,48 @@ rqr_ordinary_v1_validate_config <- function(config) {
       isTRUE(d02$future_extension$response_simulation)) {
     fail("The D02 attested materialization contract is malformed.")
   }
+  companion <- config$protected_dlm_companion
+  expected_companion_files <- c(
+    "artifact_hashes.csv", "bundle_manifest.json",
+    "input_artifact_hashes.csv", "input_bundle_summary.csv",
+    "semantic_gates.csv"
+  )
+  if (!is.list(companion) ||
+      !identical(
+        names(companion),
+        c(
+          "schema_version", "collector_path", "collector_sha256",
+          "compact_files", "semantic_gate_count", "input_role_count",
+          "input_artifact_count", "execution_environment",
+          "source_state_role"
+        )
+      ) ||
+      !identical(
+        companion$schema_version,
+        "rqrgibbs_ordinary_v1_protected_dlm_companion/1.0.0"
+      ) ||
+      !identical(
+        companion$collector_path,
+        paste0(
+          "application/scripts/",
+          "30_bundle_rqr_ordinary_v1_protected_dlm_evidence.R"
+        )
+      ) ||
+      !grepl("^[0-9a-f]{64}$", companion$collector_sha256) ||
+      !identical(companion$compact_files, expected_companion_files) ||
+      !identical(companion$semantic_gate_count, 16L) ||
+      !identical(companion$input_role_count, 4L) ||
+      !identical(companion$input_artifact_count, 39L) ||
+      !identical(
+        companion$execution_environment,
+        "RQR_ORDINARY_V1_DLM_COMPANION_DIR"
+      ) ||
+      !identical(
+        companion$source_state_role,
+        "reviewed_disabled_candidate_runtime_bound_to_benchmark"
+      )) {
+    fail("The protected-DLM companion contract is malformed.")
+  }
   protected <- config$protected_dlm_sha256
   if (!is.character(protected) ||
       !identical(
@@ -442,7 +631,12 @@ rqr_ordinary_v1_validate_config <- function(config) {
       !all(c(
         "failure_log.csv", "run_status.csv", "artifact_hashes.csv",
         "closeout.md", "rhs_root_trace_sidecar.csv",
-        "fixed_parameter_checks.csv"
+        "fixed_parameter_checks.csv", "f01_quadrature_checks.csv",
+        "f01_sampler_checks.csv",
+        "protected_dlm_companion_checks.csv",
+        paste0(
+          "protected_dlm_companion/", expected_companion_files
+        )
       ) %in% config$compact_evidence_files)) {
     fail("The compact evidence contract is malformed.")
   }
@@ -551,19 +745,197 @@ rqr_ordinary_v1_atomic_rds <- function(object, path) {
   )
 }
 
-rqr_ordinary_v1_artifact_manifest <- function(directory) {
-  files <- list.files(
-    directory, recursive = TRUE, full.names = TRUE, all.files = FALSE
+rqr_ordinary_v1_expected_output_files <- function(mode) {
+  common <- c(
+    "source_state.csv", "runtime_attestations.csv",
+    "validation_config_digest.csv", "fixture_manifest.csv",
+    "seed_ledger.csv", "resource_summary.csv"
   )
-  files <- files[file.info(files)$isdir %in% FALSE]
-  files <- files[basename(files) != "artifact_hashes.csv"]
-  relative <- substring(files, nchar(normalizePath(
-    directory, winslash = "/", mustWork = TRUE
-  )) + 2L)
+  terminal <- c(
+    "failure_log.csv", "run_status.csv", "session_info.txt",
+    "closeout.md", "artifact_hashes.csv"
+  )
+  reference <- c(
+    "reference_gates.csv", "oracle_comparisons.csv",
+    "f01_quadrature_checks.csv", "f01_sampler_checks.csv",
+    "protected_dlm_hashes.csv", "package_checks.csv",
+    "desn_design_checks.csv", "desn_future_checks.csv",
+    "missingness_checks.csv", "rhs_ns_conditional_checks.csv",
+    "continuation_checks.csv", "history_mutation_checks.csv"
+  )
+  execution <- c(
+    "fit_plan.csv", "initialization_manifest.csv",
+    "fit_plan_status.csv", "bounded_diagnostics.csv",
+    "compact_posterior_summaries.csv", "checkpoint_manifest.csv",
+    "provenance_checks.csv", "root_swap_sidecar.csv",
+    "rhs_root_trace_sidecar.csv", "fixed_parameter_checks.csv",
+    "local_chain_hashes.csv", "desn_future_checks.csv"
+  )
+  mode_specific <- switch(
+    mode,
+    preflight = "reference_gates.csv",
+    `reference-only` = reference,
+    `benchmark-one-cell` = execution,
+    `execute-bounded` = c(
+      "protected_dlm_companion_checks.csv",
+      paste0(
+        "protected_dlm_companion/",
+        c(
+          "artifact_hashes.csv", "bundle_manifest.json",
+          "input_artifact_hashes.csv", "input_bundle_summary.csv",
+          "semantic_gates.csv"
+        )
+      ),
+      execution
+    ),
+    stop("The output-file contract received an unsupported mode.",
+         call. = FALSE)
+  )
+  files <- c(common, mode_specific, terminal)
+  invalid_path <- grepl("^/", files) |
+    grepl("(^|/)\\.\\.?(/|$)", files) |
+    grepl("//", files, fixed = TRUE)
+  if (anyDuplicated(files) || any(invalid_path) ||
+      !"artifact_hashes.csv" %in% files) {
+    stop("The output-file contract is internally inconsistent.",
+         call. = FALSE)
+  }
+  files
+}
+
+rqr_ordinary_v1_allowed_failure_files <- function(mode) {
+  files <- rqr_ordinary_v1_expected_output_files(mode)
+  if (mode %in% c("benchmark-one-cell", "execute-bounded")) {
+    files <- c(
+      files,
+      "fit_plan_status_in_progress.csv",
+      "bounded_diagnostics_in_progress.csv"
+    )
+  }
+  if (anyDuplicated(files)) {
+    stop("The failure-output allowlist is internally inconsistent.",
+         call. = FALSE)
+  }
+  files
+}
+
+rqr_ordinary_v1_artifact_manifest <- function(
+    directory, expected_files = NULL, allow_partial = FALSE) {
+  if (!is.logical(allow_partial) || length(allow_partial) != 1L ||
+      is.na(allow_partial)) {
+    stop("allow_partial must be one nonmissing logical value.",
+         call. = FALSE)
+  }
+  if (!is.character(directory) || length(directory) != 1L ||
+      is.na(directory) || !nzchar(directory)) {
+    stop(
+      "The compact evidence root must be one existing, nonsymlink directory.",
+      call. = FALSE
+    )
+  }
+  root_input <- path.expand(directory)
+  if (nchar(root_input) > 1L) {
+    root_input <- sub("[/\\\\]+$", "", root_input)
+  }
+  if (!dir.exists(root_input) || nzchar(Sys.readlink(root_input))) {
+    stop(
+      "The compact evidence root must be one existing, nonsymlink directory.",
+      call. = FALSE
+    )
+  }
+  root <- normalizePath(root_input, winslash = "/", mustWork = TRUE)
+  files <- list.files(
+    root,
+    recursive = TRUE,
+    full.names = TRUE,
+    all.files = TRUE,
+    no.. = TRUE,
+    include.dirs = TRUE
+  )
+  if (length(files) && any(nzchar(Sys.readlink(files)))) {
+    stop(
+      "Compact evidence may contain only regular, nonsymlink files.",
+      call. = FALSE
+    )
+  }
+  information <- file.info(files)
+  directories <- length(files) && any(information$isdir %in% TRUE)
+  relative_all <- if (length(files)) {
+    substring(files, nchar(root) + 2L)
+  } else {
+    character(0)
+  }
+  if (anyNA(relative_all) || any(!nzchar(relative_all)) ||
+      anyDuplicated(relative_all)) {
+    stop("The compact evidence path set is malformed.", call. = FALSE)
+  }
+  directory_paths <- relative_all[information$isdir %in% TRUE]
+  files <- files[information$isdir %in% FALSE]
+  relative <- relative_all[information$isdir %in% FALSE]
+  if (length(files) && any(!utils::file_test("-f", files))) {
+    stop(
+      "Compact evidence may contain only regular, nonsymlink files.",
+      call. = FALSE
+    )
+  }
+  if (!is.null(expected_files)) {
+    invalid_expected_path <- grepl("^/", expected_files) |
+      grepl("(^|/)\\.\\.?(/|$)", expected_files) |
+      grepl("//", expected_files, fixed = TRUE)
+    if (!is.character(expected_files) || anyNA(expected_files) ||
+        any(!nzchar(expected_files)) || anyDuplicated(expected_files) ||
+        any(invalid_expected_path) ||
+        !"artifact_hashes.csv" %in% expected_files) {
+      stop("The expected compact evidence set is malformed.",
+           call. = FALSE)
+    }
+    expected_directories <- unique(dirname(expected_files))
+    expected_directories <- sort(setdiff(expected_directories, "."))
+    if (isTRUE(allow_partial)) {
+      implied_directories <- unique(dirname(relative))
+      implied_directories <- sort(setdiff(implied_directories, "."))
+      if (any(!relative %in% expected_files) ||
+          !identical(sort(directory_paths), implied_directories) ||
+          any(!directory_paths %in% expected_directories)) {
+        stop(
+          "The compact failure evidence is not an approved incomplete set.",
+          call. = FALSE
+        )
+      }
+    } else {
+      if (!identical(sort(directory_paths), expected_directories)) {
+        stop(
+          "The compact evidence directory hierarchy is not exact.",
+          call. = FALSE
+        )
+      }
+      manifest_path <- file.path(root, "artifact_hashes.csv")
+      expected_present <- if (file.exists(manifest_path)) {
+        expected_files
+      } else {
+        setdiff(expected_files, "artifact_hashes.csv")
+      }
+      if (!identical(sort(relative), sort(expected_present))) {
+        stop(
+          "The compact evidence directory is not the exact mode-specific set.",
+          call. = FALSE
+        )
+      }
+    }
+  } else if (isTRUE(directories)) {
+    stop(
+      "Compact evidence directories require an explicit expected set.",
+      call. = FALSE
+    )
+  }
+  keep <- relative != "artifact_hashes.csv"
+  files <- files[keep]
+  relative <- relative[keep]
   ordering <- order(relative)
   files <- files[ordering]
   relative <- relative[ordering]
   out <- data.frame(
+    schema_version = rep(rqr_ordinary_v1_schema(), length(relative)),
     relative_path = relative,
     byte_count = as.numeric(file.info(files)$size),
     sha256 = unname(vapply(
@@ -575,20 +947,46 @@ rqr_ordinary_v1_artifact_manifest <- function(directory) {
   out
 }
 
-rqr_ordinary_v1_validate_artifact_manifest <- function(directory, manifest) {
-  actual <- rqr_ordinary_v1_artifact_manifest(directory)
-  required <- c("relative_path", "byte_count", "sha256")
-  is.data.frame(manifest) &&
-    all(required %in% names(manifest)) &&
-    identical(
-      as.character(actual$relative_path),
-      as.character(manifest$relative_path)
-    ) &&
+rqr_ordinary_v1_validate_artifact_manifest <- function(
+    directory, manifest, expected_files = NULL, allow_partial = FALSE) {
+  actual <- rqr_ordinary_v1_artifact_manifest(
+    directory,
+    expected_files = expected_files,
+    allow_partial = allow_partial
+  )
+  required <- c(
+    "schema_version", "relative_path", "byte_count", "sha256"
+  )
+  if (!is.data.frame(manifest) ||
+      !identical(names(manifest), required) ||
+      nrow(manifest) != nrow(actual) ||
+      anyNA(manifest) ||
+      !is.character(manifest$schema_version) ||
+      any(manifest$schema_version != rqr_ordinary_v1_schema()) ||
+      !is.character(manifest$relative_path) ||
+      any(!nzchar(manifest$relative_path)) ||
+      anyDuplicated(manifest$relative_path) ||
+      any(
+        grepl("^/", manifest$relative_path) |
+          grepl("(^|/)\\.\\.?(/|$)", manifest$relative_path) |
+          grepl("//", manifest$relative_path, fixed = TRUE) |
+          grepl("\\\\", manifest$relative_path)
+      ) ||
+      !is.numeric(manifest$byte_count) ||
+      any(!is.finite(manifest$byte_count)) ||
+      any(manifest$byte_count < 0) ||
+      any(manifest$byte_count != floor(manifest$byte_count)) ||
+      !is.character(manifest$sha256) ||
+      any(!grepl("^[0-9a-f]{64}$", manifest$sha256))) {
+    return(FALSE)
+  }
+  identical(actual$schema_version, manifest$schema_version) &&
+    identical(actual$relative_path, manifest$relative_path) &&
     identical(
       as.numeric(actual$byte_count),
       as.numeric(manifest$byte_count)
     ) &&
-    identical(as.character(actual$sha256), as.character(manifest$sha256))
+    identical(actual$sha256, manifest$sha256)
 }
 
 rqr_ordinary_v1_build_fixtures <- function(config) {
@@ -1040,18 +1438,18 @@ rqr_ordinary_v1_expected_estimand_columns <- function(
   if (rhs_prior) {
     columns <- c(
       columns,
-      "log_tau2_ordered_lower", "log_tau2_ordered_upper"
+      "log_tau2_min", "log_tau2_max"
     )
     if (identical(prior_id, "rhs_ns_sampled")) {
       columns <- c(
         columns,
-        "log_zeta2_ordered_lower", "log_zeta2_ordered_upper"
+        "log_zeta2_min", "log_zeta2_max"
       )
     }
     columns <- c(
       columns,
-      paste0("log_lambda2_ordered_lower_", rhs_active_names),
-      paste0("log_lambda2_ordered_upper_", rhs_active_names)
+      paste0("log_lambda2_min_", rhs_active_names),
+      paste0("log_lambda2_max_", rhs_active_names)
     )
   }
   if (identical(family, "desn")) {
@@ -1152,8 +1550,8 @@ rqr_ordinary_v1_rhs_diagnostic_blocks <- function(static) {
   local1 <- extract_local(states1)
   local2 <- extract_local(states2)
   primary <- cbind(
-    log_tau2_ordered_lower = pmin(tau1, tau2),
-    log_tau2_ordered_upper = pmax(tau1, tau2)
+    log_tau2_min = pmin(tau1, tau2),
+    log_tau2_max = pmax(tau1, tau2)
   )
   sidecar <- cbind(
     log_tau2_root1 = tau1,
@@ -1166,8 +1564,8 @@ rqr_ordinary_v1_rhs_diagnostic_blocks <- function(static) {
     zeta2 <- extract_scalar(states2, "zeta2")
     primary <- cbind(
       primary,
-      log_zeta2_ordered_lower = pmin(zeta1, zeta2),
-      log_zeta2_ordered_upper = pmax(zeta1, zeta2)
+      log_zeta2_min = pmin(zeta1, zeta2),
+      log_zeta2_max = pmax(zeta1, zeta2)
     )
     sidecar <- cbind(
       sidecar,
@@ -1201,13 +1599,13 @@ rqr_ordinary_v1_rhs_diagnostic_blocks <- function(static) {
       stringsAsFactors = FALSE
     )
   }
-  local_lower <- pmin(local1, local2)
-  local_upper <- pmax(local1, local2)
-  colnames(local_lower) <- paste0(
-    "log_lambda2_ordered_lower_", active_names
+  local_min <- pmin(local1, local2)
+  local_max <- pmax(local1, local2)
+  colnames(local_min) <- paste0(
+    "log_lambda2_min_", active_names
   )
-  colnames(local_upper) <- paste0(
-    "log_lambda2_ordered_upper_", active_names
+  colnames(local_max) <- paste0(
+    "log_lambda2_max_", active_names
   )
   local_sidecar1 <- local1
   local_sidecar2 <- local2
@@ -1217,7 +1615,7 @@ rqr_ordinary_v1_rhs_diagnostic_blocks <- function(static) {
   colnames(local_sidecar2) <- paste0(
     "log_lambda2_", active_names, "_root2"
   )
-  primary <- cbind(primary, local_lower, local_upper)
+  primary <- cbind(primary, local_min, local_max)
   sidecar <- cbind(sidecar, local_sidecar1, local_sidecar2)
   if (anyDuplicated(colnames(primary)) ||
       anyDuplicated(colnames(sidecar)) ||
@@ -1907,6 +2305,561 @@ rqr_ordinary_v1_run_cells <- function(
   completed
 }
 
+rqr_ordinary_v1_f01_reference_columns <- function() {
+  c(
+    "schema_version", "fixture_id", "comparison_type", "estimand",
+    "threshold", "tracked_reference_schema", "tracked_value",
+    "reproduced_value", "absolute_difference",
+    "comparison_tolerance", "quadrature_order", "previous_order",
+    "order_convergence_difference", "order_convergence_tolerance",
+    "reference_method", "tracked_source_path",
+    "tracked_source_sha256", "tracked_provenance_sha256",
+    "generator_path", "generator_sha256", "pass"
+  )
+}
+
+rqr_ordinary_v1_read_f01_reference <- function(path) {
+  if (!file.exists(path) || dir.exists(path) || nzchar(Sys.readlink(path))) {
+    stop("The F01 quadrature artifact is absent or nonregular.",
+         call. = FALSE)
+  }
+  value <- utils::read.csv(
+    path, stringsAsFactors = FALSE, check.names = FALSE,
+    na.strings = ""
+  )
+  if (!identical(names(value), rqr_ordinary_v1_f01_reference_columns())) {
+    stop("The F01 quadrature artifact has an invalid schema.",
+         call. = FALSE)
+  }
+  value
+}
+
+rqr_ordinary_v1_validate_f01_reference <- function(
+    config, table, file_sha256) {
+  fail <- function() {
+    stop(
+      "The deterministic F01 quadrature evidence violates its contract.",
+      call. = FALSE
+    )
+  }
+  contract <- config$f01_reference_contract
+  expected_estimands <- c(
+    "lambda", "lower_root", "upper_root", "width", "midpoint",
+    "total_loss", "lambda", "lower_root", "upper_root", "width",
+    "midpoint"
+  )
+  expected_types <- c(rep("mean", 6L), rep("cdf", 5L))
+  expected_thresholds <- c(1, -1.5, 2.5, 4, 0.5)
+  expected_tracked_values <- unname(c(
+    contract$tracked_mean_values,
+    contract$tracked_cdf_values
+  ))
+  expected_source_path <- ifelse(
+    expected_types == "mean",
+    contract$mean_source_path,
+    contract$cdf_source_path
+  )
+  expected_source_sha256 <- ifelse(
+    expected_types == "mean",
+    contract$mean_source_sha256,
+    contract$cdf_source_sha256
+  )
+  expected_provenance_sha256 <- ifelse(
+    expected_types == "mean",
+    contract$mean_provenance_sha256,
+    contract$cdf_provenance_sha256
+  )
+  expected_reference_schema <- ifelse(
+    expected_types == "mean",
+    "rqrgibbs_ordinary_v1_f01_mean_reference/1.0.0",
+    "rqrgibbs_intercept_cdf_reference/2.0.0"
+  )
+  finite_fields <- c(
+    "tracked_value", "reproduced_value", "absolute_difference",
+    "comparison_tolerance", "order_convergence_difference",
+    "order_convergence_tolerance"
+  )
+  if (!is.data.frame(table) ||
+      !identical(names(table), rqr_ordinary_v1_f01_reference_columns()) ||
+      !identical(nrow(table), contract$comparison_rows) ||
+      any(as.character(table$schema_version) != contract$schema_version) ||
+      any(as.character(table$fixture_id) != "F01") ||
+      !identical(as.character(table$comparison_type), expected_types) ||
+      !identical(as.character(table$estimand), expected_estimands) ||
+      anyDuplicated(paste(
+        table$comparison_type, table$estimand, sep = "\r"
+      )) ||
+      any(!is.na(table$threshold[expected_types == "mean"])) ||
+      !identical(
+        as.numeric(table$threshold[expected_types == "cdf"]),
+        expected_thresholds
+      ) ||
+      anyNA(table[, finite_fields, drop = FALSE]) ||
+      any(!vapply(
+        table[, finite_fields, drop = FALSE],
+        function(value) all(is.finite(as.numeric(value))),
+        logical(1L)
+      )) ||
+      any(as.numeric(table$absolute_difference) < 0) ||
+      !identical(
+        as.numeric(table$tracked_value),
+        expected_tracked_values
+      ) ||
+      any(as.numeric(table$comparison_tolerance) <= 0) ||
+      any(as.numeric(table$order_convergence_difference) < 0) ||
+      any(as.numeric(table$order_convergence_tolerance) <= 0) ||
+      any(
+        abs(
+          abs(
+            as.numeric(table$reproduced_value) -
+              as.numeric(table$tracked_value)
+          ) - as.numeric(table$absolute_difference)
+        ) > 1e-14
+      ) ||
+      any(
+        as.numeric(table$absolute_difference) >
+          as.numeric(table$comparison_tolerance)
+      ) ||
+      any(
+        as.numeric(table$order_convergence_difference) >
+          as.numeric(table$order_convergence_tolerance)
+      ) ||
+      !identical(
+        as.numeric(table$comparison_tolerance),
+        c(
+          rep(contract$mean_comparison_tolerance, 6L),
+          rep(contract$cdf_comparison_tolerance, 5L)
+        )
+      ) ||
+      any(
+        as.numeric(table$order_convergence_tolerance) !=
+          contract$order_convergence_tolerance
+      ) ||
+      any(
+        as.numeric(table$quadrature_order) != contract$quadrature_order
+      ) ||
+      any(
+        as.numeric(table$previous_order) != contract$previous_order
+      ) ||
+      !identical(
+        as.character(table$tracked_source_path),
+        expected_source_path
+      ) ||
+      !identical(
+        as.character(table$tracked_reference_schema),
+        expected_reference_schema
+      ) ||
+      !identical(
+        as.character(table$tracked_source_sha256),
+        expected_source_sha256
+      ) ||
+      !identical(
+        as.character(table$tracked_provenance_sha256),
+        expected_provenance_sha256
+      ) ||
+      any(as.character(table$generator_path) !=
+            contract$generator_path) ||
+      any(as.character(table$generator_sha256) !=
+            contract$generator_sha256) ||
+      anyNA(table$reference_method) ||
+      any(!nzchar(as.character(table$reference_method))) ||
+      !all(as.logical(table$pass)) ||
+      !identical(tolower(file_sha256), contract$artifact_sha256)) {
+    fail()
+  }
+  invisible(TRUE)
+}
+
+rqr_ordinary_v1_run_f01_reference <- function(
+    repo_root, config, output_path) {
+  contract <- config$f01_reference_contract
+  source_paths <- c(
+    generator = contract$generator_path,
+    artifact = contract$artifact_path,
+    mean_source = contract$mean_source_path,
+    cdf_source = contract$cdf_source_path
+  )
+  absolute <- setNames(
+    file.path(repo_root, unname(source_paths)),
+    names(source_paths)
+  )
+  if (any(!file.exists(absolute)) ||
+      any(file.info(absolute)$isdir %in% TRUE) ||
+      any(vapply(absolute, function(path) nzchar(Sys.readlink(path)),
+                 logical(1L)))) {
+    stop("The tracked F01 source contract is incomplete.", call. = FALSE)
+  }
+  expected_hashes <- c(
+    generator = contract$generator_sha256,
+    artifact = contract$artifact_sha256,
+    mean_source = contract$mean_source_sha256,
+    cdf_source = contract$cdf_source_sha256
+  )
+  actual_hashes <- vapply(
+    absolute, rqr_ordinary_v1_sha256_file, character(1L)
+  )
+  if (!identical(unname(actual_hashes), unname(expected_hashes))) {
+    stop("A tracked F01 source hash changed.", call. = FALSE)
+  }
+  if (file.exists(output_path) || nzchar(Sys.readlink(output_path))) {
+    stop("The F01 reference destination must be fresh.", call. = FALSE)
+  }
+  rscript <- file.path(R.home("bin"), "Rscript")
+  command_output <- system2(
+    rscript,
+    c(
+      "--vanilla", shQuote(unname(absolute[["generator"]])),
+      shQuote(output_path)
+    ),
+    stdout = TRUE, stderr = TRUE
+  )
+  status <- attr(command_output, "status") %||% 0L
+  if (!identical(as.integer(status), 0L)) {
+    stop(
+      paste(
+        "The deterministic F01 generator failed:",
+        paste(command_output, collapse = "\n")
+      ),
+      call. = FALSE
+    )
+  }
+  output_sha256 <- rqr_ordinary_v1_sha256_file(output_path)
+  table <- rqr_ordinary_v1_read_f01_reference(output_path)
+  rqr_ordinary_v1_validate_f01_reference(
+    config, table, output_sha256
+  )
+  table
+}
+
+rqr_ordinary_v1_f01_sampler_columns <- function() {
+  c(
+    "schema_version", "fixture_id", "learning_rate_mode",
+    "comparison_type", "estimand", "threshold", "reference_value",
+    "sampler_mean", "absolute_difference", "rhat", "ess_bulk",
+    "ess_tail", "mcse_mean", "mcse_multiplier", "mcse_limit",
+    "standardized_difference", "chains", "burn_in",
+    "retained_per_chain", "thin", "chain_seeds",
+    "convergence_pass", "mcse_pass", "pass"
+  )
+}
+
+rqr_ordinary_v1_f01_sampler_estimand_schema <- function(reference) {
+  if (!is.data.frame(reference) ||
+      !identical(names(reference), rqr_ordinary_v1_f01_reference_columns()) ||
+      nrow(reference) != 11L) {
+    stop("The F01 sampler requires the validated quadrature table.",
+         call. = FALSE)
+  }
+  paste(
+    as.character(reference$comparison_type),
+    as.character(reference$estimand),
+    sep = "_"
+  )
+}
+
+rqr_ordinary_v1_f01_sampler_draws <- function(
+    fit, fixture, reference) {
+  rqr_ordinary_v1_validate_fit(fit)
+  if (!inherits(fit, "rqr_mcmc") ||
+      !is.list(fixture) ||
+      !identical(names(fixture), c("y", "X", "prior")) ||
+      !is.matrix(fixture$X) ||
+      !identical(dim(fixture$X), c(length(fixture$y), 1L)) ||
+      any(fixture$X != 1) ||
+      !identical(
+        fit$model_spec$learning_rate_mode,
+        "learned_pseudoresidual_normalized"
+      )) {
+    stop("The F01 sampler fit does not match its frozen native target.",
+         call. = FALSE)
+  }
+  beta1 <- as.numeric(fit$samp.beta_root1[, 1L])
+  beta2 <- as.numeric(fit$samp.beta_root2[, 1L])
+  lambda <- as.numeric(fit$samp.lambda)
+  if (!identical(length(beta1), length(beta2)) ||
+      !identical(length(beta1), length(lambda)) ||
+      !length(lambda) ||
+      any(!is.finite(c(beta1, beta2, lambda))) ||
+      any(lambda <= 0)) {
+    stop("The F01 native draws are dimensionally invalid.", call. = FALSE)
+  }
+  lower <- pmin(beta1, beta2)
+  upper <- pmax(beta1, beta2)
+  width <- upper - lower
+  midpoint <- 0.5 * (lower + upper)
+  check_loss <- getExportedValue("rqrgibbs", "rqr_check_loss")
+  residual_product <- getExportedValue(
+    "rqrgibbs", "rqr_residual_product"
+  )
+  total_loss <- vapply(seq_along(lambda), function(index) {
+    sum(check_loss(
+      residual_product(
+        fixture$y,
+        rep(beta1[[index]], length(fixture$y)),
+        rep(beta2[[index]], length(fixture$y))
+      ),
+      fit$model_spec$coverage_level
+    ))
+  }, numeric(1L))
+  mean_draws <- list(
+    lambda = lambda,
+    lower_root = lower,
+    upper_root = upper,
+    width = width,
+    midpoint = midpoint,
+    total_loss = total_loss
+  )
+  cdf_draws <- list(
+    lambda = as.numeric(lambda <= 1),
+    lower_root = as.numeric(lower <= -1.5),
+    upper_root = as.numeric(upper <= 2.5),
+    width = as.numeric(width <= 4),
+    midpoint = as.numeric(midpoint <= 0.5)
+  )
+  values <- as.matrix(as.data.frame(c(
+    setNames(mean_draws, paste0("mean_", names(mean_draws))),
+    setNames(cdf_draws, paste0("cdf_", names(cdf_draws)))
+  ), check.names = FALSE))
+  expected <- rqr_ordinary_v1_f01_sampler_estimand_schema(reference)
+  if (!identical(colnames(values), expected) ||
+      any(!is.finite(values)) ||
+      any(!values[, startsWith(colnames(values), "cdf_"), drop = FALSE] %in%
+            c(0, 1))) {
+    stop("The F01 native sampler estimands are malformed.", call. = FALSE)
+  }
+  values
+}
+
+rqr_ordinary_v1_validate_f01_sampler_checks <- function(
+    config, table, reference) {
+  fail <- function() {
+    stop(
+      "The F01 native sampler-to-quadrature evidence violates its contract.",
+      call. = FALSE
+    )
+  }
+  sampler <- config$f01_reference_contract$sampler
+  expected_schema <- rqr_ordinary_v1_f01_sampler_estimand_schema(reference)
+  expected_type <- as.character(reference$comparison_type)
+  expected_estimand <- as.character(reference$estimand)
+  expected_threshold <- as.numeric(reference$threshold)
+  expected_reference <- as.numeric(reference$reproduced_value)
+  finite_fields <- c(
+    "reference_value", "sampler_mean", "absolute_difference",
+    "rhat", "ess_bulk", "ess_tail", "mcse_mean", "mcse_multiplier",
+    "mcse_limit", "standardized_difference"
+  )
+  close <- function(observed, expected) {
+    all(abs(observed - expected) <=
+      256 * .Machine$double.eps *
+        pmax(1, abs(observed), abs(expected)))
+  }
+  if (!is.data.frame(table) ||
+      !identical(names(table), rqr_ordinary_v1_f01_sampler_columns()) ||
+      nrow(table) != length(expected_schema) ||
+      any(as.character(table$schema_version) !=
+            sampler$schema_version) ||
+      any(as.character(table$fixture_id) != "F01") ||
+      any(as.character(table$learning_rate_mode) !=
+            sampler$learning_rate_mode) ||
+      !identical(as.character(table$comparison_type), expected_type) ||
+      !identical(as.character(table$estimand), expected_estimand) ||
+      anyDuplicated(paste(
+        table$comparison_type, table$estimand, sep = "\r"
+      )) ||
+      any(!is.na(table$threshold[expected_type == "mean"])) ||
+      !identical(
+        as.numeric(table$threshold[expected_type == "cdf"]),
+        expected_threshold[expected_type == "cdf"]
+      ) ||
+      anyNA(table[, finite_fields, drop = FALSE]) ||
+      any(!vapply(
+        table[, finite_fields, drop = FALSE],
+        function(value) all(is.finite(as.numeric(value))),
+        logical(1L)
+      )) ||
+      any(as.numeric(table$mcse_mean) <= 0) ||
+      any(as.numeric(table$absolute_difference) < 0) ||
+      any(as.numeric(table$mcse_limit) <= 0) ||
+      any(as.numeric(table$standardized_difference) < 0) ||
+      !close(as.numeric(table$reference_value), expected_reference) ||
+      !close(
+        as.numeric(table$absolute_difference),
+        abs(
+          as.numeric(table$sampler_mean) -
+            as.numeric(table$reference_value)
+        )
+      ) ||
+      any(as.numeric(table$mcse_multiplier) !=
+            sampler$mcse_multiplier) ||
+      !close(
+        as.numeric(table$mcse_limit),
+        sampler$mcse_multiplier * as.numeric(table$mcse_mean)
+      ) ||
+      !close(
+        as.numeric(table$standardized_difference),
+        as.numeric(table$absolute_difference) /
+          as.numeric(table$mcse_mean)
+      ) ||
+      any(as.numeric(table$chains) != sampler$chains) ||
+      any(as.numeric(table$burn_in) != sampler$burn_in) ||
+      any(as.numeric(table$retained_per_chain) !=
+            sampler$retained_per_chain) ||
+      any(as.numeric(table$thin) != sampler$thin) ||
+      any(as.character(table$chain_seeds) !=
+            paste(sampler$seeds, collapse = "|"))) {
+    fail()
+  }
+  expected_convergence <- (
+    as.numeric(table$rhat) <=
+      config$gates$maximum_rank_normalized_rhat
+  ) &
+    (
+      as.numeric(table$ess_bulk) >= config$gates$minimum_bulk_ess
+    ) &
+    (
+      as.numeric(table$ess_tail) >= config$gates$minimum_tail_ess
+    )
+  expected_mcse <- as.numeric(table$absolute_difference) <=
+    as.numeric(table$mcse_limit)
+  expected_pass <- expected_convergence & expected_mcse
+  if (!identical(as.logical(table$convergence_pass), expected_convergence) ||
+      !identical(as.logical(table$mcse_pass), expected_mcse) ||
+      !identical(as.logical(table$pass), expected_pass) ||
+      !all(expected_pass)) {
+    fail()
+  }
+  invisible(TRUE)
+}
+
+rqr_ordinary_v1_compare_f01_sampler <- function(
+    chains, reference, config,
+    posterior_namespace = NULL) {
+  if (is.null(posterior_namespace)) {
+    if (!requireNamespace("posterior", quietly = TRUE)) {
+      stop("posterior is required for the F01 sampler oracle.",
+           call. = FALSE)
+    }
+    posterior_namespace <- asNamespace("posterior")
+  }
+  expected_schema <- rqr_ordinary_v1_f01_sampler_estimand_schema(reference)
+  diagnosis <- rqr_ordinary_v1_diagnose_cell(
+    chains, config$gates,
+    posterior_namespace = posterior_namespace,
+    expected_schema = expected_schema
+  )
+  combined <- do.call(rbind, chains)
+  sampler_mean <- colMeans(combined)
+  diagnostics <- diagnosis$diagnostics
+  if (!identical(as.character(diagnostics$estimand), expected_schema) ||
+      !identical(names(sampler_mean), expected_schema)) {
+    stop("The F01 sampler diagnostic schema changed.", call. = FALSE)
+  }
+  reference_value <- as.numeric(reference$reproduced_value)
+  difference <- abs(as.numeric(sampler_mean) - reference_value)
+  mcse <- as.numeric(diagnostics$mcse_mean)
+  sampler <- config$f01_reference_contract$sampler
+  table <- data.frame(
+    schema_version = sampler$schema_version,
+    fixture_id = "F01",
+    learning_rate_mode = sampler$learning_rate_mode,
+    comparison_type = as.character(reference$comparison_type),
+    estimand = as.character(reference$estimand),
+    threshold = as.numeric(reference$threshold),
+    reference_value = reference_value,
+    sampler_mean = as.numeric(sampler_mean),
+    absolute_difference = difference,
+    rhat = as.numeric(diagnostics$rhat),
+    ess_bulk = as.numeric(diagnostics$ess_bulk),
+    ess_tail = as.numeric(diagnostics$ess_tail),
+    mcse_mean = mcse,
+    mcse_multiplier = sampler$mcse_multiplier,
+    mcse_limit = sampler$mcse_multiplier * mcse,
+    standardized_difference = difference / mcse,
+    chains = sampler$chains,
+    burn_in = sampler$burn_in,
+    retained_per_chain = sampler$retained_per_chain,
+    thin = sampler$thin,
+    chain_seeds = paste(sampler$seeds, collapse = "|"),
+    convergence_pass = as.logical(diagnostics$pass),
+    mcse_pass = difference <= sampler$mcse_multiplier * mcse,
+    stringsAsFactors = FALSE
+  )
+  table$pass <- table$convergence_pass & table$mcse_pass
+  rqr_ordinary_v1_validate_f01_sampler_checks(
+    config, table, reference
+  )
+  table
+}
+
+rqr_ordinary_v1_run_f01_sampler <- function(
+    config, fixtures, provenance_control, reference,
+    posterior_namespace = NULL) {
+  if (is.null(posterior_namespace)) {
+    if (!requireNamespace("posterior", quietly = TRUE)) {
+      stop("posterior is required for the F01 sampler oracle.",
+           call. = FALSE)
+    }
+    posterior_namespace <- asNamespace("posterior")
+  }
+  sampler <- config$f01_reference_contract$sampler
+  rows <- config$seed_ledger[
+    config$seed_ledger$purpose == "f01_sampler_quadrature",
+    ,
+    drop = FALSE
+  ]
+  if (nrow(rows) != sampler$chains ||
+      !identical(as.integer(rows$chain), seq_len(sampler$chains)) ||
+      !identical(as.integer(rows$seed), sampler$seeds)) {
+    stop("The F01 sampler seed ledger changed.", call. = FALSE)
+  }
+  fixture <- fixtures$F01
+  prior <- getExportedValue("rqrgibbs", "rqr_beta_prior")(
+    "ridge", ridge = list(tau2 = fixture$prior$tau2)
+  )
+  provenance_control <- rqr_ordinary_v1_family_provenance_control(
+    provenance_control, "fixed_design"
+  )
+  chains <- lapply(seq_len(sampler$chains), function(chain) {
+    profile <- config$mcmc$initialization_profiles[[chain]]
+    init <- rqr_ordinary_v1_initial_state(fixture$X, profile, prior)
+    fit <- getExportedValue("rqrgibbs", "rqr_mcmc_fit")(
+      y = fixture$y,
+      X = fixture$X,
+      coverage_level = config$coverage_level,
+      learning_rate = config$fixed_learning_rate,
+      lambda_initial = 1,
+      loss_reference_scale = config$loss_reference_scale,
+      learning_rate_mode = sampler$learning_rate_mode,
+      lambda_prior = config$lambda_prior,
+      beta_prior_obj = prior,
+      numerical_policy = config$mcmc$numerical_policy,
+      root_swap_probability = config$mcmc$root_swap_probability,
+      provenance_control = provenance_control,
+      mcmc_control = list(
+        n_burn = sampler$burn_in,
+        n_mcmc = sampler$retained_per_chain,
+        thin = sampler$thin,
+        seed = rows$seed[[chain]],
+        store_latent_draws = FALSE,
+        store_prior_state_draws = FALSE
+      ),
+      init = init
+    )
+    values <- rqr_ordinary_v1_f01_sampler_draws(
+      fit, fixture, reference
+    )
+    if (nrow(values) != sampler$retained_per_chain) {
+      stop("The F01 sampler retained-draw count changed.", call. = FALSE)
+    }
+    values
+  })
+  rqr_ordinary_v1_compare_f01_sampler(
+    chains, reference, config,
+    posterior_namespace = posterior_namespace
+  )
+}
+
 rqr_ordinary_v1_reference_oracles <- function(config, fixtures, repo_root) {
   coverage <- config$coverage_level
   f01 <- fixtures$F01
@@ -2013,6 +2966,8 @@ rqr_ordinary_v1_reference_test_names <- function() {
     "test-rqr-native-fixed-design-v1.R",
     "test-rqr-native-ordinary-v1-materializer.R",
     "test-rqr-native-ordinary-v1-reference-cells.R",
+    "test-rqr-native-ordinary-v1-f01-quadrature.R",
+    "test-rqr-native-ordinary-v1-protected-dlm-companion.R",
     "test-rqr-native-desn-design.R",
     "test-rqr-native-desn-fit-v1.R",
     "test-rqr-native-desn-future-contract.R",
@@ -2295,6 +3250,20 @@ rqr_ordinary_v1_source_preflight <- function(repo_root, config) {
       nzchar(status)) {
     stop("Ordinary-v1 validation requires clean main at the reviewed SHA.",
          call. = FALSE)
+  }
+  companion_source <- file.path(
+    repo_root, config$protected_dlm_companion$collector_path
+  )
+  if (!file.exists(companion_source) ||
+      nzchar(Sys.readlink(companion_source)) ||
+      !identical(
+        rqr_ordinary_v1_sha256_file(companion_source),
+        config$protected_dlm_companion$collector_sha256
+      )) {
+    stop(
+      "The protected-DLM companion collector is absent or source-mismatched.",
+      call. = FALSE
+    )
   }
   authorization <- rqr_ordinary_v1_authorization_status(
     repo_root, config, actual
@@ -2626,7 +3595,7 @@ rqr_ordinary_v1_monitor_preflight <- function(config, required = TRUE) {
     stop(
       paste(
         "The active external process-group monitor does not satisfy the",
-        "45-minute, cleanup-trap, final-sweep, process, thread, and artifact",
+        "240-minute, cleanup-trap, final-sweep, process, thread, and artifact",
         "contract."
       ),
       call. = FALSE
@@ -2653,7 +3622,10 @@ rqr_ordinary_v1_disabled_config_digest <- function(config) {
 }
 
 rqr_ordinary_v1_validate_runtime_compatibility <- function(
-    recorded, current, reviewed_commit, current_commit, pinned_exdqlm_commit) {
+    recorded, current, reviewed_commit, current_commit,
+    pinned_exdqlm_commit,
+    compatibility = c("exact_runtime", "candidate_toolchain")) {
+  compatibility <- match.arg(compatibility)
   required <- c(
     "package", "version", "source_commit", "runtime_path",
     "runtime_tree_digest", "runtime_source_match",
@@ -2661,14 +3633,18 @@ rqr_ordinary_v1_validate_runtime_compatibility <- function(
     "attestation_sha256", "R_version", "platform", "compiler",
     "BLAS", "LAPACK", "posterior_version"
   )
-  stable <- c(
-    "package", "version", "runtime_tree_digest", "runtime_source_match",
+  common_stable <- c(
+    "package", "version", "runtime_source_match",
     "reproducibility_eligible", "runtime_attestation_schema",
     "R_version", "platform", "compiler", "BLAS", "LAPACK",
     "posterior_version"
   )
-  normalize <- function(table) {
-    table <- table[order(table$package), stable, drop = FALSE]
+  exact_stable <- c(
+    common_stable, "runtime_path", "runtime_tree_digest",
+    "attestation_sha256"
+  )
+  normalize <- function(table, fields) {
+    table <- table[order(table$package), fields, drop = FALSE]
     rownames(table) <- NULL
     table[] <- lapply(table, as.character)
     table
@@ -2713,9 +3689,33 @@ rqr_ordinary_v1_validate_runtime_compatibility <- function(
           ))
       }, logical(1L)))
   }
-  if (!valid_table(recorded, expected_recorded_commits) ||
-      !valid_table(current, expected_current_commits) ||
-      !identical(normalize(recorded), normalize(current))) {
+  tables_valid <- valid_table(recorded, expected_recorded_commits) &&
+    valid_table(current, expected_current_commits)
+  compatibility_valid <- if (identical(
+    compatibility, "exact_runtime"
+  )) {
+    identical(
+      normalize(recorded, exact_stable),
+      normalize(current, exact_stable)
+    )
+  } else {
+    common_match <- identical(
+      normalize(recorded, common_stable),
+      normalize(current, common_stable)
+    )
+    recorded_external <- recorded[
+      recorded$package == "exdqlm", exact_stable, drop = FALSE
+    ]
+    current_external <- current[
+      current$package == "exdqlm", exact_stable, drop = FALSE
+    ]
+    recorded_external[] <- lapply(recorded_external, as.character)
+    current_external[] <- lapply(current_external, as.character)
+    rownames(recorded_external) <- NULL
+    rownames(current_external) <- NULL
+    common_match && identical(recorded_external, current_external)
+  }
+  if (!tables_valid || !compatibility_valid) {
     stop(
       paste(
         "The reviewed-source runtime is not compatible with the current",
@@ -2729,14 +3729,30 @@ rqr_ordinary_v1_validate_runtime_compatibility <- function(
 
 rqr_ordinary_v1_validate_wrapper_manifest <- function(
     output_dir, monitor_dir, manifest) {
+  valid_root <- function(path) {
+    is.character(path) && length(path) == 1L && !is.na(path) &&
+      nzchar(path) && dir.exists(path) && !nzchar(Sys.readlink(path))
+  }
+  if (!valid_root(output_dir) || !valid_root(monitor_dir)) {
+    stop(
+      "The wrapper output and monitor roots must be nonsymlink directories.",
+      call. = FALSE
+    )
+  }
   monitor_names <- c(
     "process_group_monitor.csv", "process_group_resource_summary.csv",
     "runner.stderr.log", "runner.stdout.log", "wrapper_closeout.csv"
   )
-  output_names <- c(
-    "artifact_hashes.csv", "run_status.csv", "source_state.csv",
-    "validation_config_digest.csv"
-  )
+  output_names <- sort(list.files(
+    output_dir, all.files = TRUE, no.. = TRUE
+  ))
+  output_paths <- file.path(output_dir, output_names)
+  if (!length(output_names) ||
+      any(nzchar(Sys.readlink(output_paths))) ||
+      any(!utils::file_test("-f", output_paths))) {
+    stop("The wrapper output binding is not a regular closed file set.",
+         call. = FALSE)
+  }
   expected <- rbind(
     data.frame(
       role = "monitor_evidence",
@@ -2806,19 +3822,8 @@ rqr_ordinary_v1_validate_wrapper_manifest <- function(
 rqr_ordinary_v1_validate_benchmark_bundle <- function(
     config, source_state, runtime_table, benchmark_dir,
     benchmark_monitor_dir, attested_design) {
-  required_output <- c(
-    "artifact_hashes.csv", "bounded_diagnostics.csv",
-    "checkpoint_manifest.csv", "closeout.md",
-    "compact_posterior_summaries.csv", "desn_future_checks.csv",
-    "failure_log.csv", "fit_plan.csv", "fit_plan_status.csv",
-    "fixed_parameter_checks.csv",
-    "fixture_manifest.csv", "initialization_manifest.csv",
-    "local_chain_hashes.csv", "provenance_checks.csv",
-    "rhs_root_trace_sidecar.csv",
-    "resource_summary.csv", "root_swap_sidecar.csv",
-    "run_status.csv", "runtime_attestations.csv", "seed_ledger.csv",
-    "session_info.txt", "source_state.csv",
-    "validation_config_digest.csv"
+  required_output <- rqr_ordinary_v1_expected_output_files(
+    "benchmark-one-cell"
   )
   required_monitor <- c(
     "process_group_monitor.csv", "process_group_resource_summary.csv",
@@ -2836,6 +3841,8 @@ rqr_ordinary_v1_validate_benchmark_bundle <- function(
       !isTRUE(source_state$authorization_delta_verified[[1L]]) ||
       !dir.exists(benchmark_dir) ||
       !dir.exists(benchmark_monitor_dir) ||
+      nzchar(Sys.readlink(benchmark_dir)) ||
+      nzchar(Sys.readlink(benchmark_monitor_dir)) ||
       !identical(
         sort(list.files(
           benchmark_dir, all.files = TRUE, no.. = TRUE,
@@ -2894,7 +3901,9 @@ rqr_ordinary_v1_validate_benchmark_bundle <- function(
           rqr_ordinary_v1_schema()
       ) ||
       !rqr_ordinary_v1_validate_artifact_manifest(
-        benchmark_dir, manifest
+        benchmark_dir,
+        manifest,
+        expected_files = required_output
       )) {
     stop("The one-cell benchmark output hashes do not match.",
          call. = FALSE)
@@ -2952,7 +3961,8 @@ rqr_ordinary_v1_validate_benchmark_bundle <- function(
     )
   rqr_ordinary_v1_validate_runtime_compatibility(
     recorded_runtime, runtime_table, reviewed,
-    source_state$commit[[1L]], config$pinned_exdqlm$commit
+    source_state$commit[[1L]], config$pinned_exdqlm$commit,
+    compatibility = "candidate_toolchain"
   )
 
   resources <- utils::read.csv(
@@ -3114,6 +4124,8 @@ rqr_ordinary_v1_validate_benchmark_bundle <- function(
         status,
         c(
           "mode", "status", "source_commit", "fits_executed",
+          "fits_executed_scope",
+          "source_test_internal_fits_instrumented",
           "benchmark_fits_executed", "bounded_fits_executed",
           "matched_simulation_authorized"
         )
@@ -3201,6 +4213,16 @@ rqr_ordinary_v1_validate_benchmark_bundle <- function(
       !identical(status$status[[1L]], "pass") ||
       !identical(tolower(status$source_commit[[1L]]), reviewed) ||
       !identical(as.integer(status$fits_executed[[1L]]), 4L) ||
+      !identical(
+        as.character(status$fits_executed_scope[[1L]]),
+        "top_level_runner_fit_calls_only"
+      ) ||
+      !identical(
+        as.character(
+          status$source_test_internal_fits_instrumented[[1L]]
+        ),
+        "FALSE"
+      ) ||
       !identical(
         as.integer(status$benchmark_fits_executed[[1L]]), 4L
       ) ||
@@ -3532,7 +4554,11 @@ rqr_ordinary_v1_validate_benchmark_bundle <- function(
 }
 
 rqr_ordinary_v1_validate_reference_tables <- function(
-    config, tables, attested_design, expected_fixture_manifest) {
+    config, tables, attested_design, expected_fixture_manifest,
+    expected_source_commit,
+    expected_authorization_status,
+    expected_reviewed_implementation_commit = NA_character_,
+    expected_authorization_delta_verified = FALSE) {
   fail <- function(artifact) {
     stop(
       sprintf(
@@ -3586,7 +4612,9 @@ rqr_ordinary_v1_validate_reference_tables <- function(
   required_tables <- c(
     "run_status", "source_state", "runtime_attestations",
     "validation_config_digest", "reference_gates",
-    "oracle_comparisons", "protected_dlm_hashes", "package_checks",
+    "oracle_comparisons", "f01_quadrature_checks",
+    "f01_sampler_checks",
+    "protected_dlm_hashes", "package_checks",
     "desn_design_checks", "desn_future_checks",
     "missingness_checks", "rhs_ns_conditional_checks",
     "continuation_checks", "history_mutation_checks",
@@ -3599,27 +4627,62 @@ rqr_ordinary_v1_validate_reference_tables <- function(
       !is.data.frame(expected_fixture_manifest)) {
     fail("table-set")
   }
-  reviewed <- tolower(config$reviewed_implementation_commit %||% "")
-  config_digest <- rqr_ordinary_v1_disabled_config_digest(config)
+  if (!is.character(expected_source_commit) ||
+      length(expected_source_commit) != 1L ||
+      is.na(expected_source_commit) ||
+      !grepl("^[0-9a-fA-F]{40}$", expected_source_commit) ||
+      !is.character(expected_authorization_status) ||
+      length(expected_authorization_status) != 1L ||
+      is.na(expected_authorization_status) ||
+      !nzchar(expected_authorization_status) ||
+      !is.logical(expected_authorization_delta_verified) ||
+      length(expected_authorization_delta_verified) != 1L ||
+      is.na(expected_authorization_delta_verified) ||
+      !(is.na(expected_reviewed_implementation_commit) ||
+        (
+          is.character(expected_reviewed_implementation_commit) &&
+          length(expected_reviewed_implementation_commit) == 1L &&
+          grepl(
+            "^[0-9a-fA-F]{40}$",
+            expected_reviewed_implementation_commit
+          )
+        ))) {
+    stop("The expected reference identity is malformed.", call. = FALSE)
+  }
+  expected_source_commit <- tolower(expected_source_commit)
+  expected_reviewed_implementation_commit <- if (
+    is.na(expected_reviewed_implementation_commit)
+  ) {
+    NA_character_
+  } else {
+    tolower(expected_reviewed_implementation_commit)
+  }
+  config_digest <- rqr_ordinary_v1_sha256_object(config)
 
   run <- tables$run_status
   run_fields <- c(
     "mode", "status", "source_commit", "fits_executed",
+    "fits_executed_scope", "source_test_internal_fits_instrumented",
     "benchmark_fits_executed", "bounded_fits_executed",
     "matched_simulation_authorized"
   )
   if (!exact_schema(run, run_fields, 1L) ||
       !identical(as.character(run$mode[[1L]]), "reference-only") ||
       !identical(as.character(run$status[[1L]]), "pass") ||
-      !identical(tolower(as.character(run$source_commit[[1L]])), reviewed) ||
-      !all(vapply(
-        run[c(
-          "fits_executed", "benchmark_fits_executed",
-          "bounded_fits_executed"
-        )],
-        function(x) identical(as.numeric(x[[1L]]), 0),
-        logical(1L)
-      )) ||
+      !identical(
+        tolower(as.character(run$source_commit[[1L]])),
+        expected_source_commit
+      ) ||
+      !identical(as.numeric(run$fits_executed[[1L]]), 8) ||
+      !identical(
+        as.character(run$fits_executed_scope[[1L]]),
+        "top_level_runner_fit_calls_only"
+      ) ||
+      !false(run$source_test_internal_fits_instrumented) ||
+      !identical(
+        as.numeric(run$benchmark_fits_executed[[1L]]), 0
+      ) ||
+      !identical(as.numeric(run$bounded_fits_executed[[1L]]), 0) ||
       !false(run$matched_simulation_authorized)) {
     fail("run_status.csv")
   }
@@ -3633,15 +4696,30 @@ rqr_ordinary_v1_validate_reference_tables <- function(
   if (!exact_schema(source, source_fields, 1L) ||
       !identical(as.character(source$repository[[1L]]), "RQR-GIBBS") ||
       !identical(as.character(source$branch[[1L]]), "main") ||
-      !identical(tolower(as.character(source$commit[[1L]])), reviewed) ||
+      !identical(
+        tolower(as.character(source$commit[[1L]])),
+        expected_source_commit
+      ) ||
       !true(source$clean) ||
       !identical(as.character(source$config_digest[[1L]]), config_digest) ||
       !identical(
         as.character(source$authorization_status[[1L]]),
-        "source_candidate_execution_disabled"
+        expected_authorization_status
       ) ||
-      !is.na(source$reviewed_implementation_commit[[1L]]) ||
-      !false(source$authorization_delta_verified) ||
+      !identical(
+        if (is.na(source$reviewed_implementation_commit[[1L]])) {
+          NA_character_
+        } else {
+          tolower(as.character(
+            source$reviewed_implementation_commit[[1L]]
+          ))
+        },
+        expected_reviewed_implementation_commit
+      ) ||
+      !identical(
+        as.logical(source$authorization_delta_verified[[1L]]),
+        expected_authorization_delta_verified
+      ) ||
       is.na(source$rng_kind[[1L]]) ||
       !nzchar(as.character(source$rng_kind[[1L]]))) {
     fail("source_state.csv")
@@ -3668,7 +4746,10 @@ rqr_ordinary_v1_validate_reference_tables <- function(
         ),
         normalizePath(config_path, winslash = "/", mustWork = FALSE)
       )) ||
-      !false(configuration$execute_enabled)) {
+      !identical(
+        as.logical(configuration$execute_enabled[[1L]]),
+        isTRUE(config$ordinary_v1_execute_enabled)
+      )) {
     fail("validation_config_digest.csv")
   }
 
@@ -3705,7 +4786,10 @@ rqr_ordinary_v1_validate_reference_tables <- function(
     tolower(as.character(runtime$source_commit)),
     as.character(runtime$package)
   )
-  if (!identical(unname(runtime_commit[["rqrgibbs"]]), reviewed) ||
+  if (!identical(
+        unname(runtime_commit[["rqrgibbs"]]),
+        expected_source_commit
+      ) ||
       !identical(
         unname(runtime_commit[["exdqlm"]]),
         tolower(config$pinned_exdqlm$commit)
@@ -3716,7 +4800,10 @@ rqr_ordinary_v1_validate_reference_tables <- function(
   gates <- tables$reference_gates
   gate_fields <- c("gate_id", "status", "detail")
   expected_gate_ids <- c(
-    "deterministic_oracles", "protected_dlm_candidate_sha256",
+    "deterministic_oracles",
+    "f01_collapsed_quadrature_reproduction",
+    "f01_native_sampler_vs_quadrature",
+    "protected_dlm_candidate_sha256",
     "ordinary_v1_native_reference_tests",
     "pinned_attested_desn_materialization",
     "attested_desn_end_to_end_reference_cells"
@@ -3754,6 +4841,42 @@ rqr_ordinary_v1_validate_reference_tables <- function(
       !identical(as.character(oracle$actual), oracle_expected) ||
       !true(oracle$pass)) {
     fail("oracle_comparisons.csv")
+  }
+
+  f01_hashes <- attr(tables, "file_sha256", exact = TRUE)
+  f01_hash <- if (
+    is.character(f01_hashes) &&
+      "f01_quadrature_checks" %in% names(f01_hashes)
+  ) {
+    unname(f01_hashes[["f01_quadrature_checks"]])
+  } else {
+    NA_character_
+  }
+  f01_valid <- tryCatch(
+    {
+      rqr_ordinary_v1_validate_f01_reference(
+        config, tables$f01_quadrature_checks, f01_hash
+      )
+      TRUE
+    },
+    error = function(error) FALSE
+  )
+  if (!isTRUE(f01_valid)) {
+    fail("f01_quadrature_checks.csv")
+  }
+  f01_sampler_valid <- tryCatch(
+    {
+      rqr_ordinary_v1_validate_f01_sampler_checks(
+        config,
+        tables$f01_sampler_checks,
+        tables$f01_quadrature_checks
+      )
+      TRUE
+    },
+    error = function(error) FALSE
+  )
+  if (!isTRUE(f01_sampler_valid)) {
+    fail("f01_sampler_checks.csv")
   }
 
   dlm <- tables$protected_dlm_hashes
@@ -4089,9 +5212,270 @@ rqr_ordinary_v1_validate_reference_tables <- function(
   invisible(TRUE)
 }
 
+rqr_ordinary_v1_read_reference_tables <- function(reference_dir) {
+  files <- c(
+    run_status = "run_status.csv",
+    source_state = "source_state.csv",
+    runtime_attestations = "runtime_attestations.csv",
+    validation_config_digest = "validation_config_digest.csv",
+    reference_gates = "reference_gates.csv",
+    oracle_comparisons = "oracle_comparisons.csv",
+    f01_quadrature_checks = "f01_quadrature_checks.csv",
+    f01_sampler_checks = "f01_sampler_checks.csv",
+    protected_dlm_hashes = "protected_dlm_hashes.csv",
+    package_checks = "package_checks.csv",
+    desn_design_checks = "desn_design_checks.csv",
+    desn_future_checks = "desn_future_checks.csv",
+    missingness_checks = "missingness_checks.csv",
+    rhs_ns_conditional_checks = "rhs_ns_conditional_checks.csv",
+    continuation_checks = "continuation_checks.csv",
+    history_mutation_checks = "history_mutation_checks.csv",
+    fixture_manifest = "fixture_manifest.csv",
+    seed_ledger = "seed_ledger.csv",
+    failure_log = "failure_log.csv",
+    resource_summary = "resource_summary.csv"
+  )
+  if (!dir.exists(reference_dir) ||
+      any(!file.exists(file.path(reference_dir, files))) ||
+      any(vapply(
+        file.path(reference_dir, files),
+        function(path) nzchar(Sys.readlink(path)),
+        logical(1L)
+      ))) {
+    stop("The reference semantic table set is incomplete.", call. = FALSE)
+  }
+  tables <- lapply(setNames(files, names(files)), function(file) {
+    utils::read.csv(
+      file.path(reference_dir, file),
+      stringsAsFactors = FALSE,
+      check.names = FALSE,
+      na.strings = c("", "NA")
+    )
+  })
+  attr(tables, "file_sha256") <- setNames(
+    vapply(
+      file.path(reference_dir, unname(files)),
+      rqr_ordinary_v1_sha256_file,
+      character(1L)
+    ),
+    names(files)
+  )
+  tables
+}
+
+rqr_ordinary_v1_load_dlm_companion_validator <- function(
+    repo_root, config) {
+  source_path <- file.path(
+    repo_root, config$protected_dlm_companion$collector_path
+  )
+  if (!file.exists(source_path) || nzchar(Sys.readlink(source_path)) ||
+      !identical(
+        rqr_ordinary_v1_sha256_file(source_path),
+        config$protected_dlm_companion$collector_sha256
+      )) {
+    stop(
+      "The protected-DLM companion collector source does not match config.",
+      call. = FALSE
+    )
+  }
+  variable <- "RQR_DLM_COMPANION_SOURCE_ONLY"
+  previous <- Sys.getenv(variable, unset = NA_character_)
+  do.call(Sys.setenv, setNames(list("YES"), variable))
+  on.exit({
+    if (is.na(previous)) {
+      Sys.unsetenv(variable)
+    } else {
+      do.call(Sys.setenv, setNames(list(previous), variable))
+    }
+  }, add = TRUE)
+  environment <- new.env(parent = baseenv())
+  sys.source(source_path, envir = environment)
+  validator <- environment$rqr_dlm_companion_validate_compact
+  if (!is.function(validator)) {
+    stop(
+      "The protected-DLM compact companion validator is unavailable.",
+      call. = FALSE
+    )
+  }
+  validator
+}
+
+rqr_ordinary_v1_candidate_runtime_from_benchmark <- function(
+    benchmark_dir, config) {
+  path <- file.path(benchmark_dir, "runtime_attestations.csv")
+  if (!file.exists(path) || nzchar(Sys.readlink(path))) {
+    stop(
+      "The reviewed benchmark lacks its candidate runtime table.",
+      call. = FALSE
+    )
+  }
+  runtime <- utils::read.csv(
+    path, stringsAsFactors = FALSE, check.names = FALSE,
+    colClasses = c(
+      source_commit = "character",
+      runtime_tree_digest = "character",
+      attestation_sha256 = "character"
+    )
+  )
+  runtime <- runtime[
+    as.character(runtime$package) == "rqrgibbs", , drop = FALSE
+  ]
+  reviewed <- tolower(config$reviewed_implementation_commit)
+  if (nrow(runtime) != 1L ||
+      !identical(
+        tolower(as.character(runtime$source_commit[[1L]])), reviewed
+      ) ||
+      !grepl(
+        "^[0-9a-f]{64}$",
+        tolower(as.character(runtime$runtime_tree_digest[[1L]]))
+      ) ||
+      !grepl(
+        "^[0-9a-f]{64}$",
+        tolower(as.character(runtime$attestation_sha256[[1L]]))
+      ) ||
+      !identical(
+        as.character(runtime$runtime_source_match[[1L]]), "TRUE"
+      ) ||
+      !identical(
+        as.character(runtime$reproducibility_eligible[[1L]]), "TRUE"
+      ) ||
+      !nzchar(as.character(runtime$version[[1L]]))) {
+    stop(
+      "The reviewed benchmark candidate-runtime identity is malformed.",
+      call. = FALSE
+    )
+  }
+  runtime
+}
+
+rqr_ordinary_v1_validate_dlm_companion <- function(
+    config, repo_root, benchmark_dir, companion_dir) {
+  if (!is.character(companion_dir) || length(companion_dir) != 1L ||
+      is.na(companion_dir) || !nzchar(companion_dir) ||
+      !dir.exists(companion_dir) || nzchar(Sys.readlink(companion_dir))) {
+    stop(
+      "The reviewed protected-DLM compact companion is required.",
+      call. = FALSE
+    )
+  }
+  candidate_runtime <- rqr_ordinary_v1_candidate_runtime_from_benchmark(
+    benchmark_dir, config
+  )
+  validator <- rqr_ordinary_v1_load_dlm_companion_validator(
+    repo_root, config
+  )
+  result <- validator(
+    directory = companion_dir,
+    expected_commit = config$reviewed_implementation_commit,
+    expected_runtime_tree_digest =
+      candidate_runtime$runtime_tree_digest[[1L]],
+    expected_runtime_attestation_sha256 =
+      candidate_runtime$attestation_sha256[[1L]],
+    expected_package_version = candidate_runtime$version[[1L]],
+    expected_collector_commit =
+      config$reviewed_implementation_commit
+  )
+  manifest <- result$manifest
+  if (!identical(
+        manifest$schema_version,
+        config$protected_dlm_companion$schema_version
+      ) ||
+      !identical(
+        as.integer(manifest$semantic_gate_count),
+        config$protected_dlm_companion$semantic_gate_count
+      ) ||
+      !identical(
+        as.integer(manifest$input_artifact_count),
+        config$protected_dlm_companion$input_artifact_count
+      ) ||
+      !identical(
+        length(unlist(manifest$input_roles, use.names = FALSE)),
+        config$protected_dlm_companion$input_role_count
+      )) {
+    stop(
+      "The protected-DLM companion summary violates the frozen contract.",
+      call. = FALSE
+    )
+  }
+  data.frame(
+    schema_version = config$protected_dlm_companion$schema_version,
+    candidate_commit = tolower(config$reviewed_implementation_commit),
+    candidate_runtime_tree_digest = tolower(
+      candidate_runtime$runtime_tree_digest[[1L]]
+    ),
+    candidate_runtime_attestation_sha256 = tolower(
+      candidate_runtime$attestation_sha256[[1L]]
+    ),
+    package_version = as.character(candidate_runtime$version[[1L]]),
+    collector_sha256 =
+      config$protected_dlm_companion$collector_sha256,
+    compact_artifact_manifest_sha256 = rqr_ordinary_v1_sha256_file(
+      file.path(result$directory, "artifact_hashes.csv")
+    ),
+    semantic_gate_count = as.integer(manifest$semantic_gate_count),
+    input_artifact_count = as.integer(manifest$input_artifact_count),
+    status = "pass",
+    stringsAsFactors = FALSE
+  )
+}
+
+rqr_ordinary_v1_publish_dlm_companion <- function(
+    config, repo_root, benchmark_dir, companion_dir, output_dir,
+    expected_check) {
+  target <- file.path(output_dir, "protected_dlm_companion")
+  target_link <- Sys.readlink(target)
+  if (file.exists(target) || dir.exists(target) ||
+      (!is.na(target_link) && nzchar(target_link))) {
+    stop(
+      "The protected-DLM companion publication target must be absent.",
+      call. = FALSE
+    )
+  }
+  if (!dir.create(target, recursive = FALSE, showWarnings = FALSE)) {
+    stop(
+      "The protected-DLM companion publication directory cannot be created.",
+      call. = FALSE
+    )
+  }
+  for (name in config$protected_dlm_companion$compact_files) {
+    source <- file.path(companion_dir, name)
+    source_sha256 <- rqr_ordinary_v1_sha256_file(source)
+    rqr_ordinary_v1_atomic_file(
+      file.path(target, name),
+      writer = function(temporary) {
+        isTRUE(file.copy(
+          source, temporary, overwrite = FALSE, copy.mode = TRUE
+        ))
+      },
+      validator = function(temporary) {
+        identical(
+          rqr_ordinary_v1_sha256_file(temporary), source_sha256
+        )
+      }
+    )
+  }
+  copied_check <- rqr_ordinary_v1_validate_dlm_companion(
+    config, repo_root, benchmark_dir, target
+  )
+  comparable <- function(value) {
+    value[] <- lapply(value, as.character)
+    rownames(value) <- NULL
+    value
+  }
+  if (!is.data.frame(expected_check) ||
+      !identical(comparable(copied_check), comparable(expected_check))) {
+    stop(
+      "The published protected-DLM companion changed during copy.",
+      call. = FALSE
+    )
+  }
+  invisible(target)
+}
+
 rqr_ordinary_v1_authorize_execute <- function(
-    config, source_state, runtime_table, reference_dir,
-    benchmark_dir, benchmark_monitor_dir, attested_design) {
+    config, repo_root, source_state, runtime_table, reference_dir,
+    benchmark_dir, benchmark_monitor_dir, dlm_companion_dir,
+    attested_design) {
   if (!isTRUE(config$ordinary_v1_execute_enabled)) {
     stop(
       "execute-bounded is disabled in the reviewed tracked configuration.",
@@ -4105,21 +5489,13 @@ rqr_ordinary_v1_authorize_execute <- function(
     config, source_state, runtime_table, benchmark_dir,
     benchmark_monitor_dir, attested_design
   )
+  companion_check <- rqr_ordinary_v1_validate_dlm_companion(
+    config, repo_root, benchmark_dir, dlm_companion_dir
+  )
   if (!dir.exists(reference_dir)) {
     stop("The exact reference-only bundle is required.", call. = FALSE)
   }
-  required <- c(
-    "artifact_hashes.csv", "closeout.md", "continuation_checks.csv",
-    "desn_design_checks.csv", "desn_future_checks.csv",
-    "protected_dlm_hashes.csv", "failure_log.csv",
-    "fixture_manifest.csv", "history_mutation_checks.csv",
-    "missingness_checks.csv", "oracle_comparisons.csv",
-    "package_checks.csv", "reference_gates.csv",
-    "resource_summary.csv", "rhs_ns_conditional_checks.csv",
-    "run_status.csv", "runtime_attestations.csv", "seed_ledger.csv",
-    "session_info.txt", "source_state.csv",
-    "validation_config_digest.csv"
-  )
+  required <- rqr_ordinary_v1_expected_output_files("reference-only")
   if (!identical(
         sort(list.files(
           reference_dir, all.files = TRUE, no.. = TRUE,
@@ -4152,7 +5528,11 @@ rqr_ordinary_v1_authorize_execute <- function(
         as.character(manifest$schema_version) !=
           rqr_ordinary_v1_schema()
       ) ||
-      !rqr_ordinary_v1_validate_artifact_manifest(reference_dir, manifest)) {
+      !rqr_ordinary_v1_validate_artifact_manifest(
+        reference_dir,
+        manifest,
+        expected_files = required
+      )) {
     stop("The reference-only artifact manifest does not match the bytes.",
          call. = FALSE)
   }
@@ -4254,39 +5634,29 @@ rqr_ordinary_v1_authorize_execute <- function(
     )
   })
   names(category_checks) <- category_files
-  reviewed <- tolower(config$reviewed_implementation_commit)
+  authorization_commit <- tolower(source_state$commit[[1L]])
   rqr_ordinary_v1_validate_runtime_compatibility(
-    recorded_runtime, runtime_table, reviewed,
-    source_state$commit[[1L]], config$pinned_exdqlm$commit
+    recorded_runtime, runtime_table, authorization_commit,
+    source_state$commit[[1L]], config$pinned_exdqlm$commit,
+    compatibility = "exact_runtime"
   )
   expected_fixture_manifest <- rqr_ordinary_v1_fixture_manifest(
     rqr_ordinary_v1_build_fixtures(config)
   )
+  semantic_tables <- rqr_ordinary_v1_read_reference_tables(reference_dir)
   rqr_ordinary_v1_validate_reference_tables(
     config,
-    tables = c(
-      list(
-        run_status = status,
-        source_state = recorded_source,
-        runtime_attestations = recorded_runtime,
-        validation_config_digest = recorded_config,
-        reference_gates = gates,
-        oracle_comparisons = oracle_comparisons,
-        protected_dlm_hashes = protected_dlm_hashes,
-        package_checks = package_checks,
-        desn_design_checks = design_checks,
-        desn_future_checks = desn_reference_checks,
-        fixture_manifest = fixture_manifest,
-        seed_ledger = seed_ledger,
-        failure_log = failure_log,
-        resource_summary = resource_summary
-      ),
-      setNames(category_checks, sub("\\.csv$", "", category_files))
-    ),
+    tables = semantic_tables,
     attested_design = attested_design,
-    expected_fixture_manifest = expected_fixture_manifest
+    expected_fixture_manifest = expected_fixture_manifest,
+    expected_source_commit = authorization_commit,
+    expected_authorization_status =
+      "flag_only_authorization_verified",
+    expected_reviewed_implementation_commit =
+      config$reviewed_implementation_commit,
+    expected_authorization_delta_verified = TRUE
   )
-  invisible(TRUE)
+  companion_check
 }
 
 rqr_ordinary_v1_write_common_evidence <- function(
@@ -4322,15 +5692,93 @@ rqr_ordinary_v1_write_common_evidence <- function(
   )
 }
 
-rqr_ordinary_v1_write_manifest <- function(output_dir) {
-  manifest <- rqr_ordinary_v1_artifact_manifest(output_dir)
+rqr_ordinary_v1_write_manifest <- function(
+    output_dir, mode, require_complete = TRUE) {
+  if (!is.logical(require_complete) || length(require_complete) != 1L ||
+      is.na(require_complete)) {
+    stop("require_complete must be one nonmissing logical value.",
+         call. = FALSE)
+  }
+  expected <- if (require_complete) {
+    rqr_ordinary_v1_expected_output_files(mode)
+  } else {
+    rqr_ordinary_v1_allowed_failure_files(mode)
+  }
+  if (!require_complete) {
+    failure_path <- file.path(output_dir, "failure_log.csv")
+    status_path <- file.path(output_dir, "run_status.csv")
+    if (!file.exists(failure_path) || nzchar(Sys.readlink(failure_path)) ||
+        !file.exists(status_path) || nzchar(Sys.readlink(status_path))) {
+      stop(
+        "A compact failure manifest requires failure_log.csv and run_status.csv.",
+        call. = FALSE
+      )
+    }
+    failure <- utils::read.csv(
+      failure_path, stringsAsFactors = FALSE, check.names = FALSE,
+      na.strings = c("", "NA")
+    )
+    status <- utils::read.csv(
+      status_path, stringsAsFactors = FALSE, check.names = FALSE,
+      na.strings = c("", "NA")
+    )
+    failure_fields <- c(
+      "schema_version", "timestamp_utc", "mode", "cell_id", "chain",
+      "error_class", "message"
+    )
+    status_fields <- c(
+      "schema_version", "mode", "status", "source_commit",
+      "fits_executed", "fits_executed_scope",
+      "source_test_internal_fits_instrumented",
+      "benchmark_fits_executed", "bounded_fits_executed",
+      "matched_simulation_authorized"
+    )
+    if (!identical(names(failure), failure_fields) ||
+        nrow(failure) != 1L ||
+        !identical(names(status), status_fields) ||
+        nrow(status) != 1L ||
+        anyNA(failure[, c(
+          "schema_version", "timestamp_utc", "mode",
+          "error_class", "message"
+        ), drop = FALSE]) ||
+        anyNA(status[, c(
+          "schema_version", "mode", "status",
+          "fits_executed_scope",
+          "source_test_internal_fits_instrumented",
+          "matched_simulation_authorized"
+        ), drop = FALSE]) ||
+        !identical(as.character(failure$schema_version),
+                   rqr_ordinary_v1_schema()) ||
+        !identical(as.character(status$schema_version),
+                   rqr_ordinary_v1_schema()) ||
+        !identical(as.character(failure$mode), mode) ||
+        !identical(as.character(status$mode), mode) ||
+        !identical(as.character(status$status), "fail") ||
+        !nzchar(as.character(failure$error_class)) ||
+        !nzchar(as.character(failure$message))) {
+      stop(
+        "The compact failure terminal records are malformed.",
+        call. = FALSE
+      )
+    }
+  }
+  manifest <- rqr_ordinary_v1_artifact_manifest(
+    output_dir,
+    expected_files = expected,
+    allow_partial = !require_complete
+  )
   path <- rqr_ordinary_v1_atomic_csv(
     manifest, file.path(output_dir, "artifact_hashes.csv")
   )
   reread <- utils::read.csv(
     path, stringsAsFactors = FALSE, check.names = FALSE
   )
-  if (!rqr_ordinary_v1_validate_artifact_manifest(output_dir, reread)) {
+  if (!rqr_ordinary_v1_validate_artifact_manifest(
+        output_dir,
+        reread,
+        expected_files = expected,
+        allow_partial = !require_complete
+      )) {
     stop("The final compact artifact manifest failed readback.",
          call. = FALSE)
   }
@@ -4722,7 +6170,7 @@ rqr_ordinary_v1_execute <- function(
     }
     if (as.numeric(difftime(Sys.time(), started, units = "mins")) >
         config$resources$hard_timeout_minutes) {
-      stop("The bounded run exceeded its 45-minute wall-time ceiling.",
+      stop("The bounded run exceeded its 240-minute wall-time ceiling.",
            call. = FALSE)
     }
   }
@@ -4984,6 +6432,25 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
       references <- rqr_ordinary_v1_reference_oracles(
         config, fixtures, repo_root
       )
+      f01_reference <- rqr_ordinary_v1_run_f01_reference(
+        repo_root, config,
+        file.path(output_dir, "f01_quadrature_checks.csv")
+      )
+      f01_sampler <- rqr_ordinary_v1_run_f01_sampler(
+        config,
+        fixtures,
+        provenance_control = list(
+          repo_root = repo_root,
+          expected_git_commit = expected_commit,
+          primary_runtime_attestation = runtime$attestation,
+          required_external_repositories = character(0)
+        ),
+        reference = f01_reference
+      )
+      rqr_ordinary_v1_atomic_csv(
+        f01_sampler,
+        file.path(output_dir, "f01_sampler_checks.csv")
+      )
       package_checks <- rqr_ordinary_v1_run_reference_tests(repo_root)
       design_path <- Sys.getenv(
         "RQR_ORDINARY_V1_ATTESTED_DESN_DESIGN_RDS", unset = ""
@@ -5004,6 +6471,8 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
           required_external_repositories = "exdqlm"
         )
       )
+      fit_count <- nrow(attested_references) +
+        config$f01_reference_contract$sampler$chains
       reference_evidence <- rqr_ordinary_v1_reference_evidence_tables(
         package_checks,
         references$comparisons,
@@ -5015,6 +6484,26 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
         detail = paste(
           attested_design$receipt$source_commit,
           attested_design$file_sha256, sep = "|"
+        ),
+        stringsAsFactors = FALSE
+      )
+      f01_gate <- data.frame(
+        gate_id = "f01_collapsed_quadrature_reproduction",
+        status = if (all(f01_reference$pass)) "pass" else "fail",
+        detail = paste(
+          nrow(f01_reference),
+          "deterministic mean/CDF references reproduced with",
+          "event-boundary-aware quadrature and exact artifact bytes"
+        ),
+        stringsAsFactors = FALSE
+      )
+      f01_sampler_gate <- data.frame(
+        gate_id = "f01_native_sampler_vs_quadrature",
+        status = if (all(f01_sampler$pass)) "pass" else "fail",
+        detail = paste(
+          config$f01_reference_contract$sampler$chains,
+          "learned-rate ridge chains matched six posterior means and",
+          "five event probabilities within four maintained MCSEs"
         ),
         stringsAsFactors = FALSE
       )
@@ -5039,10 +6528,16 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
         stringsAsFactors = FALSE
       )
       references$gates <- rbind(
-        references$gates, test_gate, design_gate,
+        references$gates[1L, , drop = FALSE],
+        f01_gate,
+        f01_sampler_gate,
+        references$gates[2L, , drop = FALSE],
+        test_gate, design_gate,
         end_to_end_gate
       )
       references$pass <- isTRUE(references$pass) &&
+        all(f01_reference$pass) &&
+        all(f01_sampler$pass) &&
         all(package_checks$status == "pass") &&
         all(attested_references$status == "pass")
       if (!isTRUE(references$pass)) {
@@ -5114,9 +6609,13 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
         file.path(output_dir, "desn_design_checks.csv")
       )
       claim <- paste(
-        "Reference-only: deterministic ordinary-RQR and protected-DLM",
-        "candidate-integrity checks passed. The separately documented",
-        "baseline reconciliation and DLM regression remain required.",
+        "Reference-only: deterministic ordinary-RQR, corrected F01",
+        "quadrature, its learned-rate native sampler comparison, and",
+        "protected-DLM candidate-integrity checks passed.",
+        "The separately bound complete DLM companion regression remains",
+        "required. Eight top-level runner fits ran: four F01 chains and four",
+        "attested DESN references. Source-bound tests also exercise tiny",
+        "reference transitions whose internal fit count is not instrumented.",
         "No bounded grid or matched simulation ran."
       )
     } else if (identical(mode, "benchmark-one-cell")) {
@@ -5168,15 +6667,32 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
       benchmark_monitor_dir <- Sys.getenv(
         "RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR", unset = ""
       )
+      dlm_companion_dir <- Sys.getenv(
+        config$protected_dlm_companion$execution_environment,
+        unset = ""
+      )
       design_path <- Sys.getenv(
         "RQR_ORDINARY_V1_ATTESTED_DESN_DESIGN_RDS", unset = ""
       )
       attested_design <- rqr_ordinary_v1_validate_attested_desn_design(
         design_path, config, external_runtime
       )
-      rqr_ordinary_v1_authorize_execute(
-        config, source_state, runtime_table, reference_dir,
-        benchmark_dir, benchmark_monitor_dir, attested_design
+      dlm_companion_check <- rqr_ordinary_v1_authorize_execute(
+        config, repo_root, source_state, runtime_table, reference_dir,
+        benchmark_dir, benchmark_monitor_dir, dlm_companion_dir,
+        attested_design
+      )
+      rqr_ordinary_v1_publish_dlm_companion(
+        config = config,
+        repo_root = repo_root,
+        benchmark_dir = benchmark_dir,
+        companion_dir = dlm_companion_dir,
+        output_dir = output_dir,
+        expected_check = dlm_companion_check
+      )
+      rqr_ordinary_v1_atomic_csv(
+        dlm_companion_check,
+        file.path(output_dir, "protected_dlm_companion_checks.csv")
       )
       result <- rqr_ordinary_v1_execute(
         config, fixtures, output_dir, run_dir, runtime, source_state,
@@ -5202,6 +6718,8 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
       data.frame(
         mode = mode, status = "pass", source_commit = expected_commit,
         fits_executed = fit_count,
+        fits_executed_scope = "top_level_runner_fit_calls_only",
+        source_test_internal_fits_instrumented = FALSE,
         benchmark_fits_executed = if (
           identical(mode, "benchmark-one-cell")
         ) fit_count else 0L,
@@ -5213,6 +6731,32 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
       ),
       file.path(output_dir, "run_status.csv")
     )
+    if (identical(mode, "reference-only")) {
+      rqr_ordinary_v1_validate_reference_tables(
+        config = config,
+        tables = rqr_ordinary_v1_read_reference_tables(output_dir),
+        attested_design = attested_design,
+        expected_fixture_manifest =
+          rqr_ordinary_v1_fixture_manifest(fixtures),
+        expected_source_commit = expected_commit,
+        expected_authorization_status = if (
+          isTRUE(config$ordinary_v1_execute_enabled)
+        ) {
+          "flag_only_authorization_verified"
+        } else {
+          "source_candidate_execution_disabled"
+        },
+        expected_reviewed_implementation_commit = if (
+          isTRUE(config$ordinary_v1_execute_enabled)
+        ) {
+          config$reviewed_implementation_commit
+        } else {
+          NA_character_
+        },
+        expected_authorization_delta_verified =
+          isTRUE(config$ordinary_v1_execute_enabled)
+      )
+    }
     rqr_ordinary_v1_atomic_lines(
       c(capture.output(sessionInfo()), "", claim),
       file.path(output_dir, "session_info.txt")
@@ -5227,7 +6771,7 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
       ),
       file.path(output_dir, "closeout.md")
     )
-    rqr_ordinary_v1_write_manifest(output_dir)
+    rqr_ordinary_v1_write_manifest(output_dir, mode)
     message("ordinary-v1 ", mode, " PASS: ", output_dir)
     invisible(output_dir)
   }, error = function(error) {
@@ -5249,6 +6793,8 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
       data.frame(
         mode = mode, status = "fail", source_commit = expected_commit,
         fits_executed = NA_integer_,
+        fits_executed_scope = "top_level_runner_fit_calls_only",
+        source_test_internal_fits_instrumented = FALSE,
         benchmark_fits_executed = NA_integer_,
         bounded_fits_executed = NA_integer_,
         matched_simulation_authorized = FALSE,
@@ -5256,7 +6802,12 @@ rqr_ordinary_v1_main <- function(arguments = commandArgs(trailingOnly = TRUE)) {
       ),
       file.path(output_dir, "run_status.csv")
     ), silent = TRUE)
-    try(rqr_ordinary_v1_write_manifest(output_dir), silent = TRUE)
+    try(
+      rqr_ordinary_v1_write_manifest(
+        output_dir, mode, require_complete = FALSE
+      ),
+      silent = TRUE
+    )
     stop(error)
   })
 }

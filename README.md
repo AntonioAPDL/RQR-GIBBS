@@ -55,6 +55,12 @@ validator has four separate modes: `preflight`,
 bounded configuration is deliberately disabled; no ordinary-v1 validation
 result is claimed merely from source completion.
 
+The reference stage includes a separate four-chain learned-rate F01 sampler
+oracle against deterministic collapsed quadrature. Protected RQR-DLM evidence
+is consumed through a compact five-file companion generated from fresh DLM
+reference and correction bundles; neither gate is counted inside the final
+48-fit static/DESN grid.
+
 Fixed evolution covariances, frozen discount templates, and shared
 component-specific inverse-Gamma evolution scales define exact samplers for
 their stated generalized posteriors. A mixed-derivative audit shows that the
@@ -276,6 +282,7 @@ PDF inventory and checksums.
       RQR_ORDINARY_V1_BENCHMARK_CONFIRM=I_CONFIRM_ORDINARY_V1_ONE_CELL_BENCHMARK \
       make benchmark-ordinary-v1-one-cell
     make test-ordinary-v1-monitor
+    make test-ordinary-v1-dlm-companion
     make test-standalone-contracts
     make prepare-exdqlm-runtime
     make test-exdqlm-rqr
@@ -293,7 +300,9 @@ execution flag is still false. A later flag-only authorization commit can run
 `execute-ordinary-v1-bounded` only with `RQR_ORDINARY_V1_CONFIRM=YES` and
 explicit `RQR_ORDINARY_V1_REFERENCE_DIR`,
 `RQR_ORDINARY_V1_BENCHMARK_DIR`, and
-`RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR` pointing to the exact bound evidence.
+`RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR` pointing to the exact bound evidence,
+plus `RQR_ORDINARY_V1_DLM_COMPANION_DIR` pointing to the reviewed compact
+protected-DLM companion.
 
 No production simulation should be launched until its matched protocol is
 frozen and explicitly approved. The bounded pilot does not provide that

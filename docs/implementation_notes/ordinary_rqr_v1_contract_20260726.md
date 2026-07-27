@@ -624,8 +624,12 @@ eligible.
   kernel after accounting for constants independent of the sampled block.
 - Conditional Gaussian moments agree with independently assembled dense
   calculations.
-- Fixed-rate and normalized learned-rate intercept-only fixtures agree with
-  stable quadrature for means and event probabilities.
+- The normalized learned-rate F01 intercept-only fixture agrees with stable
+  collapsed quadrature for six posterior means and five corrected event
+  probabilities. The fixed-rate target is checked separately through direct
+  loss/augmentation identities, dense Gaussian conditionals, exact
+  continuation, and its four-chain bounded cells; no fixed-rate quadrature
+  claim is made.
 - The learned-rate shape uses \(n_{\mathcal O}\), not the allocated row count.
 - Scan-order mutation tests reject invalid partial-collapse orders.
 - Root-label invariant summaries are unchanged by a complete block swap.

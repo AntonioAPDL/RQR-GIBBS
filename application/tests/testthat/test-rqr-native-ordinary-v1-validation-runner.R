@@ -143,10 +143,9 @@ ordinary_v1_benchmark_refresh_wrapper_manifest <- function(
     "process_group_monitor.csv", "process_group_resource_summary.csv",
     "runner.stderr.log", "runner.stdout.log", "wrapper_closeout.csv"
   )
-  output_names <- c(
-    "artifact_hashes.csv", "run_status.csv", "source_state.csv",
-    "validation_config_digest.csv"
-  )
+  output_names <- sort(list.files(
+    output_dir, all.files = TRUE, no.. = TRUE
+  ))
   rows <- rbind(
     data.frame(
       role = "monitor_evidence",
@@ -258,6 +257,8 @@ ordinary_v1_benchmark_bundle_fixture <- function(
       status = "pass",
       source_commit = reviewed_commit,
       fits_executed = 4L,
+      fits_executed_scope = "top_level_runner_fit_calls_only",
+      source_test_internal_fits_instrumented = FALSE,
       benchmark_fits_executed = 4L,
       bounded_fits_executed = 0L,
       matched_simulation_authorized = FALSE,
@@ -659,8 +660,6 @@ ordinary_v1_reference_tables_fixture <- function(runner, base_config) {
   }
   reviewed <- paste(rep("a", 40L), collapse = "")
   config <- base_config
-  config$ordinary_v1_execute_enabled <- TRUE
-  config$reviewed_implementation_commit <- reviewed
   schema <- runner$rqr_ordinary_v1_schema()
   stamp <- function(data) {
     data <- as.data.frame(data, stringsAsFactors = FALSE)
@@ -761,12 +760,53 @@ ordinary_v1_reference_tables_fixture <- function(runner, base_config) {
   oracle_expected <- c(
     "0", as.character(oracle_shape), "TRUE", "3|9", "3"
   )
+  repo_root <- dirname(dirname(dirname(dirname(attr(config, "path")))))
+  f01_path <- file.path(
+    repo_root, config$f01_reference_contract$artifact_path
+  )
+  f01_table <- runner$rqr_ordinary_v1_read_f01_reference(f01_path)
+  f01_sampler_contract <- config$f01_reference_contract$sampler
+  f01_sampler_table <- data.frame(
+    schema_version = f01_sampler_contract$schema_version,
+    fixture_id = "F01",
+    learning_rate_mode = f01_sampler_contract$learning_rate_mode,
+    comparison_type = f01_table$comparison_type,
+    estimand = f01_table$estimand,
+    threshold = f01_table$threshold,
+    reference_value = f01_table$reproduced_value,
+    sampler_mean = f01_table$reproduced_value,
+    absolute_difference = 0,
+    rhat = 1,
+    ess_bulk = 2000,
+    ess_tail = 2000,
+    mcse_mean = 0.01,
+    mcse_multiplier = f01_sampler_contract$mcse_multiplier,
+    mcse_limit = 0.01 * f01_sampler_contract$mcse_multiplier,
+    standardized_difference = 0,
+    chains = f01_sampler_contract$chains,
+    burn_in = f01_sampler_contract$burn_in,
+    retained_per_chain = f01_sampler_contract$retained_per_chain,
+    thin = f01_sampler_contract$thin,
+    chain_seeds = paste(
+      f01_sampler_contract$seeds, collapse = "|"
+    ),
+    convergence_pass = TRUE,
+    mcse_pass = TRUE,
+    pass = TRUE,
+    stringsAsFactors = FALSE
+  )
+  expect_identical(
+    names(f01_sampler_table),
+    runner$rqr_ordinary_v1_f01_sampler_columns()
+  )
   tables <- list(
     run_status = stamp(data.frame(
       mode = "reference-only",
       status = "pass",
       source_commit = reviewed,
-      fits_executed = 0L,
+      fits_executed = 8L,
+      fits_executed_scope = "top_level_runner_fit_calls_only",
+      source_test_internal_fits_instrumented = FALSE,
       benchmark_fits_executed = 0L,
       bounded_fits_executed = 0L,
       matched_simulation_authorized = FALSE,
@@ -794,13 +834,16 @@ ordinary_v1_reference_tables_fixture <- function(runner, base_config) {
     )),
     reference_gates = stamp(data.frame(
       gate_id = c(
-        "deterministic_oracles", "protected_dlm_candidate_sha256",
+        "deterministic_oracles",
+        "f01_collapsed_quadrature_reproduction",
+        "f01_native_sampler_vs_quadrature",
+        "protected_dlm_candidate_sha256",
         "ordinary_v1_native_reference_tests",
         "pinned_attested_desn_materialization",
         "attested_desn_end_to_end_reference_cells"
       ),
       status = "pass",
-      detail = paste("Synthetic gate", seq_len(5L)),
+      detail = paste("Synthetic gate", seq_len(7L)),
       stringsAsFactors = FALSE
     )),
     oracle_comparisons = stamp(data.frame(
@@ -817,6 +860,8 @@ ordinary_v1_reference_tables_fixture <- function(runner, base_config) {
       pass = TRUE,
       stringsAsFactors = FALSE
     )),
+    f01_quadrature_checks = f01_table,
+    f01_sampler_checks = f01_sampler_table,
     protected_dlm_hashes = stamp(data.frame(
       relative_path = names(config$protected_dlm_sha256),
       expected_sha256 = unname(config$protected_dlm_sha256),
@@ -922,6 +967,10 @@ ordinary_v1_reference_tables_fixture <- function(runner, base_config) {
       stringsAsFactors = FALSE
     ))
   )
+  attr(tables, "file_sha256") <- c(
+    f01_quadrature_checks =
+      runner$rqr_ordinary_v1_sha256_file(f01_path)
+  )
   list(
     config = config,
     tables = tables,
@@ -972,6 +1021,31 @@ test_that("ordinary-v1 configuration freezes a unique disabled 48-fit grid", {
     config$benchmark_plan$seed, as.integer(82961:82964)
   )
   expect_identical(
+    config$f01_reference_contract$sampler,
+    list(
+      schema_version =
+        "rqrgibbs_ordinary_v1_f01_sampler_oracle/1.0.0",
+      learning_rate_mode =
+        "learned_pseudoresidual_normalized",
+      chains = 4L,
+      burn_in = 5000L,
+      retained_per_chain = 20000L,
+      thin = 1L,
+      seeds = as.integer(82931:82934),
+      mcse_multiplier = 4
+    )
+  )
+  f01_sampler_ledger <- config$seed_ledger[
+    config$seed_ledger$purpose == "f01_sampler_quadrature",
+    ,
+    drop = FALSE
+  ]
+  expect_identical(f01_sampler_ledger$chain, 1:4)
+  expect_identical(
+    f01_sampler_ledger$seed,
+    config$f01_reference_contract$sampler$seeds
+  )
+  expect_identical(
     config$desn_schema_contract,
     c(
       design = "rqrgibbs_desn_design/1.0.0",
@@ -1009,6 +1083,31 @@ test_that("ordinary-v1 configuration freezes a unique disabled 48-fit grid", {
   )))
   expect_match(config$seed_ledger_note, "82731:82734")
   expect_match(config$seed_ledger_note, "requires independent review")
+  expect_identical(
+    config$protected_dlm_companion,
+    list(
+      schema_version =
+        "rqrgibbs_ordinary_v1_protected_dlm_companion/1.0.0",
+      collector_path = paste0(
+        "application/scripts/",
+        "30_bundle_rqr_ordinary_v1_protected_dlm_evidence.R"
+      ),
+      collector_sha256 =
+        "eba18d34f7b50a9166d4991fafcaa1ae669e0dd0eba3ca0d4c9d3416d0be0f88",
+      compact_files = c(
+        "artifact_hashes.csv", "bundle_manifest.json",
+        "input_artifact_hashes.csv", "input_bundle_summary.csv",
+        "semantic_gates.csv"
+      ),
+      semantic_gate_count = 16L,
+      input_role_count = 4L,
+      input_artifact_count = 39L,
+      execution_environment =
+        "RQR_ORDINARY_V1_DLM_COMPANION_DIR",
+      source_state_role =
+        "reviewed_disabled_candidate_runtime_bound_to_benchmark"
+    )
+  )
   expect_identical(
     names(config$protected_dlm_sha256),
     c(
@@ -1058,6 +1157,52 @@ test_that("ordinary-v1 configuration freezes a unique disabled 48-fit grid", {
   expect_true(all(grepl(
     "^[[:xdigit:]]{64}$", unname(config$protected_dlm_sha256)
   )))
+  expect_identical(
+    config$f01_reference_contract$artifact_sha256,
+    runner$rqr_ordinary_v1_sha256_file(file.path(
+      dirname(dirname(dirname(dirname(attr(config, "path"))))),
+      config$f01_reference_contract$artifact_path
+    ))
+  )
+  for (mutator in list(
+    function(value) {
+      value$coverage_level <- 0.81
+      value
+    },
+    function(value) {
+      value$loss_reference_scale <- 2
+      value
+    },
+    function(value) {
+      value$lambda_prior$shape <- 5
+      value
+    },
+    function(value) {
+      value$fixtures$F01$y[[1L]] <- -1.9
+      value
+    },
+    function(value) {
+      value$fixtures$F01$X[[1L, 1L]] <- 2
+      value
+    },
+    function(value) {
+      value$fixtures$F01$prior$tau2 <- 24
+      value
+    }
+  )) {
+    expect_error(
+      runner$rqr_ordinary_v1_validate_config(mutator(config)),
+      "target or F01 quadrature fixture"
+    )
+  }
+  bad <- config
+  bad$protected_dlm_companion$collector_sha256 <-
+    "not-a-sha256"
+  expect_error(
+    runner$rqr_ordinary_v1_validate_config(bad),
+    "protected-DLM companion"
+  )
+
   bad <- config
   names(bad$protected_dlm_sha256)[[5L]] <-
     "application/R/an_unreviewed_replacement.R"
@@ -1090,6 +1235,21 @@ test_that("ordinary-v1 configuration freezes a unique disabled 48-fit grid", {
   expect_error(
     runner$rqr_ordinary_v1_validate_config(bad),
     "seed-ledger rows"
+  )
+  bad <- config
+  f01_sampler_row <- which(
+    bad$seed_ledger$purpose == "f01_sampler_quadrature"
+  )[[1L]]
+  bad$seed_ledger$seed[[f01_sampler_row]] <- 82935L
+  expect_error(
+    runner$rqr_ordinary_v1_validate_config(bad),
+    "F01 sampler seed-ledger rows"
+  )
+  bad <- config
+  bad$f01_reference_contract$sampler$burn_in <- 4999L
+  expect_error(
+    runner$rqr_ordinary_v1_validate_config(bad),
+    "F01 quadrature contract changed"
   )
   bad <- config
   bad$ordinary_v1_execute_enabled <- TRUE
@@ -1564,6 +1724,148 @@ test_that("cell diagnostics preserve iteration-chain-variable orientation", {
   )
 })
 
+test_that("F01 sampler checks bind maintained diagnostics to quadrature", {
+  runner <- ordinary_v1_runner_environment()
+  config <- ordinary_v1_config(runner)
+  repo_root <- dirname(dirname(dirname(dirname(attr(config, "path")))))
+  reference <- runner$rqr_ordinary_v1_read_f01_reference(file.path(
+    repo_root, config$f01_reference_contract$artifact_path
+  ))
+  schema <- runner$rqr_ordinary_v1_f01_sampler_estimand_schema(
+    reference
+  )
+  reference_values <- setNames(reference$reproduced_value, schema)
+  chains <- lapply(seq_len(4L), function(chain) {
+    matrix(
+      rep(reference_values, each = 5L),
+      nrow = 5L,
+      dimnames = list(NULL, schema)
+    )
+  })
+  posterior_stub <- list(
+    as_draws_array = function(x) {
+      structure(x, class = c("draws_array", "draws", "array"))
+    },
+    rhat = function(x) {
+      setNames(rep(1, dim(x)[3L]), dimnames(x)[[3L]])
+    },
+    ess_bulk = function(x) {
+      setNames(rep(1500, dim(x)[3L]), dimnames(x)[[3L]])
+    },
+    ess_tail = function(x) {
+      setNames(rep(1400, dim(x)[3L]), dimnames(x)[[3L]])
+    },
+    mcse_mean = function(x) {
+      setNames(rep(0.01, dim(x)[3L]), dimnames(x)[[3L]])
+    }
+  )
+  checks <- runner$rqr_ordinary_v1_compare_f01_sampler(
+    chains, reference, config, posterior_namespace = posterior_stub
+  )
+  expect_identical(
+    names(checks), runner$rqr_ordinary_v1_f01_sampler_columns()
+  )
+  expect_identical(nrow(checks), 11L)
+  expect_true(all(checks$pass))
+  expect_true(all(checks$absolute_difference < 1e-14))
+  expect_invisible(
+    runner$rqr_ordinary_v1_validate_f01_sampler_checks(
+      config, checks, reference
+    )
+  )
+  roundtrip_dir <- withr::local_tempdir()
+  roundtrip_path <- file.path(roundtrip_dir, "f01_sampler_checks.csv")
+  runner$rqr_ordinary_v1_atomic_csv(checks, roundtrip_path)
+  roundtrip_checks <- utils::read.csv(
+    roundtrip_path,
+    stringsAsFactors = FALSE,
+    check.names = FALSE,
+    na.strings = c("", "NA")
+  )
+  expect_invisible(
+    runner$rqr_ordinary_v1_validate_f01_sampler_checks(
+      config, roundtrip_checks, reference
+    )
+  )
+
+  false_reference <- checks
+  false_reference$reference_value[[1L]] <-
+    false_reference$reference_value[[1L]] + 1
+  false_reference$sampler_mean[[1L]] <-
+    false_reference$sampler_mean[[1L]] + 1
+  expect_error(
+    runner$rqr_ordinary_v1_validate_f01_sampler_checks(
+      config, false_reference, reference
+    ),
+    "violates its contract"
+  )
+
+  false_diagnostic <- checks
+  false_diagnostic$rhat[[1L]] <- 1.02
+  expect_error(
+    runner$rqr_ordinary_v1_validate_f01_sampler_checks(
+      config, false_diagnostic, reference
+    ),
+    "violates its contract"
+  )
+
+  false_mcse <- checks
+  false_mcse$sampler_mean[[1L]] <-
+    false_mcse$reference_value[[1L]] + 0.05
+  false_mcse$absolute_difference[[1L]] <- 0.05
+  false_mcse$standardized_difference[[1L]] <- 5
+  false_mcse$mcse_pass[[1L]] <- FALSE
+  false_mcse$pass[[1L]] <- FALSE
+  expect_error(
+    runner$rqr_ordinary_v1_validate_f01_sampler_checks(
+      config, false_mcse, reference
+    ),
+    "violates its contract"
+  )
+})
+
+test_that("F01 sampler estimands order roots and encode five events", {
+  runner <- ordinary_v1_runner_environment()
+  config <- ordinary_v1_config(runner)
+  repo_root <- dirname(dirname(dirname(dirname(attr(config, "path")))))
+  reference <- runner$rqr_ordinary_v1_read_f01_reference(file.path(
+    repo_root, config$f01_reference_contract$artifact_path
+  ))
+  runner$rqr_ordinary_v1_validate_fit <- function(fit) invisible(TRUE)
+  fit <- structure(
+    list(
+      samp.beta_root1 = matrix(c(-2, 0), ncol = 1L),
+      samp.beta_root2 = matrix(c(3, 1), ncol = 1L),
+      samp.lambda = c(0.5, 2),
+      model_spec = list(
+        coverage_level = 0.8,
+        learning_rate_mode =
+          "learned_pseudoresidual_normalized"
+      )
+    ),
+    class = c("rqr_mcmc", "list")
+  )
+  values <- runner$rqr_ordinary_v1_f01_sampler_draws(
+    fit, config$fixtures$F01, reference
+  )
+  expect_identical(
+    colnames(values),
+    runner$rqr_ordinary_v1_f01_sampler_estimand_schema(reference)
+  )
+  expect_equal(values[, "mean_lambda"], c(0.5, 2))
+  expect_equal(values[, "mean_lower_root"], c(-2, 0))
+  expect_equal(values[, "mean_upper_root"], c(3, 1))
+  expect_equal(values[, "mean_width"], c(5, 1))
+  expect_equal(values[, "mean_midpoint"], c(0.5, 0.5))
+  expect_equal(values[, "cdf_lambda"], c(1, 0))
+  expect_equal(values[, "cdf_lower_root"], c(1, 0))
+  expect_equal(values[, "cdf_upper_root"], c(0, 1))
+  expect_equal(values[, "cdf_width"], c(0, 1))
+  expect_equal(values[, "cdf_midpoint"], c(1, 1))
+  expect_true(all(is.finite(values[, "mean_total_loss"])))
+  expect_true(all(values[, "mean_total_loss"] > 0))
+})
+
 test_that("estimand schemas are exact across families, modes, and priors", {
   runner <- ordinary_v1_runner_environment()
   coefficient_names <- c("intercept", "x", "z")
@@ -1602,12 +1904,12 @@ test_that("estimand schemas are exact across families, modes, and priors", {
       identical(row$family[[1L]], "desn")
     )
     expect_identical(
-      any(startsWith(schema, "log_zeta2_ordered_")),
+      any(startsWith(schema, "log_zeta2_min")),
       identical(row$prior[[1L]], "rhs_ns_sampled")
     )
     if (rhs) {
       expect_true(all(paste0(
-        "log_lambda2_ordered_lower_", active_names
+        "log_lambda2_min_", active_names
       ) %in% schema))
       sidecar <-
         runner$rqr_ordinary_v1_expected_rhs_sidecar_columns(
@@ -1703,7 +2005,7 @@ test_that("RHS diagnostics are label invariant and fixed shoulders are exact", {
 
   sampled <- results$rhs_ns_sampled$result
   expect_true(any(startsWith(
-    colnames(sampled$values), "log_zeta2_ordered_"
+    colnames(sampled$values), "log_zeta2_min"
   )))
   expect_true(all(grepl(
     "_(x1|x2|x3)(_root[12])?$",
@@ -1786,6 +2088,31 @@ test_that("the bounded driver stops before a later cell after cell failure", {
 test_that("compact artifacts are read back, hashed, and atomically published", {
   runner <- ordinary_v1_runner_environment()
   directory <- withr::local_tempdir()
+  symlink_parent <- withr::local_tempdir()
+  symlink_root <- file.path(symlink_parent, "compact-root")
+  symlink_alias <- file.path(symlink_parent, "compact-root-alias")
+  dir.create(symlink_root)
+  skip_if_not(file.symlink(symlink_root, symlink_alias))
+  for (invalid_root in list(
+    character(0), c(symlink_root, symlink_root),
+    file.path(symlink_parent, "absent-root")
+  )) {
+    expect_error(
+      runner$rqr_ordinary_v1_artifact_manifest(invalid_root),
+      "existing, nonsymlink directory"
+    )
+  }
+  ordinary_file <- file.path(symlink_parent, "ordinary-file")
+  writeLines("not a directory", ordinary_file)
+  expect_error(
+    runner$rqr_ordinary_v1_artifact_manifest(ordinary_file),
+    "existing, nonsymlink directory"
+  )
+  expect_error(
+    runner$rqr_ordinary_v1_artifact_manifest(symlink_alias),
+    "existing, nonsymlink directory"
+  )
+
   path <- file.path(directory, "reference_gates.csv")
   runner$rqr_ordinary_v1_atomic_csv(
     data.frame(gate_id = "fixture", status = "pass"),
@@ -1801,6 +2128,14 @@ test_that("compact artifacts are read back, hashed, and atomically published", {
     "replacement"
   )
   manifest <- runner$rqr_ordinary_v1_artifact_manifest(directory)
+  expect_identical(
+    names(manifest),
+    c("schema_version", "relative_path", "byte_count", "sha256")
+  )
+  expect_identical(
+    manifest$schema_version,
+    runner$rqr_ordinary_v1_schema()
+  )
   expect_identical(manifest$relative_path, "reference_gates.csv")
   expect_true(runner$rqr_ordinary_v1_validate_artifact_manifest(
     directory, manifest
@@ -1815,6 +2150,52 @@ test_that("compact artifacts are read back, hashed, and atomically published", {
   expect_true(runner$rqr_ordinary_v1_validate_artifact_manifest(
     directory, reread
   ))
+
+  missing_schema <- reread[, setdiff(
+    names(reread), "schema_version"
+  ), drop = FALSE]
+  expect_false(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, missing_schema
+  ))
+  extra_column <- reread
+  extra_column$unexpected <- "not permitted"
+  expect_false(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, extra_column
+  ))
+  wrong_schema <- reread
+  wrong_schema$schema_version <- "rqrgibbs_ordinary_v1_evidence/0.0.0"
+  expect_false(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, wrong_schema
+  ))
+  duplicate <- rbind(reread, reread)
+  expect_false(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, duplicate
+  ))
+  invalid_path <- reread
+  invalid_path$relative_path <- "../reference_gates.csv"
+  expect_false(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, invalid_path
+  ))
+  invalid_count <- reread
+  invalid_count$byte_count <- -1
+  expect_false(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, invalid_count
+  ))
+  fractional_count <- reread
+  fractional_count$byte_count <- fractional_count$byte_count + 0.5
+  expect_false(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, fractional_count
+  ))
+  invalid_hash <- reread
+  invalid_hash$sha256 <- toupper(invalid_hash$sha256)
+  expect_false(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, invalid_hash
+  ))
+  invalid_hash$sha256 <- paste(rep("a", 63L), collapse = "")
+  expect_false(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, invalid_hash
+  ))
+
   empty_path <- file.path(directory, "failure_log.csv")
   runner$rqr_ordinary_v1_atomic_csv(
     runner$rqr_ordinary_v1_empty_failure(), empty_path
@@ -1829,6 +2210,186 @@ test_that("compact artifacts are read back, hashed, and atomically published", {
       "schema_version", "timestamp_utc", "mode", "cell_id", "chain",
       "error_class", "message"
     )
+  )
+
+  hidden <- file.path(directory, ".unexpected")
+  writeLines("hidden", hidden)
+  expect_false(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, reread
+  ))
+  unlink(hidden)
+
+  symlink_target <- file.path(directory, "symlink-target.txt")
+  writeLines("target", symlink_target)
+  symlink_path <- file.path(directory, "symlink.txt")
+  skip_if_not(file.symlink(symlink_target, symlink_path))
+  expect_error(
+    runner$rqr_ordinary_v1_artifact_manifest(directory),
+    "regular, nonsymlink"
+  )
+})
+
+test_that("mode-specific compact evidence sets are exact and closed", {
+  runner <- ordinary_v1_runner_environment()
+  expect_identical(
+    vapply(
+      c(
+        "preflight", "reference-only",
+        "benchmark-one-cell", "execute-bounded"
+      ),
+      function(mode) {
+        length(runner$rqr_ordinary_v1_expected_output_files(mode))
+      },
+      integer(1L)
+    ),
+    c(
+      preflight = 12L,
+      `reference-only` = 23L,
+      `benchmark-one-cell` = 23L,
+      `execute-bounded` = 29L
+    )
+  )
+
+  directory <- withr::local_tempdir()
+  expected <- runner$rqr_ordinary_v1_expected_output_files("preflight")
+  for (name in setdiff(expected, "artifact_hashes.csv")) {
+    writeLines(name, file.path(directory, name))
+  }
+  manifest <- runner$rqr_ordinary_v1_artifact_manifest(
+    directory, expected_files = expected
+  )
+  runner$rqr_ordinary_v1_atomic_csv(
+    manifest, file.path(directory, "artifact_hashes.csv")
+  )
+  reread <- utils::read.csv(
+    file.path(directory, "artifact_hashes.csv"),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  expect_true(runner$rqr_ordinary_v1_validate_artifact_manifest(
+    directory, reread, expected_files = expected
+  ))
+
+  writeLines("extra", file.path(directory, ".unmanifested"))
+  expect_error(
+    runner$rqr_ordinary_v1_validate_artifact_manifest(
+      directory, reread, expected_files = expected
+    ),
+    "exact mode-specific set"
+  )
+})
+
+test_that("failure manifests preserve only approved compact subsets", {
+  runner <- ordinary_v1_runner_environment()
+  modes <- c(
+    "preflight", "reference-only",
+    "benchmark-one-cell", "execute-bounded"
+  )
+  write_terminal <- function(directory, mode) {
+    runner$rqr_ordinary_v1_atomic_csv(
+      data.frame(
+        timestamp_utc = "2026-07-26T00:00:00Z",
+        mode = mode,
+        cell_id = NA_character_,
+        chain = NA_integer_,
+        error_class = "synthetic_failure",
+        message = "A deterministic failure-manifest fixture.",
+        stringsAsFactors = FALSE
+      ),
+      file.path(directory, "failure_log.csv")
+    )
+    runner$rqr_ordinary_v1_atomic_csv(
+      data.frame(
+        mode = mode,
+        status = "fail",
+        source_commit = paste(rep("a", 40L), collapse = ""),
+        fits_executed = NA_integer_,
+        fits_executed_scope = "top_level_runner_fit_calls_only",
+        source_test_internal_fits_instrumented = FALSE,
+        benchmark_fits_executed = NA_integer_,
+        bounded_fits_executed = NA_integer_,
+        matched_simulation_authorized = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      file.path(directory, "run_status.csv")
+    )
+  }
+  for (mode in modes) {
+    directory <- withr::local_tempdir()
+    write_terminal(directory, mode)
+    if (mode %in% c("benchmark-one-cell", "execute-bounded")) {
+      writeLines(
+        "progress",
+        file.path(directory, "fit_plan_status_in_progress.csv")
+      )
+    }
+    if (identical(mode, "execute-bounded")) {
+      companion <- file.path(directory, "protected_dlm_companion")
+      dir.create(companion)
+      writeLines(
+        "partial companion",
+        file.path(companion, "bundle_manifest.json")
+      )
+    }
+    path <- runner$rqr_ordinary_v1_write_manifest(
+      directory, mode, require_complete = FALSE
+    )
+    manifest <- utils::read.csv(
+      path, stringsAsFactors = FALSE, check.names = FALSE
+    )
+    expect_true(runner$rqr_ordinary_v1_validate_artifact_manifest(
+      directory,
+      manifest,
+      expected_files =
+        runner$rqr_ordinary_v1_allowed_failure_files(mode),
+      allow_partial = TRUE
+    ))
+    expect_setequal(
+      manifest$relative_path,
+      setdiff(
+        list.files(
+          directory,
+          recursive = TRUE,
+          all.files = TRUE,
+          no.. = TRUE,
+          include.dirs = FALSE
+        ),
+        "artifact_hashes.csv"
+      )
+    )
+  }
+
+  missing_terminal <- withr::local_tempdir()
+  write_terminal(missing_terminal, "preflight")
+  unlink(file.path(missing_terminal, "failure_log.csv"))
+  expect_error(
+    runner$rqr_ordinary_v1_write_manifest(
+      missing_terminal, "preflight", require_complete = FALSE
+    ),
+    "requires failure_log.csv and run_status.csv"
+  )
+
+  disallowed_progress <- withr::local_tempdir()
+  write_terminal(disallowed_progress, "preflight")
+  writeLines(
+    "not allowed",
+    file.path(disallowed_progress, "fit_plan_status_in_progress.csv")
+  )
+  expect_error(
+    runner$rqr_ordinary_v1_write_manifest(
+      disallowed_progress, "preflight", require_complete = FALSE
+    ),
+    "not an approved incomplete set"
+  )
+
+  empty_directory <- withr::local_tempdir()
+  write_terminal(empty_directory, "execute-bounded")
+  dir.create(file.path(empty_directory, "protected_dlm_companion"))
+  expect_error(
+    runner$rqr_ordinary_v1_write_manifest(
+      empty_directory, "execute-bounded", require_complete = FALSE
+    ),
+    "not an approved incomplete set"
   )
 })
 
@@ -1905,6 +2466,24 @@ test_that("wrapper manifest binds a closed monitor and R-evidence file set", {
       output, monitor, rows
     )
   )
+  output_alias <- file.path(root, "output-alias")
+  monitor_alias <- file.path(root, "monitor-alias")
+  if (file.symlink(output, output_alias)) {
+    expect_error(
+      runner$rqr_ordinary_v1_validate_wrapper_manifest(
+        output_alias, monitor, rows
+      ),
+      "must be nonsymlink directories"
+    )
+  }
+  if (file.symlink(monitor, monitor_alias)) {
+    expect_error(
+      runner$rqr_ordinary_v1_validate_wrapper_manifest(
+        output, monitor_alias, rows
+      ),
+      "must be nonsymlink directories"
+    )
+  }
 
   writeLines("mutated", file.path(output, "run_status.csv"))
   expect_error(
@@ -1922,9 +2501,18 @@ test_that("wrapper manifest binds a closed monitor and R-evidence file set", {
     ),
     "invalid closed file set"
   )
+
+  unlink(file.path(monitor, "unexpected.log"))
+  writeLines("unexpected", file.path(output, ".unexpected.csv"))
+  expect_error(
+    runner$rqr_ordinary_v1_validate_wrapper_manifest(
+      output, monitor, rows
+    ),
+    "invalid closed file set"
+  )
 })
 
-test_that("candidate evidence requires the same runtime content and toolchain", {
+test_that("candidate and refreshed evidence use distinct runtime contracts", {
   runner <- ordinary_v1_runner_environment()
   reviewed <- paste(rep("a", 40L), collapse = "")
   current_commit <- paste(rep("b", 40L), collapse = "")
@@ -1959,17 +2547,22 @@ test_that("candidate evidence requires the same runtime content and toolchain", 
   current <- make_runtime(current_commit)
   current$attestation_sha256[[1L]] <-
     paste(rep("3", 64L), collapse = "")
+  current$runtime_tree_digest[[1L]] <-
+    paste(rep("f", 64L), collapse = "")
+  current$runtime_path[[1L]] <- "/isolated/rqrgibbs-authorization"
   expect_invisible(
     runner$rqr_ordinary_v1_validate_runtime_compatibility(
-      recorded, current, reviewed, current_commit, pinned
+      recorded, current, reviewed, current_commit, pinned,
+      compatibility = "candidate_toolchain"
     )
   )
 
   bad <- current
-  bad$runtime_tree_digest[[1L]] <- paste(rep("f", 64L), collapse = "")
+  bad$runtime_tree_digest[[2L]] <- paste(rep("9", 64L), collapse = "")
   expect_error(
     runner$rqr_ordinary_v1_validate_runtime_compatibility(
-      recorded, bad, reviewed, current_commit, pinned
+      recorded, bad, reviewed, current_commit, pinned,
+      compatibility = "candidate_toolchain"
     ),
     "not compatible"
   )
@@ -1977,7 +2570,26 @@ test_that("candidate evidence requires the same runtime content and toolchain", 
   bad$posterior_version[[1L]] <- "1.8.0"
   expect_error(
     runner$rqr_ordinary_v1_validate_runtime_compatibility(
-      recorded, bad, reviewed, current_commit, pinned
+      recorded, bad, reviewed, current_commit, pinned,
+      compatibility = "candidate_toolchain"
+    ),
+    "not compatible"
+  )
+
+  exact <- make_runtime(current_commit)
+  expect_invisible(
+    runner$rqr_ordinary_v1_validate_runtime_compatibility(
+      exact, exact, current_commit, current_commit, pinned,
+      compatibility = "exact_runtime"
+    )
+  )
+  exact_changed <- exact
+  exact_changed$runtime_tree_digest[[1L]] <-
+    paste(rep("9", 64L), collapse = "")
+  expect_error(
+    runner$rqr_ordinary_v1_validate_runtime_compatibility(
+      exact, exact_changed, current_commit, current_commit, pinned,
+      compatibility = "exact_runtime"
     ),
     "not compatible"
   )
@@ -2016,6 +2628,16 @@ test_that("benchmark authorization accepts only a fully bound evidence bundle", 
 
   passing <- make_bundle()
   expect_invisible(validate(passing))
+  candidate_runtime <-
+    runner$rqr_ordinary_v1_candidate_runtime_from_benchmark(
+      passing$output_dir, passing$config
+    )
+  expect_identical(nrow(candidate_runtime), 1L)
+  expect_identical(candidate_runtime$package[[1L]], "rqrgibbs")
+  expect_identical(
+    candidate_runtime$source_commit[[1L]],
+    passing$config$reviewed_implementation_commit
+  )
 
   diagnostic_bytes <- make_bundle()
   writeLines(
@@ -2157,7 +2779,13 @@ test_that("benchmark authorization accepts only a fully bound evidence bundle", 
   runtime$runtime_table$runtime_tree_digest[
     runtime$runtime_table$package == "rqrgibbs"
   ] <- paste(rep("f", 64L), collapse = "")
-  expect_error(validate(runtime), "not compatible")
+  expect_invisible(validate(runtime))
+
+  external_runtime <- make_bundle()
+  external_runtime$runtime_table$runtime_tree_digest[
+    external_runtime$runtime_table$package == "exdqlm"
+  ] <- paste(rep("f", 64L), collapse = "")
+  expect_error(validate(external_runtime), "not compatible")
 
   toolchain <- make_bundle()
   toolchain$runtime_table$posterior_version[
@@ -2215,10 +2843,63 @@ test_that("reference authorization validates exact schemas and semantics", {
       fixture$config,
       fixture$tables,
       fixture$attested_design,
-      fixture$expected_fixture_manifest
+      fixture$expected_fixture_manifest,
+      expected_source_commit =
+        fixture$tables$source_state$commit[[1L]],
+      expected_authorization_status = if (
+        isTRUE(fixture$config$ordinary_v1_execute_enabled)
+      ) {
+        "flag_only_authorization_verified"
+      } else {
+        "source_candidate_execution_disabled"
+      },
+      expected_reviewed_implementation_commit = if (
+        isTRUE(fixture$config$ordinary_v1_execute_enabled)
+      ) {
+        fixture$config$reviewed_implementation_commit
+      } else {
+        NA_character_
+      },
+      expected_authorization_delta_verified =
+        isTRUE(fixture$config$ordinary_v1_execute_enabled)
     )
   }
   expect_invisible(validate(make_fixture()))
+
+  authorized <- make_fixture()
+  reviewed <- authorized$tables$source_state$commit[[1L]]
+  authorization_commit <- paste(rep("b", 40L), collapse = "")
+  authorized$config$ordinary_v1_execute_enabled <- TRUE
+  authorized$config$reviewed_implementation_commit <- reviewed
+  authorization_digest <-
+    runner$rqr_ordinary_v1_sha256_object(authorized$config)
+  authorized$tables$run_status$source_commit[[1L]] <-
+    authorization_commit
+  authorized$tables$source_state$commit[[1L]] <-
+    authorization_commit
+  authorized$tables$source_state$config_digest[[1L]] <-
+    authorization_digest
+  authorized$tables$source_state$authorization_status[[1L]] <-
+    "flag_only_authorization_verified"
+  authorized$tables$source_state$
+    reviewed_implementation_commit[[1L]] <- reviewed
+  authorized$tables$source_state$
+    authorization_delta_verified[[1L]] <- TRUE
+  primary_runtime <- authorized$tables$runtime_attestations$package ==
+    "rqrgibbs"
+  authorized$tables$runtime_attestations$source_commit[
+    primary_runtime
+  ] <- authorization_commit
+  authorized$tables$validation_config_digest$config_digest[[1L]] <-
+    authorization_digest
+  authorized$tables$validation_config_digest$execute_enabled[[1L]] <-
+    TRUE
+  expect_invisible(validate(authorized))
+
+  false_authorization <- authorized
+  false_authorization$tables$source_state$
+    authorization_delta_verified[[1L]] <- FALSE
+  expect_error(validate(false_authorization), "frozen contract")
 
   extra_column <- make_fixture()
   extra_column$tables$reference_gates$unreviewed <- "pass"
@@ -2248,6 +2929,46 @@ test_that("reference authorization validates exact schemas and semantics", {
   self_consistent_false_oracle$tables$oracle_comparisons$pass[[1L]] <-
     TRUE
   expect_error(validate(self_consistent_false_oracle), "frozen contract")
+
+  self_consistent_false_f01 <- make_fixture()
+  self_consistent_false_f01$tables$f01_quadrature_checks$
+    tracked_value[[1L]] <- 99
+  self_consistent_false_f01$tables$f01_quadrature_checks$
+    reproduced_value[[1L]] <- 99
+  self_consistent_false_f01$tables$f01_quadrature_checks$
+    absolute_difference[[1L]] <- 0
+  self_consistent_false_f01$tables$f01_quadrature_checks$pass[[1L]] <-
+    TRUE
+  expect_error(validate(self_consistent_false_f01), "frozen contract")
+
+  false_f01_hash <- make_fixture()
+  attr(false_f01_hash$tables, "file_sha256")[
+    "f01_quadrature_checks"
+  ] <- paste(rep("f", 64L), collapse = "")
+  expect_error(validate(false_f01_hash), "frozen contract")
+
+  self_consistent_false_f01_sampler <- make_fixture()
+  self_consistent_false_f01_sampler$tables$f01_sampler_checks$
+    reference_value[[1L]] <-
+    self_consistent_false_f01_sampler$tables$f01_sampler_checks$
+      reference_value[[1L]] + 1
+  self_consistent_false_f01_sampler$tables$f01_sampler_checks$
+    sampler_mean[[1L]] <-
+    self_consistent_false_f01_sampler$tables$f01_sampler_checks$
+      sampler_mean[[1L]] + 1
+  expect_error(
+    validate(self_consistent_false_f01_sampler), "frozen contract"
+  )
+
+  false_fit_scope <- make_fixture()
+  false_fit_scope$tables$run_status$fits_executed_scope[[1L]] <-
+    "all_transitive_fit_calls"
+  expect_error(validate(false_fit_scope), "frozen contract")
+
+  false_internal_fit_claim <- make_fixture()
+  false_internal_fit_claim$tables$run_status$
+    source_test_internal_fits_instrumented[[1L]] <- TRUE
+  expect_error(validate(false_internal_fit_claim), "frozen contract")
 
   self_consistent_false_dlm <- make_fixture()
   self_consistent_false_dlm$tables$protected_dlm_hashes$
@@ -2296,6 +3017,86 @@ test_that("execute authorization fails before reading a bundle", {
       reference_dir = file.path(tempdir(), "does-not-exist")
     ),
     "disabled in the reviewed tracked configuration"
+  )
+})
+
+test_that("protected-DLM companion consumer is source-bound", {
+  runner <- ordinary_v1_runner_environment()
+  config <- ordinary_v1_config(runner)
+  repo_root <- normalizePath(
+    testthat::test_path("..", "..", ".."),
+    winslash = "/", mustWork = TRUE
+  )
+  expect_true(is.function(
+    runner$rqr_ordinary_v1_load_dlm_companion_validator(
+      repo_root, config
+    )
+  ))
+  bad <- config
+  bad$protected_dlm_companion$collector_sha256 <-
+    paste(rep("0", 64L), collapse = "")
+  expect_error(
+    runner$rqr_ordinary_v1_load_dlm_companion_validator(
+      repo_root, bad
+    ),
+    "does not match config"
+  )
+})
+
+test_that("validated protected-DLM companion bytes are retained exactly", {
+  runner <- ordinary_v1_runner_environment()
+  config <- ordinary_v1_config(runner)
+  source <- withr::local_tempdir()
+  output <- withr::local_tempdir()
+  for (name in config$protected_dlm_companion$compact_files) {
+    writeLines(paste("companion", name), file.path(source, name))
+  }
+  expected <- data.frame(
+    schema_version =
+      config$protected_dlm_companion$schema_version,
+    status = "pass",
+    stringsAsFactors = FALSE
+  )
+  runner$rqr_ordinary_v1_validate_dlm_companion <- function(
+      config, repo_root, benchmark_dir, companion_dir) {
+    stopifnot(dir.exists(companion_dir))
+    expected
+  }
+  expect_invisible(runner$rqr_ordinary_v1_publish_dlm_companion(
+    config = config,
+    repo_root = "unused",
+    benchmark_dir = "unused",
+    companion_dir = source,
+    output_dir = output,
+    expected_check = expected
+  ))
+  published <- file.path(output, "protected_dlm_companion")
+  expect_identical(
+    sort(list.files(published, all.files = TRUE, no.. = TRUE)),
+    sort(config$protected_dlm_companion$compact_files)
+  )
+  expect_identical(
+    unname(vapply(
+      file.path(source, config$protected_dlm_companion$compact_files),
+      runner$rqr_ordinary_v1_sha256_file,
+      character(1L)
+    )),
+    unname(vapply(
+      file.path(published, config$protected_dlm_companion$compact_files),
+      runner$rqr_ordinary_v1_sha256_file,
+      character(1L)
+    ))
+  )
+  expect_error(
+    runner$rqr_ordinary_v1_publish_dlm_companion(
+      config = config,
+      repo_root = "unused",
+      benchmark_dir = "unused",
+      companion_dir = source,
+      output_dir = output,
+      expected_check = expected
+    ),
+    "target must be absent"
   )
 })
 

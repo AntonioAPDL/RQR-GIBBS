@@ -39,7 +39,8 @@ if [[ "$mode" == "execute-bounded" ]]; then
   for required_directory in \
       RQR_ORDINARY_V1_REFERENCE_DIR \
       RQR_ORDINARY_V1_BENCHMARK_DIR \
-      RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR; do
+      RQR_ORDINARY_V1_BENCHMARK_MONITOR_DIR \
+      RQR_ORDINARY_V1_DLM_COMPANION_DIR; do
     if [[ -z "${!required_directory:-}" ]]; then
       echo "execute-bounded requires $required_directory." >&2
       exit 2
@@ -142,6 +143,7 @@ esac
 
 export RQR_ORDINARY_V1_OUTPUT_DIR="$output_dir"
 export RQR_ORDINARY_V1_RUN_DIR="$run_dir"
+export RQR_ORDINARY_V1_MONITOR_DIR="$monitor_dir"
 
 test_scenario="${RQR_ORDINARY_V1_MONITOR_TEST_SCENARIO:-}"
 if [[ -n "$test_scenario" &&
@@ -150,7 +152,7 @@ if [[ -n "$test_scenario" &&
   exit 2
 fi
 
-timeout_seconds=2700
+timeout_seconds=14400
 max_processes=3
 max_threads=4
 max_artifact_bytes=1073741824
@@ -322,17 +324,24 @@ append_wrapper_manifest_row() {
 }
 
 write_wrapper_manifest() {
-  local temporary path_list path name output_name
+  local temporary path_list path name relative
+  local monitor_scan_failed=FALSE
+  local output_scan_failed=FALSE
+  local -A expected_monitor=(
+    [process_group_monitor.csv]=TRUE
+    [process_group_resource_summary.csv]=TRUE
+    [runner.stderr.log]=TRUE
+    [runner.stdout.log]=TRUE
+    [wrapper_closeout.csv]=TRUE
+  )
   temporary="$(mktemp "$monitor_dir/.wrapper_artifact_hashes.XXXXXX")" ||
     return 1
   path_list="$(mktemp "$monitor_dir/.wrapper_manifest_paths.XXXXXX")" || {
     rm -f -- "$temporary"
     return 1
   }
-  if ! find "$monitor_dir" -mindepth 1 -maxdepth 1 -type f \
-      ! -name 'wrapper_artifact_hashes.csv' \
-      ! -name '.wrapper_artifact_hashes.*' \
-      ! -name '.wrapper_manifest_paths.*' -print0 |
+  if ! find "$monitor_dir" -mindepth 1 -maxdepth 1 \
+      ! -name 'wrapper_artifact_hashes.csv' -print0 |
       LC_ALL=C sort -z >"$path_list"; then
     rm -f -- "$temporary" "$path_list"
     return 1
@@ -341,33 +350,71 @@ write_wrapper_manifest() {
     rm -f -- "$temporary" "$path_list"
     return 1
   }
-  while IFS= read -r -d '' path; do
-    name="${path##*/}"
+  for name in \
+      process_group_monitor.csv \
+      process_group_resource_summary.csv \
+      runner.stderr.log \
+      runner.stdout.log \
+      wrapper_closeout.csv; do
     append_wrapper_manifest_row \
-      "$temporary" monitor_evidence "monitor/$name" "$path" || {
+      "$temporary" monitor_evidence "monitor/$name" \
+      "$monitor_dir/$name" || {
+      rm -f -- "$temporary" "$path_list"
+      return 1
+    }
+  done
+  while IFS= read -r -d '' path; do
+    if [[ "$path" == "$temporary" || "$path" == "$path_list" ]]; then
+      continue
+    fi
+    name="${path##*/}"
+    if [[ -z "${expected_monitor[$name]+present}" ]]; then
+      monitor_scan_failed=TRUE
+    fi
+  done <"$path_list"
+  rm -f -- "$path_list"
+  path_list="$(mktemp "$monitor_dir/.wrapper_manifest_paths.XXXXXX")" || {
+    rm -f -- "$temporary"
+    return 1
+  }
+  if ! find "$output_dir" -mindepth 1 -print0 |
+      LC_ALL=C sort -z >"$path_list"; then
+    : >"$path_list"
+    output_scan_failed=TRUE
+  fi
+  while IFS= read -r -d '' path; do
+    relative="${path#"$output_dir"/}"
+    if [[ -d "$path" && ! -L "$path" ]]; then
+      if [[ "$mode" == execute-bounded &&
+            "$relative" == protected_dlm_companion ]]; then
+        continue
+      fi
+      rm -f -- "$temporary" "$path_list"
+      return 1
+    fi
+    name="$relative"
+    append_wrapper_manifest_row \
+      "$temporary" r_evidence_binding "output/$name" "$path" || {
       rm -f -- "$temporary" "$path_list"
       return 1
     }
   done <"$path_list"
   rm -f -- "$path_list"
-  for output_name in \
-      artifact_hashes.csv run_status.csv source_state.csv \
-      validation_config_digest.csv; do
-    path="$output_dir/$output_name"
-    if [[ -e "$path" || -L "$path" ]]; then
-      append_wrapper_manifest_row \
-        "$temporary" r_evidence_binding "output/$output_name" "$path" || {
-        rm -f -- "$temporary"
-        return 1
-      }
-    fi
-  done
-  atomic_publish "$temporary" "$manifest_csv"
+  atomic_publish "$temporary" "$manifest_csv" || return 1
+  [[ "$monitor_scan_failed" == FALSE &&
+     "$output_scan_failed" == FALSE ]]
 }
 
 validate_wrapper_manifest() {
   local header role relative bytes digest_value actual_path
   local actual_bytes actual_digest key path name output_name
+  local -a expected_monitor=(
+    process_group_monitor.csv
+    process_group_resource_summary.csv
+    runner.stderr.log
+    runner.stdout.log
+    wrapper_closeout.csv
+  )
   local -A seen=()
   if [[ ! -f "$manifest_csv" || -L "$manifest_csv" ]]; then
     return 1
@@ -382,17 +429,21 @@ validate_wrapper_manifest() {
       [[ -z "${seen[$key]+present}" ]] || return 1
       seen["$key"]=TRUE
       case "$role:$relative" in
-        monitor_evidence:monitor/wrapper_artifact_hashes.csv)
-          return 1
-          ;;
-        monitor_evidence:monitor/*)
+        monitor_evidence:monitor/process_group_monitor.csv|\
+        monitor_evidence:monitor/process_group_resource_summary.csv|\
+        monitor_evidence:monitor/runner.stderr.log|\
+        monitor_evidence:monitor/runner.stdout.log|\
+        monitor_evidence:monitor/wrapper_closeout.csv)
           actual_path="$monitor_dir/${relative#monitor/}"
           ;;
-        r_evidence_binding:output/artifact_hashes.csv|\
-        r_evidence_binding:output/run_status.csv|\
-        r_evidence_binding:output/source_state.csv|\
-        r_evidence_binding:output/validation_config_digest.csv)
-          actual_path="$output_dir/${relative#output/}"
+        r_evidence_binding:output/*)
+          output_name="${relative#output/}"
+          case "$output_name" in
+            ""|/*|.|..|./*|../*|*/./*|*/../*|*/.|*/..|*//*)
+              return 1
+              ;;
+          esac
+          actual_path="$output_dir/$output_name"
           ;;
         *)
           return 1
@@ -406,28 +457,45 @@ validate_wrapper_manifest() {
          "$digest_value" == "$actual_digest" ]] || return 1
     done
   } <"$manifest_csv"
-  while IFS= read -r -d '' path; do
-    name="${path##*/}"
+  for name in "${expected_monitor[@]}"; do
     key="monitor_evidence|monitor/$name"
     [[ -n "${seen[$key]+present}" ]] || return 1
+  done
+  while IFS= read -r -d '' path; do
+    name="${path##*/}"
+    case "$name" in
+      process_group_monitor.csv|\
+      process_group_resource_summary.csv|\
+      runner.stderr.log|\
+      runner.stdout.log|\
+      wrapper_closeout.csv)
+        key="monitor_evidence|monitor/$name"
+        [[ -f "$path" && ! -L "$path" &&
+           -n "${seen[$key]+present}" ]] || return 1
+        ;;
+      *)
+        return 1
+        ;;
+    esac
   done < <(
-    find "$monitor_dir" -mindepth 1 -maxdepth 1 -type f \
-      ! -name 'wrapper_artifact_hashes.csv' \
-      ! -name '.wrapper_artifact_hashes.*' \
-      ! -name '.wrapper_manifest_paths.*' -print0 |
+    find "$monitor_dir" -mindepth 1 -maxdepth 1 \
+      ! -name 'wrapper_artifact_hashes.csv' -print0 |
       LC_ALL=C sort -z
   )
-  for output_name in \
-      artifact_hashes.csv run_status.csv source_state.csv \
-      validation_config_digest.csv; do
-    path="$output_dir/$output_name"
-    key="r_evidence_binding|output/$output_name"
-    if [[ -e "$path" || -L "$path" ]]; then
-      [[ -n "${seen[$key]+present}" ]] || return 1
-    elif [[ -n "${seen[$key]+present}" ]]; then
-      return 1
+  while IFS= read -r -d '' path; do
+    output_name="${path#"$output_dir"/}"
+    if [[ -d "$path" && ! -L "$path" ]]; then
+      [[ "$mode" == execute-bounded &&
+         "$output_name" == protected_dlm_companion ]] || return 1
+      continue
     fi
-  done
+    key="r_evidence_binding|output/$output_name"
+    [[ -f "$path" && ! -L "$path" &&
+       -n "${seen[$key]+present}" ]] || return 1
+  done < <(
+    find "$output_dir" -mindepth 1 -print0 |
+      LC_ALL=C sort -z
+  )
 }
 
 write_resource_summary() {
@@ -485,6 +553,36 @@ write_closeout() {
   atomic_publish "$temporary" "$closeout_csv"
 }
 
+validate_r_output_bundle() {
+  if [[ -n "$test_scenario" || "$runner_status" -ne 0 ]]; then
+    return 0
+  fi
+  RQR_ORDINARY_V1_SOURCE_ONLY=YES \
+  RQR_ORDINARY_V1_POSTRUN_SOURCE="$repo_root/application/scripts/25_validate_rqr_ordinary_v1.R" \
+  RQR_ORDINARY_V1_POSTRUN_MODE="$mode" \
+  RQR_ORDINARY_V1_POSTRUN_OUTPUT="$output_dir" \
+    Rscript --vanilla -e '
+      environment <- new.env(parent = globalenv())
+      sys.source(
+        Sys.getenv("RQR_ORDINARY_V1_POSTRUN_SOURCE"),
+        envir = environment
+      )
+      output <- Sys.getenv("RQR_ORDINARY_V1_POSTRUN_OUTPUT")
+      mode <- Sys.getenv("RQR_ORDINARY_V1_POSTRUN_MODE")
+      manifest <- utils::read.csv(
+        file.path(output, "artifact_hashes.csv"),
+        stringsAsFactors = FALSE,
+        check.names = FALSE
+      )
+      expected <- environment$rqr_ordinary_v1_expected_output_files(mode)
+      if (!isTRUE(environment$rqr_ordinary_v1_validate_artifact_manifest(
+        output, manifest, expected_files = expected
+      ))) {
+        stop("The post-R compact output validation failed.", call. = FALSE)
+      }
+    ' >/dev/null 2>&1
+}
+
 finalize_wrapper() {
   local incoming_status="${1:-1}"
   local status final_bytes
@@ -532,13 +630,16 @@ finalize_wrapper() {
   fi
   write_resource_summary || monitor_error=TRUE
   write_closeout || monitor_error=TRUE
-  if ! write_wrapper_manifest || ! validate_wrapper_manifest; then
+  if ! write_wrapper_manifest ||
+      ! validate_r_output_bundle ||
+      ! validate_wrapper_manifest; then
     monitor_error=TRUE
     # Re-publish summaries so the failure is visible, then make one final
     # atomic manifest/readback attempt over those final bytes.
     write_resource_summary || true
     write_closeout || true
     write_wrapper_manifest || true
+    validate_r_output_bundle || true
     validate_wrapper_manifest || true
   fi
 
@@ -635,6 +736,18 @@ case "$test_scenario" in
     runner_command=(
       bash -c
       'chmod 000 "$RQR_ORDINARY_V1_OUTPUT_DIR"; sleep 60'
+    )
+    ;;
+  monitor-hidden)
+    runner_command=(
+      bash -c
+      'printf "%s\n" unexpected >"$RQR_ORDINARY_V1_MONITOR_DIR/.unexpected-monitor"; sleep 0.10; exit 0'
+    )
+    ;;
+  monitor-temporary-lookalike)
+    runner_command=(
+      bash -c
+      'printf "%s\n" unexpected >"$RQR_ORDINARY_V1_MONITOR_DIR/.wrapper_artifact_hashes.injected"; sleep 0.10; exit 0'
     )
     ;;
   *)

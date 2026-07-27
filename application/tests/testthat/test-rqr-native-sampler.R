@@ -2435,7 +2435,7 @@ test_that("runtime-backed external adapters require isolated attestation", {
 test_that("DESN forecast horizon rejects fractional values", {
   object <- structure(list(), class = "rqr_desn_fit")
   expect_error(
-    forecast_paths.rqr_desn_fit(object, H = 2.9),
+    forecast_paths(object, H = 2.9),
     "H must be one finite integer"
   )
 })

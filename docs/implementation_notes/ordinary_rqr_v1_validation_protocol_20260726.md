@@ -154,6 +154,8 @@ The Makefile exposes:
 materialize-ordinary-v1-desn
 preflight-ordinary-v1
 reference-ordinary-v1
+test-ordinary-v1-dlm-companion
+bundle-ordinary-v1-dlm-companion
 benchmark-ordinary-v1-one-cell
 test-ordinary-v1-monitor
 execute-ordinary-v1-bounded
@@ -272,11 +274,20 @@ lambda prior   = Gamma(shape=4, rate=4)
 ```
 
 The corrected tracked quadrature references remain authoritative for this
-exact fixture. The new native static sampler must reproduce the established
-means and five event probabilities within four maintained Monte Carlo
-standard errors if the bounded grid is later authorized. The
-`reference-only` mode must first reproduce the deterministic quadrature
-values and their artifact hashes without running MCMC.
+exact learned-rate fixture. The live mean contract contains only the six
+independent Output-6 posterior means; the five Output-6 CDF rows are retained
+only as superseded historical audit evidence. The live event-probability
+contract is the corrected Output-7 table.
+
+`reference-only` must first reproduce all eleven quantities by deterministic,
+event-boundary-aware collapsed quadrature. It must then run four frozen native
+ridge chains with 5,000 burn-in draws and 20,000 retained draws per chain.
+All six posterior means and five indicator means must lie within four
+maintained `posterior::mcse_mean()` standard errors of the reproduced
+quadrature values, with rank-normalized R-hat at most 1.01 and bulk and tail
+ESS at least 1,000. This oracle is separate from, and does not change, the
+48-fit ordinary mechanics grid. No analogous fixed-rate quadrature claim is
+made.
 
 ### F02: full-Gaussian regression with missing responses
 
@@ -808,6 +819,19 @@ assertion. Before merge it must rebuild the exact isolated runtime and pass:
 - monitor and fail-closed launcher tests; and
 - current M01, M02, horizon, and M03 correction gates.
 
+The four fresh protected evidence directories are then reduced by
+`30_bundle_rqr_ordinary_v1_protected_dlm_evidence.R` to one closed five-file
+companion. The collector performs no fit and copies no heavy model object. Its
+consumer validator must rehash the recursive manifest, verify the exact
+emitted sixteen-gate table, reconcile the four input roles and their artifact
+ledger, and bind the reviewed disabled-candidate commit, primary runtime tree,
+runtime attestation, package version, and collector commit. Before the first
+bounded fit, the runner atomically copies those same five validated files into
+`protected_dlm_companion/`, revalidates the copy, and includes every byte in
+the top-level recursive manifest. `execute-bounded` requires this compact
+companion in addition to BENCH01 and the refreshed authorization-commit
+reference bundle.
+
 If a target, transition, FFBS, evolution, or component-scale function changes,
 the complete 24-fit bounded DLM validation and a new independent audit are
 required. Those reruns are outside the authorization supplied by this
@@ -872,7 +896,7 @@ The runner must:
 - set thread limits before R starts;
 - execute in a process group or cgroup;
 - install `EXIT`, `INT`, `TERM`, and `HUP` cleanup handlers;
-- enforce a hard wall-time ceiling of 45 minutes for the entire bounded grid;
+- enforce a hard wall-time ceiling of 240 minutes for the entire bounded grid;
 - run sequentially;
 - sample process-tree RSS, process count, and thread count;
 - label sampled maxima as telemetry rather than kernel-hard peaks;
@@ -883,7 +907,7 @@ The runner must:
 The provisional ceilings are:
 
 ```text
-wall time       45 minutes
+wall time       240 minutes
 process count   3
 thread count    4
 artifact bytes  1 GiB under the ignored run directory
@@ -928,12 +952,16 @@ limit during execution.
 The shell-only fault suite must independently exercise normal completion,
 runner failure, TERM-to-KILL timeout cleanup, cumulative artifact overflow,
 process-count overflow, aggregate-thread-count overflow, sampled-telemetry
-failure, and an externally delivered TERM. Each failing fixture must preserve
-regular atomic wrapper evidence, record the specific gate that failed, leave
-the monitored process group empty, and leave an unrelated sentinel process
-alive. The process and thread fixtures set the other ceiling high enough to
-show that the intended gate, rather than a correlated limit, caused failure.
-These deterministic fixtures do not authorize the benchmark or bounded fits.
+failure, an undeclared hidden monitor artifact, and an externally delivered
+TERM. A separate adversarial fixture uses a filename resembling an atomic
+manifest temporary, which must not be exempt from final closure. Each failing
+fixture must preserve regular atomic wrapper evidence, record the specific
+gate that failed, leave the monitored process group empty, and leave an
+unrelated sentinel process alive. Both undeclared-artifact fixtures must fail
+without adding the undeclared byte to the monitor manifest.
+The process and thread fixtures set the other ceiling high enough to show that
+the intended gate, rather than a correlated limit, caused failure. These ten
+deterministic fixtures do not authorize the benchmark or bounded fits.
 
 ## Artifact contract
 
@@ -950,6 +978,8 @@ fixture_manifest.csv
 seed_ledger.csv
 reference_gates.csv
 oracle_comparisons.csv
+f01_quadrature_checks.csv
+f01_sampler_checks.csv
 missingness_checks.csv
 rhs_ns_conditional_checks.csv
 continuation_checks.csv
@@ -957,6 +987,12 @@ history_mutation_checks.csv
 desn_design_checks.csv
 desn_future_checks.csv
 protected_dlm_hashes.csv
+protected_dlm_companion_checks.csv
+protected_dlm_companion/artifact_hashes.csv
+protected_dlm_companion/bundle_manifest.json
+protected_dlm_companion/input_artifact_hashes.csv
+protected_dlm_companion/input_bundle_summary.csv
+protected_dlm_companion/semantic_gates.csv
 package_checks.csv
 fit_plan.csv
 initialization_manifest.csv
@@ -966,6 +1002,8 @@ compact_posterior_summaries.csv
 checkpoint_manifest.csv
 provenance_checks.csv
 root_swap_sidecar.csv
+rhs_root_trace_sidecar.csv
+fixed_parameter_checks.csv
 local_chain_hashes.csv
 resource_summary.csv
 failure_log.csv
@@ -977,9 +1015,22 @@ closeout.md
 
 Every CSV requires an explicit schema identifier. `artifact_hashes.csv` must
 list relative path, byte count, and SHA-256 for every other promoted artifact.
+Successful runs have an exact mode-specific file set: 12 files for preflight,
+23 for reference-only, 23 for BENCH01, and 29 for bounded execution including
+the five-file protected-DLM namespace. Hidden extras, residual progress files,
+unexpected directories, symbolic links, and nonregular files are rejected.
+Failed runs use a separate mode-specific subset allowlist. A failure manifest
+is published only when one valid nonempty `failure_log.csv` row and one
+matching `run_status.csv` failure row exist; approved in-progress tables and
+any already-published protected-DLM companion files are recursively hashed.
+Unknown paths, empty or unknown directories, symbolic links, and nonregular
+entries remain invalid. If even that compact inner failure contract cannot be
+published, the fail-closed wrapper evidence is the outer forensic record and
+cannot authorize reuse.
 The closeout must state the precise claim supported and the claims not
-supported. Benchmark authorization additionally binds the three compact
-process-wrapper files listed above; raw monitor samples remain ignored.
+supported. The process wrapper rehashes and binds every R-output file after R
+exits, together with its exact six-file monitor directory; those wrapper
+artifacts remain compact operational evidence rather than scientific output.
 The initialization manifest has the exact columns
 `cell_id`, `chain`, `seed`, `fixture_id`, `prior_id`,
 `learning_rate_mode`, `profile`, `n_features`, `midpoint_shift`,

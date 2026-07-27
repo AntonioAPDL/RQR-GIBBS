@@ -1,4 +1,4 @@
-# rqrgibbs 0.1.0.9022
+# rqrgibbs 0.1.0.9023
 
 ## Ordinary RQR version-1 candidate
 
@@ -21,6 +21,25 @@
   unlinking prior evidence; symbolic-link and nonregular targets fail closed.
 - Added a bounded, disabled-by-default 48-fit validation protocol, compact
   evidence schemas, process-group monitoring, and lightweight CI gates.
+- Added a separate learned-rate F01 oracle: deterministic collapsed
+  quadrature reproduces six posterior means and five corrected event
+  probabilities, then four native chains must agree within maintained Monte
+  Carlo error. Superseded Output-6 CDF values are retained only as historical
+  audit evidence.
+- Added a compact protected-DLM companion contract that validates the fresh
+  reference, M01, M02, and horizon/M03 evidence without rerunning or copying
+  fitted dynamic objects. The bounded ordinary grid cannot be authorized
+  without that closed five-file companion. On execution, the five validated
+  files are retained under a namespaced compact output and rehashed after the
+  R process exits.
+- Closed every successful mode to an exact compact file set, including hidden
+  entries, and rejected symbolic links, unexpected directories, nonregular
+  files, and residual progress files. The process wrapper now binds every
+  R-output artifact rather than a four-file subset.
+- Added a separate fail-closed partial-evidence allowlist with mandatory
+  terminal failure/status rows, strict manifest schemas and nonsymlink roots,
+  plus an exact six-file monitor contract exercised by ten shell fault
+  scenarios.
 - Preserved the existing RQR-DLM transition and its interpretation. The
   pseudo-AL variables augment a generalized-Bayes loss and do not define a
   response likelihood or posterior-predictive response distribution.
