@@ -1,29 +1,88 @@
 # RQR-GIBBS
 
-Standalone manuscript and reproducibility workspace for Bayesian relaxed
-quantile regression (RQR) with Gibbs sampling. The model hierarchy begins with
-static interval-root regression, adds an ordinary-RQR regularized-horseshoe
-adapter based on the Nishimura–Suchard augmentation (RHS-NS), treats frozen
-nonlinear DESN readouts as a fixed-design specialization, and then extends the
-roots through a native linear dynamic/state-space model. The working descriptor
-is coverage-targeted interval-root regression under the RQR loss.
+Standalone manuscript and reproducibility workspace for relaxed quantile
+regression (RQR) with generalized-Bayes Gibbs computation.
 
-## Purpose
+The project studies interval-root functionals: two regression roots are learned
+directly under a coverage-targeted loss rather than obtained by inverting a
+response likelihood. The current manuscript develops the population loss
+geometry, pseudo-asymmetric-Laplace augmentation, fixed-design Gibbs samplers,
+regularized regression extensions, frozen-feature DESN readouts, and dynamic
+linear root models.
 
-The project separates RQR from the Q-DESN article because RQR has a different
-inferential target. Q-DESN estimates conditional quantile ordinates. RQR
-directly estimates two interval roots under a residual-product loss and a
-generalized-Bayes update. The Gibbs construction arises from a pseudo-AL
-augmentation of that loss. Static ridge and ordinary RHS-NS regression share
-the same conditional-Gaussian root calculation; a frozen DESN feature design
-reuses that static scan, whereas the DLM replaces coefficient draws with
-root-specific FFBS path draws.
+## Repository contents
 
-## Preprint source
+- `main.tex` is the main manuscript.
+- `rqr-gibbs-supplement.tex` contains derivations and reproducibility details.
+- `refs.bib` stores the bibliography.
+- `figures/` and `tables/` contain source generators and tracked main-text
+  outputs.
+- `application/` contains the R package, C++ FFBS kernel, scripts, simulation
+  configurations, and tests.
+- `docs/` contains implementation notes, validation records, and design
+  contracts.
+- `literature/` contains tracked placeholders only; local PDFs are ignored.
 
-The manuscript is currently framed as a theory, algorithm, and implementation
-preprint. It does not report in-progress confirmatory simulation evidence.
-For arXiv preparation, use:
+Large generated objects, fitted models, logs, run directories, local caches,
+and local literature PDFs are intentionally excluded from version control.
+
+## Statistical scope
+
+RQR is treated as a loss-based generalized-Bayes update. Interval-root draws
+are summaries of a generalized posterior over interval functionals; they are
+not posterior-predictive response draws.
+
+The implemented ordinary-RQR paths currently include:
+
+1. fixed-design ridge regression;
+2. regularized-horseshoe regression through the Nishimura--Suchard
+   augmentation;
+3. frozen-feature DESN readouts as a fixed-design specialization; and
+4. dynamic linear root models with fixed, frozen-discount-template, and
+   component-scale evolution modes.
+
+Mean-tilt and Cornish--Fisher calculations in the manuscript are population
+geometry and initialization diagnostics. They do not yet enable validated
+nonzero-tilt Gibbs sampling. Variational approximations and nonzero-tilt DESN
+or DLM samplers are planned extensions.
+
+## External reference implementation
+
+The pinned exdqlm branch is used only as a read-only reference for legacy
+RQR-DESN and RHS-NS compatibility:
+
+```text
+repo:    https://github.com/AntonioAPDL/exdqlm
+branch:  feature/rqr-desn-readout-20260716
+commit:  dffb71ee70b597d6a716ee74be1cbc99731cd453
+```
+
+This repository should not compile, install, or load a package namespace
+directly from an exdqlm source checkout. Reference runtimes are materialized
+from exact Git archives under ignored local cache directories.
+
+## Basic build commands
+
+```bash
+make smoke
+make test-theory-figures
+make test-theory-tables
+make pdf
+make supplement
+make package-install
+make test-native
+make test-standalone-contracts
+make prepare-exdqlm-runtime
+make test-exdqlm-rqr
+make literature-manifest
+```
+
+Long-running simulation and validation targets require explicit reviewed
+configuration and should write only under ignored local output roots.
+
+## arXiv source package
+
+The main article source package is generated with:
 
 ```bash
 make test-theory-figures
@@ -33,272 +92,40 @@ make supplement
 make arxiv-source
 ```
 
-`make arxiv-source` creates a compact main-article source zip under ignored
-`application/cache/` and includes the generated `main.bbl`, required TeX
-inputs, and main-text PNG figures. See
-`docs/implementation_notes/arxiv_preprint_submission_checklist_20260727.md`
-for category, license, and upload guidance.
+`make arxiv-source` creates a compact zip under
+`application/cache/arxiv_preprint_<stamp>/`. The zip contains `main.tex`,
+`main.bbl`, `refs.bib`, the main table input, required PNG figures,
+`SOURCE_MANIFEST.txt`, and `README.txt`.
 
-## Current status
+The supplement is a separate TeX document. If it is submitted with the
+preprint, upload it separately or export a combined source bundle after
+verifying that both PDFs correspond to the same commit.
 
-The repository contains a manuscript, derivation supplement, and development R
-package under **application/**:
+Recommended arXiv starting point:
 
-- **main.tex** presents the static regression, frozen-feature DESN, and dynamic
-  linear-root targets in that order.
-- **rqr-gibbs-supplement.tex** gives the population, augmentation,
-  learned-scale, FFBS, and component-discount derivations.
-- **application/R/** contains fixed-design ridge and RHS-NS adapters,
-  frozen-feature DESN utilities, exdqlm-compatible DLM model builders, pure-R
-  FFBS, exact component-scale evolution, the RQR-DLM sampler, and restart
-  helpers. It also contains deterministic Cornish--Fisher and empirical
-  shortest-window pilots for future fixed mean-tilt screening; these pilots do
-  not enable nonzero-tilt Gibbs sampling.
-- **application/src/** contains the C++17/RcppArmadillo FFBS kernel and the
-  noncentered component-path basis used by exact scale interweaving.
-- **application/tests/** contains native package gates, standalone workflow
-  contracts, and copied exdqlm reference tests. The copied tests and
-  repository-level workflow tests remain available to dedicated Make targets
-  but are excluded from the package source where appropriate; `R CMD check`
-  runs the native package contract.
-- **docs/implementation_notes/rqr_dlm_native_design_20260722.md** freezes the
-  exact and experimental evolution-mode contracts.
+- primary archive: `stat`
+- primary subject class: `stat.ME`
+- possible cross-lists: `stat.CO` for computation or `stat.TH` for theory,
+  depending on the final abstract and emphasis.
 
-Fixed evolution covariances, frozen discount templates, and shared
-component-specific inverse-Gamma evolution scales define exact samplers for
-their stated generalized posteriors. A mixed-derivative audit shows that the
-exdqlm-style adaptive conditional-discount kernels are not generally compatible
-with a common smooth joint density while retaining their simple FFBS forms.
-That mode remains available only as an explicitly experimental working update.
-The public constructor is deliberately named
-`rqr_evolution_adaptive_working()`; exact alternatives use
-`rqr_evolution_fixed()`, `rqr_freeze_discount_template()`, or
-`rqr_evolution_component_scale()`.
-
-The package defaults to fail-fast Gaussian factorizations and rejects any
-negative-eigenvalue projection. An audit mode can record repairs, but
-mathematical target status, numerical execution status, and reproducibility
-eligibility are reported separately. Promotion requires an exact target, zero
-repairs, and a clean checkout at an explicitly expected commit. Compact fit
-objects retain terminal state draws, integrity-digested RNG checkpoints, a
-versioned schema, Git/R/compiler/BLAS provenance, and complete
-data/model/target/evolution digests; full paths are opt-in. A portability
-override is durable and removes reproducibility and promotion eligibility.
-Continuation also carries a separately digested cumulative history contract,
-including every mismatch/override generation, and compares the requested and
-resolved FFBS backends before making a bitwise claim. When an expected commit
-is declared, promotion binds the executing `rqrgibbs` namespace to a verified
-isolated-runtime attestation of that exact commit, not merely to a clean
-checkout path or installed version string. Direct source loading remains
-exploratory/test-only.
-
-Mean-tilt initialization is deliberately separate from mean-tilt inference.
-The Cornish--Fisher pilot is a near-Normal skewness approximation and the
-empirical shortest-window pilot is a shape-robust diagnostic anchor. Each
-candidate tilt is a fixed estimand for external validation, not an in-chain
-posterior parameter. Ordinary RQR with zero tilt remains the implemented
-default, and learned-scale updates are not reused at nonzero tilt.
-The version-5 attestation links the exact Git archive to the built source
-package, rehashes the actual command receipts and logs, and requires a lineage
-marker in the executing installed runtime. Continuation history derives
-per-segment exactness, target eligibility, mismatch/override effects, and
-promotion status from raw facts under a versioned target digest. Aggregate
-history statuses and saved RNG state are validated before any coercion.
-Component-scale forecasts can combine saved evolution-scale draws with fixed
-future component templates.
-
-The pinned exdqlm branch remains the read-only implementation reference for
-RQR-DESN and RHS-NS compatibility. Promotion of either path additionally
-requires the executing exdqlm namespace to come from an isolated, attested
-runtime of the exact pinned commit. Direct source-tree loading is prohibited.
-`make prepare-exdqlm-runtime` uses read-only Git access to create an archive,
-then builds entirely under the ignored `application/cache/` tree. Its
-versioned attestation binds the source commit and tree, archive checksum,
-installed package digest, and disjoint archive/runtime paths while recording
-that the full external checkout—including ignored files—was unchanged. The
-RQR adapters also refuse a namespace whose package path contains Git checkout
-metadata. The reference smoke tests are extracted from the attested archive
-and never execute from the exdqlm checkout.
-
-The corrected frozen learned-scale bounded pilot passed at source commit
-`3a37c5ee42973fd0ba1fa4792f609d1a48bcc98f`: four production collapsed chains,
-four independently coded fully augmented chains, and adaptive root quadrature
-agreed under the predeclared MCSE gates, with all R-hat/ESS gates satisfied and
-zero numerical repairs. This is a computational target check, not evidence of
-empirical coverage calibration. Exact results and the one pre-scientific
-diagnostic-infrastructure failure are recorded in
-`docs/audits/chatgpt_pro_output5_audit_20260722.md`.
-
-At implementation commit
-`e24feb411b2e30586d1bfdc18bf6acb1fb568c70`, the expanded bounded RQR-DLM
-reference suite passed 43 of 43 gates and the frozen 6,000-retained
-component-scale/learned-rate benchmark passed all 150 diagnostics with zero
-numerical repairs and exact runtime provenance. The independent Output-11
-review accepted those target and mixing results and identified two narrow
-artifact-publication boundaries. They were corrected at
-`53dc71d873ef12ebba91cbc3d6813682e0987960`; fresh exact-source validation
-again passed all 43 reference gates and 150 benchmark diagnostics. Output-12
-then approved a separately gated bounded launch. That launch failed closed in
-its first fixed-W chain because the runner required time-zero state estimands
-that fixed-W fits did not yet retain; no chain file or later fit was produced.
-The correction at `da4d265af6d8c6d6f9be06bfe2a91bfae88501d8` completes exact
-fixed-W and frozen-template paths at time zero, shares one estimand extractor
-between reference and execution modes, and strengthens all six continuation
-references. Fresh exact-source validation passed 43 of 43 reference gates and
-150 of 150 benchmark diagnostics. The execution flag was revoked at
-`0d64331732fe4118e7234f6f23a851f5d98e6614` pending independent review. See
-`docs/audits/chatgpt_pro_output12_bounded_failure_reconciliation_20260724.md`
-and `external_reviews/chatgpt_pro_output12_20260724/`.
-
-Output-13 independently accepted the correction. A new exact-source launch at
-`afc9c5fed14c66317b684fc9b9f6d01079c307cd` then completed all 24 bounded
-RQR-DLM fits. All 897 predeclared R-hat and bulk/tail ESS diagnostics passed,
-all fits used exact fixed-joint modes, and the run recorded zero numerical or
-forecast repairs. This completes bounded target-mechanics and mixing
-validation; it does not establish empirical coverage or comparative forecast
-performance. The execution flag is again false. Compact evidence and the
-closeout are in `docs/audits/rqr_dlm_output13_bounded_20260724/` and
-`docs/audits/rqr_dlm_output13_bounded_closeout_20260724.md`. A fail-closed
-ADEMP-style draft for the first matched RQR-DLM simulation is in
-`docs/implementation_notes/rqr_dlm_main_simulation_preliminary_spec_20260724.md`.
-
-Output-14 accepted the completed bounded validation with nonblocking promoter
-corrections. Evidence reuse now requires an externally frozen
-source/runtime/reference bundle, recomputed checkpoint-state and
-continuation-history digests for every reopened fit, successful continuation
-validation, and exact 24-fit set equality across the relevant compact
-manifests. These checks do not require another bounded run.
-
-Output-15 replaced the preliminary schema with the frozen
-`rqrgibbs_dlm_main_simulation/1.0.0` ADEMP contract. The implementation imports
-the exact 208-row incidence matrix (89 included and 119 explicitly omitted
-cells), reproduces its initial/central/maximum budgets, uses collision-checked
-full L'Ecuyer-CMRG states, and separates conditional-mean roots, realized
-future roots, and generated future responses. The reduced-AL DQLM MCMC and
-static quantile-regression comparators come only from exact isolated CRAN
-`exdqlm` 1.1.0 and `quantreg` 6.1 runtimes; the protected exdqlm checkout is
-never an execution source.
-
-The confirmatory runner now has preflight, oracle-reference,
-embedded-sentinel, execution, collection, and audit modes. A deterministic
-wave plan assigns the embedded sentinel phase to at most eight workers and
-standard phases to at most 32 one-compute-thread workers. BLAS, OpenMP, and
-related numerical-library settings are fixed at one. The sampled process
-monitor separately permits at most four operating-system threads per worker,
-the empirically validated envelope for the R runtime and its helper
-processes; this is distinct from numerical parallelism. Collection requires the
-authorization-bound task plan, verifies every recursive artifact manifest,
-rejects duplicate or missing worker shards and replication IDs, and requires a
-common source/runtime/seed bundle before analysis. Failed fits remain in the
-intention-to-run denominator. Confirmatory execution remains false pending a
-new independent review and a separate flag-only authorization commit; no
-standalone performance pilot is planned.
-
-Cross-wave execution is also fail closed. An append-only run state accepts
-only the next canonical wave, requires the same-batch sentinel pass before a
-standard wave, and requires a verified prior precision decision before a
-larger replication batch. The complete coordinator can resume only after a
-terminal wave record, collects evidence at each batch boundary, and stops
-permanently after a failed or incomplete wave. A separate read-only health
-check reports the supervisor, terminal-wave count, latest collection, next
-canonical wave, and local artifact size without changing the run.
-
-The first authorized full-study wave at
-`b8b7748ab181a006611b602f64d4edf5be591de6` stopped fail-closed. Its completed
-M01 fits exposed poor centered-only mixing for the shared component evolution
-scale, and its completed M02 fits exposed an invalid flattening of the
-multistate `exdqlm` posterior mean. No partial scientific result is reusable.
-The correction adds an exact centered--noncentered interweaving transition,
-projects each comparator state through its observation design, and freezes
-uniform role-specific schedules without adaptive extension. The canonical
-design, priors, seeds, estimands, learning-rate modes, targets, and diagnostic
-thresholds are unchanged. The correction audit, fixed budget overlay, and
-validation plan are recorded in
-`docs/audits/rqr_dlm_main_wave1_scale_and_projection_failure_20260726.md`,
-`docs/audits/rqr_dlm_main_correction_budget_20260726.csv`, and
-`docs/implementation_notes/rqr_dlm_component_scale_interweaving_20260726.md`.
-
-A second authorization-bound run stopped at its second wave when a fixed
-future-design horizon was reused for shorter training horizons.  The
-prospectively declared horizon is now passed through every generator,
-sentinel, execution, and collection boundary; no result from that run is
-reused.  A third fresh run passed its static-Gaussian sentinel wave but stopped
-fail-closed in the local-level sentinel wave.  The third stop exposed an R
-dimension-dropping defect for one-state exdqlm draws, three fixed-schedule M01
-component-scale mixing failures, incomplete compact publication of
-post-fitting diagnostic exceptions, and insufficient memory margin caused by
-immediate duplicate deserialization of an ignored sentinel sidecar.  None is
-an exdqlm source defect, and neither the exdqlm nor Q-DESN repository is
-modified.
-
-The complete second-wave development gate then showed that schedule matching
-alone was insufficient: all 49 M01 fits completed, but only 1,131 of 1,150
-diagnostics passed and 12 of 25 tasks failed at least one gate, predominantly
-for the shared component scale.  The current fail-closed correction preserves
-singleton state arrays as
-`p`-by-`T` matrices, matches component-scale and M02 sentinel schedules to
-their already frozen standard schedules, holds the full M02 DLM target common
-across chains while supplying distinct target-preserving MCMC warm starts
-through the CRAN interface, moves diagnostic construction inside the
-structured failure boundary, and retains only compact endpoint/diagnostic
-objects instead of accumulating full sentinel fits. It also adds an exact
-one-root partially collapsed component-scale transition: a deterministic C++
-Kalman marginal integrates one root for the scale update, that root is redrawn
-by FFBS, and the existing ASIS move follows. This changes the transition, not
-the generalized posterior or iteration-count budget. A development-only
-four-profile comparison selected three slice sweeps before the complete
-exact-runtime wave gates; its outputs are not scientific or promotion
-evidence. The maximum contract now
-contains 205,658,000 MCMC iterations: 74.8257 percent above the original
-Output-15 budget and 3.2949 percent above the previously launched ASIS-corrected
-budget.  The execution flag remains false until exact-source projection, M01
-and M02 mixing, resource, package, and document gates pass.
-The exact third-run closeout and recovery boundary are recorded in
-`docs/audits/rqr_dlm_main_third_launch_wave2_closeout_20260727.md`,
-`docs/audits/rqr_dlm_second_wave_component_scale_diagnosis_20260727.md`,
-`docs/audits/rqr_dlm_main_correction_budget_20260727.csv`, and
-`docs/audits/rqr_dlm_relaunch_readiness_audit_20260727.md`, together with
-`docs/implementation_notes/rqr_dlm_main_third_launch_recovery_plan_20260727.md`.
-A replacement coordinator may start only from a fresh exact-commit
-authorization and a new ignored run root after the complete first-wave and
-affected-wave correction gates pass.
-
-## Pinned external reference
-
-Expected exdqlm RQR branch:
-
-    repo: https://github.com/AntonioAPDL/exdqlm
-    branch: feature/rqr-desn-readout-20260716
-    expected commit: dffb71ee70b597d6a716ee74be1cbc99731cd453
+See `docs/implementation_notes/arxiv_preprint_submission_checklist_20260727.md`
+for the current pre-submission checklist.
 
 ## Local-only workspaces
 
-The literature PDFs, generated manifests, ChatGPT Pro handoff files, and heavy
-application data, caches, runs, logs, and outputs are intentionally ignored.
-Use **application/scripts/01_build_literature_manifest.R** to recreate the local
-PDF inventory and checksums.
+The following paths are for local data, caches, generated outputs, and working
+notes:
 
-## Basic commands
+```text
+application/data_local/
+application/cache/
+application/runs/
+application/logs/
+application/outputs/
+literature/pdfs/
+literature/notes/
+local_trackers/
+```
 
-    make smoke
-    make pdf
-    make supplement
-    make package-install
-    make test-native
-    make test-standalone-contracts
-    make prepare-exdqlm-runtime
-    make test-exdqlm-rqr
-    make literature-manifest
-    RQR_EXPECTED_PRIMARY_COMMIT=<reviewed-full-sha> \
-      RQR_BOUNDED_PILOT_CONFIRM=YES make bounded-pilot
-    RQR_EXPECTED_PRIMARY_COMMIT=<reviewed-full-sha> \
-      make preflight-dlm-bounded
-    RQR_EXPECTED_PRIMARY_COMMIT=<reviewed-full-sha> \
-      make reference-dlm-bounded
-
-No production simulation should be launched until its matched protocol is
-frozen and explicitly approved. The bounded pilot does not provide that
-approval, and the committed bounded-dynamic execution flag is false.
-`make test-exdqlm-rqr` and `make bounded-pilot` prepare the isolated
-runtime automatically; neither target compiles or writes inside an exdqlm
-repository.
+Do not commit heavy fitted objects, raw simulation outputs, TeX build logs,
+local PDFs, or temporary review handoffs.

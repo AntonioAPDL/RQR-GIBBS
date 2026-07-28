@@ -43,7 +43,7 @@ done
   printf 'Processor: PDFLaTeX\n'
   printf 'Notes: main.bbl is included because this project uses BibTeX/natbib.\n'
   printf 'The supplement is built separately from rqr-gibbs-supplement.tex and is not included in this main-source upload.\n'
-} > "${pkg_dir}/00README.XXX"
+} > "${pkg_dir}/README.txt"
 
 (
   cd "${pkg_dir}"

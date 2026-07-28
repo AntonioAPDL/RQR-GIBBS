@@ -23,9 +23,10 @@ confirmatory simulation.
 ## Source package
 
 The main article uses `pdflatex`, `natbib`, and tracked PNG figures. The source
-package should include `main.tex`, `main.bbl`, `refs.bib`, the table input, and
-the three main-text PNG figures. It should not include local PDFs, logs, aux
-files, caches, fitted models, or simulation outputs.
+package should include `main.tex`, `main.bbl`, `refs.bib`, the table input, the
+three main-text PNG figures, `SOURCE_MANIFEST.txt`, and `README.txt`. It should
+not include local PDFs, logs, aux files, caches, fitted models, or simulation
+outputs.
 
 Build and package the main source with:
 
