@@ -142,7 +142,8 @@
 
 .rqr_ffbs_r <- function(z, H, V, GG, m0, C0, evolution, sample = FALSE,
                         jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6),
-                        numerical_policy = c("fail", "record_repair")) {
+                        numerical_policy = c("fail", "record_repair"),
+                        canonical_shift = NULL) {
   z <- as.numeric(z)
   if (any(is.nan(z)) || any(is.infinite(z))) {
     stop("z may contain finite values or NA only; NaN and Inf are invalid.", call. = FALSE)
@@ -183,6 +184,12 @@
     } else {
       m[, tt] <- a[, tt]
       C[, , tt] <- R[, , tt]
+    }
+    if (!is.null(canonical_shift)) {
+      shift <- canonical_shift[, tt]
+      if (any(abs(shift) > 0)) {
+        m[, tt] <- m[, tt] + drop(C[, , tt] %*% shift)
+      }
     }
     # Fail early on a materially indefinite covariance.
     fac <- .rqr_chol_with_jitter(C[, , tt], jitter_ladder)
@@ -277,6 +284,7 @@
     path = path, forecast_variance = q, residual = residual,
     diagnostics = list(
       backend = "R", evolution_mode = evo$mode,
+      canonical_shift = !is.null(canonical_shift),
       max_jitter = max(jitter_used, 0), jitter_count = sum(jitter_used > 0),
       psd_draw_count = psd_draw_count,
       numerical_policy = numerical_policy,
@@ -289,7 +297,8 @@
 
 .rqr_ffbs_dispatch <- function(z, H, V, GG, m0, C0, evolution,
                                sample, backend, jitter_ladder,
-                               numerical_policy = c("fail", "record_repair")) {
+                               numerical_policy = c("fail", "record_repair"),
+                               canonical_shift = NULL) {
   backend <- match.arg(backend, c("cpp", "R", "auto"))
   resolved_backend <- .rqr_resolve_ffbs_backend(backend)
   z <- as.numeric(z)
@@ -326,6 +335,19 @@
   # changes in either backend.
   .rqr_chol_with_jitter(C0, jitter_ladder = 0)
   evo <- .rqr_prepare_evolution(evolution, p, n_time)
+  if (!is.null(canonical_shift)) {
+    canonical_shift <- as.matrix(canonical_shift)
+    if (!all(dim(canonical_shift) == c(p, n_time)) ||
+        any(!is.finite(canonical_shift))) {
+      stop("canonical_shift must be a finite p x T matrix.", call. = FALSE)
+    }
+    if (any(is.na(z) & colSums(abs(canonical_shift)) > 0)) {
+      stop("canonical_shift must be zero at missing-observation times.", call. = FALSE)
+    }
+    if (!any(abs(canonical_shift) > 0)) {
+      canonical_shift <- NULL
+    }
+  }
   numerical_policy <- .rqr_numerical_policy(numerical_policy)
   jitter_ladder <- .rqr_jitter_ladder(numerical_policy, jitter_ladder)
   use_cpp <- identical(resolved_backend, "cpp")
@@ -336,6 +358,11 @@
       m0 = m0, C0 = C0,
       evolution_mode = evo$mode_code, W = evo$W, D = evo$D,
       sample_path = isTRUE(sample), jitter_ladder = as.numeric(jitter_ladder),
+      canonical_shift = if (is.null(canonical_shift)) {
+        matrix(0, p, n_time)
+      } else {
+        canonical_shift
+      },
       evolution_label = evo$mode,
       allow_covariance_repair = identical(numerical_policy, "record_repair")
     )
@@ -346,7 +373,7 @@
   }
   .rqr_ffbs_r(
     z, H, V, GG, m0, C0, evolution, sample, jitter_ladder,
-    numerical_policy
+    numerical_policy, canonical_shift = canonical_shift
   )
 }
 
@@ -362,15 +389,19 @@
 #' @param jitter_ladder Declared matrix-relative Cholesky jitter ladder. An
 #'   exactly zero matrix uses a separately recorded absolute fallback.
 #' @param numerical_policy Either `"fail"` or `"record_repair"`.
+#' @param canonical_shift Optional `p x T` matrix of canonical linear
+#'   information shifts applied after each observed measurement update. Missing
+#'   times must have zero shift.
 #' @return Filtering and smoothing moments with numerical diagnostics.
 #' @export
 rqr_ffbs_smooth <- function(z, H, V, GG, m0, C0, evolution,
                             backend = c("cpp", "R", "auto"),
                             jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6),
-                            numerical_policy = c("fail", "record_repair")) {
+                            numerical_policy = c("fail", "record_repair"),
+                            canonical_shift = NULL) {
   .rqr_ffbs_dispatch(
     z, H, V, GG, m0, C0, evolution, FALSE, backend, jitter_ladder,
-    numerical_policy
+    numerical_policy, canonical_shift = canonical_shift
   )
 }
 
@@ -382,9 +413,10 @@ rqr_ffbs_smooth <- function(z, H, V, GG, m0, C0, evolution,
 rqr_ffbs_sample <- function(z, H, V, GG, m0, C0, evolution,
                             backend = c("cpp", "R", "auto"),
                             jitter_ladder = c(0, 1e-12, 1e-10, 1e-8, 1e-6),
-                            numerical_policy = c("fail", "record_repair")) {
+                            numerical_policy = c("fail", "record_repair"),
+                            canonical_shift = NULL) {
   .rqr_ffbs_dispatch(
     z, H, V, GG, m0, C0, evolution, TRUE, backend, jitter_ladder,
-    numerical_policy
+    numerical_policy, canonical_shift = canonical_shift
   )
 }

@@ -3,9 +3,9 @@
 # Deterministic population figures for the RQR article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
-SCRIPT_VERSION <- "2026-07-26-figure02-label-placement-7"
+SCRIPT_VERSION <- "2026-07-27-restore-figure02-add-cf-figure03-1"
 DEFAULT_CONTENT <- 0.80
-ILLUSTRATION_AL_TAU <- 0.80
+ILLUSTRATION_AL_TAU <- 0.65
 NUMERICAL_TOLERANCES <- list(
   probability_margin = 1e-8,
   integration_relative = 1e-10,
@@ -267,8 +267,19 @@ asymmetric_laplace_components <- function(
   }
 
   mean <- mu + scale * (1 - 2 * tau) / (tau * (1 - tau))
+  raw_second <- 2 * (
+    tau / (1 - tau)^2 + (1 - tau) / tau^2
+  )
+  raw_third <- 6 * (
+    (1 - tau) / tau^3 - tau / (1 - tau)^3
+  )
   variance <- scale^2 * (1 - 2 * tau + 2 * tau^2) /
     (tau^2 * (1 - tau)^2)
+  standardized_mean <- (1 - 2 * tau) / (tau * (1 - tau))
+  standardized_central_third <- raw_third -
+    3 * standardized_mean * raw_second + 2 * standardized_mean^3
+  skewness <- standardized_central_third /
+    (variance / scale^2)^(3 / 2)
   list(
     q = qfun,
     p = pfun,
@@ -279,6 +290,7 @@ asymmetric_laplace_components <- function(
     mean = mean,
     variance = variance,
     sd = sqrt(variance),
+    skewness = skewness,
     mu = mu,
     scale = scale,
     tau = tau
@@ -290,6 +302,7 @@ make_distribution <- function(id, label, short_label, subtitle, qfun, pfun,
                               support = c(-Inf, Inf),
                               plot_knots = numeric(),
                               plot_probabilities = c(0.005, 0.995),
+                              skewness = NA_real_,
                               raw_parameters = "") {
   funs <- list(qfun, pfun, dfun, moment_fun)
   if (!all(vapply(funs, is.function, logical(1)))) {
@@ -298,6 +311,7 @@ make_distribution <- function(id, label, short_label, subtitle, qfun, pfun,
   }
   assert_scalar(mean, paste0(id, "$mean"))
   assert_scalar(sd, paste0(id, "$sd"), lower = 0, lower_open = TRUE)
+  if (!is.na(skewness)) assert_scalar(skewness, paste0(id, "$skewness"))
   if (length(plot_probabilities) != 2L ||
       any(!is.finite(plot_probabilities)) ||
       plot_probabilities[1L] <= 0 ||
@@ -309,6 +323,7 @@ make_distribution <- function(id, label, short_label, subtitle, qfun, pfun,
     id = id, label = label, short_label = short_label, subtitle = subtitle,
     q = qfun, p = pfun, d = dfun, moment_between = moment_fun,
     mean = mean, sd = sd, support = support,
+    skewness = skewness,
     plot_knots = plot_knots,
     plot_probabilities = plot_probabilities,
     raw_parameters = raw_parameters
@@ -357,11 +372,17 @@ rqr_theory_distributions <- function(content = DEFAULT_CONTENT) {
         stats::pbeta(lower, shape1 = 3, shape2 = 5)
     )
   }
+  beta_skewness <- function(a, b) {
+    2 * (b - a) * sqrt(a + b + 1) / ((a + b + 2) * sqrt(a * b))
+  }
+  lognormal_skewness <- function(sigma) {
+    (exp(sigma^2) + 2) * sqrt(exp(sigma^2) - 1)
+  }
   list(
     normal = make_distribution(
       "normal", "Normal(0, 1)", "Normal", "symmetric unimodal benchmark",
       stats::qnorm, stats::pnorm, stats::dnorm, normal_moment, 0, 1,
-      plot_knots = 0
+      plot_knots = 0, skewness = 0
     ),
     exponential = make_distribution(
       "exponential", "Exponential(1)", "Exponential",
@@ -369,11 +390,15 @@ rqr_theory_distributions <- function(content = DEFAULT_CONTENT) {
       function(p) stats::qexp(p, rate = 1),
       function(y) stats::pexp(y, rate = 1),
       function(y) stats::dexp(y, rate = 1),
-      exponential_moment, 1, 1, c(0, Inf), plot_knots = 0
+      exponential_moment, 1, 1, c(0, Inf),
+      plot_knots = 0, skewness = 2
     ),
     asymmetric_laplace = make_distribution(
       "asymmetric_laplace",
-      "Asymmetric Laplace(mu=0, scale=1, tau=0.8)",
+      sprintf(
+        "Asymmetric Laplace(mu=0, scale=1, tau=%.2f)",
+        ILLUSTRATION_AL_TAU
+      ),
       "Left-skewed",
       bquote(
         "Left-skewed illustration;" ~~
@@ -383,7 +408,10 @@ rqr_theory_distributions <- function(content = DEFAULT_CONTENT) {
       c(-Inf, Inf),
       plot_knots = al$mu,
       plot_probabilities = c(0.005, 0.995),
-      raw_parameters = "mu_AL=0,s_AL=1,tau_AL=0.8"
+      skewness = al$skewness,
+      raw_parameters = sprintf(
+        "mu_AL=0,s_AL=1,tau_AL=%.2f", ILLUSTRATION_AL_TAU
+      )
     ),
     lognormal = make_distribution(
       "lognormal", "Lognormal(meanlog=0, sdlog=0.6)", "Lognormal(0, 0.6)",
@@ -394,7 +422,8 @@ rqr_theory_distributions <- function(content = DEFAULT_CONTENT) {
       lognormal_moment,
       exp(0.6^2 / 2),
       sqrt((exp(0.6^2) - 1) * exp(0.6^2)),
-      c(0, Inf), plot_knots = exp(-0.6^2)
+      c(0, Inf), plot_knots = exp(-0.6^2),
+      skewness = lognormal_skewness(0.6)
     ),
     beta25 = make_distribution(
       "beta25", "Beta(2, 5)", "Beta(2, 5)", "bounded right skew",
@@ -402,7 +431,7 @@ rqr_theory_distributions <- function(content = DEFAULT_CONTENT) {
       function(y) stats::pbeta(y, shape1 = 2, shape2 = 5),
       function(y) stats::dbeta(y, shape1 = 2, shape2 = 5),
       beta_moment, 2 / 7, sqrt(2 * 5 / (7^2 * 8)), c(0, 1),
-      plot_knots = 1 / 5
+      plot_knots = 1 / 5, skewness = beta_skewness(2, 5)
     )
   )
 }
@@ -424,6 +453,7 @@ mirror_distribution <- function(dist, id = paste0("mirror_", dist$id)) {
     support = -rev(dist$support),
     plot_knots = -dist$plot_knots,
     plot_probabilities = 1 - rev(dist$plot_probabilities),
+    skewness = -dist$skewness,
     raw_parameters = paste0("reflection_of=", dist$id)
   )
 }
@@ -452,6 +482,7 @@ affine_distribution <- function(dist, shift, scale,
     support = shift + scale * dist$support,
     plot_knots = shift + scale * dist$plot_knots,
     plot_probabilities = dist$plot_probabilities,
+    skewness = dist$skewness,
     raw_parameters = sprintf(
       "affine_of=%s;shift=%.12g;scale=%.12g", dist$id, shift, scale
     )
@@ -577,6 +608,79 @@ oracle_interval_summary <- function(dist, content = DEFAULT_CONTENT) {
       standardized_delta = (retained_mean - dist$mean) / dist$sd,
       standardized_width = interval$width / dist$sd,
       optimum_status = spec$status,
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, rows)
+  rownames(out) <- NULL
+  out
+}
+
+cornish_fisher_constant <- function(content = DEFAULT_CONTENT) {
+  assert_scalar(content, "content", 0, 1, TRUE, TRUE)
+  q_c <- stats::qnorm((1 + content) / 2)
+  q_c * stats::dnorm(q_c) / content
+}
+
+cornish_fisher_tilt_summary <- function(dist, summary,
+                                        content = DEFAULT_CONTENT) {
+  if (is.null(dist$skewness) || is.na(dist$skewness)) {
+    fail("Distribution %s does not declare a skewness.", dist$id)
+  }
+  constant <- cornish_fisher_constant(content)
+  specs <- data.frame(
+    approximation = c(
+      "cornish_fisher_equal_tailed", "cornish_fisher_shortest"
+    ),
+    target = c("equal_tailed", "shortest"),
+    multiplier = c(1 / 3, 1),
+    stringsAsFactors = FALSE
+  )
+  rows <- lapply(seq_len(nrow(specs)), function(index) {
+    target <- specs$target[[index]]
+    standardized_delta <- -dist$skewness * constant *
+      specs$multiplier[[index]]
+    delta <- standardized_delta * dist$sd
+    solved <- tryCatch({
+      u <- solve_window_for_tilt(dist, delta, content)
+      interval <- quantile_window(dist, u, content)
+      retained_mean <- quantile_window_mean(dist, u, content)
+      list(
+        within_admissible = TRUE,
+        u = u,
+        lower = interval$lower,
+        upper = interval$upper,
+        width = interval$width,
+        retained_mean = retained_mean,
+        standardized_width = interval$width / dist$sd
+      )
+    }, error = function(e) {
+      list(
+        within_admissible = FALSE,
+        u = NA_real_, lower = NA_real_, upper = NA_real_,
+        width = NA_real_, retained_mean = NA_real_,
+        standardized_width = NA_real_
+      )
+    })
+    oracle <- summary[summary$target == target, , drop = FALSE]
+    data.frame(
+      distribution = dist$id,
+      approximation = specs$approximation[[index]],
+      target = target,
+      skewness = dist$skewness,
+      cf_constant = constant,
+      delta = delta,
+      standardized_delta = standardized_delta,
+      u = solved$u,
+      lower = solved$lower,
+      upper = solved$upper,
+      width = solved$width,
+      retained_mean = solved$retained_mean,
+      standardized_width = solved$standardized_width,
+      within_admissible = solved$within_admissible,
+      oracle_standardized_delta = oracle$standardized_delta,
+      standardized_delta_error =
+        standardized_delta - oracle$standardized_delta,
       stringsAsFactors = FALSE
     )
   })
@@ -717,6 +821,15 @@ TARGET_LABEL <- c(
   ordinary_rqr = "RQR",
   shortest = "SH"
 )
+CF_TARGET_ORDER <- c("cornish_fisher_equal_tailed", "cornish_fisher_shortest")
+CF_TARGET_LABEL <- c(
+  cornish_fisher_equal_tailed = "CF-ET",
+  cornish_fisher_shortest = "CF-SH"
+)
+CF_TARGET_TO_ORACLE <- c(
+  cornish_fisher_equal_tailed = "equal_tailed",
+  cornish_fisher_shortest = "shortest"
+)
 FIGURE_02_MAP_LABEL_POSITION <- c(
   equal_tailed = 4L,
   ordinary_rqr = 1L,
@@ -728,6 +841,7 @@ FIGURE_02_WIDTH_LABEL_POSITION <- c(
   shortest = 3L
 )
 FIGURE_02_LABEL_OFFSET <- 0.45
+FIGURE_02_CF_LABEL_OFFSET <- 0.35
 
 figure_02_map_label <- function(target, standardized_delta) {
   if (!target %in% TARGET_ORDER) {
@@ -737,6 +851,16 @@ figure_02_map_label <- function(target, standardized_delta) {
     return(sprintf("%s %.2f", TARGET_LABEL[target], 0))
   }
   sprintf("%s %.3f", TARGET_LABEL[target], standardized_delta)
+}
+
+figure_02_cf_color <- function(approximation) {
+  target <- CF_TARGET_TO_ORACLE[approximation]
+  COL[target]
+}
+
+figure_02_cf_pch <- function(approximation) {
+  target <- CF_TARGET_TO_ORACLE[approximation]
+  OPEN_PCH[target]
 }
 
 draw_to_device <- function(open_device, draw_fun) {
@@ -944,6 +1068,18 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       mfrow = c(1, 3), mar = c(4.2, 3.8, 2.7, 0.7),
       oma = c(0, 0, 1.15, 0), mgp = c(2.3, 0.65, 0), tcl = -0.3
     )
+    ymax <- max(density$density)
+    graphics::plot(
+      density$z, density$density, type = "l", lwd = 2,
+      col = COL["density"], xlab = "Standardized response, z",
+      ylab = "Density", main = "Selected intervals",
+      xlim = geometry$zlim, ylim = c(-0.34 * ymax, 1.06 * ymax)
+    )
+    graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+    plot_interval_bars(
+      dist, summary, geometry, -0.055 * ymax, 0.075 * ymax,
+      labels = TRUE
+    )
     delta_min <- min(summary$standardized_delta) - 0.06
     delta_max <- max(0.20, max(summary$standardized_delta) + 0.05)
     visible <- is.finite(path$standardized_width) &
@@ -993,18 +1129,6 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
         col = COL[target]
       )
     }
-    ymax <- max(density$density)
-    graphics::plot(
-      density$z, density$density, type = "l", lwd = 2,
-      col = COL["density"], xlab = "Standardized response, z",
-      ylab = "Density", main = "Selected intervals",
-      xlim = geometry$zlim, ylim = c(-0.34 * ymax, 1.06 * ymax)
-    )
-    graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
-    plot_interval_bars(
-      dist, summary, geometry, -0.055 * ymax, 0.075 * ymax,
-      labels = TRUE
-    )
     graphics::mtext(
       dist$subtitle, side = 3, outer = TRUE, line = -0.20, cex = 0.72
     )
@@ -1020,6 +1144,189 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
   )
 }
 
+figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
+  summary <- oracle_interval_summary(dist, content)
+  check_oracle_summary(dist, summary, content)
+  cf_summary <- cornish_fisher_tilt_summary(dist, summary, content)
+  if (!all(cf_summary$within_admissible)) {
+    fail(
+      "Figure 3 requires admissible Cornish-Fisher anchors; ",
+      "out-of-range anchors: ",
+      paste(cf_summary$approximation[!cf_summary$within_admissible], collapse = ", ")
+    )
+  }
+  path <- mean_tilt_path_data(dist, content)
+  panel_files <- c(
+    write_panel_data(
+      path[, c("u", "M_minus_mu", "standardized_delta")],
+      file.path(out_dir, "fig03_panelA_window_mean.csv")
+    ),
+    write_panel_data(
+      path[, c("standardized_delta", "standardized_width")],
+      file.path(out_dir, "fig03_panelB_width_profile.csv")
+    ),
+    write_panel_data(
+      cf_summary, file.path(out_dir, "fig03_panelC_cornish_fisher_anchors.csv")
+    )
+  )
+  draw <- function() {
+    old <- graphics::par(no.readonly = TRUE)
+    on.exit(graphics::par(old))
+    graphics::par(
+      mfrow = c(1, 2), mar = c(4.2, 4.2, 2.7, 0.9),
+      oma = c(0, 0, 1.10, 0), mgp = c(2.35, 0.65, 0), tcl = -0.3
+    )
+    admissible_cf_delta <- cf_summary$standardized_delta[
+      is.finite(cf_summary$standardized_delta) &
+        cf_summary$within_admissible
+    ]
+    all_cf_delta <- cf_summary$standardized_delta[
+      is.finite(cf_summary$standardized_delta)
+    ]
+    target_delta_min <- min(summary$standardized_delta, admissible_cf_delta) -
+      0.06
+    target_delta_max <- max(
+      0.20, max(summary$standardized_delta, admissible_cf_delta) + 0.05
+    )
+    width_x_min <- min(target_delta_min, all_cf_delta - 0.04)
+    width_x_max <- max(target_delta_max, all_cf_delta + 0.04)
+    visible <- is.finite(path$standardized_width) &
+      path$standardized_delta >= target_delta_min &
+      path$standardized_delta <= target_delta_max
+    plot_path <- path[visible, , drop = FALSE]
+    width_ylim <- range(
+      c(
+        plot_path$standardized_width,
+        summary$standardized_width,
+        cf_summary$standardized_width
+      ),
+      finite = TRUE
+    )
+    width_pad <- 0.08 * diff(width_ylim)
+    if (!is.finite(width_pad) || width_pad <= 0) width_pad <- 0.05
+    map_ylim <- range(
+      c(path$standardized_delta, cf_summary$standardized_delta),
+      finite = TRUE
+    )
+    map_pad <- 0.06 * diff(map_ylim)
+    if (!is.finite(map_pad) || map_pad <= 0) map_pad <- 0.05
+    map_xlim <- range(path$u, finite = TRUE)
+    map_xlim[2L] <- map_xlim[2L] + 0.14 * diff(map_xlim)
+    graphics::plot(
+      path$u, path$standardized_delta, type = "l", lwd = 2.2,
+      col = COL["density"], xlab = "Lower-tail index, u",
+      ylab = expression(d == (M[c](u) - mu) / SD(Y)),
+      main = "Window-to-tilt map",
+      xlim = map_xlim,
+      ylim = map_ylim + c(-map_pad, map_pad)
+    )
+    graphics::abline(h = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+    for (target in TARGET_ORDER) {
+      row <- summary[summary$target == target, ]
+      graphics::points(
+        row$u, row$standardized_delta,
+        pch = PCH[target], col = COL[target], cex = 1.12
+      )
+      graphics::text(
+        row$u, row$standardized_delta,
+        labels = TARGET_LABEL[target],
+        pos = if (identical(target, "equal_tailed")) {
+          1L
+        } else if (identical(target, "shortest")) {
+          3L
+        } else {
+          FIGURE_02_MAP_LABEL_POSITION[target]
+        },
+        offset = FIGURE_02_LABEL_OFFSET, cex = 0.56,
+        col = COL[target]
+      )
+    }
+    for (approximation in CF_TARGET_ORDER) {
+      row <- cf_summary[
+        cf_summary$approximation == approximation,
+        , drop = FALSE
+      ]
+      if (!nrow(row)) next
+      graphics::points(
+        row$u, row$standardized_delta,
+        pch = figure_02_cf_pch(approximation),
+        col = figure_02_cf_color(approximation),
+        cex = 1.20, lwd = 1.7
+      )
+      graphics::text(
+        row$u, row$standardized_delta,
+        labels = CF_TARGET_LABEL[approximation],
+        pos = if (identical(
+          approximation, "cornish_fisher_equal_tailed"
+        )) 3L else 2L,
+        offset = 0.62, cex = 0.54,
+        col = figure_02_cf_color(approximation)
+      )
+    }
+    graphics::plot(
+      plot_path$standardized_delta, plot_path$standardized_width,
+      type = "l", lwd = 2.2, col = COL["density"],
+      xlab = expression(d == delta / SD(Y)),
+      ylab = expression((U - L) / SD(Y)),
+      main = "Width near target tilts", xlim = c(width_x_min, width_x_max),
+      ylim = width_ylim + c(-1.35 * width_pad, 0.45 * width_pad)
+    )
+    graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+    for (target in TARGET_ORDER) {
+      row <- summary[summary$target == target, ]
+      graphics::points(
+        row$standardized_delta, row$standardized_width,
+        pch = PCH[target], col = COL[target], cex = 1.12
+      )
+      graphics::text(
+        row$standardized_delta, row$standardized_width,
+        labels = TARGET_LABEL[target],
+        pos = if (identical(target, "equal_tailed")) {
+          1L
+        } else {
+          FIGURE_02_WIDTH_LABEL_POSITION[target]
+        },
+        offset = FIGURE_02_LABEL_OFFSET, cex = 0.58,
+        col = COL[target]
+      )
+    }
+    for (approximation in CF_TARGET_ORDER) {
+      row <- cf_summary[
+        cf_summary$approximation == approximation,
+        , drop = FALSE
+      ]
+      if (!nrow(row)) next
+      graphics::points(
+        row$standardized_delta, row$standardized_width,
+        pch = figure_02_cf_pch(approximation),
+        col = figure_02_cf_color(approximation),
+        cex = 1.20, lwd = 1.7
+      )
+      graphics::text(
+        row$standardized_delta, row$standardized_width,
+        labels = CF_TARGET_LABEL[approximation],
+        pos = if (identical(
+          approximation, "cornish_fisher_equal_tailed"
+        )) 3L else 2L,
+        offset = 0.62, cex = 0.54,
+        col = figure_02_cf_color(approximation)
+      )
+    }
+    graphics::mtext(
+      sprintf("Left-skewed illustration; interval content c = %.2f", content),
+      side = 3, outer = TRUE, line = -0.20, cex = 0.82
+    )
+  }
+  outputs <- with_graphics_devices(
+    file.path(out_dir, "fig03_mean_tilt_cf_anchors"),
+    7.2, 3.20, draw
+  )
+  list(
+    id = "fig03_mean_tilt_cf_anchors",
+    data = panel_files, outputs = outputs,
+    distributions = distribution_descriptor(dist)
+  )
+}
 figure_s01_cross_distribution <- function(out_dir, dists, content) {
   chosen <- dists[c(
     "normal", "asymmetric_laplace", "lognormal", "beta25"
@@ -1292,14 +1599,22 @@ write_publication_receipt <- function(records, out_dir, state, content,
   generator <- script_path()
   rows <- lapply(records, function(record) {
     png <- record$outputs[grepl("\\.png$", record$outputs)]
-    if (length(png) != 1L) {
-      fail("Figure %s must have exactly one publication PNG.", record$id)
+    tex <- record$outputs[grepl("\\.tex$", record$outputs)]
+    publication <- if (length(png) == 1L) {
+      png
+    } else if (length(tex) == 1L) {
+      tex
+    } else {
+      fail(
+        "Figure %s must have exactly one publication PNG or TeX source.",
+        record$id
+      )
     }
     data.frame(
       figure_id = record$id,
-      publication_file = basename(png),
-      bytes = unname(file.info(png)$size),
-      sha256 = sha256_file(png),
+      publication_file = basename(publication),
+      bytes = unname(file.info(publication)$size),
+      sha256 = sha256_file(publication),
       generator_sha256 = sha256_file(generator),
       repository_commit = state$commit,
       repository_clean = state$clean,
@@ -1349,6 +1664,9 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
       out_dir, dists$asymmetric_laplace, content
     ),
     figure_02_mean_tilt_map(
+      out_dir, dists$asymmetric_laplace, content
+    ),
+    figure_03_mean_tilt_cf_anchors(
       out_dir, dists$asymmetric_laplace, content
     ),
     figure_s01_cross_distribution(out_dir, dists, content),

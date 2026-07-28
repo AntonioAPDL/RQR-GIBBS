@@ -26,6 +26,8 @@
 #' @param X Design matrix.
 #' @param coverage_level Interval coverage level in `(0, 1)`.
 #' @param learning_rate Positive generalized-Bayes learning rate.
+#' @param mean_tilt Fixed response-scale mean tilt. Nonzero tilt is not yet
+#'   implemented for VB; use MCMC for fixed nonzero tilt.
 #' @param beta_prior_obj Beta prior object. The initial VB backend supports
 #'   ridge priors.
 #' @param vb_control Named list with `max_iter`, `tol`, `verbose`, `seed`, and
@@ -35,6 +37,7 @@
 #' @return An `rqr_vb` object.
 #' @export
 rqr_vb_fit <- function(y, X, coverage_level, learning_rate = 1,
+                       mean_tilt = 0,
                        beta_prior_obj = NULL,
                        vb_control = list(),
                        init = list(),
@@ -43,6 +46,15 @@ rqr_vb_fit <- function(y, X, coverage_level, learning_rate = 1,
   y <- dat$y
   X <- dat$X
   p <- ncol(X)
+  mean_tilt_info <- .rqr_normalize_mean_tilt(
+    mean_tilt, n = nrow(X), observed = rep(TRUE, nrow(X))
+  )
+  if (mean_tilt_info$nonzero) {
+    stop(
+      "Nonzero mean_tilt is not implemented for rqr_vb_fit; use fixed-rate MCMC until a VB/CAVI target is derived.",
+      call. = FALSE
+    )
+  }
   constants <- rqr_constants(coverage_level, learning_rate)
   if (!is.list(vb_control)) stop("vb_control must be a list.", call. = FALSE)
   seed <- vb_control$seed %||% vb_control$rng_seed %||% NULL

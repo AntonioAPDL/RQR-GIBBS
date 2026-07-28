@@ -8,6 +8,9 @@
 #' @param X Design matrix.
 #' @param coverage_level Interval coverage level in `(0, 1)`.
 #' @param learning_rate Positive fixed generalized-Bayes rate `omega_R`.
+#' @param mean_tilt Fixed response-scale mean tilt. A scalar is recycled across
+#'   rows; a vector must have length `nrow(X)`. Nonzero tilt is currently
+#'   implemented for fixed-rate ridge MCMC only.
 #' @param lambda_initial Positive initial inverse loss scale for learned modes.
 #' @param loss_reference_scale Positive reference scale `s_L`. In fixed-rate
 #'   mode, `learning_rate` is the effective rate `omega_R` and this argument
@@ -36,6 +39,7 @@
 #' @return An `rqr_mcmc` object.
 #' @export
 rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
+                         mean_tilt = 0,
                          lambda_initial = 1,
                          loss_reference_scale = 1,
                          learning_rate_mode = c(
@@ -53,6 +57,9 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   X <- dat$X
   n <- nrow(X)
   p <- ncol(X)
+  mean_tilt_info <- .rqr_normalize_mean_tilt(
+    mean_tilt, n = n, observed = rep(TRUE, n)
+  )
   learning_rate_mode <- .rqr_learning_rate_mode(learning_rate_mode)
   lambda_prior <- .rqr_lambda_prior(lambda_prior, learning_rate_mode)
   numerical_policy <- .rqr_numerical_policy(numerical_policy)
@@ -66,6 +73,12 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     stop("learning_rate must be finite and positive.", call. = FALSE)
   }
   learn_lambda <- !identical(learning_rate_mode, "fixed_rate")
+  if (mean_tilt_info$nonzero && learn_lambda) {
+    stop(
+      "Nonzero mean_tilt is currently implemented only for learning_rate_mode='fixed_rate'.",
+      call. = FALSE
+    )
+  }
   lambda_initial <- as.numeric(init$lambda %||% lambda_initial)[1L]
   if (!is.finite(lambda_initial) || lambda_initial <= 0) {
     stop("lambda_initial must be finite and positive.", call. = FALSE)
@@ -82,6 +95,12 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   beta_prior_type <- as.character(beta_prior_obj$type)[1L]
   if (!beta_prior_type %in% c("ridge", "rhs_ns")) {
     stop("rqr_mcmc_fit supports beta_prior_obj$type in {'ridge','rhs_ns'}.", call. = FALSE)
+  }
+  if (mean_tilt_info$nonzero && !identical(beta_prior_type, "ridge")) {
+    stop(
+      "Nonzero mean_tilt is currently implemented for ridge beta priors only; RHS-NS requires a separate propriety audit.",
+      call. = FALSE
+    )
   }
   if (identical(beta_prior_type, "rhs_ns")) {
     .qdesn_assert_rhs_prior_obj_intercept_policy(beta_prior_obj, context = "rqr_mcmc_fit")
@@ -135,6 +154,8 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   latent_v_draws <- if (store_latent_draws) matrix(NA_real_, n_keep, n) else NULL
   lambda_draws <- numeric(n_keep)
   loss_trace <- numeric(n_burn + n_keep * thin)
+  mean_tilted_target_loss_trace <- numeric(n_burn + n_keep * thin)
+  tilt_linear_trace <- numeric(n_burn + n_keep * thin)
   lambda_trace <- numeric(n_burn + n_keep * thin)
   effective_learning_rate_trace <- numeric(n_burn + n_keep * thin)
   lambda_post_shape_trace <- rep(NA_real_, n_burn + n_keep * thin)
@@ -189,7 +210,12 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
         likelihood_family = "rqr_generalized_bayes",
         beta_prior_type = beta_prior_type,
         root = "root1"
-      )
+      ),
+      mean_tilt_observed = if (mean_tilt_info$nonzero) {
+        mean_tilt_info$observed
+      } else {
+        NULL
+      }
     )
     beta1 <- upd1$draw
     pstats1 <- upd1$info %||% list()
@@ -220,7 +246,12 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
         likelihood_family = "rqr_generalized_bayes",
         beta_prior_type = beta_prior_type,
         root = "root2"
-      )
+      ),
+      mean_tilt_observed = if (mean_tilt_info$nonzero) {
+        mean_tilt_info$observed
+      } else {
+        NULL
+      }
     )
     beta2 <- upd2$draw
     pstats2 <- upd2$info %||% list()
@@ -246,7 +277,14 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
 
     eta1 <- drop(X %*% beta1)
     eta2 <- drop(X %*% beta2)
-    loss_trace[iter] <- sum(rqr_check_loss(rqr_residual_product(y, eta1, eta2), constants$alpha))
+    target_loss <- rqr_mean_tilt_loss(
+      y, eta1, eta2, constants$alpha,
+      mean_tilt = mean_tilt_info$full,
+      details = TRUE
+    )
+    loss_trace[iter] <- sum(target_loss$product_loss)
+    tilt_linear_trace[iter] <- sum(target_loss$linear_tilt)
+    mean_tilted_target_loss_trace[iter] <- sum(target_loss$total)
     lambda_trace[iter] <- lambda_current
     effective_learning_rate_trace[iter] <- constants$omega
     precision_strategy_root1[iter] <- as.character(pstats1$strategy %||% "direct")
@@ -291,6 +329,8 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
         lambda_prior = lambda_prior,
         beta_prior_type = beta_prior_type,
         beta_prior_hypers = beta_prior_obj$hypers,
+        mean_tilt_target = mean_tilt_info$contract,
+        mean_tilt_digest = mean_tilt_info$digest,
         numerical_policy = numerical_policy,
         precision_beta = precision_beta_cfg
       )
@@ -308,7 +348,17 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     model_spec = list(
       family = "rqr_fixed_design",
       parameterization = "two_root_readouts",
-      loss_name = "rqr_residual_product_check_loss",
+      loss_name = if (mean_tilt_info$nonzero) {
+        "mean_tilted_rqr_product_check_loss"
+      } else {
+        "rqr_residual_product_check_loss"
+      },
+      ordinary_loss_name = "rqr_residual_product_check_loss",
+      mean_tilt_mode = mean_tilt_info$mode,
+      mean_tilt = mean_tilt_info$full,
+      mean_tilt_observed = mean_tilt_info$observed,
+      mean_tilt_summary = mean_tilt_info$summary,
+      mean_tilt_digest = mean_tilt_info$digest,
       coverage_level = constants$alpha,
       learning_rate = learning_rate_report,
       fixed_learning_rate = if (learn_lambda) NA_real_ else learning_rate,
@@ -322,7 +372,9 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       lambda_power = if (learn_lambda) lambda_prior$power * n else 0,
       lambda_power_per_observation = if (learn_lambda) lambda_prior$power else 0,
       lambda_summary = lambda_summary,
-      inferential_target = .rqr_target_formula(learning_rate_mode),
+      inferential_target = .rqr_target_formula(
+        learning_rate_mode, mean_tilt_info$mode
+      ),
       sigma = if (learn_lambda) effective_learning_rate_summary$implied_sigma_mean else constants$sigma,
       inference = "mcmc",
       generalized_bayes = TRUE,
@@ -345,8 +397,15 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     summary = summary,
     diagnostics = list(
       loss_trace = loss_trace,
+      ordinary_product_check_loss_trace = loss_trace,
+      mean_tilted_target_loss_trace = mean_tilted_target_loss_trace,
+      tilt_linear_trace = tilt_linear_trace,
       scaled_loss_trace = loss_trace / loss_reference_scale,
+      scaled_target_loss_trace =
+        mean_tilted_target_loss_trace / loss_reference_scale,
       weighted_loss_trace = lambda_trace * loss_trace / loss_reference_scale,
+      weighted_target_loss_trace =
+        lambda_trace * mean_tilted_target_loss_trace / loss_reference_scale,
       lambda_trace = lambda_trace,
       effective_learning_rate_trace = effective_learning_rate_trace,
       lambda_post_shape_trace = lambda_post_shape_trace,
@@ -368,6 +427,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       beta_prior_state1 = state1,
       beta_prior_state2 = state2,
       latent_v = V,
+      mean_tilt_digest = mean_tilt_info$digest,
       rng_state = rng_state
     ),
     provenance = provenance,
@@ -380,6 +440,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       latent_v = V,
       beta_prior_state1 = state1,
       beta_prior_state2 = state2,
+      mean_tilt_digest = mean_tilt_info$digest,
       rng_state = rng_state
     ),
     misc = list(
@@ -388,6 +449,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       thin = thin,
       seed = seed,
       constants = constants,
+      mean_tilt = mean_tilt_info,
       column_names = colnames(X),
       note = "RQR is a generalized-Bayes interval readout, not a response likelihood."
     )
@@ -450,6 +512,7 @@ print.rqr_mcmc <- function(x, ...) {
   cat(sprintf("  coverage_level: %.4f\n", x$model_spec$coverage_level))
   cat(sprintf("  learning_rate:  %.4f\n", x$model_spec$learning_rate))
   cat(sprintf("  rate_mode:      %s\n", x$model_spec$learning_rate_mode %||% "fixed"))
+  cat(sprintf("  mean_tilt:      %s\n", x$model_spec$mean_tilt_mode %||% "zero"))
   if (isTRUE(x$model_spec$learned_inverse_loss_scale)) {
     cat(sprintf("  lambda_mean:    %.4f\n", x$model_spec$lambda_summary$mean))
   }

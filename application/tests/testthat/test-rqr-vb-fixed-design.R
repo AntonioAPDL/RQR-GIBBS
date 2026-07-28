@@ -4,7 +4,7 @@ test_that("RQR VB produces finite approximate interval summaries", {
   X <- cbind(1, seq(-1, 1, length.out = n))
   y <- as.numeric(-0.1 + 0.3 * X[, 2] + 0.15 * rnorm(n))
 
-  fit <- exdqlm::rqr_vb_fit(
+  fit <- rqrgibbs::rqr_vb_fit(
     y = y,
     X = X,
     coverage_level = 0.8,
@@ -23,14 +23,14 @@ test_that("RQR VB tracks the MCMC interval center without claiming calibration",
   set.seed(7502)
   y <- c(-1.0, -0.7, -0.2, 0.05, 0.45, 0.95)
   X <- matrix(1, length(y), 1)
-  vb <- exdqlm::rqr_vb_fit(
+  vb <- rqrgibbs::rqr_vb_fit(
     y = y,
     X = X,
     coverage_level = 0.8,
     learning_rate = 1,
     vb_control = list(max_iter = 80, n_draws = 300, seed = 7502)
   )
-  mc <- exdqlm::rqr_mcmc_fit(
+  mc <- rqrgibbs::rqr_mcmc_fit(
     y = y,
     X = X,
     coverage_level = 0.8,

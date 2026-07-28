@@ -22,8 +22,8 @@ rqr_filter_log_marginal_cpp <- function(z, H, V, GG, m0, C0, W) {
 #' C++ scalar-observation FFBS kernel
 #'
 #' @keywords internal
-rqr_ffbs_cpp <- function(z, H, V, GG, m0, C0, evolution_mode, W, D, sample_path, jitter_ladder, evolution_label, allow_covariance_repair) {
-    .Call(`_rqrgibbs_rqr_ffbs_cpp`, z, H, V, GG, m0, C0, evolution_mode, W, D, sample_path, jitter_ladder, evolution_label, allow_covariance_repair)
+rqr_ffbs_cpp <- function(z, H, V, GG, m0, C0, evolution_mode, W, D, sample_path, jitter_ladder, canonical_shift, evolution_label, allow_covariance_repair) {
+    .Call(`_rqrgibbs_rqr_ffbs_cpp`, z, H, V, GG, m0, C0, evolution_mode, W, D, sample_path, jitter_ladder, canonical_shift, evolution_label, allow_covariance_repair)
 }
 
 rqr_noncentered_basis_cpp <- function(theta, theta0, GG, component_dims, q) {

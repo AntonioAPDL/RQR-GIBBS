@@ -140,14 +140,21 @@
 
 .rqr_dlm_target_contract <- function(
     coverage_level, learning_rate_mode, fixed_learning_rate,
-    loss_reference_scale, lambda_prior, numerical_policy, jitter_ladder) {
+    loss_reference_scale, lambda_prior, numerical_policy, jitter_ladder,
+    mean_tilt_target) {
   list(
-    loss_name = "rqr_residual_product_check_loss",
+    loss_name = if (identical(mean_tilt_target$mode %||% "zero", "zero")) {
+      "rqr_residual_product_check_loss"
+    } else {
+      "mean_tilted_rqr_product_check_loss"
+    },
+    ordinary_loss_name = "rqr_residual_product_check_loss",
     coverage_level = coverage_level,
     learning_rate_mode = learning_rate_mode,
     fixed_learning_rate = fixed_learning_rate,
     loss_reference_scale = loss_reference_scale,
     lambda_prior = lambda_prior,
+    mean_tilt_target = mean_tilt_target,
     numerical_policy = numerical_policy,
     jitter_ladder = as.numeric(jitter_ladder),
     root_priors_exchangeable = TRUE,
@@ -216,6 +223,9 @@
 #'   evolution multipliers.
 #' @param evolution_scale_initial Initial positive component multipliers.
 #' @param learning_rate Fixed generalized-Bayes learning rate `omega_R`.
+#' @param mean_tilt Fixed response-scale mean tilt. Nonzero tilt is currently
+#'   implemented for fixed-rate `"fixed_W"` and frozen `"discount_template"`
+#'   modes only.
 #' @param lambda_initial Initial inverse loss scale for learned modes.
 #' @param loss_reference_scale Positive reference scale `s_L`. It does not
 #'   alter fixed `learning_rate`; learned modes use `lambda/s_L`.
@@ -249,7 +259,8 @@ rqr_dlm_fit <- function(
     component_templates = NULL,
     evolution_scale_prior = list(shape = 2, rate = 1),
     evolution_scale_initial = 1,
-    learning_rate = 1, lambda_initial = 1, loss_reference_scale = 1,
+    learning_rate = 1, mean_tilt = 0,
+    lambda_initial = 1, loss_reference_scale = 1,
     learning_rate_mode = c(
       "fixed_rate", "learned_pseudoresidual_normalized", "learned_pure"
     ),
@@ -267,6 +278,9 @@ rqr_dlm_fit <- function(
   p <- expanded$p
   observed <- !is.na(y)
   n_obs <- sum(observed)
+  mean_tilt_info <- .rqr_normalize_mean_tilt(
+    mean_tilt, n = T, observed = observed
+  )
   numerical_policy <- .rqr_numerical_policy(numerical_policy)
   provenance_control <- .rqr_provenance_control(provenance_control)
   if (!is.list(mcmc_control)) stop("mcmc_control must be a list.", call. = FALSE)
@@ -290,6 +304,12 @@ rqr_dlm_fit <- function(
     stop("lambda_initial must be finite and positive.", call. = FALSE)
   }
   learn_lambda <- learning_rate_mode != "fixed_rate"
+  if (mean_tilt_info$nonzero && learn_lambda) {
+    stop(
+      "Nonzero mean_tilt is currently implemented only for learning_rate_mode='fixed_rate'.",
+      call. = FALSE
+    )
+  }
   lambda <- if (learn_lambda) lambda_initial else learning_rate * loss_reference_scale
   constants <- rqr_constants(coverage_level, lambda / loss_reference_scale)
 
@@ -307,6 +327,13 @@ rqr_dlm_fit <- function(
         "adaptive_discount is an experimental working/sequential recursion,",
         "not an exact Gibbs sampler for a declared fixed joint target."
       ),
+      call. = FALSE
+    )
+  }
+  if (mean_tilt_info$nonzero &&
+      !evolution_mode %in% c("fixed_W", "discount_template")) {
+    stop(
+      "Nonzero mean_tilt is currently implemented only for fixed_W and frozen discount_template RQR-DLM modes.",
       call. = FALSE
     )
   }
@@ -519,9 +546,21 @@ rqr_dlm_fit <- function(
   } else {
     NULL
   }
+  mean_tilt_canonical_shift <- NULL
+  if (mean_tilt_info$nonzero) {
+    mean_tilt_canonical_shift <- matrix(0, p, T)
+    mean_tilt_canonical_shift[, observed] <- sweep(
+      expanded$FF[, observed, drop = FALSE],
+      2L,
+      constants$omega * constants$alpha * mean_tilt_info$full[observed],
+      `*`
+    )
+  }
 
   total_iter <- n_burn + n_keep * thin
   loss_trace <- lambda_trace <- effective_rate_trace <- numeric(total_iter)
+  mean_tilted_target_loss_trace <- numeric(total_iter)
+  tilt_linear_trace <- numeric(total_iter)
   lambda_shape_trace <- lambda_rate_trace <- rep(NA_real_, total_iter)
   root_swap_trace <- logical(total_iter)
   ffbs_iteration <- vector(
@@ -637,7 +676,8 @@ rqr_dlm_fit <- function(
         z1, H1, obs_variance, expanded$GG, expanded$m0, expanded$C0,
         evolution_iter, backend = backend_resolved,
         jitter_ladder = jitter_ladder,
-        numerical_policy = numerical_policy
+        numerical_policy = numerical_policy,
+        canonical_shift = mean_tilt_canonical_shift
       )
       append_ffbs(draw1, "root1", cycle)
       theta1 <<- draw1$path
@@ -677,7 +717,8 @@ rqr_dlm_fit <- function(
         z2, H2, obs_variance, expanded$GG, expanded$m0, expanded$C0,
         evolution_iter, backend = backend_resolved,
         jitter_ladder = jitter_ladder,
-        numerical_policy = numerical_policy
+        numerical_policy = numerical_policy,
+        canonical_shift = mean_tilt_canonical_shift
       )
       append_ffbs(draw2, "root2", cycle)
       theta2 <<- draw2$path
@@ -786,9 +827,14 @@ rqr_dlm_fit <- function(
     eta1 <- .rqr_state_ordinates(expanded$FF, theta1)
     eta2 <- .rqr_state_ordinates(expanded$FF, theta2)
 
-    loss_trace[iter] <- sum(rqr_check_loss(
-      rqr_residual_product(y[observed], eta1[observed], eta2[observed]), constants$alpha
-    ))
+    target_loss <- rqr_mean_tilt_loss(
+      y, eta1, eta2, constants$alpha,
+      mean_tilt = mean_tilt_info$full,
+      details = TRUE
+    )
+    loss_trace[iter] <- sum(target_loss$product_loss)
+    tilt_linear_trace[iter] <- sum(target_loss$linear_tilt)
+    mean_tilted_target_loss_trace[iter] <- sum(target_loss$total)
     lambda_trace[iter] <- lambda
     effective_rate_trace[iter] <- lambda / loss_reference_scale
 
@@ -875,7 +921,8 @@ rqr_dlm_fit <- function(
     loss_reference_scale = loss_reference_scale,
     lambda_prior = lambda_prior,
     numerical_policy = numerical_policy,
-    jitter_ladder = jitter_ladder
+    jitter_ladder = jitter_ladder,
+    mean_tilt_target = mean_tilt_info$contract
   )
   provenance <- .rqr_provenance(
     data = list(y = y),
@@ -910,6 +957,7 @@ rqr_dlm_fit <- function(
     lambda = lambda,
     evolution_scale = q_evolution,
     transition_kernel = component_scale_kernel_contract,
+    mean_tilt_digest = mean_tilt_info$digest,
     rng_state = rng_state
   )
   checkpoint_digest <- .rqr_digest(checkpoint)
@@ -923,7 +971,18 @@ rqr_dlm_fit <- function(
     model_spec = list(
       family = "rqr_dlm",
       parameterization = "exchangeable_dynamic_roots",
-      loss_name = "rqr_residual_product_check_loss",
+      loss_name = if (mean_tilt_info$nonzero) {
+        "mean_tilted_rqr_product_check_loss"
+      } else {
+        "rqr_residual_product_check_loss"
+      },
+      ordinary_loss_name = "rqr_residual_product_check_loss",
+      mean_tilt_mode = mean_tilt_info$mode,
+      mean_tilt = mean_tilt_info$full,
+      mean_tilt_observed = mean_tilt_info$observed,
+      mean_tilt_summary = mean_tilt_info$summary,
+      mean_tilt_digest = mean_tilt_info$digest,
+      mean_tilt_target = mean_tilt_info$contract,
       state_model = "linear_gaussian_interval_root_evolution",
       coverage_level = constants$alpha,
       learning_rate_mode = learning_rate_mode,
@@ -934,7 +993,9 @@ rqr_dlm_fit <- function(
       effective_learning_rate = mean(lambda_draws / loss_reference_scale),
       lambda_prior = lambda_prior,
       lambda_summary = lambda_summary,
-      inferential_target = .rqr_target_formula(learning_rate_mode),
+      inferential_target = .rqr_target_formula(
+        learning_rate_mode, mean_tilt_info$mode
+      ),
       generalized_bayes = TRUE,
       response_likelihood = FALSE,
       evolution_mode = evolution_mode,
@@ -975,7 +1036,12 @@ rqr_dlm_fit <- function(
     summary = .rqr_dlm_coverage_summary(y, observed, lower, upper),
     diagnostics = list(
       loss_trace = loss_trace,
+      ordinary_product_check_loss_trace = loss_trace,
+      mean_tilted_target_loss_trace = mean_tilted_target_loss_trace,
+      tilt_linear_trace = tilt_linear_trace,
       scaled_loss_trace = loss_trace / loss_reference_scale,
+      scaled_target_loss_trace =
+        mean_tilted_target_loss_trace / loss_reference_scale,
       lambda_trace = lambda_trace,
       effective_learning_rate_trace = effective_rate_trace,
       lambda_post_shape_trace = lambda_shape_trace,
@@ -1041,6 +1107,7 @@ rqr_dlm_fit <- function(
       backend_resolved = backend_resolved,
       observed = observed, store_state_draws = store_state_draws,
       store_latent_draws = store_latent_draws, jitter_ladder = jitter_ladder,
+      mean_tilt = mean_tilt_info,
       component_scale_collapsed_update =
         component_scale_collapsed_update,
       component_scale_interweave = component_scale_interweave,
@@ -1134,7 +1201,11 @@ rqr_dlm_fit <- function(
     loss_reference_scale = object$model_spec$loss_reference_scale,
     lambda_prior = object$model_spec$lambda_prior,
     numerical_policy = object$model_spec$numerical_policy,
-    jitter_ladder = object$misc$jitter_ladder
+    jitter_ladder = object$misc$jitter_ladder,
+    mean_tilt_target = object$model_spec$mean_tilt_target %||%
+      .rqr_normalize_mean_tilt(
+        0, length(object$y), observed = !is.na(object$y)
+      )$contract
   )
   current_transition_kernel <- list(
     symmetric_rootwise_partially_collapsed =
@@ -1313,6 +1384,7 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
     coverage_level = object$model_spec$coverage_level,
     evolution_spec = object$evolution,
     learning_rate = fixed_rate,
+    mean_tilt = object$model_spec$mean_tilt %||% 0,
     lambda_initial = checkpoint$lambda,
     loss_reference_scale = object$model_spec$loss_reference_scale,
     learning_rate_mode = object$model_spec$learning_rate_mode,
@@ -1678,6 +1750,7 @@ print.rqr_dlm_mcmc <- function(x, ...) {
   cat("RQR dynamic MCMC fit\n")
   cat(sprintf("  coverage_level: %.4f\n", x$model_spec$coverage_level))
   cat(sprintf("  evolution_mode: %s\n", x$model_spec$evolution_mode))
+  cat(sprintf("  mean_tilt:      %s\n", x$model_spec$mean_tilt_mode %||% "zero"))
   cat(sprintf("  target contract: %s\n", x$model_spec$target_contract))
   cat(sprintf("  numerical repairs: %d\n", x$model_spec$numerical_repair_count))
   cat(sprintf("  promotion eligible: %s\n", if (x$model_spec$promotion_eligible) "yes" else "no"))

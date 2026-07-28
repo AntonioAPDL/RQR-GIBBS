@@ -14,7 +14,8 @@ rqr_ffbs_smooth(
   evolution,
   backend = c("cpp", "R", "auto"),
   jitter_ladder = c(0, 1e-12, 1e-10, 1e-08, 1e-06),
-  numerical_policy = c("fail", "record_repair")
+  numerical_policy = c("fail", "record_repair"),
+  canonical_shift = NULL
 )
 }
 \arguments{
@@ -36,6 +37,10 @@ rqr_ffbs_smooth(
 exactly zero matrix uses a separately recorded absolute fallback.}
 
 \item{numerical_policy}{Either `"fail"` or `"record_repair"`.}
+
+\item{canonical_shift}{Optional `p x T` matrix of canonical linear
+information shifts applied after each observed measurement update. Missing
+times must have zero shift.}
 }
 \value{
 Filtering and smoothing moments with numerical diagnostics.

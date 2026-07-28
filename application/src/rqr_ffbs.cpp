@@ -256,6 +256,7 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
                         const arma::mat& D,
                         const bool sample_path,
                         const arma::vec& jitter_ladder,
+                        const arma::mat& canonical_shift,
                         const std::string evolution_label,
                         const bool allow_covariance_repair) {
   Rcpp::RNGScope scope;
@@ -264,13 +265,16 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
   if (T < 1 || H.n_rows != p || H.n_cols != T || V.n_elem != T ||
       GG.n_rows != p || GG.n_cols != p || GG.n_slices != T ||
       C0.n_rows != p || C0.n_cols != p || W.n_rows != p ||
-      W.n_cols != p || W.n_slices != T || D.n_rows != p || D.n_cols != p) {
+      W.n_cols != p || W.n_slices != T || D.n_rows != p || D.n_cols != p ||
+      canonical_shift.n_rows != p || canonical_shift.n_cols != T) {
     Rcpp::stop("Incompatible FFBS dimensions.");
   }
   if (evolution_mode != 0 && evolution_mode != 1) Rcpp::stop("Unknown evolution mode.");
-  if (arma::any(V <= 0.0) || !V.is_finite() || !H.is_finite() || !GG.is_finite()) {
-    Rcpp::stop("H, V, and GG must be finite and V positive.");
+  if (arma::any(V <= 0.0) || !V.is_finite() || !H.is_finite() ||
+      !GG.is_finite() || !canonical_shift.is_finite()) {
+    Rcpp::stop("H, V, GG, and canonical_shift must be finite and V positive.");
   }
+  const bool has_canonical_shift = arma::any(arma::vectorise(arma::abs(canonical_shift)) > 0.0);
 
   arma::mat a(p, T), m(p, T), sm(p, T);
   arma::cube R(p, p, T), C(p, p, T), sC(p, p, T);
@@ -328,8 +332,17 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
       m.col(t) = a.col(t) + rh * residual(t) / q(t);
       C.slice(t) = symm(R.slice(t) - (rh * rh.t()) / q(t));
     } else {
+      if (arma::any(arma::abs(canonical_shift.col(t)) > 0.0)) {
+        Rcpp::stop("canonical_shift must be zero at missing-observation times.");
+      }
       m.col(t) = a.col(t);
       C.slice(t) = R.slice(t);
+    }
+    if (has_canonical_shift) {
+      const arma::vec shift = canonical_shift.col(t);
+      if (arma::any(arma::abs(shift) > 0.0)) {
+        m.col(t) = m.col(t) + C.slice(t) * shift;
+      }
     }
     SpdResult cf = spd_factor(C.slice(t), jitter_ladder);
     C.slice(t) = cf.matrix;
@@ -423,6 +436,7 @@ Rcpp::List rqr_ffbs_cpp(const arma::vec& z,
     Rcpp::Named("diagnostics") = Rcpp::List::create(
       Rcpp::Named("backend") = "cpp",
       Rcpp::Named("evolution_mode") = evolution_label,
+      Rcpp::Named("canonical_shift") = has_canonical_shift,
       Rcpp::Named("max_jitter") = max_jitter,
       Rcpp::Named("jitter_count") = jitter_count,
       Rcpp::Named("psd_draw_count") = psd_draw_count,

@@ -5,12 +5,13 @@
 \usepackage{lmodern}
 \usepackage{microtype}
 \usepackage{setspace}
-\onehalfspacing
+\setstretch{1.08}
 
 \usepackage{amsmath,amssymb,mathtools,bm}
 \usepackage{amsthm}
 \numberwithin{equation}{section}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
 \usepackage{array}
@@ -24,7 +25,7 @@
   linkcolor=black,
   citecolor=black,
   urlcolor=black,
-  pdftitle={Mean-Preserving Interval Functionals and Generalized-Bayes Computation for Relaxed Quantile Regression},
+  pdftitle={Mean-Tilted Relaxed Quantile Regression: Fixed-Content Interval Functionals and Generalized-Bayes Computation},
   pdfauthor={Antonio De Leon, Raquel Prado, and Bruno Sanso}
 }
 
@@ -52,10 +53,10 @@
   \end{enumerate}\par\medskip
 }
 
-\title{\vspace{-0.6cm}Mean-Preserving Interval Functionals and Generalized-Bayes Computation for Relaxed Quantile Regression}
+\title{\vspace{-0.6cm}Mean-Tilted Relaxed Quantile Regression: Fixed-Content Interval Functionals and Generalized-Bayes Computation}
 \author{Antonio De Leon$^{1}$ \and Raquel Prado$^{1}$ \and Bruno Sans\'o$^{1}$}
 \date{\small $^{1}$ Department of Statistics, University of California, Santa Cruz\\
-\vspace{0.25em}\today}
+\vspace{0.25em}July 2026}
 
 \begin{document}
 \maketitle
@@ -70,23 +71,27 @@ preassigning endpoint quantiles. Under explicit conditions, the unrestricted
 population minimizer is the unique contiguous content-\(c\) interval whose
 retained mean equals the population mean. A fixed mean tilt preserves content
 while shifting that retained mean to \(\mu+\delta\). Interior admissible tilts
-index all finite-root interior content-\(c\) windows; qualified one-sided
-limits supply the boundary members. Equal-tailed and shortest-contiguous
-intervals therefore have distribution-specific recovery tilts. We construct
-loss-based generalized posteriors using a pseudo-asymmetric-Laplace
-normal--exponential augmentation. One fixed-rate mean-tilted sampler covers
-static regression under proper Gaussian priors, with ordinary RQR obtained
-exactly at zero tilt. An ordinary-only conditional-Gaussian
-regularized-horseshoe adapter using the Nishimura--Suchard augmentation
-(RHS-NS) supplies regularized regression, and a frozen deep echo-state-network
-feature matrix is a deterministic nonlinear-design specialization of the same
-static scan. A dynamic linear extension then replaces coefficient blocks by
-alternating root-specific forward-filtering backward-sampling steps: the
-stacked state prior is Gaussian, but the joint augmented observation kernel is
-quartic. Current software and empirical evidence concern ordinary RQR; the
-nonzero-tilt algorithms are derived but not yet implemented or validated. All
-updates concern interval-root functionals under a loss and prior, not a
-response likelihood or posterior-predictive responses.
+index all finite-root interior content-\(c\) windows, with boundary members
+obtained as qualified one-sided limits. Equal-tailed and
+shortest-contiguous intervals therefore have distribution-specific recovery
+tilts. We construct loss-based generalized posteriors using a
+pseudo-asymmetric-Laplace normal--exponential augmentation. A fixed-rate
+mean-tilted sampler covers static regression under proper Gaussian priors,
+with ordinary RQR obtained exactly at zero tilt. The implemented ordinary
+branch also supports a conditional-Gaussian regularized-horseshoe adapter
+using the Nishimura--Suchard augmentation (RHS-NS), and a frozen deep
+echo-state-network feature matrix is a deterministic nonlinear-design
+specialization of the same static scan. A dynamic linear extension replaces
+coefficient blocks by alternating root-specific forward-filtering
+backward-sampling steps: the stacked state prior is Gaussian, but the joint
+augmented observation kernel is quartic. Current software and empirical
+evidence are separated: ordinary RQR has the broader validation program, while
+fixed-rate nonzero mean tilt is implemented only for ridge static readouts,
+ridge DESN readouts, and fixed-\(W_t\) or frozen-template DLM modes. Learned
+rates, nonzero-tilt RHS-NS, adaptive or component-scale dynamic tilt, and
+VB/CAVI remain separate projects. All updates concern interval-root
+functionals under a loss and prior, not a response likelihood or
+posterior-predictive responses.
 \end{abstract}
 
 \section{Introduction}
@@ -106,11 +111,13 @@ Relaxed quantile regression (RQR) instead estimates two interval roots directly
 \citep{PouplinEtAl2024RQR}. It applies a check loss to
 \((y-\eta_1)(y-\eta_2)\), whose sign records whether \(y\) lies between the
 roots. The original article develops this loss as an optimization criterion.
-Here we first identify its population interval functional and then develop a
-loss-based generalized posterior and dynamic computation for it. Related
+Here we first identify its population interval functional, then use that
+characterization to build a mean-tilted family and generalized-Bayes
+computation for static, frozen-feature, and dynamic root models. Related
 coverage-constrained empirical optimization directly trades width against an
-empirical coverage constraint \citep{ChenEtAl2021PredictionIntervals}; that target
-and training criterion are distinct from the expected RQR loss studied here.
+empirical coverage constraint \citep{ChenEtAl2021PredictionIntervals}; that
+target and training criterion are distinct from the expected RQR loss studied
+here.
 
 The population score equations reveal more than the known content condition.
 For an unrestricted continuous problem, the selected interval also preserves
@@ -152,17 +159,21 @@ backward-sampling (FFBS) applies
 \citep{GoncalvesMigonBastos2020DQLM}. Alternating those two path draws gives
 exact root-blocked Gibbs updates for the declared fixed-joint RQR models.
 
-The contributions are therefore: (i) a mean-preserving characterization and
-global identification result for the ordinary RQR interval functional;
-(ii) a fixed-content mean-tilted family that represents all admissible
-interior windows, with boundary members obtained through qualified limits;
-(iii) a master fixed-rate mean-tilted Gibbs construction whose zero-tilt member
-is the implemented ordinary-RQR sampler; and (iv) a predictor hierarchy from
-regularized static regression, through a frozen-feature DESN specialization,
-to a root-blocked dynamic linear extension. The ordinary-RQR ridge, RHS-NS,
-frozen-DESN, and DLM branches are implemented.
-Nonzero-tilt samplers, data-driven tilt selection, and variational
-approximations remain proposed methodological developments.
+The contributions are fivefold. First, we characterize the ordinary RQR
+population functional as the mean-preserving fixed-content interval and give a
+profiled global identification result. Second, we introduce mean-tilted RQR
+as a fixed-content family whose admissible tilts index the interior window
+class, with boundary members obtained through qualified limits. Third, we
+give a first-order Cornish--Fisher approximation and finite-sample diagnostic
+for fixed-tilt initialization. Fourth, we derive a fixed-rate mean-tilted
+Gibbs construction whose zero-tilt member is the implemented ordinary-RQR
+sampler. Fifth, we organize the predictor hierarchy as regularized static
+regression, a frozen-feature DESN specialization, and a root-blocked dynamic
+linear extension. The ordinary-RQR ridge, RHS-NS, frozen-DESN, and DLM
+branches are implemented. The fixed-rate nonzero-tilt ridge cases are also
+implemented as bounded target extensions. Nonzero-tilt RHS-NS, learned-rate
+tilt, adaptive or component-scale dynamic tilt, data-driven tilt selection,
+and variational approximations remain proposed methodological developments.
 
 The interpretation is deliberately narrow. The posterior-like update concerns
 interval-root functionals under a loss and prior. It is not an ordinary
@@ -482,10 +493,10 @@ For an interior tilt,
 \]
 Thus an interior width minimum along the tilt path satisfies the usual
 equal-endpoint-density condition.
-Figure~\ref{fig:mean-tilt-map} traces this one-to-one interior map and its
-width profile for the same population illustration.
+Figure~\ref{fig:mean-tilt-map} visualizes this population map before adding
+any approximation layer.
 
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig02_mean_tilt_recovery_map.png}
 \caption{\textbf{Population mean-tilt recovery map.}
@@ -495,11 +506,58 @@ retained-window mean \(M_c(u)\) maps each interior lower-tail index \(u\) to a u
 standardized tilt \(d=\delta/\operatorname{SD}(Y)\). The marked oracle tilts
 recover the shortest contiguous (SH), equal-tailed (ET), and ordinary-RQR
 intervals; ordinary RQR has \(d=0\). The width profile shows that SH, not
-ordinary RQR in general, minimizes geometric width. The quantities are
-deterministic population calculations describing representability and width
-profiling; they do not define a data-driven tilt estimator.}
+ordinary RQR in general, minimizes geometric width. The density panel shows
+the three recovered intervals on the same standardized population scale.}
 \label{fig:mean-tilt-map}
 \end{figure}
+
+For initialization and external tilt screening, the same identities suggest a
+simple first-order approximation. Let \(\gamma_1\) denote standardized
+skewness and set
+\[
+q_c=\Phi^{-1}\{(1+c)/2\},\qquad K_c=q_c\phi(q_c)/c.
+\]
+A Cornish--Fisher expansion around a standardized Normal law gives the
+shortest-oriented and equal-tailed standardized tilt anchors
+\[
+d_{\mathrm{SH}}^{\mathrm{CF}}=-\gamma_1K_c,\qquad
+d_{\mathrm{ET}}^{\mathrm{CF}}=\frac{1}{3}d_{\mathrm{SH}}^{\mathrm{CF}},
+\qquad d=\delta/\operatorname{SD}(Y).
+\]
+These formulas are not new interval targets; they are local skewness-based
+approximations to the population recovery tilts. Right skewness gives a
+negative shortest-oriented tilt, while left skewness gives a positive tilt.
+The approximation is useful because it gives the sign and approximate
+magnitude of the tilt from a single population summary. Figure~\ref{fig:mean-tilt-cf-anchors}
+therefore places the CF anchors on the same tilt and width scales using the
+true skewness of the illustrative population, not sample estimates. In applied
+work a plug-in skewness estimate would be only a fixed initialization or
+screening candidate, to be recorded outside the Gibbs target.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/fig03_mean_tilt_cf_anchors.png}
+\caption{\textbf{Cornish--Fisher tilt-anchor diagnostic.}
+For the same content \(c=0.80\), the solid curves are the population
+window-to-tilt map and width profile. Filled markers are the oracle RQR, ET,
+and SH tilts. Open markers show first-order Cornish--Fisher anchors computed
+from true population skewness. In this moderate-skewness illustration both
+CF anchors are admissible and therefore lie on the finite-root tilt path. The
+display is an approximation diagnostic for initialization and screening, not
+a data-driven tilt estimator and not MCMC evidence.}
+\label{fig:mean-tilt-cf-anchors}
+\end{figure}
+
+\input{tables/mean_tilt_cf_mini_study.tex}
+
+Table~\ref{tab:mean-tilt-cf-mini-study} gives the same message without
+simulation noise. Each row uses the true population skewness and compares the
+first-order CF anchor with the oracle recovery tilt. The approximation is
+exact at symmetry, very accurate for the near-Normal Gamma case, preserves the
+sign reversal for reflected Beta laws, and becomes less accurate for stronger
+skewness or support-boundary shortest intervals. This is the intended role of
+the CF calculation: it supplies cheap, interpretable starting anchors for
+tilt exploration, not automatic shortest-interval estimators.
 
 These are population and oracle statements. A universal tilt does not recover
 the same interval functional across distributions, and conditional recovery
@@ -610,7 +668,7 @@ RQR-FD
 MT-RQR-FD
 & Fixed only
 & Derived for proper Gaussian roots, including ridge
-& Proposed; no nonzero-tilt evidence\\
+& Implemented for ridge; broader validation deferred\\
 RQR-DESN
 & Fixed or ordinary learned \(\kappa\)
 & Exact conditional on frozen features
@@ -618,7 +676,7 @@ RQR-DESN
 MT-RQR-DESN
 & Fixed only
 & Fixed-design specialization with a proper Gaussian ridge prior
-& Proposed; nonzero-tilt shrinkage propriety unresolved\\
+& Implemented for ridge readouts; nonzero-tilt shrinkage propriety unresolved\\
 RQR-DLM
 & Fixed or ordinary learned \(\kappa\)
 & Exact for fixed-joint modes; adaptive discount is working
@@ -626,7 +684,7 @@ RQR-DLM
 MT-RQR-DLM
 & Fixed only
 & Derived for fixed \(W_t\) and frozen templates
-& Proposed; random-scale extension unresolved\\
+& Implemented for fixed \(W_t\) and frozen templates; random-scale extension unresolved\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -778,9 +836,10 @@ At \(\vect\delta=\vect 0\) it is exactly the ordinary-RQR scan; the separate
 ordinary learned-\(\kappa\) scan is Algorithm~S1.
 \item \textbf{Implementation and validation status.} The conditional blocks
 are exact for the declared fixed-rate proper-Gaussian generalized target.
-Zero-tilt ridge and RHS-NS branches are implemented. Nonzero tilt is derived
-for proper Gaussian priors, including ridge, but is not yet implemented or
-empirically validated; the RHS-NS nonzero-tilt branch remains unresolved.
+Zero-tilt ridge and RHS-NS branches are implemented. Nonzero tilt is
+implemented for proper Gaussian ridge priors with a fixed learning rate; the
+RHS-NS nonzero-tilt branch, learned-rate tilt, and full empirical validation
+remain unresolved.
 \end{algorithmblock}
 
 At \(\vect\delta=\vect 0\), Algorithm~\ref{alg:fixed-design-gibbs} reduces
@@ -801,9 +860,9 @@ tuning decisions, and random seeds
 McDermottWikle2018DeepESNUQ}. Substituting
 \(\mat X=\mat X_{\mathrm{DESN}}\) in
 Algorithm~\ref{alg:fixed-design-gibbs} defines the RQR-DESN readout. No new loss
-or Gibbs sampler is introduced. A ridge readout supports the proposed
-fixed-rate nonzero-tilt Gaussian blocks; the implemented RHS-NS readout and
-all current evidence concern ordinary RQR only.
+or Gibbs sampler is introduced. A ridge readout supports the fixed-rate
+nonzero-tilt Gaussian blocks implemented through the static scan;
+the RHS-NS readout and all current matched evidence concern ordinary RQR only.
 
 Future root functionals use a frozen future design
 \(\mat X_{\mathrm{DESN,fut}}\) constructed under the same recorded reservoir
@@ -961,8 +1020,9 @@ fixed-joint algorithm. At \(\delta_{1:T}=0\) it reduces exactly to the
 implemented ordinary fixed-\(\mat W_t\) or frozen-template RQR-DLM scan.
 \item \textbf{Implementation and validation status.} Sequential root-specific
 FFBS gives exact full-conditional draws for the declared modes. Nonzero tilt
-is derived but unimplemented; adaptive discount remains a working update, and
-the random shared-scale extension remains ordinary-only.
+is implemented for fixed \(W_t\) and frozen discount templates with a fixed
+learning rate; adaptive discount remains a working update, and the random
+shared-scale extension remains ordinary-only.
 \end{algorithmblock}
 
 At \(\delta_{1:T}=0\), Algorithm~\ref{alg:dynamic-gibbs} reduces exactly to
@@ -1040,11 +1100,13 @@ a different placement principle. Dynamic diagnostics use time-local and
 future ordered roots, widths, midpoints, losses, learning scales, and
 component scales rather than only time averages.
 
-Current computational evidence concerns ordinary RQR. Nonzero mean tilt
-requires zero-tilt equivalence checks, independent small-target references,
-and fixed-design validation at prespecified population tilts before any
-data-driven selection rule is evaluated. Variational inference likewise
-requires its own target, derivation, and uncertainty assessment. The frozen
+Current comparative computational evidence concerns ordinary RQR. Fixed-rate
+nonzero mean tilt has implementation-level algebra and zero-tilt equivalence
+checks for ridge static readouts and the declared fixed-joint dynamic modes,
+but still requires independent small-target references and validation at
+prespecified population tilts before any data-driven selection rule is
+evaluated. Variational inference likewise requires its own target, derivation,
+and uncertainty assessment. The frozen
 RQR-DESN readout is evaluated as a static-design specialization: its reservoir
 is recorded before the generalized posterior updates the root coefficients.
 Matched nonlinear-readout evidence remains deferred. Detailed software status,
@@ -1086,7 +1148,7 @@ Important limitations remain. The population results are unrestricted and
 pointwise, whereas fitted regression and state-space classes impose
 projections. Boundary tilts can yield semi-infinite limits or inactive roots,
 and tilts outside the admissible range have no finite unrestricted target.
-Nonzero-tilt algorithms, external tilt selection, variational approximations,
+Broader nonzero-tilt algorithms, external tilt selection, variational approximations,
 and matched nonlinear-readout evidence require separate validation. The
 ordinary-RQR study is therefore designed to evaluate interval-root loss,
 empirical coverage, width, and endpoint recovery without conflating any of
