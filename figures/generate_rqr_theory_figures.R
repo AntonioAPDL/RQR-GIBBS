@@ -1194,6 +1194,16 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
       path$standardized_delta >= target_delta_min &
       path$standardized_delta <= target_delta_max
     plot_path <- path[visible, , drop = FALSE]
+    width_ylim <- range(
+      c(
+        plot_path$standardized_width,
+        summary$standardized_width,
+        cf_summary$standardized_width
+      ),
+      finite = TRUE
+    )
+    width_pad <- 0.08 * diff(width_ylim)
+    if (!is.finite(width_pad) || width_pad <= 0) width_pad <- 0.05
     map_ylim <- range(
       c(path$standardized_delta, cf_summary$standardized_delta),
       finite = TRUE
@@ -1220,7 +1230,13 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
       graphics::text(
         row$u, row$standardized_delta,
         labels = TARGET_LABEL[target],
-        pos = FIGURE_02_MAP_LABEL_POSITION[target],
+        pos = if (identical(target, "equal_tailed")) {
+          1L
+        } else if (identical(target, "shortest")) {
+          3L
+        } else {
+          FIGURE_02_MAP_LABEL_POSITION[target]
+        },
         offset = FIGURE_02_LABEL_OFFSET, cex = 0.56,
         col = COL[target]
       )
@@ -1240,7 +1256,9 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
       graphics::text(
         row$u, row$standardized_delta,
         labels = CF_TARGET_LABEL[approximation],
-        pos = if (identical(approximation, "cf_shortest")) 4L else 2L,
+        pos = if (identical(
+          approximation, "cornish_fisher_equal_tailed"
+        )) 3L else 2L,
         offset = 0.62, cex = 0.54,
         col = figure_02_cf_color(approximation)
       )
@@ -1250,7 +1268,8 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
       type = "l", lwd = 2.2, col = COL["density"],
       xlab = expression(d == delta / SD(Y)),
       ylab = expression((U - L) / SD(Y)),
-      main = "Width near target tilts", xlim = c(width_x_min, width_x_max)
+      main = "Width near target tilts", xlim = c(width_x_min, width_x_max),
+      ylim = width_ylim + c(-1.35 * width_pad, 0.45 * width_pad)
     )
     graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
     for (target in TARGET_ORDER) {
@@ -1262,7 +1281,11 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
       graphics::text(
         row$standardized_delta, row$standardized_width,
         labels = TARGET_LABEL[target],
-        pos = FIGURE_02_WIDTH_LABEL_POSITION[target],
+        pos = if (identical(target, "equal_tailed")) {
+          1L
+        } else {
+          FIGURE_02_WIDTH_LABEL_POSITION[target]
+        },
         offset = FIGURE_02_LABEL_OFFSET, cex = 0.58,
         col = COL[target]
       )
@@ -1282,7 +1305,10 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
       graphics::text(
         row$standardized_delta, row$standardized_width,
         labels = CF_TARGET_LABEL[approximation],
-        pos = 2L, offset = 0.62, cex = 0.54,
+        pos = if (identical(
+          approximation, "cornish_fisher_equal_tailed"
+        )) 3L else 2L,
+        offset = 0.62, cex = 0.54,
         col = figure_02_cf_color(approximation)
       )
     }
