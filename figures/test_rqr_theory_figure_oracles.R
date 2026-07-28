@@ -256,7 +256,7 @@ extract_figure_block <- function(path, publication_file) {
 }
 public_figure_blocks <- c(
   extract_figure_block("main.tex", "fig01_three_balance_principles.png"),
-  extract_figure_block("main.tex", "fig02_mean_tilt_recovery_map.tex"),
+  extract_figure_block("main.tex", "fig02_mean_tilt_recovery_map.png"),
   extract_figure_block(
     "rqr-gibbs-supplement.tex",
     "figS01_cross_distribution_recovery.png"
@@ -703,7 +703,8 @@ run2 <- main(sprintf("--output-dir=%s", out2))
 expected_outputs <- c(
   "fig01_three_balance_principles.pdf",
   "fig01_three_balance_principles.png",
-  "fig02_mean_tilt_recovery_map.tex",
+  "fig02_mean_tilt_recovery_map.pdf",
+  "fig02_mean_tilt_recovery_map.png",
   "figS01_cross_distribution_recovery.pdf",
   "figS01_cross_distribution_recovery.png",
   "figS02_loss_geometry.pdf",
@@ -719,7 +720,7 @@ assert_true(file.exists(run1$manifest), "first manifest exists")
 assert_true(file.exists(run2$manifest), "second manifest exists")
 
 stable_files <- list.files(
-  out1, pattern = "\\.(csv|png|tex)$", full.names = FALSE
+  out1, pattern = "\\.(csv|png)$", full.names = FALSE
 )
 stable_files <- setdiff(stable_files, "rqr_theory_figure_manifest.csv")
 for (name in stable_files) {

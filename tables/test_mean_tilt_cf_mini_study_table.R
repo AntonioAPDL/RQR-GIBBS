@@ -32,9 +32,6 @@ dir.create(tmp)
 result <- main(c(
   sprintf("--output-dir=%s", tmp),
   "--coverage=0.80",
-  "--n=40",
-  "--reps=3",
-  "--seed=20260727",
   "--repo-root=."
 ))
 
@@ -69,12 +66,17 @@ assert_true(
 )
 tex <- paste(readLines(result$tex, warn = FALSE), collapse = "\n")
 assert_true(
-  grepl("Cornish--Fisher mean-tilt approximation check", tex, fixed = TRUE),
+  grepl("Population Cornish--Fisher tilt check", tex, fixed = TRUE),
   "caption states table purpose"
 )
 assert_true(
-  grepl("not MCMC or response-prediction evidence", tex, fixed = TRUE),
+  grepl("not MCMC, tilt-selection, or response-prediction evidence",
+        tex, fixed = TRUE),
   "caption preserves claim boundary"
+)
+assert_true(
+  !any(grepl("^rmse_", names(tab))),
+  "population table omits finite-sample RMSE columns"
 )
 
 message("Mean-tilt CF mini-study table checks passed.")

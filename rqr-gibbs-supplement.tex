@@ -644,8 +644,9 @@ one on the standardized scale. The sign convention is useful for checking
 implementations: right skewness gives negative recovery tilts, while left
 skewness gives positive recovery tilts.
 
-In finite samples the implementation uses the adjusted Fisher--Pearson
-skewness \(\widehat\gamma_1\) and the training standard deviation
+For a known population law these formulas use the true \(\gamma_1\) and
+\(\sigma\). A finite-sample plug-in version may replace them by the adjusted
+Fisher--Pearson skewness \(\widehat\gamma_1\) and training standard deviation
 \(\widehat\sigma\):
 \[
 \widehat d_{\mathrm{SH}}^{\mathrm{CF}}
@@ -656,14 +657,14 @@ skewness \(\widehat\gamma_1\) and the training standard deviation
 \widehat d_{\mathrm{SH}}^{\mathrm{CF}}/3,\qquad
 \widehat\delta=\widehat\sigma\,\widehat d.
 \]
-These are fixed candidate tilts for initialization or external validation
-screening. They are not posterior draws, do not sample a tilt in the Gibbs
-chain, and do not justify reusing the ordinary learned-scale update at
-nonzero tilt. Strong skewness, finite-support boundary solutions, and
-heavy-tailed cases can move the first-order shortest approximation outside
-the admissible finite-root tilt range. The empirical shortest-window pilot in
-the software is therefore recorded as a diagnostic cross-check rather than as
-a replacement for held-out validation.
+The plug-in quantities are fixed candidate tilts for initialization or
+external validation screening. They are not posterior draws, do not sample a
+tilt in the Gibbs chain, and do not justify reusing the ordinary learned-scale
+update at nonzero tilt. Strong skewness, finite-support boundary solutions,
+and heavy-tailed cases can move the first-order shortest approximation outside
+the admissible finite-root tilt range. The deterministic population table in
+the main text is therefore an approximation diagnostic rather than an
+empirical validation or held-out selection rule.
 
 The tilt indexes the estimand and is initially treated like a fixed quantile
 level. A scalar tilt generally defines only a restricted global target in a
