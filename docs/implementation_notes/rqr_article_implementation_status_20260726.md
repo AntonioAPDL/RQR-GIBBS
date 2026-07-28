@@ -23,11 +23,11 @@ with root-specific FFBS.
 | Ordinary static RHS-NS RQR | Conditional-Gaussian regularization with separate root-specific prior states; fixed or declared learned \(\kappa\) | Implemented through the pinned, isolated exdqlm adapter | Adapter tests exist; no nonzero-tilt or standalone native-RHS claim |
 | Ordinary RQR-DESN | Frozen deterministic-feature specialization of static regression | Implemented | Design/readout checks exist; matched DESN evidence remains deferred |
 | Ordinary RQR-DLM | Alternating root-specific FFBS for declared fixed-joint modes | Implemented | Reference and bounded checks exist; comparative results remain governed by the simulation protocol |
-| Static mean-tilted RQR | Population target and fixed-rate information shift under proper Gaussian/ridge priors | Derived, not implemented | No empirical evidence |
-| DESN mean-tilted RQR | Frozen-feature specialization under a proper Gaussian/ridge readout | Not implemented | No empirical evidence; RHS-NS propriety remains unresolved |
-| Dynamic mean-tilted RQR | Conditional information-shift algebra only | Not implemented | No empirical evidence |
+| Static mean-tilted RQR | Population target and fixed-rate information shift under proper Gaussian/ridge priors | Implemented for fixed-rate ridge | Algebra and zero-tilt checks exist; broader empirical validation remains deferred |
+| DESN mean-tilted RQR | Frozen-feature specialization under a proper Gaussian/ridge readout | Implemented for fixed-rate ridge readouts | Design-shell and static-readout wiring checks exist; matched evidence and RHS-NS propriety remain unresolved |
+| Dynamic mean-tilted RQR | Fixed-rate root-specific canonical shifts for fixed \(W_t\) and frozen templates | Implemented for fixed-joint modes | FFBS algebra checks exist; adaptive-discount, shared-scale, learned-rate, and empirical validation remain deferred |
 | Data-driven tilt selection | Population motivation only | Not implemented | No empirical evidence |
-| Variational inference | Future target and derivation project | Not implemented | No evidence |
+| Variational inference | Future target and derivation project; no CAVI/ELBO claim | Zero-tilt coordinate-Gaussian sidecar only | No calibrated uncertainty evidence and no nonzero-tilt VB |
 
 ## Main-simulation correction status
 

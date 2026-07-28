@@ -55,6 +55,8 @@ application/manifests/*.RDS
 # Local operational trackers and temporary review handoffs.
 local_trackers/
 scratch_work/
+.codex_work/
+Chatgpt_output*
 docs/implementation_notes/*project_prompt.md
 docs/implementation_notes/*output*_followup_prompt.md
 docs/implementation_notes/fixed_delta_mt_rqr_gibbs_extension_plan_*.md

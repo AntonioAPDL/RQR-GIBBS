@@ -85,9 +85,13 @@ specialization of the same static scan. A dynamic linear extension replaces
 coefficient blocks by alternating root-specific forward-filtering
 backward-sampling steps: the stacked state prior is Gaussian, but the joint
 augmented observation kernel is quartic. Current software and empirical
-evidence concern ordinary RQR; nonzero-tilt algorithms are derived but not yet
-implemented or validated. All updates concern interval-root functionals under
-a loss and prior, not a response likelihood or posterior-predictive responses.
+evidence are separated: ordinary RQR has the broader validation program, while
+fixed-rate nonzero mean tilt is implemented only for ridge static readouts,
+ridge DESN readouts, and fixed-\(W_t\) or frozen-template DLM modes. Learned
+rates, nonzero-tilt RHS-NS, adaptive or component-scale dynamic tilt, and
+VB/CAVI remain separate projects. All updates concern interval-root
+functionals under a loss and prior, not a response likelihood or
+posterior-predictive responses.
 \end{abstract}
 
 \section{Introduction}
@@ -166,7 +170,9 @@ Gibbs construction whose zero-tilt member is the implemented ordinary-RQR
 sampler. Fifth, we organize the predictor hierarchy as regularized static
 regression, a frozen-feature DESN specialization, and a root-blocked dynamic
 linear extension. The ordinary-RQR ridge, RHS-NS, frozen-DESN, and DLM
-branches are implemented. Nonzero-tilt samplers, data-driven tilt selection,
+branches are implemented. The fixed-rate nonzero-tilt ridge cases are also
+implemented as bounded target extensions. Nonzero-tilt RHS-NS, learned-rate
+tilt, adaptive or component-scale dynamic tilt, data-driven tilt selection,
 and variational approximations remain proposed methodological developments.
 
 The interpretation is deliberately narrow. The posterior-like update concerns
@@ -662,7 +668,7 @@ RQR-FD
 MT-RQR-FD
 & Fixed only
 & Derived for proper Gaussian roots, including ridge
-& Proposed; no nonzero-tilt evidence\\
+& Implemented for ridge; broader validation deferred\\
 RQR-DESN
 & Fixed or ordinary learned \(\kappa\)
 & Exact conditional on frozen features
@@ -670,7 +676,7 @@ RQR-DESN
 MT-RQR-DESN
 & Fixed only
 & Fixed-design specialization with a proper Gaussian ridge prior
-& Proposed; nonzero-tilt shrinkage propriety unresolved\\
+& Implemented for ridge readouts; nonzero-tilt shrinkage propriety unresolved\\
 RQR-DLM
 & Fixed or ordinary learned \(\kappa\)
 & Exact for fixed-joint modes; adaptive discount is working
@@ -678,7 +684,7 @@ RQR-DLM
 MT-RQR-DLM
 & Fixed only
 & Derived for fixed \(W_t\) and frozen templates
-& Proposed; random-scale extension unresolved\\
+& Implemented for fixed \(W_t\) and frozen templates; random-scale extension unresolved\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -830,9 +836,10 @@ At \(\vect\delta=\vect 0\) it is exactly the ordinary-RQR scan; the separate
 ordinary learned-\(\kappa\) scan is Algorithm~S1.
 \item \textbf{Implementation and validation status.} The conditional blocks
 are exact for the declared fixed-rate proper-Gaussian generalized target.
-Zero-tilt ridge and RHS-NS branches are implemented. Nonzero tilt is derived
-for proper Gaussian priors, including ridge, but is not yet implemented or
-empirically validated; the RHS-NS nonzero-tilt branch remains unresolved.
+Zero-tilt ridge and RHS-NS branches are implemented. Nonzero tilt is
+implemented for proper Gaussian ridge priors with a fixed learning rate; the
+RHS-NS nonzero-tilt branch, learned-rate tilt, and full empirical validation
+remain unresolved.
 \end{algorithmblock}
 
 At \(\vect\delta=\vect 0\), Algorithm~\ref{alg:fixed-design-gibbs} reduces
@@ -853,9 +860,9 @@ tuning decisions, and random seeds
 McDermottWikle2018DeepESNUQ}. Substituting
 \(\mat X=\mat X_{\mathrm{DESN}}\) in
 Algorithm~\ref{alg:fixed-design-gibbs} defines the RQR-DESN readout. No new loss
-or Gibbs sampler is introduced. A ridge readout supports the proposed
-fixed-rate nonzero-tilt Gaussian blocks; the implemented RHS-NS readout and
-all current evidence concern ordinary RQR only.
+or Gibbs sampler is introduced. A ridge readout supports the fixed-rate
+nonzero-tilt Gaussian blocks implemented through the static scan;
+the RHS-NS readout and all current matched evidence concern ordinary RQR only.
 
 Future root functionals use a frozen future design
 \(\mat X_{\mathrm{DESN,fut}}\) constructed under the same recorded reservoir
@@ -1013,8 +1020,9 @@ fixed-joint algorithm. At \(\delta_{1:T}=0\) it reduces exactly to the
 implemented ordinary fixed-\(\mat W_t\) or frozen-template RQR-DLM scan.
 \item \textbf{Implementation and validation status.} Sequential root-specific
 FFBS gives exact full-conditional draws for the declared modes. Nonzero tilt
-is derived but unimplemented; adaptive discount remains a working update, and
-the random shared-scale extension remains ordinary-only.
+is implemented for fixed \(W_t\) and frozen discount templates with a fixed
+learning rate; adaptive discount remains a working update, and the random
+shared-scale extension remains ordinary-only.
 \end{algorithmblock}
 
 At \(\delta_{1:T}=0\), Algorithm~\ref{alg:dynamic-gibbs} reduces exactly to
@@ -1091,11 +1099,13 @@ a different placement principle. Dynamic diagnostics use time-local and
 future ordered roots, widths, midpoints, losses, learning scales, and
 component scales rather than only time averages.
 
-Current computational evidence concerns ordinary RQR. Nonzero mean tilt
-requires zero-tilt equivalence checks, independent small-target references,
-and fixed-design validation at prespecified population tilts before any
-data-driven selection rule is evaluated. Variational inference likewise
-requires its own target, derivation, and uncertainty assessment. The frozen
+Current comparative computational evidence concerns ordinary RQR. Fixed-rate
+nonzero mean tilt has implementation-level algebra and zero-tilt equivalence
+checks for ridge static readouts and the declared fixed-joint dynamic modes,
+but still requires independent small-target references and validation at
+prespecified population tilts before any data-driven selection rule is
+evaluated. Variational inference likewise requires its own target, derivation,
+and uncertainty assessment. The frozen
 RQR-DESN readout is evaluated as a static-design specialization: its reservoir
 is recorded before the generalized posterior updates the root coefficients.
 Matched nonlinear-readout evidence remains deferred. Detailed software status,
@@ -1137,7 +1147,7 @@ Important limitations remain. The population results are unrestricted and
 pointwise, whereas fitted regression and state-space classes impose
 projections. Boundary tilts can yield semi-infinite limits or inactive roots,
 and tilts outside the admissible range have no finite unrestricted target.
-Nonzero-tilt algorithms, external tilt selection, variational approximations,
+Broader nonzero-tilt algorithms, external tilt selection, variational approximations,
 and matched nonlinear-readout evidence require separate validation. The
 ordinary-RQR study is therefore designed to evaluate interval-root loss,
 empirical coverage, width, and endpoint recovery without conflating any of
