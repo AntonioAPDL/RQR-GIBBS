@@ -156,8 +156,10 @@ The contributions are therefore: (i) a mean-preserving characterization and
 global identification result for the ordinary RQR interval functional;
 (ii) a fixed-content mean-tilted family that represents all admissible
 interior windows, with boundary members obtained through qualified limits;
-(iii) a master fixed-rate mean-tilted Gibbs construction whose zero-tilt member
-is the implemented ordinary-RQR sampler; and (iv) a predictor hierarchy from
+(iii) a first-order Cornish--Fisher approximation and finite-sample diagnostic
+for fixed tilt initialization; (iv) a master fixed-rate mean-tilted Gibbs
+construction whose zero-tilt member is the implemented ordinary-RQR sampler;
+and (v) a predictor hierarchy from
 regularized static regression, through a frozen-feature DESN specialization,
 to a root-blocked dynamic linear extension. The ordinary-RQR ridge, RHS-NS,
 frozen-DESN, and DLM branches are implemented.
@@ -482,24 +484,60 @@ For an interior tilt,
 \]
 Thus an interior width minimum along the tilt path satisfies the usual
 equal-endpoint-density condition.
-Figure~\ref{fig:mean-tilt-map} traces this one-to-one interior map and its
-width profile for the same population illustration.
+For initialization and external tilt screening, these identities suggest a
+simple first-order approximation. Let \(\gamma_1\) denote standardized
+skewness and set
+\[
+q_c=\Phi^{-1}\{(1+c)/2\},\qquad K_c=q_c\phi(q_c)/c.
+\]
+A Cornish--Fisher expansion around a standardized Normal law gives the
+shortest-oriented and equal-tailed standardized tilt anchors
+\[
+d_{\mathrm{SH}}^{\mathrm{CF}}=-\gamma_1K_c,\qquad
+d_{\mathrm{ET}}^{\mathrm{CF}}=\frac{1}{3}d_{\mathrm{SH}}^{\mathrm{CF}},
+\qquad d=\delta/\operatorname{SD}(Y).
+\]
+These formulas are not new interval targets; they are local skewness-based
+approximations to the population recovery tilts. Right skewness gives a
+negative shortest-oriented tilt, while left skewness gives a positive tilt.
+In finite samples we replace \(\gamma_1\) by the adjusted sample skewness and
+use the result only as a fixed candidate for initialization or validation
+screening. Figure~\ref{fig:mean-tilt-map} traces the one-to-one interior map,
+the width profile, and the corresponding Cornish--Fisher anchors for the same
+population illustration.
 
 \begin{figure}[h!]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/fig02_mean_tilt_recovery_map.png}
+\resizebox{\textwidth}{!}{\input{figures/generated/fig02_mean_tilt_recovery_map.tex}}
 \caption{\textbf{Population mean-tilt recovery map.}
 For the same continuous left-skewed population illustration and content
 \(c=0.80\), displayed after mean/standard-deviation standardization, the
 retained-window mean \(M_c(u)\) maps each interior lower-tail index \(u\) to a unique
 standardized tilt \(d=\delta/\operatorname{SD}(Y)\). The marked oracle tilts
 recover the shortest contiguous (SH), equal-tailed (ET), and ordinary-RQR
-intervals; ordinary RQR has \(d=0\). The width profile shows that SH, not
-ordinary RQR in general, minimizes geometric width. The quantities are
-deterministic population calculations describing representability and width
-profiling; they do not define a data-driven tilt estimator.}
+intervals; ordinary RQR has \(d=0\). Open markers show the first-order
+Cornish--Fisher anchors for ET and SH. In this skewed illustration the CF-ET
+anchor remains on the admissible tilt path, whereas the CF-SH anchor
+overshoots the finite-root path and is drawn as an out-of-range margin marker.
+The width profile shows that SH, not ordinary RQR in general, minimizes
+geometric width. The quantities are deterministic population calculations
+describing representability, width profiling, and local approximation error;
+they do not define a data-driven tilt estimator.}
 \label{fig:mean-tilt-map}
 \end{figure}
+
+\input{tables/mean_tilt_cf_mini_study.tex}
+
+Table~\ref{tab:mean-tilt-cf-mini-study} separates two checks. The oracle
+columns compare the population recovery tilts with the first-order
+Cornish--Fisher anchors across symmetric, moderately skewed, strongly skewed,
+bounded, and boundary-shortest examples. The RMSE columns then repeat the
+calculation from independent samples to show the additional noise incurred
+when skewness is estimated. The approximation is accurate for the Normal and
+near-Normal Gamma cases, preserves reflection signs for the Beta pair, and
+becomes visibly conservative or out of range for stronger skewness and
+support-boundary targets. This is the intended use: the CF values are cheap
+starting anchors, not automatic shortest-interval estimators.
 
 These are population and oracle statements. A universal tilt does not recover
 the same interval functional across distributions, and conditional recovery

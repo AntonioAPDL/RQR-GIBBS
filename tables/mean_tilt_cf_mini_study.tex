@@ -1,0 +1,19 @@
+\begin{table}[t!]
+\centering
+\caption{\textbf{Cornish--Fisher mean-tilt approximation check.} Each row uses a known population law with content $c=0.80$. The oracle columns report standardized recovery tilts $d=\delta/\operatorname{SD}(Y)$ for the shortest-contiguous (SH) and equal-tailed (ET) windows. The CF columns use the first-order skewness approximation $d_{\mathrm{SH}}^{\mathrm{CF}}=-\gamma_1 q_c\phi(q_c)/c$ and $d_{\mathrm{ET}}^{\mathrm{CF}}=d_{\mathrm{SH}}^{\mathrm{CF}}/3$. RMSE columns summarize the corresponding sample CF pilots over 500 independent samples of size 250 using seed 20260727. The table is an initialization diagnostic, not MCMC or response-prediction evidence.}
+\label{tab:mean-tilt-cf-mini-study}
+\TableStyle
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xrrrrrrrr@{}}
+\toprule
+DGP & $\gamma_1$ & $d_{\mathrm{SH}}$ & $d_{\mathrm{SH}}^{\mathrm{CF}}$ & $|e_{\mathrm{SH}}|$ & RMSE$_{\mathrm{SH}}$ & $d_{\mathrm{ET}}$ & $d_{\mathrm{ET}}^{\mathrm{CF}}$ & RMSE$_{\mathrm{ET}}$ \\
+\midrule
+Normal & 0.000 & 0.000 & 0.000 & 0.000 & 0.042 & 0.000 & 0.000 & 0.014 \\
+Gamma(16, 0.25) & 0.500 & -0.140 & -0.141 & 0.001 & 0.050 & -0.047 & -0.047 & 0.017 \\
+Gamma(4, 1) & 1.000 & -0.273 & -0.281 & 0.008 & 0.066 & -0.092 & -0.094 & 0.022 \\
+Lognormal(0, 0.5) & 1.750 & -0.323 & -0.492 & 0.169 & 0.203 & -0.128 & -0.164 & 0.056 \\
+Exponential & 2.000 & -0.402 & -0.562 & 0.160 & 0.175 & -0.169 & -0.187 & 0.040 \\
+Beta(2, 5) & 0.596 & -0.277 & -0.168 & 0.109 & 0.114 & -0.069 & -0.056 & 0.017 \\
+Beta(5, 2) & -0.596 & 0.277 & 0.168 & 0.109 & 0.117 & 0.069 & 0.056 & 0.018 \\
+\bottomrule
+\end{tabularx}
+\end{table}

@@ -145,6 +145,13 @@ assert_true(
   "ET, RQR, and SH use filled square, circle, and triangle symbols"
 )
 assert_true(
+  identical(
+    unname(CF_TARGET_LABEL[CF_TARGET_ORDER]),
+    c("CF-ET", "CF-SH")
+  ),
+  "Figure 2 CF approximation labels are stable"
+)
+assert_true(
   identical(TARGET_ORDER, c("equal_tailed", "ordinary_rqr", "shortest")),
   "target stacking order is ET, RQR, SH"
 )
@@ -189,14 +196,15 @@ al <- asymmetric_laplace_components(mu = 0, scale = 1, tau = al_tau)
 al_dist <- dists$asymmetric_laplace
 assert_close(al$p(0), al_tau, 1e-14, "AL location is the tau quantile")
 assert_close(
-  c(al$mean, al$variance, al$sd),
+  c(al$mean, al$variance, al$sd, al$skewness),
   c(
     -3.75,
     26.5625,
-    5.153882032022076
+    5.153882032022076,
+    -1.797616985563414
   ),
   5e-13,
-  "AL analytic moments"
+  "AL analytic moments and skewness"
 )
 assert_true(
   al$mean < al$q(0.5) && al$q(0.5) < al$mu,
@@ -248,7 +256,7 @@ extract_figure_block <- function(path, publication_file) {
 }
 public_figure_blocks <- c(
   extract_figure_block("main.tex", "fig01_three_balance_principles.png"),
-  extract_figure_block("main.tex", "fig02_mean_tilt_recovery_map.png"),
+  extract_figure_block("main.tex", "fig02_mean_tilt_recovery_map.tex"),
   extract_figure_block(
     "rqr-gibbs-supplement.tex",
     "figS01_cross_distribution_recovery.png"
@@ -544,6 +552,33 @@ assert_close(
   8e-8,
   "general AL width optimizer agrees with its crossing-mode identity"
 )
+cf_al <- cornish_fisher_tilt_summary(al_dist, al_summary, content)
+cf_al <- cf_al[match(CF_TARGET_ORDER, cf_al$approximation), ]
+assert_close(
+  cornish_fisher_constant(content),
+  0.281137702548180,
+  2e-15,
+  "content-0.80 Cornish-Fisher constant"
+)
+assert_close(
+  cf_al$standardized_delta,
+  c(0.168459303127627, 0.505377909382883),
+  2e-12,
+  "AL Cornish-Fisher standardized tilts"
+)
+assert_true(
+  identical(cf_al$within_admissible, c(TRUE, FALSE)),
+  "Figure 2 records admissible CF-ET and out-of-range CF-SH anchors"
+)
+assert_true(
+  cf_al$standardized_delta_error[
+    cf_al$approximation == "cornish_fisher_equal_tailed"
+  ] > 0 &&
+    cf_al$standardized_delta_error[
+      cf_al$approximation == "cornish_fisher_shortest"
+    ] > 0.20,
+  "left-skew illustration exposes CF approximation error without hiding it"
+)
 
 # 8. Positive-affine equivariance for the target and complete fixed-tilt loss.
 base <- dists$asymmetric_laplace
@@ -668,8 +703,7 @@ run2 <- main(sprintf("--output-dir=%s", out2))
 expected_outputs <- c(
   "fig01_three_balance_principles.pdf",
   "fig01_three_balance_principles.png",
-  "fig02_mean_tilt_recovery_map.pdf",
-  "fig02_mean_tilt_recovery_map.png",
+  "fig02_mean_tilt_recovery_map.tex",
   "figS01_cross_distribution_recovery.pdf",
   "figS01_cross_distribution_recovery.png",
   "figS02_loss_geometry.pdf",
@@ -685,7 +719,7 @@ assert_true(file.exists(run1$manifest), "first manifest exists")
 assert_true(file.exists(run2$manifest), "second manifest exists")
 
 stable_files <- list.files(
-  out1, pattern = "\\.(csv|png)$", full.names = FALSE
+  out1, pattern = "\\.(csv|png|tex)$", full.names = FALSE
 )
 stable_files <- setdiff(stable_files, "rqr_theory_figure_manifest.csv")
 for (name in stable_files) {

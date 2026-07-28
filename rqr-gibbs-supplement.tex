@@ -608,6 +608,63 @@ identifies any interior shortest-contiguous member. Boundary members use the
 canonical one-sided closure described above, and the statement does not extend
 the target to disconnected highest-density regions.
 
+\subsection{First-order Cornish--Fisher tilt anchors}
+\label{sec:supp-cf-tilt}
+
+The recovery identities also give a low-cost initialization diagnostic. Let
+\(Z=(Y-\mu)/\sigma\) have small standardized skewness \(\gamma_1\), and let
+\(z_p=\Phi^{-1}(p)\). The first-order Cornish--Fisher expansion
+\[
+Q_Z(p)
+=
+z_p+\frac{\gamma_1}{6}(z_p^2-1)+O(\gamma_1^2)
+\]
+approximates the quantile function of \(Z\) around the standard Normal law.
+For content \(c\), define
+\[
+q_c=\Phi^{-1}\{(1+c)/2\},\qquad
+K_c=q_c\phi(q_c)/c.
+\]
+Integrating the expansion over the equal-tailed probability window gives
+\[
+d_{\mathrm{ET}}^{\mathrm{CF}}
+=
+-\frac{\gamma_1}{3}K_c+O(\gamma_1^2),
+\qquad d=\delta/\sigma.
+\]
+Applying the same expansion to the shortest-window first-order condition
+\(W_c'(u)=0\) and then evaluating the retained-window mean gives
+\[
+d_{\mathrm{SH}}^{\mathrm{CF}}
+=
+-\gamma_1K_c+O(\gamma_1^2).
+\]
+Thus the shortest-oriented first-order tilt is three times the equal-tailed
+one on the standardized scale. The sign convention is useful for checking
+implementations: right skewness gives negative recovery tilts, while left
+skewness gives positive recovery tilts.
+
+In finite samples the implementation uses the adjusted Fisher--Pearson
+skewness \(\widehat\gamma_1\) and the training standard deviation
+\(\widehat\sigma\):
+\[
+\widehat d_{\mathrm{SH}}^{\mathrm{CF}}
+=
+-\widehat\gamma_1K_c,\qquad
+\widehat d_{\mathrm{ET}}^{\mathrm{CF}}
+=
+\widehat d_{\mathrm{SH}}^{\mathrm{CF}}/3,\qquad
+\widehat\delta=\widehat\sigma\,\widehat d.
+\]
+These are fixed candidate tilts for initialization or external validation
+screening. They are not posterior draws, do not sample a tilt in the Gibbs
+chain, and do not justify reusing the ordinary learned-scale update at
+nonzero tilt. Strong skewness, finite-support boundary solutions, and
+heavy-tailed cases can move the first-order shortest approximation outside
+the admissible finite-root tilt range. The empirical shortest-window pilot in
+the software is therefore recorded as a diagnostic cross-check rather than as
+a replacement for held-out validation.
+
 The tilt indexes the estimand and is initially treated like a fixed quantile
 level. A scalar tilt generally defines only a restricted global target in a
 regression model; pointwise equal-tailed or shortest recovery generally
