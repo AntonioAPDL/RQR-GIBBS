@@ -1,11 +1,11 @@
-I% !TeX program = pdflatex
+% !TeX program = pdflatex
 \documentclass[11pt]{article}
 
 \usepackage[margin=1in]{geometry}
 \usepackage{lmodern}
 \usepackage{microtype}
 \usepackage{setspace}
-\onehalfspacing
+\setstretch{1.08}
 
 \usepackage{amsmath,amssymb,mathtools,bm}
 \usepackage{amsthm}
@@ -25,7 +25,7 @@ I% !TeX program = pdflatex
   linkcolor=black,
   citecolor=black,
   urlcolor=black,
-  pdftitle={Mean-Preserving Interval Functionals and Generalized-Bayes Computation for Relaxed Quantile Regression},
+  pdftitle={Mean-Tilted Relaxed Quantile Regression: Fixed-Content Interval Functionals and Generalized-Bayes Computation},
   pdfauthor={Antonio De Leon, Raquel Prado, and Bruno Sanso}
 }
 
@@ -53,10 +53,10 @@ I% !TeX program = pdflatex
   \end{enumerate}\par\medskip
 }
 
-\title{\vspace{-0.6cm}Mean-Preserving Interval Functionals and Generalized-Bayes Computation for Relaxed Quantile Regression}
+\title{\vspace{-0.6cm}Mean-Tilted Relaxed Quantile Regression: Fixed-Content Interval Functionals and Generalized-Bayes Computation}
 \author{Antonio De Leon$^{1}$ \and Raquel Prado$^{1}$ \and Bruno Sans\'o$^{1}$}
 \date{\small $^{1}$ Department of Statistics, University of California, Santa Cruz\\
-\vspace{0.25em}\today}
+\vspace{0.25em}July 2026}
 
 \begin{document}
 \maketitle
@@ -71,23 +71,23 @@ preassigning endpoint quantiles. Under explicit conditions, the unrestricted
 population minimizer is the unique contiguous content-\(c\) interval whose
 retained mean equals the population mean. A fixed mean tilt preserves content
 while shifting that retained mean to \(\mu+\delta\). Interior admissible tilts
-index all finite-root interior content-\(c\) windows; qualified one-sided
-limits supply the boundary members. Equal-tailed and shortest-contiguous
-intervals therefore have distribution-specific recovery tilts. We construct
-loss-based generalized posteriors using a pseudo-asymmetric-Laplace
-normal--exponential augmentation. One fixed-rate mean-tilted sampler covers
-static regression under proper Gaussian priors, with ordinary RQR obtained
-exactly at zero tilt. An ordinary-only conditional-Gaussian
-regularized-horseshoe adapter using the Nishimura--Suchard augmentation
-(RHS-NS) supplies regularized regression, and a frozen deep echo-state-network
-feature matrix is a deterministic nonlinear-design specialization of the same
-static scan. A dynamic linear extension then replaces coefficient blocks by
-alternating root-specific forward-filtering backward-sampling steps: the
-stacked state prior is Gaussian, but the joint augmented observation kernel is
-quartic. Current software and empirical evidence concern ordinary RQR; the
-nonzero-tilt algorithms are derived but not yet implemented or validated. All
-updates concern interval-root functionals under a loss and prior, not a
-response likelihood or posterior-predictive responses.
+index all finite-root interior content-\(c\) windows, with boundary members
+obtained as qualified one-sided limits. Equal-tailed and
+shortest-contiguous intervals therefore have distribution-specific recovery
+tilts. We construct loss-based generalized posteriors using a
+pseudo-asymmetric-Laplace normal--exponential augmentation. A fixed-rate
+mean-tilted sampler covers static regression under proper Gaussian priors,
+with ordinary RQR obtained exactly at zero tilt. The implemented ordinary
+branch also supports a conditional-Gaussian regularized-horseshoe adapter
+using the Nishimura--Suchard augmentation (RHS-NS), and a frozen deep
+echo-state-network feature matrix is a deterministic nonlinear-design
+specialization of the same static scan. A dynamic linear extension replaces
+coefficient blocks by alternating root-specific forward-filtering
+backward-sampling steps: the stacked state prior is Gaussian, but the joint
+augmented observation kernel is quartic. Current software and empirical
+evidence concern ordinary RQR; nonzero-tilt algorithms are derived but not yet
+implemented or validated. All updates concern interval-root functionals under
+a loss and prior, not a response likelihood or posterior-predictive responses.
 \end{abstract}
 
 \section{Introduction}
@@ -107,11 +107,13 @@ Relaxed quantile regression (RQR) instead estimates two interval roots directly
 \citep{PouplinEtAl2024RQR}. It applies a check loss to
 \((y-\eta_1)(y-\eta_2)\), whose sign records whether \(y\) lies between the
 roots. The original article develops this loss as an optimization criterion.
-Here we first identify its population interval functional and then develop a
-loss-based generalized posterior and dynamic computation for it. Related
+Here we first identify its population interval functional, then use that
+characterization to build a mean-tilted family and generalized-Bayes
+computation for static, frozen-feature, and dynamic root models. Related
 coverage-constrained empirical optimization directly trades width against an
-empirical coverage constraint \citep{ChenEtAl2021PredictionIntervals}; that target
-and training criterion are distinct from the expected RQR loss studied here.
+empirical coverage constraint \citep{ChenEtAl2021PredictionIntervals}; that
+target and training criterion are distinct from the expected RQR loss studied
+here.
 
 The population score equations reveal more than the known content condition.
 For an unrestricted continuous problem, the selected interval also preserves
@@ -153,19 +155,19 @@ backward-sampling (FFBS) applies
 \citep{GoncalvesMigonBastos2020DQLM}. Alternating those two path draws gives
 exact root-blocked Gibbs updates for the declared fixed-joint RQR models.
 
-The contributions are therefore: (i) a mean-preserving characterization and
-global identification result for the ordinary RQR interval functional;
-(ii) a fixed-content mean-tilted family that represents all admissible
-interior windows, with boundary members obtained through qualified limits;
-(iii) a first-order Cornish--Fisher approximation and finite-sample diagnostic
-for fixed tilt initialization; (iv) a master fixed-rate mean-tilted Gibbs
-construction whose zero-tilt member is the implemented ordinary-RQR sampler;
-and (v) a predictor hierarchy from
-regularized static regression, through a frozen-feature DESN specialization,
-to a root-blocked dynamic linear extension. The ordinary-RQR ridge, RHS-NS,
-frozen-DESN, and DLM branches are implemented.
-Nonzero-tilt samplers, data-driven tilt selection, and variational
-approximations remain proposed methodological developments.
+The contributions are fivefold. First, we characterize the ordinary RQR
+population functional as the mean-preserving fixed-content interval and give a
+profiled global identification result. Second, we introduce mean-tilted RQR
+as a fixed-content family whose admissible tilts index the interior window
+class, with boundary members obtained through qualified limits. Third, we
+give a first-order Cornish--Fisher approximation and finite-sample diagnostic
+for fixed-tilt initialization. Fourth, we derive a fixed-rate mean-tilted
+Gibbs construction whose zero-tilt member is the implemented ordinary-RQR
+sampler. Fifth, we organize the predictor hierarchy as regularized static
+regression, a frozen-feature DESN specialization, and a root-blocked dynamic
+linear extension. The ordinary-RQR ridge, RHS-NS, frozen-DESN, and DLM
+branches are implemented. Nonzero-tilt samplers, data-driven tilt selection,
+and variational approximations remain proposed methodological developments.
 
 The interpretation is deliberately narrow. The posterior-like update concerns
 interval-root functionals under a loss and prior. It is not an ordinary

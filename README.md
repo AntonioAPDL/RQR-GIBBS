@@ -19,6 +19,26 @@ the same conditional-Gaussian root calculation; a frozen DESN feature design
 reuses that static scan, whereas the DLM replaces coefficient draws with
 root-specific FFBS path draws.
 
+## Preprint source
+
+The manuscript is currently framed as a theory, algorithm, and implementation
+preprint. It does not report in-progress confirmatory simulation evidence.
+For arXiv preparation, use:
+
+```bash
+make test-theory-figures
+make test-theory-tables
+make pdf
+make supplement
+make arxiv-source
+```
+
+`make arxiv-source` creates a compact main-article source zip under ignored
+`application/cache/` and includes the generated `main.bbl`, required TeX
+inputs, and main-text PNG figures. See
+`docs/implementation_notes/arxiv_preprint_submission_checklist_20260727.md`
+for category, license, and upload guidance.
+
 ## Current status
 
 The repository contains a manuscript, derivation supplement, and development R
