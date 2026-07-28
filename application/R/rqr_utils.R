@@ -56,6 +56,133 @@ rqr_residual_product <- function(y, eta1, eta2) {
   (y - eta1) * (y - eta2)
 }
 
+.rqr_normalize_mean_tilt <- function(mean_tilt = 0, n,
+                                     observed = rep(TRUE, n),
+                                     name = "mean_tilt") {
+  n <- .rqr_scalar_integer(n, "n", 1L)
+  if (!is.logical(observed) || length(observed) != n || anyNA(observed)) {
+    stop("observed must be a complete logical vector of length n.", call. = FALSE)
+  }
+  x <- as.numeric(mean_tilt)
+  if (!length(x)) {
+    stop(sprintf("%s must be a finite scalar or length-%d numeric vector.", name, n), call. = FALSE)
+  }
+  supplied_length <- length(x)
+  if (supplied_length == 1L) {
+    full <- rep(x, n)
+    supplied_form <- "scalar"
+  } else if (supplied_length == n) {
+    full <- x
+    supplied_form <- "vector"
+  } else {
+    stop(sprintf("%s must be a finite scalar or length-%d numeric vector.", name, n), call. = FALSE)
+  }
+  if (any(is.nan(full)) || any(is.infinite(full))) {
+    stop(sprintf("%s may contain finite values or NA at unobserved sites only.", name), call. = FALSE)
+  }
+  if (any(!is.finite(full[observed]))) {
+    stop(sprintf("%s must be finite at observed sites.", name), call. = FALSE)
+  }
+  full_target <- full
+  full_target[!observed] <- 0
+  full_target[is.na(full_target)] <- 0
+  observed_values <- full_target[observed]
+  nonzero <- any(abs(observed_values) > 0)
+  contract <- list(
+    schema_version = "rqrgibbs_mean_tilt_target/1.0.0",
+    mode = if (nonzero) "fixed_response_scale" else "zero",
+    length = n,
+    observed_count = sum(observed),
+    full = full_target,
+    observed = observed_values,
+    observed_mask = observed
+  )
+  list(
+    schema_version = contract$schema_version,
+    mode = contract$mode,
+    supplied_form = supplied_form,
+    full = full_target,
+    observed = observed_values,
+    observed_mask = observed,
+    observed_count = sum(observed),
+    nonzero = nonzero,
+    digest = .rqr_digest(contract),
+    contract = contract,
+    summary = list(
+      mode = contract$mode,
+      supplied_form = supplied_form,
+      length = n,
+      observed_count = sum(observed),
+      min = if (length(observed_values)) min(observed_values) else NA_real_,
+      max = if (length(observed_values)) max(observed_values) else NA_real_,
+      mean = if (length(observed_values)) mean(observed_values) else NA_real_,
+      nonzero_count = sum(abs(observed_values) > 0),
+      digest = .rqr_digest(contract)
+    )
+  )
+}
+
+.rqr_mean_tilt_input_nonzero <- function(mean_tilt) {
+  x <- as.numeric(mean_tilt)
+  if (!length(x)) return(FALSE)
+  if (any(is.nan(x)) || any(is.infinite(x))) {
+    stop("mean_tilt may contain finite values or NA at unobserved sites only.", call. = FALSE)
+  }
+  any(abs(x[is.finite(x)]) > 0)
+}
+
+#' Mean-tilted RQR loss
+#'
+#' This evaluates the fixed-response-scale mean-tilted RQR target loss.  The
+#' result is a loss contribution for interval-root functionals under a
+#' generalized-Bayes update, not a response likelihood.
+#'
+#' @param y Response vector. `NA` values are treated as missing sites with zero
+#'   loss contribution.
+#' @param eta1,eta2 Numeric root ordinates.
+#' @param coverage_level Interval coverage level in `(0, 1)`.
+#' @param mean_tilt Fixed response-scale tilt. A scalar is recycled; a vector
+#'   must have length `length(y)`.
+#' @param details If `TRUE`, return product, linear, and total components.
+#' @return A numeric loss vector, or a list when `details = TRUE`.
+#' @export
+rqr_mean_tilt_loss <- function(y, eta1, eta2, coverage_level,
+                               mean_tilt = 0, details = FALSE) {
+  y <- as.numeric(y)
+  eta1 <- as.numeric(eta1)
+  eta2 <- as.numeric(eta2)
+  n <- length(y)
+  if (!n || length(eta1) != n || length(eta2) != n) {
+    stop("y, eta1, and eta2 must be nonempty and have the same length.", call. = FALSE)
+  }
+  if (any(is.nan(y)) || any(is.infinite(y))) {
+    stop("y may contain finite values or NA only.", call. = FALSE)
+  }
+  observed <- !is.na(y)
+  if (any(!is.finite(eta1[observed])) || any(!is.finite(eta2[observed]))) {
+    stop("eta1 and eta2 must be finite at observed sites.", call. = FALSE)
+  }
+  constants <- rqr_constants(coverage_level)
+  tilt <- .rqr_normalize_mean_tilt(mean_tilt, n = n, observed = observed)
+  product_loss <- rep(0, n)
+  linear_tilt <- rep(0, n)
+  if (any(observed)) {
+    e <- rqr_residual_product(y[observed], eta1[observed], eta2[observed])
+    product_loss[observed] <- rqr_check_loss(e, constants$alpha)
+    linear_tilt[observed] <- constants$alpha * tilt$observed *
+      (eta1[observed] + eta2[observed] - 2 * y[observed])
+  }
+  total <- product_loss - linear_tilt
+  if (!isTRUE(details)) return(total)
+  list(
+    total = total,
+    product_loss = product_loss,
+    linear_tilt = linear_tilt,
+    observed = observed,
+    mean_tilt = tilt
+  )
+}
+
 #' RQR pseudo residual from the transformed AL representation
 #'
 #' @param y Response vector.
@@ -188,8 +315,22 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   )
 }
 
-.rqr_target_formula <- function(learning_rate_mode) {
+.rqr_target_formula <- function(learning_rate_mode, mean_tilt_mode = "zero") {
   mode <- .rqr_learning_rate_mode(learning_rate_mode)
+  tilt_mode <- as.character(mean_tilt_mode %||% "zero")[1L]
+  if (!identical(tilt_mode, "zero")) {
+    if (!identical(mode, "fixed_rate")) {
+      return(
+        "nonzero fixed mean_tilt is implemented only for fixed-rate targets"
+      )
+    }
+    return(
+      paste0(
+        "pi(theta|y,delta) proportional to pi(theta) ",
+        "exp{-omega_R L_delta(theta)}"
+      )
+    )
+  }
   switch(mode,
     fixed_rate = "pi(theta|y) proportional to pi(theta) exp{-omega_R L(theta)}",
     learned_pseudoresidual_normalized = paste0(
@@ -264,7 +405,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
-.rqr_schema_version <- function() "rqrgibbs_fit/1.11.0"
+.rqr_schema_version <- function() "rqrgibbs_fit/1.12.0"
 
 .rqr_continuation_history_schema <- function() {
   "rqrgibbs_continuation_history/4.1.0"
@@ -2783,13 +2924,23 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
 }
 
 .rqr_beta_update <- function(y, X, beta_other, V, constants, prior_prec,
-                             precision_beta_cfg = list(), context = list()) {
+                             precision_beta_cfg = list(), context = list(),
+                             mean_tilt_observed = NULL) {
   eta_other <- drop(X %*% beta_other)
   A <- X * as.numeric(y - eta_other)
   z <- y^2 - y * eta_other - constants$xi * V
   W <- 1 / (constants$phi * constants$sigma * V)
   Prec <- crossprod(A * sqrt(W)) + diag(as.numeric(prior_prec), ncol(X))
   rhs <- crossprod(A, W * z)
+  if (!is.null(mean_tilt_observed)) {
+    delta <- as.numeric(mean_tilt_observed)
+    if (length(delta) != nrow(X) || any(!is.finite(delta))) {
+      stop("mean_tilt_observed must be finite and match the fixed-design row count.", call. = FALSE)
+    }
+    if (any(abs(delta) > 0)) {
+      rhs <- rhs + constants$omega * constants$alpha * crossprod(X, delta)
+    }
+  }
   .exal_mcmc_sample_mvnorm_prec(
     rhs = as.numeric(rhs),
     Prec = Prec,

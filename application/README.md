@@ -31,8 +31,13 @@ Install and run the native gates from the repository root:
 The pseudo-AL representation augments a loss and is not a response likelihood.
 The mean-tilt initializer functions build deterministic fixed-tilt anchors
 from Cornish--Fisher skewness approximations and empirical order-statistic
-windows. They do not sample the tilt, do not alter the Gibbs kernels, and do
-not authorize learned-scale updates or RQR-DLM/RQR-DESN runs at nonzero tilt.
+windows. Nonzero fixed-response-scale tilt is implemented only for fixed-rate
+MCMC targets where the tilt enters as a Gaussian canonical-vector shift:
+fixed-design ridge regression, DESN readouts delegated to that ridge kernel,
+and RQR-DLM fits with fixed-W or pre-frozen discount-template evolution.
+Learned inverse-loss scales, RHS-NS priors, component-scale/adaptive dynamic
+evolution, VB/CAVI, and automatic tilt selection remain explicitly gated until
+their separate target and propriety contracts are derived and tested.
 The fixed-W, discount-template, and component-scale modes are exact for their
 declared Gaussian evolution priors. Adaptive conditional discounting is
 mathematically incompatible in general with the advertised pair of simple

@@ -20,6 +20,7 @@ rqr_dlm_fit(
   evolution_scale_prior = list(shape = 2, rate = 1),
   evolution_scale_initial = 1,
   learning_rate = 1,
+  mean_tilt = 0,
   lambda_initial = 1,
   loss_reference_scale = 1,
   learning_rate_mode = c("fixed_rate", "learned_pseudoresidual_normalized",
@@ -59,6 +60,10 @@ evolution multipliers.}
 \item{evolution_scale_initial}{Initial positive component multipliers.}
 
 \item{learning_rate}{Fixed generalized-Bayes learning rate `omega_R`.}
+
+\item{mean_tilt}{Fixed response-scale mean tilt. Nonzero tilt is currently
+implemented for fixed-rate `"fixed_W"` and frozen `"discount_template"`
+modes only.}
 
 \item{lambda_initial}{Initial inverse loss scale for learned modes.}
 

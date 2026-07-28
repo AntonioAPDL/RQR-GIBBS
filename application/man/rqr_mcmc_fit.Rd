@@ -9,6 +9,7 @@ rqr_mcmc_fit(
   X,
   coverage_level,
   learning_rate = 1,
+  mean_tilt = 0,
   lambda_initial = 1,
   loss_reference_scale = 1,
   learning_rate_mode = c("fixed_rate", "learned_pseudoresidual_normalized",
@@ -30,6 +31,10 @@ rqr_mcmc_fit(
 \item{coverage_level}{Interval coverage level in `(0, 1)`.}
 
 \item{learning_rate}{Positive fixed generalized-Bayes rate `omega_R`.}
+
+\item{mean_tilt}{Fixed response-scale mean tilt. A scalar is recycled across
+rows; a vector must have length `nrow(X)`. Nonzero tilt is currently
+implemented for fixed-rate ridge MCMC only.}
 
 \item{lambda_initial}{Positive initial inverse loss scale for learned modes.}
 

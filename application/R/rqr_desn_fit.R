@@ -12,6 +12,8 @@
 #' @param ... Arguments forwarded to `qdesn_fit_vb()` for design construction.
 #' @param inference One of `"mcmc"` or `"vb"`.
 #' @param learning_rate Positive generalized-Bayes learning rate.
+#' @param mean_tilt Fixed response-scale mean tilt for the RQR readout.
+#'   Nonzero tilt is currently implemented for MCMC ridge readouts only.
 #' @param lambda_initial Positive initial inverse scale for learned MCMC modes.
 #' @param loss_reference_scale Positive reference scale `s_L`. It does not
 #'   alter fixed `learning_rate`; learned modes use `lambda/s_L`. Passed to
@@ -33,6 +35,7 @@
 rqr_desn_fit <- function(y, coverage_level, ...,
                          inference = c("mcmc", "vb"),
                          learning_rate = 1,
+                         mean_tilt = 0,
                          lambda_initial = 1,
                          loss_reference_scale = 1,
                          learning_rate_mode = c(
@@ -44,6 +47,7 @@ rqr_desn_fit <- function(y, coverage_level, ...,
                          mcmc_args = list(),
                          vb_args = list(),
                          fit_readout = TRUE) {
+  mean_tilt_supplied <- !missing(mean_tilt)
   inference <- match.arg(inference)
   learning_rate_mode <- .rqr_learning_rate_mode(learning_rate_mode)
   lambda_prior <- .rqr_lambda_prior(lambda_prior, learning_rate_mode)
@@ -76,6 +80,31 @@ rqr_desn_fit <- function(y, coverage_level, ...,
   }
   if (!is.list(mcmc_args)) stop("mcmc_args must be a list.", call. = FALSE)
   if (!is.list(vb_args)) stop("vb_args must be a list.", call. = FALSE)
+  if (mean_tilt_supplied && "mean_tilt" %in% names(mcmc_args)) {
+    stop(
+      "Supply mean_tilt only at the rqr_desn_fit() top level, not also in mcmc_args.",
+      call. = FALSE
+    )
+  }
+  mean_tilt_for_readout <- if (!mean_tilt_supplied &&
+      "mean_tilt" %in% names(mcmc_args)) {
+    mcmc_args$mean_tilt
+  } else {
+    mean_tilt
+  }
+  mean_tilt_nonzero_input <- .rqr_mean_tilt_input_nonzero(mean_tilt_for_readout)
+  if (mean_tilt_nonzero_input && !identical(learning_rate_mode, "fixed_rate")) {
+    stop(
+      "Nonzero mean_tilt is currently implemented only for fixed-rate RQR-DESN readouts.",
+      call. = FALSE
+    )
+  }
+  if (mean_tilt_nonzero_input && identical(inference, "vb")) {
+    stop(
+      "Nonzero mean_tilt is not implemented for RQR-DESN VB readouts; use fixed-rate MCMC ridge readouts.",
+      call. = FALSE
+    )
+  }
 
   design_fit <- do.call(
     qdesn_fit_vb,
@@ -85,9 +114,16 @@ rqr_desn_fit <- function(y, coverage_level, ...,
     )
   )
   if (!isTRUE(fit_readout)) {
+    tilt_shell <- .rqr_normalize_mean_tilt(
+      mean_tilt_for_readout, n = nrow(design_fit$X),
+      observed = rep(TRUE, nrow(design_fit$X))
+    )
     design_fit$meta$rqr_design_only <- TRUE
     design_fit$meta$rqr_coverage_level <- rqr_constants(coverage_level, learning_rate)$alpha
     design_fit$meta$rqr_loss_reference_scale <- loss_reference_scale
+    design_fit$meta$rqr_mean_tilt_mode <- tilt_shell$mode
+    design_fit$meta$rqr_mean_tilt_digest <- tilt_shell$digest
+    design_fit$meta$rqr_mean_tilt_summary <- tilt_shell$summary
     return(design_fit)
   }
   if (all(abs(design_fit$X) <= sqrt(.Machine$double.eps))) {
@@ -128,6 +164,7 @@ rqr_desn_fit <- function(y, coverage_level, ...,
       learning_rate_mode = mcmc_args$learning_rate_mode %||% learning_rate_mode,
       lambda_prior = mcmc_args$lambda_prior %||% lambda_prior,
       beta_prior_obj = beta_prior_obj,
+      mean_tilt = mean_tilt_for_readout,
       numerical_policy = mcmc_args$numerical_policy %||% numerical_policy,
       provenance_control = desn_provenance_control,
       mcmc_control = mcmc_args$mcmc_control %||% mcmc_args,
@@ -139,6 +176,7 @@ rqr_desn_fit <- function(y, coverage_level, ...,
       X = design_fit$X,
       coverage_level = coverage_level,
       learning_rate = learning_rate,
+      mean_tilt = mean_tilt_for_readout,
       vb_control = vb_args$vb_control %||% vb_args,
       init = vb_args$init %||% list()
     )
@@ -162,6 +200,9 @@ rqr_desn_fit <- function(y, coverage_level, ...,
         rqr_effective_learning_rate = fit$model_spec$effective_learning_rate,
         rqr_loss_reference_scale = fit$model_spec$loss_reference_scale,
         rqr_learning_rate_mode = fit$model_spec$learning_rate_mode %||% learning_rate_mode,
+        rqr_mean_tilt_mode = fit$model_spec$mean_tilt_mode %||% "zero",
+        rqr_mean_tilt_digest = fit$model_spec$mean_tilt_digest %||% NA_character_,
+        rqr_mean_tilt_summary = fit$model_spec$mean_tilt_summary %||% list(),
         inherited_design_p0 = design_fit$meta$p0 %||% NA_real_,
         response_likelihood = FALSE,
         generalized_bayes = TRUE

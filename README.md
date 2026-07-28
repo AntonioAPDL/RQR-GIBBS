@@ -42,9 +42,13 @@ The implemented ordinary-RQR paths currently include:
    component-scale evolution modes.
 
 Mean-tilt and Cornish--Fisher calculations in the manuscript are population
-geometry and initialization diagnostics. They do not yet enable validated
-nonzero-tilt Gibbs sampling. Variational approximations and nonzero-tilt DESN
-or DLM samplers are planned extensions.
+geometry and initialization diagnostics. The package now exposes a bounded
+fixed-tilt MCMC path for fixed-rate ridge readouts: fixed-design regression,
+frozen-feature DESN readouts through the same fixed-design kernel, and RQR-DLM
+models with fixed or pre-frozen discount-template evolution. Nonzero tilt is
+not yet implemented for learned inverse-loss scales, RHS-NS priors,
+component-scale/adaptive dynamic evolution, VB/CAVI, or data-driven tilt
+selection.
 
 ## External reference implementation
 
@@ -71,6 +75,7 @@ make pdf
 make supplement
 make package-install
 make test-native
+make test-native-mean-tilt
 make test-standalone-contracts
 make prepare-exdqlm-runtime
 make test-exdqlm-rqr

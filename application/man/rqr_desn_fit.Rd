@@ -10,6 +10,7 @@ rqr_desn_fit(
   ...,
   inference = c("mcmc", "vb"),
   learning_rate = 1,
+  mean_tilt = 0,
   lambda_initial = 1,
   loss_reference_scale = 1,
   learning_rate_mode = c("fixed_rate", "learned_pseudoresidual_normalized",
@@ -32,6 +33,9 @@ rqr_desn_fit(
 \item{inference}{One of `"mcmc"` or `"vb"`.}
 
 \item{learning_rate}{Positive generalized-Bayes learning rate.}
+
+\item{mean_tilt}{Fixed response-scale mean tilt for the RQR readout.
+Nonzero tilt is currently implemented for MCMC ridge readouts only.}
 
 \item{lambda_initial}{Positive initial inverse scale for learned MCMC modes.}
 

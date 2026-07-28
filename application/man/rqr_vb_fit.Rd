@@ -9,6 +9,7 @@ rqr_vb_fit(
   X,
   coverage_level,
   learning_rate = 1,
+  mean_tilt = 0,
   beta_prior_obj = NULL,
   vb_control = list(),
   init = list(),
@@ -23,6 +24,9 @@ rqr_vb_fit(
 \item{coverage_level}{Interval coverage level in `(0, 1)`.}
 
 \item{learning_rate}{Positive generalized-Bayes learning rate.}
+
+\item{mean_tilt}{Fixed response-scale mean tilt. Nonzero tilt is not yet
+implemented for VB; use MCMC for fixed nonzero tilt.}
 
 \item{beta_prior_obj}{Beta prior object. The initial VB backend supports
 ridge priors.}
