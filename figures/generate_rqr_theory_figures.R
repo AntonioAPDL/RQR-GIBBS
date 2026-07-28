@@ -1068,6 +1068,18 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       mfrow = c(1, 3), mar = c(4.2, 3.8, 2.7, 0.7),
       oma = c(0, 0, 1.15, 0), mgp = c(2.3, 0.65, 0), tcl = -0.3
     )
+    ymax <- max(density$density)
+    graphics::plot(
+      density$z, density$density, type = "l", lwd = 2,
+      col = COL["density"], xlab = "Standardized response, z",
+      ylab = "Density", main = "Selected intervals",
+      xlim = geometry$zlim, ylim = c(-0.34 * ymax, 1.06 * ymax)
+    )
+    graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+    plot_interval_bars(
+      dist, summary, geometry, -0.055 * ymax, 0.075 * ymax,
+      labels = TRUE
+    )
     delta_min <- min(summary$standardized_delta) - 0.06
     delta_max <- max(0.20, max(summary$standardized_delta) + 0.05)
     visible <- is.finite(path$standardized_width) &
@@ -1117,18 +1129,6 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
         col = COL[target]
       )
     }
-    ymax <- max(density$density)
-    graphics::plot(
-      density$z, density$density, type = "l", lwd = 2,
-      col = COL["density"], xlab = "Standardized response, z",
-      ylab = "Density", main = "Selected intervals",
-      xlim = geometry$zlim, ylim = c(-0.34 * ymax, 1.06 * ymax)
-    )
-    graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
-    plot_interval_bars(
-      dist, summary, geometry, -0.055 * ymax, 0.075 * ymax,
-      labels = TRUE
-    )
     graphics::mtext(
       dist$subtitle, side = 3, outer = TRUE, line = -0.20, cex = 0.72
     )
