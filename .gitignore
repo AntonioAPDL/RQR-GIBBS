@@ -57,6 +57,7 @@ local_trackers/
 scratch_work/
 docs/implementation_notes/*project_prompt.md
 docs/implementation_notes/*output*_followup_prompt.md
+docs/implementation_notes/fixed_delta_mt_rqr_gibbs_extension_plan_*.md
 /*review_output*
 /*output*_audit_*.md
 /*output*_handoff_*.md
