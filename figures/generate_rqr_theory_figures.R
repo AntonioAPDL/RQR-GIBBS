@@ -1219,9 +1219,9 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
       )
       graphics::text(
         row$u, row$standardized_delta,
-        labels = figure_02_map_label(target, row$standardized_delta),
+        labels = TARGET_LABEL[target],
         pos = FIGURE_02_MAP_LABEL_POSITION[target],
-        offset = FIGURE_02_LABEL_OFFSET, cex = 0.72,
+        offset = FIGURE_02_LABEL_OFFSET, cex = 0.56,
         col = COL[target]
       )
     }
@@ -1241,7 +1241,7 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
         row$u, row$standardized_delta,
         labels = CF_TARGET_LABEL[approximation],
         pos = if (identical(approximation, "cf_shortest")) 4L else 2L,
-        offset = 0.62, cex = 0.62,
+        offset = 0.62, cex = 0.54,
         col = figure_02_cf_color(approximation)
       )
     }
@@ -1263,7 +1263,7 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
         row$standardized_delta, row$standardized_width,
         labels = TARGET_LABEL[target],
         pos = FIGURE_02_WIDTH_LABEL_POSITION[target],
-        offset = FIGURE_02_LABEL_OFFSET, cex = 0.76,
+        offset = FIGURE_02_LABEL_OFFSET, cex = 0.58,
         col = COL[target]
       )
     }
@@ -1282,7 +1282,7 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
       graphics::text(
         row$standardized_delta, row$standardized_width,
         labels = CF_TARGET_LABEL[approximation],
-        pos = 2L, offset = 0.62, cex = 0.62,
+        pos = 2L, offset = 0.62, cex = 0.54,
         col = figure_02_cf_color(approximation)
       )
     }
