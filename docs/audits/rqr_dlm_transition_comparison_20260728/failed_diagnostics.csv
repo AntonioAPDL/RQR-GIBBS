@@ -1,0 +1,4 @@
+estimand,chains,rhat,ess_bulk,ess_tail,mcse_mean,mcse_over_sd,pass,DGP,replication,sentinel,candidate_id,candidate_order,case_role
+log_q_1,1,,117.728370364498,318.809415011155,0.0548756351538229,0.0923454256542592,False,S03,13,False,current_rootwise1_ASIS2,1,persistent_hard
+observed_loss,1,,188.783148831425,439.188204161569,0.506158322778998,0.0737284042966541,False,S03,13,False,current_rootwise1_ASIS2,1,persistent_hard
+log_q_1,1,,165.683925201272,366.900717746153,0.0427744018509138,0.0776119878348206,False,S03,94,False,current_rootwise1_ASIS2,1,persistent_hard

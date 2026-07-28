@@ -1,0 +1,6 @@
+"candidate_id","candidate_order","collapsed_cycles","interweave_cycles","transition_order","burn","retain","thin","role","target_change","threshold_change","adaptive_extension"
+"current_rootwise1_ASIS2",1,1,2,"rootwise_then_interweave",1000,6000,1,"current_failed_candidate_replicated",FALSE,FALSE,FALSE
+"rootwise2_ASIS1",2,2,1,"rootwise_then_interweave",1000,6000,1,"repeat_full_rootwise_composition",FALSE,FALSE,FALSE
+"rootwise2_ASIS2",3,2,2,"rootwise_then_interweave",1000,6000,1,"repeat_full_rootwise_composition_and_two_ASIS",FALSE,FALSE,FALSE
+"ASIS1_then_rootwise2",4,2,1,"interweave_then_rootwise",1000,6000,1,"test_transition_order_ASIS_before_rootwise",FALSE,FALSE,FALSE
+"current_rootwise1_ASIS2_uniform9000",5,1,2,"rootwise_then_interweave",1500,9000,1,"uniform_schedule_diagnostic_comparator",FALSE,FALSE,FALSE
