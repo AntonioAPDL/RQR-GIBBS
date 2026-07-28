@@ -3,9 +3,9 @@
 # Deterministic population figures for the RQR article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
-SCRIPT_VERSION <- "2026-07-27-cornish-fisher-figure02-1"
+SCRIPT_VERSION <- "2026-07-27-restore-figure02-add-cf-figure03-1"
 DEFAULT_CONTENT <- 0.80
-ILLUSTRATION_AL_TAU <- 0.80
+ILLUSTRATION_AL_TAU <- 0.65
 NUMERICAL_TOLERANCES <- list(
   probability_margin = 1e-8,
   integration_relative = 1e-10,
@@ -395,7 +395,10 @@ rqr_theory_distributions <- function(content = DEFAULT_CONTENT) {
     ),
     asymmetric_laplace = make_distribution(
       "asymmetric_laplace",
-      "Asymmetric Laplace(mu=0, scale=1, tau=0.8)",
+      sprintf(
+        "Asymmetric Laplace(mu=0, scale=1, tau=%.2f)",
+        ILLUSTRATION_AL_TAU
+      ),
       "Left-skewed",
       bquote(
         "Left-skewed illustration;" ~~
@@ -406,7 +409,9 @@ rqr_theory_distributions <- function(content = DEFAULT_CONTENT) {
       plot_knots = al$mu,
       plot_probabilities = c(0.005, 0.995),
       skewness = al$skewness,
-      raw_parameters = "mu_AL=0,s_AL=1,tau_AL=0.8"
+      raw_parameters = sprintf(
+        "mu_AL=0,s_AL=1,tau_AL=%.2f", ILLUSTRATION_AL_TAU
+      )
     ),
     lognormal = make_distribution(
       "lognormal", "Lognormal(meanlog=0, sdlog=0.6)", "Lognormal(0, 0.6)",
@@ -1037,8 +1042,11 @@ figure_01_three_principles <- function(out_dir, dist, content) {
 figure_02_mean_tilt_map <- function(out_dir, dist, content) {
   summary <- oracle_interval_summary(dist, content)
   check_oracle_summary(dist, summary, content)
-  cf_summary <- cornish_fisher_tilt_summary(dist, summary, content)
   path <- mean_tilt_path_data(dist, content)
+  geometry <- interval_plot_geometry(dist, summary)
+  density <- standardized_density_data(
+    dist, summary = summary, geometry = geometry
+  )
   panel_files <- c(
     write_panel_data(
       path[, c("u", "M_minus_mu", "standardized_delta")],
@@ -1049,7 +1057,116 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
       file.path(out_dir, "fig02_panelB_width_profile.csv")
     ),
     write_panel_data(
-      cf_summary, file.path(out_dir, "fig02_panelC_cornish_fisher_anchors.csv")
+      summary, file.path(out_dir, "fig02_panelC_selected_intervals.csv")
+    ),
+    write_panel_data(density, file.path(out_dir, "fig02_density.csv"))
+  )
+  draw <- function() {
+    old <- graphics::par(no.readonly = TRUE)
+    on.exit(graphics::par(old))
+    graphics::par(
+      mfrow = c(1, 3), mar = c(4.2, 3.8, 2.7, 0.7),
+      oma = c(0, 0, 1.15, 0), mgp = c(2.3, 0.65, 0), tcl = -0.3
+    )
+    delta_min <- min(summary$standardized_delta) - 0.06
+    delta_max <- max(0.20, max(summary$standardized_delta) + 0.05)
+    visible <- is.finite(path$standardized_width) &
+      path$standardized_delta >= delta_min &
+      path$standardized_delta <= delta_max
+    plot_path <- path[visible, , drop = FALSE]
+    graphics::plot(
+      path$u, path$standardized_delta, type = "l", lwd = 2,
+      col = COL["density"], xlab = "Lower-tail index, u",
+      ylab = expression(d == (M[c](u) - mu) / SD(Y)),
+      main = "Window-to-tilt map"
+    )
+    graphics::abline(h = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+    for (target in TARGET_ORDER) {
+      row <- summary[summary$target == target, ]
+      graphics::points(
+        row$u, row$standardized_delta,
+        pch = PCH[target], col = COL[target], cex = 1.05
+      )
+      graphics::text(
+        row$u, row$standardized_delta,
+        labels = figure_02_map_label(target, row$standardized_delta),
+        pos = FIGURE_02_MAP_LABEL_POSITION[target],
+        offset = FIGURE_02_LABEL_OFFSET, cex = 0.64,
+        col = COL[target]
+      )
+    }
+    graphics::plot(
+      plot_path$standardized_delta, plot_path$standardized_width,
+      type = "l", lwd = 2, col = COL["density"],
+      xlab = expression(d == delta / SD(Y)),
+      ylab = expression((U - L) / SD(Y)),
+      main = "Width near target tilts", xlim = c(delta_min, delta_max)
+    )
+    graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+    for (target in TARGET_ORDER) {
+      row <- summary[summary$target == target, ]
+      graphics::points(
+        row$standardized_delta, row$standardized_width,
+        pch = PCH[target], col = COL[target], cex = 1.05
+      )
+      graphics::text(
+        row$standardized_delta, row$standardized_width,
+        labels = TARGET_LABEL[target],
+        pos = FIGURE_02_WIDTH_LABEL_POSITION[target],
+        offset = FIGURE_02_LABEL_OFFSET, cex = 0.68,
+        col = COL[target]
+      )
+    }
+    ymax <- max(density$density)
+    graphics::plot(
+      density$z, density$density, type = "l", lwd = 2,
+      col = COL["density"], xlab = "Standardized response, z",
+      ylab = "Density", main = "Selected intervals",
+      xlim = geometry$zlim, ylim = c(-0.34 * ymax, 1.06 * ymax)
+    )
+    graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+    plot_interval_bars(
+      dist, summary, geometry, -0.055 * ymax, 0.075 * ymax,
+      labels = TRUE
+    )
+    graphics::mtext(
+      dist$subtitle, side = 3, outer = TRUE, line = -0.20, cex = 0.72
+    )
+  }
+  outputs <- with_graphics_devices(
+    file.path(out_dir, "fig02_mean_tilt_recovery_map"),
+    7.2, 3.22, draw
+  )
+  list(
+    id = "fig02_mean_tilt_recovery_map",
+    data = panel_files, outputs = outputs,
+    distributions = distribution_descriptor(dist)
+  )
+}
+
+figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
+  summary <- oracle_interval_summary(dist, content)
+  check_oracle_summary(dist, summary, content)
+  cf_summary <- cornish_fisher_tilt_summary(dist, summary, content)
+  if (!all(cf_summary$within_admissible)) {
+    fail(
+      "Figure 3 requires admissible Cornish-Fisher anchors; ",
+      "out-of-range anchors: ",
+      paste(cf_summary$approximation[!cf_summary$within_admissible], collapse = ", ")
+    )
+  }
+  path <- mean_tilt_path_data(dist, content)
+  panel_files <- c(
+    write_panel_data(
+      path[, c("u", "M_minus_mu", "standardized_delta")],
+      file.path(out_dir, "fig03_panelA_window_mean.csv")
+    ),
+    write_panel_data(
+      path[, c("standardized_delta", "standardized_width")],
+      file.path(out_dir, "fig03_panelB_width_profile.csv")
+    ),
+    write_panel_data(
+      cf_summary, file.path(out_dir, "fig03_panelC_cornish_fisher_anchors.csv")
     )
   )
   draw <- function() {
@@ -1085,7 +1202,6 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
     if (!is.finite(map_pad) || map_pad <= 0) map_pad <- 0.05
     map_xlim <- range(path$u, finite = TRUE)
     map_xlim[2L] <- map_xlim[2L] + 0.14 * diff(map_xlim)
-    map_outside_x <- as.numeric(stats::quantile(path$u, 0.82, names = FALSE))
     graphics::plot(
       path$u, path$standardized_delta, type = "l", lwd = 2.2,
       col = COL["density"], xlab = "Lower-tail index, u",
@@ -1115,22 +1231,17 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
         , drop = FALSE
       ]
       if (!nrow(row)) next
-      x_value <- if (isTRUE(row$within_admissible)) row$u else map_outside_x
       graphics::points(
-        x_value, row$standardized_delta,
+        row$u, row$standardized_delta,
         pch = figure_02_cf_pch(approximation),
         col = figure_02_cf_color(approximation),
         cex = 1.20, lwd = 1.7
       )
       graphics::text(
-        x_value, row$standardized_delta,
-        labels = if (isTRUE(row$within_admissible)) {
-          CF_TARGET_LABEL[approximation]
-        } else {
-          paste(CF_TARGET_LABEL[approximation], "out")
-        },
-        pos = if (isTRUE(row$within_admissible)) 2L else 4L,
-        offset = FIGURE_02_CF_LABEL_OFFSET, cex = 0.66,
+        row$u, row$standardized_delta,
+        labels = CF_TARGET_LABEL[approximation],
+        pos = if (identical(approximation, "cf_shortest")) 4L else 2L,
+        offset = 0.62, cex = 0.62,
         col = figure_02_cf_color(approximation)
       )
     }
@@ -1162,27 +1273,17 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
         , drop = FALSE
       ]
       if (!nrow(row)) next
-      y_value <- if (isTRUE(row$within_admissible)) {
-        row$standardized_width
-      } else {
-        usr <- graphics::par("usr")
-        usr[4L] - 0.06 * diff(usr[3:4])
-      }
       graphics::points(
-        row$standardized_delta, y_value,
+        row$standardized_delta, row$standardized_width,
         pch = figure_02_cf_pch(approximation),
         col = figure_02_cf_color(approximation),
         cex = 1.20, lwd = 1.7
       )
       graphics::text(
-        row$standardized_delta, y_value,
-        labels = if (isTRUE(row$within_admissible)) {
-          CF_TARGET_LABEL[approximation]
-        } else {
-          paste(CF_TARGET_LABEL[approximation], "out")
-        },
-        pos = 2L, offset = FIGURE_02_CF_LABEL_OFFSET,
-        cex = 0.66, col = figure_02_cf_color(approximation)
+        row$standardized_delta, row$standardized_width,
+        labels = CF_TARGET_LABEL[approximation],
+        pos = 2L, offset = 0.62, cex = 0.62,
+        col = figure_02_cf_color(approximation)
       )
     }
     graphics::mtext(
@@ -1191,11 +1292,11 @@ figure_02_mean_tilt_map <- function(out_dir, dist, content) {
     )
   }
   outputs <- with_graphics_devices(
-    file.path(out_dir, "fig02_mean_tilt_recovery_map"),
+    file.path(out_dir, "fig03_mean_tilt_cf_anchors"),
     7.2, 3.20, draw
   )
   list(
-    id = "fig02_mean_tilt_recovery_map",
+    id = "fig03_mean_tilt_cf_anchors",
     data = panel_files, outputs = outputs,
     distributions = distribution_descriptor(dist)
   )
@@ -1537,6 +1638,9 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
       out_dir, dists$asymmetric_laplace, content
     ),
     figure_02_mean_tilt_map(
+      out_dir, dists$asymmetric_laplace, content
+    ),
+    figure_03_mean_tilt_cf_anchors(
       out_dir, dists$asymmetric_laplace, content
     ),
     figure_s01_cross_distribution(out_dir, dists, content),

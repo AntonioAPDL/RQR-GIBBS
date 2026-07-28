@@ -133,7 +133,7 @@ al_tau <- ILLUSTRATION_AL_TAU
 tolerance <- 3e-7
 dists <- rqr_theory_distributions(content)
 assert_close(
-  c(content, al_tau), c(0.80, 0.80), 1e-15,
+  c(content, al_tau), c(0.80, 0.65), 1e-15,
   "interval content and AL quantile index are separately declared"
 )
 assert_true(
@@ -149,7 +149,7 @@ assert_true(
     unname(CF_TARGET_LABEL[CF_TARGET_ORDER]),
     c("CF-ET", "CF-SH")
   ),
-  "Figure 2 CF approximation labels are stable"
+  "Cornish-Fisher approximation labels are stable"
 )
 assert_true(
   identical(TARGET_ORDER, c("equal_tailed", "ordinary_rqr", "shortest")),
@@ -198,17 +198,17 @@ assert_close(al$p(0), al_tau, 1e-14, "AL location is the tau quantile")
 assert_close(
   c(al$mean, al$variance, al$sd, al$skewness),
   c(
-    -3.75,
-    26.5625,
-    5.153882032022076,
-    -1.797616985563414
+    -1.3186813186813189,
+    10.530129211447894,
+    3.2450160571941544,
+    -1.1520066473223101
   ),
   5e-13,
   "AL analytic moments and skewness"
 )
 assert_true(
   al$mean < al$q(0.5) && al$q(0.5) < al$mu,
-  "tau=0.8 AL is left-skewed under the declared convention"
+  "tau=0.65 AL is left-skewed under the declared convention"
 )
 public_al_label_text <- paste(
   c(
@@ -254,13 +254,29 @@ extract_figure_block <- function(path, publication_file) {
   )
   paste(lines[max(starts):min(ends)], collapse = "\n")
 }
+fig02_block <- extract_figure_block(
+  "main.tex", "fig02_mean_tilt_recovery_map.png"
+)
+fig03_block <- extract_figure_block(
+  "main.tex", "fig03_mean_tilt_cf_anchors.png"
+)
 public_figure_blocks <- c(
   extract_figure_block("main.tex", "fig01_three_balance_principles.png"),
-  extract_figure_block("main.tex", "fig02_mean_tilt_recovery_map.png"),
+  fig02_block,
+  fig03_block,
   extract_figure_block(
     "rqr-gibbs-supplement.tex",
     "figS01_cross_distribution_recovery.png"
   )
+)
+assert_true(
+  !grepl("Cornish--Fisher|CF-ET|CF-SH", fig02_block),
+  "Figure 2 remains the non-CF mean-tilt geometry figure"
+)
+assert_true(
+  grepl("Cornish--Fisher", fig03_block, fixed = TRUE) &&
+    grepl("fig:mean-tilt-cf-anchors", fig03_block, fixed = TRUE),
+  "Figure 3 is the CF-anchor diagnostic figure"
 )
 for (term in c(
     "\\operatorname{AL}", "asymmetric-Laplace", "\\tau_{\\mathrm{AL}}"
@@ -365,8 +381,8 @@ for (dist in dists) {
   )
 }
 
-# The illustrative equality tau=0.8 and c=0.8 is numerical only. Perturb each
-# input separately to guard against accidental coupling in the generator.
+# Perturb the illustration law and the interval content separately to guard
+# against accidental coupling in the generator.
 probe_al <- asymmetric_laplace_components(mu = 0, scale = 1, tau = 0.79)
 probe_dist <- make_distribution(
   "asymmetric_laplace_probe",
@@ -485,16 +501,20 @@ al_summary <- al_summary[
 ]
 assert_close(
   al_summary$u,
-  c(0.16, 0.1, 0.0534325656741456),
+  c(
+    0.129999998115306215,
+    0.099999999999999978,
+    0.072050567860342807
+  ),
   8e-10,
   "AL lower-tail indices"
 )
 assert_close(
   al_summary$lower,
   c(
-    -8.047189562170502,
-    -10.397207708399183,
-    -13.530956617479615
+    -4.5983940769478426,
+    -5.3480062197188341,
+    -6.2845833114264344
   ),
   2e-7,
   "AL raw lower endpoints"
@@ -502,9 +522,9 @@ assert_close(
 assert_close(
   al_summary$upper,
   c(
-    2.011797390542625,
-    0.866433975699932,
-    0.388539676790271
+    2.4760582853998514,
+    1.9273276438390277,
+    1.5481508154309045
   ),
   2e-7,
   "AL raw upper endpoints"
@@ -512,9 +532,9 @@ assert_close(
 assert_close(
   (al_summary$lower - al_dist$mean) / al_dist$sd,
   c(
-    -0.833777245088500,
-    -1.289747741042340,
-    -1.897784341339163
+    -1.0106923048949010,
+    -1.2416964446461087,
+    -1.5303166163803046
   ),
   2e-9,
   "AL standardized lower endpoints"
@@ -522,22 +542,30 @@ assert_close(
 assert_close(
   (al_summary$upper - al_dist$mean) / al_dist$sd,
   c(
-    1.117952905158378,
-    0.895719759788277,
-    0.802994645797954
+    1.1694054935932556,
+    1.0003059785556350,
+    0.8834569948449090
   ),
   2e-9,
   "AL standardized upper endpoints"
 )
 assert_close(
   al_summary$standardized_delta,
-  c(0.292759522537032, 0.140204357045383, 0),
+  c(
+    0.163507329750590735,
+    0.080970217872203806,
+    6.5950684787640499e-12
+  ),
   2e-9,
   "AL standardized recovery tilts"
 )
 assert_close(
   al_summary$standardized_width,
-  c(1.951730150246878, 2.185467500830618, 2.700778987137117),
+  c(
+    2.1800977984881564,
+    2.2420024232017433,
+    2.4137736112252139
+  ),
   2e-9,
   "AL standardized widths"
 )
@@ -562,13 +590,13 @@ assert_close(
 )
 assert_close(
   cf_al$standardized_delta,
-  c(0.168459303127627, 0.505377909382883),
+  c(0.10795750071614209, 0.32387250214842628),
   2e-12,
   "AL Cornish-Fisher standardized tilts"
 )
 assert_true(
-  identical(cf_al$within_admissible, c(TRUE, FALSE)),
-  "Figure 2 records admissible CF-ET and out-of-range CF-SH anchors"
+  identical(cf_al$within_admissible, c(TRUE, TRUE)),
+  "Figure 3 records admissible CF-ET and CF-SH anchors"
 )
 assert_true(
   cf_al$standardized_delta_error[
@@ -576,7 +604,7 @@ assert_true(
   ] > 0 &&
     cf_al$standardized_delta_error[
       cf_al$approximation == "cornish_fisher_shortest"
-    ] > 0.20,
+    ] > 0.10,
   "left-skew illustration exposes CF approximation error without hiding it"
 )
 
@@ -705,6 +733,8 @@ expected_outputs <- c(
   "fig01_three_balance_principles.png",
   "fig02_mean_tilt_recovery_map.pdf",
   "fig02_mean_tilt_recovery_map.png",
+  "fig03_mean_tilt_cf_anchors.pdf",
+  "fig03_mean_tilt_cf_anchors.png",
   "figS01_cross_distribution_recovery.pdf",
   "figS01_cross_distribution_recovery.png",
   "figS02_loss_geometry.pdf",
@@ -729,7 +759,7 @@ for (name in stable_files) {
   assert_true(identical(hash1, hash2), paste(name, "byte reproduction"))
 }
 manifest <- utils::read.csv(run1$manifest, stringsAsFactors = FALSE)
-assert_true(nrow(manifest) == 4L, "four-figure manifest")
+assert_true(nrow(manifest) == 5L, "five-figure manifest")
 assert_true(
   all(grepl("deterministic population illustration", manifest$evidence_class,
             fixed = TRUE)),
@@ -738,7 +768,7 @@ assert_true(
 receipt <- utils::read.csv(
   run1$publication_receipt, stringsAsFactors = FALSE
 )
-assert_true(nrow(receipt) == 4L, "four-figure publication receipt")
+assert_true(nrow(receipt) == 5L, "five-figure publication receipt")
 assert_true(
   all(file.exists(file.path(out1, receipt$publication_file))),
   "publication receipt paths"
@@ -757,11 +787,12 @@ al_receipt <- receipt[
   receipt$figure_id %in% c(
     "fig01_three_balance_principles",
     "fig02_mean_tilt_recovery_map",
+    "fig03_mean_tilt_cf_anchors",
     "figS01_cross_distribution_recovery"
   ),
 ]
 assert_true(
-  all(grepl("tau_AL=0.8", al_receipt$distributions, fixed = TRUE)),
+  all(grepl("tau_AL=0.65", al_receipt$distributions, fixed = TRUE)),
   "AL publication receipts retain the raw parameter metadata"
 )
 assert_close(
@@ -773,8 +804,8 @@ assert_close(
   "AL publication receipts record the AL quantile index separately"
 )
 assert_true(
-  !any(grepl("tau_AL=0.99", al_receipt$distributions, fixed = TRUE)),
-  "AL publication receipts contain no stale tau=0.99 metadata"
+  !any(grepl("tau_AL=0.8|tau_AL=0.99", al_receipt$distributions)),
+  "AL publication receipts contain no stale tau metadata"
 )
 assert_true(
   all(grepl(

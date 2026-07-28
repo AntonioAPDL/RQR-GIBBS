@@ -135,14 +135,14 @@ write_cf_table_tex <- function(table, path) {
     "\\caption{\\textbf{Population Cornish--Fisher tilt check.} Each row uses a known population law with content $c=0.80$ and true population skewness $\\gamma_1$. The oracle columns report standardized recovery tilts $d=\\delta/\\operatorname{SD}(Y)$ for the shortest-contiguous (SH) and equal-tailed (ET) windows. The CF columns use $d_{\\mathrm{SH}}^{\\mathrm{CF}}=-\\gamma_1 q_c\\phi(q_c)/c$ and $d_{\\mathrm{ET}}^{\\mathrm{CF}}=d_{\\mathrm{SH}}^{\\mathrm{CF}}/3$; $|e|$ is the absolute population approximation gap. The table is a deterministic approximation diagnostic, not MCMC, tilt-selection, or response-prediction evidence.}",
     "\\label{tab:mean-tilt-cf-mini-study}",
     "\\TableStyle",
-    "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrrrrr@{}}",
+    "\\begin{tabular}{@{}l@{\\hspace{1.1em}}rrrrrrr@{}}",
     "\\toprule",
     "DGP & $\\gamma_1$ & $d_{\\mathrm{SH}}$ & $d_{\\mathrm{SH}}^{\\mathrm{CF}}$ & $|e_{\\mathrm{SH}}|$ & $d_{\\mathrm{ET}}$ & $d_{\\mathrm{ET}}^{\\mathrm{CF}}$ & $|e_{\\mathrm{ET}}|$ \\\\",
     "\\midrule"
   )
   footer <- c(
     "\\bottomrule",
-    "\\end{tabularx}",
+    "\\end{tabular}",
     "\\end{table}"
   )
   writeLines(c(header, rows, footer), path, useBytes = TRUE)

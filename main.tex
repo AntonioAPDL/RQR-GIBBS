@@ -485,7 +485,25 @@ For an interior tilt,
 \]
 Thus an interior width minimum along the tilt path satisfies the usual
 equal-endpoint-density condition.
-For initialization and external tilt screening, these identities suggest a
+Figure~\ref{fig:mean-tilt-map} visualizes this population map before adding
+any approximation layer.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/fig02_mean_tilt_recovery_map.png}
+\caption{\textbf{Population mean-tilt recovery map.}
+For the same continuous left-skewed population illustration and content
+\(c=0.80\), displayed after mean/standard-deviation standardization, the
+retained-window mean \(M_c(u)\) maps each interior lower-tail index \(u\) to a unique
+standardized tilt \(d=\delta/\operatorname{SD}(Y)\). The marked oracle tilts
+recover the shortest contiguous (SH), equal-tailed (ET), and ordinary-RQR
+intervals; ordinary RQR has \(d=0\). The width profile shows that SH, not
+ordinary RQR in general, minimizes geometric width. The density panel shows
+the three recovered intervals on the same standardized population scale.}
+\label{fig:mean-tilt-map}
+\end{figure}
+
+For initialization and external tilt screening, the same identities suggest a
 simple first-order approximation. Let \(\gamma_1\) denote standardized
 skewness and set
 \[
@@ -502,30 +520,24 @@ These formulas are not new interval targets; they are local skewness-based
 approximations to the population recovery tilts. Right skewness gives a
 negative shortest-oriented tilt, while left skewness gives a positive tilt.
 The approximation is useful because it gives the sign and approximate
-magnitude of the tilt from a single population summary. Figure~\ref{fig:mean-tilt-map}
-therefore uses the true skewness of the illustrative population, not a sample
-estimate, to place the CF anchors on the tilt scale. In applied work a
-plug-in skewness estimate would be only a fixed initialization or screening
-candidate, to be recorded outside the Gibbs target.
+magnitude of the tilt from a single population summary. Figure~\ref{fig:mean-tilt-cf-anchors}
+therefore places the CF anchors on the same tilt and width scales using the
+true skewness of the illustrative population, not sample estimates. In applied
+work a plug-in skewness estimate would be only a fixed initialization or
+screening candidate, to be recorded outside the Gibbs target.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/fig02_mean_tilt_recovery_map.png}
-\caption{\textbf{Population mean-tilt recovery map.}
-For the same continuous left-skewed population illustration and content
-\(c=0.80\), displayed after mean/standard-deviation standardization, the
-retained-window mean \(M_c(u)\) maps each interior lower-tail index \(u\) to a unique
-standardized tilt \(d=\delta/\operatorname{SD}(Y)\). The marked oracle tilts
-recover the shortest contiguous (SH), equal-tailed (ET), and ordinary-RQR
-intervals; ordinary RQR has \(d=0\). Open markers show the first-order
-Cornish--Fisher anchors computed from the true population skewness. In this
-skewed illustration the CF-ET anchor remains on the admissible tilt path,
-whereas the CF-SH anchor overshoots the finite-root path and is drawn as an
-out-of-range margin marker. The width profile shows that SH, not ordinary RQR
-in general, minimizes geometric width. The quantities are deterministic
-population calculations describing representability, width profiling, and
-local approximation error; they do not define a data-driven tilt estimator.}
-\label{fig:mean-tilt-map}
+\includegraphics[width=\textwidth]{figures/generated/fig03_mean_tilt_cf_anchors.png}
+\caption{\textbf{Cornish--Fisher tilt-anchor diagnostic.}
+For the same content \(c=0.80\), the solid curves are the population
+window-to-tilt map and width profile. Filled markers are the oracle RQR, ET,
+and SH tilts. Open markers show first-order Cornish--Fisher anchors computed
+from true population skewness. In this moderate-skewness illustration both
+CF anchors are admissible and therefore lie on the finite-root tilt path. The
+display is an approximation diagnostic for initialization and screening, not
+a data-driven tilt estimator and not MCMC evidence.}
+\label{fig:mean-tilt-cf-anchors}
 \end{figure}
 
 \input{tables/mean_tilt_cf_mini_study.tex}

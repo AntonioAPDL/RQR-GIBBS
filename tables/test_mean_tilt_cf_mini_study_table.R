@@ -75,6 +75,15 @@ assert_true(
   "caption preserves claim boundary"
 )
 assert_true(
+  grepl("\\begin{tabular}{@{}l@{\\hspace{1.1em}}rrrrrrr@{}}",
+        tex, fixed = TRUE),
+  "table uses natural-width first column"
+)
+assert_true(
+  !grepl("tabularx", tex, fixed = TRUE),
+  "table does not use stretched tabularx layout"
+)
+assert_true(
   !any(grepl("^rmse_", names(tab))),
   "population table omits finite-sample RMSE columns"
 )
