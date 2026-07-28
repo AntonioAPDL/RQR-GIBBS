@@ -230,7 +230,10 @@
 #'   and attestation fields.
 #' @param mcmc_control Iteration, seed, storage, backend, progress, jitter, and
 #'   optional exact partially collapsed and interwoven component-scale
-#'   controls.
+#'   controls. For component-scale evolution, `component_scale_collapsed_cycles`
+#'   repeats the full root-1/root-2 partially collapsed composition, and
+#'   `component_scale_transition_order` is either `"rootwise_then_interweave"`
+#'   or `"interweave_then_rootwise"`.
 #' @param init Optional initial states, latent scales, lambda, evolution scales,
 #'   time-zero states, and RNG state.
 #' @return An `rqr_dlm_mcmc` object.
@@ -402,6 +405,38 @@ rqr_dlm_fit <- function(
     mcmc_control$component_scale_interweave_cycles %||% 1L,
     "mcmc_control$component_scale_interweave_cycles", 1L
   )
+  component_scale_collapsed_cycles <- .rqr_scalar_integer(
+    mcmc_control$component_scale_collapsed_cycles %||% 1L,
+    "mcmc_control$component_scale_collapsed_cycles", 1L
+  )
+  if (!isTRUE(component_scale_collapsed_update) &&
+      component_scale_collapsed_cycles != 1L) {
+    stop(
+      paste(
+        "mcmc_control$component_scale_collapsed_cycles can differ from one",
+        "only when component_scale_collapsed_update=TRUE."
+      ),
+      call. = FALSE
+    )
+  }
+  component_scale_transition_order <- match.arg(
+    mcmc_control$component_scale_transition_order %||%
+      "rootwise_then_interweave",
+    c("rootwise_then_interweave", "interweave_then_rootwise")
+  )
+  if (identical(component_scale_transition_order,
+                "interweave_then_rootwise") &&
+      (!component_mode || !isTRUE(component_scale_interweave) ||
+       !isTRUE(component_scale_collapsed_update))) {
+    stop(
+      paste(
+        "The interweave_then_rootwise transition order requires",
+        "component-scale evolution with both collapsed and interwoven",
+        "scale moves enabled."
+      ),
+      call. = FALSE
+    )
+  }
   component_scale_kernel_contract <- list(
     symmetric_rootwise_partially_collapsed =
       component_mode && isTRUE(component_scale_collapsed_update),
@@ -412,10 +447,22 @@ rqr_dlm_fit <- function(
     } else {
       character(0)
     },
+    collapsed_cycles = if (
+        component_mode && isTRUE(component_scale_collapsed_update)
+      ) {
+      component_scale_collapsed_cycles
+    } else {
+      0L
+    },
     centered_inverse_gamma = component_mode,
     noncentered_slice_interweave =
       component_mode && isTRUE(component_scale_interweave),
     interweave_cycles = component_scale_interweave_cycles,
+    transition_order = if (component_mode) {
+      component_scale_transition_order
+    } else {
+      "rootwise_then_interweave"
+    },
     slice_width = component_scale_slice_width,
     slice_sweeps_per_cycle = component_scale_slice_sweeps,
     slice_max_steps = component_scale_slice_max_steps,
@@ -477,7 +524,16 @@ rqr_dlm_fit <- function(
   loss_trace <- lambda_trace <- effective_rate_trace <- numeric(total_iter)
   lambda_shape_trace <- lambda_rate_trace <- rep(NA_real_, total_iter)
   root_swap_trace <- logical(total_iter)
-  ffbs_iteration <- vector("list", 2L * total_iter)
+  ffbs_iteration <- vector(
+    "list",
+    2L * total_iter *
+      if (component_mode && isTRUE(component_scale_collapsed_update)) {
+        component_scale_collapsed_cycles
+      } else {
+        1L
+      }
+  )
+  ffbs_counter <- 0L
   component_scale_interweave_iteration <- if (
       component_mode && isTRUE(component_scale_interweave)
     ) {
@@ -517,113 +573,142 @@ rqr_dlm_fit <- function(
     v[observed] <- rqr_sample_gig_half(gp$b, gp$a)
     v[!observed] <- loss_reference_scale / lambda
     obs_variance <- constants$phi * loss_reference_scale * v / lambda
-    H1 <- sweep(expanded$FF, 2L, y - eta2, `*`)
-    H1[, !observed] <- 0
-    z1 <- y * (y - eta2) - constants$xi * v
-    z1[!observed] <- NA_real_
-    if (component_mode && isTRUE(component_scale_collapsed_update)) {
-      collapsed_update <- .rqr_collapsed_component_scale_update(
-        conditioned_theta = theta2,
-        conditioned_theta0 = theta02,
-        z = z1, H = H1, obs_variance = obs_variance,
-        GG = expanded$GG, m0 = expanded$m0, C0 = expanded$C0,
-        evolution = evolution, q = q_evolution,
-        backend = backend_resolved,
-        width = component_scale_slice_width,
-        sweeps = component_scale_slice_sweeps,
-        max_steps = component_scale_slice_max_steps,
-        max_shrink = component_scale_slice_max_shrink
+    q_update <- NULL
+    append_ffbs <- function(draw, root, cycle) {
+      ffbs_counter <<- ffbs_counter + 1L
+      repair_records <<- .rqr_bind_ffbs_repairs(
+        repair_records, draw$diagnostics, iter,
+        sprintf("%s_cycle%d", root, cycle)
       )
-      q_evolution <- collapsed_update$q
-      component_scale_collapsed_iteration[[iter]] <- data.frame(
-        iteration = iter,
-        block = 1L,
-        component = evolution$component_names,
-        evaluations = collapsed_update$diagnostics$evaluations,
-        shrink_steps = collapsed_update$diagnostics$shrink_steps,
-        sweeps = collapsed_update$diagnostics$sweeps,
-        integrated_root = "root1",
-        conditioned_root = "root2",
-        exact_partially_collapsed = TRUE,
+      ffbs_iteration[[ffbs_counter]] <<- data.frame(
+        iteration = iter, cycle = cycle, root = root,
+        jitter_count = draw$diagnostics$jitter_count,
+        repair_count = draw$diagnostics$repair_count,
+        psd_draw_count = draw$diagnostics$psd_draw_count,
+        min_forecast_variance = draw$diagnostics$min_forecast_variance,
         stringsAsFactors = FALSE
       )
     }
-    evolution_iter <- if (component_mode) {
-      .rqr_materialize_component_evolution(evolution, q_evolution, T, p)
-    } else evolution
-    draw1 <- rqr_ffbs_sample(
-      z1, H1, obs_variance, expanded$GG, expanded$m0, expanded$C0,
-      evolution_iter, backend = backend_resolved, jitter_ladder = jitter_ladder,
-      numerical_policy = numerical_policy
-    )
-    theta1 <- draw1$path
-    if (component_mode) {
-      theta01 <- .rqr_draw_initial_state(
-        theta1[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
-        evolution_iter$W[, , 1L]
+    append_collapsed <- function(cycle, block, update, integrated_root,
+                                 conditioned_root) {
+      row <- data.frame(
+        iteration = iter,
+        cycle = cycle,
+        block = block,
+        component = evolution$component_names,
+        evaluations = update$diagnostics$evaluations,
+        shrink_steps = update$diagnostics$shrink_steps,
+        sweeps = update$diagnostics$sweeps,
+        integrated_root = integrated_root,
+        conditioned_root = conditioned_root,
+        exact_partially_collapsed = TRUE,
+        stringsAsFactors = FALSE
+      )
+      component_scale_collapsed_iteration[[iter]] <<- rbind(
+        component_scale_collapsed_iteration[[iter]], row
       )
     }
-    eta1 <- .rqr_state_ordinates(expanded$FF, theta1)
-
-    H2 <- sweep(expanded$FF, 2L, y - eta1, `*`)
-    H2[, !observed] <- 0
-    z2 <- y * (y - eta1) - constants$xi * v
-    z2[!observed] <- NA_real_
-    if (component_mode && isTRUE(component_scale_collapsed_update)) {
-      collapsed_update_root2 <- .rqr_collapsed_component_scale_update(
-        conditioned_theta = theta1,
-        conditioned_theta0 = theta01,
-        z = z2, H = H2, obs_variance = obs_variance,
-        GG = expanded$GG, m0 = expanded$m0, C0 = expanded$C0,
-        evolution = evolution, q = q_evolution,
-        backend = backend_resolved,
-        width = component_scale_slice_width,
-        sweeps = component_scale_slice_sweeps,
-        max_steps = component_scale_slice_max_steps,
-        max_shrink = component_scale_slice_max_shrink
-      )
-      q_evolution <- collapsed_update_root2$q
-      component_scale_collapsed_iteration[[iter]] <- rbind(
-        component_scale_collapsed_iteration[[iter]],
-        data.frame(
-          iteration = iter,
-          block = 2L,
-          component = evolution$component_names,
-          evaluations =
-            collapsed_update_root2$diagnostics$evaluations,
-          shrink_steps =
-            collapsed_update_root2$diagnostics$shrink_steps,
-          sweeps = collapsed_update_root2$diagnostics$sweeps,
-          integrated_root = "root2",
-          conditioned_root = "root1",
-          exact_partially_collapsed = TRUE,
-          stringsAsFactors = FALSE
+    run_rootwise_cycle <- function(cycle) {
+      eta2 <<- .rqr_state_ordinates(expanded$FF, theta2)
+      H1 <- sweep(expanded$FF, 2L, y - eta2, `*`)
+      H1[, !observed] <- 0
+      z1 <- y * (y - eta2) - constants$xi * v
+      z1[!observed] <- NA_real_
+      if (component_mode && isTRUE(component_scale_collapsed_update)) {
+        collapsed_update <- .rqr_collapsed_component_scale_update(
+          conditioned_theta = theta2,
+          conditioned_theta0 = theta02,
+          z = z1, H = H1, obs_variance = obs_variance,
+          GG = expanded$GG, m0 = expanded$m0, C0 = expanded$C0,
+          evolution = evolution, q = q_evolution,
+          backend = backend_resolved,
+          width = component_scale_slice_width,
+          sweeps = component_scale_slice_sweeps,
+          max_steps = component_scale_slice_max_steps,
+          max_shrink = component_scale_slice_max_shrink
         )
+        q_evolution <<- collapsed_update$q
+        append_collapsed(cycle, 1L, collapsed_update, "root1", "root2")
+      }
+      evolution_iter <- if (component_mode) {
+        .rqr_materialize_component_evolution(evolution, q_evolution, T, p)
+      } else evolution
+      draw1 <- rqr_ffbs_sample(
+        z1, H1, obs_variance, expanded$GG, expanded$m0, expanded$C0,
+        evolution_iter, backend = backend_resolved,
+        jitter_ladder = jitter_ladder,
+        numerical_policy = numerical_policy
       )
-      evolution_iter <- .rqr_materialize_component_evolution(
-        evolution, q_evolution, T, p
+      append_ffbs(draw1, "root1", cycle)
+      theta1 <<- draw1$path
+      if (component_mode) {
+        theta01 <<- .rqr_draw_initial_state(
+          theta1[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
+          evolution_iter$W[, , 1L]
+        )
+      }
+      eta1 <<- .rqr_state_ordinates(expanded$FF, theta1)
+
+      H2 <- sweep(expanded$FF, 2L, y - eta1, `*`)
+      H2[, !observed] <- 0
+      z2 <- y * (y - eta1) - constants$xi * v
+      z2[!observed] <- NA_real_
+      if (component_mode && isTRUE(component_scale_collapsed_update)) {
+        collapsed_update_root2 <- .rqr_collapsed_component_scale_update(
+          conditioned_theta = theta1,
+          conditioned_theta0 = theta01,
+          z = z2, H = H2, obs_variance = obs_variance,
+          GG = expanded$GG, m0 = expanded$m0, C0 = expanded$C0,
+          evolution = evolution, q = q_evolution,
+          backend = backend_resolved,
+          width = component_scale_slice_width,
+          sweeps = component_scale_slice_sweeps,
+          max_steps = component_scale_slice_max_steps,
+          max_shrink = component_scale_slice_max_shrink
+        )
+        q_evolution <<- collapsed_update_root2$q
+        append_collapsed(cycle, 2L, collapsed_update_root2,
+                         "root2", "root1")
+        evolution_iter <- .rqr_materialize_component_evolution(
+          evolution, q_evolution, T, p
+        )
+      }
+      draw2 <- rqr_ffbs_sample(
+        z2, H2, obs_variance, expanded$GG, expanded$m0, expanded$C0,
+        evolution_iter, backend = backend_resolved,
+        jitter_ladder = jitter_ladder,
+        numerical_policy = numerical_policy
       )
+      append_ffbs(draw2, "root2", cycle)
+      theta2 <<- draw2$path
+      if (component_mode) {
+        theta02 <<- .rqr_draw_initial_state(
+          theta2[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
+          evolution_iter$W[, , 1L]
+        )
+      } else if (time0_completion_mode) {
+        theta01 <<- .rqr_draw_initial_state(
+          theta1[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
+          evolution_iter$W[, , 1L]
+        )
+        theta02 <<- .rqr_draw_initial_state(
+          theta2[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
+          evolution_iter$W[, , 1L]
+        )
+      }
+      invisible(NULL)
     }
-    draw2 <- rqr_ffbs_sample(
-      z2, H2, obs_variance, expanded$GG, expanded$m0, expanded$C0,
-      evolution_iter, backend = backend_resolved, jitter_ladder = jitter_ladder,
-      numerical_policy = numerical_policy
-    )
-    theta2 <- draw2$path
-    if (component_mode) {
-      theta02 <- .rqr_draw_initial_state(
-        theta2[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
-        evolution_iter$W[, , 1L]
-      )
+    run_interweave_cycles <- function() {
+      if (!component_mode) return(NULL)
       if (isTRUE(component_scale_interweave)) {
         iteration_interweave <- vector(
           "list", component_scale_interweave_cycles
         )
         for (cycle in seq_len(component_scale_interweave_cycles)) {
-          q_update <- .rqr_sample_component_scales(
+          q_update <<- .rqr_sample_component_scales(
             theta1, theta2, theta01, theta02, expanded$GG, evolution
           )
-          q_evolution <- q_update$draw
+          q_evolution <<- q_update$draw
           interweave <- .rqr_interweave_component_scales(
             theta1 = theta1, theta2 = theta2,
             theta01 = theta01, theta02 = theta02,
@@ -636,9 +721,9 @@ rqr_dlm_fit <- function(
             max_steps = component_scale_slice_max_steps,
             max_shrink = component_scale_slice_max_shrink
           )
-          q_evolution <- interweave$q
-          theta1 <- interweave$theta1
-          theta2 <- interweave$theta2
+          q_evolution <<- interweave$q
+          theta1 <<- interweave$theta1
+          theta2 <<- interweave$theta2
           iteration_interweave[[cycle]] <- data.frame(
             iteration = iter,
             cycle = cycle,
@@ -650,33 +735,47 @@ rqr_dlm_fit <- function(
             stringsAsFactors = FALSE
           )
         }
-        q_update <- list(
+        q_update <<- list(
           draw = q_evolution,
           posterior = .rqr_component_scale_posterior(
             theta1, theta2, theta01, theta02, expanded$GG, evolution
           )
         )
-        component_scale_interweave_iteration[[iter]] <-
+        component_scale_interweave_iteration[[iter]] <<-
           do.call(rbind, iteration_interweave)
       } else {
-        q_update <- .rqr_sample_component_scales(
+        q_update <<- .rqr_sample_component_scales(
           theta1, theta2, theta01, theta02, expanded$GG, evolution
         )
-        q_evolution <- q_update$draw
+        q_evolution <<- q_update$draw
       }
-    } else if (time0_completion_mode) {
-      # Fixed-W and frozen-template FFBS integrate theta_0 out through
-      # (m0, C0). Complete each root path with an exact draw from
-      # p(theta_0 | theta_1) so stored full-state summaries have the same
-      # time-zero contract as component-scale fits.
-      theta01 <- .rqr_draw_initial_state(
-        theta1[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
-        evolution_iter$W[, , 1L]
+      invisible(NULL)
+    }
+
+    if (identical(component_scale_transition_order,
+                  "interweave_then_rootwise")) {
+      run_interweave_cycles()
+      for (cycle in seq_len(component_scale_collapsed_cycles)) {
+        run_rootwise_cycle(cycle)
+      }
+      q_update <- list(
+        draw = q_evolution,
+        posterior = .rqr_component_scale_posterior(
+          theta1, theta2, theta01, theta02, expanded$GG, evolution
+        )
       )
-      theta02 <- .rqr_draw_initial_state(
-        theta2[, 1L], expanded$GG[, , 1L], expanded$m0, expanded$C0,
-        evolution_iter$W[, , 1L]
-      )
+    } else {
+      cycles <- if (
+          component_mode && isTRUE(component_scale_collapsed_update)
+        ) {
+        component_scale_collapsed_cycles
+      } else {
+        1L
+      }
+      for (cycle in seq_len(cycles)) {
+        run_rootwise_cycle(cycle)
+      }
+      if (component_mode) run_interweave_cycles()
     }
 
     if (stats::runif(1L) < 0.5) {
@@ -692,22 +791,6 @@ rqr_dlm_fit <- function(
     ))
     lambda_trace[iter] <- lambda
     effective_rate_trace[iter] <- lambda / loss_reference_scale
-    repair_records <- .rqr_bind_ffbs_repairs(repair_records, draw1$diagnostics, iter, "root1")
-    repair_records <- .rqr_bind_ffbs_repairs(repair_records, draw2$diagnostics, iter, "root2")
-    ffbs_iteration[[2L * iter - 1L]] <- data.frame(
-      iteration = iter, root = "root1",
-      jitter_count = draw1$diagnostics$jitter_count,
-      repair_count = draw1$diagnostics$repair_count,
-      psd_draw_count = draw1$diagnostics$psd_draw_count,
-      min_forecast_variance = draw1$diagnostics$min_forecast_variance
-    )
-    ffbs_iteration[[2L * iter]] <- data.frame(
-      iteration = iter, root = "root2",
-      jitter_count = draw2$diagnostics$jitter_count,
-      repair_count = draw2$diagnostics$repair_count,
-      psd_draw_count = draw2$diagnostics$psd_draw_count,
-      min_forecast_variance = draw2$diagnostics$min_forecast_variance
-    )
 
     if (iter > n_burn && (iter - n_burn) %% thin == 0L) {
       save_idx <- save_idx + 1L
@@ -915,33 +998,34 @@ rqr_dlm_fit <- function(
       template_construction_audit = evolution$construction_audit %||% NULL,
       partial_collapse_order = c(
         "lambda_collapsed", "latent_v_refresh",
-        if (
-            component_mode &&
-              isTRUE(component_scale_collapsed_update)
-          ) {
-          "component_scale_root1_collapsed"
-        } else NULL,
-        "root1_ffbs",
-        if (component_mode) "root1_time0" else NULL,
-        if (
-            component_mode &&
-              isTRUE(component_scale_collapsed_update)
-          ) {
-          "component_scale_root2_collapsed"
-        } else NULL,
-        "root2_ffbs",
-        if (component_mode) {
-          "root2_time0"
-        } else if (time0_completion_mode) {
-          "fixed_evolution_time0_completion"
-        } else NULL,
-        if (component_mode && isTRUE(component_scale_interweave)) {
+        if (component_mode &&
+            identical(component_scale_transition_order,
+                      "interweave_then_rootwise")) {
           sprintf(
             "component_scale_centered_noncentered_cycles_%d",
             component_scale_interweave_cycles
           )
-        } else if (component_mode) {
+        } else NULL,
+        if (component_mode && isTRUE(component_scale_collapsed_update)) {
+          sprintf(
+            "component_scale_rootwise_collapsed_cycles_%d",
+            component_scale_collapsed_cycles
+          )
+        } else c("root1_ffbs", "root2_ffbs"),
+        if (component_mode &&
+            identical(component_scale_transition_order,
+                      "rootwise_then_interweave") &&
+            isTRUE(component_scale_interweave)) {
+          sprintf(
+            "component_scale_centered_noncentered_cycles_%d",
+            component_scale_interweave_cycles
+          )
+        } else if (component_mode &&
+                   identical(component_scale_transition_order,
+                             "rootwise_then_interweave")) {
           "component_scale_centered_update"
+        } else if (!component_mode && time0_completion_mode) {
+          "fixed_evolution_time0_completion"
         } else NULL,
         "global_root_swap"
       )
@@ -962,6 +1046,10 @@ rqr_dlm_fit <- function(
       component_scale_interweave = component_scale_interweave,
       component_scale_interweave_cycles =
         component_scale_interweave_cycles,
+      component_scale_collapsed_cycles =
+        component_scale_collapsed_cycles,
+      component_scale_transition_order =
+        component_scale_transition_order,
       component_scale_slice_width = component_scale_slice_width,
       component_scale_slice_sweeps = component_scale_slice_sweeps,
       component_scale_slice_max_steps =
@@ -1060,6 +1148,14 @@ rqr_dlm_fit <- function(
     } else {
       character(0)
     },
+    collapsed_cycles = if (
+        identical(object$model_spec$evolution_mode, "component_scale") &&
+          isTRUE(object$misc$component_scale_collapsed_update)
+      ) {
+      object$misc$component_scale_collapsed_cycles %||% 1L
+    } else {
+      0L
+    },
     centered_inverse_gamma =
       identical(object$model_spec$evolution_mode, "component_scale"),
     noncentered_slice_interweave =
@@ -1067,6 +1163,14 @@ rqr_dlm_fit <- function(
         isTRUE(object$misc$component_scale_interweave),
     interweave_cycles =
       object$misc$component_scale_interweave_cycles %||% 1L,
+    transition_order = if (
+        identical(object$model_spec$evolution_mode, "component_scale")
+      ) {
+      object$misc$component_scale_transition_order %||%
+        "rootwise_then_interweave"
+    } else {
+      "rootwise_then_interweave"
+    },
     slice_width = object$misc$component_scale_slice_width %||% 1,
     slice_sweeps_per_cycle =
       object$misc$component_scale_slice_sweeps %||% 1L,
@@ -1265,6 +1369,11 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
         isTRUE(object$misc$component_scale_interweave),
       component_scale_interweave_cycles =
         object$misc$component_scale_interweave_cycles %||% 1L,
+      component_scale_collapsed_cycles =
+        object$misc$component_scale_collapsed_cycles %||% 1L,
+      component_scale_transition_order =
+        object$misc$component_scale_transition_order %||%
+          "rootwise_then_interweave",
       component_scale_slice_width =
         object$misc$component_scale_slice_width %||% 1,
       component_scale_slice_sweeps =

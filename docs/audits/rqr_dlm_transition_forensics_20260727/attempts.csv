@@ -1,0 +1,4 @@
+"attempt_id","attempt_order","transition_label","evidence_root"
+"one_root_exact_e9c8068",1,"one-root partially collapsed scale update","application/cache/rqr_dlm_promotion_e9c8068_20260727/m01_wave2"
+"symmetric_rootwise_one_ASIS",2,"symmetric rootwise partial collapse + one ASIS cycle","application/cache/rqr_dlm_wave2_symmetric_rootwise_dev_20260727"
+"symmetric_rootwise_two_ASIS",3,"symmetric rootwise partial collapse + two ASIS cycles","application/cache/rqr_dlm_wave2_two_ASIS_cycles_dev2_20260727"

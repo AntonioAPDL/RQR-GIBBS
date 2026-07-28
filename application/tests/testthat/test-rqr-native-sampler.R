@@ -550,6 +550,7 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
       component_scale_collapsed_update = TRUE,
       component_scale_interweave = TRUE,
       component_scale_interweave_cycles = 2L,
+      component_scale_collapsed_cycles = 1L,
       component_scale_slice_sweeps = 1L
     )
   )
@@ -558,14 +559,23 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
     fit$diagnostics$partial_collapse_order,
     c(
       "lambda_collapsed", "latent_v_refresh",
-      "component_scale_root1_collapsed",
-      "root1_ffbs",
-      "root1_time0",
-      "component_scale_root2_collapsed",
-      "root2_ffbs", "root2_time0",
+      "component_scale_rootwise_collapsed_cycles_1",
       "component_scale_centered_noncentered_cycles_2",
       "global_root_swap"
     )
+  )
+  expect_identical(fit$misc$component_scale_collapsed_cycles, 1L)
+  expect_identical(
+    fit$misc$component_scale_transition_order,
+    "rootwise_then_interweave"
+  )
+  expect_identical(
+    fit$model_spec$component_scale_transition_kernel$collapsed_cycles,
+    1L
+  )
+  expect_identical(
+    fit$model_spec$component_scale_transition_kernel$transition_order,
+    "rootwise_then_interweave"
   )
   expect_identical(
     nrow(fit$diagnostics$component_scale_interweave),
@@ -574,6 +584,10 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
   expect_identical(
     nrow(fit$diagnostics$component_scale_collapsed),
     14L
+  )
+  expect_identical(
+    fit$diagnostics$component_scale_collapsed$cycle,
+    rep(1L, 14L)
   )
   expect_true(all(
     fit$diagnostics$component_scale_collapsed$
@@ -640,6 +654,7 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
       component_scale_collapsed_update = TRUE,
       component_scale_interweave = TRUE,
       component_scale_interweave_cycles = 2L,
+      component_scale_collapsed_cycles = 1L,
       component_scale_slice_sweeps = 1L
     )
   )
@@ -678,6 +693,111 @@ test_that("component-scale interweaving is an exact noncentered reparameterizati
   expect_identical(
     continued$checkpoint_state$rng_state,
     uninterrupted$checkpoint_state$rng_state
+  )
+})
+
+test_that("component-scale transition controls expose exact cycle variants", {
+  fit <- rqr_dlm_fit(
+    y = c(-1.2, -0.4, 0.1, 0.8, 1.4),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "component_scale",
+    component_templates = list(matrix(1, 1, 1)),
+    evolution_scale_prior = list(shape = 3, rate = 0.2),
+    numerical_policy = "fail",
+    mcmc_control = list(
+      n_burn = 1, n_mcmc = 2, seed = 1223,
+      backend = "cpp", store_state_draws = TRUE,
+      component_scale_collapsed_update = TRUE,
+      component_scale_collapsed_cycles = 2L,
+      component_scale_interweave = TRUE,
+      component_scale_interweave_cycles = 1L,
+      component_scale_transition_order = "interweave_then_rootwise",
+      component_scale_slice_sweeps = 1L
+    )
+  )
+  expect_identical(
+    fit$diagnostics$partial_collapse_order,
+    c(
+      "lambda_collapsed", "latent_v_refresh",
+      "component_scale_centered_noncentered_cycles_1",
+      "component_scale_rootwise_collapsed_cycles_2",
+      "global_root_swap"
+    )
+  )
+  expect_identical(fit$misc$component_scale_collapsed_cycles, 2L)
+  expect_identical(
+    fit$misc$component_scale_transition_order,
+    "interweave_then_rootwise"
+  )
+  expect_identical(
+    fit$model_spec$component_scale_transition_kernel$collapsed_cycles,
+    2L
+  )
+  expect_identical(
+    fit$model_spec$component_scale_transition_kernel$interweave_cycles,
+    1L
+  )
+  expect_identical(
+    fit$model_spec$component_scale_transition_kernel$transition_order,
+    "interweave_then_rootwise"
+  )
+  expect_identical(
+    nrow(fit$diagnostics$component_scale_collapsed),
+    12L
+  )
+  expect_identical(
+    fit$diagnostics$component_scale_collapsed$cycle,
+    rep(rep(1:2, each = 2L), times = 3L)
+  )
+  expect_identical(
+    fit$diagnostics$component_scale_collapsed$integrated_root,
+    rep(c("root1", "root2", "root1", "root2"), times = 3L)
+  )
+  expect_identical(nrow(fit$diagnostics$ffbs_iteration), 12L)
+  expect_true(all(fit$diagnostics$ffbs_iteration$cycle %in% 1:2))
+  expect_identical(
+    nrow(fit$diagnostics$component_scale_interweave),
+    3L
+  )
+  recomputed <- lapply(seq_len(2L), function(draw) {
+    rqrgibbs:::.rqr_component_scale_posterior(
+      matrix(
+        fit$samp.theta_root1[, , draw],
+        nrow = fit$expanded_model$p
+      ),
+      matrix(
+        fit$samp.theta_root2[, , draw],
+        nrow = fit$expanded_model$p
+      ),
+      fit$samp.theta0_root1[, draw],
+      fit$samp.theta0_root2[, draw],
+      fit$expanded_model$GG,
+      fit$evolution
+    )
+  })
+  expect_equal(
+    unname(fit$samp.evolution_scale_shape),
+    do.call(rbind, lapply(recomputed, `[[`, "shape"))
+  )
+  expect_equal(
+    unname(fit$samp.evolution_scale_rate),
+    do.call(rbind, lapply(recomputed, `[[`, "rate"))
+  )
+  expect_error(
+    rqr_dlm_fit(
+      y = c(-1, 0, 1),
+      model = rqr_polytrend(1L, C0 = 2),
+      coverage_level = 0.8,
+      evolution_mode = "component_scale",
+      component_templates = list(matrix(1, 1, 1)),
+      mcmc_control = list(
+        n_burn = 1, n_mcmc = 1, seed = 1224,
+        component_scale_collapsed_update = FALSE,
+        component_scale_collapsed_cycles = 2L
+      )
+    ),
+    "collapsed_cycles"
   )
 })
 
@@ -829,7 +949,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.13.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.14.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%
@@ -939,8 +1059,12 @@ test_that("continuation inherits numerical and source history cumulatively", {
     "history contract"
   )
 
-  child <- rqr_dlm_continue(fit, n_mcmc = 1)
-  grandchild <- rqr_dlm_continue(child, n_mcmc = 1)
+  child <- rqr_dlm_continue(
+    fit, n_mcmc = 1, allow_environment_mismatch = TRUE
+  )
+  grandchild <- rqr_dlm_continue(
+    child, n_mcmc = 1, allow_environment_mismatch = TRUE
+  )
   expect_identical(grandchild$continuation_history_contract$generation, 2L)
   expect_length(grandchild$continuation_history_contract$segments, 3L)
   expect_identical(

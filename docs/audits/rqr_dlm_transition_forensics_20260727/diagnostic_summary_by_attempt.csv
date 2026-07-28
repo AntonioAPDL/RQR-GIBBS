@@ -1,0 +1,4 @@
+"attempt_id","attempt_order","transition_label","diagnostics_total","diagnostics_passed","diagnostics_failed","tasks_total","tasks_failed","log_q_1_bulk_min","log_q_1_bulk_median","log_q_1_tail_min","log_q_1_mcse_over_sd_max"
+"one_root_exact_e9c8068",1,"one-root partially collapsed scale update",1150,1144,6,25,5,94.416715037947,342.775363900188,244.56089669561,0.103171234277105
+"symmetric_rootwise_one_ASIS",2,"symmetric rootwise partial collapse + one ASIS cycle",1150,1147,3,25,2,108.330437183045,398.166420371241,277.256772936765,0.0964308466353841
+"symmetric_rootwise_two_ASIS",3,"symmetric rootwise partial collapse + two ASIS cycles",1150,1147,3,25,2,117.728370364498,437.292096799233,318.809415011155,0.0923454256542592

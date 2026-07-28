@@ -3321,7 +3321,13 @@ rqr_confirm_initialization <- function(generated, model, profile,
 
 rqr_confirm_dynamic_fit <- function(
     contract, generated, method, chain, ledger,
-    provenance_control = list(), profile_name = NULL) {
+    provenance_control = list(), profile_name = NULL,
+    mcmc_control_override = list()) {
+  if (!is.list(mcmc_control_override) ||
+      (!is.null(names(mcmc_control_override)) &&
+        any(!nzchar(names(mcmc_control_override))))) {
+    stop("mcmc_control_override must be a named list.", call. = FALSE)
+  }
   chain <- rqr_confirm_strict_integer(chain, "chain", 1L, 4L)
   model_bundle <- rqr_confirm_model_bundle(generated)
   model <- model_bundle$training
@@ -3409,6 +3415,10 @@ rqr_confirm_dynamic_fit <- function(
     ),
     init = initial
   )
+  if (length(mcmc_control_override)) {
+    common$mcmc_control[names(mcmc_control_override)] <-
+      mcmc_control_override
+  }
   forecast_W <- NULL
   forecast_templates <- NULL
   if (component_method) {
