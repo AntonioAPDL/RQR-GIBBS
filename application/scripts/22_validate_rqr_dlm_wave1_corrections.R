@@ -23,7 +23,18 @@ if (file.exists(output_root) || dir.exists(output_root)) {
 }
 dir.create(output_root, recursive = TRUE, showWarnings = FALSE)
 
-suppressPackageStartupMessages(library(rqrgibbs))
+expected_commit_env <- tolower(Sys.getenv(
+  "RQR_EXPECTED_PRIMARY_COMMIT", unset = ""
+))
+suppressPackageStartupMessages({
+  if (nzchar(expected_commit_env)) {
+    library(rqrgibbs)
+  } else if (requireNamespace("pkgload", quietly = TRUE)) {
+    pkgload::load_all(file.path(repo_root, "application"), quiet = TRUE)
+  } else {
+    library(rqrgibbs)
+  }
+})
 source(file.path(
   repo_root, "application", "scripts", "lib",
   "rqr_dlm_confirmatory_simulation.R"
@@ -46,9 +57,7 @@ source_commit <- tolower(git_value(c("rev-parse", "HEAD")))
 source_status <- git_value(c(
   "status", "--porcelain=v2", "--untracked-files=all"
 ))
-expected_commit <- tolower(Sys.getenv(
-  "RQR_EXPECTED_PRIMARY_COMMIT", unset = ""
-))
+expected_commit <- expected_commit_env
 primary_attestation <- Sys.getenv(
   "RQR_PRIMARY_RUNTIME_ATTESTATION", unset = ""
 )
