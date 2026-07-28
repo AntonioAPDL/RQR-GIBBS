@@ -68,8 +68,10 @@ interval under the population conditions stated in the main article. The
 derivations below establish its score equations, quantile-window and
 profiled-risk identification, and consequences for the retained and omitted
 distributions. They also distinguish equal-tailed, shortest-contiguous, and
-mean-tilted targets; derive the pseudo-asymmetric-Laplace augmentation and
-Gaussian/GIG blocks; state the fixed-rate mean-tilted information shifts for
+mean-tilted targets; record exact fractional empirical balance and the
+fixed-dimensional static uncertainty geometry; derive the
+pseudo-asymmetric-Laplace augmentation and Gaussian/GIG blocks; state the
+fixed-rate mean-tilted information shifts for
 fixed design and dynamic states; and give the ordinary-only learned-scale and
 component-scale contracts. The fixed-rate nonzero-tilt information shifts are
 implemented for ridge fixed-design and DESN readouts and for fixed-\(W_t\) or
@@ -282,13 +284,14 @@ The full conditional distribution is their mixture with weights \(c\) and
 
 \subsection{Interval path, response scale, and tail sensitivity}
 
-Retain the assumptions of
-Proposition~\ref{prop:supp-quantile-window}, write \(u_c\) for the ordinary-RQR
-index, and set \(L_c=Q(u_c)\) and \(U_c=Q(u_c+c)\). Differentiating
+Retain the quantile-window characterization and assume, for this derivative
+calculation, connected support and positive continuous density at the relevant
+endpoint quantiles. Write \(u_c\) for the ordinary-RQR index, and set
+\(L_c=Q(u_c)\) and \(U_c=Q(u_c+c)\). Differentiating
 \[
 \int_{u_c}^{u_c+c}\{Q(v)-\mu\}\,dv=0
 \]
-with respect to \(c\) gives
+with respect to \(c\), at regular interior values, gives
 \[
 \frac{du_c}{dc}
 =-\frac{U_c-\mu}{U_c-L_c}<0,
@@ -297,13 +300,21 @@ with respect to \(c\) gives
 =\frac{\mu-L_c}{U_c-L_c}>0.
 \]
 The ordinary-RQR population intervals are therefore nested as content
-increases. Moreover, \(Q(u_c)<\mu<Q(u_c+c)\), so
-\(F(\mu)\in(u_c,u_c+c)\). It follows directly that
+increases, with analogous one-sided statements at isolated nonsmooth support
+transitions. If \(p_\mu=F(\mu)\) satisfies \(Q(p_\mu)=\mu\) and \(Q\) is
+continuous at \(p_\mu\), then \(Q(u_c)\le\mu\le Q(u_c+c)\), so
+\(p_\mu\in[u_c,u_c+c]\). Since this probability window has length \(c\),
 \[
 L_c\longrightarrow\mu,\qquad U_c\longrightarrow\mu
 \quad\text{as }c\downarrow0.
 \]
-This zero-content anchor is a property of the population interval path; the
+This zero-content anchor needs the local support condition above. It is false
+under the quantile-window assumptions alone: for the symmetric distribution
+with density \(1/2\) on \([-2,-1]\cup[1,2]\), \(\mu=0\) and the ordinary
+window has \(u_c=(1-c)/2\), hence \(L_c=-1-c\) and \(U_c=1+c\), so the
+zero-content limit straddles the support gap rather than contracting to
+\(\mu\). The corrected zero-content anchor is a property of the population
+interval path; the
 midpoint at a fixed positive \(c\) is not generally the mean, and independent
 fits at several content levels do not by themselves define joint posterior
 draws of that path.
@@ -615,11 +626,11 @@ the target to disconnected highest-density regions.
 
 The recovery identities also give a low-cost initialization diagnostic. Let
 \(Z=(Y-\mu)/\sigma\) have small standardized skewness \(\gamma_1\), and let
-\(z_p=\Phi^{-1}(p)\). The first-order Cornish--Fisher expansion
+\(z_p=\Phi^{-1}(p)\). The formal first-order Cornish--Fisher expansion
 \[
 Q_Z(p)
-=
-z_p+\frac{\gamma_1}{6}(z_p^2-1)+O(\gamma_1^2)
+ \approx
+z_p+\frac{\gamma_1}{6}(z_p^2-1)
 \]
 approximates the quantile function of \(Z\) around the standard Normal law.
 For content \(c\), define
@@ -630,21 +641,35 @@ K_c=q_c\phi(q_c)/c.
 Integrating the expansion over the equal-tailed probability window gives
 \[
 d_{\mathrm{ET}}^{\mathrm{CF}}
-=
--\frac{\gamma_1}{3}K_c+O(\gamma_1^2),
+\approx
+-\frac{\gamma_1}{3}K_c,
 \qquad d=\delta/\sigma.
 \]
 Applying the same expansion to the shortest-window first-order condition
 \(W_c'(u)=0\) and then evaluating the retained-window mean gives
 \[
 d_{\mathrm{SH}}^{\mathrm{CF}}
-=
--\gamma_1K_c+O(\gamma_1^2).
+\approx
+-\gamma_1K_c.
 \]
 Thus the shortest-oriented first-order tilt is three times the equal-tailed
 one on the standardized scale. The sign convention is useful for checking
 implementations: right skewness gives negative recovery tilts, while left
 skewness gives positive recovery tilts.
+
+These displays are used as first-order anchors, not as a universal remainder
+theorem. An \(O(\epsilon^2)\) statement is defensible only for an explicitly
+indexed near-Normal family \(F_\epsilon\) whose quantile function and
+derivative admit a uniform expansion
+\[
+Q_\epsilon(p)
+=z_p+\epsilon\kappa_3(z_p^2-1)/6+r_\epsilon(p),
+\qquad
+\sup_p\{|r_\epsilon(p)|+|\partial_pr_\epsilon(p)|\}=O(\epsilon^2),
+\]
+on a neighborhood of the central window, with
+\(\gamma_1(F_\epsilon)=\epsilon\kappa_3+O(\epsilon^2)\). Small skewness by
+itself does not control higher cumulants or the quantile remainder.
 
 For a known population law these formulas use the true \(\gamma_1\) and
 \(\sigma\). A finite-sample plug-in version may replace them by the adjusted
@@ -711,6 +736,181 @@ This deterministic illustration does not imply a finite-sample tilt-selection
 rule.}
 \label{fig:supp-cross-distribution}
 \end{figure}
+
+\section{Static Finite-Sample Balance and Uncertainty Geometry}
+\label{sec:supp-static-theory}
+
+\subsection{Fractional empirical balance}
+
+For intercept-only roots and fixed \(\delta\), define
+\[
+R_n(a,b)
+=\sum_{i=1}^n
+\left[
+\rho_c\{(y_i-a)(y_i-b)\}
+-c\delta(a+b-2y_i)
+\right],
+\qquad a<b.
+\]
+Let \((\widehat a,\widehat b)\) be an interior subgradient-stationary point.
+For each observation, choose
+\[
+s_i\in\partial\rho_c(\widehat e_i),
+\qquad
+\widehat e_i=(y_i-\widehat a)(y_i-\widehat b),
+\]
+where \(s_i=c-1\) if \(\widehat e_i<0\), \(s_i=c\) if
+\(\widehat e_i>0\), and \(s_i\in[c-1,c]\) if \(\widehat e_i=0\). Set
+\(\widehat q_i=c-s_i\). Then
+\(\widehat q_i=1\) strictly inside the fitted interval,
+\(\widehat q_i=0\) strictly outside, and
+\(\widehat q_i\in[0,1]\) only at fitted roots.
+
+\begin{theorem}[Exact fractional empirical balance]
+\label{thm:supp-fractional-balance}
+At any interior subgradient-stationary intercept-only MT-RQR solution,
+there are allocations \(\widehat q_i\in[0,1]\) with the membership convention
+above such that
+\[
+\sum_{i=1}^n\widehat q_i=nc,
+\qquad
+\sum_{i=1}^n\widehat q_i y_i
+=nc(\overline y+\delta).
+\]
+\end{theorem}
+
+\begin{proof}
+The endpoint subgradient equations are
+\[
+\sum_{i=1}^n s_i(\widehat b-y_i)-nc\delta=0,
+\qquad
+\sum_{i=1}^n s_i(\widehat a-y_i)-nc\delta=0.
+\]
+Subtracting them and using \(\widehat b-\widehat a>0\) gives
+\(\sum_i s_i=0\), hence \(\sum_i\widehat q_i=nc\). Substituting this identity
+back into either endpoint equation gives
+\[
+\sum_{i=1}^n(\widehat q_i-c)y_i=nc\delta,
+\]
+which is the retained-mean balance.
+\end{proof}
+
+If \(B_n=\#\{i:\widehat e_i=0\}\), then the theorem immediately implies
+\[
+P_n(\widehat a<Y<\widehat b)\le c\le
+P_n(\widehat a\le Y\le\widehat b),
+\qquad
+\left|P_n(\widehat a<Y<\widehat b)-c\right|\le B_n/n.
+\]
+For iid intercept-only data, Massart's sharp DKW inequality
+\citep{Massart1990DKW} gives, with probability at least \(1-\alpha\),
+\[
+\left|\Pr_F(\widehat a<Y<\widehat b)-c\right|
+\le
+\frac{B_n}{n}+
+\sqrt{\frac{2\log(2/\alpha)}{n}}.
+\]
+The bound is conservative and high probability. It is not exact nominal
+future coverage and it does not extend to restricted regression without a
+separate argument.
+
+For linear roots in a globally ordered chart, the same subgradient selection
+gives
+\begin{align}
+\sum_i X_i\left[(c-\widehat q_i)(\widehat b_i-y_i)-c\delta_i\right]&=0,\\
+\sum_i X_i\left[(c-\widehat q_i)(\widehat a_i-y_i)-c\delta_i\right]&=0.
+\end{align}
+Subtracting yields the width-weighted calibration equation
+\[
+\sum_i X_i\widehat w_i(c-\widehat q_i)=0,
+\qquad \widehat w_i=\widehat b_i-\widehat a_i.
+\]
+This is the finite-sample analogue of the restricted population score. It is
+not pointwise conditional coverage unless the predictor class is correctly
+specified and sufficiently rich.
+
+\subsection{Fixed-dimensional iid uncertainty geometry}
+
+The static asymptotic statements used for uncertainty calibration are
+fixed-dimensional iid random-design statements. Let \(Z=(X,Y)\) be iid with
+bounded \(X\), fixed \(c\), fixed externally declared \(\delta(X)\), and fixed
+learning rate \(\omega_{\mathrm R}\). Work on an ordered chart with
+\[
+a_\theta(X)=X^\top\beta_L,\qquad
+b_\theta(X)=X^\top\beta_U,\qquad
+\inf_X\{b_{\theta_0}(X)-a_{\theta_0}(X)\}>0
+\]
+in a neighborhood of the unique population minimizer \(\theta_0\). Assume
+finite second response moment, positive continuous conditional endpoint
+densities, positive-definite curvature, global risk separation, and a prior
+that is positive and continuous near \(\theta_0\). These assumptions exclude
+crossing raw linear roots after pointwise sorting, deterministic fixed-design
+triangular arrays, serial dependence, selected DESN reservoirs, growing
+dimension, learned \(\kappa\), and same-sample tilt screening.
+
+Let \(w_0(X)=b_{\theta_0}(X)-a_{\theta_0}(X)\) and
+\[
+p_0(X)=\Pr\{a_{\theta_0}(X)<Y<b_{\theta_0}(X)\mid X\}.
+\]
+Writing the endpoint score vector as \(\psi_0(Z)\), define
+\[
+J=\operatorname{Var}\{\psi_0(Z)\}.
+\]
+The expected-risk Hessian is
+\[
+H=
+\begin{pmatrix}
+\E\{XX^\top w_0(X)f_{Y\mid X}(a_{\theta_0}\mid X)\}
+&
+\E\{XX^\top[c-p_0(X)]\}\\
+\E\{XX^\top[c-p_0(X)]\}
+&
+\E\{XX^\top w_0(X)f_{Y\mid X}(b_{\theta_0}\mid X)\}
+\end{pmatrix}.
+\]
+Under the standard nonsmooth M-estimation conditions for the product-check
+loss, the empirical minimizer satisfies
+\[
+\sqrt n(\widehat\theta-\theta_0)
+\Rightarrow
+\Normal(0,H^{-1}JH^{-1}).
+\]
+Under the corresponding generalized-posterior concentration and local
+asymptotic-quadratic conditions \citep{Miller2021GeneralizedPosteriors},
+the fixed-rate generalized posterior satisfies the local Bernstein--von
+Mises approximation
+\[
+\sqrt n(\theta-\widehat\theta)\mid\vect y
+\approx
+\Normal\{0,(\omega_{\mathrm R}H)^{-1}\}.
+\]
+Thus the generalized posterior is centered at the same first-order target
+but has curvature covariance, not generally the frequentist sandwich
+covariance.
+
+The full joint covariance is matched by a scalar learning rate if and only if
+\[
+J=\omega_{\mathrm R}^{-1}H.
+\]
+Otherwise different endpoint, midpoint, width, or coefficient contrasts may
+prefer different scalar rates. If \(H\) and \(J\) are positive definite and
+consistent estimators \(\widehat H,\widehat J\) are available, the
+open-faced-sandwich post-processing transformation
+\citep{Shaby2014OpenFacedSandwich}
+\[
+\theta^{\mathrm{adj}}
+=\widehat\theta+
+\widehat\Sigma_F^{1/2}\widehat\Sigma_G^{-1/2}
+(\theta-\widehat\theta),
+\quad
+\widehat\Sigma_F=\widehat H^{-1}\widehat J\widehat H^{-1},\quad
+\widehat\Sigma_G=(\omega_{\mathrm R}\widehat H)^{-1},
+\]
+has the desired first-order covariance for static coefficient and
+differentiable endpoint-function summaries. This is a calibration of
+generalized-posterior draws. It is not equivalent to declaring an ordinary
+response likelihood, and it is not a dynamic-state or DESN forecasting
+theorem.
 
 \begin{figure}[t]
 \centering

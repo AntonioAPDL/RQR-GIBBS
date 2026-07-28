@@ -159,17 +159,19 @@ backward-sampling (FFBS) applies
 \citep{GoncalvesMigonBastos2020DQLM}. Alternating those two path draws gives
 exact root-blocked Gibbs updates for the declared fixed-joint RQR models.
 
-The contributions are fivefold. First, we characterize the ordinary RQR
+The contributions are sixfold. First, we characterize the ordinary RQR
 population functional as the mean-preserving fixed-content interval and give a
 profiled global identification result. Second, we introduce mean-tilted RQR
 as a fixed-content family whose admissible tilts index the interior window
 class, with boundary members obtained through qualified limits. Third, we
-give a first-order Cornish--Fisher approximation and finite-sample diagnostic
-for fixed-tilt initialization. Fourth, we derive a fixed-rate mean-tilted
-Gibbs construction whose zero-tilt member is the implemented ordinary-RQR
-sampler. Fifth, we organize the predictor hierarchy as regularized static
-regression, a frozen-feature DESN specialization, and a root-blocked dynamic
-linear extension. The ordinary-RQR ridge, RHS-NS, frozen-DESN, and DLM
+give exact fractional finite-sample score identities and separate static
+frequentist covariance from generalized-posterior curvature. Fourth, we give a
+first-order Cornish--Fisher approximation and finite-sample diagnostic for
+fixed-tilt initialization. Fifth, we derive a fixed-rate mean-tilted Gibbs
+construction whose zero-tilt member is the implemented ordinary-RQR sampler.
+Sixth, we organize the predictor hierarchy as regularized static regression,
+a frozen-feature DESN specialization, and a root-blocked dynamic linear
+extension. The ordinary-RQR ridge, RHS-NS, frozen-DESN, and DLM
 branches are implemented. The fixed-rate nonzero-tilt ridge cases are also
 implemented as bounded target extensions. Nonzero-tilt RHS-NS, learned-rate
 tilt, adaptive or component-scale dynamic tilt, data-driven tilt selection,
@@ -190,8 +192,10 @@ Shaby2014OpenFacedSandwich}.
 
 Section~\ref{sec:interval-functionals} defines the fixed-content class.
 Sections~\ref{sec:rqr-loss} and~\ref{sec:mean-tilt} identify ordinary and
-mean-tilted RQR. Section~\ref{sec:posterior} develops static regression,
-ordinary RHS-NS regularization, and the frozen-DESN specialization.
+mean-tilted RQR. Section~\ref{sec:static-theory-scope} records finite-sample
+balance and the fixed-dimensional iid static uncertainty scope.
+Section~\ref{sec:posterior} develops static regression, ordinary RHS-NS
+regularization, and the frozen-DESN specialization.
 Section~\ref{sec:dynamic} develops dynamic linear root states.
 Section~\ref{sec:evaluation} states the evaluation strategy, and
 Section~\ref{sec:discussion} concludes.
@@ -351,10 +355,15 @@ This theorem identifies the unique regular stationary window.
 Proposition~\ref{prop:profiled-mean-tilt} below strengthens that statement to
 the unique global expected-loss minimizer by profiling over the half-width.
 The supplement proves these results and records the restricted score
-equations. As \(c\) varies, the regular unrestricted population intervals form
-a nested path that contracts to the conditional mean as \(c\) decreases to
-zero. This path statement does not turn the midpoint at a fixed positive
-content into a mean estimator. If the conditional law has endpoint atoms,
+equations. Under the connected-support and local positive-density conditions
+used in Theorem~\ref{prop:profiled-mean-tilt}, the regular unrestricted
+population intervals form a nested path. If the conditional quantile function
+is continuous at \(p_{\mu,x}=F_x(\mu_x)\) and
+\(Q_x(p_{\mu,x})=\mu_x\), the two endpoints converge to \(\mu_x\) as
+\(c\downarrow0\). Without this local support condition, the zero-content
+limit may straddle a support gap. This path statement does not turn the
+midpoint at a fixed positive content into a mean estimator. If the
+conditional law has endpoint atoms,
 the corresponding directional conditions give
 \[
 \Pr(a<Y<b\mid X=x)\le c\le\Pr(a\le Y\le b\mid X=x),
@@ -485,7 +494,8 @@ Each \(u\in\mathcal U_{\mathrm{SH}}\) has recovery tilt
 shortest-contiguous window is unique or one minimizer has been selected.
 \end{corollary}
 
-For an interior tilt,
+At regular interior points where the endpoint quantiles are differentiable
+and have positive densities,
 \[
 \frac{du_\delta}{d\delta}=\frac{c}{W_c(u_\delta)},\qquad
 \frac{dW_c(u_\delta)}{d\delta}
@@ -578,6 +588,102 @@ root priors, the tilt is linear in the root parameters and Gaussian prior tails
 make the tilted kernel integrable. This argument covers the initial ridge and
 Gaussian-state implementations; heavier-tailed shrinkage priors require a
 separate propriety analysis before nonzero tilt is enabled.
+
+\section{Empirical Balance and Static Uncertainty Scope}
+\label{sec:static-theory-scope}
+
+The preceding results are population identifications. They should not be
+replaced by a smooth-gradient finite-sample argument, because fitted endpoints
+are data dependent and the empirical product-check loss is nonsmooth at
+observations that fall exactly on a root. The correct finite-sample statement
+is fractional. For intercept-only MT-RQR with fixed \(\delta\), let
+\((\widehat a,\widehat b)\), \(\widehat a<\widehat b\), be an interior
+subgradient-stationary empirical solution. Then there exist allocations
+\(\widehat q_i\in[0,1]\), equal to one for observations strictly inside the
+fitted interval, zero for observations strictly outside it, and fractional
+only at fitted roots, such that
+\[
+\sum_{i=1}^n \widehat q_i=nc,
+\qquad
+\sum_{i=1}^n \widehat q_i y_i
+=nc(\overline y+\delta).
+\]
+Thus the training interval has exact fractional content and exact fractional
+retained-mean balance. This is a score identity for the fitted training
+sample, not an exact future-coverage statement. If \(B_n\) observations lie
+on fitted roots, then
+\[
+P_n(\widehat a<Y<\widehat b)\le c\le
+P_n(\widehat a\le Y\le\widehat b),
+\qquad
+\left|P_n(\widehat a<Y<\widehat b)-c\right|\le B_n/n.
+\]
+In the iid intercept-only case, the Dvoretzky--Kiefer--Wolfowitz inequality
+therefore gives the conservative high-probability bound
+\[
+\left|\Pr_F(\widehat a<Y<\widehat b)-c\right|
+\le
+\frac{B_n}{n}+
+\sqrt{\frac{2\log(2/\alpha)}{n}}
+\]
+with probability at least \(1-\alpha\). Regression fits satisfy analogous
+design-weighted score equations; when a global ordering is valid, their
+coverage component contains
+\(\sum_i X_i\widehat w_i(c-\widehat q_i)=0\), with
+\(\widehat w_i=\widehat U_i-\widehat L_i\). This is width-weighted
+calibration in the chosen design span, not pointwise conditional coverage.
+
+A separate static large-sample theory concerns iid random-design observations
+\(Z_i=(X_i,Y_i)\), fixed coefficient dimension, fixed \(c\), fixed
+\(\delta(X)\), and fixed \(\omega_{\mathrm R}\). It assumes a globally
+labelable ordered chart with uniformly separated roots
+\(a_0(X)=X^\top\beta_{L0}<b_0(X)=X^\top\beta_{U0}\), positive endpoint
+densities, a unique population target, positive-definite curvature, and a
+proper prior positive near the target. Pointwise sorting of crossing raw
+linear roots is not covered by this ordered-chart theorem; nor are selected
+DESN reservoirs, deterministic fixed-design triangular arrays, dependent time
+series, growing feature dimension, learned \(\kappa\), or same-sample tilt
+selection.
+
+Under these static regularity conditions, write
+\(\theta_0=(\beta_{L0}^\top,\beta_{U0}^\top)^\top\), let \(w_0(X)=b_0(X)-a_0(X)\),
+and let \(p_0(X)=\Pr\{a_0(X)<Y<b_0(X)\mid X\}\). The expected-risk Hessian has
+blocks
+\[
+H=
+\begin{pmatrix}
+\E\{XX^\top w_0(X)f_{Y\mid X}(a_0\mid X)\}
+&
+\E\{XX^\top[c-p_0(X)]\}\\
+\E\{XX^\top[c-p_0(X)]\}
+&
+\E\{XX^\top w_0(X)f_{Y\mid X}(b_0\mid X)\}
+\end{pmatrix},
+\]
+and \(J=\operatorname{Var}\{\psi_0(Z)\}\) is the variance of the endpoint score
+vector. The empirical minimizer has asymptotic sandwich covariance
+\[
+\Sigma_F=H^{-1}JH^{-1},
+\]
+whereas the fixed-rate generalized posterior has local curvature covariance
+\[
+\Sigma_G=(\omega_{\mathrm R}H)^{-1}.
+\]
+Consequently a scalar learning rate reproduces the full joint endpoint
+covariance only under the information-proportionality condition
+\(J=\omega_{\mathrm R}^{-1}H\). When consistent estimators
+\(\widehat H\) and \(\widehat J\) are available and \(H,J\) are positive
+definite, an open-faced-sandwich transformation
+\[
+\theta^{\mathrm{adj}}
+=\widehat\theta+
+\widehat\Sigma_F^{1/2}\widehat\Sigma_G^{-1/2}
+(\theta-\widehat\theta)
+\]
+calibrates static coefficient and differentiable endpoint-function summaries
+to first order. This is a post-processing calibration of a generalized
+posterior, not a response likelihood and not a proof of dynamic or DESN
+forecast calibration.
 
 \section{Static Interval-Root Regression and Generalized-Bayes Computation}
 \label{sec:posterior}
@@ -869,7 +975,10 @@ Future root functionals use a frozen future design
 contract, without using held-out responses to refit its features. Ordered
 endpoints, midpoints, and widths are functions of the readout draws. No
 response-simulation distribution is implied, and reservoir or feature
-selection occurs outside the generalized-posterior scan.
+selection occurs outside the generalized-posterior scan. This computational
+equivalence to a fixed static design does not, by itself, establish the iid
+random-design asymptotic theory for serially dependent DESN rows or for
+data-selected reservoir features.
 
 \subsection{Ordinary-RQR learned inverse-loss scale}
 
@@ -1146,13 +1255,17 @@ Gibbs sampler for a demonstrated joint density.
 
 Important limitations remain. The population results are unrestricted and
 pointwise, whereas fitted regression and state-space classes impose
-projections. Boundary tilts can yield semi-infinite limits or inactive roots,
-and tilts outside the admissible range have no finite unrestricted target.
-Broader nonzero-tilt algorithms, external tilt selection, variational approximations,
-and matched nonlinear-readout evidence require separate validation. The
-ordinary-RQR study is therefore designed to evaluate interval-root loss,
-empirical coverage, width, and endpoint recovery without conflating any of
-them with posterior-predictive response calibration.
+projections. Static covariance statements require fixed-dimensional iid
+random-design conditions and a globally separated ordered chart; they do not
+cover crossing raw linear roots after pointwise sorting, serial dependence,
+selected reservoirs, or large-\(T\) dynamic-state asymptotics. Boundary tilts
+can yield semi-infinite limits or inactive roots, and tilts outside the
+admissible range have no finite unrestricted target. Broader nonzero-tilt
+algorithms, external tilt selection, variational approximations, and matched
+nonlinear-readout evidence require separate validation. The ordinary-RQR study
+is therefore designed to evaluate interval-root loss, empirical coverage,
+width, and endpoint recovery without conflating any of them with
+posterior-predictive response calibration.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
