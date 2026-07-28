@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.9.0"
+    "rqrgibbs_dlm_main_correction/1.10.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -162,7 +162,31 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_identical(
     contract$config$implementation_correction$
       component_scale_transition_selection,
-    "two_ASIS_cycles_selected_before_new_exact_complete_wave_gates"
+    "rootwise2_ASIS2_selected_after_targeted_transition_comparison"
+  )
+  expect_match(
+    contract$config$implementation_correction$
+      rootwise2_ASIS2_selection_reason,
+    "hard-case diagnostic margin",
+    fixed = TRUE
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      rootwise2_ASIS2_development_evidence_path,
+    "docs/audits/rqr_dlm_transition_comparison_20260728/candidate_summary.csv"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      rootwise2_ASIS2_development_evidence_sha256,
+    environment$rqr_confirm_sha256(file.path(
+      contract$repo_root,
+      contract$config$implementation_correction$
+        rootwise2_ASIS2_development_evidence_path
+    ))
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      rootwise2_ASIS2_development_outputs_reused
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -204,9 +228,12 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     list(
       symmetric_rootwise_partially_collapsed = TRUE,
       collapsed_integrated_roots = c("root1", "root2"),
+      collapsed_cycles = 2L,
       centered_inverse_gamma = TRUE,
       noncentered_slice_interweave = TRUE,
       interweave_cycles = 2L,
+      transition_order = "rootwise_then_interweave",
+      selected_candidate = "rootwise2_ASIS2",
       slice_width = 1,
       slice_sweeps_per_cycle = 3L,
       slice_max_steps = 100L,
@@ -323,6 +350,34 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     "not fail closed"
   )
   expect_invisible(environment$rqr_confirm_validate_contract(altered))
+})
+
+test_that("M01 construction forwards the selected rootwise2-ASIS2 kernel", {
+  environment <- load_confirmatory_helpers()
+  body_text <- paste(
+    deparse(environment$rqr_confirm_dynamic_fit),
+    collapse = "\n"
+  )
+  expect_true(grepl(
+    "component_scale_collapsed_cycles = if (component_evolution_method)",
+    body_text,
+    fixed = TRUE
+  ))
+  expect_true(grepl(
+    "component_scale_transition_order =",
+    body_text,
+    fixed = TRUE
+  ))
+  expect_true(grepl(
+    "component_scale_kernel$collapsed_cycles",
+    body_text,
+    fixed = TRUE
+  ))
+  expect_true(grepl(
+    "component_scale_kernel$transition_order",
+    body_text,
+    fixed = TRUE
+  ))
 })
 
 test_that("fit provenance retains the primary attestation file path", {

@@ -24,6 +24,12 @@ benchmark,development,M01_S03_rep0028_four_chain_log_q_Rhat,,1.00137,ratio,,thre
 benchmark,development,M01_S03_rep0028_four_chain_log_q_bulk_ESS,,405.3803,draws,,three-sweep four-profile development comparison with 1500 retained draws per chain
 benchmark,development,M01_S03_rep0028_four_chain_log_q_tail_ESS,,892.6263,draws,,three-sweep four-profile development comparison with 1500 retained draws per chain
 benchmark,development,M01_S03_rep0028_four_chain_log_q_MCSE_over_SD,,0.0497085,ratio,,three-sweep four-profile development comparison
+benchmark,development,M01_S03_hardcase_rootwise2_ASIS2_min_log_q_bulk_ESS,,290.3288,draws,,targeted 15-fit transition comparison on S03 replications 13 55 and 94
+benchmark,development,M01_S03_hardcase_rootwise2_ASIS2_min_observed_loss_bulk_ESS,,422.2386,draws,,targeted 15-fit transition comparison on S03 replications 13 55 and 94
+benchmark,development,M01_S03_hardcase_rootwise2_ASIS2_max_log_q_MCSE_over_SD,,0.058746,ratio,,targeted 15-fit transition comparison on S03 replications 13 55 and 94
+benchmark,development,M01_S03_hardcase_rootwise2_ASIS2_elapsed_sum,,7065.648,seconds,,three one-chain jobs under selected rootwise2_ASIS2 transition
+benchmark,development,M01_S03_hardcase_rootwise2_ASIS2_peak_RSS,,706904,KiB,,maximum sidecar RSS across selected rootwise2_ASIS2 targeted jobs
+benchmark,development,M01_S03_hardcase_rootwise2_ASIS2_zero_repairs,,0,repairs,,selected targeted jobs reported no numerical repairs
 benchmark,failed_run,maximum_sampled_worker_RSS,,1496068,KiB,,third launch wave-1 worker peak before deferred local-only RDS validation
 benchmark,failed_run,declared_worker_RSS_ceiling,,1572864,KiB,,1.5 GiB process-group ceiling
 projection,initial,safeguarded_upper_CPU_hours_optimistic,947,2787.7,CPU hours,2.943717,iteration and ASIS factors followed by the full-workload hard-case partial-collapse factor

@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   implementation_correction = list(
-    schema_version = "rqrgibbs_dlm_main_correction/1.9.0",
+    schema_version = "rqrgibbs_dlm_main_correction/1.10.0",
     failed_authorization_commit =
       "b8b7748ab181a006611b602f64d4edf5be591de6",
     failed_wave_id =
@@ -92,13 +92,23 @@ rqr_dlm_main_simulation <- list(
       "compose a second exact centered_noncentered scale transition"
     ),
     component_scale_transition_selection =
-      "two_ASIS_cycles_selected_before_new_exact_complete_wave_gates",
+      "rootwise2_ASIS2_selected_after_targeted_transition_comparison",
+    rootwise2_ASIS2_selection_reason = paste(
+      "repeat the full symmetric rootwise partial-collapse composition twice;",
+      "retain two centered-noncentered ASIS cycles for the strongest",
+      "hard-case diagnostic margin"
+    ),
+    rootwise2_ASIS2_development_evidence_path =
+      "docs/audits/rqr_dlm_transition_comparison_20260728/candidate_summary.csv",
+    rootwise2_ASIS2_development_evidence_sha256 =
+      "007ec6c84db930119858b16b49b398516001c353937e26310e91eb0a7818989c",
+    rootwise2_ASIS2_development_outputs_reused = FALSE,
     component_scale_transition_benchmark_role =
       "development_only_no_scientific_metrics_no_promotion",
     correction_budget_path =
       "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
     correction_budget_sha256 =
-      "68e8cbdee5736d8cd85978300eea92753c081ecad8edb5c6afde9c2a9b0e33d8",
+      "f1ef169465d7bc2dadfa0ef4a498f6efc8718dabd489efb51ffd94a5524a6cb8",
     target_prior_seed_or_diagnostic_threshold_changed = FALSE,
     mcmc_transition_and_fixed_role_schedule_changed = TRUE
   ),
@@ -239,9 +249,12 @@ rqr_dlm_main_simulation <- list(
     component_scale_kernel = list(
       symmetric_rootwise_partially_collapsed = TRUE,
       collapsed_integrated_roots = c("root1", "root2"),
+      collapsed_cycles = 2L,
       centered_inverse_gamma = TRUE,
       noncentered_slice_interweave = TRUE,
       interweave_cycles = 2L,
+      transition_order = "rootwise_then_interweave",
+      selected_candidate = "rootwise2_ASIS2",
       slice_width = 1,
       slice_sweeps_per_cycle = 3L,
       slice_max_steps = 100L,
