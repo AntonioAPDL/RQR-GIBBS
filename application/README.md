@@ -36,13 +36,22 @@ Install and run the native gates from the repository root:
 The pseudo-AL representation augments a loss and is not a response likelihood.
 The mean-tilt initializer functions build deterministic fixed-tilt anchors
 from Cornish--Fisher skewness approximations and empirical order-statistic
-windows. Nonzero fixed-response-scale tilt is implemented only for fixed-rate
+windows. Cornish--Fisher objects now carry moment, probability-window, boundary,
+and bootstrap diagnostics so that they are used as first-order near-Normal
+anchors rather than exact empirical-window estimators. Nonzero
+fixed-response-scale tilt is implemented only for fixed-rate
 MCMC targets where the tilt enters as a Gaussian canonical-vector shift:
 fixed-design ridge regression, DESN readouts delegated to that ridge kernel,
 and RQR-DLM fits with fixed-W or pre-frozen discount-template evolution.
 Learned inverse-loss scales, RHS-NS priors, component-scale/adaptive dynamic
 evolution, VB/CAVI, and automatic tilt selection remain explicitly gated until
 their separate target and propriety contracts are derived and tested.
+Static MCMC stores raw exchangeable root labels and, when requested, attempts
+post-processing canonicalization of complete root coefficient blocks on a
+declared audit design. The canonical coefficient fields are populated only
+when that audit passes; otherwise endpoint summaries should use pointwise
+sorting through `predict_interval()`. `rqr_canonicalize_root_paths()` provides
+the analogous complete-path post-processing diagnostic for DLM root ordinates.
 For didactic single-data examples, use `make oracle-tilt-illustrations-dry-run`
 to inspect the fit plan or `make oracle-tilt-illustrations` to run the compact
 fixed-rate illustration workflow.
