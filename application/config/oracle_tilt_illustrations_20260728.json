@@ -44,7 +44,7 @@
   },
   "fixed_design": {
     "seed": 202607281,
-    "n": 180,
+    "n": 540,
     "ridge_tau2": 250
   },
   "dlm": {

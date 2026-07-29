@@ -41,6 +41,17 @@ testthat::test_that("fixed-design oracle tilts are exactly representable by the 
   }
 })
 
+testthat::test_that("publication fixed-design illustration uses 540 observations", {
+  testthat::skip_if_not_installed("jsonlite")
+  config <- jsonlite::read_json(
+    testthat::test_path(
+      "..", "..", "config", "oracle_tilt_illustrations_20260728.json"
+    ),
+    simplifyVector = TRUE
+  )
+  testthat::expect_identical(as.integer(config$fixed_design$n), 540L)
+})
+
 testthat::test_that("DLM oracle tilts preserve NA masks at missing observations", {
   testthat::skip_if_not_installed("rqrgibbs")
   source(testthat::test_path(

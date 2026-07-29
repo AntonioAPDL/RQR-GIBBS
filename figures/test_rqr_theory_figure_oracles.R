@@ -174,6 +174,16 @@ assert_true(
   "Figure 2 width labels place SH above its marker"
 )
 assert_true(
+  identical(
+    unname(FIGURE_MAIN_02_CROSS_WIDTH_LABEL_POSITION[TARGET_ORDER]),
+    c(3L, 4L, 3L)
+  ),
+  paste(
+    "cross-distribution Figure 2 width panels place every non-Normal",
+    "SH label above its marker"
+  )
+)
+assert_true(
   identical(figure_02_map_label("ordinary_rqr", 9e-12), "RQR 0.00"),
   "Figure 2 ordinary-RQR map label uses the requested literal"
 )

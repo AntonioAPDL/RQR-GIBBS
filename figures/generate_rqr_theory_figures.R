@@ -3,7 +3,7 @@
 # Deterministic population figures for the RQR article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
-SCRIPT_VERSION <- "2026-07-29-main-figure02-cross-distribution-polish-1"
+SCRIPT_VERSION <- "2026-07-29-main-figure02-cross-distribution-sh-labels-2"
 DEFAULT_CONTENT <- 0.80
 ILLUSTRATION_AL_TAU <- 0.65
 NUMERICAL_TOLERANCES <- list(
@@ -840,6 +840,11 @@ FIGURE_02_WIDTH_LABEL_POSITION <- c(
   ordinary_rqr = 4L,
   shortest = 3L
 )
+FIGURE_MAIN_02_CROSS_WIDTH_LABEL_POSITION <- c(
+  equal_tailed = 3L,
+  ordinary_rqr = 4L,
+  shortest = 3L
+)
 FIGURE_02_LABEL_OFFSET <- 0.45
 FIGURE_02_CF_LABEL_OFFSET <- 0.35
 
@@ -1473,16 +1478,10 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
             pch = PCH[target], col = COL[target],
             bg = "white", cex = 1.08, lwd = 1.35
           )
-          label_pos <- if (target == "shortest") {
-            if (row$standardized_delta >= 0) 2 else 4
-          } else if (target == "equal_tailed") {
-            3
-          } else {
-            4
-          }
           graphics::text(
             row$standardized_delta, row$standardized_width,
-            labels = TARGET_LABEL[target], pos = label_pos,
+            labels = TARGET_LABEL[target],
+            pos = FIGURE_MAIN_02_CROSS_WIDTH_LABEL_POSITION[target],
             offset = 0.34, cex = 0.62, col = COL[target]
           )
         }
