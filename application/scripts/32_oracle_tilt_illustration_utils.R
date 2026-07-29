@@ -1251,7 +1251,7 @@ oti_plot_endpoint_error_panels <- function(error_density, file, title,
   oti_ensure_dir(dirname(file))
   targets <- c("RQR", "ET", "SH")
   targets <- targets[targets %in% unique(error_density$target)]
-  grDevices::png(file, width = 2100, height = 1200, res = 210)
+  grDevices::png(file, width = 2100, height = 1300, res = 210)
   old <- graphics::par(no.readonly = TRUE)
   on.exit({
     graphics::par(old)
@@ -1260,8 +1260,8 @@ oti_plot_endpoint_error_panels <- function(error_density, file, title,
   graphics::par(
     family = "serif",
     mfrow = c(length(targets), 1L),
-    mar = c(2.0, 4.3, 2.0, 1.2),
-    oma = c(3.1, 0.4, 2.4, 0)
+    mar = c(2.6, 4.3, 2.6, 1.2),
+    oma = c(3.2, 0.4, 2.7, 0)
   )
   col_lower <- "#0072B2"
   col_upper <- "#D55E00"
