@@ -40,5 +40,6 @@ first-order approximation
 and the equal-tailed pilot is one third of that value.  These pilots are
 initialization and screening anchors.  They are not posterior draws, do not
 sample the tilt, and do not propagate tilt-estimation uncertainty through an
-RQR generalized posterior.
+RQR generalized posterior.  The returned moment, boundary, and bootstrap
+fields are diagnostics for the approximation, not validity guarantees.
 }

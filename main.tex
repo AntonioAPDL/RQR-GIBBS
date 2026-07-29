@@ -516,8 +516,10 @@ These formulas are not new interval targets; they are local skewness-based
 approximations to the population recovery tilts. Right skewness gives a
 negative shortest-oriented tilt, while left skewness gives a positive tilt.
 They supply cheap, interpretable starting anchors for tilt exploration, not
-automatic shortest-interval estimators. The supplement gives the corresponding
-diagnostic figure and finite-population comparison table.
+automatic shortest-interval estimators. Implementation diagnostics record
+moment shape, probability-window boundary behavior, and bootstrap sensitivity.
+The supplement gives the corresponding diagnostic figure and finite-population
+comparison table.
 
 These are population and oracle statements. A universal tilt does not recover
 the same interval functional across distributions, and conditional recovery
@@ -637,6 +639,16 @@ M_i=(L_i+U_i)/2,\quad W_i=U_i-L_i.
 These ordered summaries are computational functionals. They should not be
 confused with the ordered-chart static asymptotic theory above, which assumes
 one globally labelable and uniformly separated endpoint ordering.
+When the two root priors are exchangeable, the raw labels \(k=1,2\) are not
+identified. The sampler may therefore apply a complete-root label swap as an
+acceptance-one symmetry move; this exchanges all root-specific coefficient and
+prior-state variables but does not assign lower- or upper-endpoint meaning to
+the raw labels. Coefficient-level lower/upper summaries are reported only as a
+post-processing chart on a declared audit design, and only when one complete
+root block is separated below the other across that design. If the fitted
+linear roots cross on the audit domain or the keep/swap assignment is
+ambiguous, the canonical coefficient chart is not reported; pointwise ordered
+endpoints remain well defined.
 For priors \(\pi_1,\pi_2\), a fixed externally declared
 \(\vect\delta\), and a fixed learning rate \(\omega_{\mathrm R}>0\), define
 \begin{equation}
@@ -855,10 +867,12 @@ on \(\vect\beta_2\), with tilt shift
 acceptance-one label swap.
 \end{enumerate}
 \item \textbf{Report ordered functionals.} Store ordered endpoints, widths,
-midpoints, losses, and target metadata. The scan is exact for the declared
-fixed-rate proper-Gaussian target; at \(\vect\delta=\vect 0\) it reduces to
-ordinary RQR. The ordinary learned-\(\kappa\) scan and RHS-NS applicability
-details are given in the supplement.
+midpoints, losses, raw root-label diagnostics, and target metadata. Optional
+canonical coefficient summaries are post-processing outputs and require a
+passed global labelability audit on the declared design. The scan is exact for
+the declared fixed-rate proper-Gaussian target; at \(\vect\delta=\vect 0\) it
+reduces to ordinary RQR. The ordinary learned-\(\kappa\) scan and RHS-NS
+applicability details are given in the supplement.
 \end{algorithmblock}
 
 At \(\vect\delta=\vect 0\), Algorithm~\ref{alg:fixed-design-gibbs} reduces
@@ -1029,10 +1043,12 @@ apply the acceptance-one complete-root label swap.
 \end{enumerate}
 \item \textbf{Report root functionals.} Retain ordered time-local endpoints,
 widths, midpoints, selected state functionals, losses, and complete
-target/evolution metadata. These are not simulated responses. The scan is
-exact for fixed \(W_t\) and frozen-template fixed-joint modes; adaptive
-discounts and ordinary shared component scales are separate extensions
-described in the supplement.
+target/evolution metadata. These are not simulated responses. If a dynamic
+lower/upper label is requested beyond pointwise ordered endpoints, the
+post-processing decision is one complete path assignment per retained draw,
+not a separate relabeling at each time. The scan is exact for fixed \(W_t\) and
+frozen-template fixed-joint modes; adaptive discounts and ordinary shared
+component scales are separate extensions described in the supplement.
 \end{algorithmblock}
 
 At \(\delta_{1:T}=0\), Algorithm~\ref{alg:dynamic-gibbs} reduces exactly to
@@ -1076,6 +1092,51 @@ conditionals, analytic scale updates, and exact checkpoint continuation. These
 checks establish target and implementation agreement for the stated fixtures;
 they do not establish empirical coverage calibration or forecasting
 superiority.
+
+Figures~\ref{fig:oracle-tilt-fixed-design-fit} and
+\ref{fig:oracle-tilt-dlm-fit} give single-data illustrations of the same
+fixed-target idea in a static readout and in a dynamic root model. The
+population law, mean curve or state path, and recovery tilts are fixed before
+fitting. The fitted intervals are generalized-posterior summaries of ordered
+root draws; the shaded bands summarize endpoint uncertainty from the Gibbs
+draws and are not response-predictive intervals. These examples are included
+to show how ordinary RQR, equal-tailed recovery, and shortest-window recovery
+enter the implemented fixed-rate scan. They are not a simulation study.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/fig04_oracle_tilt_fixed_design_fit.png}
+\caption{\textbf{Fixed-design illustration with oracle recovery tilts.}
+A single quadratic fixed-design data set is generated from a skewed
+location-scale population with content \(c=0.80\). Each panel fits the same
+ridge static root-regression model with a different fixed population-oracle
+tilt: ordinary RQR, equal-tailed recovery (ET), or shortest-window recovery
+(SH). Blue curves are the population-oracle endpoints; orange curves are
+generalized-posterior mean fitted endpoints; pale orange ribbons are pointwise
+90\% endpoint summaries from the Gibbs draws. The figure illustrates target
+placement and finite-sample endpoint uncertainty, not response simulation. A
+frozen-feature DESN readout uses the same static scan after replacing
+\(\mat X\) by the recorded reservoir-feature design.}
+\label{fig:oracle-tilt-fixed-design-fit}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/fig05_oracle_tilt_dlm_fit.png}
+\caption{\textbf{Dynamic linear root-state illustration with oracle recovery
+tilts.}
+A single local-linear state trajectory is observed with missing responses at
+three times. The MT-RQR-DLM is fit with fixed \(W_t\), fixed learning rate,
+and the same three population-oracle tilt choices as in
+Figure~\ref{fig:oracle-tilt-fixed-design-fit}. Missing observations contribute
+no loss, latent-scale, or tilt site; red crosses mark their latent mean
+positions in the display. Blue curves are population-oracle dynamic endpoints,
+orange curves are generalized-posterior mean fitted endpoints, and pale
+orange ribbons are pointwise 90\% endpoint summaries from root-state Gibbs
+draws. These are interval-root summaries under the declared loss update, not
+posterior-predictive response bands.}
+\label{fig:oracle-tilt-dlm-fit}
+\end{figure}
 
 The matched ordinary-RQR study uses common data-generating mechanisms,
 training and forecast windows, content levels, seeds, and scoring rules across

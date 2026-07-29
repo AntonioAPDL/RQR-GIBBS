@@ -22,7 +22,21 @@ test_that("Cornish-Fisher mean-tilt pilots satisfy algebraic invariances", {
     cf_neg$delta_standardized, -cf_y$delta_standardized,
     tolerance = 1e-12
   )
+  expect_equal(
+    cf_neg$excess_kurtosis, cf_y$excess_kurtosis,
+    tolerance = 1e-12
+  )
+  expect_equal(
+    cf_neg$standardized_sixth_moment,
+    cf_y$standardized_sixth_moment,
+    tolerance = 1e-12
+  )
   expect_equal(cf_neg$delta_raw, -cf_y$delta_raw, tolerance = 1e-12)
+  expect_true(all(c("u_lower", "u_upper", "clipped") %in%
+                    names(cf_y$probability_window)))
+  expect_true(cf_y$u_lower_cf >= 0)
+  expect_true(cf_y$u_upper_cf <= 1)
+  expect_true(cf_y$reliability_status %in% c("nominal", "diagnostic_caution"))
 
   shifted_scaled <- rqr_mt_tilt_cf(7.5 + 3.2 * y, 0.90, "shortest")
   expect_equal(
@@ -101,6 +115,30 @@ test_that("mean-tilt screen grid and validation selection are fail-closed", {
   )
   expect_identical(selected$status, "selected")
   expect_equal(selected$selected_delta_standardized, 0)
+
+  guarded <- rqr_mt_select_tilt_candidate(
+    candidates = c(-0.2, 0, 0.2),
+    mean_width = c(1.1, 1.0, 0.8),
+    empirical_coverage = c(0.94, 0.93, 0.89),
+    coverage_level = 0.90,
+    tolerance = 0.02,
+    coverage_guard = "simultaneous_binomial",
+    validation_n = 500L,
+    confidence_level = 0.90
+  )
+  expect_identical(guarded$coverage_guard, "simultaneous_binomial")
+  expect_true(all(guarded$coverage_lower_bound <= guarded$empirical_coverage))
+  expect_true(guarded$status %in% c("selected", "failed_no_coverage_candidate"))
+  expect_error(
+    rqr_mt_select_tilt_candidate(
+      candidates = c(0, 0.1),
+      mean_width = c(1, 1),
+      empirical_coverage = c(0.91, 0.92),
+      coverage_level = 0.9,
+      coverage_guard = "simultaneous_binomial"
+    ),
+    "validation_n is required"
+  )
 })
 
 test_that("bootstrap diagnostic is reproducible and does not redefine target", {

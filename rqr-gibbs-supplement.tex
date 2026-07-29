@@ -463,6 +463,23 @@ They are design-weighted projection equations; they do not imply pointwise
 conditional content or retained-mean identities unless the predictor class is
 sufficiently rich and the unrestricted conditions apply.
 
+\paragraph{Root-label contract.}
+The losses \eqref{eq:mean-tilted-loss-roots} and the ordinary
+\(\delta=0\) loss are invariant to exchanging the two raw roots. With
+exchangeable root priors, the unordered pair is identified but the labels
+``root 1'' and ``root 2'' are not. The implemented static sampler therefore
+permits a complete-root swap that exchanges the coefficient vector and any
+root-specific prior state as one block. This swap is not a device for naming a
+lower root. Lower and upper endpoint functionals are obtained by pointwise
+sorting. Coefficient-level lower/upper summaries require a separate
+post-processing chart: one binary keep/swap assignment is made for each
+retained complete root block using distances on a declared audit design, and
+canonical coefficient summaries are suppressed if the two fitted linear roots
+cross or the assignment is ambiguous on that design. The dynamic implementation
+uses the same rule for ordinate paths: a retained draw may be kept or swapped
+as one complete path, but roots are not relabelled separately at different
+times.
+
 \begin{proposition}[Fixed-content mean-tilted target]
 \label{prop:supp-mean-tilt}
 Under the regularity conditions in
@@ -736,9 +753,11 @@ external validation screening. They are not posterior draws, do not sample a
 tilt in the Gibbs chain, and do not justify reusing the ordinary learned-scale
 update at nonzero tilt. Strong skewness, finite-support boundary solutions,
 and heavy-tailed cases can move the first-order shortest approximation outside
-the admissible finite-root tilt range. The deterministic population figure and
-table below are therefore approximation diagnostics rather than empirical
-validation or held-out selection rules.
+the admissible finite-root tilt range. The implementation records adjusted
+skewness, excess kurtosis, standardized sixth moment, probability-window
+clipping, boundary proximity, and bootstrap sidecars for this reason. The
+deterministic population figure and table below are therefore approximation
+diagnostics rather than empirical validation or held-out selection rules.
 
 \begin{figure}[H]
 \centering

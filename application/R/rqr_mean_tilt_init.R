@@ -1,5 +1,5 @@
 .rqr_mt_tilt_pilot_schema <- function() {
-  "rqrgibbs_mean_tilt_pilot/1.0.0"
+  "rqrgibbs_mean_tilt_pilot/1.1.0"
 }
 
 .rqr_mt_tilt_screen_schema <- function() {
@@ -7,7 +7,7 @@
 }
 
 .rqr_mt_tilt_selection_schema <- function() {
-  "rqrgibbs_mean_tilt_selection/1.0.0"
+  "rqrgibbs_mean_tilt_selection/1.1.0"
 }
 
 .rqr_mt_assert_coverage <- function(coverage_level) {
@@ -75,6 +75,45 @@
          call. = FALSE)
   }
   sqrt(n * (n - 1)) / (n - 2) * m3 / m2^(3 / 2)
+}
+
+.rqr_mt_standardized_moments <- function(y) {
+  centered <- y - mean(y)
+  m2 <- mean(centered^2)
+  if (!is.finite(m2) || m2 <= 0) {
+    stop("Sample central moments must be finite with positive variance.",
+         call. = FALSE)
+  }
+  m3 <- mean(centered^3)
+  m4 <- mean(centered^4)
+  m6 <- mean(centered^6)
+  list(
+    skewness_moment = m3 / m2^(3 / 2),
+    excess_kurtosis = m4 / m2^2 - 3,
+    standardized_sixth_moment = m6 / m2^3
+  )
+}
+
+.rqr_mt_cf_probability_window <- function(coverage_level, gamma1,
+                                          target) {
+  q_c <- stats::qnorm((1 + coverage_level) / 2)
+  lower_equal <- (1 - coverage_level) / 2
+  lower_shortest <- lower_equal - gamma1 * stats::dnorm(q_c) / 3
+  lower_unclipped <- if (identical(target, "shortest")) {
+    lower_shortest
+  } else {
+    lower_equal
+  }
+  lower <- min(max(lower_unclipped, 0), 1 - coverage_level)
+  upper <- lower + coverage_level
+  list(
+    u_lower_unclipped = lower_unclipped,
+    u_upper_unclipped = lower_unclipped + coverage_level,
+    u_lower = lower,
+    u_upper = upper,
+    clipped = !isTRUE(all.equal(lower_unclipped, lower, tolerance = 0)),
+    distance_to_boundary = min(lower, 1 - coverage_level - lower)
+  )
 }
 
 .rqr_mt_seed_scope <- function(seed) {
@@ -167,7 +206,8 @@ rqr_mt_cf_constant <- function(coverage_level) {
 #' and the equal-tailed pilot is one third of that value.  These pilots are
 #' initialization and screening anchors.  They are not posterior draws, do not
 #' sample the tilt, and do not propagate tilt-estimation uncertainty through an
-#' RQR generalized posterior.
+#' RQR generalized posterior.  The returned moment, boundary, and bootstrap
+#' fields are diagnostics for the approximation, not validity guarantees.
 #'
 #' @param y Training responses.
 #' @param coverage_level Target interval coverage in `(0, 1)`.
@@ -190,6 +230,7 @@ rqr_mt_tilt_cf <- function(
   y_mean <- mean(y)
   y_sd <- stats::sd(y)
   gamma1 <- .rqr_mt_adjusted_fisher_pearson_skewness(y)
+  moment_diag <- .rqr_mt_standardized_moments(y)
   constant <- rqr_mt_cf_constant(coverage_level)
   multiplier <- if (identical(target, "shortest")) 1 else 1 / 3
   d_hat <- -gamma1 * constant * multiplier
@@ -251,11 +292,36 @@ rqr_mt_tilt_cf <- function(
       draws_standardized = finite_draws
     )
   }
+  probability_window <- .rqr_mt_cf_probability_window(
+    coverage_level, gamma1, target
+  )
+  reliability_flags <- list(
+    boundary_clipped = isTRUE(probability_window$clipped),
+    near_probability_boundary =
+      is.finite(probability_window$distance_to_boundary) &&
+      probability_window$distance_to_boundary < 0.02,
+    large_abs_adjusted_skewness = abs(gamma1) > 1,
+    large_abs_excess_kurtosis = abs(moment_diag$excess_kurtosis) > 2,
+    large_standardized_sixth_moment =
+      moment_diag$standardized_sixth_moment > 60,
+    bootstrap_unstable = is.finite(bootstrap_summary$sd_standardized) &&
+      bootstrap_summary$sd_standardized >
+        max(0.1, abs(d_hat) / 2)
+  )
+  reliability_status <- if (any(unlist(reliability_flags, use.names = FALSE))) {
+    "diagnostic_caution"
+  } else {
+    "nominal"
+  }
 
   out <- list(
     schema_version = .rqr_mt_tilt_pilot_schema(),
     method = "cornish_fisher_first_order",
     approximation_order = "first_order_skewness",
+    approximation_scope = paste(
+      "Formal first-order near-Normal Cornish--Fisher anchor;",
+      "not a finite-sample empirical optimizer."
+    ),
     target = target,
     coverage_level = coverage_level,
     n = n,
@@ -264,7 +330,20 @@ rqr_mt_tilt_cf <- function(
     training_mean = y_mean,
     training_sd = y_sd,
     adjusted_skewness = gamma1,
+    skewness_moment = moment_diag$skewness_moment,
+    excess_kurtosis = moment_diag$excess_kurtosis,
+    standardized_sixth_moment =
+      moment_diag$standardized_sixth_moment,
     cf_constant = constant,
+    probability_window = probability_window,
+    u_lower_cf_unclipped = probability_window$u_lower_unclipped,
+    u_upper_cf_unclipped = probability_window$u_upper_unclipped,
+    u_lower_cf = probability_window$u_lower,
+    u_upper_cf = probability_window$u_upper,
+    boundary_warning = isTRUE(probability_window$clipped) ||
+      reliability_flags$near_probability_boundary,
+    reliability_status = reliability_status,
+    reliability_flags = reliability_flags,
     delta_raw = delta_hat,
     delta_standardized = d_hat,
     bootstrap = bootstrap_summary,
@@ -272,7 +351,8 @@ rqr_mt_tilt_cf <- function(
     sampled_tilt = FALSE,
     interpretation = paste(
       "Cornish--Fisher fixed mean-tilt pilot for initialization or screening;",
-      "not a posterior draw and not an automatic shortest-interval guarantee."
+      "not a posterior draw, not a finite-sample empirical optimizer, and",
+      "not an automatic shortest-interval guarantee."
     )
   )
   class(out) <- c("rqr_mt_tilt_pilot", "list")
@@ -567,12 +647,22 @@ rqr_mt_tilt_screen <- function(
 #' @param coverage_level Target interval coverage in `(0, 1)`.
 #' @param tolerance Nonnegative coverage tolerance; candidates must satisfy
 #'   `empirical_coverage >= coverage_level - tolerance`.
+#' @param coverage_guard Coverage rule. `"point"` uses the supplied point
+#'   empirical coverage. `"simultaneous_binomial"` uses a Bonferroni one-sided
+#'   Normal lower bound for all candidates.
+#' @param validation_n Validation-set size, required for
+#'   `"simultaneous_binomial"`.
+#' @param confidence_level Simultaneous confidence level used by the binomial
+#'   lower-bound guard.
 #' @return An `rqr_mt_tilt_selection` object.
 #' @export
 rqr_mt_select_tilt_candidate <- function(
     candidates, mean_width, empirical_coverage, coverage_level,
-    tolerance = 0) {
+    tolerance = 0,
+    coverage_guard = c("point", "simultaneous_binomial"),
+    validation_n = NULL, confidence_level = 0.95) {
   coverage_level <- .rqr_mt_assert_coverage(coverage_level)
+  coverage_guard <- match.arg(coverage_guard)
   candidates <- as.numeric(candidates)
   mean_width <- as.numeric(mean_width)
   empirical_coverage <- as.numeric(empirical_coverage)
@@ -593,7 +683,31 @@ rqr_mt_select_tilt_candidate <- function(
     stop("tolerance must be finite, nonnegative, and smaller than coverage_level.",
          call. = FALSE)
   }
-  admissible <- empirical_coverage >= coverage_level - tolerance
+  confidence_level <- as.numeric(confidence_level)[1L]
+  if (!is.finite(confidence_level) || confidence_level <= 0 ||
+      confidence_level >= 1) {
+    stop("confidence_level must be one finite scalar in (0, 1).",
+         call. = FALSE)
+  }
+  coverage_lower_bound <- empirical_coverage
+  if (identical(coverage_guard, "simultaneous_binomial")) {
+    if (is.null(validation_n)) {
+      stop(
+        "validation_n is required when coverage_guard = 'simultaneous_binomial'.",
+        call. = FALSE
+      )
+    }
+    validation_n <- .rqr_mt_assert_count(validation_n, "validation_n", 1L)
+    alpha_family <- 1 - confidence_level
+    z <- stats::qnorm(1 - alpha_family / length(candidates))
+    se <- sqrt(pmax(empirical_coverage * (1 - empirical_coverage), 0) /
+                 validation_n)
+    coverage_lower_bound <- pmax(0, empirical_coverage - z * se)
+  } else {
+    validation_n <- if (is.null(validation_n)) NA_integer_ else
+      .rqr_mt_assert_count(validation_n, "validation_n", 1L)
+  }
+  admissible <- coverage_lower_bound >= coverage_level - tolerance
   if (!any(admissible)) {
     out <- list(
       schema_version = .rqr_mt_tilt_selection_schema(),
@@ -602,9 +716,13 @@ rqr_mt_select_tilt_candidate <- function(
       selected_delta_standardized = NA_real_,
       coverage_level = coverage_level,
       tolerance = tolerance,
+      coverage_guard = coverage_guard,
+      validation_n = validation_n,
+      confidence_level = confidence_level,
       candidates = candidates,
       mean_width = mean_width,
       empirical_coverage = empirical_coverage,
+      coverage_lower_bound = coverage_lower_bound,
       admissible = admissible,
       interpretation = paste(
         "No fixed tilt satisfied the held-out coverage constraint;",
@@ -623,11 +741,16 @@ rqr_mt_select_tilt_candidate <- function(
     selected_delta_standardized = candidates[[best]],
     selected_mean_width = mean_width[[best]],
     selected_empirical_coverage = empirical_coverage[[best]],
+    selected_coverage_lower_bound = coverage_lower_bound[[best]],
     coverage_level = coverage_level,
     tolerance = tolerance,
+    coverage_guard = coverage_guard,
+    validation_n = validation_n,
+    confidence_level = confidence_level,
     candidates = candidates,
     mean_width = mean_width,
     empirical_coverage = empirical_coverage,
+    coverage_lower_bound = coverage_lower_bound,
     admissible = admissible,
     interpretation = paste(
       "Selected fixed tilt by held-out mean width subject to held-out",

@@ -57,6 +57,7 @@ local_trackers/
 scratch_work/
 .codex_work/
 RQR_theory.md
+newsuggestions.md
 Chatgpt_output*
 docs/implementation_notes/*project_prompt.md
 docs/implementation_notes/*output*_followup_prompt.md

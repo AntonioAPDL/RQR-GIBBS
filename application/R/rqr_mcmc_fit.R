@@ -33,7 +33,10 @@
 #'   runtime-package attestation metadata. RHS fits require the executing
 #'   exdqlm namespace to match the pinned source for promotion eligibility.
 #' @param mcmc_control Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
-#'   `verbose`, `progress_every`, `precision_beta`, and `store_latent_draws`.
+#'   `verbose`, `progress_every`, `precision_beta`, `store_latent_draws`, and
+#'   optional `root_label_control`. The latter controls the complete-root swap
+#'   probability and post-processing canonicalization of exchangeable raw root
+#'   labels.
 #' @param init Optional initial values.
 #' @param ... Reserved.
 #' @return An `rqr_mcmc` object.
@@ -126,6 +129,9 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     mcmc_control$progress_every %||% 100L, "mcmc_control$progress_every", 1L
   )
   store_latent_draws <- isTRUE(mcmc_control$store_latent_draws %||% FALSE)
+  root_label_control <- .rqr_normalize_root_label_control(
+    mcmc_control$root_label_control %||% list(), X
+  )
   precision_beta_cfg <- .exal_normalize_mcmc_precision_beta_cfg(
     mcmc_control$precision_beta %||% mcmc_control$precision %||% list()
   )
@@ -267,7 +273,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     pr_upd2 <- .rqr_prior_state_update(beta_prior_obj, state2, beta2)
     state2 <- pr_upd2$state
 
-    if (stats::runif(1L) < 0.5) {
+    if (stats::runif(1L) < root_label_control$swap_probability) {
       tmp <- beta1; beta1 <- beta2; beta2 <- tmp
       tmp <- state1; state1 <- state2; state2 <- tmp
       tmp <- pr_upd1; pr_upd1 <- pr_upd2; pr_upd2 <- tmp
@@ -306,6 +312,52 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   }
 
   summary <- .rqr_fit_summary(y, X, beta1_draws, beta2_draws)
+  summary$beta_raw_root1_mean <- summary$beta_root1_mean
+  summary$beta_raw_root2_mean <- summary$beta_root2_mean
+  root_label_diagnostics <- NULL
+  canonical_beta_lower <- NULL
+  canonical_beta_upper <- NULL
+  if (isTRUE(root_label_control$canonicalize_draws)) {
+    root_label_diagnostics <- tryCatch(
+      rqr_canonicalize_root_draws(
+        beta_root1 = beta1_draws,
+        beta_root2 = beta2_draws,
+        X_audit = root_label_control$audit_X,
+        reference_beta_lower = root_label_control$reference_beta_lower,
+        reference_beta_upper = root_label_control$reference_beta_upper,
+        audit_weights = root_label_control$audit_weights,
+        gap_tolerance = root_label_control$gap_tolerance,
+        ambiguity_tolerance = root_label_control$ambiguity_tolerance,
+        reference_method = root_label_control$reference_method,
+        max_iter = root_label_control$max_iter,
+        fail_on_ambiguous = root_label_control$fail_on_ambiguous
+      ),
+      error = function(e) {
+        out <- list(
+          schema_version = .rqr_root_label_schema(),
+          object = "static_root_coefficients",
+          status = "failed_with_error",
+          error = conditionMessage(e),
+          root_estimand = "unordered_root_pair",
+          raw_root_labels_identified = FALSE,
+          canonicalization_changes_chain = FALSE,
+          interpretation = paste(
+            "Canonical coefficient labels were not produced; raw root labels",
+            "remain exchangeable and interval endpoints are obtained by",
+            "pointwise sorting."
+          )
+        )
+        class(out) <- c("rqr_root_label_diagnostics", "list")
+        out
+      }
+    )
+    if (identical(root_label_diagnostics$status, "ok")) {
+      canonical_beta_lower <- root_label_diagnostics$canonical_beta_lower
+      canonical_beta_upper <- root_label_diagnostics$canonical_beta_upper
+      summary$beta_canonical_lower_mean <- colMeans(canonical_beta_lower)
+      summary$beta_canonical_upper_mean <- colMeans(canonical_beta_upper)
+    }
+  }
   lambda_summary <- .rqr_lambda_summary(lambda_draws)
   effective_learning_rate_summary <- .rqr_lambda_summary(lambda_draws / loss_reference_scale)
   learning_rate_report <- if (learn_lambda) lambda_summary$mean / loss_reference_scale else learning_rate
@@ -331,6 +383,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
         beta_prior_hypers = beta_prior_obj$hypers,
         mean_tilt_target = mean_tilt_info$contract,
         mean_tilt_digest = mean_tilt_info$digest,
+        root_label_contract = root_label_control$contract,
         numerical_policy = numerical_policy,
         precision_beta = precision_beta_cfg
       )
@@ -379,6 +432,23 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       inference = "mcmc",
       generalized_bayes = TRUE,
       response_likelihood = FALSE,
+      root_estimand = "unordered_root_pair",
+      raw_root_labels_identified = FALSE,
+      root_priors_exchangeable = TRUE,
+      root_swap_enabled = root_label_control$swap_probability > 0,
+      root_swap_probability = root_label_control$swap_probability,
+      coefficient_label_contract = root_label_control$contract,
+      canonicalization_status =
+        root_label_diagnostics$status %||% "not_requested",
+      canonical_coefficient_inference_available =
+        identical(root_label_diagnostics$status %||% "not_requested", "ok"),
+      canonicalization_reference_source =
+        root_label_diagnostics$reference$method %||% NA_character_,
+      canonicalization_audit_domain = if (!is.null(root_label_diagnostics)) {
+        root_label_diagnostics$audit_domain
+      } else {
+        list(n = nrow(root_label_control$audit_X), p = ncol(root_label_control$audit_X))
+      },
       target_contract = "fixed_joint_exact",
       exact_joint_target = TRUE,
       numerical_policy = numerical_policy,
@@ -392,6 +462,8 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     X = X,
     samp.beta_root1 = beta1_draws,
     samp.beta_root2 = beta2_draws,
+    samp.beta_lower_canonical = canonical_beta_lower,
+    samp.beta_upper_canonical = canonical_beta_upper,
     samp.lambda = lambda_draws,
     samp.latent_v = latent_v_draws,
     summary = summary,
@@ -415,6 +487,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       precision_beta = precision_beta_cfg,
       numerical_repairs = repair_records %||% data.frame(),
       root_swap_trace = root_swap_trace,
+      root_label_diagnostics = root_label_diagnostics,
       rhs_stats_root1 = rhs_stats1,
       rhs_stats_root2 = rhs_stats2
     ),
@@ -450,6 +523,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       seed = seed,
       constants = constants,
       mean_tilt = mean_tilt_info,
+      root_label_control = root_label_control$contract,
       column_names = colnames(X),
       note = "RQR is a generalized-Bayes interval readout, not a response likelihood."
     )
@@ -459,11 +533,27 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
 }
 
 #' @export
-rqr_posterior_draws.rqr_mcmc <- function(object, nd = NULL, seed = NULL, ...) {
+rqr_posterior_draws.rqr_mcmc <- function(
+    object, nd = NULL, seed = NULL,
+    root_representation = c("raw", "canonical"), ...) {
   if (!inherits(object, "rqr_mcmc")) stop("Expected an rqr_mcmc object.", call. = FALSE)
+  root_representation <- match.arg(root_representation)
   if (!is.null(seed)) set.seed(.rqr_scalar_integer(seed, "seed", 0L))
-  b1 <- as.matrix(object$samp.beta_root1)
-  b2 <- as.matrix(object$samp.beta_root2)
+  if (identical(root_representation, "canonical")) {
+    if (!isTRUE(object$model_spec$canonical_coefficient_inference_available) ||
+        is.null(object$samp.beta_lower_canonical) ||
+        is.null(object$samp.beta_upper_canonical)) {
+      stop(
+        "Canonical coefficient draws are unavailable: the global root-label audit did not pass for this fit.",
+        call. = FALSE
+      )
+    }
+    b1 <- as.matrix(object$samp.beta_lower_canonical)
+    b2 <- as.matrix(object$samp.beta_upper_canonical)
+  } else {
+    b1 <- as.matrix(object$samp.beta_root1)
+    b2 <- as.matrix(object$samp.beta_root2)
+  }
   n_save <- nrow(b1)
   lambda_all <- as.numeric(object$samp.lambda %||% rep(object$model_spec$learning_rate %||% NA_real_, n_save))
   if (is.null(nd)) {
@@ -475,8 +565,16 @@ rqr_posterior_draws.rqr_mcmc <- function(object, nd = NULL, seed = NULL, ...) {
   list(
     beta_root1 = b1[idx, , drop = FALSE],
     beta_root2 = b2[idx, , drop = FALSE],
+    beta_lower = if (identical(root_representation, "canonical")) b1[idx, , drop = FALSE] else NULL,
+    beta_upper = if (identical(root_representation, "canonical")) b2[idx, , drop = FALSE] else NULL,
     lambda = lambda_all[idx],
-    nd = length(idx)
+    nd = length(idx),
+    root_representation = root_representation,
+    root_label_interpretation = if (identical(root_representation, "canonical")) {
+      "Canonical lower/upper coefficient blocks from a passed audit-domain relabeling."
+    } else {
+      "Raw exchangeable root labels; use pointwise sorting for interval endpoints."
+    }
   )
 }
 

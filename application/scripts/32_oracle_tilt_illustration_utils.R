@@ -463,7 +463,19 @@ oti_interval_metrics <- function(pred, truth, y, index_name = "index") {
   )
 }
 
+oti_row_quantile <- function(x, probs) {
+  x <- as.matrix(x)
+  out <- t(apply(x, 1L, stats::quantile, probs = probs, na.rm = TRUE,
+                 names = FALSE, type = 8))
+  colnames(out) <- paste0("q", sprintf("%02d", round(100 * probs)))
+  out
+}
+
 oti_curve_frame <- function(family, target, x, y, pred, truth) {
+  lower_q <- oti_row_quantile(pred$lower_draws, c(0.05, 0.95))
+  upper_q <- oti_row_quantile(pred$upper_draws, c(0.05, 0.95))
+  midpoint_q <- oti_row_quantile(pred$midpoint_draws, c(0.05, 0.95))
+  width_q <- oti_row_quantile(pred$width_draws, c(0.05, 0.95))
   data.frame(
     family = family,
     target = target,
@@ -477,6 +489,14 @@ oti_curve_frame <- function(family, target, x, y, pred, truth) {
     fit_upper = as.numeric(pred$upper_mean),
     fit_midpoint = as.numeric(pred$midpoint_mean),
     fit_width = as.numeric(pred$width_mean),
+    fit_lower_q05 = lower_q[, 1L],
+    fit_lower_q95 = lower_q[, 2L],
+    fit_upper_q05 = upper_q[, 1L],
+    fit_upper_q95 = upper_q[, 2L],
+    fit_midpoint_q05 = midpoint_q[, 1L],
+    fit_midpoint_q95 = midpoint_q[, 2L],
+    fit_width_q05 = width_q[, 1L],
+    fit_width_q95 = width_q[, 2L],
     observed = is.finite(y),
     stringsAsFactors = FALSE
   )
@@ -636,61 +656,102 @@ oti_fit_desn_target <- function(dgp, targets_by_index, target, config,
 }
 
 oti_plot_curve_panels <- function(curves, file, title,
-                                  xlab = "Index", ylab = "Response scale") {
+                                  xlab = "Index", ylab = "Response scale",
+                                  caption_note = NULL,
+                                  show_legend_each_panel = FALSE) {
   oti_ensure_dir(dirname(file))
   targets <- c("RQR", "ET", "SH")
   targets <- targets[targets %in% unique(curves$target)]
-  grDevices::png(file, width = 1800, height = 1200, res = 170)
+  grDevices::png(file, width = 2100, height = 1450, res = 210)
   old <- graphics::par(no.readonly = TRUE)
   on.exit({
     graphics::par(old)
     grDevices::dev.off()
   }, add = TRUE)
-  graphics::par(mfrow = c(length(targets), 1L), mar = c(2.3, 4.1, 2.1, 1.2),
-                oma = c(2.8, 0, 2, 0))
-  col_oracle <- "#1b4f72"
-  col_fit <- grDevices::adjustcolor("#d95f02", alpha.f = 0.85)
-  for (target in targets) {
+  graphics::par(
+    family = "serif",
+    mfrow = c(length(targets), 1L),
+    mar = c(2.0, 4.3, 2.0, 1.2),
+    oma = c(3.3, 0.4, 2.4, 0)
+  )
+  col_truth <- "#222222"
+  col_data <- "#6b6b6b"
+  col_oracle <- "#0072B2"
+  col_fit <- "#D55E00"
+  col_missing <- "#CC79A7"
+  col_ribbon <- grDevices::adjustcolor(col_fit, alpha.f = 0.18)
+  for (panel_id in seq_along(targets)) {
+    target <- targets[panel_id]
     z <- curves[curves$target == target, , drop = FALSE]
+    z <- z[order(z$x), , drop = FALSE]
     yr <- range(
       z$y, z$mean_truth, z$oracle_lower, z$oracle_upper,
-      z$fit_lower, z$fit_upper, na.rm = TRUE
+      z$fit_lower, z$fit_upper, z$fit_lower_q05, z$fit_lower_q95,
+      z$fit_upper_q05, z$fit_upper_q95, na.rm = TRUE
     )
+    pad <- diff(yr) * 0.06
+    yr <- yr + c(-pad, pad)
     graphics::plot(
-      z$x, z$y, pch = 16, cex = 0.55,
-      col = ifelse(z$observed, "#6b6b6b", "#c7c7c7"),
+      z$x, z$y, type = "n",
       xlab = "", ylab = ylab, ylim = yr,
-      main = paste0(target, " target")
+      main = paste0(target, " target"), las = 1,
+      cex.lab = 0.96, cex.axis = 0.88, cex.main = 1.02
     )
-    graphics::lines(z$x, z$mean_truth, col = "#222222", lwd = 2)
-    graphics::lines(z$x, z$oracle_lower, col = col_oracle, lwd = 2.2)
-    graphics::lines(z$x, z$oracle_upper, col = col_oracle, lwd = 2.2)
-    graphics::lines(z$x, z$fit_lower, col = col_fit, lwd = 1.8)
-    graphics::lines(z$x, z$fit_upper, col = col_fit, lwd = 1.8)
+    graphics::grid(col = "#e9e9e9", lwd = 0.8)
+    if (all(is.finite(z$fit_lower_q05)) && all(is.finite(z$fit_lower_q95))) {
+      graphics::polygon(
+        c(z$x, rev(z$x)),
+        c(z$fit_lower_q05, rev(z$fit_lower_q95)),
+        col = col_ribbon, border = NA
+      )
+      graphics::polygon(
+        c(z$x, rev(z$x)),
+        c(z$fit_upper_q05, rev(z$fit_upper_q95)),
+        col = col_ribbon, border = NA
+      )
+    }
+    graphics::points(
+      z$x[z$observed], z$y[z$observed],
+      pch = 16, cex = 0.48, col = grDevices::adjustcolor(col_data, 0.85)
+    )
+    graphics::lines(z$x, z$mean_truth, col = col_truth, lwd = 2.1)
+    graphics::lines(z$x, z$oracle_lower, col = col_oracle, lwd = 2.15)
+    graphics::lines(z$x, z$oracle_upper, col = col_oracle, lwd = 2.15)
+    graphics::lines(z$x, z$fit_lower, col = col_fit, lwd = 1.95)
+    graphics::lines(z$x, z$fit_upper, col = col_fit, lwd = 1.95)
     if (any(!z$observed)) {
       graphics::points(z$x[!z$observed], z$mean_truth[!z$observed],
-                       pch = 4, col = "#b22222", cex = 0.8)
+                       pch = 4, col = col_missing, cex = 0.82, lwd = 1.2)
     }
-    legend <- c("observed data", "truth", "oracle interval", "fit mean interval")
-    legend_col <- c("#6b6b6b", "#222222", col_oracle, col_fit)
-    legend_pch <- c(16, NA, NA, NA)
-    legend_lty <- c(NA, 1, 1, 1)
-    legend_lwd <- c(NA, 2, 2.2, 1.8)
+    show_legend <- isTRUE(show_legend_each_panel) || panel_id == 1L
+    if (!show_legend) next
+    legend <- c(
+      "observed data", "truth", "population-oracle interval",
+      "fit mean interval", "90% endpoint ribbon"
+    )
+    legend_col <- c(col_data, col_truth, col_oracle, col_fit, col_ribbon)
+    legend_pch <- c(16, NA, NA, NA, 15)
+    legend_lty <- c(NA, 1, 1, 1, NA)
+    legend_lwd <- c(NA, 2.1, 2.15, 1.95, NA)
     if (any(!z$observed)) {
       legend <- c(legend, "missing time")
-      legend_col <- c(legend_col, "#b22222")
+      legend_col <- c(legend_col, col_missing)
       legend_pch <- c(legend_pch, 4)
       legend_lty <- c(legend_lty, NA)
       legend_lwd <- c(legend_lwd, NA)
     }
     graphics::legend(
-      "topleft", bty = "n", cex = 0.82,
+      "topleft", bty = "n", cex = 0.77,
       legend = legend, col = legend_col,
       pch = legend_pch, lty = legend_lty, lwd = legend_lwd
     )
   }
-  graphics::mtext(xlab, side = 1, outer = TRUE, line = 1.2)
-  graphics::mtext(title, outer = TRUE, cex = 1.1, font = 2)
+  graphics::mtext(xlab, side = 1, outer = TRUE, line = 1.4, cex = 0.96)
+  graphics::mtext(title, outer = TRUE, cex = 1.12, font = 2)
+  if (!is.null(caption_note) && nzchar(caption_note)) {
+    graphics::mtext(caption_note, side = 1, outer = TRUE, line = 2.55,
+                    cex = 0.72, col = "#444444")
+  }
   invisible(file)
 }
 

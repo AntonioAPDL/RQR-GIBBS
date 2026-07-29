@@ -65,7 +65,10 @@ runtime-package attestation metadata. RHS fits require the executing
 exdqlm namespace to match the pinned source for promotion eligibility.}
 
 \item{mcmc_control}{Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
-`verbose`, `progress_every`, `precision_beta`, and `store_latent_draws`.}
+`verbose`, `progress_every`, `precision_beta`, `store_latent_draws`, and
+optional `root_label_control`. The latter controls the complete-root swap
+probability and post-processing canonicalization of exchangeable raw root
+labels.}
 
 \item{init}{Optional initial values.}
 

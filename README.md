@@ -32,6 +32,17 @@ RQR is treated as a loss-based generalized-Bayes update. Interval-root draws
 are summaries of a generalized posterior over interval functionals; they are
 not posterior-predictive response draws.
 
+The two root blocks are exchangeable under the symmetric ordinary and
+mean-tilted targets. Raw fields such as `samp.beta_root1` and
+`samp.beta_root2` are therefore MCMC labels, not lower- and upper-endpoint
+coefficient estimates after label mixing. Interval endpoints are always
+available by pointwise sorting. Coefficient-level lower/upper summaries are
+reported only when a post-processing audit finds one globally separated
+lower/upper chart on a declared design; otherwise the package fails closed and
+keeps only raw-label coefficients plus ordered endpoint functionals. Dynamic
+RQR-DLM paths follow the same whole-root principle: swaps exchange complete
+root trajectories, not individual times.
+
 The implemented ordinary-RQR paths currently include:
 
 1. fixed-design ridge regression;

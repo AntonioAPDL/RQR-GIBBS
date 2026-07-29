@@ -22,9 +22,11 @@ config_path <- arg_value(
 )
 output_dir_arg <- arg_value("--output-dir=", NULL)
 families_arg <- arg_value("--families=", NULL)
+figure_output_dir_arg <- arg_value("--figure-output-dir=", NULL)
 dry_run <- has_flag("--dry-run")
 quick <- has_flag("--quick")
 strict_desn <- has_flag("--strict-desn")
+paper_figures <- has_flag("--paper-figures")
 
 repo_root <- normalizePath(file.path(script_dir, "..", ".."), mustWork = TRUE)
 setwd(repo_root)
@@ -62,7 +64,7 @@ run_id <- arg_value("--run-id=", oti_now_id())
 output_root <- output_dir_arg %||%
   file.path("application", "outputs", "oracle_tilt_illustrations", run_id)
 output_root <- oti_ensure_dir(output_root)
-figure_dir <- oti_ensure_dir(file.path(output_root, "figures"))
+figure_dir <- oti_ensure_dir(figure_output_dir_arg %||% file.path(output_root, "figures"))
 
 law <- oti_law_from_config(config)
 oracle_targets <- oti_oracle_targets(law, coverage_level, targets)
@@ -163,7 +165,18 @@ if (length(all_curves)) {
   paths <- c(paths, oti_write_csv(curves, file.path(output_root, "fit_curves.csv")))
   for (fam in unique(curves$family)) {
     fcurves <- curves[curves$family == fam, , drop = FALSE]
-    file <- file.path(figure_dir, paste0("oracle_tilt_", fam, ".png"))
+    fig_name <- if (isTRUE(paper_figures)) {
+      switch(
+        fam,
+        fixed_design = "fig04_oracle_tilt_fixed_design_fit.png",
+        dlm = "fig05_oracle_tilt_dlm_fit.png",
+        desn = "fig06_oracle_tilt_desn_fit.png",
+        paste0("oracle_tilt_", fam, ".png")
+      )
+    } else {
+      paste0("oracle_tilt_", fam, ".png")
+    }
+    file <- file.path(figure_dir, fig_name)
     title <- switch(
       fam,
       fixed_design = "Fixed-design mean-tilted RQR illustration",
@@ -172,7 +185,16 @@ if (length(all_curves)) {
       paste("Mean-tilted RQR illustration:", fam)
     )
     xlab <- if (identical(fam, "fixed_design")) "Covariate x" else "Time"
-    paths <- c(paths, oti_plot_curve_panels(fcurves, file, title, xlab = xlab))
+    note <- switch(
+      fam,
+      fixed_design = "Intervals compare population-oracle endpoints with generalized-posterior endpoint summaries from one illustrative data set.",
+      dlm = "Missing responses are omitted from the loss and tilt sites; red crosses mark their latent mean positions.",
+      desn = "The DESN panel uses a frozen deterministic feature design and the same static readout scan.",
+      NULL
+    )
+    paths <- c(paths, oti_plot_curve_panels(
+      fcurves, file, title, xlab = xlab, caption_note = note
+    ))
   }
 }
 

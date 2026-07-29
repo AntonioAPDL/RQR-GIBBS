@@ -9,7 +9,10 @@ rqr_mt_select_tilt_candidate(
   mean_width,
   empirical_coverage,
   coverage_level,
-  tolerance = 0
+  tolerance = 0,
+  coverage_guard = c("point", "simultaneous_binomial"),
+  validation_n = NULL,
+  confidence_level = 0.95
 )
 }
 \arguments{
@@ -23,6 +26,16 @@ rqr_mt_select_tilt_candidate(
 
 \item{tolerance}{Nonnegative coverage tolerance; candidates must satisfy
 `empirical_coverage >= coverage_level - tolerance`.}
+
+\item{coverage_guard}{Coverage rule. `"point"` uses the supplied point
+empirical coverage. `"simultaneous_binomial"` uses a Bonferroni one-sided
+Normal lower bound for all candidates.}
+
+\item{validation_n}{Validation-set size, required for
+`"simultaneous_binomial"`.}
+
+\item{confidence_level}{Simultaneous confidence level used by the binomial
+lower-bound guard.}
 }
 \value{
 An `rqr_mt_tilt_selection` object.

@@ -998,6 +998,22 @@ rqr_dlm_fit <- function(
       ),
       generalized_bayes = TRUE,
       response_likelihood = FALSE,
+      root_estimand = "unordered_dynamic_root_pair",
+      raw_root_labels_identified = FALSE,
+      root_priors_exchangeable = TRUE,
+      root_swap_enabled = TRUE,
+      root_swap_probability = 0.5,
+      path_label_contract = list(
+        schema_version = .rqr_root_label_control_schema(),
+        root_estimand = "unordered_dynamic_root_pair",
+        raw_root_labels_identified = FALSE,
+        complete_root_swap = TRUE,
+        swap_probability = 0.5,
+        canonicalization_is_postprocessing = TRUE,
+        canonicalization_helper = "rqr_canonicalize_root_paths",
+        endpoint_reporting = "pointwise_ordered_interval_roots"
+      ),
+      canonical_path_inference_available = FALSE,
       evolution_mode = evolution_mode,
       component_scale_transition_kernel =
         component_scale_kernel_contract,
@@ -1108,6 +1124,14 @@ rqr_dlm_fit <- function(
       observed = observed, store_state_draws = store_state_draws,
       store_latent_draws = store_latent_draws, jitter_ladder = jitter_ladder,
       mean_tilt = mean_tilt_info,
+      path_label_control = list(
+        schema_version = .rqr_root_label_control_schema(),
+        root_estimand = "unordered_dynamic_root_pair",
+        raw_root_labels_identified = FALSE,
+        complete_root_swap = TRUE,
+        swap_probability = 0.5,
+        canonicalization_is_postprocessing = TRUE
+      ),
       component_scale_collapsed_update =
         component_scale_collapsed_update,
       component_scale_interweave = component_scale_interweave,

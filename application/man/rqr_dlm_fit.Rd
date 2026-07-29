@@ -85,7 +85,10 @@ and attestation fields.}
 
 \item{mcmc_control}{Iteration, seed, storage, backend, progress, jitter, and
 optional exact partially collapsed and interwoven component-scale
-controls.}
+controls. For component-scale evolution, `component_scale_collapsed_cycles`
+repeats the full root-1/root-2 partially collapsed composition, and
+`component_scale_transition_order` is either `"rootwise_then_interweave"`
+or `"interweave_then_rootwise"`.}
 
 \item{init}{Optional initial states, latent scales, lambda, evolution scales,
 time-zero states, and RNG state.}
