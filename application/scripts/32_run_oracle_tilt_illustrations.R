@@ -99,6 +99,8 @@ paths <- c(paths, oti_write_csv(fit_plan, file.path(output_root, "fit_plan.csv")
 
 all_summaries <- list()
 all_curves <- list()
+all_error_densities <- list()
+all_error_summaries <- list()
 skip_rows <- list()
 
 if (dry_run) {
@@ -114,6 +116,8 @@ if (dry_run) {
       res <- oti_fit_fixed_design_target(dgp, tbi, target, config, quick = quick)
       all_summaries[[length(all_summaries) + 1L]] <- res$summary
       all_curves[[length(all_curves) + 1L]] <- res$curves
+      all_error_densities[[length(all_error_densities) + 1L]] <- res$error_density
+      all_error_summaries[[length(all_error_summaries) + 1L]] <- res$error_summary
     }
   }
   if ("dlm" %in% families) {
@@ -126,6 +130,8 @@ if (dry_run) {
       res <- oti_fit_dlm_target(dgp, tbi, target, config, quick = quick)
       all_summaries[[length(all_summaries) + 1L]] <- res$summary
       all_curves[[length(all_curves) + 1L]] <- res$curves
+      all_error_densities[[length(all_error_densities) + 1L]] <- res$error_density
+      all_error_summaries[[length(all_error_summaries) + 1L]] <- res$error_summary
     }
   }
   if ("desn" %in% families) {
@@ -138,6 +144,8 @@ if (dry_run) {
       res <- oti_fit_desn_target(dgp, tbi, target, config, quick = quick)
       all_summaries[[length(all_summaries) + 1L]] <- res$summary
       all_curves[[length(all_curves) + 1L]] <- res$curves
+      all_error_densities[[length(all_error_densities) + 1L]] <- res$error_density
+      all_error_summaries[[length(all_error_summaries) + 1L]] <- res$error_summary
     }
   }
 }
@@ -170,7 +178,7 @@ if (length(all_curves)) {
         fam,
         fixed_design = "fig04_oracle_tilt_fixed_design_fit.png",
         dlm = "fig05_oracle_tilt_dlm_fit.png",
-        desn = "fig06_oracle_tilt_desn_fit.png",
+        desn = "fig08_oracle_tilt_desn_fit.png",
         paste0("oracle_tilt_", fam, ".png")
       )
     } else {
@@ -188,12 +196,48 @@ if (length(all_curves)) {
     note <- switch(
       fam,
       fixed_design = "Intervals compare population-oracle endpoints with generalized-posterior endpoint summaries from one illustrative data set.",
-      dlm = "Missing responses are omitted from the loss and tilt sites; red crosses mark their latent mean positions.",
+      dlm = "Missing responses are omitted from the loss and tilt sites; magenta ticks mark omitted response times.",
       desn = "The DESN panel uses a frozen deterministic feature design and the same static readout scan.",
       NULL
     )
     paths <- c(paths, oti_plot_curve_panels(
       fcurves, file, title, xlab = xlab, caption_note = note
+    ))
+  }
+}
+
+if (length(all_error_densities)) {
+  error_density <- oti_rbind_fill(all_error_densities)
+  paths <- c(paths, oti_write_csv(
+    error_density, file.path(output_root, "endpoint_error_density.csv")
+  ))
+  error_summary <- oti_rbind_fill(all_error_summaries)
+  paths <- c(paths, oti_write_csv(
+    error_summary, file.path(output_root, "endpoint_error_summary.csv")
+  ))
+  for (fam in unique(error_density$family)) {
+    ferr <- error_density[error_density$family == fam, , drop = FALSE]
+    fig_name <- if (isTRUE(paper_figures)) {
+      switch(
+        fam,
+        fixed_design = "fig06_oracle_tilt_fixed_design_endpoint_errors.png",
+        dlm = "fig07_oracle_tilt_dlm_endpoint_errors.png",
+        desn = "fig09_oracle_tilt_desn_endpoint_errors.png",
+        paste0("oracle_tilt_", fam, "_endpoint_errors.png")
+      )
+    } else {
+      paste0("oracle_tilt_", fam, "_endpoint_errors.png")
+    }
+    title <- switch(
+      fam,
+      fixed_design = "Fixed-design endpoint error distributions",
+      dlm = "Dynamic linear root endpoint error distributions",
+      desn = "Reservoir readout endpoint error distributions",
+      paste("Endpoint error distributions:", fam)
+    )
+    paths <- c(paths, oti_plot_endpoint_error_panels(
+      ferr, file.path(figure_dir, fig_name), title,
+      xlab = expression(fitted~endpoint~draw - population~oracle~endpoint)
     ))
   }
 }

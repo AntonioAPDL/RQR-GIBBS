@@ -63,6 +63,38 @@ testthat::test_that("DLM oracle tilts preserve NA masks at missing observations"
   }
 })
 
+testthat::test_that("endpoint error summaries are centered on oracle differences", {
+  source(testthat::test_path(
+    "..", "..", "scripts", "32_oracle_tilt_illustration_utils.R"
+  ))
+  truth <- data.frame(
+    oracle_lower = c(-1, -0.5, 0),
+    oracle_upper = c(1, 1.5, 2),
+    stringsAsFactors = FALSE
+  )
+  pred <- list(
+    lower_draws = cbind(
+      truth$oracle_lower + c(-0.1, 0.0, 0.1),
+      truth$oracle_lower + c(0.0, 0.1, 0.2),
+      truth$oracle_lower + c(-0.2, -0.1, 0.0)
+    ),
+    upper_draws = cbind(
+      truth$oracle_upper + c(0.1, 0.0, -0.1),
+      truth$oracle_upper + c(0.2, 0.1, 0.0),
+      truth$oracle_upper + c(0.0, -0.1, -0.2)
+    )
+  )
+  dens <- oti_endpoint_error_density_frame("fixed_design", "RQR", pred, truth)
+  summ <- oti_endpoint_error_summary_frame("fixed_design", "RQR", pred, truth)
+  testthat::expect_setequal(dens$endpoint, c("lower", "upper"))
+  testthat::expect_setequal(summ$endpoint, c("lower", "upper"))
+  testthat::expect_true(all(is.finite(dens$error)))
+  testthat::expect_true(all(is.finite(dens$density)))
+  testthat::expect_true(all(summ$q025_error <= summ$median_error))
+  testthat::expect_true(all(summ$median_error <= summ$q975_error))
+  testthat::expect_true(all(summ$rmse >= 0))
+})
+
 testthat::test_that("runner dry-run writes the declared compact contract", {
   testthat::skip_if_not_installed("rqrgibbs")
   testthat::skip_if_not_installed("jsonlite")

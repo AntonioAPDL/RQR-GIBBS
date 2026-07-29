@@ -56,8 +56,10 @@ For didactic single-data examples, use `make oracle-tilt-illustrations-dry-run`
 to inspect the fit plan or `make oracle-tilt-illustrations` to run the compact
 fixed-rate illustration workflow. Use `make model-illustration-figures` to
 regenerate the manuscript-ready fixed-design and RQR-DLM illustration figures
-under `figures/generated/`; run metadata and summaries remain under ignored
-local output roots.
+under `figures/generated/`. The workflow also writes endpoint-error density
+figures and compact endpoint-error summaries comparing fitted endpoint draws
+with the population-oracle interval limits; run metadata and summaries remain
+under ignored local output roots.
 The fixed-W, discount-template, and component-scale modes are exact for their
 declared Gaussian evolution priors. Adaptive conditional discounting is
 mathematically incompatible in general with the advertised pair of simple
