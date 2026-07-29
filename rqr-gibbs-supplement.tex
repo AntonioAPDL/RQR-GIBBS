@@ -8,6 +8,7 @@
 \setstretch{1.08}
 \usepackage{amsmath,amssymb,mathtools,bm,booktabs,tabularx,array,amsthm}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
 \usepackage{enumitem}
@@ -107,6 +108,52 @@ Symbol & Role & Scope\\
 \(\lambda_W\) & RQR-W quadratic width-penalty coefficient & comparison only\\
 \(\gamma_j,q_j\) & component discount and shared component evolution scale & dynamic model\\
 \(\mathcal O,n_{\mathrm{obs}},T\) & observed sites, their count, and dynamic time horizon & computation\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The supplement is organized as a support map for the main article rather than
+as a second narrative paper. Table~\ref{tab:supp-support-map} records the
+principal claim types and where the reader can recover the corresponding
+derivation or computational contract.
+
+\begin{table}[t]
+\centering
+\caption{\textbf{Support map for the main article.} The table separates
+population identification, finite-sample score identities, static uncertainty
+geometry, computation, and reproducibility scope.}
+\label{tab:supp-support-map}
+\TableStyle
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.28\textwidth}
+  >{\raggedright\arraybackslash}p{0.24\textwidth}
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+Main claim or object & Supplement location & Type of support\\
+\midrule
+Fixed-content interval class and shortest-window condition
+& Sections~\ref{sec:supp-interval-functionals}--\ref{sec:supp-population-target}
+& Population geometry and endpoint qualifications\\
+Ordinary RQR retained-mean target
+& Section~\ref{sec:supp-population-target}
+& Score derivation, quantile-window identification, and restricted-regression warning\\
+Mean-tilted RQR and recovery tilts
+& Section~\ref{sec:supp-mean-tilt}
+& Profiled-risk proof, boundary cases, affine equivariance, and CF anchors\\
+Exact fractional empirical balance
+& Section~\ref{sec:supp-static-theory}
+& Clarke/subgradient allocation proof and regression score equations\\
+Static generalized-posterior uncertainty geometry
+& Section~\ref{sec:supp-static-theory}
+& Fixed-dimensional iid random-design scope, \(H/J\) covariance contrast, and sandwich transform\\
+Pseudo-AL Gibbs blocks
+& Sections~\ref{sec:supp-pseudo-al}--\ref{sec:supp-static-regression}
+& Loss-kernel augmentation, GIG latent scales, Gaussian root blocks, and adapter contracts\\
+Dynamic linear root-state computation
+& Sections~\ref{sec:supp-dynamic}--\ref{sec:supp-discounts}
+& Quartic joint kernel, root-specific FFBS, frozen discounts, component scales, and adaptive-discount caveat\\
+Evidence and reproducibility scope
+& Section~\ref{sec:supp-reproducibility}
+& Interpretation of validation fixtures and limits of empirical claims\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -689,9 +736,24 @@ external validation screening. They are not posterior draws, do not sample a
 tilt in the Gibbs chain, and do not justify reusing the ordinary learned-scale
 update at nonzero tilt. Strong skewness, finite-support boundary solutions,
 and heavy-tailed cases can move the first-order shortest approximation outside
-the admissible finite-root tilt range. The deterministic population table in
-the main text is therefore an approximation diagnostic rather than an
-empirical validation or held-out selection rule.
+the admissible finite-root tilt range. The deterministic population figure and
+table below are therefore approximation diagnostics rather than empirical
+validation or held-out selection rules.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/fig03_mean_tilt_cf_anchors.png}
+\caption{\textbf{Cornish--Fisher tilt-anchor diagnostic.}
+For content \(c=0.80\), the solid curves are the population window-to-tilt map
+and width profile from the main article's left-skewed illustration. Filled
+markers are the oracle RQR, ET, and SH tilts. Open markers show first-order
+Cornish--Fisher anchors computed from true population skewness. The display is
+an approximation diagnostic for initialization and screening, not a
+data-driven tilt estimator and not MCMC evidence.}
+\label{fig:supp-mean-tilt-cf-anchors}
+\end{figure}
+
+\input{tables/mean_tilt_cf_mini_study.tex}
 
 The tilt indexes the estimand and is initially treated like a fixed quantile
 level. A scalar tilt generally defines only a restricted global target in a
@@ -963,6 +1025,7 @@ additive constant. This explains both the form of RQR-W and why its path does
 not generally coincide with the shortest-contiguous path.
 
 \section{Pseudo-AL Kernel}
+\label{sec:supp-pseudo-al}
 
 For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\) and
 \(\rho_c(e)=e\{c-\ind(e<0)\}\), a fixed-rate generalized posterior is
@@ -1143,6 +1206,7 @@ scan; reservoir tuning and any tilt selection belong to an external, recorded
 validation layer. Nonzero-tilt RHS-NS and VB readouts remain disabled.
 
 \section{Learned Inverse-Loss Scale}
+\label{sec:supp-learned-scale}
 
 Let \(s_L>0\) be a declared reference loss scale and set
 \(\sigma_{\mathrm R}=s_L/\kappa\). With
@@ -1393,6 +1457,7 @@ matrix-relative except for an exactly zero matrix, for which use of the
 declared ladder is recorded as an absolute fallback.
 
 \section{Component-Specific Discount Factors}
+\label{sec:supp-discounts}
 
 Let component discounts be \(\gamma_1,\ldots,\gamma_J\), with
 \(0<\gamma_j\le1\), and let their state dimensions sum to \(p\). Define the
@@ -1629,6 +1694,7 @@ optionally swaps the two complete root labels. Static \(q_j=0\) components are
 separate degenerate models and are not part of the inverse-Gamma support.
 
 \section{Reproducibility and Evidence Scope}
+\label{sec:supp-reproducibility}
 
 The repository separates mathematical target status, numerical execution, and
 reproducibility eligibility. Reference checks cover the Gaussian filtering and

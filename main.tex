@@ -66,32 +66,27 @@
 \noindent
 Probability content does not by itself determine interval placement. We study
 the interval functional induced by relaxed quantile regression (RQR), whose
-residual-product check loss estimates two unlabeled raw roots without
-preassigning endpoint quantiles. Under explicit conditions, the unrestricted
-population minimizer is the unique contiguous content-\(c\) interval whose
-retained mean equals the population mean. A fixed mean tilt preserves content
-while shifting that retained mean to \(\mu+\delta\). Interior admissible tilts
-index all finite-root interior content-\(c\) windows, with boundary members
-obtained as qualified one-sided limits. Equal-tailed and
-shortest-contiguous intervals therefore have distribution-specific recovery
-tilts. We construct loss-based generalized posteriors using a
-pseudo-asymmetric-Laplace normal--exponential augmentation. A fixed-rate
-mean-tilted sampler covers static regression under proper Gaussian priors,
-with ordinary RQR obtained exactly at zero tilt. The implemented ordinary
-branch also supports a conditional-Gaussian regularized-horseshoe adapter
-using the Nishimura--Suchard augmentation (RHS-NS), and a frozen deep
-echo-state-network feature matrix is a deterministic nonlinear-design
-specialization of the same static scan. A dynamic linear extension replaces
-coefficient blocks by alternating root-specific forward-filtering
-backward-sampling steps: the stacked state prior is Gaussian, but the joint
-augmented observation kernel is quartic. Current software and empirical
-evidence are separated: ordinary RQR has the broader validation program, while
-fixed-rate nonzero mean tilt is implemented only for ridge static readouts,
-ridge DESN readouts, and fixed-\(W_t\) or frozen-template DLM modes. Learned
-rates, nonzero-tilt RHS-NS, adaptive or component-scale dynamic tilt, and
-VB/CAVI remain separate projects. All updates concern interval-root
-functionals under a loss and prior, not a response likelihood or
-posterior-predictive responses.
+residual-product check loss estimates two exchangeable roots without assigning
+endpoint quantile levels. Under explicit regularity conditions, the
+unrestricted population minimizer is the unique contiguous content-\(c\)
+interval whose retained mean equals the population mean. A fixed mean tilt
+preserves content while shifting the retained mean to \(\mu+\delta\), thereby
+indexing a family of fixed-content interval targets that includes
+distribution-specific recovery tilts for equal-tailed and shortest-contiguous
+intervals. We construct loss-based generalized posteriors for these targets
+using a pseudo-asymmetric-Laplace normal--exponential augmentation, yielding
+generalized-inverse-Gaussian latent scales and Gaussian root blocks. Static
+regression, frozen-feature DESN readouts, and dynamic linear root states are
+then treated as design or state-evolution restrictions on the same interval
+loss. In the dynamic case, the stacked state prior is Gaussian but the joint
+augmented observation kernel is quartic, so exact fixed-joint computation uses
+alternating root-specific FFBS rather than one stacked Gaussian FFBS draw. The
+ordinary RQR branches have the broader current validation program; fixed-rate
+nonzero mean tilt is implemented only for the proper-Gaussian ridge readout
+and fixed-\(W_t\) or frozen-template DLM cases. Learned rates, nonzero-tilt
+RHS-NS, adaptive or component-scale dynamic tilt, and VB/CAVI are separate
+projects. All updates concern interval-root functionals under a loss and
+prior, not a response likelihood or posterior-predictive responses.
 \end{abstract}
 
 \section{Introduction}
@@ -135,47 +130,36 @@ pseudo-asymmetric-Laplace normal--exponential representation, adapted from
 Bayesian quantile-regression computation
 \citep{yu2001bayesian,KozumiKobayashi2011Gibbs}, yields generalized
 inverse-Gaussian latent scales and Gaussian conditional root blocks. The
-augmentation acts on a pseudo-residual, not on the response distribution. A
-fixed tilt changes only the Gaussian information vectors. This yields a
-three-stage predictor hierarchy. First, static interval-root regression uses a
-fixed design matrix and conditionally Gaussian coefficient blocks. Proper
-Gaussian priors include ridge; at zero tilt, the implemented ordinary-RQR
-branch also supports a root-specific RHS-NS regularization adapter
-\citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS,
-NishimuraSuchard2023SSS}. The nonzero-tilt derivation remains restricted to
-proper Gaussian priors because propriety of the external random-scale adapter
-has not been established. Second, substituting a deterministic, recorded DESN
-feature design gives a frozen-feature specialization of this same static
-regression and sampler
-\citep{Jaeger2001EchoState,GallicchioMicheliPedrelli2018DeepESNDesign}.
-The reservoir is a design object, not a posterior state.
+augmentation acts on a pseudo-residual, not on the response distribution, and
+a fixed tilt changes only the Gaussian information vectors. This gives a
+common computational template for static interval-root regression, frozen
+DESN feature readouts
+\citep{Jaeger2001EchoState,GallicchioMicheliPedrelli2018DeepESNDesign},
+and dynamic linear root states.
 
-Third, the dynamic extension replaces each coefficient vector by a linear
-Gaussian state trajectory. Although the two trajectories have a jointly
-Gaussian stacked prior, their joint augmented observation kernel is quartic.
+The dynamic extension replaces each coefficient vector by a linear Gaussian
+state trajectory. Although the two trajectories have a jointly Gaussian
+stacked prior, their joint augmented observation kernel is quartic.
 Conditioning on either complete trajectory restores a linear Gaussian system
 for the other, to which standard dynamic-linear-model forward-filtering
 backward-sampling (FFBS) applies
 \citep{GoncalvesMigonBastos2020DQLM}. Alternating those two path draws gives
 exact root-blocked Gibbs updates for the declared fixed-joint RQR models.
 
-The contributions are sixfold. First, we characterize the ordinary RQR
-population functional as the mean-preserving fixed-content interval and give a
-profiled global identification result. Second, we introduce mean-tilted RQR
-as a fixed-content family whose admissible tilts index the interior window
-class, with boundary members obtained through qualified limits. Third, we
-give exact fractional finite-sample score identities and separate static
-frequentist covariance from generalized-posterior curvature. Fourth, we give a
-first-order Cornish--Fisher approximation and finite-sample diagnostic for
-fixed-tilt initialization. Fifth, we derive a fixed-rate mean-tilted Gibbs
-construction whose zero-tilt member is the implemented ordinary-RQR sampler.
-Sixth, we organize the predictor hierarchy as regularized static regression,
-a frozen-feature DESN specialization, and a root-blocked dynamic linear
-extension. The ordinary-RQR ridge, RHS-NS, frozen-DESN, and DLM
-branches are implemented. The fixed-rate nonzero-tilt ridge cases are also
-implemented as bounded target extensions. Nonzero-tilt RHS-NS, learned-rate
-tilt, adaptive or component-scale dynamic tilt, data-driven tilt selection,
-and variational approximations remain proposed methodological developments.
+The paper contributes four linked pieces. First, it identifies ordinary RQR as
+the mean-preserving member of the fixed-content interval class and introduces a
+fixed mean-tilt extension that indexes other content-\(c\) windows. Second, it
+records the exact fractional empirical balance equations and separates
+static frequentist covariance from generalized-posterior curvature. Third, it
+derives the pseudo-AL Gibbs construction for fixed-rate static targets, with
+ordinary RQR as the zero-tilt member. Fourth, it organizes the computational
+extensions as regularized static regression, frozen-feature DESN readouts, and
+root-blocked dynamic linear states. The validated ordinary-RQR implementation
+is broader than the current nonzero-tilt implementation: nonzero tilt is
+restricted to proper-Gaussian fixed-rate readouts and fixed-\(W_t\) or
+frozen-template DLM modes, while nonzero-tilt RHS-NS, learned-rate tilt,
+adaptive or component-scale dynamic tilt, data-driven tilt selection, and
+variational approximations remain separate developments.
 
 The interpretation is deliberately narrow. The posterior-like update concerns
 interval-root functionals under a loss and prior. It is not an ordinary
@@ -253,17 +237,11 @@ distribution.
 \includegraphics[width=\textwidth]{figures/generated/fig01_three_balance_principles.png}
 \caption{\textbf{Three interval-selection principles under left skewness.}
 All panels use the same continuous left-skewed population illustration with
-interval content \(c=0.80\), displayed as
-\(Z=\{Y-\E(Y)\}/\operatorname{SD}(Y)\). The illustrative population is not
-part of the RQR construction; it makes the three placement principles visibly
-distinct. All targets are computed on the raw population scale before
-standardization. Equal-tailed (ET)
-intervals balance omitted
-probabilities, ordinary RQR balances omitted first moments, and shortest
-contiguous (SH) intervals minimize geometric width. Direct labels, endpoint
-glyphs, and redundant color encode the three targets; every interval segment is
-solid. These deterministic population calculations compare the functionals;
-they do not provide finite-sample or comparative-performance evidence.}
+content \(c=0.80\), displayed after standardization. Equal-tailed (ET)
+intervals balance omitted probabilities, ordinary RQR balances omitted first
+moments, and shortest-contiguous (SH) intervals minimize geometric width.
+These deterministic population calculations compare functionals; they are not
+finite-sample or comparative-performance evidence.}
 \label{fig:three-interval-principles}
 \end{figure}
 
@@ -537,37 +515,9 @@ d_{\mathrm{ET}}^{\mathrm{CF}}=\frac{1}{3}d_{\mathrm{SH}}^{\mathrm{CF}},
 These formulas are not new interval targets; they are local skewness-based
 approximations to the population recovery tilts. Right skewness gives a
 negative shortest-oriented tilt, while left skewness gives a positive tilt.
-The approximation is useful because it gives the sign and approximate
-magnitude of the tilt from a single population summary. Figure~\ref{fig:mean-tilt-cf-anchors}
-therefore places the CF anchors on the same tilt and width scales using the
-true skewness of the illustrative population, not sample estimates. In applied
-work a plug-in skewness estimate would be only a fixed initialization or
-screening candidate, to be recorded outside the Gibbs target.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/generated/fig03_mean_tilt_cf_anchors.png}
-\caption{\textbf{Cornish--Fisher tilt-anchor diagnostic.}
-For the same content \(c=0.80\), the solid curves are the population
-window-to-tilt map and width profile. Filled markers are the oracle RQR, ET,
-and SH tilts. Open markers show first-order Cornish--Fisher anchors computed
-from true population skewness. In this moderate-skewness illustration both
-CF anchors are admissible and therefore lie on the finite-root tilt path. The
-display is an approximation diagnostic for initialization and screening, not
-a data-driven tilt estimator and not MCMC evidence.}
-\label{fig:mean-tilt-cf-anchors}
-\end{figure}
-
-\input{tables/mean_tilt_cf_mini_study.tex}
-
-Table~\ref{tab:mean-tilt-cf-mini-study} gives the same message without
-simulation noise. Each row uses the true population skewness and compares the
-first-order CF anchor with the oracle recovery tilt. The approximation is
-exact at symmetry, very accurate for the near-Normal Gamma case, preserves the
-sign reversal for reflected Beta laws, and becomes less accurate for stronger
-skewness or support-boundary shortest intervals. This is the intended role of
-the CF calculation: it supplies cheap, interpretable starting anchors for
-tilt exploration, not automatic shortest-interval estimators.
+They supply cheap, interpretable starting anchors for tilt exploration, not
+automatic shortest-interval estimators. The supplement gives the corresponding
+diagnostic figure and finite-population comparison table.
 
 These are population and oracle statements. A universal tilt does not recover
 the same interval functional across distributions, and conditional recovery
@@ -618,17 +568,11 @@ P_n(\widehat a\le Y\le\widehat b),
 \qquad
 \left|P_n(\widehat a<Y<\widehat b)-c\right|\le B_n/n.
 \]
-In the iid intercept-only case, the Dvoretzky--Kiefer--Wolfowitz inequality
-therefore gives the conservative high-probability bound
-\[
-\left|\Pr_F(\widehat a<Y<\widehat b)-c\right|
-\le
-\frac{B_n}{n}+
-\sqrt{\frac{2\log(2/\alpha)}{n}}
-\]
-with probability at least \(1-\alpha\). Regression fits satisfy analogous
-design-weighted score equations; when a global ordering is valid, their
-coverage component contains
+In the iid intercept-only case, this combines with the
+Dvoretzky--Kiefer--Wolfowitz inequality to give a conservative
+high-probability population-content bound; the supplement gives the explicit
+display. Regression fits satisfy analogous design-weighted score equations;
+when a global ordering is valid, their coverage component contains
 \(\sum_i X_i\widehat w_i(c-\widehat q_i)=0\), with
 \(\widehat w_i=\widehat U_i-\widehat L_i\). This is width-weighted
 calibration in the chosen design span, not pointwise conditional coverage.
@@ -646,22 +590,10 @@ series, growing feature dimension, learned \(\kappa\), or same-sample tilt
 selection.
 
 Under these static regularity conditions, write
-\(\theta_0=(\beta_{L0}^\top,\beta_{U0}^\top)^\top\), let \(w_0(X)=b_0(X)-a_0(X)\),
-and let \(p_0(X)=\Pr\{a_0(X)<Y<b_0(X)\mid X\}\). The expected-risk Hessian has
-blocks
-\[
-H=
-\begin{pmatrix}
-\E\{XX^\top w_0(X)f_{Y\mid X}(a_0\mid X)\}
-&
-\E\{XX^\top[c-p_0(X)]\}\\
-\E\{XX^\top[c-p_0(X)]\}
-&
-\E\{XX^\top w_0(X)f_{Y\mid X}(b_0\mid X)\}
-\end{pmatrix},
-\]
-and \(J=\operatorname{Var}\{\psi_0(Z)\}\) is the variance of the endpoint score
-vector. The empirical minimizer has asymptotic sandwich covariance
+\(\theta_0=(\beta_{L0}^\top,\beta_{U0}^\top)^\top\). Let \(H\) be the
+expected-risk Hessian and \(J=\operatorname{Var}\{\psi_0(Z)\}\) the variance
+of the endpoint score vector; the supplement records their block forms. The
+empirical minimizer has asymptotic sandwich covariance
 \[
 \Sigma_F=H^{-1}JH^{-1},
 \]
@@ -702,6 +634,9 @@ L_i=\min(\eta_{1i},\eta_{2i}),\quad
 U_i=\max(\eta_{1i},\eta_{2i}),\quad
 M_i=(L_i+U_i)/2,\quad W_i=U_i-L_i.
 \]
+These ordered summaries are computational functionals. They should not be
+confused with the ordered-chart static asymptotic theory above, which assumes
+one globally labelable and uniformly separated endpoint ordering.
 For priors \(\pi_1,\pi_2\), a fixed externally declared
 \(\vect\delta\), and a fixed learning rate \(\omega_{\mathrm R}>0\), define
 \begin{equation}
@@ -897,55 +832,33 @@ propriety does not establish the same result after random-scale mixing.
 
 \begin{algorithmblock}{Static fixed-rate RQR/MT-RQR root-blocked Gibbs scan}
 \label{alg:fixed-design-gibbs}
-\item \textbf{Declared target and applicability.} Target
-\eqref{eq:fixed-mt-target} with fixed \(\omega_{\mathrm R}>0\), fixed
-\(\vect\delta\), and proper Gaussian root priors, including ridge priors; or
-the implemented ordinary-only branch with
-\(\vect\delta=\vect 0\) and the conditional-Gaussian RHS-NS adapter. The scan
-applies to fixed, recorded design rows; it does not define a response
-likelihood.
-\item \textbf{Inputs and fixed quantities.} Supply
-\(\vect y,\mat X,\mathcal O,c,\omega_{\mathrm R},\vect\delta_{\mathcal O}\),
-iteration controls, and a recorded label-swap rule. Supply either two Gaussian
-prior canonical parameter pairs or two identically specified RHS-NS prior
-states and their fixed hyperparameters. Missing rows are excluded from every
-loss, latent-scale, and tilt site.
-\item \textbf{Initialization.} Choose finite
-\(\vect\beta_1,\vect\beta_2\) and positive placeholder \(v_i\) for every
-\(i\in\mathcal O\). Initialize valid root-specific prior states when using
-RHS-NS.
-\item \textbf{One complete sweep.} Repeat for every warm-up and sampling
-iteration:
+\item \textbf{Declare the fixed target.} Fix
+\(\vect y,\mat X,\mathcal O,c,\omega_{\mathrm R}\), the target tilt
+\(\vect\delta_{\mathcal O}\), proper root priors, and the label-swap rule.
+Missing rows contribute no loss, latent-scale, or tilt site.
+\item \textbf{Initialize.} Choose finite
+\(\vect\beta_1,\vect\beta_2\), positive \(v_i\) for \(i\in\mathcal O\), and
+valid root-specific prior states when the ordinary RHS-NS adapter is used.
+\item \textbf{Sweep.} For each iteration:
 \begin{enumerate}[label=(\alph*),leftmargin=1.8em,itemsep=0.15em,topsep=0.15em]
 \item compute \(e_i\) and draw every observed \(v_i\) from the GIG
 conditional;
-\item draw \(\vect\beta_1\) conditional on \(\vect\beta_2\) and its current
-prior state from the Gaussian system with shift
+\item draw \(\vect\beta_1\) from its conditional Gaussian system, conditional
+on \(\vect\beta_2\), with tilt shift
 \(\omega_{\mathrm R}c\mat X_{\mathcal O}^{\top}
 \vect\delta_{\mathcal O}\);
-\item in the ordinary RHS-NS branch, update \(\vect\psi_1\) conditional on the
-new \(\vect\beta_1\);
-\item rebuild the system and draw \(\vect\beta_2\) conditional on the new
-\(\vect\beta_1\) and its current prior state, using the same shift;
-\item in the ordinary RHS-NS branch, update \(\vect\psi_2\) conditional on the
-new \(\vect\beta_2\); and
-\item if authorized by exchangeability, swap both complete root labels and
-all associated root-specific states together.
+\item update root 1's ordinary RHS-NS prior state when that adapter is active;
+\item rebuild the system and draw \(\vect\beta_2\) conditionally on the new
+\(\vect\beta_1\), using the same tilt shift;
+\item update root 2's ordinary RHS-NS prior state when active; and
+\item when the two complete root blocks are exchangeable, apply the
+acceptance-one label swap.
 \end{enumerate}
-\item \textbf{Stored quantities and label handling.} Retain raw roots only
-when required for diagnostics, and report ordered endpoints \(L_i,U_i\),
-widths, midpoints, losses, and complete target metadata. The optional
-acceptance-one swap is omitted unless the two prior and hyperstate blocks are
-exchangeable.
-\item \textbf{Rate and computational status.} This is a fixed-rate scan.
-At \(\vect\delta=\vect 0\) it is exactly the ordinary-RQR scan; the separate
-ordinary learned-\(\kappa\) scan is Algorithm~S1.
-\item \textbf{Implementation and validation status.} The conditional blocks
-are exact for the declared fixed-rate proper-Gaussian generalized target.
-Zero-tilt ridge and RHS-NS branches are implemented. Nonzero tilt is
-implemented for proper Gaussian ridge priors with a fixed learning rate; the
-RHS-NS nonzero-tilt branch, learned-rate tilt, and full empirical validation
-remain unresolved.
+\item \textbf{Report ordered functionals.} Store ordered endpoints, widths,
+midpoints, losses, and target metadata. The scan is exact for the declared
+fixed-rate proper-Gaussian target; at \(\vect\delta=\vect 0\) it reduces to
+ordinary RQR. The ordinary learned-\(\kappa\) scan and RHS-NS applicability
+details are given in the supplement.
 \end{algorithmblock}
 
 At \(\vect\delta=\vect 0\), Algorithm~\ref{alg:fixed-design-gibbs} reduces
@@ -1093,45 +1006,33 @@ recorded as an empirical-Bayes specification.
 
 \begin{algorithmblock}{Fixed-rate MT-RQR-DLM root-blocked Gibbs scan}
 \label{alg:dynamic-gibbs}
-\item \textbf{Declared target and applicability.} Use the fixed-rate
-mean-tilted loss with two Gaussian root-state priors and either fixed
-\(\mat W_{1:T}\) or one precomputed, frozen discount template. The scan does
-not cover adaptive conditional discounts or random shared component scales.
-\item \textbf{Inputs and fixed quantities.} Supply the responses and observed
-index \((\vect y,\mathcal O)\), \(c,\omega_{\mathrm R},\delta_{1:T}\), all
-design vectors \(\vect f_{1:T}\), all evolution matrices \(\mat G_{1:T}\),
-proper Gaussian initial laws, fixed or frozen \(\mat W_{1:T}\), iteration
-controls, and the label-swap rule.
-\item \textbf{Initialization.} Choose finite root paths
+\item \textbf{Declare the fixed joint target.} Fix
+\((\vect y,\mathcal O)\), \(c,\omega_{\mathrm R}\), \(\delta_{1:T}\),
+\(\vect f_{1:T}\), \(\mat G_{1:T}\), proper Gaussian initial laws, and either
+fixed \(\mat W_{1:T}\) or one precomputed frozen discount template.
+\item \textbf{Initialize.} Choose finite root paths
 \(\vect\theta_{1,1:T},\vect\theta_{2,1:T}\) and positive placeholder latent
-scales at observed times. Do not instantiate a latent or tilt site at a
-missing response.
-\item \textbf{One complete sweep.} Repeat for every warm-up and sampling
-iteration:
+scales at observed times. Missing responses instantiate no loss, latent-scale,
+or tilt site.
+\item \textbf{Sweep.} For each iteration:
 \begin{enumerate}[label=(\alph*),leftmargin=1.8em,itemsep=0.15em,topsep=0.15em]
 \item compute the current product residual and draw \(v_t\) at every
 \(t\in\mathcal O\) from the GIG conditional;
-\item conditional on \(\vect\theta_{2,1:T}\), build root 1's scalar
+\item conditional on \(\vect\theta_{2,1:T}\), build root 1's scalar Gaussian
 pseudo-observation system, add
 \(\vect g_t=\omega_{\mathrm R}c\delta_t\vect f_t\) at observed times, and draw
 \(\vect\theta_{1,1:T}\) by FFBS;
-\item rebuild the system conditional on the new first path and draw
-\(\vect\theta_{2,1:T}\) by the analogous tilted FFBS update; and
-\item if all initial laws, evolutions, and root-specific states are
-exchangeable, swap the two complete root blocks together.
+\item rebuild the system conditional on the new first path and draw the second
+path by the analogous tilted FFBS update; and
+\item when all root-state priors and evolution contracts are exchangeable,
+apply the acceptance-one complete-root label swap.
 \end{enumerate}
-\item \textbf{Stored quantities and label handling.} Retain ordered
-time-local endpoints, widths, midpoints, selected state functionals, losses,
-and complete target/evolution metadata. These are root functionals, not
-simulated responses.
-\item \textbf{Rate and computational status.} This is a fixed-rate,
-fixed-joint algorithm. At \(\delta_{1:T}=0\) it reduces exactly to the
-implemented ordinary fixed-\(\mat W_t\) or frozen-template RQR-DLM scan.
-\item \textbf{Implementation and validation status.} Sequential root-specific
-FFBS gives exact full-conditional draws for the declared modes. Nonzero tilt
-is implemented for fixed \(W_t\) and frozen discount templates with a fixed
-learning rate; adaptive discount remains a working update, and the random
-shared-scale extension remains ordinary-only.
+\item \textbf{Report root functionals.} Retain ordered time-local endpoints,
+widths, midpoints, selected state functionals, losses, and complete
+target/evolution metadata. These are not simulated responses. The scan is
+exact for fixed \(W_t\) and frozen-template fixed-joint modes; adaptive
+discounts and ordinary shared component scales are separate extensions
+described in the supplement.
 \end{algorithmblock}
 
 At \(\delta_{1:T}=0\), Algorithm~\ref{alg:dynamic-gibbs} reduces exactly to
@@ -1151,38 +1052,18 @@ partitions the state into blocks and sets
 \{q_1\mat Q_{1t},\ldots,q_J\mat Q_{Jt}\},
 \qquad q_j\sim\operatorname{IG}(a_j,b_j),
 \]
-where the \(\mat Q_{jt}\) are fixed positive-definite templates. The multipliers are
-shared across the two roots to preserve prior exchangeability. Sampling the
-time-zero states restores the innovation factorization and yields conjugate
-inverse-Gamma updates for each \(q_j\). The implemented component-scale kernel
-uses two rootwise partially collapsed blocks. It first conditions on root 2,
-integrates root 1 through its Gaussian pseudo-observation model, updates the
-log scales under the resulting Kalman marginal, and redraws root 1 by FFBS.
-It then exchanges the root roles, updates the scales under the root-2 Kalman
-marginal conditional on the refreshed root 1, and redraws root 2. Finally,
-the sampler interweaves the centered inverse-Gamma update with a noncentered
-slice update: state innovations are divided by \(\sqrt{q_j}\), the log scales
-are updated conditional on those standardized innovations, and both root
-paths are reconstructed. Each rootwise marginal-update/conditional-redraw
-block is invariant for the same target, as are the interweaving transition
-and the optional global label swap. Their composition therefore leaves the
-same ordinary generalized posterior invariant
-\citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. The complete
-derivation and scan order appear in the supplement.
-
-This component-scale interweaving is not silently generalized to nonzero
-tilt. In the noncentered parameterization the linear tilt depends on
-\(\sqrt{q_j}\) through the reconstructed state path, so the ordinary slice
-target must be modified and validated; propriety of the resulting tilted
-joint target must also be established. Likewise, the implemented
-pseudo-residual-normalized learned-\(\kappa\) update remains ordinary-only.
-
-By contrast, recomputing \(\mat W_t\) from each changing conditional filter
-covariance makes the evolution depend on the other root and latent-scale
-blocks. We retain that exdqlm-compatible discount recursion only as an
-experimental working update. A two-time scalar mixed-derivative argument in
-the supplement shows that its two advertised conditional FFBS kernels are
-generally incompatible with one common positive smooth joint density.
+where the \(\mat Q_{jt}\) are fixed positive-definite templates and the
+multipliers are shared across the two roots to preserve exchangeability. The
+implemented ordinary component-scale sampler uses rootwise partial collapse
+and centered/noncentered interweaving; the supplement gives the invariant
+transition and scan order
+\citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. This extension is
+not silently generalized to nonzero tilt. In the noncentered parameterization
+the tilt depends on \(\sqrt{q_j}\) through the reconstructed state path, so a
+tilted component-scale target requires separate normalization, propriety, and
+validation. Likewise, recomputing \(\mat W_t\) from each changing conditional
+filter covariance is retained only as an experimental working update, not as
+exact Gibbs for one fixed joint posterior.
 
 \section{Evaluation Strategy and Evidence Scope}
 \label{sec:evaluation}
