@@ -63,6 +63,106 @@ testthat::test_that("DLM oracle tilts preserve NA masks at missing observations"
   }
 })
 
+testthat::test_that("endpoint error summaries are centered on oracle differences", {
+  source(testthat::test_path(
+    "..", "..", "scripts", "32_oracle_tilt_illustration_utils.R"
+  ))
+  truth <- data.frame(
+    oracle_lower = c(-1, -0.5, 0),
+    oracle_upper = c(1, 1.5, 2),
+    stringsAsFactors = FALSE
+  )
+  pred <- list(
+    lower_draws = cbind(
+      truth$oracle_lower + c(-0.1, 0.0, 0.1),
+      truth$oracle_lower + c(0.0, 0.1, 0.2),
+      truth$oracle_lower + c(-0.2, -0.1, 0.0)
+    ),
+    upper_draws = cbind(
+      truth$oracle_upper + c(0.1, 0.0, -0.1),
+      truth$oracle_upper + c(0.2, 0.1, 0.0),
+      truth$oracle_upper + c(0.0, -0.1, -0.2)
+    )
+  )
+  dens <- oti_endpoint_error_density_frame("fixed_design", "RQR", pred, truth)
+  summ <- oti_endpoint_error_summary_frame("fixed_design", "RQR", pred, truth)
+  testthat::expect_setequal(dens$endpoint, c("lower", "upper"))
+  testthat::expect_setequal(summ$endpoint, c("lower", "upper"))
+  testthat::expect_true(all(is.finite(dens$error)))
+  testthat::expect_true(all(is.finite(dens$density)))
+  testthat::expect_true(all(summ$q025_error <= summ$median_error))
+  testthat::expect_true(all(summ$median_error <= summ$q975_error))
+  testthat::expect_true(all(summ$rmse >= 0))
+})
+
+testthat::test_that("paper run control and chain seeds are explicit", {
+  source(testthat::test_path(
+    "..", "..", "scripts", "32_oracle_tilt_illustration_utils.R"
+  ))
+  config <- list(
+    paper_mcmc_control = list(
+      enabled = TRUE,
+      n_chains = 4L,
+      diagnostics = list(enabled = TRUE)
+    ),
+    fixed_design = list(seed = 1000L),
+    dlm = list(seed = 2000L)
+  )
+  paper <- oti_run_control(config, paper_figures = TRUE)
+  quick <- oti_run_control(config, quick = TRUE, paper_figures = TRUE)
+  one_chain <- oti_run_control(config, paper_figures = TRUE, one_chain = TRUE)
+
+  testthat::expect_true(paper$paper_mode)
+  testthat::expect_equal(paper$n_chains, 4L)
+  testthat::expect_true(paper$diagnostics$enabled)
+  testthat::expect_false(quick$paper_mode)
+  testthat::expect_equal(quick$n_chains, 1L)
+  testthat::expect_false(one_chain$paper_mode)
+  testthat::expect_equal(one_chain$n_chains, 1L)
+
+  seeds <- vapply(seq_len(4L), function(chain) {
+    oti_chain_seed(config, "fixed_design", "RQR", chain)
+  }, integer(1L))
+  testthat::expect_equal(length(unique(seeds)), 4L)
+  testthat::expect_equal(seeds[1L], 1100L)
+})
+
+testthat::test_that("prediction combination and diagnostics have stable schemas", {
+  testthat::skip_if_not_installed("posterior")
+  source(testthat::test_path(
+    "..", "..", "scripts", "32_oracle_tilt_illustration_utils.R"
+  ))
+  pred1 <- list(
+    lower_draws = matrix(1:6, 3, 2),
+    upper_draws = matrix(7:12, 3, 2),
+    midpoint_draws = matrix(13:18, 3, 2),
+    width_draws = matrix(19:24, 3, 2)
+  )
+  pred2 <- lapply(pred1, function(x) x + 100)
+  combined <- oti_combine_predictions(list(pred1, pred2))
+  testthat::expect_equal(dim(combined$lower_draws), c(3L, 4L))
+  testthat::expect_equal(combined$lower_mean, rowMeans(combined$lower_draws))
+
+  set.seed(1)
+  scalar_chains <- list(
+    cbind(a = stats::rnorm(80), b = stats::rnorm(80)),
+    cbind(a = stats::rnorm(80), b = stats::rnorm(80))
+  )
+  run_control <- list(
+    diagnostics = list(
+      enabled = TRUE,
+      rhat_max = Inf,
+      bulk_ess_min = 1,
+      tail_ess_min = 1,
+      mcse_over_sd_max = Inf
+    )
+  )
+  diag <- oti_mcmc_diagnostics("fixed_design", "RQR", scalar_chains, run_control)
+  testthat::expect_setequal(diag$estimand, c("a", "b"))
+  testthat::expect_true(all(is.finite(diag$rhat)))
+  testthat::expect_true(all(diag$pass))
+})
+
 testthat::test_that("runner dry-run writes the declared compact contract", {
   testthat::skip_if_not_installed("rqrgibbs")
   testthat::skip_if_not_installed("jsonlite")
@@ -89,9 +189,12 @@ testthat::test_that("runner dry-run writes the declared compact contract", {
   testthat::expect_equal(status, 0)
   testthat::expect_true(file.exists(file.path(tmp, "oracle_targets.csv")))
   testthat::expect_true(file.exists(file.path(tmp, "fit_plan.csv")))
+  testthat::expect_true(file.exists(file.path(tmp, "runtime_state.json")))
   testthat::expect_true(file.exists(file.path(tmp, "artifact_manifest.csv")))
   plan <- read.csv(file.path(tmp, "fit_plan.csv"))
   testthat::expect_equal(nrow(plan), 6L)
   testthat::expect_setequal(plan$family, c("fixed_design", "dlm"))
   testthat::expect_setequal(plan$target, c("RQR", "ET", "SH"))
+  testthat::expect_true(all(plan$n_chains == 1L))
+  testthat::expect_true(all(!plan$paper_mode))
 })
