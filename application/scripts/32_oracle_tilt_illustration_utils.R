@@ -472,10 +472,10 @@ oti_row_quantile <- function(x, probs) {
 }
 
 oti_curve_frame <- function(family, target, x, y, pred, truth) {
-  lower_q <- oti_row_quantile(pred$lower_draws, c(0.05, 0.95))
-  upper_q <- oti_row_quantile(pred$upper_draws, c(0.05, 0.95))
-  midpoint_q <- oti_row_quantile(pred$midpoint_draws, c(0.05, 0.95))
-  width_q <- oti_row_quantile(pred$width_draws, c(0.05, 0.95))
+  lower_q <- oti_row_quantile(pred$lower_draws, c(0.025, 0.975))
+  upper_q <- oti_row_quantile(pred$upper_draws, c(0.025, 0.975))
+  midpoint_q <- oti_row_quantile(pred$midpoint_draws, c(0.025, 0.975))
+  width_q <- oti_row_quantile(pred$width_draws, c(0.025, 0.975))
   data.frame(
     family = family,
     target = target,
@@ -489,17 +489,78 @@ oti_curve_frame <- function(family, target, x, y, pred, truth) {
     fit_upper = as.numeric(pred$upper_mean),
     fit_midpoint = as.numeric(pred$midpoint_mean),
     fit_width = as.numeric(pred$width_mean),
-    fit_lower_q05 = lower_q[, 1L],
-    fit_lower_q95 = lower_q[, 2L],
-    fit_upper_q05 = upper_q[, 1L],
-    fit_upper_q95 = upper_q[, 2L],
-    fit_midpoint_q05 = midpoint_q[, 1L],
-    fit_midpoint_q95 = midpoint_q[, 2L],
-    fit_width_q05 = width_q[, 1L],
-    fit_width_q95 = width_q[, 2L],
+    fit_lower_q025 = lower_q[, 1L],
+    fit_lower_q975 = lower_q[, 2L],
+    fit_upper_q025 = upper_q[, 1L],
+    fit_upper_q975 = upper_q[, 2L],
+    fit_midpoint_q025 = midpoint_q[, 1L],
+    fit_midpoint_q975 = midpoint_q[, 2L],
+    fit_width_q025 = width_q[, 1L],
+    fit_width_q975 = width_q[, 2L],
     observed = is.finite(y),
     stringsAsFactors = FALSE
   )
+}
+
+oti_endpoint_error_vectors <- function(pred, truth) {
+  lower <- sweep(as.matrix(pred$lower_draws), 1L, truth$oracle_lower, "-")
+  upper <- sweep(as.matrix(pred$upper_draws), 1L, truth$oracle_upper, "-")
+  list(
+    lower = as.numeric(lower[is.finite(lower)]),
+    upper = as.numeric(upper[is.finite(upper)])
+  )
+}
+
+oti_endpoint_error_density_frame <- function(family, target, pred, truth,
+                                             n_grid = 512L) {
+  errs <- oti_endpoint_error_vectors(pred, truth)
+  rows <- lapply(names(errs), function(endpoint) {
+    e <- errs[[endpoint]]
+    if (!length(e)) {
+      return(data.frame())
+    }
+    den <- stats::density(e, n = n_grid, na.rm = TRUE)
+    qs <- stats::quantile(e, c(0.025, 0.5, 0.975),
+                          names = FALSE, type = 8)
+    data.frame(
+      family = family,
+      target = target,
+      endpoint = endpoint,
+      error = den$x,
+      density = den$y,
+      q025 = qs[1L],
+      median = qs[2L],
+      q975 = qs[3L],
+      mean_error = mean(e),
+      rmse = sqrt(mean(e^2)),
+      stringsAsFactors = FALSE
+    )
+  })
+  do.call(rbind, rows)
+}
+
+oti_endpoint_error_summary_frame <- function(family, target, pred, truth) {
+  errs <- oti_endpoint_error_vectors(pred, truth)
+  rows <- lapply(names(errs), function(endpoint) {
+    e <- errs[[endpoint]]
+    qs <- stats::quantile(e, c(0.025, 0.25, 0.5, 0.75, 0.975),
+                          names = FALSE, type = 8)
+    data.frame(
+      family = family,
+      target = target,
+      endpoint = endpoint,
+      mean_error = mean(e),
+      median_error = qs[3L],
+      q025_error = qs[1L],
+      q25_error = qs[2L],
+      q75_error = qs[4L],
+      q975_error = qs[5L],
+      rmse = sqrt(mean(e^2)),
+      mean_abs_error = mean(abs(e)),
+      stringsAsFactors = FALSE
+    )
+  })
+  do.call(rbind, rows)
 }
 
 oti_fit_fixed_design_target <- function(dgp, targets_by_index, target,
@@ -540,7 +601,13 @@ oti_fit_fixed_design_target <- function(dgp, targets_by_index, target,
   list(
     fit = fit,
     summary = summary,
-    curves = oti_curve_frame("fixed_design", target, dgp$x, dgp$y, pred, truth)
+    curves = oti_curve_frame("fixed_design", target, dgp$x, dgp$y, pred, truth),
+    error_density = oti_endpoint_error_density_frame(
+      "fixed_design", target, pred, truth
+    ),
+    error_summary = oti_endpoint_error_summary_frame(
+      "fixed_design", target, pred, truth
+    )
   )
 }
 
@@ -585,7 +652,9 @@ oti_fit_dlm_target <- function(dgp, targets_by_index, target, config,
   list(
     fit = fit,
     summary = summary,
-    curves = oti_curve_frame("dlm", target, dgp$time, dgp$y, pred, truth)
+    curves = oti_curve_frame("dlm", target, dgp$time, dgp$y, pred, truth),
+    error_density = oti_endpoint_error_density_frame("dlm", target, pred, truth),
+    error_summary = oti_endpoint_error_summary_frame("dlm", target, pred, truth)
   )
 }
 
@@ -651,6 +720,12 @@ oti_fit_desn_target <- function(dgp, targets_by_index, target, config,
     summary = summary,
     curves = oti_curve_frame(
       "desn", target, dgp$time[idx], fit$fit$y, pred, truth
+    ),
+    error_density = oti_endpoint_error_density_frame(
+      "desn", target, pred, truth
+    ),
+    error_summary = oti_endpoint_error_summary_frame(
+      "desn", target, pred, truth
     )
   )
 }
@@ -674,7 +749,6 @@ oti_plot_curve_panels <- function(curves, file, title,
     mar = c(2.0, 4.3, 2.0, 1.2),
     oma = c(3.3, 0.4, 2.4, 0)
   )
-  col_truth <- "#222222"
   col_data <- "#6b6b6b"
   col_oracle <- "#0072B2"
   col_fit <- "#D55E00"
@@ -685,9 +759,9 @@ oti_plot_curve_panels <- function(curves, file, title,
     z <- curves[curves$target == target, , drop = FALSE]
     z <- z[order(z$x), , drop = FALSE]
     yr <- range(
-      z$y, z$mean_truth, z$oracle_lower, z$oracle_upper,
-      z$fit_lower, z$fit_upper, z$fit_lower_q05, z$fit_lower_q95,
-      z$fit_upper_q05, z$fit_upper_q95, na.rm = TRUE
+      z$y, z$oracle_lower, z$oracle_upper,
+      z$fit_lower, z$fit_upper, z$fit_lower_q025, z$fit_lower_q975,
+      z$fit_upper_q025, z$fit_upper_q975, na.rm = TRUE
     )
     pad <- diff(yr) * 0.06
     yr <- yr + c(-pad, pad)
@@ -698,15 +772,15 @@ oti_plot_curve_panels <- function(curves, file, title,
       cex.lab = 0.96, cex.axis = 0.88, cex.main = 1.02
     )
     graphics::grid(col = "#e9e9e9", lwd = 0.8)
-    if (all(is.finite(z$fit_lower_q05)) && all(is.finite(z$fit_lower_q95))) {
+    if (all(is.finite(z$fit_lower_q025)) && all(is.finite(z$fit_lower_q975))) {
       graphics::polygon(
         c(z$x, rev(z$x)),
-        c(z$fit_lower_q05, rev(z$fit_lower_q95)),
+        c(z$fit_lower_q025, rev(z$fit_lower_q975)),
         col = col_ribbon, border = NA
       )
       graphics::polygon(
         c(z$x, rev(z$x)),
-        c(z$fit_upper_q05, rev(z$fit_upper_q95)),
+        c(z$fit_upper_q025, rev(z$fit_upper_q975)),
         col = col_ribbon, border = NA
       )
     }
@@ -714,31 +788,33 @@ oti_plot_curve_panels <- function(curves, file, title,
       z$x[z$observed], z$y[z$observed],
       pch = 16, cex = 0.48, col = grDevices::adjustcolor(col_data, 0.85)
     )
-    graphics::lines(z$x, z$mean_truth, col = col_truth, lwd = 2.1)
     graphics::lines(z$x, z$oracle_lower, col = col_oracle, lwd = 2.15)
     graphics::lines(z$x, z$oracle_upper, col = col_oracle, lwd = 2.15)
     graphics::lines(z$x, z$fit_lower, col = col_fit, lwd = 1.95)
     graphics::lines(z$x, z$fit_upper, col = col_fit, lwd = 1.95)
     if (any(!z$observed)) {
-      graphics::points(z$x[!z$observed], z$mean_truth[!z$observed],
-                       pch = 4, col = col_missing, cex = 0.82, lwd = 1.2)
+      miss_x <- z$x[!z$observed]
+      graphics::segments(
+        miss_x, yr[1L], miss_x, yr[1L] + 0.045 * diff(yr),
+        col = col_missing, lwd = 1.4
+      )
     }
     show_legend <- isTRUE(show_legend_each_panel) || panel_id == 1L
     if (!show_legend) next
     legend <- c(
-      "observed data", "truth", "population-oracle interval",
-      "fit mean interval", "90% endpoint ribbon"
+      "observed data", "population-oracle interval",
+      "fit mean interval", "95% endpoint ribbon"
     )
-    legend_col <- c(col_data, col_truth, col_oracle, col_fit, col_ribbon)
-    legend_pch <- c(16, NA, NA, NA, 15)
-    legend_lty <- c(NA, 1, 1, 1, NA)
-    legend_lwd <- c(NA, 2.1, 2.15, 1.95, NA)
+    legend_col <- c(col_data, col_oracle, col_fit, col_ribbon)
+    legend_pch <- c(16, NA, NA, 15)
+    legend_lty <- c(NA, 1, 1, NA)
+    legend_lwd <- c(NA, 2.15, 1.95, NA)
     if (any(!z$observed)) {
-      legend <- c(legend, "missing time")
+      legend <- c(legend, "missing response time")
       legend_col <- c(legend_col, col_missing)
-      legend_pch <- c(legend_pch, 4)
-      legend_lty <- c(legend_lty, NA)
-      legend_lwd <- c(legend_lwd, NA)
+      legend_pch <- c(legend_pch, NA)
+      legend_lty <- c(legend_lty, 1)
+      legend_lwd <- c(legend_lwd, 1.4)
     }
     graphics::legend(
       "topleft", bty = "n", cex = 0.77,
@@ -752,6 +828,69 @@ oti_plot_curve_panels <- function(curves, file, title,
     graphics::mtext(caption_note, side = 1, outer = TRUE, line = 2.55,
                     cex = 0.72, col = "#444444")
   }
+  invisible(file)
+}
+
+oti_plot_endpoint_error_panels <- function(error_density, file, title,
+                                           xlab = "Endpoint error") {
+  oti_ensure_dir(dirname(file))
+  targets <- c("RQR", "ET", "SH")
+  targets <- targets[targets %in% unique(error_density$target)]
+  grDevices::png(file, width = 2100, height = 1200, res = 210)
+  old <- graphics::par(no.readonly = TRUE)
+  on.exit({
+    graphics::par(old)
+    grDevices::dev.off()
+  }, add = TRUE)
+  graphics::par(
+    family = "serif",
+    mfrow = c(length(targets), 1L),
+    mar = c(2.0, 4.3, 2.0, 1.2),
+    oma = c(3.1, 0.4, 2.4, 0)
+  )
+  col_lower <- "#0072B2"
+  col_upper <- "#D55E00"
+  for (panel_id in seq_along(targets)) {
+    target <- targets[panel_id]
+    z <- error_density[error_density$target == target, , drop = FALSE]
+    z_lower <- z[z$endpoint == "lower", , drop = FALSE]
+    z_upper <- z[z$endpoint == "upper", , drop = FALSE]
+    xr <- range(z$error, z$q025, z$q975, 0, na.rm = TRUE)
+    yr <- range(z$density, na.rm = TRUE)
+    xr <- xr + c(-0.06, 0.06) * diff(xr)
+    yr <- c(0, yr[2L] * 1.10)
+    graphics::plot(
+      z_lower$error, z_lower$density, type = "n",
+      xlim = xr, ylim = yr, xlab = "", ylab = "Density",
+      main = paste0(target, " target"), las = 1,
+      cex.lab = 0.96, cex.axis = 0.88, cex.main = 1.02
+    )
+    graphics::grid(col = "#e9e9e9", lwd = 0.8)
+    graphics::abline(v = 0, col = "#222222", lwd = 1.25)
+    graphics::lines(z_lower$error, z_lower$density, col = col_lower, lwd = 2.1)
+    graphics::lines(z_upper$error, z_upper$density, col = col_upper, lwd = 2.1)
+    q_lower <- z_lower[1L, c("q025", "median", "q975")]
+    q_upper <- z_upper[1L, c("q025", "median", "q975")]
+    y_lower <- yr[2L] * 0.075
+    y_upper <- yr[2L] * 0.135
+    graphics::segments(q_lower$q025, y_lower, q_lower$q975, y_lower,
+                       col = col_lower, lwd = 3)
+    graphics::points(q_lower$median, y_lower, pch = 16, col = col_lower)
+    graphics::segments(q_upper$q025, y_upper, q_upper$q975, y_upper,
+                       col = col_upper, lwd = 3)
+    graphics::points(q_upper$median, y_upper, pch = 16, col = col_upper)
+    if (panel_id == 1L) {
+      graphics::legend(
+        "topright", bty = "n", cex = 0.78,
+        legend = c("lower endpoint error", "upper endpoint error",
+                   "zero error", "central 95% interval"),
+        col = c(col_lower, col_upper, "#222222", "#555555"),
+        lty = c(1, 1, 1, 1), lwd = c(2.1, 2.1, 1.25, 3)
+      )
+    }
+  }
+  graphics::mtext(xlab, side = 1, outer = TRUE, line = 1.35, cex = 0.96)
+  graphics::mtext(title, outer = TRUE, cex = 1.12, font = 2)
   invisible(file)
 }
 
