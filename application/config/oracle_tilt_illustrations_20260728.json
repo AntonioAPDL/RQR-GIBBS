@@ -1,5 +1,5 @@
 {
-  "schema_version": "rqrgibbs_oracle_tilt_illustrations/1.0.0",
+  "schema_version": "rqrgibbs_oracle_tilt_illustrations/1.1.0",
   "coverage_level": 0.8,
   "learning_rate": 1.0,
   "targets": ["RQR", "ET", "SH"],
@@ -24,6 +24,23 @@
     "verbose": false,
     "progress_every": 1000,
     "store_latent_draws": false
+  },
+  "paper_mcmc_control": {
+    "enabled": true,
+    "n_chains": 4,
+    "n_burn": 1000,
+    "n_mcmc": 2000,
+    "thin": 1,
+    "verbose": false,
+    "progress_every": 1000,
+    "store_latent_draws": false,
+    "diagnostics": {
+      "enabled": true,
+      "rhat_max": 1.05,
+      "bulk_ess_min": 400,
+      "tail_ess_min": 200,
+      "mcse_over_sd_max": 0.10
+    }
   },
   "fixed_design": {
     "seed": 202607281,

@@ -1098,7 +1098,8 @@ give single-data illustrations of the same fixed-target idea in a static
 readout and in a dynamic root model. The population law and recovery tilts are
 fixed before fitting. The fitted intervals are generalized-posterior summaries
 of ordered root draws; the shaded bands summarize endpoint uncertainty from
-the Gibbs draws and are not response-predictive intervals. Endpoint-error
+the combined retained Gibbs draws and are not response-predictive intervals.
+Endpoint-error
 plots report fitted endpoint draws minus the corresponding population-oracle
 endpoints, so zero marks exact recovery on the oracle endpoint scale. These
 examples show how ordinary RQR, equal-tailed recovery, and shortest-window
@@ -1115,8 +1116,9 @@ ridge static root-regression model with a different fixed population-oracle
 tilt: ordinary RQR, equal-tailed recovery (ET), or shortest-window recovery
 (SH). Blue curves are the population-oracle endpoints; orange curves are
 generalized-posterior mean fitted endpoints; pale orange ribbons are pointwise
-95\% endpoint summaries from the Gibbs draws. The figure illustrates target
-placement and finite-sample endpoint uncertainty, not response simulation. A
+95\% endpoint summaries from the combined retained Gibbs draws. The figure
+illustrates target placement and finite-sample endpoint uncertainty, not
+response simulation. A
 frozen-feature DESN readout uses the same static scan after replacing
 \(\mat X\) by the recorded reservoir-feature design.}
 \label{fig:oracle-tilt-fixed-design-fit}
@@ -1131,9 +1133,9 @@ For each target in Figure~\ref{fig:oracle-tilt-fixed-design-fit}, the curves
 show the distribution of fitted lower- and upper-endpoint draws after
 subtracting the corresponding population-oracle endpoint at the same design
 point. The vertical black line is zero error; short horizontal bars summarize
-central 95\% generalized-posterior endpoint-error intervals. Concentration
-near zero indicates accurate recovery of the population interval endpoints in
-this single illustrative data set.}
+central 95\% generalized-posterior endpoint-error summaries. Concentration
+near zero is a visual endpoint-recovery diagnostic for this single
+illustrative data set.}
 \label{fig:oracle-tilt-fixed-design-errors}
 \end{figure}
 
@@ -1149,8 +1151,9 @@ Figure~\ref{fig:oracle-tilt-fixed-design-fit}. Missing observations contribute
 no loss, latent-scale, or tilt site; magenta ticks mark omitted response times
 in the display. Blue curves are population-oracle dynamic endpoints, orange
 curves are generalized-posterior mean fitted endpoints, and pale orange
-ribbons are pointwise 95\% endpoint summaries from root-state Gibbs
-draws. These are interval-root summaries under the declared loss update, not
+ribbons are pointwise 95\% endpoint summaries from combined retained
+root-state Gibbs draws. These are interval-root summaries under the declared
+loss update, not
 posterior-predictive response bands.}
 \label{fig:oracle-tilt-dlm-fit}
 \end{figure}

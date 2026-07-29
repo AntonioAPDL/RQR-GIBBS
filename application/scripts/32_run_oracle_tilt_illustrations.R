@@ -27,6 +27,7 @@ dry_run <- has_flag("--dry-run")
 quick <- has_flag("--quick")
 strict_desn <- has_flag("--strict-desn")
 paper_figures <- has_flag("--paper-figures")
+one_chain <- has_flag("--one-chain")
 
 repo_root <- normalizePath(file.path(script_dir, "..", ".."), mustWork = TRUE)
 setwd(repo_root)
@@ -34,6 +35,9 @@ config <- oti_read_json(config_path)
 coverage_level <- oti_scalar(config$coverage_level %||% 0.8, "coverage_level",
                              1e-8, 1 - 1e-8)
 config$coverage_level <- coverage_level
+run_control <- oti_run_control(
+  config, quick = quick, paper_figures = paper_figures, one_chain = one_chain
+)
 targets <- oti_normalize_targets(config$targets %||% c("RQR", "ET", "SH"))
 families <- if (is.null(families_arg)) {
   tolower(as.character(config$families %||% c("fixed_design", "dlm")))
@@ -70,16 +74,21 @@ law <- oti_law_from_config(config)
 oracle_targets <- oti_oracle_targets(law, coverage_level, targets)
 fit_plan <- oti_plan_rows(
   c(families, if (desn_skipped) "desn_skipped" else character(0)),
-  targets
+  targets,
+  run_control = run_control
 )
 
 paths <- character(0)
 paths <- c(paths, oti_write_json(config, file.path(output_root, "config.json")))
 paths <- c(paths, oti_write_json(
   list(
+    schema_version = oti_run_schema(),
     run_id = run_id,
     dry_run = dry_run,
     quick = quick,
+    paper_figures = paper_figures,
+    one_chain = one_chain,
+    run_control = run_control,
     repo_state = oti_git_state(repo_root),
     config_path = normalizePath(config_path, mustWork = TRUE),
     law = list(
@@ -92,6 +101,16 @@ paths <- c(paths, oti_write_json(
   ),
   file.path(output_root, "source_state.json")
 ))
+paths <- c(paths, oti_write_json(
+  oti_runtime_state(
+    repo_root = repo_root,
+    config_path = config_path,
+    script_path = normalizePath(script_path, mustWork = TRUE),
+    args = trailing,
+    run_control = run_control
+  ),
+  file.path(output_root, "runtime_state.json")
+))
 paths <- c(paths, oti_write_csv(
   oracle_targets, file.path(output_root, "oracle_targets.csv")
 ))
@@ -101,6 +120,9 @@ all_summaries <- list()
 all_curves <- list()
 all_error_densities <- list()
 all_error_summaries <- list()
+all_endpoint_errors_by_index <- list()
+all_chain_summaries <- list()
+all_mcmc_diagnostics <- list()
 skip_rows <- list()
 
 if (dry_run) {
@@ -113,11 +135,20 @@ if (dry_run) {
     )
     for (target in targets) {
       message("[oracle-tilt] fixed_design / ", target)
-      res <- oti_fit_fixed_design_target(dgp, tbi, target, config, quick = quick)
+      res <- oti_fit_fixed_design_target(
+        dgp, tbi, target, config, quick = quick, run_control = run_control
+      )
       all_summaries[[length(all_summaries) + 1L]] <- res$summary
       all_curves[[length(all_curves) + 1L]] <- res$curves
       all_error_densities[[length(all_error_densities) + 1L]] <- res$error_density
       all_error_summaries[[length(all_error_summaries) + 1L]] <- res$error_summary
+      all_endpoint_errors_by_index[[length(all_endpoint_errors_by_index) + 1L]] <-
+        res$endpoint_error_by_index
+      all_chain_summaries[[length(all_chain_summaries) + 1L]] <- res$chain_summary
+      if (nrow(res$mcmc_diagnostics)) {
+        all_mcmc_diagnostics[[length(all_mcmc_diagnostics) + 1L]] <-
+          res$mcmc_diagnostics
+      }
     }
   }
   if ("dlm" %in% families) {
@@ -127,11 +158,20 @@ if (dry_run) {
     )
     for (target in targets) {
       message("[oracle-tilt] dlm / ", target)
-      res <- oti_fit_dlm_target(dgp, tbi, target, config, quick = quick)
+      res <- oti_fit_dlm_target(
+        dgp, tbi, target, config, quick = quick, run_control = run_control
+      )
       all_summaries[[length(all_summaries) + 1L]] <- res$summary
       all_curves[[length(all_curves) + 1L]] <- res$curves
       all_error_densities[[length(all_error_densities) + 1L]] <- res$error_density
       all_error_summaries[[length(all_error_summaries) + 1L]] <- res$error_summary
+      all_endpoint_errors_by_index[[length(all_endpoint_errors_by_index) + 1L]] <-
+        res$endpoint_error_by_index
+      all_chain_summaries[[length(all_chain_summaries) + 1L]] <- res$chain_summary
+      if (nrow(res$mcmc_diagnostics)) {
+        all_mcmc_diagnostics[[length(all_mcmc_diagnostics) + 1L]] <-
+          res$mcmc_diagnostics
+      }
     }
   }
   if ("desn" %in% families) {
@@ -167,6 +207,31 @@ if (length(all_summaries)) {
 if (length(skip_rows)) {
   skips <- oti_rbind_fill(skip_rows)
   paths <- c(paths, oti_write_csv(skips, file.path(output_root, "fit_skips.csv")))
+}
+if (length(all_chain_summaries)) {
+  chain_summary <- oti_rbind_fill(all_chain_summaries)
+  paths <- c(paths, oti_write_csv(
+    chain_summary, file.path(output_root, "chain_summary.csv")
+  ))
+  paths <- c(paths, oti_write_csv(
+    chain_summary[, c("family", "target", "chain", "seed"), drop = FALSE],
+    file.path(output_root, "seed_ledger.csv")
+  ))
+}
+if (length(all_mcmc_diagnostics)) {
+  mcmc_diagnostics <- oti_rbind_fill(all_mcmc_diagnostics)
+  paths <- c(paths, oti_write_csv(
+    mcmc_diagnostics, file.path(output_root, "mcmc_diagnostics.csv")
+  ))
+  quality_gates <- aggregate(
+    pass ~ family + target,
+    data = mcmc_diagnostics,
+    FUN = function(x) all(as.logical(x))
+  )
+  names(quality_gates)[names(quality_gates) == "pass"] <- "diagnostics_pass"
+  paths <- c(paths, oti_write_csv(
+    quality_gates, file.path(output_root, "figure_quality_gates.csv")
+  ))
 }
 if (length(all_curves)) {
   curves <- do.call(rbind, all_curves)
@@ -240,6 +305,13 @@ if (length(all_error_densities)) {
       xlab = expression(fitted~endpoint~draw - population~oracle~endpoint)
     ))
   }
+}
+if (length(all_endpoint_errors_by_index)) {
+  endpoint_error_by_index <- oti_rbind_fill(all_endpoint_errors_by_index)
+  paths <- c(paths, oti_write_csv(
+    endpoint_error_by_index,
+    file.path(output_root, "endpoint_error_by_index.csv")
+  ))
 }
 
 manifest <- oti_artifact_manifest(paths, root = repo_root)
