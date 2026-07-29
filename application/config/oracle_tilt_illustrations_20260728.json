@@ -1,0 +1,56 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_illustrations/1.0.0",
+  "coverage_level": 0.8,
+  "learning_rate": 1.0,
+  "targets": ["RQR", "ET", "SH"],
+  "families": ["fixed_design", "dlm"],
+  "innovation": {
+    "family": "asymmetric_laplace",
+    "tau": 0.65,
+    "standardized": true
+  },
+  "mcmc_control": {
+    "n_burn": 500,
+    "n_mcmc": 1000,
+    "thin": 1,
+    "verbose": false,
+    "progress_every": 250,
+    "store_latent_draws": false
+  },
+  "quick_mcmc_control": {
+    "n_burn": 40,
+    "n_mcmc": 80,
+    "thin": 1,
+    "verbose": false,
+    "progress_every": 1000,
+    "store_latent_draws": false
+  },
+  "fixed_design": {
+    "seed": 202607281,
+    "n": 90,
+    "ridge_tau2": 250
+  },
+  "dlm": {
+    "seed": 202607282,
+    "T": 100,
+    "missing_times": [35, 36, 70],
+    "scale": 0.55,
+    "state_sd_level": 0.035,
+    "state_sd_slope": 0.006,
+    "mcmc_control": {
+      "backend": "cpp",
+      "store_state_draws": false
+    }
+  },
+  "desn": {
+    "enabled_by_default": false,
+    "seed": 202607283,
+    "T": 150,
+    "washout": 20,
+    "n_reservoir": 40,
+    "spectral_radius": 0.75,
+    "leak_rate": 0.25,
+    "input_scale": 0.35,
+    "ridge_tau2": 100
+  }
+}

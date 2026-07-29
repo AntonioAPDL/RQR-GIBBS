@@ -22,6 +22,11 @@ layer for the standalone article.
   tests.
 - **scripts/** contains preflight, manifest, simulation, collection, and audit
   scripts.
+- **scripts/32_run_oracle_tilt_illustrations.R** is a lightweight, local-only
+  illustration runner for a single fixed-design and RQR-DLM data set under
+  population-oracle RQR, equal-tailed, and shortest-interval tilts. It writes
+  compact summaries and figures under ignored output roots and is not a
+  simulation study.
 
 Install and run the native gates from the repository root:
 
@@ -38,6 +43,9 @@ and RQR-DLM fits with fixed-W or pre-frozen discount-template evolution.
 Learned inverse-loss scales, RHS-NS priors, component-scale/adaptive dynamic
 evolution, VB/CAVI, and automatic tilt selection remain explicitly gated until
 their separate target and propriety contracts are derived and tested.
+For didactic single-data examples, use `make oracle-tilt-illustrations-dry-run`
+to inspect the fit plan or `make oracle-tilt-illustrations` to run the compact
+fixed-rate illustration workflow.
 The fixed-W, discount-template, and component-scale modes are exact for their
 declared Gaussian evolution priors. Adaptive conditional discounting is
 mathematically incompatible in general with the advertised pair of simple

@@ -9,4 +9,5 @@
 ^outputs$
 ^runs$
 ^scripts$
+^tests/testthat/test-rqr-oracle-tilt-illustrations\.R$
 ^tests/testthat/test-rqr-(algebra|contracts|desn-.*|forecast-contract|learned-scale-mcmc|mcmc-fixed-design|rhs-ns|vb-fixed-design)\.R$
