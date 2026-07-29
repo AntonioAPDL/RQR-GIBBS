@@ -1187,6 +1187,22 @@ oti_plot_curve_panels <- function(curves, file, title,
       cex.lab = 0.96, cex.axis = 0.88, cex.main = 1.02
     )
     graphics::grid(col = "#e9e9e9", lwd = 0.8)
+    miss_x <- z$x[!z$observed]
+    if (length(miss_x)) {
+      ux <- sort(unique(z$x))
+      dx <- if (length(ux) > 1L) min(diff(ux)) else diff(range(z$x)) * 0.01
+      if (!is.finite(dx) || dx <= 0) dx <- 0.50
+      graphics::rect(
+        miss_x - 0.36 * dx, yr[1L],
+        miss_x + 0.36 * dx, yr[2L],
+        col = grDevices::adjustcolor(col_missing, alpha.f = 0.10),
+        border = NA
+      )
+      graphics::abline(
+        v = miss_x, col = grDevices::adjustcolor(col_missing, alpha.f = 0.65),
+        lty = 2, lwd = 1.15
+      )
+    }
     if (all(is.finite(z$fit_lower_q025)) && all(is.finite(z$fit_lower_q975))) {
       graphics::polygon(
         c(z$x, rev(z$x)),
@@ -1207,11 +1223,10 @@ oti_plot_curve_panels <- function(curves, file, title,
     graphics::lines(z$x, z$oracle_upper, col = col_oracle, lwd = 2.15)
     graphics::lines(z$x, z$fit_lower, col = col_fit, lwd = 1.95)
     graphics::lines(z$x, z$fit_upper, col = col_fit, lwd = 1.95)
-    if (any(!z$observed)) {
-      miss_x <- z$x[!z$observed]
-      graphics::segments(
-        miss_x, yr[1L], miss_x, yr[1L] + 0.045 * diff(yr),
-        col = col_missing, lwd = 1.4
+    if (length(miss_x)) {
+      graphics::points(
+        miss_x, rep(yr[1L] + 0.035 * diff(yr), length(miss_x)),
+        pch = 24, cex = 0.78, col = col_missing, bg = "white", lwd = 1.2
       )
     }
     show_legend <- isTRUE(show_legend_each_panel) || panel_id == 1L
@@ -1224,12 +1239,12 @@ oti_plot_curve_panels <- function(curves, file, title,
     legend_pch <- c(16, NA, NA, 15)
     legend_lty <- c(NA, 1, 1, NA)
     legend_lwd <- c(NA, 2.15, 1.95, NA)
-    if (any(!z$observed)) {
-      legend <- c(legend, "missing response time")
+    if (length(miss_x)) {
+      legend <- c(legend, "omitted response time")
       legend_col <- c(legend_col, col_missing)
-      legend_pch <- c(legend_pch, NA)
-      legend_lty <- c(legend_lty, 1)
-      legend_lwd <- c(legend_lwd, 1.4)
+      legend_pch <- c(legend_pch, 24)
+      legend_lty <- c(legend_lty, 2)
+      legend_lwd <- c(legend_lwd, 1.15)
     }
     graphics::legend(
       "topleft", bty = "n", cex = 0.77,

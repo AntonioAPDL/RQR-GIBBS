@@ -756,8 +756,9 @@ and heavy-tailed cases can move the first-order shortest approximation outside
 the admissible finite-root tilt range. The implementation records adjusted
 skewness, excess kurtosis, standardized sixth moment, probability-window
 clipping, boundary proximity, and bootstrap sidecars for this reason. The
-deterministic population figure and table below are therefore approximation
-diagnostics rather than empirical validation or held-out selection rules.
+deterministic Cornish--Fisher figure and table below are therefore
+approximation diagnostics rather than empirical validation or held-out
+selection rules.
 
 \begin{figure}[H]
 \centering
@@ -792,31 +793,6 @@ density has finite exponential moments in every linear direction. This covers
 the initial ridge fixed-design model and finite-horizon Gaussian state model.
 Nonzero tilt under heavier-tailed shrinkage priors requires a separate
 coercivity or propriety result.
-
-\begin{figure}[p]
-\centering
-\includegraphics[width=\textwidth]{figures/generated/figS01_cross_distribution_recovery.png}
-\caption{\textbf{Recovery tilts across symmetric and skewed distributions.}
-Every interval has population content \(c=0.80\). Targets are computed on each
-raw population and then standardized by its mean and standard deviation for
-display. The top row shows standardized densities with intervals ordered from
-top to bottom as
-equal-tailed (ET; green squares), ordinary RQR (RQR; blue circles), and
-shortest contiguous (SH; orange triangles). All interval segments are solid.
-The second column uses a continuous left-skewed population illustration; its
-distributional specification is not part of the RQR
-construction. The bottom row shows standardized width over the
-target-containing portion of the mean-tilted family.
-The Normal benchmark marks the exact three-way coincidence at
-\(\delta/\operatorname{SD}(Y)=0\) with
-nested open glyphs; no horizontal jitter is used. Bottom-row horizontal ranges
-are panel specific so that each width profile remains legible. The displayed
-asymmetric laws illustrate that the signs and magnitudes of the ET and SH
-recovery tilts are distribution specific.
-This deterministic illustration does not imply a finite-sample tilt-selection
-rule.}
-\label{fig:supp-cross-distribution}
-\end{figure}
 
 \section{Static Finite-Sample Balance and Uncertainty Geometry}
 \label{sec:supp-static-theory}

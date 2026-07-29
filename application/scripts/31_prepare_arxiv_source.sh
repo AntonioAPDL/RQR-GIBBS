@@ -17,10 +17,10 @@ required_files=(
   "main.tex"
   "main.bbl"
   "refs.bib"
-  "tables/mean_tilt_cf_mini_study.tex"
   "figures/generated/fig01_three_balance_principles.png"
-  "figures/generated/fig02_mean_tilt_recovery_map.png"
-  "figures/generated/fig03_mean_tilt_cf_anchors.png"
+  "figures/generated/figS01_cross_distribution_recovery.png"
+  "figures/generated/fig04_oracle_tilt_fixed_design_fit.png"
+  "figures/generated/fig05_oracle_tilt_dlm_fit.png"
 )
 
 rm -rf "${out_root}"

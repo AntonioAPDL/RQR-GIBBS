@@ -50,7 +50,7 @@ supplement: theory-figures
 all-pdf: pdf supplement
 
 arxiv-source: pdf
-	application/scripts/31_prepare_arxiv_source.sh
+	bash application/scripts/31_prepare_arxiv_source.sh
 
 smoke:
 	$(R) application/scripts/00_validate_environment.R

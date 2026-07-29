@@ -255,28 +255,24 @@ extract_figure_block <- function(path, publication_file) {
   paste(lines[max(starts):min(ends)], collapse = "\n")
 }
 fig02_block <- extract_figure_block(
-  "main.tex", "fig02_mean_tilt_recovery_map.png"
+  "main.tex", "figS01_cross_distribution_recovery.png"
 )
 fig03_block <- extract_figure_block(
-  "main.tex", "fig03_mean_tilt_cf_anchors.png"
+  "rqr-gibbs-supplement.tex", "fig03_mean_tilt_cf_anchors.png"
 )
 public_figure_blocks <- c(
   extract_figure_block("main.tex", "fig01_three_balance_principles.png"),
   fig02_block,
-  fig03_block,
-  extract_figure_block(
-    "rqr-gibbs-supplement.tex",
-    "figS01_cross_distribution_recovery.png"
-  )
+  fig03_block
 )
 assert_true(
   !grepl("Cornish--Fisher|CF-ET|CF-SH", fig02_block),
-  "Figure 2 remains the non-CF mean-tilt geometry figure"
+  "Main Figure 2 remains a non-CF population recovery figure"
 )
 assert_true(
   grepl("Cornish--Fisher", fig03_block, fixed = TRUE) &&
-    grepl("fig:mean-tilt-cf-anchors", fig03_block, fixed = TRUE),
-  "Figure 3 is the CF-anchor diagnostic figure"
+    grepl("fig:supp-mean-tilt-cf-anchors", fig03_block, fixed = TRUE),
+  "Supplement CF-anchor diagnostic figure is labelled correctly"
 )
 for (term in c(
     "\\operatorname{AL}", "asymmetric-Laplace", "\\tau_{\\mathrm{AL}}"

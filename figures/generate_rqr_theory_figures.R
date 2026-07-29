@@ -3,7 +3,7 @@
 # Deterministic population figures for the RQR article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
-SCRIPT_VERSION <- "2026-07-27-restore-figure02-add-cf-figure03-1"
+SCRIPT_VERSION <- "2026-07-29-main-figure02-cross-distribution-polish-1"
 DEFAULT_CONTENT <- 0.80
 ILLUSTRATION_AL_TAU <- 0.65
 NUMERICAL_TOLERANCES <- list(
@@ -1359,13 +1359,25 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
       )
     )
   }
+  draw_panel_grid <- function() {
+    graphics::grid(col = "#E7EDF4", lwd = 0.75)
+  }
+  draw_target_legend <- function(cex = 0.64) {
+    graphics::legend(
+      "topright", bty = "n", cex = cex,
+      legend = c("ET", "RQR", "SH"),
+      col = COL[TARGET_ORDER], pch = PCH[TARGET_ORDER],
+      lty = 1, lwd = 2.8, pt.cex = 0.88,
+      y.intersp = 0.78
+    )
+  }
   draw <- function() {
     old <- graphics::par(no.readonly = TRUE)
     on.exit(graphics::par(old))
     graphics::par(
-      mfrow = c(2, 4), mar = c(3.4, 3.3, 2.5, 0.5),
-      oma = c(0.5, 0, 0.3, 0), mgp = c(1.95, 0.55, 0), tcl = -0.25,
-      cex = 0.82
+      mfrow = c(2, 4), mar = c(3.45, 3.55, 2.65, 0.75),
+      oma = c(2.45, 2.55, 1.65, 0.25), mgp = c(2.05, 0.58, 0),
+      tcl = -0.25, cex = 0.84, las = 1
     )
     for (i in seq_along(chosen)) {
       dist <- chosen[[i]]
@@ -1374,15 +1386,32 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
       geometry <- geometries[[i]]
       ymax <- max(density$density)
       graphics::plot(
-        density$z, density$density, type = "l", lwd = 1.8,
-        col = COL["density"], xlab = "z", ylab = "Density",
+        density$z, density$density, type = "n",
+        xlab = "z", ylab = if (i == 1L) "Density" else "",
         main = dist$short_label, xlim = geometry$zlim,
-        ylim = c(-0.29 * ymax, 1.05 * ymax), cex.main = 0.92
+        ylim = c(-0.34 * ymax, 1.08 * ymax), cex.main = 0.96
       )
-      graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+      draw_panel_grid()
+      graphics::abline(v = 0, lty = 1, lwd = 0.80, col = COL["mean"])
+      for (target in rev(TARGET_ORDER)) {
+        row <- summary[summary$target == target, , drop = FALSE]
+        lower_z <- (row$lower - dist$mean) / dist$sd
+        upper_z <- (row$upper - dist$mean) / dist$sd
+        shade_interval(
+          density, lower_z, upper_z,
+          grDevices::adjustcolor(COL[target], alpha.f = 0.82)
+        )
+      }
+      graphics::lines(density$z, density$density, lwd = 2.25,
+                      col = COL["density"])
       plot_interval_bars(
-        dist, summary, geometry, -0.050 * ymax, 0.068 * ymax,
-        labels = TRUE
+        dist, summary, geometry, -0.065 * ymax, 0.075 * ymax,
+        labels = FALSE
+      )
+      if (i == 1L) draw_target_legend()
+      graphics::mtext(
+        "selected 80% intervals", side = 3, line = 0.10,
+        cex = 0.58, col = "#45515C"
       )
     }
     for (i in seq_along(chosen)) {
@@ -1395,32 +1424,55 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
         path$standardized_delta >= delta_min &
         path$standardized_delta <= delta_max
       plot_path <- path[visible, , drop = FALSE]
+      y_limits <- range(
+        c(plot_path$standardized_width, summary$standardized_width),
+        finite = TRUE
+      )
+      y_pad <- 0.08 * diff(y_limits)
+      if (!is.finite(y_pad) || y_pad <= 0) y_pad <- 0.05
       graphics::plot(
         plot_path$standardized_delta, plot_path$standardized_width,
-        type = "l", lwd = 1.8, col = COL["density"],
-        xlab = "Standardized tilt, d", ylab = "Standardized width",
-        xlim = c(delta_min, delta_max)
+        type = "n", xlab = expression(d == delta / SD(Y)),
+        ylab = if (i == 1L) "Width" else "",
+        xlim = c(delta_min, delta_max), ylim = y_limits + c(-y_pad, y_pad)
       )
-      graphics::abline(v = 0, lty = 1, lwd = 0.75, col = COL["mean"])
+      draw_panel_grid()
+      graphics::abline(v = 0, lty = 1, lwd = 0.80, col = COL["mean"])
+      graphics::lines(
+        plot_path$standardized_delta, plot_path$standardized_width,
+        lwd = 2.25, col = COL["density"]
+      )
       if (identical(dist$id, "normal")) {
-        point <- summary[summary$target == "ordinary_rqr", ]
+        point <- summary[summary$target == "ordinary_rqr", , drop = FALSE]
         coincidence_cex <- c(
-          equal_tailed = 1.30, ordinary_rqr = 0.95, shortest = 0.68
+          equal_tailed = 1.35, ordinary_rqr = 1.02, shortest = 0.73
         )
         for (target in TARGET_ORDER) {
           graphics::points(
             point$standardized_delta, point$standardized_width,
             pch = OPEN_PCH[target], col = COL[target],
-            cex = coincidence_cex[target], lwd = 1.5
+            cex = coincidence_cex[target], lwd = 1.7
           )
         }
         graphics::text(
           point$standardized_delta, point$standardized_width,
-          labels = "ET = RQR = SH", pos = 4, offset = 0.45, cex = 0.70
+          labels = "ET = RQR = SH", pos = 4, offset = 0.42,
+          cex = 0.64, col = "#38434D"
         )
       } else {
         for (target in TARGET_ORDER) {
-          row <- summary[summary$target == target, ]
+          row <- summary[summary$target == target, , drop = FALSE]
+          graphics::segments(
+            row$standardized_delta, y_limits[1L] - 0.40 * y_pad,
+            row$standardized_delta, row$standardized_width,
+            col = grDevices::adjustcolor(COL[target], alpha.f = 0.35),
+            lwd = 1.1
+          )
+          graphics::points(
+            row$standardized_delta, row$standardized_width,
+            pch = PCH[target], col = COL[target],
+            bg = "white", cex = 1.08, lwd = 1.35
+          )
           label_pos <- if (target == "shortest") {
             if (row$standardized_delta >= 0) 2 else 4
           } else if (target == "equal_tailed") {
@@ -1428,22 +1480,26 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
           } else {
             4
           }
-          graphics::points(
-            row$standardized_delta, row$standardized_width,
-            pch = PCH[target], col = COL[target], cex = 0.95
-          )
           graphics::text(
             row$standardized_delta, row$standardized_width,
             labels = TARGET_LABEL[target], pos = label_pos,
-            offset = 0.35, cex = 0.66, col = COL[target]
+            offset = 0.34, cex = 0.62, col = COL[target]
           )
         }
       }
     }
+    graphics::mtext(
+      sprintf("Population recovery map, fixed content c = %.2f", content),
+      side = 3, outer = TRUE, line = 0.35, cex = 0.92, font = 2
+    )
+    graphics::mtext(
+      "Densities and widths are standardized separately within each population law.",
+      side = 1, outer = TRUE, line = 0.55, cex = 0.72, col = "#45515C"
+    )
   }
   outputs <- with_graphics_devices(
     file.path(out_dir, "figS01_cross_distribution_recovery"),
-    7.2, 5.45, draw
+    8.40, 5.65, draw
   )
   list(
     id = "figS01_cross_distribution_recovery",

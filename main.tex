@@ -481,21 +481,25 @@ and have positive densities,
 \]
 Thus an interior width minimum along the tilt path satisfies the usual
 equal-endpoint-density condition.
-Figure~\ref{fig:mean-tilt-map} visualizes this population map before adding
-any approximation layer.
+Figure~\ref{fig:mean-tilt-map} visualizes the same recovery map across
+symmetric and skewed population laws before adding any finite-sample
+approximation layer.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/fig02_mean_tilt_recovery_map.png}
-\caption{\textbf{Population mean-tilt recovery map.}
-For the same continuous left-skewed population illustration and content
-\(c=0.80\), displayed after mean/standard-deviation standardization, the
-retained-window mean \(M_c(u)\) maps each interior lower-tail index \(u\) to a unique
-standardized tilt \(d=\delta/\operatorname{SD}(Y)\). The marked oracle tilts
-recover the shortest contiguous (SH), equal-tailed (ET), and ordinary-RQR
-intervals; ordinary RQR has \(d=0\). The width profile shows that SH, not
-ordinary RQR in general, minimizes geometric width. The density panel shows
-the three recovered intervals on the same standardized population scale.}
+\includegraphics[width=\textwidth]{figures/generated/figS01_cross_distribution_recovery.png}
+\caption{\textbf{Population recovery tilts across symmetric and skewed
+distributions.}
+Every interval has content \(c=0.80\). Targets are computed on each raw
+population law and then displayed after mean/standard-deviation
+standardization. The top row shows standardized densities with equal-tailed
+(ET), ordinary RQR, and shortest-contiguous (SH) intervals; the bottom row
+shows the standardized width profile along the mean-tilted family. In the
+Normal benchmark the three targets coincide at
+\(\delta/\operatorname{SD}(Y)=0\). Under skewness, ET and SH generally require
+nonzero, distribution-specific recovery tilts, while ordinary RQR remains the
+zero-tilt retained-mean-balance target. This deterministic population
+illustration is not a finite-sample tilt-selection rule.}
 \label{fig:mean-tilt-map}
 \end{figure}
 
@@ -1093,24 +1097,21 @@ checks establish target and implementation agreement for the stated fixtures;
 they do not establish empirical coverage calibration or forecasting
 superiority.
 
-Figures~\ref{fig:oracle-tilt-fixed-design-fit}--\ref{fig:oracle-tilt-dlm-errors}
-give single-data illustrations of the same fixed-target idea in a static
-readout and in a dynamic root model. The population law and recovery tilts are
-fixed before fitting. The fitted intervals are generalized-posterior summaries
-of ordered root draws; the shaded bands summarize endpoint uncertainty from
-the combined retained Gibbs draws and are not response-predictive intervals.
-Endpoint-error
-plots report fitted endpoint draws minus the corresponding population-oracle
-endpoints, so zero marks exact recovery on the oracle endpoint scale. These
-examples show how ordinary RQR, equal-tailed recovery, and shortest-window
-recovery enter the implemented fixed-rate scan. They are not a simulation
-study.
+Figures~\ref{fig:oracle-tilt-fixed-design-fit}
+and~\ref{fig:oracle-tilt-dlm-fit} give single-data illustrations of the same
+fixed-target idea in a static readout and in a dynamic root model. The
+population law and recovery tilts are fixed before fitting. The fitted
+intervals are generalized-posterior summaries of ordered root draws; the
+shaded bands summarize endpoint uncertainty from the combined retained Gibbs
+draws and are not response-predictive intervals. These examples show how
+ordinary RQR, equal-tailed recovery, and shortest-window recovery enter the
+implemented fixed-rate scan. They are not a simulation study.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig04_oracle_tilt_fixed_design_fit.png}
 \caption{\textbf{Fixed-design illustration with oracle recovery tilts.}
-A single quadratic fixed-design data set is generated from a skewed
+A single quadratic fixed-design data set with \(n=180\) is generated from a skewed
 location-scale population with content \(c=0.80\). Each panel fits the same
 ridge static root-regression model with a different fixed population-oracle
 tilt: ordinary RQR, equal-tailed recovery (ET), or shortest-window recovery
@@ -1126,21 +1127,6 @@ frozen-feature DESN readout uses the same static scan after replacing
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/fig06_oracle_tilt_fixed_design_endpoint_errors.png}
-\caption{\textbf{Fixed-design endpoint errors for the oracle-tilt
-illustration.}
-For each target in Figure~\ref{fig:oracle-tilt-fixed-design-fit}, the curves
-show the distribution of fitted lower- and upper-endpoint draws after
-subtracting the corresponding population-oracle endpoint at the same design
-point. The vertical black line is zero error; short horizontal bars summarize
-central 95\% generalized-posterior endpoint-error summaries. Concentration
-near zero is a visual endpoint-recovery diagnostic for this single
-illustrative data set.}
-\label{fig:oracle-tilt-fixed-design-errors}
-\end{figure}
-
-\begin{figure}[H]
-\centering
 \includegraphics[width=\textwidth]{figures/generated/fig05_oracle_tilt_dlm_fit.png}
 \caption{\textbf{Dynamic linear root-state illustration with oracle recovery
 tilts.}
@@ -1148,28 +1134,14 @@ A single local-linear state trajectory is observed with missing responses at
 three times. The MT-RQR-DLM is fit with fixed \(W_t\), fixed learning rate,
 and the same three population-oracle tilt choices as in
 Figure~\ref{fig:oracle-tilt-fixed-design-fit}. Missing observations contribute
-no loss, latent-scale, or tilt site; magenta ticks mark omitted response times
-in the display. Blue curves are population-oracle dynamic endpoints, orange
-curves are generalized-posterior mean fitted endpoints, and pale orange
-ribbons are pointwise 95\% endpoint summaries from combined retained
-root-state Gibbs draws. These are interval-root summaries under the declared
-loss update, not
+no loss, latent-scale, or tilt site; translucent magenta bands and baseline
+triangles mark omitted response times in the display. Blue curves are
+population-oracle dynamic endpoints, orange curves are generalized-posterior
+mean fitted endpoints, and pale orange ribbons are pointwise 95\% endpoint
+summaries from combined retained root-state Gibbs draws. These are
+interval-root summaries under the declared loss update, not
 posterior-predictive response bands.}
 \label{fig:oracle-tilt-dlm-fit}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/generated/fig07_oracle_tilt_dlm_endpoint_errors.png}
-\caption{\textbf{Dynamic-linear endpoint errors for the oracle-tilt
-illustration.}
-The DLM error summaries use the same endpoint-draw minus population-oracle
-endpoint scale as Figure~\ref{fig:oracle-tilt-fixed-design-errors}, now pooled
-over time and retained Gibbs draws within each target. Missing response times
-are omitted from the loss update, but the dynamic root states continue to
-evolve through those times, so oracle and fitted endpoint summaries remain
-defined on the full displayed time grid.}
-\label{fig:oracle-tilt-dlm-errors}
 \end{figure}
 
 The matched ordinary-RQR study uses common data-generating mechanisms,

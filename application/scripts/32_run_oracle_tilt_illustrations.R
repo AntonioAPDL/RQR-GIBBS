@@ -261,7 +261,7 @@ if (length(all_curves)) {
     note <- switch(
       fam,
       fixed_design = "Intervals compare population-oracle endpoints with generalized-posterior endpoint summaries from one illustrative data set.",
-      dlm = "Missing responses are omitted from the loss and tilt sites; magenta ticks mark omitted response times.",
+      dlm = "Missing responses are omitted from the loss and tilt sites; magenta bands and baseline triangles mark omitted response times.",
       desn = "The DESN panel uses a frozen deterministic feature design and the same static readout scan.",
       NULL
     )
