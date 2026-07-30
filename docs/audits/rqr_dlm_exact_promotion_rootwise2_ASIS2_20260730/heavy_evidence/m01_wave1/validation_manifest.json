@@ -1,0 +1,59 @@
+{
+  "schema_version": "rqrgibbs_dlm_wave_correction_validation/2.0.0",
+  "source_commit": "38c008030d888593701c3769dbad3cdf53bd84b5",
+  "source_clean": true,
+  "package_version": "0.1.0.9028",
+  "primary_runtime_attestation_sha256": "1c3e19ab06e0aba53cc18a793f48aed69ba228c240aa53f81dce58fe395c143f",
+  "config_digest": "fe2b4dc1eaec829a15f616b820ac3577fa3ecd3d7adc57a9fb00d7fafa0878f3",
+  "incidence_digest": "b11f85602339fd60187284934323479ca8807dae362d27deddce496a7743aee7",
+  "seed_ledger_digest": "58cb7a9e45f5cd8032bc24177f435b5840e71f46991150ac0f7e6c01fa49afc7",
+  "wave_id": "static_gaussian_T200__target0200__sentinel",
+  "wave_task_count": 20,
+  "chain_job_count": 44,
+  "workers": 8,
+  "thread_environment": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1"
+  },
+  "component_scale_kernel": {
+    "symmetric_rootwise_partially_collapsed": true,
+    "collapsed_integrated_roots": ["root1", "root2"],
+    "collapsed_cycles": 2,
+    "centered_inverse_gamma": true,
+    "noncentered_slice_interweave": true,
+    "interweave_cycles": 2,
+    "transition_order": "rootwise_then_interweave",
+    "selected_candidate": "rootwise2_ASIS2",
+    "slice_width": 1,
+    "slice_sweeps_per_cycle": 3,
+    "slice_max_steps": 100,
+    "slice_max_shrink": 1000,
+    "target_change": false
+  },
+  "standard_component_scale_schedule": {
+    "burn": 1000,
+    "retain": 6000,
+    "thin": 1
+  },
+  "sentinel_component_scale_schedule": {
+    "burn": 1000,
+    "retain": 6000,
+    "thin": 1
+  },
+  "exact_target_preserving_kernel": true,
+  "comparative_simulation_metrics_used": false,
+  "failed_outputs_reused": false,
+  "all_fits_succeeded": true,
+  "all_fits_reproducibility_eligible": true,
+  "unique_runtime_tree_digests": "6b66e2e41617a496e141c4d46230bb4c462a69a13469393eca2a350c02081c6e",
+  "total_fit_elapsed_seconds": 88708.44,
+  "maximum_process_peak_RSS_KiB": 765056,
+  "declared_worker_memory_ceiling_KiB": 1572864,
+  "resource_margin_pass": true,
+  "all_diagnostics_passed": true,
+  "started_at_utc": "2026-07-29 23:34:46 UTC",
+  "completed_at_utc": "2026-07-30 02:55:32 UTC"
+}

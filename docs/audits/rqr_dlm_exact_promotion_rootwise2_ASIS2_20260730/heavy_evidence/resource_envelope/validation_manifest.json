@@ -1,0 +1,24 @@
+{
+  "schema_version": "rqrgibbs_dlm_resource_envelope_validation/1.0.0",
+  "source_commit": "38c008030d888593701c3769dbad3cdf53bd84b5",
+  "source_clean": true,
+  "package_version": "0.1.0.9028",
+  "primary_runtime_attestation_sha256": "1c3e19ab06e0aba53cc18a793f48aed69ba228c240aa53f81dce58fe395c143f",
+  "primary_runtime_tree_digest": "6b66e2e41617a496e141c4d46230bb4c462a69a13469393eca2a350c02081c6e",
+  "primary_reproducibility_eligible": true,
+  "thread_environment": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1"
+  },
+  "scientific_metrics_used": false,
+  "response_prediction_contract": false,
+  "maximum_written_peak_RSS_KiB": 609900,
+  "declared_worker_memory_ceiling_KiB": 1572864,
+  "required_margin_fraction": 0.8,
+  "resource_margin_pass": true,
+  "all_deserializations_valid": true,
+  "completed_at_utc": "2026-07-30 07:40:38 UTC"
+}

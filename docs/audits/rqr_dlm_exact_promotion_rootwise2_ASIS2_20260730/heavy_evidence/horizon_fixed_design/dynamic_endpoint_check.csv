@@ -1,0 +1,2 @@
+"DGP","replication","method","training_horizon_expected","training_lower_length","training_upper_length","future_horizon_expected","future_lower_length","future_upper_length","numerical_repairs","exact_joint_target","reproducibility_eligible","elapsed_seconds","error_message","pass"
+"S03",13,"M01",200,200,200,20,20,20,0,TRUE,TRUE,1930.135,"",TRUE

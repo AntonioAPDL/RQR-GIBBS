@@ -98,33 +98,27 @@ configuration and should write only under ignored local output roots.
 
 ## arXiv source package
 
-The complete second-wave development gate then showed that schedule matching
-alone was insufficient: all 49 M01 fits completed, but only 1,131 of 1,150
-diagnostics passed and 12 of 25 tasks failed at least one gate, predominantly
-for the shared component scale.  The current fail-closed correction preserves
-singleton state arrays as
-`p`-by-`T` matrices, matches component-scale and M02 sentinel schedules to
-their already frozen standard schedules, holds the full M02 DLM target common
-across chains while supplying distinct target-preserving MCMC warm starts
-through the CRAN interface, moves diagnostic construction inside the
-structured failure boundary, and retains only compact endpoint/diagnostic
-objects instead of accumulating full sentinel fits. It also adds exact
-rootwise partially collapsed component-scale transitions: a deterministic C++
-Kalman marginal integrates and redraws each root in turn before the existing
-centered--noncentered ASIS transition. The symmetric second block was added
-after a clean one-root promotion gate still missed six of 1,150 wave-2
-diagnostics; none of that failed gate is reused. A subsequent one-cycle
-symmetric development wave still missed three of 1,150 diagnostics, so the
-current candidate uses the selected `rootwise2_ASIS2` composition: two exact
-rootwise component-scale cycles followed by two exact ASIS cycles before any
-new promotion gate. This changes the transition, not the generalized posterior
-or iteration-count budget. Its development outputs are not scientific or
-promotion evidence. The maximum contract now
-contains 205,658,000 MCMC iterations: 74.8257 percent above the original
-Output-15 budget and 3.2949 percent above the previously launched ASIS-corrected
-budget.  The execution flag remains false until exact-source projection, M01
-and M02 mixing, resource, package, and document gates pass.
-The exact third-run closeout and recovery boundary are recorded in
+The selected exact-target `rootwise2_ASIS2` transition repeats the symmetric
+rootwise partially collapsed component-scale composition twice and then runs
+two centered--noncentered ASIS cycles. The complete exact-runtime promotion
+passed all 4,423 frozen diagnostic rows across M01, M02, and fixed-design
+gates, all 16 horizon checks, the dynamic endpoint check, and the resource
+envelope without relaxed thresholds, replacement seeds, or selective
+extension. A later generic package test exposed and correctly stopped an
+installation-isolation defect; it occurred after the heavy gates and did not
+change their results. Package checks are now installed into a disjoint
+library, document checks build from an isolated Git archive, and the corrected
+hermetic validation matrix preserves both the attested runtime digest and a
+clean source checkout.
+
+The transition changes MCMC efficiency, not the generalized posterior or
+response interpretation. Development and promotion outputs remain distinct
+from confirmatory outputs. A separate flag-only authorization commit, fresh
+exact runtime, preflight, oracle-reference bundle, and new append-only run root
+are still required before the confirmatory study begins. The authenticated
+promotion closeout is
+`docs/audits/rqr_dlm_exact_promotion_rootwise2_ASIS2_20260730/README.md`.
+The earlier failure history and recovery boundary are recorded in
 `docs/audits/rqr_dlm_main_third_launch_wave2_closeout_20260727.md`,
 `docs/audits/rqr_dlm_second_wave_component_scale_diagnosis_20260727.md`,
 `docs/audits/rqr_dlm_exact_promotion_e9c8068_closeout_20260727.md`,
@@ -133,9 +127,6 @@ The exact third-run closeout and recovery boundary are recorded in
 `docs/implementation_notes/rqr_dlm_main_third_launch_recovery_plan_20260727.md`
 and
 `docs/implementation_notes/rqr_dlm_two_ASIS_finish_plan_20260727.md`.
-A replacement coordinator may start only from a fresh exact-commit
-authorization and a new ignored run root after the complete first-wave and
-affected-wave correction gates pass.
 
 The main article source package is generated with:
 

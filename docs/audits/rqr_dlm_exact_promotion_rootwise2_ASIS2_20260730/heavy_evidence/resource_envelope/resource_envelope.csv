@@ -1,0 +1,4 @@
+"case","state_dimension","training_horizon","retained_draws","chains","baseline_peak_RSS_KiB","written_peak_RSS_KiB","checked_peak_RSS_KiB","bytes","sha256","deserialization_valid","declared_worker_memory_ceiling_KiB","eighty_percent_margin_KiB","serialization_margin_pass"
+"four_state_component_scale",4,200,6000,4,85720,534784,534784,57148,"fc26a08f6a2c65c3c53c10abe007242018bf7a66cf6a94da2b669042b841249c",TRUE,1572864,1258291.2,TRUE
+"three_state_learned_component_scale",3,200,9000,4,534784,609900,609900,68332,"11659a0e60eea62f0f023fb941a2b623f11f27923b6707f53d9074a370018a0f",TRUE,1572864,1258291.2,TRUE
+"long_horizon_single_state",1,400,6000,4,609900,609900,609900,45868,"8864992abcdacbe09e51359a49f8d367474f68006b12d16261806c170bc19fd7",TRUE,1572864,1258291.2,TRUE
