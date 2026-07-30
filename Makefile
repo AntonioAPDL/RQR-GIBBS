@@ -5,6 +5,8 @@ LATEXMK ?= latexmk
 PACKAGE_NAME := $(shell sed -n 's/^Package:[[:space:]]*//p' application/DESCRIPTION)
 PACKAGE_VERSION := $(shell sed -n 's/^Version:[[:space:]]*//p' application/DESCRIPTION)
 PACKAGE_TARBALL := $(PACKAGE_NAME)_$(PACKAGE_VERSION).tar.gz
+RQR_PACKAGE_LIBRARY ?=
+RQR_PACKAGE_INSTALL_LIBRARY_ARG := $(if $(strip $(RQR_PACKAGE_LIBRARY)),--library=$(RQR_PACKAGE_LIBRARY),)
 THEORY_FIGURE_DIR ?= figures/generated
 THEORY_TABLE_DIR ?= tables
 ORACLE_TILT_ILLUSTRATION_CONFIG ?= application/config/oracle_tilt_illustrations_20260728.json
@@ -56,7 +58,12 @@ smoke:
 	$(R) application/scripts/00_validate_environment.R
 
 package-install:
-	R CMD INSTALL --preclean application
+	@if [ -n "$${RQR_PRIMARY_RUNTIME_ATTESTATION:-}" ] && [ -z "$(strip $(RQR_PACKAGE_LIBRARY))" ]; then \
+		echo "Refusing to install into an attested runtime; set RQR_PACKAGE_LIBRARY to a disjoint test library." >&2; \
+		exit 65; \
+	fi
+	@if [ -n "$(strip $(RQR_PACKAGE_LIBRARY))" ]; then mkdir -p "$(RQR_PACKAGE_LIBRARY)"; fi
+	R CMD INSTALL --preclean --clean $(RQR_PACKAGE_INSTALL_LIBRARY_ARG) application
 
 prepare-exdqlm-runtime:
 	$(R) application/scripts/04_prepare_pinned_exdqlm_runtime.R

@@ -172,7 +172,11 @@ test_that("pilot and confirmatory runner modes fail before output", {
       shQuote(script), "diagnostic-pilot-preflight",
       shQuote(preflight_output)
     ),
-    stdout = TRUE, stderr = TRUE
+    stdout = TRUE, stderr = TRUE,
+    env = c(
+      "RQR_EXPECTED_PRIMARY_COMMIT=",
+      "RQR_PRIMARY_RUNTIME_ATTESTATION="
+    )
   ))
   expect_false(is.null(attr(preflight_result, "status")))
   expect_match(
