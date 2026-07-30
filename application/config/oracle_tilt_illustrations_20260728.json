@@ -6,7 +6,7 @@
   "families": ["fixed_design", "dlm"],
   "innovation": {
     "family": "asymmetric_laplace",
-    "tau": 0.65,
+    "tau": 0.99,
     "standardized": true
   },
   "mcmc_control": {

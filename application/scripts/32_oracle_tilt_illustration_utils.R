@@ -312,7 +312,11 @@ oti_oracle_shortest_interval <- function(law, coverage_level,
   bracket_half <- upper_u / max(20, grid_size - 1L)
   lo <- max(0, best - bracket_half)
   hi <- min(upper_u, best + bracket_half)
-  opt <- stats::optimize(objective, interval = c(lo, hi))$minimum
+  opt <- stats::optimize(
+    objective,
+    interval = c(lo, hi),
+    tol = max(.Machine$double.eps^0.75, upper_u * 1e-12)
+  )$minimum
   cbind(target = "SH", oti_interval_from_u(law, opt, coverage_level))
 }
 
@@ -357,6 +361,8 @@ oti_oracle_targets <- function(law, coverage_level, targets = c("RQR", "ET", "SH
   out$law_family <- law$family
   out$law_tau <- law$tau
   out$law_standardized <- law$standardized
+  out$oracle_construction <- "population_quantile_truncated_moment"
+  out$uses_cornish_fisher <- FALSE
   out
 }
 

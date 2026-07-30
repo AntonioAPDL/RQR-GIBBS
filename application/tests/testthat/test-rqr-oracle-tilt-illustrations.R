@@ -41,7 +41,7 @@ testthat::test_that("fixed-design oracle tilts are exactly representable by the 
   }
 })
 
-testthat::test_that("publication fixed-design illustration uses 540 observations", {
+testthat::test_that("publication illustration fixes size and exact tau-0.99 oracles", {
   testthat::skip_if_not_installed("jsonlite")
   config <- jsonlite::read_json(
     testthat::test_path(
@@ -50,6 +50,43 @@ testthat::test_that("publication fixed-design illustration uses 540 observations
     simplifyVector = TRUE
   )
   testthat::expect_identical(as.integer(config$fixed_design$n), 540L)
+  testthat::expect_equal(as.numeric(config$innovation$tau), 0.99)
+  testthat::expect_true(isTRUE(config$innovation$standardized))
+
+  source(testthat::test_path(
+    "..", "..", "scripts", "32_oracle_tilt_illustration_utils.R"
+  ))
+  law <- oti_law_from_config(config)
+  targets <- oti_oracle_targets(law, config$coverage_level)
+  testthat::expect_true(all(
+    targets$oracle_construction ==
+      "population_quantile_truncated_moment"
+  ))
+  testthat::expect_true(all(!targets$uses_cornish_fisher))
+  testthat::expect_true(all(
+    abs(targets$content - config$coverage_level) < 1e-10
+  ))
+  testthat::expect_lt(
+    abs(targets$retained_mean_innovation[targets$target == "RQR"]),
+    1e-10
+  )
+  testthat::expect_equal(
+    targets$u[targets$target == "ET"],
+    (1 - config$coverage_level) / 2,
+    tolerance = 1e-12
+  )
+  testthat::expect_true(
+    targets$width_innovation[targets$target == "SH"] <=
+      min(targets$width_innovation[targets$target != "SH"]) + 1e-8
+  )
+  oracle_width <- targets$width_innovation[targets$target == "SH"]
+  u_grid <- seq(0, 1 - config$coverage_level, length.out = 5001L)
+  grid_width <- vapply(
+    u_grid,
+    function(u) law$q(u + config$coverage_level) - law$q(u),
+    numeric(1L)
+  )
+  testthat::expect_lte(oracle_width, min(grid_width) + 1e-7)
 })
 
 testthat::test_that("DLM oracle tilts preserve NA masks at missing observations", {
@@ -206,6 +243,7 @@ testthat::test_that("runner dry-run writes the declared compact contract", {
   testthat::expect_equal(nrow(plan), 6L)
   testthat::expect_setequal(plan$family, c("fixed_design", "dlm"))
   testthat::expect_setequal(plan$target, c("RQR", "ET", "SH"))
+  testthat::expect_identical(unique(plan$mean_tilt_source), "population_oracle")
   testthat::expect_true(all(plan$n_chains == 1L))
   testthat::expect_true(all(!plan$paper_mode))
 })
