@@ -60,6 +60,12 @@ under `figures/generated/`. The paper-figure path uses the declared
 four-chain illustration contract, writes deterministic seed, runtime,
 chain-summary, maintained-diagnostic, endpoint-error-by-index, and artifact
 hash ledgers, and keeps full fit objects under ignored local output roots.
+The publication configuration uses standardized asymmetric-Laplace response
+innovations with quantile index `0.99` for both families. Its RQR, equal-tail,
+and shortest-window tilts are computed from exact population quantiles and
+truncated first moments (`uses_cornish_fisher = FALSE`). The fixed-design
+illustration retains 2,000 draws per chain; the more autocorrelated DLM
+illustration retains 10,000 per chain under its family-specific paper control.
 These checks support reproducibility and visual quality for a single
 illustrative data set; they are not a coverage-calibration simulation study.
 The fixed-W, discount-template, and component-scale modes are exact for their
