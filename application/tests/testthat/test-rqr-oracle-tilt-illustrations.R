@@ -191,7 +191,7 @@ testthat::test_that("family paper controls override only the selected family", {
     fixed_design = list(mcmc_control = list(store_latent_draws = FALSE)),
     dlm = list(
       mcmc_control = list(backend = "cpp"),
-      paper_mcmc_control = list(n_mcmc = 8000L)
+      paper_mcmc_control = list(n_mcmc = 10000L)
     )
   )
 
@@ -208,7 +208,7 @@ testthat::test_that("family paper controls override only the selected family", {
   testthat::expect_equal(fixed_paper$n_burn, 1000L)
   testthat::expect_equal(fixed_paper$n_mcmc, 2000L)
   testthat::expect_equal(dlm_paper$n_burn, 1000L)
-  testthat::expect_equal(dlm_paper$n_mcmc, 8000L)
+  testthat::expect_equal(dlm_paper$n_mcmc, 10000L)
   testthat::expect_equal(dlm_paper$backend, "cpp")
   testthat::expect_equal(dlm_regular$n_burn, 100L)
   testthat::expect_equal(dlm_regular$n_mcmc, 200L)

@@ -56,7 +56,7 @@
     "state_sd_slope": 0.006,
     "paper_mcmc_control": {
       "n_burn": 1000,
-      "n_mcmc": 8000,
+      "n_mcmc": 10000,
       "thin": 1
     },
     "mcmc_control": {
