@@ -17,6 +17,13 @@ exdqlm_attestation="$(realpath "$3")"
 quantreg_attestation="$(realpath "$4")"
 output_root="$(realpath -m "$5")"
 repo_root="$(pwd -P)"
+git_common_dir="$(
+  git -C "$repo_root" -c core.fsmonitor=false \
+    rev-parse --path-format=absolute --git-common-dir
+)"
+canonical_repo_root="$(dirname "$git_common_dir")"
+canonical_repo_parent="$(dirname "$canonical_repo_root")"
+exdqlm_repo="${EXDQLM_RQR_REPO:-$canonical_repo_parent/exdqlm__wt__qdesn_0p4p0_integration}"
 
 if [[ ! "$expected_commit" =~ ^[0-9a-f]{40}$ ]]; then
   echo "The expected commit must be a complete lowercase SHA." >&2
@@ -26,6 +33,12 @@ if [[ ! -f "$repo_root/application/DESCRIPTION" ]]; then
   echo "Run this script from the RQR-GIBBS repository root." >&2
   exit 64
 fi
+if [[ ! -d "$exdqlm_repo/.git" && ! -f "$exdqlm_repo/.git" ]]; then
+  echo "Could not locate the protected exdqlm checkout: $exdqlm_repo" >&2
+  echo "Set EXDQLM_RQR_REPO explicitly when it is not beside the canonical RQR-GIBBS checkout." >&2
+  exit 66
+fi
+exdqlm_repo="$(realpath "$exdqlm_repo")"
 if [[ -e "$output_root" ]]; then
   echo "The promotion-check output root must be fresh: $output_root" >&2
   exit 64
@@ -154,6 +167,7 @@ export MKL_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export RCPP_PARALLEL_NUM_THREADS=1
+export EXDQLM_RQR_REPO="$exdqlm_repo"
 
 # Generic package tests exercise their own fail-closed runtime branches. They
 # must not inherit the exact-runtime binding used by the heavy promotion gates.
@@ -237,6 +251,7 @@ fi
   printf 'primary_runtime_digest_after,%s\n' "$runtime_digest_after"
   printf 'check_library,%s\n' "$check_library"
   printf 'exdqlm_runtime_path,%s\n' "$exdqlm_runtime_path"
+  printf 'exdqlm_source_checkout,%s\n' "$exdqlm_repo"
   printf 'quantreg_runtime_path,%s\n' "$quantreg_runtime_path"
   printf 'source_worktree_clean_after,TRUE\n'
   printf 'source_compiler_artifacts_after,0\n'
