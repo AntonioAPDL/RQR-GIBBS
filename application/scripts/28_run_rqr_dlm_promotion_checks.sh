@@ -43,7 +43,7 @@ if [[ -e "$output_root" ]]; then
   echo "The promotion-check output root must be fresh: $output_root" >&2
   exit 64
 fi
-for command in git R Rscript jq sha256sum realpath; do
+for command in git R Rscript jq sha256sum realpath tar; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "Missing required command: $command" >&2
     exit 69
@@ -201,8 +201,19 @@ run_logged prepare_pinned_exdqlm_runtime \
   Rscript application/scripts/04_prepare_pinned_exdqlm_runtime.R
 run_logged test_exdqlm_rqr \
   Rscript application/scripts/02_smoke_rqr_exdqlm_branch.R
-run_logged make_pdf make pdf
-run_logged make_supplement make supplement
+
+# The ordinary PDF targets regenerate a tracked provenance receipt whose
+# repository-commit field legitimately changes at every source commit. Build
+# the exact committed document tree in an isolated archive checkout so that
+# publication checks remain complete without mutating the promotion source.
+document_source="$output_root/document-source"
+mkdir -p "$document_source"
+run_logged prepare_document_source \
+  bash -c \
+  'git -c core.fsmonitor=false archive "$1" | tar -x -C "$2"' \
+  _ "$expected_commit" "$document_source"
+run_logged make_pdf make -C "$document_source" pdf
+run_logged make_supplement make -C "$document_source" supplement
 run_logged make_literature_manifest make literature-manifest
 
 runtime_digest_after="$(
