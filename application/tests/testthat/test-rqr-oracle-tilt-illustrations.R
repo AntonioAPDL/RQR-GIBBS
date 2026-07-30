@@ -175,6 +175,45 @@ testthat::test_that("paper run control and chain seeds are explicit", {
   testthat::expect_equal(seeds[1L], 1100L)
 })
 
+testthat::test_that("family paper controls override only the selected family", {
+  source(testthat::test_path(
+    "..", "..", "scripts", "32_oracle_tilt_illustration_utils.R"
+  ))
+  config <- list(
+    mcmc_control = list(n_burn = 100L, n_mcmc = 200L, thin = 1L),
+    paper_mcmc_control = list(
+      enabled = TRUE,
+      n_chains = 4L,
+      n_burn = 1000L,
+      n_mcmc = 2000L,
+      diagnostics = list(enabled = TRUE)
+    ),
+    fixed_design = list(mcmc_control = list(store_latent_draws = FALSE)),
+    dlm = list(
+      mcmc_control = list(backend = "cpp"),
+      paper_mcmc_control = list(n_mcmc = 8000L)
+    )
+  )
+
+  fixed_paper <- oti_mcmc_control(
+    config, "fixed_design", paper_mode = TRUE, seed = 11L
+  )
+  dlm_paper <- oti_mcmc_control(
+    config, "dlm", paper_mode = TRUE, seed = 12L
+  )
+  dlm_regular <- oti_mcmc_control(
+    config, "dlm", paper_mode = FALSE, seed = 13L
+  )
+
+  testthat::expect_equal(fixed_paper$n_burn, 1000L)
+  testthat::expect_equal(fixed_paper$n_mcmc, 2000L)
+  testthat::expect_equal(dlm_paper$n_burn, 1000L)
+  testthat::expect_equal(dlm_paper$n_mcmc, 8000L)
+  testthat::expect_equal(dlm_paper$backend, "cpp")
+  testthat::expect_equal(dlm_regular$n_burn, 100L)
+  testthat::expect_equal(dlm_regular$n_mcmc, 200L)
+})
+
 testthat::test_that("prediction combination and diagnostics have stable schemas", {
   testthat::skip_if_not_installed("posterior")
   source(testthat::test_path(

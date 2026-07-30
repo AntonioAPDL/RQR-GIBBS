@@ -54,6 +54,11 @@
     "scale": 0.55,
     "state_sd_level": 0.035,
     "state_sd_slope": 0.006,
+    "paper_mcmc_control": {
+      "n_burn": 1000,
+      "n_mcmc": 8000,
+      "thin": 1
+    },
     "mcmc_control": {
       "backend": "cpp",
       "store_state_draws": false

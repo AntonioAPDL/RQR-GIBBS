@@ -547,12 +547,23 @@ oti_mcmc_control <- function(config, family, quick = FALSE, seed = NULL,
   } else {
     list()
   }
+  family_paper <- if (isTRUE(paper_mode)) {
+    oti_fit_control_fields(family_cfg$paper_mcmc_control %||% list())
+  } else {
+    list()
+  }
   quick_ctl <- if (isTRUE(quick)) {
     config$quick_mcmc_control %||% list(n_burn = 30L, n_mcmc = 60L, thin = 1L)
   } else {
     list()
   }
-  out <- oti_merge_control(oti_merge_control(oti_merge_control(base, fam), paper), quick_ctl)
+  out <- oti_merge_control(
+    oti_merge_control(
+      oti_merge_control(oti_merge_control(base, fam), paper),
+      family_paper
+    ),
+    quick_ctl
+  )
   out$seed <- seed %||% out$seed %||% 1L
   out$verbose <- isTRUE(out$verbose %||% FALSE)
   out
