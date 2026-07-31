@@ -1,8 +1,11 @@
 # Wave-2 M03/M08 candidate-selection closeout
 
-Date: 2026-07-31  
-Source commit: `c2d560d761aae35554cadfe417e11a65ef540043`  
-Authorization changed: no  
+Date: 2026-07-31
+
+Source commit: `c2d560d761aae35554cadfe417e11a65ef540043`
+
+Authorization changed: no
+
 Promotion evidence: no
 
 The two clean development comparisons completed successfully and their

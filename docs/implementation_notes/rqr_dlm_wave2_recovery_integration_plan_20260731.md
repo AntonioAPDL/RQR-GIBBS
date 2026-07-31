@@ -1,7 +1,9 @@
 # RQR-DLM wave-2 recovery integration and promotion plan
 
-Date: 2026-07-31  
-Scope: confirmatory RQR-DLM simulation  
+Date: 2026-07-31
+
+Scope: confirmatory RQR-DLM simulation
+
 State: fail-closed until every gate below succeeds
 
 ## Executive decision
