@@ -1,6 +1,6 @@
 {
   "schema_version": "rqrgibbs_oracle_tilt_publication_config/2.0.0",
-  "execution_authorized": false,
+  "execution_authorized": true,
   "coverage_level": 0.95,
   "learning_rate": 1,
   "targets": ["RQR", "ET", "SH"],
