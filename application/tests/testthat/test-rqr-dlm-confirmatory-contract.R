@@ -677,10 +677,81 @@ test_that("execution publishes diagnostic failures without duplicate RDS reads",
     '"sentinel_diagnostics_ignored.rds"',
     runner, fixed = TRUE
   )))
+  expect_true(any(grepl(
+    '"failed_mcmc_diagnostics_ignored.rds"',
+    runner, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    '"rqrgibbs_dlm_compact_mcmc_diagnostics/1.1.0"',
+    runner, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "method_seed_state_digests =",
+    runner, fixed = TRUE
+  )))
+  compact_assignment <- grep(
+    "sentinel_objects[[method]] <- compact_diagnostic_object",
+    runner, fixed = TRUE
+  )
+  diagnostic_stop <- grep(
+    "if (!all(diagnostics$pass)) {", runner, fixed = TRUE
+  )
+  expect_length(compact_assignment, 1L)
+  expect_length(diagnostic_stop, 1L)
+  expect_lt(compact_assignment, diagnostic_stop)
   expect_false(any(grepl(
     '"sentinel_chains_ignored.rds"',
     runner, fixed = TRUE
   )))
+})
+
+test_that("one schedule router binds every MCMC method", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  expect_identical(
+    environment$rqr_confirm_method_schedule(contract, "M03", "A"),
+    environment$rqr_confirm_fixed_design_schedule(contract, "A")
+  )
+  expect_identical(
+    environment$rqr_confirm_method_schedule(
+      contract, "M08", "standard"
+    ),
+    environment$rqr_confirm_dynamic_schedule(
+      contract, "M08", FALSE, "standard"
+    )
+  )
+  expect_null(environment$rqr_confirm_method_schedule(
+    contract, "M04", "standard"
+  ))
+})
+
+test_that("the coordinator owns lock cleanup inside a function", {
+  coordinator <- readLines(
+    testthat::test_path(
+      "..", "..", "scripts",
+      "18_orchestrate_rqr_dlm_confirmatory_simulation.R"
+    ),
+    warn = FALSE
+  )
+  function_line <- grep(
+    "run_coordinator <- function() {", coordinator, fixed = TRUE
+  )
+  lock_line <- grep(
+    'lock_path <- file.path(run_root, ".coordinator.lock")',
+    coordinator, fixed = TRUE
+  )
+  cleanup_line <- grep(
+    "on.exit(unlink(lock_path, recursive = TRUE, force = TRUE)",
+    coordinator, fixed = TRUE
+  )
+  invocation_line <- grep("run_coordinator()", coordinator, fixed = TRUE)
+  expect_length(function_line, 1L)
+  expect_length(lock_line, 1L)
+  expect_length(cleanup_line, 1L)
+  expect_length(invocation_line, 1L)
+  expect_lt(function_line, lock_line)
+  expect_lt(lock_line, cleanup_line)
+  expect_lt(cleanup_line, invocation_line)
 })
 
 test_that("all Output-15 budgets and sentinel counts are reproduced", {

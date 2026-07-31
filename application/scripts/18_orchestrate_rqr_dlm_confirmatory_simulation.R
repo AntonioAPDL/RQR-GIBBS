@@ -130,6 +130,7 @@ if (file.exists(closeout_path)) {
   quit(save = "no", status = 0L, runLast = FALSE)
 }
 
+run_coordinator <- function() {
 lock_path <- file.path(run_root, ".coordinator.lock")
 if (!dir.create(lock_path, showWarnings = FALSE)) {
   stop(
@@ -286,8 +287,8 @@ ensure_completed_boundary_collection <- function() {
   invisible("")
 }
 
-validate_wave_state()
-ensure_completed_boundary_collection()
+invisible(validate_wave_state())
+invisible(ensure_completed_boundary_collection())
 repeat {
   completed <- length(completion_paths())
   if (completed >= nrow(catalog)) break
@@ -330,7 +331,7 @@ repeat {
     stop("A wave returned success without one terminal state record.",
          call. = FALSE)
   }
-  validate_wave_state(require_present = TRUE)
+  invisible(validate_wave_state(require_present = TRUE))
   final_in_batch <- max(which(
     catalog$batch_sequence == current$batch_sequence
   ))
@@ -339,7 +340,7 @@ repeat {
   }
 }
 
-validate_wave_state(require_present = TRUE)
+invisible(validate_wave_state(require_present = TRUE))
 final_tasks <- canonical_plan[
   canonical_plan$wave_id %in% passed_wave_ids(), , drop = FALSE
 ]
@@ -405,3 +406,7 @@ rqr_confirm_atomic_write_json(
 cat("The complete confirmatory RQR-DLM study reached final audit.\n")
 cat("  run root:", run_root, "\n")
 cat("  final audit:", final_audit, "\n")
+invisible(NULL)
+}
+
+run_coordinator()

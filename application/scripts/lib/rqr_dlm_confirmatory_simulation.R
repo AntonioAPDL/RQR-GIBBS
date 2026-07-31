@@ -692,36 +692,8 @@ rqr_confirm_budget_summary <- function(contract, planning = "maximum") {
 
 rqr_confirm_method_iteration_cost <- function(
     contract, method, profile_name = "standard") {
-  schedule <- switch(
-    method,
-    M01 = rqr_confirm_dynamic_schedule(
-      contract, method, TRUE, profile_name
-    ),
-    M02 = rqr_confirm_dynamic_quantile_schedule(
-      contract, profile_name
-    ),
-    M03 = rqr_confirm_fixed_design_schedule(
-      contract, profile_name
-    ),
-    M06 = rqr_confirm_dynamic_schedule(
-      contract, method, FALSE, profile_name
-    ),
-    M07 = rqr_confirm_dynamic_schedule(
-      contract, method, TRUE, profile_name
-    ),
-    M08 = rqr_confirm_dynamic_schedule(
-      contract, method, FALSE, profile_name
-    ),
-    M09 = rqr_confirm_dynamic_schedule(
-      contract, method, TRUE, profile_name
-    ),
-    M10 = rqr_confirm_dynamic_schedule(
-      contract, method, TRUE, profile_name
-    ),
-    M11 = rqr_confirm_dynamic_schedule(
-      contract, method, TRUE, profile_name
-    ),
-    NULL
+  schedule <- rqr_confirm_method_schedule(
+    contract, method, profile_name
   )
   if (is.null(schedule)) return(0)
   per_chain <- schedule$burn + schedule$retain * schedule$thin
@@ -3287,6 +3259,41 @@ rqr_confirm_fixed_design_schedule <- function(
   } else {
     contract$config$schedules$fixed_design_rqr
   }
+}
+
+rqr_confirm_method_schedule <- function(
+    contract, method, profile_name = "standard") {
+  switch(
+    method,
+    M01 = rqr_confirm_dynamic_schedule(
+      contract, method, TRUE, profile_name
+    ),
+    M02 = rqr_confirm_dynamic_quantile_schedule(
+      contract, profile_name
+    ),
+    M03 = rqr_confirm_fixed_design_schedule(
+      contract, profile_name
+    ),
+    M06 = rqr_confirm_dynamic_schedule(
+      contract, method, FALSE, profile_name
+    ),
+    M07 = rqr_confirm_dynamic_schedule(
+      contract, method, TRUE, profile_name
+    ),
+    M08 = rqr_confirm_dynamic_schedule(
+      contract, method, FALSE, profile_name
+    ),
+    M09 = rqr_confirm_dynamic_schedule(
+      contract, method, TRUE, profile_name
+    ),
+    M10 = rqr_confirm_dynamic_schedule(
+      contract, method, TRUE, profile_name
+    ),
+    M11 = rqr_confirm_dynamic_schedule(
+      contract, method, TRUE, profile_name
+    ),
+    NULL
+  )
 }
 
 rqr_confirm_initialization <- function(generated, model, profile,

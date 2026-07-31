@@ -1081,6 +1081,7 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
     replication_result_index <- replication_diagnostic_index <- 0L
     replication_failure_index <- 0L
     sentinel_objects <- list()
+    failed_mcmc_objects <- list()
     cell_stop <- FALSE
     global_stop <- FALSE
     cell_stop_message <- ""
@@ -1385,7 +1386,76 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           replication_diagnostic_index + 1L
         replication_diagnostics[[replication_diagnostic_index]] <-
           diagnostics
+        chain_profiles <- vapply(
+          seq_len(chains),
+          function(chain) {
+            rqr_confirm_initialization_profile_name(
+              method_is_sentinel, chain
+            )
+          },
+          character(1L)
+        )
+        method_seed_keys <- paste(
+          "method", method_cell_id, task$replication[[1L]],
+          "interval", seq_len(chains), sep = "|"
+        )
+        method_seed_rows <- match(method_seed_keys, ledger$task_key)
+        if (anyNA(method_seed_rows)) {
+          stop(
+            "A compact diagnostic object lacks a bound method seed.",
+            call. = FALSE
+          )
+        }
+        schedule_rows <- lapply(chain_profiles, function(profile_name) {
+          schedule <- rqr_confirm_method_schedule(
+            contract, method, profile_name
+          )
+          if (is.null(schedule)) {
+            stop(
+              "A compact diagnostic object lacks an MCMC schedule.",
+              call. = FALSE
+            )
+          }
+          data.frame(
+            profile = profile_name,
+            burn = as.integer(schedule$burn),
+            retain = as.integer(schedule$retain),
+            thin = as.integer(schedule$thin),
+            stringsAsFactors = FALSE
+          )
+        })
+        compact_diagnostic_object <- list(
+          schema_version =
+            "rqrgibbs_dlm_compact_mcmc_diagnostics/1.1.0",
+          source_commit = source_commit,
+          config_digest = contract_digests$config_sha256,
+          incidence_digest = contract_digests$incidence_sha256,
+          seed_ledger_digest = rqr_confirm_sha256(ledger_path),
+          runtime_digest = primary_binding$runtime_tree_digest,
+          DGP = task$DGP[[1L]],
+          replication = task$replication[[1L]],
+          cell_id = method_cell_id,
+          method = method,
+          sentinel = method_is_sentinel,
+          chain_profiles = chain_profiles,
+          method_seed_keys = method_seed_keys,
+          method_seed_state_digests =
+            ledger$state_digest[method_seed_rows],
+          schedules = do.call(rbind, schedule_rows),
+          scalar_chains = scalar_chains,
+          diagnostics = diagnostics,
+          diagnostic_pass = all(diagnostics$pass),
+          full_fit_objects_retained = FALSE,
+          exact_refit_inputs_bound = TRUE,
+          generalized_bayes = TRUE,
+          response_likelihood = FALSE,
+          response_prediction_contract = FALSE
+        )
+        if (method_is_sentinel) {
+          sentinel_objects[[method]] <- compact_diagnostic_object
+        }
         if (!all(diagnostics$pass)) {
+          failed_mcmc_objects[[method]] <- compact_diagnostic_object
           diagnostic_message <- sprintf(
             "Frozen MCMC diagnostics failed for %s/%s/rep%d.",
             task$DGP[[1L]], method, task$replication[[1L]]
@@ -1425,18 +1495,6 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
             stage_status <- "completed_with_fit_failures"
           }
         }
-      }
-      if (method_is_sentinel) {
-        sentinel_objects[[method]] <- list(
-          schema_version =
-            "rqrgibbs_dlm_compact_sentinel_diagnostics/1.0.0",
-          scalar_chains = scalar_chains,
-          diagnostics = diagnostics,
-          full_fit_objects_retained = FALSE,
-          exact_refit_inputs_bound = TRUE,
-          generalized_bayes = TRUE,
-          response_prediction_contract = FALSE
-        )
       }
     }
     replication_directory <- file.path(
@@ -1495,6 +1553,15 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
         sentinel_objects,
         file.path(
           replication_staging, "sentinel_diagnostics_ignored.rds"
+        )
+      )
+    }
+    if (length(failed_mcmc_objects)) {
+      atomic_rds(
+        failed_mcmc_objects,
+        file.path(
+          replication_staging,
+          "failed_mcmc_diagnostics_ignored.rds"
         )
       )
     }
@@ -1561,7 +1628,8 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
     # completed sentinel fit merely because its last top-level binding is
     # still visible.  Compact rows above are independent objects.
     for (object_name in c(
-        "sentinel_objects", "chain_results", "diagnostic_payload",
+        "sentinel_objects", "failed_mcmc_objects", "chain_results",
+        "diagnostic_payload", "compact_diagnostic_object",
         "scalar_chains", "value", "generated", "forecast",
         "forecasts"
       )) {
