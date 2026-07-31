@@ -6,6 +6,11 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `implementation_notes/oracle_tilt_c095_v2_protocol_20260731.md` freezes the
+  source-level contract for the pending standardized-`AL_0.80` replacement:
+  exact population tilts, estimability thresholds, empirical orthogonal fixed
+  design, fixed-horizon DLM, staged runtime binding, monitored execution, and
+  compact evidence promotion. It records no MCMC result or manuscript claim.
 - `implementation_notes/oracle_tilt_c095_publication_protocol_20260731.md`
   freezes the clean-source 27-chain publication illustration, its exact
   population tilts, common dynamic prior, diagnostics, compact evidence, and

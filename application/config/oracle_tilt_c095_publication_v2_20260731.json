@@ -1,0 +1,139 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_publication_config/2.0.0",
+  "execution_authorized": true,
+  "coverage_level": 0.95,
+  "learning_rate": 1,
+  "targets": ["RQR", "ET", "SH"],
+  "tilt_source": "exact_population_oracle",
+  "innovation": {
+    "family": "asymmetric_laplace",
+    "tau": 0.8,
+    "location": 0,
+    "scale": 1,
+    "standardized": true,
+    "expected_raw_mean": -3.75,
+    "expected_raw_sd": 5.153882032022076,
+    "expected_standardized_skewness": -1.7976169855634085
+  },
+  "fixed_design": {
+    "seed": 202607311,
+    "n": 1200,
+    "basis": "empirical_orthogonal_quadratic",
+    "ridge_prior_selection": {
+      "candidate_tau2": [0.5, 1, 2, 4, 8, 16, 25],
+      "center_half_width_min": 2.5,
+      "maximum_half_width_max": 6,
+      "probability": 0.95,
+      "selection_rule": "largest_passing",
+      "expected_tau2": 1
+    },
+    "n_chains": 4,
+    "workers": 2,
+    "mcmc_control": {
+      "n_burn": 1500,
+      "n_mcmc": 6000,
+      "thin": 1,
+      "store_latent_draws": false,
+      "verbose": false
+    }
+  },
+  "dlm": {
+    "seed": 202607312,
+    "T": 1200,
+    "time_grid": "i_over_T",
+    "time_horizon": [0, 1],
+    "missing_windows": [
+      [0.345, 0.354],
+      [0.695, 0.704]
+    ],
+    "expected_missing": 22,
+    "expected_observed": 1178,
+    "scale": 0.55,
+    "initial_state": [0.15, 0.6],
+    "evolution_prior_selection": {
+      "candidate_initial_level_variance": [0.5, 1, 2],
+      "candidate_initial_slope_variance": [0.1, 0.25, 0.5],
+      "candidate_q_level": [0.01, 0.02, 0.04],
+      "candidate_q_slope": [0.02, 0.04, 0.09],
+      "initial_level_half_width_min": 1.75,
+      "initial_level_half_width_max": 2.25,
+      "terminal_level_half_width_max": 2.5,
+      "terminal_root_difference_sd_max": 1.75,
+      "terminal_slope_half_width_min": 0.75,
+      "terminal_slope_half_width_max": 1.25,
+      "probability": 0.95,
+      "selection_rule": "componentwise_largest_passing",
+      "expected_initial_level_variance": 1,
+      "expected_initial_slope_variance": 0.25,
+      "expected_q_level": 0.04,
+      "expected_q_slope": 0.09
+    },
+    "initial_profiles": [
+      "default",
+      "oracle_centered",
+      "narrow",
+      "wide",
+      "slope_stress"
+    ],
+    "n_chains": 5,
+    "workers": 2,
+    "mcmc_control": {
+      "n_burn": 2500,
+      "n_mcmc": 6000,
+      "thin": 1,
+      "backend": "cpp",
+      "store_state_draws": true,
+      "store_latent_draws": true,
+      "verbose": false
+    }
+  },
+  "preflight_gates": {
+    "minimum_expected_rare_tail_count": 10,
+    "static_design_rank": 3,
+    "static_projection_max_abs": 1e-10,
+    "static_gram_max_abs_error": 1e-10,
+    "fixed_horizon_covariance_max_abs_error": 1e-10
+  },
+  "diagnostics": {
+    "rhat_max": 1.01,
+    "bulk_ess_min": 1000,
+    "tail_ess_min": 1000,
+    "mcse_over_sd_max": 0.05,
+    "conditional_reference_relative_tolerance": 1e-7,
+    "R_cpp_absolute_tolerance": 1e-10,
+    "remote_width_ratio_threshold": 20,
+    "remote_endpoint_sd_threshold": 20,
+    "maximum_remote_draw_fraction": 0.01
+  },
+  "recovery_gates": {
+    "endpoint_rmse_over_oracle_width_max": 0.2,
+    "mean_width_ratio_min": 0.85,
+    "mean_width_ratio_max": 1.2,
+    "endpoint_summary_joint_inclusion_min": 0.9,
+    "static_edge_center_rmse_ratio_max": 2.5,
+    "absolute_endpoint_bias_over_oracle_width_max": 0.15,
+    "static_edge_fraction": 0.2
+  },
+  "benchmark": {
+    "fixed_design_target": "SH",
+    "dlm_target": "SH",
+    "chain": 1,
+    "maximum_elapsed_seconds": 7200,
+    "maximum_worker_bytes": 2147483648
+  },
+  "resources": {
+    "minimum_free_bytes": 21474836480,
+    "maximum_processes": 3,
+    "maximum_threads": 4,
+    "maximum_sampled_rss_kib": 12582912,
+    "maximum_execute_seconds": 28800,
+    "monitor_interval_seconds": 0.2
+  },
+  "interpretation": {
+    "response_likelihood": false,
+    "response_predictive_draws": false,
+    "population_oracle_tilts": true,
+    "cornish_fisher_used": false,
+    "simulation_study": false
+  }
+}

@@ -16,8 +16,12 @@ ORACLE_TILT_PUBLICATION_CONFIG ?= application/config/oracle_tilt_c095_publicatio
 ORACLE_TILT_PUBLICATION_DIR ?= application/outputs/oracle_tilt_c095_publication
 ORACLE_TILT_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095
 ORACLE_TILT_RUN_DIR ?=
+ORACLE_TILT_V2_CONFIG ?= application/config/oracle_tilt_c095_publication_v2_20260731.json
+ORACLE_TILT_V2_DIR ?= application/outputs/oracle_tilt_c095_publication_v2
+ORACLE_TILT_V2_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095_v2
+ORACLE_TILT_V2_RUN_DIR ?=
 
-.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication test-oracle-tilt-publication-v2 test-oracle-tilt-v2-workflow oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence oracle-tilt-v2-preflight oracle-tilt-v2-reference oracle-tilt-v2-benchmark oracle-tilt-v2-execute oracle-tilt-v2-package-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
@@ -91,6 +95,12 @@ test-oracle-tilt-forensics: package-install
 test-oracle-tilt-publication: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-publication.R", reporter = "summary")'
 
+test-oracle-tilt-publication-v2: package-install
+	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-publication-v2.R", reporter = "summary")'
+
+test-oracle-tilt-v2-workflow:
+	application/scripts/42_test_oracle_tilt_v2_workflow.sh
+
 oracle-tilt-illustrations-dry-run: package-install
 	$(R) application/scripts/32_run_oracle_tilt_illustrations.R --config=$(ORACLE_TILT_ILLUSTRATION_CONFIG) --output-dir=$(ORACLE_TILT_ILLUSTRATION_DIR)/dry-run --dry-run
 
@@ -112,6 +122,22 @@ oracle-tilt-publication-execute:
 oracle-tilt-package-evidence:
 	@test -n "$(strip $(ORACLE_TILT_RUN_DIR))" || { echo "Set ORACLE_TILT_RUN_DIR to one completed run." >&2; exit 64; }
 	$(R) application/scripts/35_package_oracle_tilt_evidence.R --run-dir=$(ORACLE_TILT_RUN_DIR) --output-dir=$(ORACLE_TILT_EVIDENCE_DIR) --replace
+
+oracle-tilt-v2-preflight:
+	RQR_ORACLE_TILT_V2_OUTPUT_DIR=$(ORACLE_TILT_V2_DIR)/preflight application/scripts/41_run_oracle_tilt_publication_v2.sh preflight
+
+oracle-tilt-v2-reference:
+	RQR_ORACLE_TILT_V2_OUTPUT_DIR=$(ORACLE_TILT_V2_DIR)/reference-only application/scripts/41_run_oracle_tilt_publication_v2.sh reference-only
+
+oracle-tilt-v2-benchmark:
+	RQR_ORACLE_TILT_V2_OUTPUT_DIR=$(ORACLE_TILT_V2_DIR)/benchmark application/scripts/41_run_oracle_tilt_publication_v2.sh benchmark
+
+oracle-tilt-v2-execute:
+	RQR_ORACLE_TILT_V2_OUTPUT_DIR=$(ORACLE_TILT_V2_DIR)/execute application/scripts/41_run_oracle_tilt_publication_v2.sh execute
+
+oracle-tilt-v2-package-evidence:
+	@test -n "$(strip $(ORACLE_TILT_V2_RUN_DIR))" || { echo "Set ORACLE_TILT_V2_RUN_DIR to one completed v2 execute run." >&2; exit 64; }
+	$(R) application/scripts/41_package_oracle_tilt_v2_evidence.R --run-dir=$(ORACLE_TILT_V2_RUN_DIR) --output-dir=$(ORACLE_TILT_V2_EVIDENCE_DIR) --replace
 
 test-standalone-contracts: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "dlm-bounded|dlm-main|dlm-confirmatory", reporter = "summary")'

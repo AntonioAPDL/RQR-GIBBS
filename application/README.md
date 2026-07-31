@@ -42,6 +42,16 @@ layer for the standalone article.
   compact illustration summaries to `figures/data/oracle_tilt_c095/`.
   **figures/generate_oracle_tilt_model_figures.R** then verifies those hashes
   and renders the manuscript figures without loading fits or launching MCMC.
+- **scripts/40_run_oracle_tilt_publication_v2.R** implements the replacement
+  95% illustration contract based on standardized `AL_0.80(0,1)` innovations,
+  exact population tilts, a 1,200-point empirical orthogonal quadratic design,
+  and a 1,200-step fixed-horizon local-linear DLM. Its four modes separate
+  deterministic preflight, independent conditional references, representative
+  resource benchmarking, and the 27-chain execution.
+- **scripts/41_run_oracle_tilt_publication_v2.sh** applies process-group
+  monitoring, fixed thread settings, sampled resource limits, signal cleanup,
+  and recursive artifact hashing. **scripts/41_package_oracle_tilt_v2_evidence.R**
+  accepts only a fully monitored, strict-passing execute bundle.
 
 Install and run the native gates from the repository root:
 
@@ -98,6 +108,44 @@ dynamic prior, iteration budget, population-oracle construction, and gate
 definitions. An ESS-only warning can support a didactic illustration only when
 all hard validity, R-hat, MCSE, conditional-reference, and pathology gates
 pass; it is never presented as strict convergence.
+
+The version-2 replacement leaves the preceding run and evidence immutable. It
+addresses tail-information and grid-scaling limitations diagnosed in that run:
+the innovation index is `0.80`, both families contain at least ten expected
+observations in the rarer endpoint tail for every exact-oracle target, and the
+DLM uses the exact discretization
+
+```text
+G(dt) = [1 dt; 0 1],
+W(dt) = [q_l dt + q_s dt^3/3, q_s dt^2/2;
+         q_s dt^2/2,          q_s dt]
+```
+
+on the fixed physical horizon `[0,1]`. The fixed-design ridge scale and DLM
+state/evolution scales are selected by frozen, data-independent
+prior-predictive rules. The complete frozen contract is recorded in
+`docs/implementation_notes/oracle_tilt_c095_v2_protocol_20260731.md`. Run the
+stages in order:
+
+```bash
+make test-oracle-tilt-publication-v2
+make oracle-tilt-v2-preflight
+make oracle-tilt-v2-reference
+make oracle-tilt-v2-benchmark
+make oracle-tilt-v2-execute
+make oracle-tilt-v2-package-evidence \
+  ORACLE_TILT_V2_RUN_DIR=application/outputs/.../execute
+```
+
+Promotion-grade stages must execute from an isolated package runtime bound to
+the complete reviewed `main` SHA. Benchmarking additionally requires
+`RQR_ORACLE_TILT_V2_BENCHMARK_CONFIRM=YES`; execution requires a reviewed local
+configuration with `execution_authorized=true` and
+`RQR_ORACLE_TILT_V2_CONFIRM=YES`. The benchmark binds passing exact-runtime
+preflight and reference directories; execution also binds the passing
+benchmark directory. Raw chains remain under ignored output storage. No v2
+result enters the manuscript until all six family/target cells pass the frozen
+computational and recovery gates and the compact evidence packager succeeds.
 
 The tracked high-content forensic configuration is
 `config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.

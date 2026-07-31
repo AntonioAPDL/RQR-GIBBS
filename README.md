@@ -112,6 +112,19 @@ passing all numerical, provenance, conditional-reference, scale-pathology,
 R-hat, and MCSE gates. See
 `docs/audits/oracle_tilt_c095_publication_closeout_20260731.md`.
 
+A separately versioned replacement workflow is implemented but has not been
+promoted into the manuscript. It uses exact population tilts under affinely
+standardized `AL_0.80(0,1)` innovations, 1,200 observations in each family,
+an empirical orthogonal quadratic fixed design, and a local-linear DLM whose
+transition and innovation covariance preserve the physical horizon as the time
+grid is refined. The deterministic design preflight and independent
+fixed-design/DLM conditional-reference suite are source-level gates; monitored
+benchmark and execute modes additionally require an isolated runtime bound to
+a clean, complete `main` SHA. The tracked configuration keeps execution
+disabled. See `application/README.md` for the staged commands. This remains a
+single-data method illustration, not a repeated-sample coverage study or a
+response-predictive analysis.
+
 ## arXiv source package
 
 The selected exact-target `rootwise2_ASIS2` transition repeats the symmetric
