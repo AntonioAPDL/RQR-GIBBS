@@ -93,12 +93,11 @@ ignored output root.
 | Exact composition | 1,500 | 3,000 | 2 | 9,000 |
 
 All five candidates run four profiles on S03 replications 117, 13, 90, and
-185. Replication 117 uses its original four ledger states. The original main
-ledger has only a standard chain for the three guards, so profiles B--D use
-predeclared sequential `nextRNGSubStream()` descendants of each guard's chain-1
-state. Their full RNG states and SHA-256 digests are recorded before fitting.
-This makes the guard test stronger without pretending the derived states were
-part of the original authorization ledger.
+185. The reviewed maximum ledger already contains four exact method states for
+each hard and guard replication, even where the main execution role uses only
+one chain. Every profile is therefore bound directly to an original
+authorization-ledger state; no seed is derived, replaced, or regenerated. The
+task keys and state digests are written before fitting.
 
 ### M08 candidates
 

@@ -23,6 +23,7 @@ if (any(args %in% c("-h", "--help"))) {
   cat(paste(
     "Usage:",
     "  Rscript application/scripts/37_compare_rqr_dlm_wave2_failure_candidates.R",
+    "    --mode=<preflight|execute>",
     "    --seed-ledger=<authorization seed_ledger_maximum.csv>",
     "    [--output-root=application/cache/rqr_dlm_wave2_failure_candidates_<id>]",
     "    [--workers=6]",
@@ -44,6 +45,10 @@ seed_ledger_path <- normalizePath(
 )
 expected_seed_ledger_sha256 <-
   "3dc8483f4a777ab766704b901997295bed1c89db0590429a70f3116b233e948f"
+mode <- parse_arg("mode", "preflight")
+if (!mode %in% c("preflight", "execute")) {
+  stop("--mode must be preflight or execute.", call. = FALSE)
+}
 output_root <- parse_arg(
   "output-root",
   file.path(
@@ -229,22 +234,9 @@ ledger <- ledger_all[ledger_all$task_key %in% required_seed_keys, ,
 ledger_all <- NULL
 invisible(gc(full = TRUE))
 missing_seed_keys <- setdiff(required_seed_keys, ledger$task_key)
-expected_development_keys <- unlist(lapply(
-  c(13L, 90L, 185L),
-  function(replication) {
-    cell_id <- contract$incidence$cell_id[
-      contract$incidence$DGP == "S03" &
-        contract$incidence$method == "M03"
-    ]
-    paste(
-      "method", cell_id, replication, "interval", 2:4,
-      sep = "|"
-    )
-  }
-), use.names = FALSE)
-if (!setequal(missing_seed_keys, expected_development_keys)) {
+if (length(missing_seed_keys)) {
   stop(
-    "The reviewed seed ledger has an unexpected required-state gap.",
+    "The reviewed seed ledger lacks a required hard/guard state.",
     call. = FALSE
   )
 }
@@ -252,50 +244,12 @@ ledger$substream <- suppressWarnings(as.integer(ledger$substream))
 ledger <- rqr_confirm_validate_seed_ledger(
   ledger, contract, planning = "maximum", require_complete = FALSE
 )
-development_seed_derivations <- list()
-derivation_index <- 0L
-for (replication in c(13L, 90L, 185L)) {
-  cell_id <- contract$incidence$cell_id[
-    contract$incidence$DGP == "S03" &
-      contract$incidence$method == "M03"
-  ]
-  parent_key <- paste(
-    "method", cell_id, replication, "interval", 1L, sep = "|"
-  )
-  state <- rqr_confirm_state_from_ledger(ledger, parent_key)
-  for (chain in 2:4) {
-    state <- parallel::nextRNGSubStream(state)
-    child_key <- paste(
-      "method", cell_id, replication, "interval", chain, sep = "|"
-    )
-    derivation_index <- derivation_index + 1L
-    development_seed_derivations[[derivation_index]] <- data.frame(
-      task_key = child_key,
-      parent_task_key = parent_key,
-      derivation = sprintf(
-        "sequential_nextRNGSubStream_%d_from_chain1", chain - 1L
-      ),
-      state_digest = rqr_confirm_state_digest(state),
-      stringsAsFactors = FALSE
-    )
-    ledger <- rbind(ledger, data.frame(
-      task_key = child_key,
-      parent_task_key = NA_character_,
-      stream_type = "stream",
-      substream = NA_integer_,
-      state_digest = rqr_confirm_state_digest(state),
-      state = rqr_confirm_state_text(state),
-      stringsAsFactors = FALSE
-    ))
-  }
-}
-development_seed_derivations <- do.call(
-  rbind, development_seed_derivations
-)
 ledger <- ledger[match(required_seed_keys, ledger$task_key), , drop = FALSE]
-ledger <- rqr_confirm_validate_seed_ledger(
-  ledger, contract, planning = "maximum", require_complete = FALSE
-)
+chain_seed_bindings <- ledger[
+  grepl("^method\\|", ledger$task_key),
+  c("task_key", "state_digest"), drop = FALSE
+]
+chain_seed_bindings$origin <- "reviewed_authorization_seed_ledger"
 
 thread_names <- c(
   "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
@@ -315,9 +269,46 @@ rqr_confirm_atomic_write_csv(candidates, file.path(output_root, "candidates.csv"
 rqr_confirm_atomic_write_csv(cases, file.path(output_root, "cases.csv"))
 rqr_confirm_atomic_write_csv(jobs, file.path(output_root, "jobs.csv"))
 rqr_confirm_atomic_write_csv(
-  development_seed_derivations,
-  file.path(output_root, "development_seed_derivations.csv")
+  chain_seed_bindings,
+  file.path(output_root, "chain_seed_bindings.csv")
 )
+
+if (identical(mode, "preflight")) {
+  rqr_confirm_atomic_write_json(
+    list(
+      schema_version =
+        "rqrgibbs_dlm_wave2_candidate_preflight/1.0.0",
+      source_commit = source_commit,
+      source_clean = TRUE,
+      fail_closed = TRUE,
+      seed_ledger_sha256 = seed_ledger_sha256,
+      jobs = nrow(jobs),
+      M03_fit_executions = sum(
+        jobs$method == "M03" & jobs$chains == 4L
+      ) * 4L,
+      M08_fit_executions = sum(
+        jobs$method == "M08" & jobs$chains == 1L
+      ),
+      thresholds_unchanged = TRUE,
+      exact_target_candidates_only = TRUE,
+      confirmatory_authorization_changed = FALSE,
+      fits_executed = 0L,
+      generalized_bayes = TRUE,
+      response_likelihood = FALSE,
+      completed_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE)
+    ),
+    file.path(output_root, "preflight_manifest.json")
+  )
+  hashes <- rqr_confirm_recursive_manifest(output_root)
+  rqr_confirm_atomic_write_csv(
+    hashes, file.path(output_root, "artifact_hashes.csv")
+  )
+  invisible(rqr_confirm_verify_recursive_manifest(output_root))
+  cat("Development candidate preflight passed; no fits executed.\n")
+  cat("  source commit:", source_commit, "\n")
+  cat("  output root:", output_root, "\n")
+  quit(save = "no", status = 0L, runLast = FALSE)
+}
 
 started_at <- format(Sys.time(), tz = "UTC", usetz = TRUE)
 results <- parallel::mclapply(
@@ -603,7 +594,7 @@ atomic_rds(
     seed_ledger_sha256 = seed_ledger_sha256,
     candidates = candidates,
     cases = cases,
-    development_seed_derivations = development_seed_derivations,
+    chain_seed_bindings = chain_seed_bindings,
     jobs = jobs,
     results = results,
     generalized_bayes = TRUE,
