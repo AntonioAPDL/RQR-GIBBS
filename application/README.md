@@ -27,6 +27,13 @@ layer for the standalone article.
   population-oracle RQR, equal-tailed, and shortest-interval tilts. It writes
   compact summaries and figures under ignored output roots and is not a
   simulation study.
+- **scripts/33_run_oracle_tilt_forensics.R** is the fail-closed diagnostic
+  workflow for high-content oracle-tilt illustrations. Its preflight records
+  population admissibility margins, the Gaussian dynamic prior's response to
+  the linear tilt, and an escaping-slope target profile. Its separately
+  authorized bounded execution retains compact per-chain state, loss, prior,
+  and latent-scale traces and checks selected conditional path distributions
+  against dense Gaussian references.
 
 Install and run the native gates from the repository root:
 
@@ -68,6 +75,29 @@ illustration retains 2,000 draws per chain; the more autocorrelated DLM
 illustration retains 10,000 per chain under its family-specific paper control.
 These checks support reproducibility and visual quality for a single
 illustrative data set; they are not a coverage-calibration simulation study.
+Full fitted objects are not published by the illustration runner. Compact
+curves, error summaries, diagnostics, source/runtime state, and artifact hashes
+are written under ignored output roots.
+
+The tracked high-content forensic configuration is
+`config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.
+The exact revised DLM-SH acceptance template is
+`config/oracle_tilt_dlm_sh_acceptance_20260730.json`; it is also disabled and
+uses one worker so that a constrained host publishes each completed chain
+before starting the next. Select either template with
+`ORACLE_TILT_FORENSIC_CONFIG=...`.
+Run `make oracle-tilt-forensics-preflight` for its non-MCMC geometry checks.
+A bounded MCMC execution requires an ignored local copy with
+`execution_authorized=true` plus
+`RQR_ORACLE_TILT_FORENSICS_CONFIRM=YES`. The forensic workflow never replaces
+the manuscript figures automatically, and its traces remain local-only.
+Fork-capable systems may set `dlm$workers` for bounded chain parallelism.
+Completed worker traces and result envelopes are written atomically and are
+resumed only when their source/config contract digest and trace hash match
+exactly. The 2026-07-30 reconciliation accepted the fixed-design SH and DLM-ET
+checks, diagnosed the original DLM-SH failure as a near-boundary tilt/prior
+interaction, and left the revised DLM-SH ESS gate open; see
+`docs/audits/oracle_tilt_high_content_forensic_reconciliation_20260730.md`.
 The fixed-W, discount-template, and component-scale modes are exact for their
 declared Gaussian evolution priors. Adaptive conditional discounting is
 mathematically incompatible in general with the advertised pair of simple

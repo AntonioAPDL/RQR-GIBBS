@@ -1,0 +1,60 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_forensics_config/1.1.0",
+  "execution_authorized": false,
+  "coverage_level": 0.95,
+  "learning_rate": 1,
+  "innovation": {
+    "family": "asymmetric_laplace",
+    "tau": 0.99,
+    "standardized": true
+  },
+  "population_boundary_caution_fraction": 0.02,
+  "fixed_design": {
+    "enabled": false,
+    "seed": 202607281,
+    "n": 540,
+    "ridge_tau2": 250,
+    "target": "SH"
+  },
+  "dlm": {
+    "seed": 202607282,
+    "T": 100,
+    "missing_times": [35, 36, 70],
+    "scale": 0.55,
+    "state_sd_level": 0.035,
+    "state_sd_slope": 0.006,
+    "initial_level_variance": 4,
+    "initial_slope_variance": 0.001,
+    "workers": 1,
+    "targets": ["SH"],
+    "initial_profiles": [
+      "default",
+      "oracle",
+      "narrow",
+      "wide",
+      "prior_shift_stress"
+    ],
+    "mcmc_control": {
+      "n_burn": 3000,
+      "n_mcmc": 24000,
+      "thin": 1,
+      "backend": "cpp",
+      "store_state_draws": true,
+      "store_latent_draws": true
+    }
+  },
+  "prior_sensitivity": {
+    "enabled": false
+  },
+  "tilt_path": {
+    "enabled": false
+  },
+  "diagnostics": {
+    "rhat_max": 1.05,
+    "bulk_ess_min": 400,
+    "tail_ess_min": 200,
+    "mcse_over_sd_max": 0.1,
+    "conditional_reference_relative_tolerance": 1e-7,
+    "R_cpp_absolute_tolerance": 1e-10
+  }
+}

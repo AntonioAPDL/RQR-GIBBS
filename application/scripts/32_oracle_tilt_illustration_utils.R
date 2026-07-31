@@ -427,6 +427,16 @@ oti_dlm_dgp <- function(config, law) {
   set.seed(seed)
   level_sd <- oti_scalar(cfg$state_sd_level %||% 0.035, "dlm$state_sd_level", 0)
   slope_sd <- oti_scalar(cfg$state_sd_slope %||% 0.006, "dlm$state_sd_slope", 0)
+  initial_level_variance <- oti_scalar(
+    cfg$initial_level_variance %||% 4,
+    "dlm$initial_level_variance",
+    .Machine$double.eps
+  )
+  initial_slope_variance <- oti_scalar(
+    cfg$initial_slope_variance %||% 1,
+    "dlm$initial_slope_variance",
+    .Machine$double.eps
+  )
   theta <- matrix(NA_real_, T, 2L)
   theta[1L, ] <- c(0.15, 0.015)
   if (T > 1L) {
@@ -443,7 +453,7 @@ oti_dlm_dgp <- function(config, law) {
   model <- rqrgibbs::rqr_polytrend(
     order = 2L,
     m0 = c(0, 0),
-    C0 = diag(c(4, 1)),
+    C0 = diag(c(initial_level_variance, initial_slope_variance)),
     name = "local_linear"
   )
   W <- diag(c(level_sd^2, slope_sd^2))
@@ -458,6 +468,8 @@ oti_dlm_dgp <- function(config, law) {
     mean_truth = theta[, 1L],
     state_truth = theta,
     scale_truth = scale,
+    initial_level_variance = initial_level_variance,
+    initial_slope_variance = initial_slope_variance,
     observed = !is.na(y),
     missing_times = missing_times
   )
