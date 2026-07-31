@@ -1,0 +1,7 @@
+method,candidate_id,candidate_order,transition_cost,hard_and_guard_pass,selected,selection_rule
+M03,M03_REX4_B500_R1500,1,8000,TRUE,TRUE,all fixed cases pass unchanged gates; zero repairs; exact target; then minimum transition cost and candidate order
+M03,M03_REX5_B500_R1500,2,10000,TRUE,FALSE,all fixed cases pass unchanged gates; zero repairs; exact target; then minimum transition cost and candidate order
+M03,M03_REX6_B500_R1500,3,12000,TRUE,FALSE,all fixed cases pass unchanged gates; zero repairs; exact target; then minimum transition cost and candidate order
+M03,M03_REX8_B500_R1500,4,16000,TRUE,FALSE,all fixed cases pass unchanged gates; zero repairs; exact target; then minimum transition cost and candidate order
+M08,M08_current_B1000_R2000,1,3000,FALSE,FALSE,all fixed cases pass unchanged gates; zero repairs; exact target; then minimum transition cost and candidate order
+M08,M08_uniform_B1000_R4000,2,5000,TRUE,TRUE,all fixed cases pass unchanged gates; zero repairs; exact target; then minimum transition cost and candidate order

@@ -409,6 +409,11 @@ results <- parallel::mclapply(
             job$kernel_repetitions[[1L]]
           init_override <- list()
           if (identical(
+              job$kernel_kind[[1L]], "ordinary_gibbs"
+            )) {
+            override$replica_exchange <- list(enabled = FALSE)
+          }
+          if (identical(
               job$kernel_kind[[1L]],
               "likelihood_tempered_replica_exchange"
             )) {

@@ -1,0 +1,8 @@
+method,candidate_id,DGP,replication,case_role,chains,diagnostics,diagnostics_passed,min_bulk_ess,min_tail_ess,max_rhat,max_mcse_over_sd,minimum_swap_acceptance,total_round_trips,numerical_repair_count,fit_elapsed_seconds,peak_RSS_KiB
+M03,M03_REX4_B500_R1500,S03,13,guard_four_chain,4,41,41,1537.859,2919.931,1.001668,0.02560721,0.396,662,0,117.671,385768
+M03,M03_REX4_B500_R1500,S03,90,guard_four_chain,4,41,41,1690.002,2674.176,1.001079,0.02436036,0.377,652,0,118.640,385464
+M03,M03_REX4_B500_R1500,S03,117,hard_four_chain,4,41,41,1618.438,2470.898,1.003531,0.02482885,0.342,626,0,117.361,385736
+M03,M03_REX4_B500_R1500,S03,185,guard_four_chain,4,41,41,1666.607,2597.015,1.003904,0.02454189,0.399,701,0,121.191,385728
+M08,M08_uniform_B1000_R4000,S03,13,hard_one_chain,1,45,45,385.5624,1057.561,,0.05216983,,,0,417.560,379004
+M08,M08_uniform_B1000_R4000,S03,55,guard_one_chain,1,45,45,977.4119,1843.499,,0.03208319,,,0,415.754,379004
+M08,M08_uniform_B1000_R4000,S03,94,guard_one_chain,1,45,45,810.9020,1401.537,,0.03511880,,,0,412.962,379004

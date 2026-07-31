@@ -153,7 +153,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$implementation_correction,
         list(
-          schema_version = "rqrgibbs_dlm_main_correction/1.10.0",
+          schema_version = "rqrgibbs_dlm_main_correction/1.11.0",
           failed_authorization_commit =
             "b8b7748ab181a006611b602f64d4edf5be591de6",
           failed_wave_id =
@@ -247,10 +247,32 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           rootwise2_ASIS2_development_outputs_reused = FALSE,
           component_scale_transition_benchmark_role =
             "development_only_no_scientific_metrics_no_promotion",
+          wave2_recovery_selection_source_commit =
+            "c2d560d761aae35554cadfe417e11a65ef540043",
+          wave2_recovery_seed_ledger_sha256 =
+            "3dc8483f4a777ab766704b901997295bed1c89db0590429a70f3116b233e948f",
+          wave2_recovery_selection_path = paste0(
+            "docs/audits/rqr_dlm_wave2_candidate_selection_20260731/",
+            "candidate_decisions.csv"
+          ),
+          wave2_recovery_selection_sha256 =
+            "12bf449b5de7b7c8badb794f8a5e894969963b26612e8b7f5255781ad05d39bc",
+          wave2_recovery_development_outputs_reused = FALSE,
+          wave2_recovery_scientific_metrics_used = FALSE,
+          fixed_design_replica_exchange_correction = paste(
+            "exact four-replica loss-tempered transition;",
+            "retain only the inverse-temperature-one target"
+          ),
+          fixed_design_replica_exchange_selection =
+            "M03_REX4_B500_R1500_minimum_cost_eligible_candidate",
+          fixed_design_replica_exchange_target_change = FALSE,
+          true_fixed_W_schedule_correction =
+            "M08_uniform_B1000_R4000_method_level_schedule",
+          true_fixed_W_schedule_applies_to_M06 = FALSE,
           correction_budget_path =
             "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
           correction_budget_sha256 =
-            "f1ef169465d7bc2dadfa0ef4a498f6efc8718dabd489efb51ffd94a5524a6cb8",
+            "719c8260abb19b2dd0c06ba584bbe4bea79d5dfe423690212b55a334687db64b",
           target_prior_seed_or_diagnostic_threshold_changed = FALSE,
           mcmc_transition_and_fixed_role_schedule_changed = TRUE
         )
@@ -273,6 +295,24 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           slice_max_shrink = 1000L,
           target_change = FALSE
         )
+      ) ||
+      !identical(
+        config$frozen_tuning$fixed_design_replica_exchange,
+        list(
+          enabled = TRUE,
+          inverse_temperatures = c(1, 0.45, 0.20, 0.09),
+          swap_every = 1L,
+          pairing = "alternating_adjacent",
+          store_energy_trace = FALSE,
+          hot_initialization_profiles = c("A", "C", "D"),
+          selected_candidate = "M03_REX4_B500_R1500",
+          exact_cold_target = TRUE,
+          target_change = FALSE
+        )
+      ) ||
+      !identical(
+        config$schedules$dynamic_rqr_true_fixed_W,
+        list(burn = 1000L, retain = 4000L, thin = 1L)
       ) ||
       !identical(
         config$schedules$dynamic_rqr_component_scale_standard,
@@ -363,6 +403,28 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
         config$implementation_correction$correction_budget_sha256
       )) {
     stop("The correction budget overlay digest changed.", call. = FALSE)
+  }
+  correction_evidence <- list(
+    rootwise2_ASIS2 = c(
+      path = config$implementation_correction$
+        rootwise2_ASIS2_development_evidence_path,
+      sha256 = config$implementation_correction$
+        rootwise2_ASIS2_development_evidence_sha256
+    ),
+    wave2_M03_M08 = c(
+      path = config$implementation_correction$
+        wave2_recovery_selection_path,
+      sha256 = config$implementation_correction$
+        wave2_recovery_selection_sha256
+    )
+  )
+  for (evidence in correction_evidence) {
+    path <- file.path(contract$repo_root, evidence[["path"]])
+    if (!file.exists(path) ||
+        !identical(rqr_confirm_sha256(path), evidence[["sha256"]])) {
+      stop("A computational-correction evidence digest changed.",
+           call. = FALSE)
+    }
   }
   incidence <- contract$incidence
   required <- c(
@@ -697,7 +759,17 @@ rqr_confirm_method_iteration_cost <- function(
   )
   if (is.null(schedule)) return(0)
   per_chain <- schedule$burn + schedule$retain * schedule$thin
-  as.numeric(per_chain * rqr_confirm_method_mcmc_chains(method))
+  replicas <- if (identical(method, "M03")) {
+    length(
+      contract$config$frozen_tuning$fixed_design_replica_exchange$
+        inverse_temperatures
+    )
+  } else {
+    1L
+  }
+  as.numeric(
+    per_chain * rqr_confirm_method_mcmc_chains(method) * replicas
+  )
 }
 
 rqr_confirm_iteration_budget_summary <- function(
@@ -3218,6 +3290,9 @@ rqr_confirm_initialization_profile_name <- function(is_sentinel, chain) {
 
 rqr_confirm_dynamic_schedule <- function(
     contract, method, component_evolution_method, profile_name) {
+  if (identical(method, "M08")) {
+    return(contract$config$schedules$dynamic_rqr_true_fixed_W)
+  }
   learned <- identical(method, "M11")
   component <- isTRUE(component_evolution_method)
   standard <- identical(profile_name, "standard")
@@ -3259,6 +3334,62 @@ rqr_confirm_fixed_design_schedule <- function(
   } else {
     contract$config$schedules$fixed_design_rqr
   }
+}
+
+rqr_confirm_fixed_design_replica_initialization <- function(
+    contract, generated, cold_profile_name, cold_endpoints, p) {
+  replica <- contract$config$frozen_tuning$fixed_design_replica_exchange
+  if (!is.list(replica) || !isTRUE(replica$enabled) ||
+      !isTRUE(replica$exact_cold_target) || isTRUE(replica$target_change)) {
+    stop("The fixed-design replica-exchange contract is malformed.",
+         call. = FALSE)
+  }
+  p <- rqr_confirm_strict_integer(p, "p", 1L)
+  profiles <- c(
+    cold_profile_name,
+    replica$hot_initialization_profiles
+  )
+  if (length(profiles) != length(replica$inverse_temperatures)) {
+    stop("The replica temperature and initialization counts differ.",
+         call. = FALSE)
+  }
+  endpoints <- vector("list", length(profiles))
+  endpoints[[1L]] <- cold_endpoints
+  if (length(profiles) > 1L) {
+    for (index in 2:length(profiles)) {
+      profile <- contract$config$initialization_profiles[[
+        profiles[[index]]
+      ]]
+      if (is.null(profile)) {
+        stop("A hot-replica initialization profile is unknown.",
+             call. = FALSE)
+      }
+      endpoints[[index]] <- rqr_confirm_profile_interval(
+        generated, profile
+      )
+    }
+  }
+  root_matrix <- function(endpoint_name) {
+    do.call(rbind, lapply(endpoints, function(endpoint) {
+      c(endpoint[[endpoint_name]], rep(0, p - 1L))
+    }))
+  }
+  list(
+    mcmc_control = list(
+      replica_exchange = list(
+        enabled = TRUE,
+        inverse_temperatures = replica$inverse_temperatures,
+        swap_every = replica$swap_every,
+        pairing = replica$pairing,
+        store_energy_trace = replica$store_energy_trace
+      )
+    ),
+    init = list(
+      replica_beta_root1 = root_matrix("lower"),
+      replica_beta_root2 = root_matrix("upper")
+    ),
+    profiles = profiles
+  )
 }
 
 rqr_confirm_method_schedule <- function(
@@ -3623,6 +3754,11 @@ rqr_confirm_fixed_design <- function(
     n_burn = schedule$burn, n_mcmc = schedule$retain,
     thin = schedule$thin, verbose = FALSE
   )
+  replica <- rqr_confirm_fixed_design_replica_initialization(
+    contract, generated, profile_name, endpoints, ncol(X)
+  )
+  mcmc_control[names(replica$mcmc_control)] <-
+    replica$mcmc_control
   if (length(mcmc_control_override)) {
     mcmc_control[names(mcmc_control_override)] <-
       mcmc_control_override
@@ -3633,6 +3769,13 @@ rqr_confirm_fixed_design <- function(
     beta_root2 = c(endpoints[["upper"]], rep(0, ncol(X) - 1L)),
     lambda = profile$lambda_initial
   )
+  final_replica_control <- mcmc_control$replica_exchange
+  final_replica_enabled <- isTRUE(final_replica_control$enabled) ||
+    (!identical(final_replica_control$enabled, FALSE) &&
+       length(final_replica_control$inverse_temperatures %||% 1) > 1L)
+  if (final_replica_enabled) {
+    fit_init[names(replica$init)] <- replica$init
+  }
   if (length(init_override)) {
     fit_init[names(init_override)] <- init_override
   }
@@ -3651,6 +3794,46 @@ rqr_confirm_fixed_design <- function(
     mcmc_control = mcmc_control,
     init = fit_init
   )
+  expected_replica <-
+    contract$config$frozen_tuning$fixed_design_replica_exchange
+  attempts <- fit$diagnostics$replica_swap_attempts
+  accepts <- fit$diagnostics$replica_swap_accepts
+  acceptance <- fit$diagnostics$replica_swap_acceptance
+  cold_labels <- sort(unique(
+    fit$diagnostics$replica_cold_label_trace
+  ))
+  round_trips <- fit$diagnostics$replica_round_trips
+  replica_operational <- if (final_replica_enabled) {
+    isTRUE(fit$model_spec$replica_exchange_enabled) &&
+      identical(
+        fit$model_spec$replica_exchange$inverse_temperatures,
+        expected_replica$inverse_temperatures
+      ) &&
+      length(attempts) ==
+        length(expected_replica$inverse_temperatures) - 1L &&
+      length(accepts) == length(attempts) &&
+      length(acceptance) == length(attempts) &&
+      all(attempts > 0L) && all(accepts > 0L) &&
+      all(accepts <= attempts) &&
+      all(is.finite(acceptance)) && all(acceptance > 0) &&
+      length(cold_labels) > 1L &&
+      length(round_trips) ==
+        length(expected_replica$inverse_temperatures) &&
+      sum(round_trips) > 0L
+  } else {
+    !isTRUE(fit$model_spec$replica_exchange_enabled)
+  }
+  if (!isTRUE(replica_operational) ||
+      !isTRUE(fit$model_spec$exact_joint_target) ||
+      fit$model_spec$numerical_repair_count != 0L) {
+    stop(
+      paste(
+        "The exact joint target replica-exchange operational contract",
+        "failed."
+      ),
+      call. = FALSE
+    )
+  }
   training <- predict_interval(fit, X_new = X)
   future <- predict_interval(fit, X_new = X_future)
   list(
@@ -3662,6 +3845,14 @@ rqr_confirm_fixed_design <- function(
     diagnostics = list(
       numerical_repairs = fit$model_spec$numerical_repair_count,
       exact_joint_target = TRUE,
+      replica_exchange_operational = replica_operational,
+      replica_exchange_minimum_acceptance = if (length(acceptance)) {
+        min(acceptance)
+      } else {
+        NA_real_
+      },
+      replica_exchange_total_round_trips = sum(round_trips),
+      replica_exchange_cold_labels_visited = cold_labels,
       promotion_eligible =
         isTRUE(fit$provenance$reproducibility_eligible)
     )

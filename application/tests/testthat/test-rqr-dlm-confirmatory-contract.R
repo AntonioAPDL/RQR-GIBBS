@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.10.0"
+    "rqrgibbs_dlm_main_correction/1.11.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -194,6 +194,36 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     "development_only_no_scientific_metrics_no_promotion"
   )
   expect_identical(
+    contract$config$implementation_correction$
+      wave2_recovery_selection_source_commit,
+    "c2d560d761aae35554cadfe417e11a65ef540043"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      wave2_recovery_selection_sha256,
+    environment$rqr_confirm_sha256(file.path(
+      contract$repo_root,
+      contract$config$implementation_correction$
+        wave2_recovery_selection_path
+    ))
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      wave2_recovery_development_outputs_reused
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      wave2_recovery_scientific_metrics_used
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      fixed_design_replica_exchange_target_change
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      true_fixed_W_schedule_applies_to_M06
+  )
+  expect_identical(
     contract$config$implementation_correction$correction_budget_sha256,
     environment$rqr_confirm_sha256(file.path(
       contract$repo_root,
@@ -213,7 +243,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
       correction_budget$section == "mcmc" &
         correction_budget$planning == "maximum"
     ],
-    205658000
+    265376000
   )
   expect_false(
     contract$config$implementation_correction$
@@ -240,6 +270,24 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
       slice_max_shrink = 1000L,
       target_change = FALSE
     )
+  )
+  expect_identical(
+    contract$config$frozen_tuning$fixed_design_replica_exchange,
+    list(
+      enabled = TRUE,
+      inverse_temperatures = c(1, 0.45, 0.20, 0.09),
+      swap_every = 1L,
+      pairing = "alternating_adjacent",
+      store_energy_trace = FALSE,
+      hot_initialization_profiles = c("A", "C", "D"),
+      selected_candidate = "M03_REX4_B500_R1500",
+      exact_cold_target = TRUE,
+      target_change = FALSE
+    )
+  )
+  expect_identical(
+    contract$config$schedules$dynamic_rqr_true_fixed_W,
+    list(burn = 1000L, retain = 4000L, thin = 1L)
   )
   expect_identical(
     contract$config$schedules$dynamic_rqr_component_scale_standard,
@@ -296,6 +344,18 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     ),
     contract$config$schedules$
       learned_dynamic_rqr_component_scale_sentinel
+  )
+  expect_identical(
+    environment$rqr_confirm_dynamic_schedule(
+      contract, "M08", FALSE, "standard"
+    ),
+    contract$config$schedules$dynamic_rqr_true_fixed_W
+  )
+  expect_identical(
+    environment$rqr_confirm_dynamic_schedule(
+      contract, "M06", FALSE, "standard"
+    ),
+    contract$config$schedules$dynamic_rqr
   )
   expect_identical(
     environment$rqr_confirm_dynamic_quantile_schedule(
@@ -378,6 +438,60 @@ test_that("M01 construction forwards the selected rootwise2-ASIS2 kernel", {
     body_text,
     fixed = TRUE
   ))
+})
+
+test_that("M03 uses the frozen exact REX4 construction uniformly", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  generated <- list(
+    training_y = seq(-2, 2, length.out = 20L),
+    coverage_level = 0.8
+  )
+  cold <- environment$rqr_confirm_profile_interval(
+    generated, contract$config$standard_initialization
+  )
+  replica <- environment$rqr_confirm_fixed_design_replica_initialization(
+    contract, generated, "standard", cold, 3L
+  )
+  expect_identical(
+    replica$mcmc_control$replica_exchange,
+    list(
+      enabled = TRUE,
+      inverse_temperatures = c(1, 0.45, 0.20, 0.09),
+      swap_every = 1L,
+      pairing = "alternating_adjacent",
+      store_energy_trace = FALSE
+    )
+  )
+  expect_identical(replica$profiles, c("standard", "A", "C", "D"))
+  expect_identical(dim(replica$init$replica_beta_root1), c(4L, 3L))
+  expect_identical(dim(replica$init$replica_beta_root2), c(4L, 3L))
+  expect_identical(
+    unname(replica$init$replica_beta_root1[1L, ]),
+    c(unname(cold[["lower"]]), 0, 0)
+  )
+  expect_identical(
+    unname(replica$init$replica_beta_root2[1L, ]),
+    c(unname(cold[["upper"]]), 0, 0)
+  )
+  expect_identical(
+    environment$rqr_confirm_method_iteration_cost(
+      contract, "M03", "standard"
+    ),
+    14000
+  )
+  expect_identical(
+    environment$rqr_confirm_method_iteration_cost(
+      contract, "M03", "A"
+    ),
+    8000
+  )
+  expect_identical(
+    environment$rqr_confirm_method_iteration_cost(
+      contract, "M08", "standard"
+    ),
+    5000
+  )
 })
 
 test_that("fit provenance retains the primary attestation file path", {
@@ -789,6 +903,34 @@ test_that("wave-2 candidate comparison is fixed and cannot authorize", {
   )))
 })
 
+test_that("the production-routed M03/M08 stress gate is fail closed", {
+  stress_script <- readLines(
+    testthat::test_path(
+      "..", "..", "scripts",
+      "39_validate_rqr_dlm_wave2_m03_m08_stress.R"
+    ),
+    warn = FALSE
+  )
+  required <- c(
+    "--scope must be targeted or full-wave",
+    "rqr_confirm_fixed_design(",
+    "rqr_confirm_dynamic_fit(",
+    "production_routing = TRUE",
+    "confirmatory_authorization_changed = FALSE",
+    "replica_exchange_operational",
+    "thresholds_unchanged = TRUE",
+    "promotion_evidence = nzchar(expected_commit) && all_pass",
+    "3dc8483f4a777ab766704b901997295bed1c89db0590429a70f3116b233e948f"
+  )
+  for (value in required) {
+    expect_true(any(grepl(value, stress_script, fixed = TRUE)))
+  }
+  expect_false(any(grepl(
+    "confirmatory_execution_authorized <- TRUE",
+    stress_script, fixed = TRUE
+  )))
+})
+
 test_that("the coordinator owns lock cleanup inside a function", {
   coordinator <- readLines(
     testthat::test_path(
@@ -833,9 +975,9 @@ test_that("all Output-15 budgets and sentinel counts are reproduced", {
     expect_identical(as.numeric(actual$value), expected[[planning]])
   }
   expected_iterations <- c(
-    initial = 76518000,
-    central = 141088000,
-    maximum = 205658000
+    initial = 97248000,
+    central = 181312000,
+    maximum = 265376000
   )
   for (planning in names(expected_iterations)) {
     actual <- environment$rqr_confirm_iteration_budget_summary(

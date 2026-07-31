@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   implementation_correction = list(
-    schema_version = "rqrgibbs_dlm_main_correction/1.10.0",
+    schema_version = "rqrgibbs_dlm_main_correction/1.11.0",
     failed_authorization_commit =
       "b8b7748ab181a006611b602f64d4edf5be591de6",
     failed_wave_id =
@@ -105,10 +105,32 @@ rqr_dlm_main_simulation <- list(
     rootwise2_ASIS2_development_outputs_reused = FALSE,
     component_scale_transition_benchmark_role =
       "development_only_no_scientific_metrics_no_promotion",
+    wave2_recovery_selection_source_commit =
+      "c2d560d761aae35554cadfe417e11a65ef540043",
+    wave2_recovery_seed_ledger_sha256 =
+      "3dc8483f4a777ab766704b901997295bed1c89db0590429a70f3116b233e948f",
+    wave2_recovery_selection_path = paste0(
+      "docs/audits/rqr_dlm_wave2_candidate_selection_20260731/",
+      "candidate_decisions.csv"
+    ),
+    wave2_recovery_selection_sha256 =
+      "12bf449b5de7b7c8badb794f8a5e894969963b26612e8b7f5255781ad05d39bc",
+    wave2_recovery_development_outputs_reused = FALSE,
+    wave2_recovery_scientific_metrics_used = FALSE,
+    fixed_design_replica_exchange_correction = paste(
+      "exact four-replica loss-tempered transition;",
+      "retain only the inverse-temperature-one target"
+    ),
+    fixed_design_replica_exchange_selection =
+      "M03_REX4_B500_R1500_minimum_cost_eligible_candidate",
+    fixed_design_replica_exchange_target_change = FALSE,
+    true_fixed_W_schedule_correction =
+      "M08_uniform_B1000_R4000_method_level_schedule",
+    true_fixed_W_schedule_applies_to_M06 = FALSE,
     correction_budget_path =
       "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
     correction_budget_sha256 =
-      "f1ef169465d7bc2dadfa0ef4a498f6efc8718dabd489efb51ffd94a5524a6cb8",
+      "719c8260abb19b2dd0c06ba584bbe4bea79d5dfe423690212b55a334687db64b",
     target_prior_seed_or_diagnostic_threshold_changed = FALSE,
     mcmc_transition_and_fixed_role_schedule_changed = TRUE
   ),
@@ -261,6 +283,17 @@ rqr_dlm_main_simulation <- list(
       slice_max_shrink = 1000L,
       target_change = FALSE
     ),
+    fixed_design_replica_exchange = list(
+      enabled = TRUE,
+      inverse_temperatures = c(1, 0.45, 0.20, 0.09),
+      swap_every = 1L,
+      pairing = "alternating_adjacent",
+      store_energy_trace = FALSE,
+      hot_initialization_profiles = c("A", "C", "D"),
+      selected_candidate = "M03_REX4_B500_R1500",
+      exact_cold_target = TRUE,
+      target_change = FALSE
+    ),
     fixed_design_ridge_variance = 25,
     empirical_window = 100L,
     discounts = list(
@@ -274,6 +307,8 @@ rqr_dlm_main_simulation <- list(
   ),
   schedules = list(
     dynamic_rqr = list(burn = 1000L, retain = 2000L, thin = 1L),
+    dynamic_rqr_true_fixed_W =
+      list(burn = 1000L, retain = 4000L, thin = 1L),
     dynamic_rqr_component_scale_standard =
       list(burn = 1000L, retain = 6000L, thin = 1L),
     dynamic_rqr_component_scale_sentinel =

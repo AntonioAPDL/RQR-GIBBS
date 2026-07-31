@@ -17,7 +17,7 @@ ORACLE_TILT_PUBLICATION_DIR ?= application/outputs/oracle_tilt_c095_publication
 ORACLE_TILT_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095
 ORACLE_TILT_RUN_DIR ?=
 
-.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
@@ -183,6 +183,21 @@ validate-dlm-main-wave2-comparator: package-install
 
 validate-dlm-main-horizon-fixed-design: package-install
 	$(R) application/scripts/24_validate_rqr_dlm_horizon_and_fixed_design.R
+
+preflight-dlm-main-wave2-m03-m08-stress: package-install
+	$(R) application/scripts/39_validate_rqr_dlm_wave2_m03_m08_stress.R \
+		--mode=preflight \
+		--seed-ledger=$${RQR_CONFIRMATORY_SEED_LEDGER}
+
+validate-dlm-main-wave2-m03-m08-stress: package-install
+	$(R) application/scripts/39_validate_rqr_dlm_wave2_m03_m08_stress.R \
+		--mode=execute \
+		--seed-ledger=$${RQR_CONFIRMATORY_SEED_LEDGER}
+
+validate-dlm-main-wave2-m03-m08-full: package-install
+	$(R) application/scripts/39_validate_rqr_dlm_wave2_m03_m08_stress.R \
+		--mode=execute --scope=full-wave \
+		--seed-ledger=$${RQR_CONFIRMATORY_SEED_LEDGER}
 
 validate-dlm-main-resource-envelope: package-install
 	$(R) application/scripts/25_validate_rqr_dlm_resource_envelope.R
