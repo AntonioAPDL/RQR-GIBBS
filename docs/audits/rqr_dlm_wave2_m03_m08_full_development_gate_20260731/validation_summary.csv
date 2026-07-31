@@ -1,0 +1,4 @@
+"scope","method","cases","chain_fits","diagnostics_passed","diagnostics_total","minimum_bulk_ess","minimum_tail_ess","maximum_mcse_over_sd","maximum_rhat","exact_target","zero_repairs","result"
+"full_wave","all",34,52,1462,1462,385.562424044217,973.422800567833,0.0521698318694343,1.00390430528874,TRUE,TRUE,"pass"
+"full_wave","M03",17,29,697,697,587.957329584068,973.422800567833,0.0411394304832511,1.00390430528874,TRUE,TRUE,"pass"
+"full_wave","M08",17,23,765,765,385.562424044217,1057.56097072902,0.0521698318694343,1.00222392852239,TRUE,TRUE,"pass"

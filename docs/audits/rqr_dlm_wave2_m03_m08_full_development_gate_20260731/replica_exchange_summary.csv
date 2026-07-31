@@ -1,0 +1,4 @@
+"edge","minimum_acceptance","median_acceptance","maximum_acceptance","minimum_round_trips","median_round_trips","maximum_round_trips"
+1,0.412,0.437,0.4931429,152,176,339
+2,0.3977143,0.429,0.4742857,152,176,339
+3,0.342,0.407,0.4622857,152,176,339
