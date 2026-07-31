@@ -47,10 +47,11 @@ if (!all(c("path", "bytes", "sha256") %in% names(manifest))) {
 }
 paths <- file.path(evidence_dir, manifest$path)
 if (any(!file.exists(paths)) ||
-    !identical(as.numeric(file.info(paths)$size), as.numeric(manifest$bytes)) ||
-    !identical(
-      tolower(vapply(paths, oti_file_sha256, character(1L))),
-      tolower(manifest$sha256)
+    !all(as.numeric(unname(file.info(paths)$size)) ==
+           as.numeric(manifest$bytes)) ||
+    !all(
+      tolower(unname(vapply(paths, oti_file_sha256, character(1L)))) ==
+        tolower(manifest$sha256)
     )) {
   oti_stop("Compact evidence failed byte-count or SHA-256 verification.")
 }
