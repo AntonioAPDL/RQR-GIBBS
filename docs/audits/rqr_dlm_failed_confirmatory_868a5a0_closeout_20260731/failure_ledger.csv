@@ -1,0 +1,3 @@
+"run_id","cell_id","replication","method","failure_class","message_digest","intention_to_run_denominator","retry_count","source_file","wave_id"
+"worker-01","C03M08",13,"M08","mcmc_diagnostic_failure","08bb3c19feabe4af234e52f579e400b230672a3b36776fdee48323675f69c4b2",TRUE,0,"waves/0002__local_level_gaussian_T200__target0200__sentinel/workers/worker-01/failure_log.csv","local_level_gaussian_T200__target0200__sentinel"
+"worker-02","C03M03",117,"M03","mcmc_diagnostic_failure","f9d3073f444501f362804bcc97459aacb035657b8b49195467c12f40a9332457",TRUE,0,"waves/0002__local_level_gaussian_T200__target0200__sentinel/workers/worker-02/failure_log.csv","local_level_gaussian_T200__target0200__sentinel"

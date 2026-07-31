@@ -34,9 +34,11 @@
 #'   exdqlm namespace to match the pinned source for promotion eligibility.
 #' @param mcmc_control Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
 #'   `verbose`, `progress_every`, `precision_beta`, `store_latent_draws`, and
-#'   optional `root_label_control`. The latter controls the complete-root swap
-#'   probability and post-processing canonicalization of exchangeable raw root
-#'   labels.
+#'   optional `root_label_control` and `kernel_repetitions`. The latter is a
+#'   positive integer giving the number of complete, exact Gibbs transitions
+#'   composed between recorded iterations; its default is one. Root-label
+#'   control governs the complete-root swap probability and post-processing
+#'   canonicalization of exchangeable raw root labels.
 #' @param init Optional initial values.
 #' @param ... Reserved.
 #' @return An `rqr_mcmc` object.
@@ -61,7 +63,8 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   n <- nrow(X)
   p <- ncol(X)
   mean_tilt_info <- .rqr_normalize_mean_tilt(
-    mean_tilt, n = n, observed = rep(TRUE, n)
+    mean_tilt,
+    n = n, observed = rep(TRUE, n)
   )
   learning_rate_mode <- .rqr_learning_rate_mode(learning_rate_mode)
   lambda_prior <- .rqr_lambda_prior(lambda_prior, learning_rate_mode)
@@ -128,6 +131,10 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   progress_every <- .rqr_scalar_integer(
     mcmc_control$progress_every %||% 100L, "mcmc_control$progress_every", 1L
   )
+  kernel_repetitions <- .rqr_scalar_integer(
+    mcmc_control$kernel_repetitions %||% 1L,
+    "mcmc_control$kernel_repetitions", 1L
+  )
   store_latent_draws <- isTRUE(mcmc_control$store_latent_draws %||% FALSE)
   root_label_control <- .rqr_normalize_root_label_control(
     mcmc_control$root_label_control %||% list(), X
@@ -171,115 +178,134 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   rhs_stats1 <- vector("list", n_keep)
   rhs_stats2 <- vector("list", n_keep)
   root_swap_trace <- logical(n_burn + n_keep * thin)
+  root_swap_count_trace <- integer(n_burn + n_keep * thin)
   repair_records <- NULL
 
   total_iter <- n_burn + n_keep * thin
   save_idx <- 0L
   for (iter in seq_len(total_iter)) {
-    eta1 <- drop(X %*% beta1)
-    eta2 <- drop(X %*% beta2)
-    e <- rqr_residual_product(y, eta1, eta2)
-    if (learn_lambda) {
-      loss_for_lambda <- sum(rqr_check_loss(e, constants$alpha)) / loss_reference_scale
-      lambda_post <- .rqr_lambda_posterior_params(
-        loss_sum = loss_for_lambda,
-        n = n,
-        lambda_prior = lambda_prior,
-        learning_rate_mode = learning_rate_mode
+    for (kernel_step in seq_len(kernel_repetitions)) {
+      eta1 <- drop(X %*% beta1)
+      eta2 <- drop(X %*% beta2)
+      e <- rqr_residual_product(y, eta1, eta2)
+      if (learn_lambda) {
+        loss_for_lambda <- sum(rqr_check_loss(e, constants$alpha)) / loss_reference_scale
+        lambda_post <- .rqr_lambda_posterior_params(
+          loss_sum = loss_for_lambda,
+          n = n,
+          lambda_prior = lambda_prior,
+          learning_rate_mode = learning_rate_mode
+        )
+        lambda_post_shape_trace[iter] <- lambda_post$shape
+        lambda_post_rate_trace[iter] <- lambda_post$rate
+        lambda_current <- stats::rgamma(1L, shape = lambda_post$shape, rate = lambda_post$rate)
+        constants <- rqr_constants(coverage_level, lambda_current / loss_reference_scale)
+      }
+      gp <- rqr_gig_params(e, coverage_level = constants$alpha, learning_rate = constants$omega)
+      V <- as.numeric(.sample_gig_devroye_required(
+        1L,
+        p = gp$p,
+        a = gp$a,
+        b_vec = gp$b,
+        context = "rqr_mcmc_fit::latent_v"
+      )[1L, ])
+
+      prior_prec1 <- .rqr_prior_precision(beta_prior_obj, state1, p = p)
+      upd1 <- .rqr_beta_update(
+        y = y,
+        X = X,
+        beta_other = beta2,
+        V = V,
+        constants = constants,
+        prior_prec = prior_prec1,
+        precision_beta_cfg = precision_beta_cfg,
+        context = list(
+          iter = iter,
+          n_burn = n_burn,
+          likelihood_family = "rqr_generalized_bayes",
+          beta_prior_type = beta_prior_type,
+          root = "root1"
+        ),
+        mean_tilt_observed = if (mean_tilt_info$nonzero) {
+          mean_tilt_info$observed
+        } else {
+          NULL
+        }
       )
-      lambda_post_shape_trace[iter] <- lambda_post$shape
-      lambda_post_rate_trace[iter] <- lambda_post$rate
-      lambda_current <- stats::rgamma(1L, shape = lambda_post$shape, rate = lambda_post$rate)
-      constants <- rqr_constants(coverage_level, lambda_current / loss_reference_scale)
-    }
-    gp <- rqr_gig_params(e, coverage_level = constants$alpha, learning_rate = constants$omega)
-    V <- as.numeric(.sample_gig_devroye_required(
-      1L,
-      p = gp$p,
-      a = gp$a,
-      b_vec = gp$b,
-      context = "rqr_mcmc_fit::latent_v"
-    )[1L, ])
-
-    prior_prec1 <- .rqr_prior_precision(beta_prior_obj, state1, p = p)
-    upd1 <- .rqr_beta_update(
-      y = y,
-      X = X,
-      beta_other = beta2,
-      V = V,
-      constants = constants,
-      prior_prec = prior_prec1,
-      precision_beta_cfg = precision_beta_cfg,
-      context = list(
-        iter = iter,
-        n_burn = n_burn,
-        likelihood_family = "rqr_generalized_bayes",
-        beta_prior_type = beta_prior_type,
-        root = "root1"
-      ),
-      mean_tilt_observed = if (mean_tilt_info$nonzero) {
-        mean_tilt_info$observed
-      } else {
-        NULL
+      beta1 <- upd1$draw
+      pstats1 <- upd1$info %||% list()
+      current_repair <- .rqr_add_repair_record(
+        .rqr_empty_repair_records(), "beta_precision", NA_integer_, pstats1
+      )
+      if (nrow(current_repair)) {
+        current_repair$iteration <- iter
+        current_repair$root <- "root1"
+        repair_records <- if (is.null(repair_records)) {
+          current_repair
+        } else {
+          rbind(repair_records, current_repair)
+        }
       }
-    )
-    beta1 <- upd1$draw
-    pstats1 <- upd1$info %||% list()
-    current_repair <- .rqr_add_repair_record(
-      .rqr_empty_repair_records(), "beta_precision", NA_integer_, pstats1
-    )
-    if (nrow(current_repair)) {
-      current_repair$iteration <- iter
-      current_repair$root <- "root1"
-      repair_records <- if (is.null(repair_records)) current_repair else
-        rbind(repair_records, current_repair)
-    }
-    pr_upd1 <- .rqr_prior_state_update(beta_prior_obj, state1, beta1)
-    state1 <- pr_upd1$state
+      pr_upd1 <- .rqr_prior_state_update(beta_prior_obj, state1, beta1)
+      state1 <- pr_upd1$state
 
-    prior_prec2 <- .rqr_prior_precision(beta_prior_obj, state2, p = p)
-    upd2 <- .rqr_beta_update(
-      y = y,
-      X = X,
-      beta_other = beta1,
-      V = V,
-      constants = constants,
-      prior_prec = prior_prec2,
-      precision_beta_cfg = precision_beta_cfg,
-      context = list(
-        iter = iter,
-        n_burn = n_burn,
-        likelihood_family = "rqr_generalized_bayes",
-        beta_prior_type = beta_prior_type,
-        root = "root2"
-      ),
-      mean_tilt_observed = if (mean_tilt_info$nonzero) {
-        mean_tilt_info$observed
-      } else {
-        NULL
+      prior_prec2 <- .rqr_prior_precision(beta_prior_obj, state2, p = p)
+      upd2 <- .rqr_beta_update(
+        y = y,
+        X = X,
+        beta_other = beta1,
+        V = V,
+        constants = constants,
+        prior_prec = prior_prec2,
+        precision_beta_cfg = precision_beta_cfg,
+        context = list(
+          iter = iter,
+          n_burn = n_burn,
+          likelihood_family = "rqr_generalized_bayes",
+          beta_prior_type = beta_prior_type,
+          root = "root2"
+        ),
+        mean_tilt_observed = if (mean_tilt_info$nonzero) {
+          mean_tilt_info$observed
+        } else {
+          NULL
+        }
+      )
+      beta2 <- upd2$draw
+      pstats2 <- upd2$info %||% list()
+      current_repair <- .rqr_add_repair_record(
+        .rqr_empty_repair_records(), "beta_precision", NA_integer_, pstats2
+      )
+      if (nrow(current_repair)) {
+        current_repair$iteration <- iter
+        current_repair$root <- "root2"
+        repair_records <- if (is.null(repair_records)) {
+          current_repair
+        } else {
+          rbind(repair_records, current_repair)
+        }
       }
-    )
-    beta2 <- upd2$draw
-    pstats2 <- upd2$info %||% list()
-    current_repair <- .rqr_add_repair_record(
-      .rqr_empty_repair_records(), "beta_precision", NA_integer_, pstats2
-    )
-    if (nrow(current_repair)) {
-      current_repair$iteration <- iter
-      current_repair$root <- "root2"
-      repair_records <- if (is.null(repair_records)) current_repair else
-        rbind(repair_records, current_repair)
-    }
-    pr_upd2 <- .rqr_prior_state_update(beta_prior_obj, state2, beta2)
-    state2 <- pr_upd2$state
+      pr_upd2 <- .rqr_prior_state_update(beta_prior_obj, state2, beta2)
+      state2 <- pr_upd2$state
 
-    if (stats::runif(1L) < root_label_control$swap_probability) {
-      tmp <- beta1; beta1 <- beta2; beta2 <- tmp
-      tmp <- state1; state1 <- state2; state2 <- tmp
-      tmp <- pr_upd1; pr_upd1 <- pr_upd2; pr_upd2 <- tmp
-      tmp <- pstats1; pstats1 <- pstats2; pstats2 <- tmp
-      root_swap_trace[iter] <- TRUE
+      if (stats::runif(1L) < root_label_control$swap_probability) {
+        tmp <- beta1
+        beta1 <- beta2
+        beta2 <- tmp
+        tmp <- state1
+        state1 <- state2
+        state2 <- tmp
+        tmp <- pr_upd1
+        pr_upd1 <- pr_upd2
+        pr_upd2 <- tmp
+        tmp <- pstats1
+        pstats1 <- pstats2
+        pstats2 <- tmp
+        root_swap_count_trace[iter] <-
+          root_swap_count_trace[iter] + 1L
+      }
     }
+    root_swap_trace[iter] <- root_swap_count_trace[iter] > 0L
 
     eta1 <- drop(X %*% beta1)
     eta2 <- drop(X %*% beta2)
@@ -386,6 +412,10 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
         root_label_contract = root_label_control$contract,
         numerical_policy = numerical_policy,
         precision_beta = precision_beta_cfg
+      ),
+      transition = list(
+        kernel = "complete_exact_gibbs_composition",
+        kernel_repetitions = kernel_repetitions
       )
     ),
     external_repositories = provenance_control$external_repositories,
@@ -437,6 +467,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       root_priors_exchangeable = TRUE,
       root_swap_enabled = root_label_control$swap_probability > 0,
       root_swap_probability = root_label_control$swap_probability,
+      kernel_repetitions = kernel_repetitions,
       coefficient_label_contract = root_label_control$contract,
       canonicalization_status =
         root_label_diagnostics$status %||% "not_requested",
@@ -487,6 +518,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       precision_beta = precision_beta_cfg,
       numerical_repairs = repair_records %||% data.frame(),
       root_swap_trace = root_swap_trace,
+      root_swap_count_trace = root_swap_count_trace,
       root_label_diagnostics = root_label_diagnostics,
       rhs_stats_root1 = rhs_stats1,
       rhs_stats_root2 = rhs_stats2
@@ -520,6 +552,7 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       n_burn = n_burn,
       n_mcmc = n_keep,
       thin = thin,
+      kernel_repetitions = kernel_repetitions,
       seed = seed,
       constants = constants,
       mean_tilt = mean_tilt_info,
@@ -534,15 +567,16 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
 
 #' @export
 rqr_posterior_draws.rqr_mcmc <- function(
-    object, nd = NULL, seed = NULL,
-    root_representation = c("raw", "canonical"), ...) {
+  object, nd = NULL, seed = NULL,
+  root_representation = c("raw", "canonical"), ...
+) {
   if (!inherits(object, "rqr_mcmc")) stop("Expected an rqr_mcmc object.", call. = FALSE)
   root_representation <- match.arg(root_representation)
   if (!is.null(seed)) set.seed(.rqr_scalar_integer(seed, "seed", 0L))
   if (identical(root_representation, "canonical")) {
     if (!isTRUE(object$model_spec$canonical_coefficient_inference_available) ||
-        is.null(object$samp.beta_lower_canonical) ||
-        is.null(object$samp.beta_upper_canonical)) {
+      is.null(object$samp.beta_lower_canonical) ||
+      is.null(object$samp.beta_upper_canonical)) {
       stop(
         "Canonical coefficient draws are unavailable: the global root-label audit did not pass for this fit.",
         call. = FALSE

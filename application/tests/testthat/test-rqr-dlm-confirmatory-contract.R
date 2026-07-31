@@ -725,6 +725,55 @@ test_that("one schedule router binds every MCMC method", {
   ))
 })
 
+test_that("fixed-design development overrides are explicit and named", {
+  environment <- load_confirmatory_helpers()
+  expect_true(
+    "mcmc_control_override" %in%
+      names(formals(environment$rqr_confirm_fixed_design))
+  )
+  body_text <- paste(
+    deparse(body(environment$rqr_confirm_fixed_design)),
+    collapse = "\n"
+  )
+  expect_match(body_text, "mcmc_control_override must be a named list")
+  expect_match(body_text, "mcmc_control\\[names\\(mcmc_control_override\\)\\]")
+})
+
+test_that("wave-2 candidate comparison is fixed and cannot authorize", {
+  candidate_script <- readLines(
+    testthat::test_path(
+      "..", "..", "scripts",
+      "37_compare_rqr_dlm_wave2_failure_candidates.R"
+    ),
+    warn = FALSE
+  )
+  required <- c(
+    "M03_current_B500_R1500_K1",
+    "M03_burn_B3000_R1500_K1",
+    "M03_retain_B500_R6000_K1",
+    "M03_long_B3000_R6000_K1",
+    "M03_compose_B1500_R3000_K2",
+    "M08_current_B1000_R2000",
+    "M08_uniform_B1000_R4000",
+    "3dc8483f4a777ab766704b901997295bed1c89db0590429a70f3116b233e948f"
+  )
+  for (value in required) {
+    expect_true(any(grepl(value, candidate_script, fixed = TRUE)))
+  }
+  expect_true(any(grepl(
+    "rqr_confirm_validate_contract(contract, require_closed = TRUE)",
+    candidate_script, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "confirmatory_authorization_changed = FALSE",
+    candidate_script, fixed = TRUE
+  )))
+  expect_false(any(grepl(
+    "confirmatory_execution_authorized <- TRUE",
+    candidate_script, fixed = TRUE
+  )))
+})
+
 test_that("the coordinator owns lock cleanup inside a function", {
   coordinator <- readLines(
     testthat::test_path(

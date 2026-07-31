@@ -66,9 +66,11 @@ exdqlm namespace to match the pinned source for promotion eligibility.}
 
 \item{mcmc_control}{Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
 `verbose`, `progress_every`, `precision_beta`, `store_latent_draws`, and
-optional `root_label_control`. The latter controls the complete-root swap
-probability and post-processing canonicalization of exchangeable raw root
-labels.}
+optional `root_label_control` and `kernel_repetitions`. The latter is a
+positive integer giving the number of complete, exact Gibbs transitions
+composed between recorded iterations; its default is one. Root-label
+control governs the complete-root swap probability and post-processing
+canonicalization of exchangeable raw root labels.}
 
 \item{init}{Optional initial values.}
 

@@ -127,6 +127,89 @@ test_that("native fixed-design ridge MCMC has no private exdqlm dependency", {
   ) %in% names(repaired$info)))
 })
 
+test_that("fixed-design complete-kernel repetition is exact and opt-in", {
+  set.seed(1701)
+  X <- cbind(intercept = 1, time = seq(-1, 1, length.out = 14))
+  y <- 0.1 + 0.4 * X[, "time"] + rnorm(14, sd = 0.2)
+  common <- list(
+    y = y,
+    X = X,
+    coverage_level = 0.8,
+    beta_prior_obj = beta_prior("ridge", ridge = list(tau2 = 5))
+  )
+  default_fit <- do.call(
+    rqr_mcmc_fit,
+    c(common, list(
+      mcmc_control = list(n_burn = 3, n_mcmc = 8, seed = 1702)
+    ))
+  )
+  explicit_one <- do.call(
+    rqr_mcmc_fit,
+    c(common, list(
+      mcmc_control = list(
+        n_burn = 3, n_mcmc = 8, seed = 1702,
+        kernel_repetitions = 1L
+      )
+    ))
+  )
+  expect_identical(
+    default_fit$samp.beta_root1, explicit_one$samp.beta_root1
+  )
+  expect_identical(
+    default_fit$samp.beta_root2, explicit_one$samp.beta_root2
+  )
+  expect_identical(
+    default_fit$diagnostics$root_swap_trace,
+    explicit_one$diagnostics$root_swap_trace
+  )
+  expect_identical(default_fit$model_spec$kernel_repetitions, 1L)
+
+  repeated <- do.call(
+    rqr_mcmc_fit,
+    c(common, list(
+      mcmc_control = list(
+        n_burn = 3, n_mcmc = 8, seed = 1702,
+        kernel_repetitions = 2L
+      )
+    ))
+  )
+  expect_identical(repeated$model_spec$kernel_repetitions, 2L)
+  expect_identical(repeated$misc$kernel_repetitions, 2L)
+  expect_true(repeated$model_spec$exact_joint_target)
+  expect_equal(repeated$model_spec$numerical_repair_count, 0L)
+  expect_true(all(
+    repeated$diagnostics$root_swap_count_trace %in% 0:2
+  ))
+  expect_identical(
+    repeated$diagnostics$root_swap_trace,
+    repeated$diagnostics$root_swap_count_trace > 0L
+  )
+  expect_error(
+    do.call(
+      rqr_mcmc_fit,
+      c(common, list(
+        mcmc_control = list(
+          n_burn = 0, n_mcmc = 2, seed = 1702,
+          kernel_repetitions = 0L
+        )
+      ))
+    ),
+    "kernel_repetitions"
+  )
+  expect_error(
+    do.call(
+      rqr_mcmc_fit,
+      c(common, list(
+        mcmc_control = list(
+          n_burn = 0, n_mcmc = 2, seed = 1702,
+          kernel_repetitions = 1.5
+        )
+      ))
+    ),
+    "kernel_repetitions"
+  )
+})
+
 test_that("RQR-DLM skips missing response measurements", {
   y <- c(rnorm(6), NA_real_, rnorm(5))
   fit <- rqr_dlm_fit(
@@ -949,7 +1032,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.15.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.16.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%

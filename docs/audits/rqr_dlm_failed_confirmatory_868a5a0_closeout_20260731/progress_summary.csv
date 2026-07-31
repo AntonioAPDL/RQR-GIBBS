@@ -1,0 +1,13 @@
+"item","observed","denominator"
+"canonical_waves",2,110
+"passed_waves",1,110
+"failed_waves",1,110
+"not_started_waves",108,110
+"replication_tasks_with_artifacts",45,8400
+"fully_completed_tasks",44,8400
+"method_evaluations",223,43800
+"MCMC_method_attempts",151,NA
+"MCMC_chain_executions",289,40938
+"diagnostic_rows",6724,NA
+"diagnostic_rows_passed",6678,NA
+"diagnostic_rows_failed",46,NA

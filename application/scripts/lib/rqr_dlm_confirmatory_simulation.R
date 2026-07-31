@@ -3564,7 +3564,12 @@ rqr_confirm_dynamic_fit <- function(
 
 rqr_confirm_fixed_design <- function(
     contract, generated, chain, ledger, provenance_control = list(),
-    profile_name = NULL) {
+    profile_name = NULL, mcmc_control_override = list()) {
+  if (!is.list(mcmc_control_override) ||
+      (!is.null(names(mcmc_control_override)) &&
+        any(!nzchar(names(mcmc_control_override))))) {
+    stop("mcmc_control_override must be a named list.", call. = FALSE)
+  }
   chain <- rqr_confirm_strict_integer(chain, "chain", 1L, 4L)
   profile_name <- profile_name %||% c("A", "B", "C", "D")[[chain]]
   profile <- if (identical(profile_name, "standard")) {
@@ -3599,6 +3604,14 @@ rqr_confirm_fixed_design <- function(
   schedule <- rqr_confirm_fixed_design_schedule(
     contract, profile_name
   )
+  mcmc_control <- list(
+    n_burn = schedule$burn, n_mcmc = schedule$retain,
+    thin = schedule$thin, verbose = FALSE
+  )
+  if (length(mcmc_control_override)) {
+    mcmc_control[names(mcmc_control_override)] <-
+      mcmc_control_override
+  }
   fit <- rqr_mcmc_fit(
     generated$training_y, X,
     coverage_level = generated$coverage_level,
@@ -3611,10 +3624,7 @@ rqr_confirm_fixed_design <- function(
     ),
     numerical_policy = "fail",
     provenance_control = provenance_control,
-    mcmc_control = list(
-      n_burn = schedule$burn, n_mcmc = schedule$retain,
-      thin = schedule$thin, verbose = FALSE
-    ),
+    mcmc_control = mcmc_control,
     init = list(
       rng_state = state,
       beta_root1 = c(endpoints[["lower"]], rep(0, ncol(X) - 1L)),
