@@ -135,3 +135,27 @@ testthat::test_that("publication plotters write deterministic PDF and PNG types"
   testthat::expect_gt(file.info(pdf)$size, 0)
   testthat::expect_gt(file.info(png)$size, 0)
 })
+
+testthat::test_that("artifact verifier ignores harmless vector names", {
+  directory <- withr::local_tempdir()
+  writeLines("verified", file.path(directory, "value.txt"))
+  manifest <- data.frame(
+    path = "value.txt",
+    bytes = unname(file.info(file.path(directory, "value.txt"))$size),
+    sha256 = oti_file_sha256(file.path(directory, "value.txt")),
+    stringsAsFactors = FALSE
+  )
+  write.csv(
+    manifest, file.path(directory, "artifact_manifest.csv"),
+    row.names = FALSE
+  )
+  testthat::expect_invisible(otp_verify_manifest(directory))
+  manifest$sha256 <- paste0(substr(manifest$sha256, 1L, 63L), "0")
+  write.csv(
+    manifest, file.path(directory, "artifact_manifest.csv"),
+    row.names = FALSE
+  )
+  testthat::expect_error(
+    otp_verify_manifest(directory), "Artifact-manifest verification failed"
+  )
+})

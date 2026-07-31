@@ -345,8 +345,8 @@ otp_verify_manifest <- function(root, manifest_path =
     oti_file_sha256(file.path(root, relative))
   }, character(1L))
   sizes <- file.info(file.path(root, manifest$path))$size
-  if (!identical(tolower(actual), tolower(manifest$sha256)) ||
-      !identical(as.numeric(sizes), as.numeric(manifest$bytes))) {
+  if (!all(tolower(unname(actual)) == tolower(manifest$sha256)) ||
+      !all(as.numeric(unname(sizes)) == as.numeric(manifest$bytes))) {
     oti_stop("Artifact-manifest verification failed.")
   }
   invisible(TRUE)

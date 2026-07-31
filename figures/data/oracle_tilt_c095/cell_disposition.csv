@@ -1,0 +1,7 @@
+"family","target","provenance_pass","hard_diagnostics_pass","strict_diagnostics_pass","conditional_reference_pass","pathology_pass","hard_pass","disposition","scientifically_usable_for_illustration"
+"fixed_design","RQR",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,"strict_pass",TRUE
+"fixed_design","ET",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,"strict_pass",TRUE
+"fixed_design","SH",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,"strict_pass",TRUE
+"dlm","RQR",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,"strict_pass",TRUE
+"dlm","ET",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,"strict_pass",TRUE
+"dlm","SH",TRUE,TRUE,FALSE,TRUE,TRUE,TRUE,"illustration_warning_ess_only",TRUE

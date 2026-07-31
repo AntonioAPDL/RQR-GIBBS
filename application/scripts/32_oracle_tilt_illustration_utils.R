@@ -1205,7 +1205,7 @@ oti_plot_curve_panels <- function(curves, file, title,
   graphics::par(
     family = "serif",
     mfrow = c(length(targets), 1L),
-    mar = c(2.0, 4.3, 2.0, 1.2),
+    mar = c(2.0, 4.3, 2.7, 1.2),
     oma = c(3.3, 0.4, 2.4, 0)
   )
   col_data <- "#6b6b6b"
@@ -1227,8 +1227,12 @@ oti_plot_curve_panels <- function(curves, file, title,
     graphics::plot(
       z$x, z$y, type = "n",
       xlab = "", ylab = ylab, ylim = yr,
-      main = paste0(target, " target"), las = 1,
+      main = "", las = 1,
       cex.lab = 0.96, cex.axis = 0.88, cex.main = 1.02
+    )
+    graphics::title(
+      main = paste0(target, " target"), line = 0.75,
+      cex.main = 1.02
     )
     graphics::grid(col = "#e9e9e9", lwd = 0.8)
     miss_x <- z$x[!z$observed]
@@ -1319,7 +1323,7 @@ oti_plot_endpoint_error_panels <- function(error_density, file, title,
   graphics::par(
     family = "serif",
     mfrow = c(length(targets), 1L),
-    mar = c(2.6, 4.3, 2.6, 1.2),
+    mar = c(2.6, 4.3, 2.9, 1.2),
     oma = c(3.2, 0.4, 2.7, 0)
   )
   col_lower <- "#0072B2"
@@ -1336,8 +1340,12 @@ oti_plot_endpoint_error_panels <- function(error_density, file, title,
     graphics::plot(
       z_lower$error, z_lower$density, type = "n",
       xlim = xr, ylim = yr, xlab = "", ylab = "Density",
-      main = paste0(target, " target"), las = 1,
+      main = "", las = 1,
       cex.lab = 0.96, cex.axis = 0.88, cex.main = 1.02
+    )
+    graphics::title(
+      main = paste0(target, " target"), line = 0.75,
+      cex.main = 1.02
     )
     graphics::grid(col = "#e9e9e9", lwd = 0.8)
     graphics::abline(v = 0, col = "#222222", lwd = 1.25)

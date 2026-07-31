@@ -96,6 +96,22 @@ make literature-manifest
 Long-running simulation and validation targets require explicit reviewed
 configuration and should write only under ignored local output roots.
 
+The 95% single-data oracle-tilt illustrations are reproduced in two stages.
+The publication runner writes raw chain envelopes only under ignored output
+storage; after all hard gates pass, the evidence packager promotes a compact,
+hashed allowlist to `figures/data/oracle_tilt_c095/`. The command
+
+```bash
+make model-illustration-figures
+```
+
+then verifies that evidence and renders the article and supplement figures
+without fitting a model. Five of the six family/target cells pass every strict
+gate. The dynamic shortest-window cell has a disclosed ESS-only warning while
+passing all numerical, provenance, conditional-reference, scale-pathology,
+R-hat, and MCSE gates. See
+`docs/audits/oracle_tilt_c095_publication_closeout_20260731.md`.
+
 ## arXiv source package
 
 The selected exact-target `rootwise2_ASIS2` transition repeats the symmetric
@@ -140,7 +156,7 @@ make arxiv-source
 
 `make arxiv-source` creates a compact zip under
 `application/cache/arxiv_preprint_<stamp>/`. The zip contains `main.tex`,
-`main.bbl`, `refs.bib`, the main table input, required PNG figures,
+`main.bbl`, `refs.bib`, the main table input, required figure files,
 `SOURCE_MANIFEST.txt`, and `README.txt`.
 
 The supplement is a separate TeX document. If it is submitted with the

@@ -1,0 +1,77 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_publication_config/1.0.0",
+  "coverage_level": 0.95,
+  "learning_rate": 1,
+  "targets": [
+    "RQR",
+    "ET",
+    "SH"
+  ],
+  "innovation": {
+    "family": "asymmetric_laplace",
+    "tau": 0.99,
+    "standardized": true
+  },
+  "fixed_design": {
+    "seed": 202607281,
+    "n": 540,
+    "ridge_tau2": 250,
+    "n_chains": 4,
+    "mcmc_control": {
+      "n_burn": 1000,
+      "n_mcmc": 6000,
+      "thin": 1,
+      "store_latent_draws": false,
+      "verbose": false
+    }
+  },
+  "dlm": {
+    "seed": 202607282,
+    "T": 100,
+    "missing_times": [
+      35,
+      36,
+      70
+    ],
+    "scale": 0.55,
+    "state_sd_level": 0.035,
+    "state_sd_slope": 0.006,
+    "initial_level_variance": 4,
+    "initial_slope_variance": 0.001,
+    "initial_profiles": [
+      "default",
+      "oracle_centered",
+      "narrow",
+      "wide",
+      "slope_stress"
+    ],
+    "workers": 2,
+    "mcmc_control": {
+      "n_burn": 2000,
+      "n_mcmc": 6000,
+      "thin": 1,
+      "backend": "cpp",
+      "store_state_draws": true,
+      "store_latent_draws": true,
+      "verbose": false
+    }
+  },
+  "diagnostics": {
+    "rhat_max": 1.05,
+    "bulk_ess_min": 400,
+    "tail_ess_min": 200,
+    "mcse_over_sd_max": 0.1,
+    "conditional_reference_relative_tolerance": 1e-07,
+    "R_cpp_absolute_tolerance": 1e-10,
+    "remote_width_ratio_threshold": 20,
+    "remote_endpoint_sd_threshold": 20,
+    "maximum_remote_draw_fraction": 0.01
+  },
+  "interpretation": {
+    "response_likelihood": false,
+    "response_predictive_draws": false,
+    "population_oracle_tilts": true,
+    "cornish_fisher_used": false,
+    "simulation_study": false
+  }
+}

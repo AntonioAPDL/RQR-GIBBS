@@ -1,0 +1,17 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_publication/1.0.0",
+  "mode": "execute",
+  "finished_at_utc": "2026-07-31 20:36:31 UTC",
+  "planned_chains": 27,
+  "completed_chains": 27,
+  "all_chains_completed": true,
+  "all_cells_hard_pass": true,
+  "strict_pass_cells": 5,
+  "warning_cells": 1,
+  "failed_cells": 0,
+  "exact_population_oracle_tilts": true,
+  "cornish_fisher_used": false,
+  "response_predictive_analysis": false,
+  "simulation_study": false,
+  "manuscript_promotion_authorized": false
+}

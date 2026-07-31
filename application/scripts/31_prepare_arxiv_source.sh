@@ -19,8 +19,8 @@ required_files=(
   "refs.bib"
   "figures/generated/fig01_three_balance_principles.png"
   "figures/generated/figS01_cross_distribution_recovery.png"
-  "figures/generated/fig04_oracle_tilt_fixed_design_fit.png"
-  "figures/generated/fig05_oracle_tilt_dlm_fit.png"
+  "figures/generated/fig04_fixed_design_oracle_tilt_c095.pdf"
+  "figures/generated/fig05_dlm_oracle_tilt_c095.pdf"
 )
 
 rm -rf "${out_root}"

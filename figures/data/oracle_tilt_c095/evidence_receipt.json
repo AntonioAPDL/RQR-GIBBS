@@ -1,0 +1,15 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_evidence/1.0.0",
+  "source_commit": "90707fcd3f79661fca7358456c6d9a0415bd17a3",
+  "coverage_level": 0.95,
+  "target_cells": 6,
+  "all_cells_hard_pass": true,
+  "strict_pass_cells": 5,
+  "warning_cells": 1,
+  "warning_scope": "ESS-only; all hard validity, R-hat, MCSE, reference, and pathology gates pass",
+  "exact_population_oracle_tilts": true,
+  "cornish_fisher_used": false,
+  "response_predictive_analysis": false,
+  "simulation_study": false,
+  "manuscript_illustration_evidence_eligible": true
+}

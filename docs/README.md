@@ -10,6 +10,10 @@ Current oracle-tilt implementation records:
   freezes the clean-source 27-chain publication illustration, its exact
   population tilts, common dynamic prior, diagnostics, compact evidence, and
   deterministic rendering contract.
+- `audits/oracle_tilt_c095_publication_closeout_20260731.md` records the exact
+  source/runtime binding, 27-chain completion, five strict cells, localized
+  dynamic-SH ESS warning, manifest reconciliation, and promoted compact
+  evidence.
 
 - `implementation_notes/oracle_tilt_high_content_forensic_protocol_20260730.md`
   defines the fail-closed \(c=0.95\) target, conditional-reference, MCMC,
