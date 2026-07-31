@@ -34,6 +34,14 @@ layer for the standalone article.
   authorized bounded execution retains compact per-chain state, loss, prior,
   and latent-scale traces and checks selected conditional path distributions
   against dense Gaussian references.
+- **scripts/34_run_oracle_tilt_publication.R** executes the balanced,
+  clean-source 95% fixed-design and fixed-W DLM illustration grid. It requires
+  an isolated runtime bound to a complete clean `main` commit and writes raw
+  worker envelopes only under ignored output roots.
+- **scripts/35_package_oracle_tilt_evidence.R** promotes only hard-passing,
+  compact illustration summaries to `figures/data/oracle_tilt_c095/`.
+  **figures/generate_oracle_tilt_model_figures.R** then verifies those hashes
+  and renders the manuscript figures without loading fits or launching MCMC.
 
 Install and run the native gates from the repository root:
 
@@ -59,7 +67,7 @@ declared audit design. The canonical coefficient fields are populated only
 when that audit passes; otherwise endpoint summaries should use pointwise
 sorting through `predict_interval()`. `rqr_canonicalize_root_paths()` provides
 the analogous complete-path post-processing diagnostic for DLM root ordinates.
-For didactic single-data examples, use `make oracle-tilt-illustrations-dry-run`
+For exploratory single-data examples, use `make oracle-tilt-illustrations-dry-run`
 to inspect the fit plan or `make oracle-tilt-illustrations` to run the compact
 fixed-rate illustration workflow. Use `make model-illustration-figures` to
 regenerate the manuscript-ready fixed-design and RQR-DLM illustration figures
@@ -78,6 +86,18 @@ illustrative data set; they are not a coverage-calibration simulation study.
 Full fitted objects are not published by the illustration runner. Compact
 curves, error summaries, diagnostics, source/runtime state, and artifact hashes
 are written under ignored output roots.
+
+The publication-grade replacement is governed by
+`docs/implementation_notes/oracle_tilt_c095_publication_protocol_20260731.md`.
+Run `make oracle-tilt-publication-preflight` before freezing source. Execute
+mode is intentionally fail-closed and must use the exact isolated runtime.
+After a hard-passing run, set `ORACLE_TILT_RUN_DIR` and run
+`make oracle-tilt-package-evidence`; `make model-illustration-figures` then
+renders only from the tracked compact evidence. The six cells share their DGP,
+dynamic prior, iteration budget, population-oracle construction, and gate
+definitions. An ESS-only warning can support a didactic illustration only when
+all hard validity, R-hat, MCSE, conditional-reference, and pathology gates
+pass; it is never presented as strict convergence.
 
 The tracked high-content forensic configuration is
 `config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.

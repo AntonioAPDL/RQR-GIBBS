@@ -6,6 +6,11 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `implementation_notes/oracle_tilt_c095_publication_protocol_20260731.md`
+  freezes the clean-source 27-chain publication illustration, its exact
+  population tilts, common dynamic prior, diagnostics, compact evidence, and
+  deterministic rendering contract.
+
 - `implementation_notes/oracle_tilt_high_content_forensic_protocol_20260730.md`
   defines the fail-closed \(c=0.95\) target, conditional-reference, MCMC,
   scale, artifact, and promotion contracts.

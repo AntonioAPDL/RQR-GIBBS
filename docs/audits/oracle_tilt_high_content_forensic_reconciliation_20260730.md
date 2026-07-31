@@ -1,7 +1,7 @@
 # Oracle-Tilt High-Content Forensic Reconciliation
 
-Date: 2026-07-30  
-Repository baseline: `581b36896852937b5f08135ff90627bcc2313fdb`  
+Date: 2026-07-30
+Repository baseline: `581b36896852937b5f08135ff90627bcc2313fdb`
 Scope: one fixed simulated data set, content \(c=0.95\), standardized
 asymmetric-Laplace innovations with index \(0.99\), exact population-oracle
 tilts, and fixed learning rate.

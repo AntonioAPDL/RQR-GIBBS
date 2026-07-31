@@ -1174,6 +1174,21 @@ oti_fit_desn_target <- function(dgp, targets_by_index, target, config,
   )
 }
 
+oti_open_figure_device <- function(file, width, height, res = 210) {
+  extension <- tolower(tools::file_ext(file))
+  if (identical(extension, "pdf")) {
+    grDevices::pdf(
+      file, width = width / res, height = height / res,
+      family = "serif", useDingbats = FALSE
+    )
+  } else if (identical(extension, "png")) {
+    grDevices::png(file, width = width, height = height, res = res)
+  } else {
+    oti_stop("Figure output must use a .pdf or .png extension.")
+  }
+  invisible(file)
+}
+
 oti_plot_curve_panels <- function(curves, file, title,
                                   xlab = "Index", ylab = "Response scale",
                                   caption_note = NULL,
@@ -1181,7 +1196,7 @@ oti_plot_curve_panels <- function(curves, file, title,
   oti_ensure_dir(dirname(file))
   targets <- c("RQR", "ET", "SH")
   targets <- targets[targets %in% unique(curves$target)]
-  grDevices::png(file, width = 2100, height = 1450, res = 210)
+  oti_open_figure_device(file, width = 2100, height = 1450, res = 210)
   old <- graphics::par(no.readonly = TRUE)
   on.exit({
     graphics::par(old)
@@ -1295,7 +1310,7 @@ oti_plot_endpoint_error_panels <- function(error_density, file, title,
   oti_ensure_dir(dirname(file))
   targets <- c("RQR", "ET", "SH")
   targets <- targets[targets %in% unique(error_density$target)]
-  grDevices::png(file, width = 2100, height = 1300, res = 210)
+  oti_open_figure_device(file, width = 2100, height = 1300, res = 210)
   old <- graphics::par(no.readonly = TRUE)
   on.exit({
     graphics::par(old)

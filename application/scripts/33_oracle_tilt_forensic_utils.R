@@ -374,8 +374,12 @@ otf_initial_state_paths <- function(profile, dgp, truth,
                                     learning_rate = 1) {
   profile <- match.arg(
     profile,
-    c("default", "oracle", "narrow", "wide", "prior_shift_stress")
+    c(
+      "default", "oracle", "oracle_centered", "narrow", "wide",
+      "slope_stress", "prior_shift_stress"
+    )
   )
+  if (identical(profile, "oracle_centered")) profile <- "oracle"
   if (identical(profile, "default")) return(list())
   p <- ncol(dgp$state_truth)
   n_time <- nrow(dgp$state_truth)
@@ -387,6 +391,7 @@ otf_initial_state_paths <- function(profile, dgp, truth,
     oracle = 1,
     narrow = 0.25,
     wide = 2.5,
+    slope_stress = 1,
     prior_shift_stress = 1
   )
   lower <- midpoint - multiplier * half_width
@@ -401,6 +406,14 @@ otf_initial_state_paths <- function(profile, dgp, truth,
     theta0_root1 = c(lower[1L] - slope[1L], slope[1L]),
     theta0_root2 = c(upper[1L] - slope[1L], slope[1L])
   )
+  if (identical(profile, "slope_stress")) {
+    slope_offset <- 2 * sqrt(dgp$initial_slope_variance)
+    time_index <- seq_len(n_time)
+    out$theta0_root2[2L] <- out$theta0_root2[2L] + slope_offset
+    out$state_root2[2L, ] <- out$state_root2[2L, ] + slope_offset
+    out$state_root2[1L, ] <-
+      out$state_root2[1L, ] + slope_offset * time_index
+  }
   if (identical(profile, "prior_shift_stress")) {
     if (is.null(coverage_level)) {
       oti_stop(

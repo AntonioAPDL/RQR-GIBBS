@@ -12,8 +12,12 @@ THEORY_TABLE_DIR ?= tables
 ORACLE_TILT_ILLUSTRATION_CONFIG ?= application/config/oracle_tilt_illustrations_20260728.json
 ORACLE_TILT_ILLUSTRATION_DIR ?= application/outputs/oracle_tilt_illustrations
 ORACLE_TILT_FORENSIC_CONFIG ?= application/config/oracle_tilt_forensics_20260730.json
+ORACLE_TILT_PUBLICATION_CONFIG ?= application/config/oracle_tilt_c095_publication_20260731.json
+ORACLE_TILT_PUBLICATION_DIR ?= application/outputs/oracle_tilt_c095_publication
+ORACLE_TILT_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095
+ORACLE_TILT_RUN_DIR ?=
 
-.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
@@ -21,8 +25,8 @@ theory-figures:
 theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
 
-model-illustration-figures: package-install
-	$(R) application/scripts/32_run_oracle_tilt_illustrations.R --config=$(ORACLE_TILT_ILLUSTRATION_CONFIG) --output-dir=$(ORACLE_TILT_ILLUSTRATION_DIR)/paper-figures --figure-output-dir=$(THEORY_FIGURE_DIR) --families=fixed_design,dlm --paper-figures
+model-illustration-figures:
+	$(R) figures/generate_oracle_tilt_model_figures.R --evidence-dir=$(ORACLE_TILT_EVIDENCE_DIR) --output-dir=$(THEORY_FIGURE_DIR) --table-dir=$(THEORY_TABLE_DIR)
 
 test-theory-figures:
 	$(R) figures/test_rqr_theory_figure_oracles.R
@@ -84,6 +88,9 @@ test-oracle-tilt-illustrations: package-install
 test-oracle-tilt-forensics: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-forensics.R", reporter = "summary")'
 
+test-oracle-tilt-publication: package-install
+	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-publication.R", reporter = "summary")'
+
 oracle-tilt-illustrations-dry-run: package-install
 	$(R) application/scripts/32_run_oracle_tilt_illustrations.R --config=$(ORACLE_TILT_ILLUSTRATION_CONFIG) --output-dir=$(ORACLE_TILT_ILLUSTRATION_DIR)/dry-run --dry-run
 
@@ -95,6 +102,16 @@ oracle-tilt-forensics-preflight: package-install
 
 oracle-tilt-forensics-execute: package-install
 	$(R) application/scripts/33_run_oracle_tilt_forensics.R --mode=execute --config=$(ORACLE_TILT_FORENSIC_CONFIG)
+
+oracle-tilt-publication-preflight: package-install
+	$(R) application/scripts/34_run_oracle_tilt_publication.R --mode=preflight --config=$(ORACLE_TILT_PUBLICATION_CONFIG)
+
+oracle-tilt-publication-execute:
+	$(R) application/scripts/34_run_oracle_tilt_publication.R --mode=execute --config=$(ORACLE_TILT_PUBLICATION_CONFIG) --output-dir=$(ORACLE_TILT_PUBLICATION_DIR)
+
+oracle-tilt-package-evidence:
+	@test -n "$(strip $(ORACLE_TILT_RUN_DIR))" || { echo "Set ORACLE_TILT_RUN_DIR to one completed run." >&2; exit 64; }
+	$(R) application/scripts/35_package_oracle_tilt_evidence.R --run-dir=$(ORACLE_TILT_RUN_DIR) --output-dir=$(ORACLE_TILT_EVIDENCE_DIR) --replace
 
 test-standalone-contracts: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_dir("application/tests/testthat", filter = "dlm-bounded|dlm-main|dlm-confirmatory", reporter = "summary")'
