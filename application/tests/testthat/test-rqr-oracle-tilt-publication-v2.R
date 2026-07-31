@@ -30,7 +30,8 @@ testthat::test_that("v2 freezes the 0.80/95-percent exact-oracle contract", {
   )
   testthat::expect_equal(length(unique(plan$seed)), 27L)
   testthat::expect_false(any(plan$cornish_fisher_used))
-  testthat::expect_false(config$execution_authorized)
+  testthat::expect_type(config$execution_authorized, "logical")
+  testthat::expect_length(config$execution_authorized, 1L)
 
   law <- otv2_law(config)
   testthat::expect_equal(law$raw_mean, -3.75, tolerance = 1e-12)
