@@ -27,6 +27,8 @@ if (any(args %in% c("-h", "--help"))) {
     "    --seed-ledger=<authorization seed_ledger_maximum.csv>",
     "    [--output-root=application/cache/rqr_dlm_wave2_failure_candidates_<id>]",
     "    [--workers=6]",
+    "    [--methods=M03,M08]",
+    "    [--m03-kernel=ordinary|replica_exchange]",
     "",
     "The source checkout must be clean and fail-closed. Outputs are local-only",
     "development evidence; this script never edits the simulation contract.",
@@ -67,6 +69,19 @@ workers <- suppressWarnings(as.integer(parse_arg("workers", "6")))
 if (length(workers) != 1L || is.na(workers) || workers < 1L ||
     workers > 12L) {
   stop("--workers must be one integer in [1, 12].", call. = FALSE)
+}
+methods_requested <- unique(strsplit(
+  parse_arg("methods", "M03,M08"), ",", fixed = TRUE
+)[[1L]])
+methods_requested <- trimws(methods_requested)
+if (!length(methods_requested) ||
+    any(!methods_requested %in% c("M03", "M08"))) {
+  stop("--methods must select M03, M08, or both.", call. = FALSE)
+}
+m03_kernel <- parse_arg("m03-kernel", "ordinary")
+if (!m03_kernel %in% c("ordinary", "replica_exchange")) {
+  stop("--m03-kernel must be ordinary or replica_exchange.",
+       call. = FALSE)
 }
 
 suppressPackageStartupMessages({
@@ -131,8 +146,44 @@ m03_candidates <- data.frame(
     "uniform_long_schedule",
     "complete_exact_kernel_composition"
   ),
+  kernel_kind = "ordinary_gibbs",
+  inverse_temperatures = "1",
+  replicas = 1L,
+  swap_every = NA_integer_,
   stringsAsFactors = FALSE
 )
+if (identical(m03_kernel, "replica_exchange")) {
+  m03_candidates <- data.frame(
+    method = "M03",
+    candidate_id = c(
+      "M03_REX4_B500_R1500",
+      "M03_REX5_B500_R1500",
+      "M03_REX6_B500_R1500",
+      "M03_REX8_B500_R1500"
+    ),
+    candidate_order = 1:4,
+    burn = 500L,
+    retain = 1500L,
+    thin = 1L,
+    kernel_repetitions = 1L,
+    role = c(
+      "four_replica_sparse_ladder",
+      "five_replica_geometric_ladder",
+      "six_replica_geometric_ladder",
+      "eight_replica_dense_ladder"
+    ),
+    kernel_kind = "likelihood_tempered_replica_exchange",
+    inverse_temperatures = c(
+      "1;0.45;0.20;0.09",
+      "1;0.55;0.30;0.165;0.09",
+      "1;0.63;0.40;0.25;0.16;0.10",
+      "1;0.72;0.52;0.37;0.27;0.19;0.13;0.09"
+    ),
+    replicas = c(4L, 5L, 6L, 8L),
+    swap_every = 1L,
+    stringsAsFactors = FALSE
+  )
+}
 m08_candidates <- data.frame(
   method = "M08",
   candidate_id = c(
@@ -145,12 +196,17 @@ m08_candidates <- data.frame(
   thin = 1L,
   kernel_repetitions = 1L,
   role = c("failed_baseline_reproduction", "uniform_retained_draws"),
+  kernel_kind = "ordinary_gibbs",
+  inverse_temperatures = "1",
+  replicas = 1L,
+  swap_every = NA_integer_,
   stringsAsFactors = FALSE
 )
 candidates <- rbind(m03_candidates, m08_candidates)
+candidates <- candidates[candidates$method %in% methods_requested, , drop = FALSE]
 candidates$transition_cost <-
   (candidates$burn + candidates$retain * candidates$thin) *
-  candidates$kernel_repetitions
+  candidates$kernel_repetitions * candidates$replicas
 candidates$target_change <- FALSE
 candidates$threshold_change <- FALSE
 candidates$adaptive_extension <- FALSE
@@ -171,6 +227,7 @@ cases <- rbind(
     stringsAsFactors = FALSE
   )
 )
+cases <- cases[cases$method %in% methods_requested, , drop = FALSE]
 jobs <- merge(candidates, cases, by = "method", sort = FALSE)
 jobs <- jobs[order(
   match(jobs$method, c("M03", "M08")),
@@ -218,6 +275,15 @@ for (index in seq_len(nrow(cases))) {
       "interval", seq_len(case$chains), sep = "|"
     )
   )
+  if (identical(case$method, "M08")) {
+    required_seed_keys <- c(
+      required_seed_keys,
+      paste(
+        "forecast", cell_id, case$replication,
+        "interval", seq_len(case$chains), sep = "|"
+      )
+    )
+  }
 }
 required_seed_keys <- unique(required_seed_keys)
 
@@ -246,7 +312,7 @@ ledger <- rqr_confirm_validate_seed_ledger(
 )
 ledger <- ledger[match(required_seed_keys, ledger$task_key), , drop = FALSE]
 chain_seed_bindings <- ledger[
-  grepl("^method\\|", ledger$task_key),
+  grepl("^(method|forecast)\\|", ledger$task_key),
   c("task_key", "state_digest"), drop = FALSE
 ]
 chain_seed_bindings$origin <- "reviewed_authorization_seed_ledger"
@@ -283,6 +349,8 @@ if (identical(mode, "preflight")) {
       fail_closed = TRUE,
       seed_ledger_sha256 = seed_ledger_sha256,
       jobs = nrow(jobs),
+      methods = methods_requested,
+      M03_kernel_family = m03_kernel,
       M03_fit_executions = sum(
         jobs$method == "M03" & jobs$chains == 4L
       ) * 4L,
@@ -339,11 +407,65 @@ results <- parallel::mclapply(
         if (identical(job$method[[1L]], "M03")) {
           override$kernel_repetitions <-
             job$kernel_repetitions[[1L]]
+          init_override <- list()
+          if (identical(
+              job$kernel_kind[[1L]],
+              "likelihood_tempered_replica_exchange"
+            )) {
+            inverse_temperatures <- as.numeric(strsplit(
+              job$inverse_temperatures[[1L]], ";", fixed = TRUE
+            )[[1L]])
+            if (length(inverse_temperatures) != job$replicas[[1L]] ||
+                any(!is.finite(inverse_temperatures))) {
+              stop("A replica-exchange ladder is malformed.",
+                   call. = FALSE)
+            }
+            override$replica_exchange <- list(
+              inverse_temperatures = inverse_temperatures,
+              swap_every = job$swap_every[[1L]],
+              pairing = "alternating_adjacent",
+              store_energy_trace = TRUE
+            )
+            hot_profile_cycle <- c("A", "C", "D", "B")
+            replica_profiles <- c(
+              profiles[[chain]],
+              rep(
+                hot_profile_cycle,
+                length.out = job$replicas[[1L]] - 1L
+              )
+            )
+            replica_endpoints <- lapply(
+              replica_profiles,
+              function(profile_name) rqr_confirm_profile_interval(
+                generated,
+                contract$config$initialization_profiles[[profile_name]]
+              )
+            )
+            init_override$replica_beta_root1 <- do.call(
+              rbind,
+              lapply(replica_endpoints, function(endpoint) {
+                c(
+                  endpoint[["lower"]],
+                  rep(0, 2L)
+                )
+              })
+            )
+            init_override$replica_beta_root2 <- do.call(
+              rbind,
+              lapply(replica_endpoints, function(endpoint) {
+                c(
+                  endpoint[["upper"]],
+                  rep(0, 2L)
+                )
+              })
+            )
+          }
           value <- rqr_confirm_fixed_design(
             contract, generated, chain, ledger,
             provenance_control = list(),
             profile_name = profiles[[chain]],
-            mcmc_control_override = override
+            mcmc_control_override = override,
+            init_override = init_override
           )
         } else {
           value <- rqr_confirm_dynamic_fit(
@@ -361,6 +483,35 @@ results <- parallel::mclapply(
         exact[[chain]] <- isTRUE(value$fit$model_spec$exact_joint_target)
         repairs[[chain]] <-
           as.integer(value$fit$model_spec$numerical_repair_count)
+        replica_exchange <- if (
+          isTRUE(value$fit$model_spec$replica_exchange_enabled)
+        ) {
+          list(
+            chain = chain,
+            profile = profiles[[chain]],
+            inverse_temperatures = paste(
+              value$fit$model_spec$replica_exchange$
+                inverse_temperatures,
+              collapse = ";"
+            ),
+            swap_attempts =
+              value$fit$diagnostics$replica_swap_attempts,
+            swap_accepts =
+              value$fit$diagnostics$replica_swap_accepts,
+            swap_acceptance =
+              value$fit$diagnostics$replica_swap_acceptance,
+            round_trips = value$fit$diagnostics$replica_round_trips,
+            cold_labels_visited = sort(unique(
+              value$fit$diagnostics$replica_cold_label_trace
+            ))
+          )
+        } else {
+          NULL
+        }
+        if (chain == 1L) {
+          replica_exchange_chains <- vector("list", job$chains[[1L]])
+        }
+        replica_exchange_chains[[chain]] <- replica_exchange
         value <- NULL
         invisible(gc(full = TRUE))
       }
@@ -382,12 +533,14 @@ results <- parallel::mclapply(
         diagnostics = diagnostics,
         exact_joint_target = exact,
         numerical_repair_count = repairs,
+        replica_exchange = replica_exchange_chains,
         peak_RSS_KiB = rqr_confirm_process_peak_rss_kib()
       )
     }, error = function(error) {
       list(
         ok = FALSE, job = as.list(job),
         error_class = class(error)[[1L]],
+        error_message = conditionMessage(error),
         message_digest = digest::digest(
           conditionMessage(error), algo = "sha256", serialize = FALSE
         ),
@@ -430,12 +583,70 @@ diagnostics <- diagnostics[order(
   diagnostics$estimand, method = "radix"
 ), , drop = FALSE]
 
+replica_rows <- list()
+replica_index <- 0L
+for (result in results) {
+  if (!isTRUE(result$ok)) next
+  for (chain_result in result$replica_exchange) {
+    if (is.null(chain_result)) next
+    for (edge in seq_along(chain_result$swap_attempts)) {
+      replica_index <- replica_index + 1L
+      replica_rows[[replica_index]] <- data.frame(
+        method = result$job$method,
+        candidate_id = result$job$candidate_id,
+        DGP = result$job$DGP,
+        replication = result$job$replication,
+        case_role = result$job$case_role,
+        chain = chain_result$chain,
+        profile = chain_result$profile,
+        inverse_temperatures = chain_result$inverse_temperatures,
+        edge = edge,
+        attempts = chain_result$swap_attempts[[edge]],
+        accepts = chain_result$swap_accepts[[edge]],
+        acceptance = chain_result$swap_acceptance[[edge]],
+        total_round_trips = sum(chain_result$round_trips),
+        cold_labels_visited = paste(
+          chain_result$cold_labels_visited, collapse = ";"
+        ),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+}
+replica_exchange_table <- if (length(replica_rows)) {
+  do.call(rbind, replica_rows)
+} else {
+  data.frame()
+}
+
 job_summary <- do.call(rbind, lapply(results, function(result) {
   job <- result$job
   rows <- diagnostics[
     diagnostics$candidate_id == job$candidate_id &
       diagnostics$replication == job$replication, , drop = FALSE
   ]
+  replica_rows <- if (nrow(replica_exchange_table)) {
+    replica_exchange_table[
+      replica_exchange_table$candidate_id == job$candidate_id &
+        replica_exchange_table$replication == job$replication,
+      , drop = FALSE
+    ]
+  } else {
+    replica_exchange_table
+  }
+  replica_required <- identical(
+    job$kernel_kind,
+    "likelihood_tempered_replica_exchange"
+  )
+  replica_operational <- !replica_required || (
+    nrow(replica_rows) == job$chains * (job$replicas - 1L) &&
+      all(replica_rows$attempts > 0L) &&
+      all(replica_rows$accepts > 0L) &&
+      all(vapply(
+        strsplit(replica_rows$cold_labels_visited, ";", fixed = TRUE),
+        length, integer(1L)
+      ) > 1L)
+  )
   data.frame(
     method = job$method,
     candidate_id = job$candidate_id,
@@ -455,6 +666,19 @@ job_summary <- do.call(rbind, lapply(results, function(result) {
       suppressWarnings(max(rows$mcse_over_sd, na.rm = TRUE)),
     exact_joint_target = isTRUE(result$ok) &&
       all(result$exact_joint_target),
+    replica_exchange_required = replica_required,
+    replica_exchange_operational = replica_operational,
+    minimum_swap_acceptance = if (nrow(replica_rows)) {
+      min(replica_rows$acceptance)
+    } else {
+      NA_real_
+    },
+    total_round_trips = if (nrow(replica_rows)) {
+      sum(replica_rows$total_round_trips) /
+        max(job$replicas - 1L, 1L)
+    } else {
+      NA_real_
+    },
     numerical_repair_count = if (isTRUE(result$ok)) {
       sum(result$numerical_repair_count)
     } else {
@@ -490,6 +714,7 @@ candidate_decisions <- do.call(rbind, lapply(
         all(jobs_for_candidate$ok) &&
         all(jobs_for_candidate$all_diagnostics_pass) &&
         all(jobs_for_candidate$exact_joint_target) &&
+        all(jobs_for_candidate$replica_exchange_operational) &&
         all(jobs_for_candidate$numerical_repair_count == 0L)
       data.frame(
         method = candidate$method,
@@ -574,6 +799,12 @@ rqr_confirm_atomic_write_csv(
 rqr_confirm_atomic_write_csv(
   candidate_decisions, file.path(output_root, "candidate_decisions.csv")
 )
+if (nrow(replica_exchange_table)) {
+  rqr_confirm_atomic_write_csv(
+    replica_exchange_table,
+    file.path(output_root, "replica_exchange.csv")
+  )
+}
 rqr_confirm_atomic_write_csv(
   acf_table, file.path(output_root, "autocorrelation.csv")
 )
@@ -617,6 +848,8 @@ manifest <- list(
   workers = workers,
   thread_environment = as.list(thread_values),
   jobs = nrow(jobs),
+  methods = methods_requested,
+  M03_kernel_family = m03_kernel,
   successful_jobs = sum(vapply(results, function(x) isTRUE(x$ok), logical(1L))),
   selected_M03 = candidate_decisions$candidate_id[
     candidate_decisions$method == "M03" & candidate_decisions$selected

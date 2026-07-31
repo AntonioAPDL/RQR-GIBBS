@@ -210,6 +210,150 @@ test_that("fixed-design complete-kernel repetition is exact and opt-in", {
   )
 })
 
+test_that("fixed-design replica exchange preserves the exact cold target", {
+  set.seed(1703)
+  X <- cbind(intercept = 1, time = seq(-1, 1, length.out = 18))
+  y <- 0.2 + 0.3 * X[, "time"] + rnorm(18, sd = 0.3)
+  prior <- beta_prior("ridge", ridge = list(tau2 = 5))
+  common <- list(
+    y = y, X = X, coverage_level = 0.8,
+    beta_prior_obj = prior
+  )
+  ordinary <- do.call(
+    rqr_mcmc_fit,
+    c(common, list(
+      mcmc_control = list(n_burn = 3, n_mcmc = 8, seed = 1704)
+    ))
+  )
+  disabled <- do.call(
+    rqr_mcmc_fit,
+    c(common, list(
+      mcmc_control = list(
+        n_burn = 3, n_mcmc = 8, seed = 1704,
+        replica_exchange = list(enabled = FALSE)
+      )
+    ))
+  )
+  expect_identical(
+    ordinary$samp.beta_root1, disabled$samp.beta_root1
+  )
+  expect_identical(
+    ordinary$samp.beta_root2, disabled$samp.beta_root2
+  )
+
+  cold1 <- c(-0.5, 0)
+  cold2 <- c(0.8, 0)
+  initial1 <- rbind(cold1, c(-1.2, 0.1), c(-2, -0.1))
+  initial2 <- rbind(cold2, c(1.3, -0.1), c(2, 0.1))
+  fit <- do.call(
+    rqr_mcmc_fit,
+    c(common, list(
+      mcmc_control = list(
+        n_burn = 4, n_mcmc = 12, seed = 1705,
+        replica_exchange = list(
+          inverse_temperatures = c(1, 0.5, 0.2),
+          swap_every = 1L
+        )
+      ),
+      init = list(
+        beta_root1 = cold1, beta_root2 = cold2,
+        replica_beta_root1 = initial1,
+        replica_beta_root2 = initial2
+      )
+    ))
+  )
+  expect_true(fit$model_spec$replica_exchange_enabled)
+  expect_true(fit$model_spec$exact_joint_target)
+  expect_true(fit$model_spec$target_numerical_eligible)
+  expect_identical(
+    fit$model_spec$replica_exchange$inverse_temperatures,
+    c(1, 0.5, 0.2)
+  )
+  expect_equal(dim(fit$diagnostics$replica_energy_trace), c(16L, 3L))
+  expect_length(fit$diagnostics$replica_cold_label_trace, 16L)
+  expect_length(fit$diagnostics$replica_swap_attempts, 2L)
+  expect_true(all(
+    fit$diagnostics$replica_swap_accepts <=
+      fit$diagnostics$replica_swap_attempts
+  ))
+  expect_true(all(is.finite(fit$samp.beta_root1)))
+  expect_true(all(is.finite(fit$samp.beta_root2)))
+  expect_false(fit$misc$continuation_supported)
+
+  log_ratio <- rqrgibbs:::.rqr_replica_exchange_log_acceptance(
+    1, 0.4, 3, 7
+  )
+  reverse <- rqrgibbs:::.rqr_replica_exchange_log_acceptance(
+    1, 0.4, 7, 3
+  )
+  forward_acceptance <- exp(min(0, log_ratio))
+  reverse_acceptance <- exp(min(0, reverse))
+  expect_equal(
+    log(forward_acceptance / reverse_acceptance), log_ratio,
+    tolerance = 1e-14
+  )
+})
+
+test_that("fixed-design replica exchange rejects unsupported contracts", {
+  X <- cbind(intercept = 1, time = seq(-1, 1, length.out = 10))
+  y <- seq(-0.5, 0.5, length.out = 10)
+  common <- list(
+    y = y, X = X, coverage_level = 0.8,
+    beta_prior_obj = beta_prior("ridge", ridge = list(tau2 = 5))
+  )
+  expect_error(
+    do.call(rqr_mcmc_fit, c(common, list(
+      mcmc_control = list(
+        n_burn = 0, n_mcmc = 2, seed = 1706,
+        replica_exchange = list(
+          inverse_temperatures = c(1, 1, 0.5)
+        )
+      )
+    ))),
+    "strictly decrease"
+  )
+  expect_error(
+    do.call(rqr_mcmc_fit, c(common, list(
+      mcmc_control = list(
+        n_burn = 0, n_mcmc = 2, seed = 1706,
+        store_latent_draws = TRUE,
+        replica_exchange = list(
+          inverse_temperatures = c(1, 0.5)
+        )
+      )
+    ))),
+    "store_latent_draws"
+  )
+  expect_error(
+    do.call(rqr_mcmc_fit, c(common, list(
+      mean_tilt = 0.1,
+      mcmc_control = list(
+        n_burn = 0, n_mcmc = 2, seed = 1706,
+        replica_exchange = list(
+          inverse_temperatures = c(1, 0.5)
+        )
+      )
+    ))),
+    "zero-tilt ridge"
+  )
+  expect_error(
+    do.call(rqr_mcmc_fit, c(common, list(
+      mcmc_control = list(
+        n_burn = 0, n_mcmc = 2, seed = 1706,
+        replica_exchange = list(
+          inverse_temperatures = c(1, 0.5)
+        )
+      ),
+      init = list(
+        beta_root1 = c(-1, 0), beta_root2 = c(1, 0),
+        replica_beta_root1 = rbind(c(0, 0), c(-1, 0)),
+        replica_beta_root2 = rbind(c(1, 0), c(2, 0))
+      )
+    ))),
+    "first row"
+  )
+})
+
 test_that("RQR-DLM skips missing response measurements", {
   y <- c(rnorm(6), NA_real_, rnorm(5))
   fit <- rqr_dlm_fit(
@@ -1032,7 +1176,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.16.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.17.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%

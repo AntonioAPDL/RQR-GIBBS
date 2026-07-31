@@ -356,6 +356,130 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   as.integer(x)
 }
 
+.rqr_normalize_replica_exchange_control <- function(control = NULL) {
+  if (is.null(control)) control <- list()
+  if (!is.list(control)) {
+    stop("mcmc_control$replica_exchange must be a named list.", call. = FALSE)
+  }
+  if (length(control) &&
+      (is.null(names(control)) || any(!nzchar(names(control))))) {
+    stop("mcmc_control$replica_exchange must be a named list.", call. = FALSE)
+  }
+  allowed <- c(
+    "enabled", "inverse_temperatures", "swap_every",
+    "pairing", "store_energy_trace"
+  )
+  unknown <- setdiff(names(control), allowed)
+  if (length(unknown)) {
+    stop(
+      sprintf(
+        "Unknown mcmc_control$replica_exchange field(s): %s.",
+        paste(unknown, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+  temperatures <- as.numeric(control$inverse_temperatures %||% 1)
+  enabled <- control$enabled %||% (length(temperatures) > 1L)
+  if (!is.logical(enabled) || length(enabled) != 1L || is.na(enabled)) {
+    stop("replica_exchange$enabled must be one nonmissing logical value.",
+         call. = FALSE)
+  }
+  if (!isTRUE(enabled)) {
+    if (length(temperatures) != 1L || temperatures[[1L]] != 1) {
+      stop(
+        "Disabled replica exchange must have inverse_temperatures = 1.",
+        call. = FALSE
+      )
+    }
+    return(list(
+      schema_version = "rqrgibbs_replica_exchange/1.0.0",
+      enabled = FALSE,
+      inverse_temperatures = 1,
+      replicas = 1L,
+      swap_every = NA_integer_,
+      pairing = "none",
+      store_energy_trace = FALSE,
+      exact_cold_target = TRUE
+    ))
+  }
+  if (length(temperatures) < 2L || length(temperatures) > 32L ||
+      any(!is.finite(temperatures)) || any(temperatures <= 0) ||
+      temperatures[[1L]] != 1 || any(diff(temperatures) >= 0)) {
+    stop(
+      paste(
+        "replica_exchange$inverse_temperatures must begin at one and",
+        "then strictly decrease through 2--32 finite positive values."
+      ),
+      call. = FALSE
+    )
+  }
+  swap_every <- .rqr_scalar_integer(
+    control$swap_every %||% 1L,
+    "mcmc_control$replica_exchange$swap_every", 1L
+  )
+  pairing <- as.character(control$pairing %||% "alternating_adjacent")
+  if (length(pairing) != 1L || is.na(pairing) ||
+      !identical(pairing, "alternating_adjacent")) {
+    stop(
+      "replica_exchange$pairing must be 'alternating_adjacent'.",
+      call. = FALSE
+    )
+  }
+  store_energy_trace <- control$store_energy_trace %||% TRUE
+  if (!is.logical(store_energy_trace) || length(store_energy_trace) != 1L ||
+      is.na(store_energy_trace)) {
+    stop(
+      "replica_exchange$store_energy_trace must be one logical value.",
+      call. = FALSE
+    )
+  }
+  list(
+    schema_version = "rqrgibbs_replica_exchange/1.0.0",
+    enabled = TRUE,
+    inverse_temperatures = temperatures,
+    replicas = as.integer(length(temperatures)),
+    swap_every = swap_every,
+    pairing = pairing,
+    store_energy_trace = store_energy_trace,
+    exact_cold_target = TRUE
+  )
+}
+
+.rqr_replica_initial_matrix <- function(value, cold, replicas, p, name) {
+  if (is.null(value)) {
+    return(matrix(rep(as.numeric(cold), each = replicas), replicas, p))
+  }
+  value <- as.matrix(value)
+  storage.mode(value) <- "double"
+  if (!all(dim(value) == c(replicas, p)) || any(!is.finite(value))) {
+    stop(sprintf("%s must be a finite replicas-by-p matrix.", name),
+         call. = FALSE)
+  }
+  if (!identical(as.numeric(value[1L, ]), as.numeric(cold))) {
+    stop(sprintf("The first row of %s must equal the cold initial root.", name),
+         call. = FALSE)
+  }
+  value
+}
+
+.rqr_replica_exchange_log_acceptance <- function(
+    inverse_temperature_left, inverse_temperature_right,
+    energy_left, energy_right) {
+  values <- c(
+    inverse_temperature_left, inverse_temperature_right,
+    energy_left, energy_right
+  )
+  if (any(!is.finite(values)) ||
+      inverse_temperature_left <= inverse_temperature_right ||
+      inverse_temperature_right <= 0) {
+    stop("Replica-exchange temperatures or energies are invalid.",
+         call. = FALSE)
+  }
+  (inverse_temperature_left - inverse_temperature_right) *
+    (energy_left - energy_right)
+}
+
 .rqr_history_count <- function(x, name) {
   .rqr_scalar_integer(
     x, name = name, minimum = 0L, maximum = .Machine$integer.max
@@ -405,7 +529,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   digest::digest(object, algo = "sha256", serialize = TRUE)
 }
 
-.rqr_schema_version <- function() "rqrgibbs_fit/1.16.0"
+.rqr_schema_version <- function() "rqrgibbs_fit/1.17.0"
 
 .rqr_continuation_history_schema <- function() {
   "rqrgibbs_continuation_history/4.1.0"

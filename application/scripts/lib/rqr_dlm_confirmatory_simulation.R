@@ -3564,11 +3564,26 @@ rqr_confirm_dynamic_fit <- function(
 
 rqr_confirm_fixed_design <- function(
     contract, generated, chain, ledger, provenance_control = list(),
-    profile_name = NULL, mcmc_control_override = list()) {
+    profile_name = NULL, mcmc_control_override = list(),
+    init_override = list()) {
   if (!is.list(mcmc_control_override) ||
       (!is.null(names(mcmc_control_override)) &&
         any(!nzchar(names(mcmc_control_override))))) {
     stop("mcmc_control_override must be a named list.", call. = FALSE)
+  }
+  if (!is.list(init_override) ||
+      (!is.null(names(init_override)) &&
+        any(!nzchar(names(init_override))))) {
+    stop("init_override must be a named list.", call. = FALSE)
+  }
+  if (length(setdiff(
+      names(init_override),
+      c("replica_beta_root1", "replica_beta_root2")
+    ))) {
+    stop(
+      "init_override may contain replica beta initialization only.",
+      call. = FALSE
+    )
   }
   chain <- rqr_confirm_strict_integer(chain, "chain", 1L, 4L)
   profile_name <- profile_name %||% c("A", "B", "C", "D")[[chain]]
@@ -3612,6 +3627,15 @@ rqr_confirm_fixed_design <- function(
     mcmc_control[names(mcmc_control_override)] <-
       mcmc_control_override
   }
+  fit_init <- list(
+    rng_state = state,
+    beta_root1 = c(endpoints[["lower"]], rep(0, ncol(X) - 1L)),
+    beta_root2 = c(endpoints[["upper"]], rep(0, ncol(X) - 1L)),
+    lambda = profile$lambda_initial
+  )
+  if (length(init_override)) {
+    fit_init[names(init_override)] <- init_override
+  }
   fit <- rqr_mcmc_fit(
     generated$training_y, X,
     coverage_level = generated$coverage_level,
@@ -3625,12 +3649,7 @@ rqr_confirm_fixed_design <- function(
     numerical_policy = "fail",
     provenance_control = provenance_control,
     mcmc_control = mcmc_control,
-    init = list(
-      rng_state = state,
-      beta_root1 = c(endpoints[["lower"]], rep(0, ncol(X) - 1L)),
-      beta_root2 = c(endpoints[["upper"]], rep(0, ncol(X) - 1L)),
-      lambda = profile$lambda_initial
-    )
+    init = fit_init
   )
   training <- predict_interval(fit, X_new = X)
   future <- predict_interval(fit, X_new = X_future)

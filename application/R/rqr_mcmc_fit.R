@@ -34,7 +34,11 @@
 #'   exdqlm namespace to match the pinned source for promotion eligibility.
 #' @param mcmc_control Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
 #'   `verbose`, `progress_every`, `precision_beta`, `store_latent_draws`, and
-#'   optional `root_label_control` and `kernel_repetitions`. The latter is a
+#'   optional `root_label_control`, `kernel_repetitions`, and
+#'   `replica_exchange`. The latter is an opt-in likelihood-tempered,
+#'   alternating-adjacent replica-exchange kernel for fixed-rate ridge RQR;
+#'   only draws from its inverse-temperature-one replica are retained. The
+#'   cold target is unchanged. `kernel_repetitions` is a
 #'   positive integer giving the number of complete, exact Gibbs transitions
 #'   composed between recorded iterations; its default is one. Root-label
 #'   control governs the complete-root swap probability and post-processing
@@ -135,7 +139,22 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     mcmc_control$kernel_repetitions %||% 1L,
     "mcmc_control$kernel_repetitions", 1L
   )
+  replica_exchange <- .rqr_normalize_replica_exchange_control(
+    mcmc_control$replica_exchange %||% list()
+  )
   store_latent_draws <- isTRUE(mcmc_control$store_latent_draws %||% FALSE)
+  if (isTRUE(replica_exchange$enabled) &&
+      (!identical(learning_rate_mode, "fixed_rate") ||
+        !identical(beta_prior_type, "ridge") ||
+        mean_tilt_info$nonzero || store_latent_draws)) {
+    stop(
+      paste(
+        "Replica exchange currently requires fixed-rate, zero-tilt ridge",
+        "RQR with store_latent_draws = FALSE."
+      ),
+      call. = FALSE
+    )
+  }
   root_label_control <- .rqr_normalize_root_label_control(
     mcmc_control$root_label_control %||% list(), X
   )
@@ -149,6 +168,14 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   init_roots <- .rqr_init_roots(y, X, coverage_level, init = init)
   beta1 <- init_roots$beta1
   beta2 <- init_roots$beta2
+  replica_beta1_initial <- .rqr_replica_initial_matrix(
+    init$replica_beta_root1 %||% NULL, beta1,
+    replica_exchange$replicas, p, "init$replica_beta_root1"
+  )
+  replica_beta2_initial <- .rqr_replica_initial_matrix(
+    init$replica_beta_root2 %||% NULL, beta2,
+    replica_exchange$replicas, p, "init$replica_beta_root2"
+  )
   eta1 <- drop(X %*% beta1)
   eta2 <- drop(X %*% beta2)
   e <- rqr_residual_product(y, eta1, eta2)
@@ -179,10 +206,16 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   rhs_stats2 <- vector("list", n_keep)
   root_swap_trace <- logical(n_burn + n_keep * thin)
   root_swap_count_trace <- integer(n_burn + n_keep * thin)
+  replica_energy_trace <- NULL
+  replica_cold_label_trace <- NULL
+  replica_swap_attempts <- integer(0L)
+  replica_swap_accepts <- integer(0L)
+  replica_round_trips <- integer(0L)
   repair_records <- NULL
 
   total_iter <- n_burn + n_keep * thin
   save_idx <- 0L
+  if (!isTRUE(replica_exchange$enabled)) {
   for (iter in seq_len(total_iter)) {
     for (kernel_step in seq_len(kernel_repetitions)) {
       eta1 <- drop(X %*% beta1)
@@ -336,6 +369,266 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       message(sprintf("[rqr_mcmc_fit] iter %d/%d loss=%.6g", iter, total_iter, loss_trace[iter]))
     }
   }
+  } else {
+    temperatures <- replica_exchange$inverse_temperatures
+    n_replicas <- replica_exchange$replicas
+    replica_beta1 <- lapply(
+      seq_len(n_replicas),
+      function(index) as.numeric(replica_beta1_initial[index, ])
+    )
+    replica_beta2 <- lapply(
+      seq_len(n_replicas),
+      function(index) as.numeric(replica_beta2_initial[index, ])
+    )
+    replica_V <- lapply(
+      temperatures,
+      function(temperature) rep(
+        rqr_constants(
+          coverage_level, learning_rate * temperature
+        )$sigma,
+        n
+      )
+    )
+    replica_labels <- seq_len(n_replicas)
+    label_reached_hot <- logical(n_replicas)
+    replica_round_trips <- integer(n_replicas)
+    replica_swap_attempts <- integer(n_replicas - 1L)
+    replica_swap_accepts <- integer(n_replicas - 1L)
+    replica_cold_label_trace <- integer(total_iter)
+    if (isTRUE(replica_exchange$store_energy_trace)) {
+      replica_energy_trace <- matrix(
+        NA_real_, total_iter, n_replicas,
+        dimnames = list(NULL, sprintf("temperature_%02d", seq_len(n_replicas)))
+      )
+    }
+    swap_round <- 0L
+    for (iter in seq_len(total_iter)) {
+      replica_root_swaps <- integer(n_replicas)
+      replica_pstats1 <- vector("list", n_replicas)
+      replica_pstats2 <- vector("list", n_replicas)
+      for (replica in seq_len(n_replicas)) {
+        replica_constants <- rqr_constants(
+          coverage_level, learning_rate * temperatures[[replica]]
+        )
+        for (kernel_step in seq_len(kernel_repetitions)) {
+          eta1_replica <- drop(X %*% replica_beta1[[replica]])
+          eta2_replica <- drop(X %*% replica_beta2[[replica]])
+          e_replica <- rqr_residual_product(
+            y, eta1_replica, eta2_replica
+          )
+          gp <- rqr_gig_params(
+            e_replica,
+            coverage_level = replica_constants$alpha,
+            learning_rate = replica_constants$omega
+          )
+          replica_V[[replica]] <- as.numeric(
+            .sample_gig_devroye_required(
+              1L, p = gp$p, a = gp$a, b_vec = gp$b,
+              context = "rqr_mcmc_fit::replica_exchange_latent_v"
+            )[1L, ]
+          )
+          prior_prec1 <- .rqr_prior_precision(
+            beta_prior_obj, list(), p = p
+          )
+          upd1 <- .rqr_beta_update(
+            y = y, X = X,
+            beta_other = replica_beta2[[replica]],
+            V = replica_V[[replica]],
+            constants = replica_constants,
+            prior_prec = prior_prec1,
+            precision_beta_cfg = precision_beta_cfg,
+            context = list(
+              iter = iter, n_burn = n_burn,
+              likelihood_family =
+                "rqr_generalized_bayes_replica_exchange",
+              beta_prior_type = beta_prior_type,
+              root = "root1", replica = replica,
+              inverse_temperature = temperatures[[replica]]
+            )
+          )
+          replica_beta1[[replica]] <- upd1$draw
+          replica_pstats1[[replica]] <- upd1$info %||% list()
+          current_repair <- .rqr_add_repair_record(
+            .rqr_empty_repair_records(), "beta_precision",
+            NA_integer_, replica_pstats1[[replica]]
+          )
+          if (nrow(current_repair)) {
+            current_repair$iteration <- iter
+            current_repair$root <- "root1"
+            current_repair$replica <- replica
+            current_repair$inverse_temperature <-
+              temperatures[[replica]]
+            repair_records <- if (is.null(repair_records)) {
+              current_repair
+            } else {
+              rbind(repair_records, current_repair)
+            }
+          }
+
+          prior_prec2 <- .rqr_prior_precision(
+            beta_prior_obj, list(), p = p
+          )
+          upd2 <- .rqr_beta_update(
+            y = y, X = X,
+            beta_other = replica_beta1[[replica]],
+            V = replica_V[[replica]],
+            constants = replica_constants,
+            prior_prec = prior_prec2,
+            precision_beta_cfg = precision_beta_cfg,
+            context = list(
+              iter = iter, n_burn = n_burn,
+              likelihood_family =
+                "rqr_generalized_bayes_replica_exchange",
+              beta_prior_type = beta_prior_type,
+              root = "root2", replica = replica,
+              inverse_temperature = temperatures[[replica]]
+            )
+          )
+          replica_beta2[[replica]] <- upd2$draw
+          replica_pstats2[[replica]] <- upd2$info %||% list()
+          current_repair <- .rqr_add_repair_record(
+            .rqr_empty_repair_records(), "beta_precision",
+            NA_integer_, replica_pstats2[[replica]]
+          )
+          if (nrow(current_repair)) {
+            current_repair$iteration <- iter
+            current_repair$root <- "root2"
+            current_repair$replica <- replica
+            current_repair$inverse_temperature <-
+              temperatures[[replica]]
+            repair_records <- if (is.null(repair_records)) {
+              current_repair
+            } else {
+              rbind(repair_records, current_repair)
+            }
+          }
+          if (stats::runif(1L) < root_label_control$swap_probability) {
+            temporary <- replica_beta1[[replica]]
+            replica_beta1[[replica]] <- replica_beta2[[replica]]
+            replica_beta2[[replica]] <- temporary
+            replica_root_swaps[[replica]] <-
+              replica_root_swaps[[replica]] + 1L
+          }
+        }
+      }
+
+      energies <- vapply(seq_len(n_replicas), function(replica) {
+        eta1_replica <- drop(X %*% replica_beta1[[replica]])
+        eta2_replica <- drop(X %*% replica_beta2[[replica]])
+        learning_rate * sum(rqr_check_loss(
+          rqr_residual_product(y, eta1_replica, eta2_replica),
+          coverage_level
+        ))
+      }, numeric(1L))
+      if (iter %% replica_exchange$swap_every == 0L) {
+        swap_round <- swap_round + 1L
+        first <- if (swap_round %% 2L == 1L) 1L else 2L
+        pairs <- if (first <= n_replicas - 1L) {
+          seq.int(first, n_replicas - 1L, by = 2L)
+        } else {
+          integer(0L)
+        }
+        for (left in pairs) {
+          right <- left + 1L
+          replica_swap_attempts[[left]] <-
+            replica_swap_attempts[[left]] + 1L
+          log_acceptance <- .rqr_replica_exchange_log_acceptance(
+            temperatures[[left]], temperatures[[right]],
+            energies[[left]], energies[[right]]
+          )
+          if (log(stats::runif(1L)) < min(0, log_acceptance)) {
+            temporary <- replica_beta1[[left]]
+            replica_beta1[[left]] <- replica_beta1[[right]]
+            replica_beta1[[right]] <- temporary
+            temporary <- replica_beta2[[left]]
+            replica_beta2[[left]] <- replica_beta2[[right]]
+            replica_beta2[[right]] <- temporary
+            temporary_root_swaps <- replica_root_swaps[[left]]
+            replica_root_swaps[[left]] <- replica_root_swaps[[right]]
+            replica_root_swaps[[right]] <- temporary_root_swaps
+            energies[c(left, right)] <- energies[c(right, left)]
+            temporary_label <- replica_labels[[left]]
+            replica_labels[[left]] <- replica_labels[[right]]
+            replica_labels[[right]] <- temporary_label
+            replica_swap_accepts[[left]] <-
+              replica_swap_accepts[[left]] + 1L
+          }
+        }
+      }
+      label_reached_hot[replica_labels[[n_replicas]]] <- TRUE
+      cold_label <- replica_labels[[1L]]
+      if (label_reached_hot[[cold_label]]) {
+        replica_round_trips[[cold_label]] <-
+          replica_round_trips[[cold_label]] + 1L
+        label_reached_hot[[cold_label]] <- FALSE
+      }
+      replica_cold_label_trace[[iter]] <- cold_label
+      if (!is.null(replica_energy_trace)) {
+        replica_energy_trace[iter, ] <- energies
+      }
+
+      beta1 <- replica_beta1[[1L]]
+      beta2 <- replica_beta2[[1L]]
+      constants <- rqr_constants(coverage_level, learning_rate)
+      eta1 <- drop(X %*% beta1)
+      eta2 <- drop(X %*% beta2)
+      target_loss <- rqr_mean_tilt_loss(
+        y, eta1, eta2, constants$alpha,
+        mean_tilt = mean_tilt_info$full, details = TRUE
+      )
+      loss_trace[[iter]] <- sum(target_loss$product_loss)
+      tilt_linear_trace[[iter]] <- sum(target_loss$linear_tilt)
+      mean_tilted_target_loss_trace[[iter]] <- sum(target_loss$total)
+      lambda_trace[[iter]] <- lambda_current
+      effective_learning_rate_trace[[iter]] <- constants$omega
+      precision_strategy_root1[[iter]] <- as.character(
+        replica_pstats1[[1L]]$strategy %||% "direct"
+      )
+      precision_strategy_root2[[iter]] <- as.character(
+        replica_pstats2[[1L]]$strategy %||% "direct"
+      )
+      root_swap_count_trace[[iter]] <- replica_root_swaps[[1L]]
+      root_swap_trace[[iter]] <- root_swap_count_trace[[iter]] > 0L
+
+      if (iter > n_burn && ((iter - n_burn) %% thin == 0L)) {
+        save_idx <- save_idx + 1L
+        beta1_draws[save_idx, ] <- beta1
+        beta2_draws[save_idx, ] <- beta2
+        lambda_draws[[save_idx]] <- lambda_current
+        rhs_stats1[[save_idx]] <- list()
+        rhs_stats2[[save_idx]] <- list()
+      }
+      if (verbose &&
+          (iter %% progress_every == 0L || iter == total_iter)) {
+        message(sprintf(
+          paste0(
+            "[rqr_mcmc_fit replica exchange] iter %d/%d ",
+            "loss=%.6g cold_label=%d"
+          ),
+          iter, total_iter, loss_trace[[iter]], cold_label
+        ))
+      }
+    }
+    beta1 <- replica_beta1[[1L]]
+    beta2 <- replica_beta2[[1L]]
+    eta1 <- drop(X %*% beta1)
+    eta2 <- drop(X %*% beta2)
+    final_gp <- rqr_gig_params(
+      rqr_residual_product(y, eta1, eta2),
+      coverage_level = coverage_level,
+      learning_rate = learning_rate
+    )
+    V <- as.numeric(.sample_gig_devroye_required(
+      1L, p = final_gp$p, a = final_gp$a, b_vec = final_gp$b,
+      context = "rqr_mcmc_fit::replica_exchange_final_latent_v"
+    )[1L, ])
+    state1 <- list()
+    state2 <- list()
+    pr_upd1 <- list(state = state1, stats = list())
+    pr_upd2 <- list(state = state2, stats = list())
+    pstats1 <- replica_pstats1[[1L]] %||% list()
+    pstats2 <- replica_pstats2[[1L]] %||% list()
+  }
 
   summary <- .rqr_fit_summary(y, X, beta1_draws, beta2_draws)
   summary$beta_raw_root1_mean <- summary$beta_root1_mean
@@ -414,8 +707,23 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
         precision_beta = precision_beta_cfg
       ),
       transition = list(
-        kernel = "complete_exact_gibbs_composition",
-        kernel_repetitions = kernel_repetitions
+        kernel = if (isTRUE(replica_exchange$enabled)) {
+          "likelihood_tempered_replica_exchange"
+        } else {
+          "complete_exact_gibbs_composition"
+        },
+        kernel_repetitions = kernel_repetitions,
+        replica_exchange = replica_exchange,
+        replica_initial_root_digest = if (
+          isTRUE(replica_exchange$enabled)
+        ) {
+          .rqr_digest(list(
+            beta_root1 = replica_beta1_initial,
+            beta_root2 = replica_beta2_initial
+          ))
+        } else {
+          NA_character_
+        }
       )
     ),
     external_repositories = provenance_control$external_repositories,
@@ -468,6 +776,20 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       root_swap_enabled = root_label_control$swap_probability > 0,
       root_swap_probability = root_label_control$swap_probability,
       kernel_repetitions = kernel_repetitions,
+      replica_exchange = replica_exchange,
+      replica_exchange_enabled = isTRUE(replica_exchange$enabled),
+      retained_replica_inverse_temperature = 1,
+      replica_exchange_target_contract = if (
+        isTRUE(replica_exchange$enabled)
+      ) {
+        paste(
+          "Each replica targets the common ridge prior times exp(-t * omega_R * L);",
+          "alternating adjacent beta-state swaps use the exact marginal loss-energy ratio;",
+          "only the t=1 cold replica is retained."
+        )
+      } else {
+        "not_enabled"
+      },
       coefficient_label_contract = root_label_control$contract,
       canonicalization_status =
         root_label_diagnostics$status %||% "not_requested",
@@ -519,6 +841,16 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       numerical_repairs = repair_records %||% data.frame(),
       root_swap_trace = root_swap_trace,
       root_swap_count_trace = root_swap_count_trace,
+      replica_energy_trace = replica_energy_trace,
+      replica_cold_label_trace = replica_cold_label_trace,
+      replica_swap_attempts = replica_swap_attempts,
+      replica_swap_accepts = replica_swap_accepts,
+      replica_swap_acceptance = if (length(replica_swap_attempts)) {
+        replica_swap_accepts / pmax(replica_swap_attempts, 1L)
+      } else {
+        numeric(0L)
+      },
+      replica_round_trips = replica_round_trips,
       root_label_diagnostics = root_label_diagnostics,
       rhs_stats_root1 = rhs_stats1,
       rhs_stats_root2 = rhs_stats2
@@ -553,6 +885,14 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       n_mcmc = n_keep,
       thin = thin,
       kernel_repetitions = kernel_repetitions,
+      replica_exchange = replica_exchange,
+      replica_initial_beta_root1 = if (
+        isTRUE(replica_exchange$enabled)
+      ) replica_beta1_initial else NULL,
+      replica_initial_beta_root2 = if (
+        isTRUE(replica_exchange$enabled)
+      ) replica_beta2_initial else NULL,
+      continuation_supported = !isTRUE(replica_exchange$enabled),
       seed = seed,
       constants = constants,
       mean_tilt = mean_tilt_info,

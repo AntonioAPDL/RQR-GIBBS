@@ -731,12 +731,17 @@ test_that("fixed-design development overrides are explicit and named", {
     "mcmc_control_override" %in%
       names(formals(environment$rqr_confirm_fixed_design))
   )
+  expect_true(
+    "init_override" %in%
+      names(formals(environment$rqr_confirm_fixed_design))
+  )
   body_text <- paste(
     deparse(body(environment$rqr_confirm_fixed_design)),
     collapse = "\n"
   )
   expect_match(body_text, "mcmc_control_override must be a named list")
   expect_match(body_text, "mcmc_control\\[names\\(mcmc_control_override\\)\\]")
+  expect_match(body_text, "replica beta initialization only")
 })
 
 test_that("wave-2 candidate comparison is fixed and cannot authorize", {
@@ -753,6 +758,8 @@ test_that("wave-2 candidate comparison is fixed and cannot authorize", {
     "M03_retain_B500_R6000_K1",
     "M03_long_B3000_R6000_K1",
     "M03_compose_B1500_R3000_K2",
+    "M03_REX4_B500_R1500",
+    "M03_REX8_B500_R1500",
     "M08_current_B1000_R2000",
     "M08_uniform_B1000_R4000",
     "3dc8483f4a777ab766704b901997295bed1c89db0590429a70f3116b233e948f"
@@ -771,6 +778,14 @@ test_that("wave-2 candidate comparison is fixed and cannot authorize", {
   expect_false(any(grepl(
     "confirmatory_execution_authorized <- TRUE",
     candidate_script, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    'grepl("^(method|forecast)', candidate_script,
+    fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "replica_exchange_operational", candidate_script,
+    fixed = TRUE
   )))
 })
 
