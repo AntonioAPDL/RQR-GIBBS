@@ -34,7 +34,7 @@ test-theory-figures:
 test-theory-tables:
 	$(R) tables/test_mean_tilt_cf_mini_study_table.R
 
-pdf: theory-figures theory-tables
+pdf: theory-figures theory-tables model-illustration-figures
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
 		$(LATEXMK) -pdf -interaction=nonstopmode main.tex; \
 	else \
@@ -44,7 +44,7 @@ pdf: theory-figures theory-tables
 		$(PDFLATEX) -interaction=nonstopmode main.tex; \
 	fi
 
-supplement: theory-figures
+supplement: theory-figures model-illustration-figures
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
 		$(LATEXMK) -pdf -interaction=nonstopmode rqr-gibbs-supplement.tex; \
 	else \

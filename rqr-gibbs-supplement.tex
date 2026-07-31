@@ -1688,6 +1688,60 @@ component-scale and noncentered updates in the interweaving transition, and
 optionally swaps the two complete root labels. Static \(q_j=0\) components are
 separate degenerate models and are not part of the inverse-Gamma support.
 
+\section{Single-Data Oracle-Tilt Diagnostics}
+\label{sec:supp-oracle-tilt-diagnostics}
+
+The article's fixed-design and dynamic illustrations use one frozen data set
+per model family at content \(c=0.95\). Innovations follow the known
+standardized asymmetric-Laplace law with quantile index \(0.99\). Ordinary RQR
+uses zero tilt; the ET and SH tilts are calculated from exact population
+quantiles and truncated moments. No Cornish--Fisher approximation enters these
+fits. The displays therefore diagnose recovery of prespecified population
+interval functionals under the loss update; they are not repeated-sample
+coverage experiments.
+
+Table~\ref{tab:supp-oracle-tilt-summary} reports descriptive endpoint and width
+errors and the prespecified computational disposition. Realized coverage is
+included only to describe these two frozen samples. Five of six cells pass all
+strict gates. The dynamic SH cell passes all hard gates, including zero
+repairs, source/runtime binding, dense conditional references, scale-pathology
+checks, \(\widehat R\le 1.05\), and MCSE/SD at most 0.10. Five local summaries
+near times 51 and 71 fall below the ESS thresholds, so this cell is labeled
+ESS warning rather than strict pass.
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Compact diagnostics for the 95\% single-data oracle-tilt
+illustrations.} Endpoint RMSE averages squared lower- and upper-endpoint error;
+width RMSE compares fitted and population-oracle widths. Realized coverage is
+descriptive for the frozen data set and is not a calibration estimate.}
+\label{tab:supp-oracle-tilt-summary}
+\TableStyle
+\input{tables/oracle_tilt_c095_illustration_summary.tex}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS03_fixed_design_endpoint_error_c095.pdf}
+\caption{\textbf{Fixed-design endpoint-error distributions.} Curves pool the
+generalized-posterior endpoint draws across four chains and all design sites,
+after subtracting the corresponding population-oracle endpoint. Horizontal
+segments mark central 95\% summaries and points mark medians. These are errors
+of interval-root draws, not response-predictive residuals.}
+\label{fig:supp-fixed-endpoint-error-c095}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS04_dlm_endpoint_error_c095.pdf}
+\caption{\textbf{Dynamic endpoint-error distributions.} Curves pool
+generalized-posterior endpoint draws across five chains and all times after
+subtracting the time-specific population-oracle endpoint. The wider SH upper
+tail is retained together with its disclosed local ESS warning; hard
+numerical, reference, provenance, and pathology gates pass.}
+\label{fig:supp-dlm-endpoint-error-c095}
+\end{figure}
+
 \section{Reproducibility and Evidence Scope}
 \label{sec:supp-reproducibility}
 
@@ -1710,12 +1764,13 @@ factors, Monte Carlo precision, failure handling, and reporting rules are
 prespecified \citep{MorrisWhiteCrowther2019Simulation}.
 
 The implemented validation program is deepest for ordinary RQR
-(\(\delta=0\)). Fixed-rate nonzero mean tilt currently has implementation
-checks for the Gaussian information shift, zero-tilt equivalence, and the
-declared ridge/static and fixed-joint dynamic gates. It still requires
-independent small-target numerical references, recovery at prespecified
-population tilts, and externally evaluated tilt selection before comparative
-scientific evidence is claimed.
+(\(\delta=0\)). Fixed-rate nonzero mean tilt has implementation checks for the
+Gaussian information shift, zero-tilt equivalence, dense conditional
+references, and the prespecified population-tilt illustrations in
+Section~\ref{sec:supp-oracle-tilt-diagnostics}. These checks do not replace an
+externally evaluated tilt-selection protocol or a repeated-sample calibration
+study, both of which remain necessary before comparative scientific evidence
+is claimed.
 Detailed implementation status, runtime attestations, gate results, and
 withheld-evidence decisions are maintained in the repository audit notes
 rather than in the statistical supplement.
