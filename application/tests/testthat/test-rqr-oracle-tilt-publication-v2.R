@@ -206,3 +206,45 @@ testthat::test_that("recovery gates distinguish adequate and poor fits", {
     config$recovery_gates$endpoint_rmse_over_oracle_width_max
   )
 })
+
+testthat::test_that("benchmark assessment rejects gross recovery failure", {
+  config <- read_config()
+  preflight <- otv2_design_preflight(config)
+  truth <- oti_target_row(preflight$fixed_targets, "SH")
+  n_draw <- 20L
+  exact_lower <- matrix(truth$oracle_lower, nrow = length(truth$oracle_lower),
+                        ncol = n_draw)
+  exact_upper <- matrix(truth$oracle_upper, nrow = length(truth$oracle_upper),
+                        ncol = n_draw)
+  exact_pred <- list(
+    lower_draws = exact_lower,
+    upper_draws = exact_upper,
+    midpoint_draws = 0.5 * (exact_lower + exact_upper),
+    width_draws = exact_upper - exact_lower,
+    lower_mean = rowMeans(exact_lower),
+    upper_mean = rowMeans(exact_upper),
+    midpoint_mean = rowMeans(0.5 * (exact_lower + exact_upper)),
+    width_mean = rowMeans(exact_upper - exact_lower)
+  )
+  good <- otv2_benchmark_assessment(
+    "fixed_design", "SH", list(pred = exact_pred), preflight$fixed_dgp,
+    preflight$fixed_targets, config
+  )
+  testthat::expect_true(good$gross_recovery_pass)
+  testthat::expect_true(good$pathology_pass)
+
+  shifted <- exact_pred
+  shifted$lower_draws <- shifted$lower_draws - 2 *
+    mean(truth$oracle_width)
+  shifted$lower_mean <- rowMeans(shifted$lower_draws)
+  shifted$midpoint_draws <- 0.5 *
+    (shifted$lower_draws + shifted$upper_draws)
+  shifted$midpoint_mean <- rowMeans(shifted$midpoint_draws)
+  shifted$width_draws <- shifted$upper_draws - shifted$lower_draws
+  shifted$width_mean <- rowMeans(shifted$width_draws)
+  bad <- otv2_benchmark_assessment(
+    "fixed_design", "SH", list(pred = shifted), preflight$fixed_dgp,
+    preflight$fixed_targets, config
+  )
+  testthat::expect_false(bad$gross_recovery_pass)
+})

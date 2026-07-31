@@ -421,7 +421,23 @@ if (identical(mode, "benchmark")) {
                           tolower(specification$target), "_benchmark.rds")
     )
     otf_atomic_save_rds(result, path, compress = FALSE)
-    data.frame(
+    assessment <- otv2_benchmark_assessment(
+      family = specification$family,
+      target = specification$target,
+      result = result,
+      dgp = if (identical(specification$family, "fixed_design")) {
+        preflight$fixed_dgp
+      } else {
+        preflight$dlm_dgp
+      },
+      targets = if (identical(specification$family, "fixed_design")) {
+        preflight$fixed_targets
+      } else {
+        preflight$dlm_targets
+      },
+      config = config
+    )
+    cbind(data.frame(
       family = specification$family, target = specification$target,
       chain = as.integer(config$benchmark$chain),
       elapsed_seconds = as.numeric(difftime(Sys.time(), started, units = "secs")),
@@ -429,14 +445,16 @@ if (identical(mode, "benchmark")) {
       numerical_repair_count = result$chain_summary$numerical_repair_count,
       promotion_eligible = result$chain_summary$promotion_eligible,
       worker_sha256 = oti_file_sha256(path), stringsAsFactors = FALSE
-    )
+    ), assessment[, setdiff(names(assessment), c("family", "target")),
+                   drop = FALSE])
   })
   benchmark <- do.call(rbind, rows)
   benchmark$pass <- with(
     benchmark,
     elapsed_seconds <= config$benchmark$maximum_elapsed_seconds &
       worker_bytes <= config$benchmark$maximum_worker_bytes &
-      numerical_repair_count == 0L & promotion_eligible
+      numerical_repair_count == 0L & promotion_eligible &
+      gross_recovery_pass & pathology_pass
   )
   otf_atomic_write_csv(benchmark, file.path(output_root, "benchmark_summary.csv"))
   passed <- nrow(benchmark) == 2L && all(benchmark$pass)

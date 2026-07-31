@@ -954,6 +954,46 @@ otv2_recovery_summary <- function(family, curves, metrics, config) {
   )
 }
 
+otv2_benchmark_assessment <- function(family, target, result, dgp, targets,
+                                      config) {
+  truth <- oti_target_row(targets, target)
+  x <- if (identical(family, "fixed_design")) dgp$x else dgp$time
+  curves <- oti_curve_frame(family, target, x, dgp$y, result$pred, truth)
+  metrics <- oti_interval_metrics(result$pred, truth, dgp$y)
+  recovery <- otv2_recovery_summary(family, curves, metrics, config)
+  gates <- config$recovery_gates
+  gross_recovery_pass <- with(
+    recovery,
+    is.finite(endpoint_rmse_over_oracle_width) &
+      endpoint_rmse_over_oracle_width <=
+        2 * gates$endpoint_rmse_over_oracle_width_max &
+      is.finite(mean_width_ratio) &
+      mean_width_ratio >= max(0, gates$mean_width_ratio_min - 0.20) &
+      mean_width_ratio <= gates$mean_width_ratio_max + 0.20 &
+      abs(lower_bias_over_oracle_width) <=
+        2 * gates$absolute_endpoint_bias_over_oracle_width_max &
+      abs(upper_bias_over_oracle_width) <=
+        2 * gates$absolute_endpoint_bias_over_oracle_width_max
+  )
+  pathology_pass <- if (identical(family, "dlm")) {
+    pathology <- result$pathology
+    nrow(pathology) == 1L && is.finite(pathology$remote_draw_fraction) &&
+      pathology$remote_draw_fraction <=
+        config$diagnostics$maximum_remote_draw_fraction
+  } else TRUE
+  data.frame(
+    family = family, target = target,
+    endpoint_rmse_over_oracle_width =
+      recovery$endpoint_rmse_over_oracle_width,
+    mean_width_ratio = recovery$mean_width_ratio,
+    lower_bias_over_oracle_width = recovery$lower_bias_over_oracle_width,
+    upper_bias_over_oracle_width = recovery$upper_bias_over_oracle_width,
+    gross_recovery_pass = gross_recovery_pass,
+    pathology_pass = pathology_pass,
+    stringsAsFactors = FALSE
+  )
+}
+
 otv2_summarize_cell <- function(family, target, chain_results, dgp, targets,
                                 config) {
   truth <- oti_target_row(targets, target)

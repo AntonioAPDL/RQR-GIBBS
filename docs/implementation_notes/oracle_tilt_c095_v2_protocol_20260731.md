@@ -97,8 +97,10 @@ The workflow has four modes and fails closed between them.
    covariances, selected cross-time sampled covariances, missing-measurement
    omission, and repair counts against a dense Gaussian reference.
 3. `benchmark` runs one complete SH chain per family under the exact isolated
-   runtime and verifies elapsed time, artifact size, provenance, and zero
-   numerical repairs.
+   runtime and verifies elapsed time, artifact size, provenance, zero
+   numerical repairs, and deliberately loose recovery/pathology screens. The
+   loose screens stop a grossly invalid fit without substituting for the
+   strict multi-chain recovery and diagnostic gates used by `execute`.
 4. `execute` runs six cells sequentially. Only the chains inside the current
    cell may run in parallel. Every four- or five-chain cell must pass before the
    next cell starts.
