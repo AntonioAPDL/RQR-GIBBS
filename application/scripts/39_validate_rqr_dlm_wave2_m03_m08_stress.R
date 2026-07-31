@@ -405,7 +405,7 @@ for (index in seq_along(results)) {
   reproducible <- isTRUE(result$ok) && all(vapply(
     result$fits, `[[`, logical(1L), "reproducibility_eligible"
   ))
-  replica_operational <- TRUE
+  replica_operational <- NA
   if (isTRUE(result$ok) && identical(case$method, "M03")) {
     replica_operational <- all(vapply(result$fits, function(fit) {
       isTRUE(fit$replica_exchange_operational)
@@ -490,7 +490,9 @@ all_pass <- all(summary$fit_success) &&
   all(summary$all_diagnostics_pass) &&
   all(summary$exact_joint_target) &&
   all(summary$numerical_repair_count == 0L) &&
-  all(summary$replica_exchange_operational) &&
+  all(summary$replica_exchange_operational[
+    summary$method == "M03"
+  ]) &&
   (!nzchar(expected_commit) || all(summary$reproducibility_eligible))
 manifest <- list(
   schema_version = "rqrgibbs_dlm_wave2_stress_validation/1.0.0",
