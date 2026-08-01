@@ -17,7 +17,7 @@
   },
   "fixed_design": {
     "seed": 202608011,
-    "n": 1200,
+    "n": 2400,
     "basis": "empirical_orthogonal_cubic_bspline",
     "basis_contract": {
       "degree": 3,

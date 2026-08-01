@@ -91,6 +91,7 @@ testthat::test_that("config validation rejects silent design drift", {
 testthat::test_that("cubic spline basis is orthogonal and truth-exact", {
   preflight <- otv3_design_preflight(read_config())
   basis <- preflight$fixed_dgp$basis
+  testthat::expect_equal(length(preflight$fixed_dgp$y), 2400L)
   testthat::expect_equal(basis$rank, 8L)
   testthat::expect_equal(
     unname(basis$gram), diag(8L), tolerance = 1e-12

@@ -63,7 +63,11 @@ enters these fits.
 
 ## Fixed-design construction
 
-The design contains `n = 1200` equally spaced points on `[-1, 1]`. A cubic
+The design contains `n = 2400` equally spaced points on `[-1, 1]`. This size
+was selected before the full grid because a bound one-chain diagnostic at
+`n = 1200` narrowly under-recovered the prespecified scale contrast; doubling
+the fixed design moved endpoint, high-scale, and contrast errors inside their
+strict gates without changing the population functions or fitted model. A cubic
 B-spline basis with four fixed internal knots and eight columns defines both
 the nonlinear mean and positive scale functions. The population functions are
 linear in the raw B-spline basis. The fitted design is a deterministic QR

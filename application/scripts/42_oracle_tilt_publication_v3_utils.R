@@ -61,7 +61,7 @@ otv3_validate_config <- function(config) {
     oti_stop("The v3 source law must be standardized AL_0.80(0,1).")
   }
   fixed <- config$fixed_design %||% list()
-  if (otv3_integer_scalar(fixed$n, "fixed_design$n", 20L) != 1200L ||
+  if (otv3_integer_scalar(fixed$n, "fixed_design$n", 20L) != 2400L ||
       !identical(as.character(fixed$basis),
                  "empirical_orthogonal_cubic_bspline") ||
       otv3_integer_scalar(

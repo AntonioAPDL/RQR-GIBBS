@@ -171,7 +171,7 @@ receipt <- list(
   runtime_tree_digest = closeout$runtime_tree_digest,
   coverage_level = 0.95,
   innovation_contract = "affinely standardized AL_0.80(0,1)",
-  fixed_design_n = 1200L, dlm_T = 1200L, dlm_n_observed = 1178L,
+  fixed_design_n = 2400L, dlm_T = 1200L, dlm_n_observed = 1178L,
   fixed_design_contract = "eight-dimensional orthogonalized cubic B-spline",
   dynamic_contract = paste(
     "four-state local-linear plus regularized Fourier seasonal harmonic",
