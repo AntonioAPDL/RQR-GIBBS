@@ -52,6 +52,16 @@ layer for the standalone article.
   monitoring, fixed thread settings, sampled resource limits, signal cleanup,
   and recursive artifact hashing. **scripts/41_package_oracle_tilt_v2_evidence.R**
   accepts only a fully monitored, strict-passing execute bundle.
+- **scripts/42_run_oracle_tilt_publication_v3.R** defines the richer
+  single-data replacement: an exactly representable nonlinear,
+  heteroscedastic cubic-spline regression and a four-state local-linear plus
+  deterministic-seasonal DLM with varying population scale. Its 22-gate
+  reference suite includes an innovation-coordinate Gaussian oracle that
+  supports the seasonal block's exact zero evolution variance.
+- **scripts/43_run_oracle_tilt_publication_v3.sh** enforces the fail-closed
+  process-group, thread, sampled-RSS, timeout, free-space, and artifact-hash
+  contract. **scripts/43_package_oracle_tilt_v3_evidence.R** can publish only
+  a complete strict-passing 27-chain run and never copies fitted objects.
 
 Install and run the native gates from the repository root:
 
@@ -150,8 +160,20 @@ The fixed-design v2 scan composes two complete exact Gibbs transitions between
 its 6,000 retained draws; the DLM scan retains one transition per iteration.
 This distinction is explicit in the configuration and fit provenance.
 Within a cell, execution uses deterministic two-chain batches and fully reaps
-one batch before starting the next, preserving the monitored three-process and
-four-thread ceiling without transient worker overlap.
+one batch before starting the next, avoiding transient worker overlap. The
+shell monitor permits at most three R processes, seven total OS processes, and
+eight total threads so short-lived provenance helpers are counted rather than
+mislabeled as chain workers.
+
+The prospective version-3 illustration protocol is frozen in
+`docs/implementation_notes/oracle_tilt_c095_v3_protocol_20260801.md`. It does
+not modify the validated version-2 figures unless its source tests, exact-
+runtime preflight, 22 independent conditional references, representative
+benchmark, all six model/target cells, compact-evidence packager, and figure
+regeneration pass. The response law remains standardized `AL_0.80`, content
+remains `0.95`, and all three tilts remain exact population-oracle values; the
+new construction changes only the informativeness of the covariate/time
+patterns and their prespecified recovery checks.
 
 The tracked high-content forensic configuration is
 `config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.

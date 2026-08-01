@@ -6,6 +6,10 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `implementation_notes/oracle_tilt_c095_v3_protocol_20260801.md` freezes the
+  nonlinear heteroscedastic fixed-design and seasonal varying-scale DLM
+  single-data illustration protocol, exact-oracle targets, independent
+  references, resource contract, and atomic promotion rules.
 - `audits/oracle_tilt_c095_v2_validation_closeout_20260801.md` records the
   successful exact-source validation, all six strict-pass cells, compact
   evidence hashes, resource envelope, and manuscript-promotion decision.
