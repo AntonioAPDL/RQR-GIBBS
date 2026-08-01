@@ -165,7 +165,7 @@ config <- jsonlite::read_json(
 )
 otv3_validate_config(config)
 receipt <- list(
-  schema_version = "rqrgibbs_oracle_tilt_evidence/3.0.0",
+  schema_version = "rqrgibbs_oracle_tilt_evidence/3.1.0",
   source_commit = closeout$source_commit,
   config_sha256 = closeout$config_sha256,
   runtime_tree_digest = closeout$runtime_tree_digest,
@@ -173,6 +173,10 @@ receipt <- list(
   innovation_contract = "affinely standardized AL_0.80(0,1)",
   fixed_design_n = 2400L, dlm_T = 1200L, dlm_n_observed = 1178L,
   fixed_design_contract = "eight-dimensional orthogonalized cubic B-spline",
+  fixed_design_initialization = paste(
+    "four data-derived known-law absolute-moment profiles;",
+    "population endpoint curves not used; target unchanged"
+  ),
   dynamic_contract = paste(
     "four-state local-linear plus regularized Fourier seasonal harmonic",
     "with covariate-dependent population scale"
@@ -209,6 +213,11 @@ writeLines(c(
     "The static construction uses an orthogonalized cubic B-spline basis;",
     "the dynamic construction combines an exact continuous-time local-linear",
     "block with one regularized Fourier seasonal harmonic."
+  ),
+  paste(
+    "Four static starts are dispersed around a data-derived first-absolute-",
+    "moment pilot. They use standardized population endpoint anchors but not",
+    "the population endpoint curves and do not alter the target."
   ),
   paste(
     "These artifacts summarize loss-based generalized posteriors; they do",

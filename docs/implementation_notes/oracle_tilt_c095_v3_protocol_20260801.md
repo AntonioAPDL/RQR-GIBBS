@@ -84,7 +84,27 @@ width and a maximum row-wise half-width. The uniquely selected value is
 
 Four chains retain 6,000 draws after 1,500 warm-up transitions. Each recorded
 iteration composes two complete exact fixed-design Gibbs transitions. Latent
-draws are not retained.
+draws are not retained. The four chains use a deterministic, data-derived
+moment pilot rather than the fixed-design API's generic initialization. The
+pilot estimates the conditional mean by least squares and the positive scale
+curve by projecting absolute residuals and dividing by the known standardized
+innovation first absolute moment. The target-specific standardized endpoint
+anchors are then applied to that estimated location--scale pair. Centered,
+narrow, wide, and shape-stress versions disperse the four starts. They do not
+use the population endpoint curves, alter the prior, or change the generalized
+posterior target.
+
+This initialization contract was added after the first exact version-3 grid
+stopped at the ordinary fixed-design RQR cell. All four default-start chains
+were exact and repair-free, but occupied two separated low-density regions:
+their fitted empirical losses exceeded the loss at the representable
+population-oracle curve by about 59--77 units, whereas the corresponding
+ridge-prior difference was only about 2--3 units. A bounded four-chain check
+with the data-derived moment pilot reached the relevant region and passed the
+prespecified modern diagnostics and recovery gates without replica exchange,
+changing the spline dimension, weakening the DGP, or relaxing a threshold.
+The failed run remains local diagnostic evidence and is not manuscript
+evidence.
 
 ## Dynamic construction
 
@@ -138,8 +158,10 @@ Before MCMC, the workflow must pass all deterministic design gates:
 9. exact missing mask;
 10. at least ten expected observations in every rarer endpoint tail;
 11. at least two expected rarer-tail observations in every scale quintile;
-12. a 27-chain fit plan with unique seeds; and
-13. absence of Cornish--Fisher use.
+12. a 27-chain fit plan with unique seeds;
+13. twelve distinct, positive-width static initialization profiles whose
+    target-change flags are false; and
+14. absence of Cornish--Fisher use.
 
 The conditional reference suite contains 24 gates. It checks the eight-
 dimensional static Gaussian root conditional by analytic moments and Monte

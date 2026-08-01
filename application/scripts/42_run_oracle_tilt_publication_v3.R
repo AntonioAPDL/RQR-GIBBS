@@ -237,6 +237,8 @@ write_preflight_artifacts <- function(root, preflight) {
     static_basis_audit.csv = basis_audit,
     static_basis_transform.csv = transform,
     static_projection_audit.csv = preflight$projection_audit,
+    static_initialization_audit.csv =
+      preflight$fixed_initialization_audit,
     dynamic_projection_audit.csv = preflight$dynamic_projection_audit,
     static_prior_predictive.csv = preflight$static_prior_audit,
     dlm_prior_predictive.csv = preflight$dlm_prior_audit,
@@ -414,7 +416,8 @@ if (identical(mode, "benchmark")) {
       otv3_fixed_chain(
         config, preflight$fixed_dgp, preflight$fixed_targets,
         specification$target, as.integer(config$benchmark$chain),
-        provenance_control
+        provenance_control,
+        preflight$fixed_initializations[[specification$target]]$profiles
       )
     } else {
       otv3_dlm_chain(
@@ -513,7 +516,8 @@ run_worker <- function(family, target, chain) {
   }
   result <- if (identical(family, "fixed_design")) {
     otv3_fixed_chain(
-      config, dgp, target_values, target, chain, provenance_control
+      config, dgp, target_values, target, chain, provenance_control,
+      preflight$fixed_initializations[[target]]$profiles
     )
   } else {
     otv3_dlm_chain(

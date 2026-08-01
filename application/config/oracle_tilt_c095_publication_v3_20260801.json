@@ -1,5 +1,5 @@
 {
-  "schema_version": "rqrgibbs_oracle_tilt_publication_config/3.0.0",
+  "schema_version": "rqrgibbs_oracle_tilt_publication_config/3.1.0",
   "execution_authorized": true,
   "coverage_level": 0.95,
   "learning_rate": 1,
@@ -41,6 +41,24 @@
     },
     "n_chains": 4,
     "workers": 2,
+    "initial_profiles": [
+      "moment_centered",
+      "moment_narrow",
+      "moment_wide",
+      "moment_shape_stress"
+    ],
+    "initialization_contract": {
+      "pilot": "known_law_first_absolute_moment",
+      "expected_standardized_absolute_moment": 0.7332205895378953,
+      "uses_observed_response": true,
+      "uses_population_endpoint_anchors": true,
+      "uses_population_endpoint_curves": false,
+      "width_multipliers": [1.0, 0.55, 1.45, 0.75],
+      "shape_stress_basis_indices": [2, 7],
+      "shape_stress_coefficients": [0.35, -0.30],
+      "minimum_initial_width": 0.05,
+      "target_changed": false
+    },
     "mcmc_control": {
       "n_burn": 1500,
       "n_mcmc": 6000,

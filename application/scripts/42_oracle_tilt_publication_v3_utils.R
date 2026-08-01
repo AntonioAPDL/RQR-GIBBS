@@ -1,11 +1,11 @@
-otv3_schema <- function() "rqrgibbs_oracle_tilt_publication/3.0.0"
+otv3_schema <- function() "rqrgibbs_oracle_tilt_publication/3.1.0"
 
 otv3_config_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_config/3.0.0"
+  "rqrgibbs_oracle_tilt_publication_config/3.1.0"
 }
 
 otv3_preflight_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_preflight/1.0.0"
+  "rqrgibbs_oracle_tilt_publication_preflight/1.1.0"
 }
 
 otv3_close <- function(x, y, tolerance = 1e-12) {
@@ -121,6 +121,50 @@ otv3_validate_config <- function(config) {
       !identical(as.character(ridge$selection_rule), "largest_passing") ||
       !otv3_close(ridge$expected_tau2, 0.25)) {
     oti_stop("The fixed-design prior-selection contract changed.")
+  }
+  fixed_profiles <- as.character(unlist(fixed$initial_profiles))
+  expected_fixed_profiles <- c(
+    "moment_centered", "moment_narrow", "moment_wide",
+    "moment_shape_stress"
+  )
+  initialization <- fixed$initialization_contract %||% list()
+  if (!identical(fixed_profiles, expected_fixed_profiles) ||
+      !identical(
+        as.character(initialization$pilot),
+        "known_law_first_absolute_moment"
+      ) ||
+      !otv3_close(
+        initialization$expected_standardized_absolute_moment,
+        0.7332205895378953
+      ) ||
+      !identical(initialization$uses_observed_response, TRUE) ||
+      !identical(initialization$uses_population_endpoint_anchors, TRUE) ||
+      !identical(initialization$uses_population_endpoint_curves, FALSE) ||
+      !identical(
+        otv3_numeric_vector(
+          initialization$width_multipliers,
+          "fixed-design initialization width multipliers",
+          lower = .Machine$double.eps
+        ),
+        c(1, 0.55, 1.45, 0.75)
+      ) ||
+      !identical(
+        otv3_numeric_vector(
+          initialization$shape_stress_basis_indices,
+          "fixed-design shape-stress indices", lower = 1
+        ),
+        c(2, 7)
+      ) ||
+      !identical(
+        otv3_numeric_vector(
+          initialization$shape_stress_coefficients,
+          "fixed-design shape-stress coefficients"
+        ),
+        c(0.35, -0.30)
+      ) ||
+      !otv3_close(initialization$minimum_initial_width, 0.05) ||
+      !identical(initialization$target_changed, FALSE)) {
+    oti_stop("The fixed-design initialization contract changed.")
   }
   dlm <- config$dlm %||% list()
   if (otv3_integer_scalar(dlm$T, "dlm$T", 20L) != 1200L ||
@@ -543,6 +587,141 @@ otv3_fixed_design_dgp <- function(config, law) {
   )
 }
 
+otv3_exact_zero_rqr_oracle <- function(oracle) {
+  selected <- as.character(oracle$target) == "RQR"
+  if (!any(selected) ||
+      max(abs(oracle$delta_innovation[selected])) > 1e-10 ||
+      max(abs(oracle$retained_mean_innovation[selected])) > 1e-10) {
+    oti_stop("The numerical RQR oracle is not compatible with exact zero tilt.")
+  }
+  oracle$delta_innovation[selected] <- 0
+  oracle$retained_mean_innovation[selected] <- 0
+  oracle
+}
+
+otv3_target_mean_tilt <- function(target, truth) {
+  target <- toupper(as.character(target)[1L])
+  if (identical(target, "RQR")) {
+    observed <- is.finite(truth$mean_tilt)
+    if (!any(observed) || max(abs(truth$mean_tilt[observed])) > 1e-10) {
+      oti_stop("The ordinary RQR target is not numerically zero-tilted.")
+    }
+    return(0)
+  }
+  truth$mean_tilt
+}
+
+otv3_static_initialization_profiles <- function(config, dgp, truth, law) {
+  contract <- config$fixed_design$initialization_contract
+  profiles <- as.character(unlist(config$fixed_design$initial_profiles))
+  multipliers <- as.numeric(unlist(contract$width_multipliers))
+  names(multipliers) <- profiles
+
+  absolute_moment <- stats::integrate(
+    function(value) abs(value) * law$d(value),
+    lower = -Inf, upper = Inf, rel.tol = 1e-10,
+    subdivisions = 1000L
+  )$value
+  if (!otv3_close(
+    absolute_moment,
+    contract$expected_standardized_absolute_moment,
+    tolerance = 1e-10
+  )) {
+    oti_stop("The standardized innovation absolute-moment receipt changed.")
+  }
+
+  X <- dgp$X
+  mean_beta <- drop(qr.solve(X, dgp$y))
+  residual <- dgp$y - drop(X %*% mean_beta)
+  scale_beta <- drop(qr.solve(X, abs(residual))) / absolute_moment
+  scale_pilot <- drop(X %*% scale_beta)
+  if (any(!is.finite(scale_pilot)) || min(scale_pilot) <= 0) {
+    oti_stop("The fixed-design moment scale pilot is not strictly positive.")
+  }
+
+  standardized_lower <-
+    (truth$oracle_lower - dgp$mean_truth) / dgp$scale_truth
+  standardized_upper <-
+    (truth$oracle_upper - dgp$mean_truth) / dgp$scale_truth
+  lower_anchor <- mean(standardized_lower)
+  upper_anchor <- mean(standardized_upper)
+  if (max(abs(standardized_lower - lower_anchor)) > 1e-10 ||
+      max(abs(standardized_upper - upper_anchor)) > 1e-10 ||
+      lower_anchor >= upper_anchor) {
+    oti_stop("The population endpoint anchors are not constant and ordered.")
+  }
+
+  lower_beta <- mean_beta + lower_anchor * scale_beta
+  upper_beta <- mean_beta + upper_anchor * scale_beta
+  midpoint_beta <- 0.5 * (lower_beta + upper_beta)
+  half_width_beta <- 0.5 * (upper_beta - lower_beta)
+  stress <- numeric(ncol(X))
+  stress_indices <- as.integer(unlist(contract$shape_stress_basis_indices))
+  stress[stress_indices] <-
+    as.numeric(unlist(contract$shape_stress_coefficients))
+
+  initializations <- lapply(profiles, function(profile) {
+    multiplier <- multipliers[[profile]]
+    midpoint <- midpoint_beta
+    if (identical(profile, "moment_shape_stress")) {
+      midpoint <- midpoint + stress
+    }
+    list(
+      beta_root1 = midpoint - multiplier * half_width_beta,
+      beta_root2 = midpoint + multiplier * half_width_beta
+    )
+  })
+  names(initializations) <- profiles
+
+  target <- unique(as.character(truth$target))
+  if (length(target) != 1L) {
+    oti_stop("A static initialization set must contain exactly one target.")
+  }
+  audit <- do.call(rbind, lapply(profiles, function(profile) {
+    initialization <- initializations[[profile]]
+    eta1 <- drop(X %*% initialization$beta_root1)
+    eta2 <- drop(X %*% initialization$beta_root2)
+    lower <- pmin(eta1, eta2)
+    upper <- pmax(eta1, eta2)
+    oracle_width <- mean(truth$oracle_width)
+    data.frame(
+      target = target, profile = profile,
+      initialization_digest = otf_object_sha256(initialization),
+      absolute_moment = absolute_moment,
+      mean_pilot_rmse = sqrt(mean(
+        (drop(X %*% mean_beta) - dgp$mean_truth)^2
+      )),
+      scale_pilot_relative_rmse = sqrt(mean(
+        (scale_pilot - dgp$scale_truth)^2
+      )) / mean(dgp$scale_truth),
+      endpoint_rmse_over_oracle_width = sqrt(mean(c(
+        (lower - truth$oracle_lower)^2,
+        (upper - truth$oracle_upper)^2
+      ))) / oracle_width,
+      mean_width_ratio = mean(upper - lower) / oracle_width,
+      minimum_width = min(upper - lower),
+      maximum_width = max(upper - lower),
+      target_changed = FALSE,
+      stringsAsFactors = FALSE
+    )
+  }))
+  if (any(audit$minimum_width < contract$minimum_initial_width) ||
+      anyDuplicated(audit$initialization_digest) ||
+      any(audit$target_changed)) {
+    oti_stop("The fixed-design initialization profiles are not admissible.")
+  }
+  list(
+    profiles = initializations,
+    audit = audit,
+    mean_beta_pilot = mean_beta,
+    scale_beta_pilot = scale_beta,
+    absolute_moment = absolute_moment,
+    population_endpoint_anchors = c(
+      lower = lower_anchor, upper = upper_anchor
+    )
+  )
+}
+
 otv3_dlm_dgp <- function(config, law) {
   time_contract <- otv3_time_grid(config)
   prior <- otv3_dlm_prior_audit(config)
@@ -788,10 +967,13 @@ otv3_scale_information <- function(config, oracle, fixed_dgp, dlm_dgp) {
 otv3_plan <- function(config) {
   rows <- list()
   for (target in c("RQR", "ET", "SH")) {
+    fixed_profiles <- as.character(unlist(
+      config$fixed_design$initial_profiles
+    ))
     rows[[length(rows) + 1L]] <- data.frame(
       family = "fixed_design", target = target,
-      chain = seq_len(as.integer(config$fixed_design$n_chains)),
-      profile = "seed_only",
+      chain = seq_along(fixed_profiles),
+      profile = fixed_profiles,
       n_burn = as.integer(config$fixed_design$mcmc_control$n_burn),
       n_mcmc = as.integer(config$fixed_design$mcmc_control$n_mcmc),
       stringsAsFactors = FALSE
@@ -831,7 +1013,9 @@ otv3_chain_batches <- function(chains, workers) {
 otv3_design_preflight <- function(config) {
   otv3_validate_config(config)
   law <- otv3_law(config)
-  oracle <- oti_oracle_targets(law, config$coverage_level, config$targets)
+  oracle <- otv3_exact_zero_rqr_oracle(oti_oracle_targets(
+    law, config$coverage_level, config$targets
+  ))
   fixed <- otv3_fixed_design_dgp(config, law)
   dlm <- otv3_dlm_dgp(config, law)
   fixed_targets <- oti_targets_by_index(
@@ -840,6 +1024,15 @@ otv3_design_preflight <- function(config) {
   dlm_targets <- oti_targets_by_index(
     dlm$mean_truth, dlm$scale_truth, oracle, dlm$observed
   )
+  fixed_initializations <- lapply(c("RQR", "ET", "SH"), function(target) {
+    otv3_static_initialization_profiles(
+      config, fixed, oti_target_row(fixed_targets, target), law
+    )
+  })
+  names(fixed_initializations) <- c("RQR", "ET", "SH")
+  fixed_initialization_audit <- do.call(rbind, lapply(
+    fixed_initializations, `[[`, "audit"
+  ))
   tail <- otv3_tail_information(config, oracle, sum(dlm$observed))
   projection <- otv3_projection_audit(fixed, fixed_targets)
   dynamic_projection <- otv3_dynamic_projection_audit(dlm, dlm_targets)
@@ -858,7 +1051,8 @@ otv3_design_preflight <- function(config) {
       "seasonal_covariance_recursion", "dynamic_observability_rank",
       "static_scale_floor", "dynamic_scale_floor",
       "scale_quintile_rare_tail_count", "missing_mask", "fit_plan_size",
-      "cornish_fisher_absent"
+      "static_initialization_count", "static_initialization_minimum_width",
+      "static_initialization_unique_digests", "cornish_fisher_absent"
     ),
     value = c(
       min(c(tail$fixed_design_expected_rare_count,
@@ -869,7 +1063,10 @@ otv3_design_preflight <- function(config) {
       seasonal_covariance$maximum_covariance_recursion_error,
       observability$rank, min(fixed$scale_truth), min(dlm$scale_truth),
       min(scale_information$expected_rare_tail_count),
-      sum(!dlm$observed), nrow(otv3_plan(config)), 0
+      sum(!dlm$observed), nrow(otv3_plan(config)),
+      nrow(fixed_initialization_audit),
+      min(fixed_initialization_audit$minimum_width),
+      length(unique(fixed_initialization_audit$initialization_digest)), 0
     ),
     threshold = c(
       config$preflight_gates$minimum_expected_rare_tail_count,
@@ -884,11 +1081,13 @@ otv3_design_preflight <- function(config) {
       config$dlm$scale_contract$minimum_scale,
       config$preflight_gates$
         minimum_expected_rare_tail_count_per_scale_quintile,
-      config$dlm$expected_missing, 27, 0
+      config$dlm$expected_missing, 27, 12,
+      config$fixed_design$initialization_contract$minimum_initial_width,
+      12, 0
     ),
     comparison = c(
       ">=", "==", "<=", "<=", "<=", "<=", "<=", "==",
-      ">=", ">=", ">=", "==", "==", "=="
+      ">=", ">=", ">=", "==", "==", "==", ">=", "==", "=="
     ),
     stringsAsFactors = FALSE
   )
@@ -911,6 +1110,8 @@ otv3_design_preflight <- function(config) {
     static_prior_audit = fixed$prior_audit$table,
     dlm_prior_audit = dlm$prior_audit$table,
     seasonal_prior_audit = dlm$seasonal_prior_audit$table,
+    fixed_initializations = fixed_initializations,
+    fixed_initialization_audit = fixed_initialization_audit,
     fixed_horizon_audit = dlm$fixed_horizon_audit,
     plan = otv3_plan(config), gates = gates,
     pass = all(gates$pass)
@@ -1367,8 +1568,21 @@ otv3_scalar_draw_matrix <- function(family, pred, truth, y, coverage_level,
 }
 
 otv3_fixed_chain <- function(config, dgp, targets, target, chain,
-                             provenance_control, mcmc_override = NULL) {
+                             provenance_control, initializations = NULL,
+                             mcmc_override = NULL) {
   truth <- oti_target_row(targets, target)
+  profiles <- as.character(unlist(config$fixed_design$initial_profiles))
+  profile <- profiles[[chain]]
+  if (is.null(initializations)) {
+    initializations <- otv3_static_initialization_profiles(
+      config, dgp, truth, otv3_law(config)
+    )$profiles
+  }
+  init <- initializations[[profile]]
+  if (!is.list(init) || is.null(init$beta_root1) ||
+      is.null(init$beta_root2)) {
+    oti_stop("The requested fixed-design initialization is unavailable.")
+  }
   control <- config$fixed_design$mcmc_control
   if (!is.null(mcmc_override)) control <- modifyList(control, mcmc_override)
   seed <- otp_seed(config, "fixed_design", target, chain)
@@ -1376,10 +1590,11 @@ otv3_fixed_chain <- function(config, dgp, targets, target, chain,
   elapsed <- system.time(fit <- rqrgibbs::rqr_mcmc_fit(
     y = dgp$y, X = dgp$X, coverage_level = config$coverage_level,
     learning_rate = config$learning_rate,
-    learning_rate_mode = "fixed_rate", mean_tilt = truth$mean_tilt,
+    learning_rate_mode = "fixed_rate",
+    mean_tilt = otv3_target_mean_tilt(target, truth),
     beta_prior_obj = oti_ridge_prior(dgp$ridge_tau2),
     numerical_policy = "fail", provenance_control = provenance_control,
-    mcmc_control = control
+    mcmc_control = control, init = init
   ))
   pred <- rqrgibbs::predict_interval(fit, X_new = dgp$X)
   list(
@@ -1389,7 +1604,7 @@ otv3_fixed_chain <- function(config, dgp, targets, target, chain,
     ),
     chain_summary = cbind(
       oti_chain_summary("fixed_design", target, chain, seed, fit, elapsed),
-      profile = "seed_only", otp_provenance_summary(fit)
+      profile = profile, otp_provenance_summary(fit)
     )
   )
 }
@@ -1775,7 +1990,8 @@ otv3_compact_files <- function() {
     "config.json", "source_state.json", "runtime_binding.json",
     "design_contract.csv", "oracle_targets.csv", "tail_information.csv",
     "static_basis_audit.csv", "static_basis_transform.csv",
-    "static_projection_audit.csv", "static_prior_predictive.csv",
+    "static_projection_audit.csv", "static_initialization_audit.csv",
+    "static_prior_predictive.csv",
     "dynamic_projection_audit.csv", "dlm_prior_predictive.csv",
     "seasonal_prior_predictive.csv", "dlm_time_contract.csv",
     "fixed_horizon_audit.csv", "seasonal_covariance_audit.csv",

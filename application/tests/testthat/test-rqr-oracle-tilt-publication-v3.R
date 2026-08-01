@@ -33,6 +33,11 @@ testthat::test_that("v3 freezes the 0.80/95-percent exact-oracle contract", {
   testthat::expect_identical(
     config$fixed_design$mcmc_control$kernel_repetitions, 2L
   )
+  testthat::expect_identical(
+    as.character(unlist(config$fixed_design$initial_profiles)),
+    c("moment_centered", "moment_narrow", "moment_wide",
+      "moment_shape_stress")
+  )
   testthat::expect_type(config$execution_authorized, "logical")
   testthat::expect_length(config$execution_authorized, 1L)
 
@@ -71,6 +76,11 @@ testthat::test_that("config validation rejects silent design drift", {
   bad <- config
   bad$fixed_design$mcmc_control$kernel_repetitions <- 1L
   testthat::expect_error(otv3_validate_config(bad), "MCMC contract")
+  bad <- config
+  bad$fixed_design$initialization_contract$width_multipliers[[2L]] <- 0.6
+  testthat::expect_error(
+    otv3_validate_config(bad), "initialization contract"
+  )
   bad <- config
   bad$dlm$mcmc_control$store_state_draws <- TRUE
   testthat::expect_error(otv3_validate_config(bad), "storage contract")
@@ -117,6 +127,48 @@ testthat::test_that("cubic spline basis is orthogonal and truth-exact", {
     preflight$fixed_dgp$scale_ratio >= 2 &&
       preflight$fixed_dgp$scale_ratio <= 2.5
   )
+})
+
+testthat::test_that("static moment starts are data-derived, distinct, and admissible", {
+  preflight <- otv3_design_preflight(read_config())
+  testthat::expect_equal(
+    preflight$oracle$delta_innovation[
+      preflight$oracle$target == "RQR"
+    ],
+    0
+  )
+  testthat::expect_equal(
+    unique(oti_target_row(preflight$fixed_targets, "RQR")$mean_tilt),
+    0
+  )
+  audit <- preflight$fixed_initialization_audit
+  testthat::expect_equal(nrow(audit), 12L)
+  testthat::expect_equal(length(unique(audit$initialization_digest)), 12L)
+  testthat::expect_true(all(audit$minimum_width >= 0.05))
+  testthat::expect_false(any(audit$target_changed))
+  testthat::expect_equal(
+    unique(audit$absolute_moment), 0.7332205895378953,
+    tolerance = 1e-10
+  )
+  for (target in c("RQR", "ET", "SH")) {
+    profiles <- preflight$fixed_initializations[[target]]$profiles
+    testthat::expect_identical(
+      names(profiles),
+      c("moment_centered", "moment_narrow", "moment_wide",
+        "moment_shape_stress")
+    )
+    testthat::expect_true(all(vapply(
+      profiles,
+      function(initialization) {
+        eta1 <- drop(preflight$fixed_dgp$X %*%
+          initialization$beta_root1)
+        eta2 <- drop(preflight$fixed_dgp$X %*%
+          initialization$beta_root2)
+        min(abs(eta2 - eta1)) >= 0.05
+      },
+      logical(1L)
+    )))
+  }
 })
 
 testthat::test_that("seasonal DLM preserves the physical and harmonic contracts", {
@@ -240,7 +292,7 @@ testthat::test_that("chain batches enforce the worker ceiling deterministically"
 testthat::test_that("preflight and independent conditional references pass", {
   config <- read_config()
   preflight <- otv3_design_preflight(config)
-  testthat::expect_equal(nrow(preflight$gates), 14L)
+  testthat::expect_equal(nrow(preflight$gates), 17L)
   testthat::expect_true(all(preflight$gates$pass))
   references <- otv3_reference_suite(config)
   testthat::expect_equal(nrow(references), 24L)

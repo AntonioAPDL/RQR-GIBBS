@@ -58,7 +58,10 @@ layer for the standalone article.
   regularized-seasonal DLM with varying population scale. Its 24-gate
   reference suite includes an innovation-coordinate Gaussian oracle that
   supports positive-semidefinite reference problems and verifies actual
-  four-state path sampling under the strict numerical policy.
+  four-state path sampling under the strict numerical policy. Static chains
+  use four frozen, data-derived moment-pilot starts; the pilot uses the known
+  innovation first absolute moment and standardized endpoint anchors but not
+  the population endpoint curves, and it does not change the target.
 - **scripts/43_run_oracle_tilt_publication_v3.sh** enforces the fail-closed
   process-group, thread, sampled-RSS, timeout, free-space, and artifact-hash
   contract. **scripts/43_package_oracle_tilt_v3_evidence.R** can publish only
@@ -174,7 +177,11 @@ benchmark, all six model/target cells, compact-evidence packager, and figure
 regeneration pass. The response law remains standardized `AL_0.80`, content
 remains `0.95`, and all three tilts remain exact population-oracle values; the
 new construction changes only the informativeness of the covariate/time
-patterns and their prespecified recovery checks.
+patterns and their prespecified recovery checks. A fail-closed first static
+RQR cell exposed inadequate generic initialization for the eight-dimensional
+nonlinear target. Its diagnosis and the common target-preserving moment-start
+correction are recorded in
+`docs/audits/oracle_tilt_c095_v3_static_mixing_reconciliation_20260801.md`.
 
 The tracked high-content forensic configuration is
 `config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.

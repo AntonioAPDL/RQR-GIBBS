@@ -10,6 +10,9 @@ Current oracle-tilt implementation records:
   nonlinear heteroscedastic fixed-design and seasonal varying-scale DLM
   single-data illustration protocol, exact-oracle targets, independent
   references, resource contract, and atomic promotion rules.
+- `audits/oracle_tilt_c095_v3_static_mixing_reconciliation_20260801.md`
+  diagnoses the failed default-start static RQR cell and records the selected
+  data-derived, target-preserving moment initialization correction.
 - `audits/oracle_tilt_c095_v2_validation_closeout_20260801.md` records the
   successful exact-source validation, all six strict-pass cells, compact
   evidence hashes, resource envelope, and manuscript-promotion decision.
