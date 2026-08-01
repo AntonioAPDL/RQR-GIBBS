@@ -174,6 +174,19 @@ testthat::test_that("DGPs and overdispersed paths are deterministic", {
   )
 })
 
+testthat::test_that("chain batches enforce the worker ceiling deterministically", {
+  testthat::expect_identical(
+    unname(otv2_chain_batches(1:4, 2L)), list(1:2, 3:4)
+  )
+  testthat::expect_identical(
+    unname(otv2_chain_batches(1:5, 2L)), list(1:2, 3:4, 5L)
+  )
+  testthat::expect_identical(
+    unname(otv2_chain_batches(1:4, 5L)), list(1:4)
+  )
+  testthat::expect_error(otv2_chain_batches(c(1L, 1L), 2L), "unique")
+})
+
 testthat::test_that("preflight and independent conditional references pass", {
   config <- read_config()
   preflight <- otv2_design_preflight(config)

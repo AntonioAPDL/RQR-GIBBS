@@ -516,6 +516,16 @@ otv2_plan <- function(config) {
   out
 }
 
+otv2_chain_batches <- function(chains, workers) {
+  chains <- as.integer(chains)
+  workers <- otv2_integer_scalar(workers, "workers", 1L)
+  if (!length(chains) || anyNA(chains) || any(chains < 1L) ||
+      anyDuplicated(chains)) {
+    oti_stop("chains must contain unique positive integers.")
+  }
+  split(chains, ceiling(seq_along(chains) / workers))
+}
+
 otv2_design_preflight <- function(config) {
   otv2_validate_config(config)
   law <- otv2_law(config)

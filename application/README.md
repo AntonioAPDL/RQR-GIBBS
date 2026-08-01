@@ -149,6 +149,9 @@ computational and recovery gates and the compact evidence packager succeeds.
 The fixed-design v2 scan composes two complete exact Gibbs transitions between
 its 6,000 retained draws; the DLM scan retains one transition per iteration.
 This distinction is explicit in the configuration and fit provenance.
+Within a cell, execution uses deterministic two-chain batches and fully reaps
+one batch before starting the next, preserving the monitored three-process and
+four-thread ceiling without transient worker overlap.
 
 The tracked high-content forensic configuration is
 `config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.

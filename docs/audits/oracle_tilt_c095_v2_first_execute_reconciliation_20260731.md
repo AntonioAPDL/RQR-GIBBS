@@ -77,3 +77,21 @@ The DLM scan, all population targets, the exact tilt calculations, and all
 predeclared gates remain unchanged. The corrected source must receive a new
 isolated runtime, preflight, reference, and benchmark bundle before execution.
 As before, execution stops after the first failing family/target cell.
+
+## Process-turnover correction before relaunch
+
+The first corrected launch was stopped by the resource monitor after its first
+two fixed-design RQR workers completed. With four chains submitted together to
+dynamic `mclapply` scheduling, a 0.2-second telemetry sample observed the
+parent plus four children during worker turnover: five processes and six
+threads, versus the frozen ceilings of three and four. Only two completed
+worker objects existed, no cell diagnostic had been evaluated, and no later
+cell had started. Peak sampled RSS was about 1.61 GiB, so memory was not the
+cause.
+
+The process and thread ceilings remain unchanged. The runner now partitions
+each cell into deterministic batches of at most two chains, uses one
+prescheduled fork call per batch, and waits for complete child reaping before
+starting the next batch. Chain-specific seeds and contracts are unchanged, so
+this correction affects scheduling and monitorability rather than the
+statistical transition. Unit tests freeze the `2+2` and `2+2+1` batch layouts.

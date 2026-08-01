@@ -101,9 +101,10 @@ The workflow has four modes and fails closed between them.
    numerical repairs, and deliberately loose recovery/pathology screens. The
    loose screens stop a grossly invalid fit without substituting for the
    strict multi-chain recovery and diagnostic gates used by `execute`.
-4. `execute` runs six cells sequentially. Only the chains inside the current
-   cell may run in parallel. Every four- or five-chain cell must pass before the
-   next cell starts.
+4. `execute` runs six cells sequentially. Chains inside the current cell run in
+   deterministic batches of at most two; each batch is fully reaped before the
+   next begins. Every four- or five-chain cell must pass before the next cell
+   starts.
 
 Benchmark mode binds exact-runtime preflight and reference manifests. Execute
 mode additionally binds the benchmark manifest. Every binding includes the

@@ -535,25 +535,26 @@ for (family in c("fixed_design", "dlm")) {
       " chains; workers=", workers
     )
     started <- Sys.time()
-    returns <- if (workers > 1L && .Platform$OS.type != "windows") {
-      parallel::mclapply(
-        chains,
-        function(chain) tryCatch(
-          run_worker(family, target, chain),
-          error = function(error) structure(
-            list(message = conditionMessage(error)), class = "otv2_worker_error"
-          )
-        ),
-        mc.cores = workers, mc.preschedule = FALSE, mc.set.seed = FALSE
-      )
-    } else {
-      lapply(chains, function(chain) tryCatch(
+    run_one <- function(chain) {
+      tryCatch(
         run_worker(family, target, chain),
         error = function(error) structure(
           list(message = conditionMessage(error)), class = "otv2_worker_error"
         )
-      ))
+      )
     }
+    batches <- otv2_chain_batches(chains, workers)
+    returns <- unlist(lapply(batches, function(batch) {
+      if (length(batch) > 1L && .Platform$OS.type != "windows") {
+        parallel::mclapply(
+          batch,
+          run_one,
+          mc.cores = length(batch), mc.preschedule = TRUE, mc.set.seed = FALSE
+        )
+      } else {
+        lapply(batch, run_one)
+      }
+    }), recursive = FALSE, use.names = FALSE)
     failed <- which(vapply(
       returns, inherits, logical(1L), what = "otv2_worker_error"
     ))
