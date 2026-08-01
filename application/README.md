@@ -55,9 +55,10 @@ layer for the standalone article.
 - **scripts/42_run_oracle_tilt_publication_v3.R** defines the richer
   single-data replacement: an exactly representable nonlinear,
   heteroscedastic cubic-spline regression and a four-state local-linear plus
-  deterministic-seasonal DLM with varying population scale. Its 22-gate
+  regularized-seasonal DLM with varying population scale. Its 24-gate
   reference suite includes an innovation-coordinate Gaussian oracle that
-  supports the seasonal block's exact zero evolution variance.
+  supports positive-semidefinite reference problems and verifies actual
+  four-state path sampling under the strict numerical policy.
 - **scripts/43_run_oracle_tilt_publication_v3.sh** enforces the fail-closed
   process-group, thread, sampled-RSS, timeout, free-space, and artifact-hash
   contract. **scripts/43_package_oracle_tilt_v3_evidence.R** can publish only
@@ -168,7 +169,7 @@ mislabeled as chain workers.
 The prospective version-3 illustration protocol is frozen in
 `docs/implementation_notes/oracle_tilt_c095_v3_protocol_20260801.md`. It does
 not modify the validated version-2 figures unless its source tests, exact-
-runtime preflight, 22 independent conditional references, representative
+runtime preflight, 24 independent conditional references, representative
 benchmark, all six model/target cells, compact-evidence packager, and figure
 regeneration pass. The response law remains standardized `AL_0.80`, content
 remains `0.95`, and all three tilts remain exact population-oracle values; the

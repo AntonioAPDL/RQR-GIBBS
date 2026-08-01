@@ -155,13 +155,16 @@ testthat::test_that("seasonal DLM preserves the physical and harmonic contracts"
   matrices <- otv3_local_linear_matrices(1 / 1200, 0.04, 0.09)
   testthat::expect_equal(dgp$model$GG[1:2, 1:2, 1L], matrices$G)
   testthat::expect_equal(dgp$W[1:2, 1:2, 1200L], matrices$W)
-  testthat::expect_equal(dgp$W[3:4, 3:4, ], array(0, c(2, 2, 1200)))
+  expected_seasonal_W <- array(
+    rep(diag(1e-6, 2L), 1200L), c(2L, 2L, 1200L)
+  )
+  testthat::expect_equal(dgp$W[3:4, 3:4, ], expected_seasonal_W)
   testthat::expect_equal(matrices$W, t(matrices$W), tolerance = 1e-15)
   testthat::expect_true(min(eigen(matrices$W, symmetric = TRUE)$values) > 0)
   testthat::expect_equal(preflight$observability_audit$rank, 4L)
   testthat::expect_lt(
     preflight$seasonal_covariance_audit$
-      maximum_covariance_invariance_error, 1e-10
+      maximum_covariance_recursion_error, 1e-10
   )
   testthat::expect_true(all(
     preflight$dynamic_projection_audit$max_absolute_residual < 1e-10
@@ -239,7 +242,7 @@ testthat::test_that("preflight and independent conditional references pass", {
   testthat::expect_equal(nrow(preflight$gates), 14L)
   testthat::expect_true(all(preflight$gates$pass))
   references <- otv3_reference_suite(config)
-  testthat::expect_equal(nrow(references), 22L)
+  testthat::expect_equal(nrow(references), 24L)
   testthat::expect_true(all(references$pass))
   testthat::expect_equal(
     references$value[references$gate == "dlm_R_repair_count"], 0
@@ -249,6 +252,11 @@ testthat::test_that("preflight and independent conditional references pass", {
   )
   testthat::expect_equal(
     references$value[references$gate == "seasonal_cpp_repair_count"], 0
+  )
+  testthat::expect_equal(
+    references$value[
+      references$gate == "seasonal_cpp_sample_finite_zero_repair"
+    ], 1
   )
 })
 

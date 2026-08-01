@@ -90,7 +90,7 @@ reference <- utils::read.csv(
 benchmark <- utils::read.csv(
   file.path(run_dir, "benchmark_summary.csv"), stringsAsFactors = FALSE
 )
-if (nrow(reference) != 22L || !all(reference$pass) ||
+if (nrow(reference) != 24L || !all(reference$pass) ||
     nrow(benchmark) != 2L || !all(benchmark$pass)) {
   oti_stop("The bound reference or benchmark evidence is incomplete.")
 }
@@ -174,7 +174,7 @@ receipt <- list(
   fixed_design_n = 1200L, dlm_T = 1200L, dlm_n_observed = 1178L,
   fixed_design_contract = "eight-dimensional orthogonalized cubic B-spline",
   dynamic_contract = paste(
-    "four-state local-linear plus deterministic Fourier seasonal harmonic",
+    "four-state local-linear plus regularized Fourier seasonal harmonic",
     "with covariate-dependent population scale"
   ),
   target_cells = 6L, completed_chains = 27L,
@@ -208,7 +208,7 @@ writeLines(c(
   paste(
     "The static construction uses an orthogonalized cubic B-spline basis;",
     "the dynamic construction combines an exact continuous-time local-linear",
-    "block with one deterministic Fourier seasonal harmonic."
+    "block with one regularized Fourier seasonal harmonic."
   ),
   paste(
     "These artifacts summarize loss-based generalized posteriors; they do",

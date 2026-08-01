@@ -29,8 +29,8 @@ provided the endpoint design contains the scale function. The RQR-DLM can also
 represent time-varying width because its two root states evolve separately,
 but pronounced recurring variation is better supported by an explicit
 seasonal state than by asking a local-linear component to approximate four
-cycles. A deterministic Fourier block is therefore preferable to either an
-unmodeled seasonal DGP or an unnecessarily stochastic seasonal evolution.
+cycles. An explicit Fourier block is therefore preferable to an unmodeled
+seasonal DGP or a higher-dimensional generic trend.
 
 The adopted construction is deliberately exactly representable by each fitted
 model. This makes disagreement interpretable as finite-sample or computational
@@ -93,9 +93,11 @@ local level, local slope, seasonal cosine coefficient, seasonal sine coefficient
 
 The local-linear block uses the exact continuous-time discretization at
 `dt = 1/T`. The mean adds one Fourier harmonic with period 300 observations,
-so four full cycles appear. Its amplitude is `0.62`. The seasonal evolution
-variance is exactly zero: the two seasonal coefficients are uncertain a
-priori but rotate deterministically once initialized.
+so four full cycles appear. Its amplitude is `0.62`. The population seasonal
+path is deterministic, while the fitted seasonal state uses the small fixed
+innovation covariance `10^-6 I_2`. This regularization leaves the declared
+harmonic clearly dominant but keeps the FFBS conditional strictly
+nondegenerate under the fail-on-repair numerical policy.
 
 The response scale is
 
@@ -126,7 +128,7 @@ Before MCMC, the workflow must pass all deterministic design gates:
 3. exact static endpoint projection;
 4. exact four-state dynamic endpoint projection;
 5. fixed-horizon local-linear covariance invariance;
-6. deterministic seasonal covariance invariance;
+6. exact seasonal covariance recursion under the frozen innovation variance;
 7. full four-state observability;
 8. static and dynamic scale floors and ratios;
 9. exact missing mask;
@@ -135,16 +137,17 @@ Before MCMC, the workflow must pass all deterministic design gates:
 12. a 27-chain fit plan with unique seeds; and
 13. absence of Cornish--Fisher use.
 
-The conditional reference suite contains 22 gates. It checks the eight-
+The conditional reference suite contains 24 gates. It checks the eight-
 dimensional static Gaussian root conditional by analytic moments and Monte
 Carlo standard errors, checks a nonsingular local-linear FFBS conditional
 against a dense Gaussian precision calculation, and checks the four-state
 seasonal conditional against an independent innovation-coordinate Gaussian
 calculation. The latter reference admits positive-semidefinite evolution
-covariances and therefore tests the exact zero-variance seasonal block without
-injecting artificial jitter. Both R and C++ smoothers must agree with the
-independent means and marginal covariances, omit missing measurements, report
-zero numerical repairs, and preserve the zero seasonal innovation block.
+covariances without injecting artificial jitter and is applied to the frozen
+four-state seasonal model. Both R and C++ smoothers must agree with the
+independent means and marginal covariances, omit missing measurements, and
+report zero numerical repairs. Separate R and C++ draws must also be finite
+and repair-free under the actual seasonal innovation covariance.
 
 ## Execution stages and fail-closed controls
 
@@ -205,7 +208,7 @@ the high/low width contrast, and dynamic seasonal width amplitude and phase.
 
 Raw fits remain under ignored `application/outputs/`. The packager accepts only
 a complete strict-passing run with 27 worker receipts, six strict-passing
-cells, 22 passing reference gates, two passing benchmark cells, exact runtime
+cells, 24 passing reference gates, two passing benchmark cells, exact runtime
 binding, wrapper closeout, and recursive hashes. It publishes compact CSV/JSON
 evidence to `figures/data/oracle_tilt_c095_v3/`; it never publishes fitted
 objects.

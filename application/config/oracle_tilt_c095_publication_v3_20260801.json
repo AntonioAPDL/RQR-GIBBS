@@ -75,7 +75,7 @@
       "mean_amplitude": 0.62,
       "mean_phase": 0.25,
       "expected_cycles": 4,
-      "evolution_variance": 0
+      "evolution_variance": 1e-6
     },
     "initial_state": [0.15, 0.6],
     "evolution_prior_selection": {
@@ -130,7 +130,7 @@
     "static_gram_max_abs_error": 1e-10,
     "fixed_horizon_covariance_max_abs_error": 1e-10,
     "dynamic_projection_max_abs": 1e-10,
-    "seasonal_covariance_invariance_max_abs_error": 1e-10,
+    "seasonal_covariance_recursion_max_abs_error": 1e-10,
     "dynamic_observability_rank": 4,
     "minimum_expected_rare_tail_count_per_scale_quintile": 2
   },

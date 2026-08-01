@@ -164,7 +164,7 @@ otv3_validate_config <- function(config) {
       ) != 4L ||
       !otv3_close(seasonal$mean_amplitude, 0.62) ||
       !otv3_close(seasonal$mean_phase, 0.25) ||
-      !otv3_close(seasonal$evolution_variance, 0) ||
+      !otv3_close(seasonal$evolution_variance, 1e-6) ||
       !otv3_close(scale$baseline, 0.55) ||
       !otv3_close(scale$amplitude, 0.22) ||
       !otv3_close(scale$phase, -0.50) ||
@@ -716,17 +716,20 @@ otv3_seasonal_covariance_audit <- function(dgp) {
   expanded <- otf_expanded_dlm(dgp)
   covariance <- expanded$C0[3:4, 3:4, drop = FALSE]
   initial <- covariance
+  evolution_variance <- max(abs(expanded$W[3:4, 3:4, ]))
   maximum_error <- 0
   for (index in seq_len(expanded$n_time)) {
     G <- expanded$GG[3:4, 3:4, index, drop = FALSE][, , 1L]
     W <- expanded$W[3:4, 3:4, index, drop = FALSE][, , 1L]
     covariance <- G %*% covariance %*% t(G) + W
-    maximum_error <- max(maximum_error, max(abs(covariance - initial)))
+    expected <- initial + diag(index * evolution_variance, 2L)
+    maximum_error <- max(maximum_error, max(abs(covariance - expected)))
   }
   data.frame(
     seasonal_dimension = 2L,
-    evolution_variance = max(abs(expanded$W[3:4, 3:4, ])),
-    maximum_covariance_invariance_error = maximum_error,
+    evolution_variance = evolution_variance,
+    terminal_marginal_variance = covariance[1L, 1L],
+    maximum_covariance_recursion_error = maximum_error,
     stringsAsFactors = FALSE
   )
 }
@@ -852,7 +855,7 @@ otv3_design_preflight <- function(config) {
       "expected_rare_tail_count", "static_design_rank",
       "static_basis_gram", "static_truth_projection",
       "dynamic_truth_projection", "fixed_horizon_covariance",
-      "seasonal_covariance_invariance", "dynamic_observability_rank",
+      "seasonal_covariance_recursion", "dynamic_observability_rank",
       "static_scale_floor", "dynamic_scale_floor",
       "scale_quintile_rare_tail_count", "missing_mask", "fit_plan_size",
       "cornish_fisher_absent"
@@ -863,7 +866,7 @@ otv3_design_preflight <- function(config) {
       fixed$basis$rank, gram_error,
       max(projection$max_absolute_residual),
       max(dynamic_projection$max_absolute_residual), horizon_error,
-      seasonal_covariance$maximum_covariance_invariance_error,
+      seasonal_covariance$maximum_covariance_recursion_error,
       observability$rank, min(fixed$scale_truth), min(dlm$scale_truth),
       min(scale_information$expected_rare_tail_count),
       sum(!dlm$observed), nrow(otv3_plan(config)), 0
@@ -875,7 +878,7 @@ otv3_design_preflight <- function(config) {
       config$preflight_gates$static_projection_max_abs,
       config$preflight_gates$dynamic_projection_max_abs,
       config$preflight_gates$fixed_horizon_covariance_max_abs_error,
-      config$preflight_gates$seasonal_covariance_invariance_max_abs_error,
+      config$preflight_gates$seasonal_covariance_recursion_max_abs_error,
       config$preflight_gates$dynamic_observability_rank,
       config$fixed_design$basis_contract$minimum_scale,
       config$dlm$scale_contract$minimum_scale,
@@ -1145,7 +1148,11 @@ otv3_reference_suite <- function(config) {
     period = 8, harmonics = 1, C0 = diag(1, 2)
   )$GG
   seasonal_GG_one <- otv3_block_diag(local$G, seasonal_G)
-  seasonal_W_one <- otv3_block_diag(local$W, matrix(0, 2, 2))
+  seasonal_evolution_variance <-
+    as.numeric(config$dlm$seasonal_contract$evolution_variance)
+  seasonal_W_one <- otv3_block_diag(
+    local$W, diag(seasonal_evolution_variance, 2L)
+  )
   seasonal_GG <- otv3_expand_cube(seasonal_GG_one, seasonal_T)
   seasonal_W <- otv3_expand_cube(seasonal_W_one, seasonal_T)
   seasonal_C0 <- otv3_block_diag(diag(c(1, 0.25)), diag(1, 2))
@@ -1186,6 +1193,20 @@ otv3_reference_suite <- function(config) {
     backend = "cpp", numerical_policy = "fail",
     canonical_shift = seasonal_shift
   )
+  set.seed(202608015L)
+  seasonal_R_sample <- rqrgibbs::rqr_ffbs_sample(
+    seasonal_response, seasonal_H, seasonal_variance, seasonal_GG,
+    seasonal_expanded$m0, seasonal_C0, seasonal_evolution,
+    backend = "R", numerical_policy = "fail",
+    canonical_shift = seasonal_shift
+  )
+  set.seed(202608015L)
+  seasonal_cpp_sample <- rqrgibbs::rqr_ffbs_sample(
+    seasonal_response, seasonal_H, seasonal_variance, seasonal_GG,
+    seasonal_expanded$m0, seasonal_C0, seasonal_evolution,
+    backend = "cpp", numerical_policy = "fail",
+    canonical_shift = seasonal_shift
+  )
   seasonal_dense_blocks <- array(NA_real_, c(4L, 4L, seasonal_T))
   for (index in seq_len(seasonal_T)) {
     block <- ((index - 1L) * 4L + 1L):(index * 4L)
@@ -1202,7 +1223,9 @@ otv3_reference_suite <- function(config) {
       "seasonal_R_cpp_marginal_covariance_absolute_error",
       "seasonal_R_repair_count", "seasonal_cpp_repair_count",
       "seasonal_missing_measurement_omission",
-      "seasonal_zero_evolution_block"
+      "seasonal_evolution_variance",
+      "seasonal_R_sample_finite_zero_repair",
+      "seasonal_cpp_sample_finite_zero_repair"
     ),
     value = c(
       max(abs(seasonal_R$smooth_mean - seasonal_dense$mean)),
@@ -1216,10 +1239,17 @@ otv3_reference_suite <- function(config) {
       as.numeric(all(is.na(
         seasonal_R$residual[c(5L, 12L)]
       ))),
-      max(abs(seasonal_W[3:4, 3:4, ]))
+      max(abs(seasonal_W[3:4, 3:4, ])),
+      as.numeric(all(is.finite(seasonal_R_sample$path)) &&
+        seasonal_R_sample$diagnostics$repair_count == 0L),
+      as.numeric(all(is.finite(seasonal_cpp_sample$path)) &&
+        seasonal_cpp_sample$diagnostics$repair_count == 0L)
     ),
-    threshold = c(1e-9, 1e-9, 1e-10, 1e-9, 1e-9, 1e-10, 0, 0, 1, 0),
-    comparison = c(rep("<=", 8L), "==", "=="),
+    threshold = c(
+      1e-9, 1e-9, 1e-10, 1e-9, 1e-9, 1e-10, 0, 0, 1,
+      seasonal_evolution_variance, 1, 1
+    ),
+    comparison = c(rep("<=", 8L), rep("==", 4L)),
     stringsAsFactors = FALSE
   )
   rows <- rbind(rows, seasonal_rows)

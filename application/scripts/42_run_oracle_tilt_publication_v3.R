@@ -289,7 +289,7 @@ if (identical(mode, "preflight")) {
 if (identical(mode, "reference-only")) {
   reference <- otv3_reference_suite(config)
   otf_atomic_write_csv(reference, file.path(output_root, "reference_gates.csv"))
-  passed <- nrow(reference) == 22L && all(reference$pass)
+  passed <- nrow(reference) == 24L && all(reference$pass)
   close_and_manifest(list(
     pass = passed, reference_gates = nrow(reference),
     reference_gates_passed = sum(reference$pass), completed_chains = 0L,
