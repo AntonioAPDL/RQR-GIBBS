@@ -146,6 +146,9 @@ preflight and reference directories; execution also binds the passing
 benchmark directory. Raw chains remain under ignored output storage. No v2
 result enters the manuscript until all six family/target cells pass the frozen
 computational and recovery gates and the compact evidence packager succeeds.
+The fixed-design v2 scan composes two complete exact Gibbs transitions between
+its 6,000 retained draws; the DLM scan retains one transition per iteration.
+This distinction is explicit in the configuration and fit provenance.
 
 The tracked high-content forensic configuration is
 `config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.

@@ -30,6 +30,9 @@ testthat::test_that("v2 freezes the 0.80/95-percent exact-oracle contract", {
   )
   testthat::expect_equal(length(unique(plan$seed)), 27L)
   testthat::expect_false(any(plan$cornish_fisher_used))
+  testthat::expect_identical(
+    config$fixed_design$mcmc_control$kernel_repetitions, 2L
+  )
   testthat::expect_type(config$execution_authorized, "logical")
   testthat::expect_length(config$execution_authorized, 1L)
 
@@ -65,6 +68,9 @@ testthat::test_that("config validation rejects silent design drift", {
   bad <- config
   bad$fixed_design$mcmc_control$n_mcmc <- 6000.5
   testthat::expect_error(otv2_validate_config(bad), "finite integer")
+  bad <- config
+  bad$fixed_design$mcmc_control$kernel_repetitions <- 1L
+  testthat::expect_error(otv2_validate_config(bad), "MCMC contract")
   bad <- config
   bad$dlm$mcmc_control$store_state_draws <- FALSE
   testthat::expect_error(otv2_validate_config(bad), "storage contract")
@@ -247,4 +253,31 @@ testthat::test_that("benchmark assessment rejects gross recovery failure", {
     preflight$fixed_targets, config
   )
   testthat::expect_false(bad$gross_recovery_pass)
+})
+
+testthat::test_that("two complete static transitions preserve a tilted target", {
+  x <- seq(-1, 1, length.out = 18L)
+  X <- cbind(intercept = 1, x = x)
+  y <- 0.2 + 0.4 * x + seq(-0.15, 0.15, length.out = length(x))
+  fit <- rqrgibbs::rqr_mcmc_fit(
+    y = y, X = X, coverage_level = 0.8, learning_rate = 1,
+    learning_rate_mode = "fixed_rate", mean_tilt = rep(0.15, length(y)),
+    beta_prior_obj = rqrgibbs::beta_prior(
+      "ridge", ridge = list(tau2 = 2)
+    ),
+    numerical_policy = "fail",
+    mcmc_control = list(
+      n_burn = 3L, n_mcmc = 8L, thin = 1L, seed = 202607319L,
+      kernel_repetitions = 2L, store_latent_draws = FALSE
+    )
+  )
+  testthat::expect_identical(fit$model_spec$kernel_repetitions, 2L)
+  testthat::expect_identical(
+    fit$model_spec$mean_tilt_summary$nonzero_count, length(y)
+  )
+  testthat::expect_true(fit$model_spec$exact_joint_target)
+  testthat::expect_equal(fit$model_spec$numerical_repair_count, 0L)
+  testthat::expect_true(all(
+    fit$diagnostics$root_swap_count_trace %in% 0:2
+  ))
 })

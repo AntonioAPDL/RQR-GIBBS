@@ -79,6 +79,10 @@ otv2_validate_config <- function(config) {
                           "fixed_design$mcmc_control$n_mcmc", 1L) != 6000L ||
       otv2_integer_scalar(fixed_control$thin,
                           "fixed_design$mcmc_control$thin", 1L) != 1L ||
+      otv2_integer_scalar(
+        fixed_control$kernel_repetitions,
+        "fixed_design$mcmc_control$kernel_repetitions", 1L
+      ) != 2L ||
       !identical(fixed_control$store_latent_draws, FALSE)) {
     oti_stop("The fixed-design MCMC contract changed.")
   }

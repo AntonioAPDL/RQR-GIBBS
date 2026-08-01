@@ -33,6 +33,7 @@
       "n_burn": 1500,
       "n_mcmc": 6000,
       "thin": 1,
+      "kernel_repetitions": 2,
       "store_latent_draws": false,
       "verbose": false
     }

@@ -113,8 +113,12 @@ and artifact-manifest hash.
 ## MCMC and recovery gates
 
 The fixed-design cells use four chains with 1,500 warm-up and 6,000 retained
-iterations. DLM cells use five chains with 2,500 warm-up and 6,000 retained
-iterations, the C++ backend, stored state paths, and stored latent variables.
+iterations. Two complete exact Gibbs transitions are composed between retained
+fixed-design draws. This prospectively frozen thinning-by-transition corrects
+the modest local bulk-ESS shortfall found with one transition while preserving
+the same target and retained evidence shape. DLM cells use five chains with
+2,500 warm-up and 6,000 retained iterations, one complete transition per
+iteration, the C++ backend, stored state paths, and stored latent variables.
 The numerical policy is `fail`.
 
 Maintained diagnostics are computed for aggregate loss and interval summaries
