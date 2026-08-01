@@ -39,6 +39,7 @@ export MKL_NUM_THREADS=1
 export BLIS_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
+export TZ=UTC
 export RQR_RESOURCE_MONITOR_ACTIVE=TRUE
 export RQR_PROCESS_MONITOR_KIND=pgid_sampled_fallback
 export RQR_MONITOR_KERNEL_HARD_MEMORY=FALSE
@@ -49,8 +50,9 @@ case "$mode" in
   execute) timeout_seconds=28800 ;;
 esac
 max_rss_kib=12582912
-max_threads=4
-max_processes=3
+max_threads=8
+max_processes=7
+max_r_processes=3
 monitor_interval=0.2
 
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -87,15 +89,20 @@ final_pgid_empty=FALSE
 max_sampled_rss=0
 max_sampled_threads=0
 max_sampled_processes=0
+max_sampled_r_processes=0
 start_epoch="$(date +%s)"
 
 pgid_snapshot() {
   local group_id="$1"
-  ps -eo pgid=,rss=,nlwp=,stat= | awk -v group="$group_id" '
+  ps -eo pgid=,rss=,nlwp=,stat=,comm= | awk -v group="$group_id" '
     $1 == group && $4 !~ /^Z/ {
       processes += 1; rss += $2; threads += $3
+      if ($5 == "R") r_processes += 1
     }
-    END { printf "%d,%d,%d\n", processes + 0, rss + 0, threads + 0 }
+    END {
+      printf "%d,%d,%d,%d\n", processes + 0, r_processes + 0,
+        rss + 0, threads + 0
+    }
   '
 }
 
@@ -119,7 +126,9 @@ trap 'on_signal TERM' TERM
 trap 'on_signal HUP' HUP
 trap 'if [[ -n "$pgid" ]]; then terminate_group "$pgid"; fi' EXIT
 
-printf '%s\n' "sample_utc,elapsed_seconds,processes,rss_kib,threads" >"$monitor_csv"
+printf '%s\n' \
+  "sample_utc,elapsed_seconds,processes,r_processes,rss_kib,threads" \
+  >"$monitor_csv"
 runner=(
   Rscript application/scripts/40_run_oracle_tilt_publication_v2.R
   "--mode=$mode"
@@ -132,20 +141,23 @@ pgid=$root_pid
 
 while true; do
   snapshot="$(pgid_snapshot "$pgid")"
-  IFS=, read -r processes rss_kib threads <<<"$snapshot"
+  IFS=, read -r processes r_processes rss_kib threads <<<"$snapshot"
   elapsed=$(( $(date +%s) - start_epoch ))
-  printf '%s,%s,%s,%s,%s\n' \
+  printf '%s,%s,%s,%s,%s,%s\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$elapsed" \
-    "$processes" "$rss_kib" "$threads" >>"$monitor_csv"
+    "$processes" "$r_processes" "$rss_kib" "$threads" >>"$monitor_csv"
   (( rss_kib > max_sampled_rss )) && max_sampled_rss=$rss_kib
   (( threads > max_sampled_threads )) && max_sampled_threads=$threads
   (( processes > max_sampled_processes )) && max_sampled_processes=$processes
+  (( r_processes > max_sampled_r_processes )) && \
+    max_sampled_r_processes=$r_processes
   if (( elapsed > timeout_seconds )); then
     timed_out=TRUE
     terminate_group "$pgid"
     break
   fi
-  if (( rss_kib > max_rss_kib || threads > max_threads || processes > max_processes )); then
+  if (( rss_kib > max_rss_kib || threads > max_threads ||
+        processes > max_processes || r_processes > max_r_processes )); then
     limit_triggered=TRUE
     terminate_group "$pgid"
     break
@@ -172,12 +184,13 @@ if (( runner_status != 0 )) || [[ "$timed_out" != FALSE ]] ||
   wrapper_pass=FALSE
 fi
 printf '%s\n' \
-  "mode,runner_status,elapsed_seconds,max_sampled_rss_kib,max_sampled_threads,max_sampled_processes,timeout_seconds,rss_limit_kib,thread_limit,process_limit,timed_out,sampled_limit_triggered,signal_received,final_pgid_empty,telemetry_kind,pass" \
+  "mode,runner_status,elapsed_seconds,max_sampled_rss_kib,max_sampled_threads,max_sampled_processes,max_sampled_r_processes,timeout_seconds,rss_limit_kib,thread_limit,process_limit,r_process_limit,timezone,timed_out,sampled_limit_triggered,signal_received,final_pgid_empty,telemetry_kind,pass" \
   >"$resource_csv"
-printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
   "$mode" "$runner_status" "$elapsed_total" "$max_sampled_rss" \
-  "$max_sampled_threads" "$max_sampled_processes" "$timeout_seconds" \
-  "$max_rss_kib" "$max_threads" "$max_processes" "$timed_out" \
+  "$max_sampled_threads" "$max_sampled_processes" \
+  "$max_sampled_r_processes" "$timeout_seconds" "$max_rss_kib" \
+  "$max_threads" "$max_processes" "$max_r_processes" "$TZ" "$timed_out" \
   "$limit_triggered" "$signal_received" "$final_pgid_empty" \
   "sampled_pgid_not_kernel_hard" "$wrapper_pass" >>"$resource_csv"
 

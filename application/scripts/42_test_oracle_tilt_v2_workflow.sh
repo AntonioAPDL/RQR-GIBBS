@@ -24,6 +24,9 @@ wrapper <- read.csv(file.path(root, "wrapper_closeout.csv"))
 stopifnot(
   nrow(resource) == 1L, isTRUE(resource$pass),
   isTRUE(resource$final_pgid_empty), resource$runner_status == 0L,
+  resource$process_limit == 7L, resource$r_process_limit == 3L,
+  resource$thread_limit == 8L, identical(resource$timezone, "UTC"),
+  resource$max_sampled_r_processes <= resource$r_process_limit,
   nrow(wrapper) == 1L, isTRUE(wrapper$wrapper_pass),
   file.exists(file.path(root, "wrapper_artifact_manifest.csv"))
 )

@@ -139,11 +139,16 @@ for the single frozen illustration, not estimates of repeated-sample coverage.
 
 ## Resource and artifact contract
 
-The shell wrapper sets BLAS/OpenMP thread variables before R starts, executes R
-in a new process group, samples group RSS/process/thread totals every 0.2
-seconds, installs signal cleanup, enforces elapsed and sampled resource limits,
-and performs a final process-group sweep. Sampled RSS is telemetry rather than
-a kernel-hard memory ceiling. The wrapper recursively hashes local artifacts.
+The shell wrapper sets `TZ=UTC` and BLAS/OpenMP thread variables before R
+starts, executes R in a new process group, samples group RSS/process/thread
+totals every 0.2 seconds, installs signal cleanup, enforces elapsed and sampled
+resource limits, and performs a final process-group sweep. The runner admits at
+most two concurrent chain workers. The monitor separately caps R processes at
+three (one parent plus two workers) and the full process group at seven
+processes/eight threads so short-lived read-only provenance and toolchain
+helpers are bounded without being misclassified as extra chains. The RSS cap
+is 12 GiB. Sampled RSS is telemetry rather than a kernel-hard memory ceiling.
+The wrapper recursively hashes local artifacts.
 
 Full worker envelopes remain under ignored `application/outputs/`. Successful
 promotion copies only the compact allowlist, monitored-resource records, and

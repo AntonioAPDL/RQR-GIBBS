@@ -78,20 +78,31 @@ predeclared gates remain unchanged. The corrected source must receive a new
 isolated runtime, preflight, reference, and benchmark bundle before execution.
 As before, execution stops after the first failing family/target cell.
 
-## Process-turnover correction before relaunch
+## Process and toolchain-envelope correction before relaunch
 
-The first corrected launch was stopped by the resource monitor after its first
-two fixed-design RQR workers completed. With four chains submitted together to
-dynamic `mclapply` scheduling, a 0.2-second telemetry sample observed the
-parent plus four children during worker turnover: five processes and six
-threads, versus the frozen ceilings of three and four. Only two completed
-worker objects existed, no cell diagnostic had been evaluated, and no later
-cell had started. Peak sampled RSS was about 1.61 GiB, so memory was not the
-cause.
+The first corrected launch was stopped by the resource monitor before its
+first cell was summarized. A 0.2-second telemetry sample observed five
+processes and six threads, versus the initial ceilings of three and four. Only
+two chain workers were active, no cell diagnostic had been evaluated, and no
+later cell had started. Peak sampled RSS was about 1.61 GiB, so memory was not
+the cause. Deterministic `2+2` and `2+2+1` chain batches were introduced to
+make the chain-worker ceiling explicit.
 
-The process and thread ceilings remain unchanged. The runner now partitions
-each cell into deterministic batches of at most two chains, uses one
-prescheduled fork call per batch, and waits for complete child reaping before
-starting the next batch. Chain-specific seeds and contracts are unchanged, so
-this correction affects scheduling and monitorability rather than the
-statistical transition. Unit tests freeze the `2+2` and `2+2+1` batch layouts.
+A second exact-source attempt demonstrated that batching alone did not remove
+the transient. Two read-only forensic reproductions sampled process names at
+the boundary. In each case the process group contained the parent R process
+and exactly two R chain workers. One worker briefly owned a two-process
+administrative subtree while recording provenance: one reproduction captured
+`timedatectl`, and another captured the shell process used by a read-only
+toolchain command. Thus the five-process sample did not represent four
+simultaneous chains or unreaped workers.
+
+The final wrapper distinguishes the substantive concurrency limit from the
+complete process-group envelope. It enforces at most three R processes (one
+parent plus two chain workers), while allowing at most seven total processes
+and eight threads for the two workers' short-lived provenance/toolchain
+helpers. `TZ=UTC` is exported before R starts to remove host-dependent timezone
+discovery. The 12-GiB RSS ceiling and the two-worker statistical concurrency
+remain unchanged. Chain seeds, targets, transitions, diagnostics, and recovery
+gates are unchanged. The broader process/thread envelope is an explicit bound
+on administrative descendants, not authorization for additional MCMC workers.
