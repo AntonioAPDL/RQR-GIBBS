@@ -1,9 +1,13 @@
 {
   "schema_version": "rqrgibbs_oracle_tilt_publication_config/2.0.0",
-  "execution_authorized": false,
+  "execution_authorized": true,
   "coverage_level": 0.95,
   "learning_rate": 1,
-  "targets": ["RQR", "ET", "SH"],
+  "targets": [
+    "RQR",
+    "ET",
+    "SH"
+  ],
   "tilt_source": "exact_population_oracle",
   "innovation": {
     "family": "asymmetric_laplace",
@@ -12,15 +16,23 @@
     "scale": 1,
     "standardized": true,
     "expected_raw_mean": -3.75,
-    "expected_raw_sd": 5.153882032022076,
-    "expected_standardized_skewness": -1.7976169855634085
+    "expected_raw_sd": 5.15388203202208,
+    "expected_standardized_skewness": -1.79761698556341
   },
   "fixed_design": {
     "seed": 202607311,
     "n": 1200,
     "basis": "empirical_orthogonal_quadratic",
     "ridge_prior_selection": {
-      "candidate_tau2": [0.5, 1, 2, 4, 8, 16, 25],
+      "candidate_tau2": [
+        0.5,
+        1,
+        2,
+        4,
+        8,
+        16,
+        25
+      ],
       "center_half_width_min": 2.5,
       "maximum_half_width_max": 6,
       "probability": 0.95,
@@ -42,20 +54,48 @@
     "seed": 202607312,
     "T": 1200,
     "time_grid": "i_over_T",
-    "time_horizon": [0, 1],
+    "time_horizon": [
+      0,
+      1
+    ],
     "missing_windows": [
-      [0.345, 0.354],
-      [0.695, 0.704]
+      [
+        0.345,
+        0.354
+      ],
+      [
+        0.695,
+        0.704
+      ]
     ],
     "expected_missing": 22,
     "expected_observed": 1178,
     "scale": 0.55,
-    "initial_state": [0.15, 0.6],
+    "initial_state": [
+      0.15,
+      0.6
+    ],
     "evolution_prior_selection": {
-      "candidate_initial_level_variance": [0.5, 1, 2],
-      "candidate_initial_slope_variance": [0.1, 0.25, 0.5],
-      "candidate_q_level": [0.01, 0.02, 0.04],
-      "candidate_q_slope": [0.02, 0.04, 0.09],
+      "candidate_initial_level_variance": [
+        0.5,
+        1,
+        2
+      ],
+      "candidate_initial_slope_variance": [
+        0.1,
+        0.25,
+        0.5
+      ],
+      "candidate_q_level": [
+        0.01,
+        0.02,
+        0.04
+      ],
+      "candidate_q_slope": [
+        0.02,
+        0.04,
+        0.09
+      ],
       "initial_level_half_width_min": 1.75,
       "initial_level_half_width_max": 2.25,
       "terminal_level_half_width_max": 2.5,
@@ -100,7 +140,7 @@
     "bulk_ess_min": 1000,
     "tail_ess_min": 1000,
     "mcse_over_sd_max": 0.05,
-    "conditional_reference_relative_tolerance": 1e-7,
+    "conditional_reference_relative_tolerance": 1e-07,
     "R_cpp_absolute_tolerance": 1e-10,
     "remote_width_ratio_threshold": 20,
     "remote_endpoint_sd_threshold": 20,

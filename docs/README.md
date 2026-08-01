@@ -6,6 +6,9 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/oracle_tilt_c095_v2_validation_closeout_20260801.md` records the
+  successful exact-source validation, all six strict-pass cells, compact
+  evidence hashes, resource envelope, and manuscript-promotion decision.
 - `audits/oracle_tilt_c095_v2_first_execute_reconciliation_20260731.md`
   records the fail-closed first execution, its narrow fixed-design bulk-ESS
   finding, and the exact-transition correction selected before relaunch.
@@ -13,8 +16,8 @@ Current oracle-tilt implementation records:
   source-level contract for the pending standardized-`AL_0.80` replacement:
   exact population tilts, estimability thresholds, empirical orthogonal fixed
   design, fixed-horizon DLM, staged runtime binding, monitored execution, and
-  compact evidence promotion. It does not authorize a manuscript claim before
-  the corrected six-cell execution passes.
+  compact evidence promotion. Its corrected six-cell execution has now passed
+  under the exact source recorded in the validation closeout.
 - `implementation_notes/oracle_tilt_c095_publication_protocol_20260731.md`
   freezes the clean-source 27-chain publication illustration, its exact
   population tilts, common dynamic prior, diagnostics, compact evidence, and

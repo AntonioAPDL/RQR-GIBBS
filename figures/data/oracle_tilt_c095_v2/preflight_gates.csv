@@ -1,0 +1,9 @@
+"gate","value","threshold","comparison","pass"
+"expected_rare_tail_count",11.7800010264016,10,">=",TRUE
+"static_design_rank",3,3,"==",TRUE
+"static_basis_gram",2.22044604925031e-16,1e-10,"<=",TRUE
+"static_truth_projection",5.74540415243519e-15,1e-10,"<=",TRUE
+"fixed_horizon_covariance",1.28785870856518e-13,1e-10,"<=",TRUE
+"missing_mask",22,22,"==",TRUE
+"fit_plan_size",27,27,"==",TRUE
+"cornish_fisher_absent",0,0,"==",TRUE

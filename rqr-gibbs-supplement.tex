@@ -1693,7 +1693,8 @@ separate degenerate models and are not part of the inverse-Gamma support.
 
 The article's fixed-design and dynamic illustrations use one frozen data set
 per model family at content \(c=0.95\). Innovations follow the known
-standardized asymmetric-Laplace law with quantile index \(0.99\). Ordinary RQR
+affinely standardized asymmetric-Laplace law with source index \(0.80\).
+Ordinary RQR
 uses zero tilt; the ET and SH tilts are calculated from exact population
 quantiles and truncated moments. No Cornish--Fisher approximation enters these
 fits. The displays therefore diagnose recovery of prespecified population
@@ -1702,12 +1703,12 @@ coverage experiments.
 
 Table~\ref{tab:supp-oracle-tilt-summary} reports descriptive endpoint and width
 errors and the prespecified computational disposition. Realized coverage is
-included only to describe these two frozen samples. Five of six cells pass all
-strict gates. The dynamic SH cell passes all hard gates, including zero
-repairs, source/runtime binding, dense conditional references, scale-pathology
-checks, \(\widehat R\le 1.05\), and MCSE/SD at most 0.10. Five local summaries
-near times 51 and 71 fall below the ESS thresholds, so this cell is labeled
-ESS warning rather than strict pass.
+included only to describe these two frozen samples. All six cells pass every
+strict gate, including zero repairs, exact source/runtime binding, dense
+conditional references, scale-pathology checks,
+\(\widehat R\le 1.01\), bulk and tail ESS of at least 1,000, and MCSE/SD at
+most 0.05. The fixed-design fits use four chains and the dynamic fits use five;
+each chain retains 6,000 draws after warm-up.
 
 \begin{table}[H]
 \centering
@@ -1736,9 +1737,9 @@ of interval-root draws, not response-predictive residuals.}
 \includegraphics[width=\textwidth]{figures/generated/figS04_dlm_endpoint_error_c095.pdf}
 \caption{\textbf{Dynamic endpoint-error distributions.} Curves pool
 generalized-posterior endpoint draws across five chains and all times after
-subtracting the time-specific population-oracle endpoint. The wider SH upper
-tail is retained together with its disclosed local ESS warning; hard
-numerical, reference, provenance, and pathology gates pass.}
+subtracting the time-specific population-oracle endpoint. Horizontal segments
+mark central 95\% summaries and points mark medians. All three target cells
+pass the numerical, reference, provenance, recovery, and convergence gates.}
 \label{fig:supp-dlm-endpoint-error-c095}
 \end{figure}
 

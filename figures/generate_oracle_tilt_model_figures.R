@@ -23,7 +23,7 @@ arg_value <- function(prefix, default = NULL) {
 evidence_dir <- normalizePath(
   arg_value(
     "--evidence-dir=",
-    file.path(repo_root, "figures", "data", "oracle_tilt_c095")
+    file.path(repo_root, "figures", "data", "oracle_tilt_c095_v2")
   ),
   winslash = "/", mustWork = TRUE
 )
@@ -139,9 +139,10 @@ for (family in names(figure_specs)) {
 family_label <- ifelse(
   summary$family == "fixed_design", "Fixed design", "Dynamic linear roots"
 )
-disposition_label <- ifelse(
-  summary$disposition == "strict_pass", "Strict pass", "ESS warning"
-)
+if (!all(summary$disposition == "strict_pass")) {
+  oti_stop("Every promoted illustration cell must have strict-pass status.")
+}
+disposition_label <- rep("Strict pass", nrow(summary))
 rows <- sprintf(
   "%s & %s & %.3f & %.3f & %.3f & %.3f & %s \\\\",
   family_label, summary$target,

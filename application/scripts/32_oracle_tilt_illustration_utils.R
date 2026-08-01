@@ -1235,20 +1235,27 @@ oti_plot_curve_panels <- function(curves, file, title,
       cex.main = 1.02
     )
     graphics::grid(col = "#e9e9e9", lwd = 0.8)
-    miss_x <- z$x[!z$observed]
-    if (length(miss_x)) {
+    miss_index <- which(!z$observed)
+    miss_x <- z$x[miss_index]
+    miss_centers <- numeric(0)
+    if (length(miss_index)) {
       ux <- sort(unique(z$x))
       dx <- if (length(ux) > 1L) min(diff(ux)) else diff(range(z$x)) * 0.01
       if (!is.finite(dx) || dx <= 0) dx <- 0.50
-      graphics::rect(
-        miss_x - 0.36 * dx, yr[1L],
-        miss_x + 0.36 * dx, yr[2L],
-        col = grDevices::adjustcolor(col_missing, alpha.f = 0.10),
-        border = NA
+      run_id <- cumsum(c(TRUE, diff(miss_index) != 1L))
+      miss_runs <- split(miss_index, run_id)
+      miss_left <- vapply(
+        miss_runs, function(idx) min(z$x[idx]) - 0.50 * dx, numeric(1L)
       )
-      graphics::abline(
-        v = miss_x, col = grDevices::adjustcolor(col_missing, alpha.f = 0.65),
-        lty = 2, lwd = 1.15
+      miss_right <- vapply(
+        miss_runs, function(idx) max(z$x[idx]) + 0.50 * dx, numeric(1L)
+      )
+      miss_centers <- 0.50 * (miss_left + miss_right)
+      graphics::rect(
+        miss_left, yr[1L], miss_right, yr[2L],
+        col = grDevices::adjustcolor(col_missing, alpha.f = 0.14),
+        border = grDevices::adjustcolor(col_missing, alpha.f = 0.72),
+        lwd = 0.9
       )
     }
     if (all(is.finite(z$fit_lower_q025)) && all(is.finite(z$fit_lower_q975))) {
@@ -1271,9 +1278,10 @@ oti_plot_curve_panels <- function(curves, file, title,
     graphics::lines(z$x, z$oracle_upper, col = col_oracle, lwd = 2.15)
     graphics::lines(z$x, z$fit_lower, col = col_fit, lwd = 1.95)
     graphics::lines(z$x, z$fit_upper, col = col_fit, lwd = 1.95)
-    if (length(miss_x)) {
+    if (length(miss_centers)) {
       graphics::points(
-        miss_x, rep(yr[1L] + 0.035 * diff(yr), length(miss_x)),
+        miss_centers,
+        rep(yr[1L] + 0.035 * diff(yr), length(miss_centers)),
         pch = 24, cex = 0.78, col = col_missing, bg = "white", lwd = 1.2
       )
     }
@@ -1287,12 +1295,12 @@ oti_plot_curve_panels <- function(curves, file, title,
     legend_pch <- c(16, NA, NA, 15)
     legend_lty <- c(NA, 1, 1, NA)
     legend_lwd <- c(NA, 2.15, 1.95, NA)
-    if (length(miss_x)) {
-      legend <- c(legend, "omitted response time")
+    if (length(miss_index)) {
+      legend <- c(legend, "omitted response window")
       legend_col <- c(legend_col, col_missing)
       legend_pch <- c(legend_pch, 24)
-      legend_lty <- c(legend_lty, 2)
-      legend_lwd <- c(legend_lwd, 1.15)
+      legend_lty <- c(legend_lty, NA)
+      legend_lwd <- c(legend_lwd, NA)
     }
     graphics::legend(
       "topleft", bty = "n", cex = 0.77,

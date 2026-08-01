@@ -1,0 +1,22 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_publication/2.0.0",
+  "mode": "execute",
+  "source_commit": "fec979f927c9039cf778ac09aef139ebd6761e8e",
+  "config_sha256": "e037461a3adf3a98065af9718daf636e6fbbd54ec00cc2fd71c9404f6ba50587",
+  "runtime_tree_digest": "d7890468c42d046697a11fe6784e7f08ac26a72c4764d5adb9ecca37931158b9",
+  "exact_runtime_bound": true,
+  "finished_at_utc": "2026-08-01 06:32:19 UTC",
+  "exact_population_oracle_tilts": true,
+  "cornish_fisher_used": false,
+  "response_predictive_analysis": false,
+  "simulation_study": false,
+  "manuscript_promotion_authorized": false,
+  "pass": true,
+  "planned_chains": 27,
+  "completed_chains": 27,
+  "all_chains_completed": true,
+  "all_cells_pass": true,
+  "passed_cells": 6,
+  "failed_cells": 0,
+  "compact_evidence_eligible": true
+}

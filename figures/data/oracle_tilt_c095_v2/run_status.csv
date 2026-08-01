@@ -1,0 +1,7 @@
+"family","target","status","chains_completed","elapsed_seconds","computational_pass","recovery_pass","disposition"
+"fixed_design","RQR","completed",4,209.582824230194,TRUE,TRUE,"strict_pass"
+"fixed_design","ET","completed",4,210.639828205109,TRUE,TRUE,"strict_pass"
+"fixed_design","SH","completed",4,210.665078401566,TRUE,TRUE,"strict_pass"
+"dlm","RQR","completed",5,5154.53596234322,TRUE,TRUE,"strict_pass"
+"dlm","ET","completed",5,5397.62694430351,TRUE,TRUE,"strict_pass"
+"dlm","SH","completed",5,5096.98071265221,TRUE,TRUE,"strict_pass"

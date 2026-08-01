@@ -1,0 +1,13 @@
+"gate","value","threshold","comparison","pass"
+"static_conditional_sampled_mean_z",0.850489651414371,5,"<=",TRUE
+"static_conditional_sampled_covariance_z",1.33872078072025,5,"<=",TRUE
+"dlm_R_dense_mean_absolute_error",7.52176099183544e-15,1e-09,"<=",TRUE
+"dlm_cpp_dense_mean_absolute_error",7.52176099183544e-15,1e-09,"<=",TRUE
+"dlm_R_cpp_mean_absolute_error",0,1e-10,"<=",TRUE
+"dlm_R_dense_marginal_covariance_absolute_error",1.16573417585641e-14,1e-09,"<=",TRUE
+"dlm_cpp_dense_marginal_covariance_absolute_error",1.16573417585641e-14,1e-09,"<=",TRUE
+"dlm_R_cpp_marginal_covariance_absolute_error",0,1e-10,"<=",TRUE
+"dlm_sampled_cross_time_covariance_z",1.20956243060246,5,"<=",TRUE
+"dlm_R_repair_count",0,0,"<=",TRUE
+"dlm_cpp_repair_count",0,0,"<=",TRUE
+"missing_measurement_omission",1,1,"==",TRUE

@@ -14,7 +14,8 @@ ORACLE_TILT_ILLUSTRATION_DIR ?= application/outputs/oracle_tilt_illustrations
 ORACLE_TILT_FORENSIC_CONFIG ?= application/config/oracle_tilt_forensics_20260730.json
 ORACLE_TILT_PUBLICATION_CONFIG ?= application/config/oracle_tilt_c095_publication_20260731.json
 ORACLE_TILT_PUBLICATION_DIR ?= application/outputs/oracle_tilt_c095_publication
-ORACLE_TILT_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095
+ORACLE_TILT_PUBLICATION_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095
+ORACLE_TILT_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095_v2
 ORACLE_TILT_RUN_DIR ?=
 ORACLE_TILT_V2_CONFIG ?= application/config/oracle_tilt_c095_publication_v2_20260731.json
 ORACLE_TILT_V2_DIR ?= application/outputs/oracle_tilt_c095_publication_v2
@@ -121,7 +122,7 @@ oracle-tilt-publication-execute:
 
 oracle-tilt-package-evidence:
 	@test -n "$(strip $(ORACLE_TILT_RUN_DIR))" || { echo "Set ORACLE_TILT_RUN_DIR to one completed run." >&2; exit 64; }
-	$(R) application/scripts/35_package_oracle_tilt_evidence.R --run-dir=$(ORACLE_TILT_RUN_DIR) --output-dir=$(ORACLE_TILT_EVIDENCE_DIR) --replace
+	$(R) application/scripts/35_package_oracle_tilt_evidence.R --run-dir=$(ORACLE_TILT_RUN_DIR) --output-dir=$(ORACLE_TILT_PUBLICATION_EVIDENCE_DIR) --replace
 
 oracle-tilt-v2-preflight:
 	RQR_ORACLE_TILT_V2_OUTPUT_DIR=$(ORACLE_TILT_V2_DIR)/preflight application/scripts/41_run_oracle_tilt_publication_v2.sh preflight
