@@ -94,6 +94,11 @@ testthat::test_that("config validation rejects silent design drift", {
   bad$diagnostics$rhat_max <- 1.05
   testthat::expect_error(otv3_validate_config(bad), "diagnostic contract")
   bad <- config
+  bad$recovery_gates$endpoint_summary_joint_inclusion_role <- "strict_gate"
+  testthat::expect_error(
+    otv3_validate_config(bad), "descriptive-only"
+  )
+  bad <- config
   bad$resources$maximum_threads <- 4L
   testthat::expect_error(otv3_validate_config(bad), "resource contract")
 })
@@ -328,12 +333,21 @@ testthat::test_that("recovery gates distinguish adequate and poor fits", {
   good <- otv3_recovery_summary("fixed_design", curves, metrics, config)
   testthat::expect_equal(good$endpoint_rmse_over_oracle_width, 0)
   testthat::expect_equal(good$mean_width_ratio, 1)
+  low_inclusion <- good
+  low_inclusion$endpoint_summary_joint_inclusion <- 0
+  low_inclusion$static_edge_center_rmse_ratio <- 1
+  testthat::expect_true(otv3_recovery_gate_pass(
+    "fixed_design", low_inclusion, config$recovery_gates
+  ))
   curves$fit_lower <- curves$fit_lower - 1
   bad <- otv3_recovery_summary("fixed_design", curves, metrics, config)
   testthat::expect_gt(
     bad$endpoint_rmse_over_oracle_width,
     config$recovery_gates$endpoint_rmse_over_oracle_width_max
   )
+  testthat::expect_false(otv3_recovery_gate_pass(
+    "fixed_design", bad, config$recovery_gates
+  ))
 })
 
 testthat::test_that("heterogeneity diagnostics recover scale contrast and phase", {

@@ -165,7 +165,7 @@ config <- jsonlite::read_json(
 )
 otv3_validate_config(config)
 receipt <- list(
-  schema_version = "rqrgibbs_oracle_tilt_evidence/3.1.0",
+  schema_version = "rqrgibbs_oracle_tilt_evidence/3.2.0",
   source_commit = closeout$source_commit,
   config_sha256 = closeout$config_sha256,
   runtime_tree_digest = closeout$runtime_tree_digest,
@@ -182,6 +182,7 @@ receipt <- list(
     "with covariate-dependent population scale"
   ),
   target_cells = 6L, completed_chains = 27L,
+  endpoint_summary_joint_inclusion_role = "descriptive_only",
   all_cells_strict_pass = TRUE,
   exact_population_oracle_tilts = TRUE, cornish_fisher_used = FALSE,
   response_predictive_analysis = FALSE, simulation_study = FALSE,

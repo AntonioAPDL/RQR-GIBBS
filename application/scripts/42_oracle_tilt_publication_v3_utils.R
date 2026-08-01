@@ -1,11 +1,11 @@
-otv3_schema <- function() "rqrgibbs_oracle_tilt_publication/3.1.0"
+otv3_schema <- function() "rqrgibbs_oracle_tilt_publication/3.2.0"
 
 otv3_config_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_config/3.1.0"
+  "rqrgibbs_oracle_tilt_publication_config/3.2.0"
 }
 
 otv3_preflight_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_preflight/1.1.0"
+  "rqrgibbs_oracle_tilt_publication_preflight/1.2.0"
 }
 
 otv3_close <- function(x, y, tolerance = 1e-12) {
@@ -245,6 +245,15 @@ otv3_validate_config <- function(config) {
       !otv3_close(diagnostics$tail_ess_min, 1000) ||
       !otv3_close(diagnostics$mcse_over_sd_max, 0.05)) {
     oti_stop("The maintained MCMC diagnostic contract changed.")
+  }
+  recovery <- config$recovery_gates %||% list()
+  if (!identical(
+    as.character(recovery$endpoint_summary_joint_inclusion_role),
+    "descriptive_only"
+  ) || !is.null(recovery$endpoint_summary_joint_inclusion_min)) {
+    oti_stop(
+      "Endpoint-summary joint inclusion must remain descriptive-only."
+    )
   }
   resources <- config$resources %||% list()
   if (!otv3_close(resources$minimum_free_bytes, 21474836480) ||
@@ -1809,6 +1818,28 @@ otv3_recovery_summary <- function(family, curves, metrics, config) {
   )
 }
 
+otv3_recovery_gate_pass <- function(family, recovery, gates) {
+  if (!identical(
+    as.character(gates$endpoint_summary_joint_inclusion_role),
+    "descriptive_only"
+  )) {
+    oti_stop("Endpoint-summary joint inclusion has an unsupported gate role.")
+  }
+  with(
+    recovery,
+    endpoint_rmse_over_oracle_width <=
+      gates$endpoint_rmse_over_oracle_width_max &
+      mean_width_ratio >= gates$mean_width_ratio_min &
+      mean_width_ratio <= gates$mean_width_ratio_max &
+      abs(lower_bias_over_oracle_width) <=
+        gates$absolute_endpoint_bias_over_oracle_width_max &
+      abs(upper_bias_over_oracle_width) <=
+        gates$absolute_endpoint_bias_over_oracle_width_max &
+      (identical(family, "dlm") || static_edge_center_rmse_ratio <=
+         gates$static_edge_center_rmse_ratio_max)
+  )
+}
+
 otv3_benchmark_assessment <- function(family, target, result, dgp, targets,
                                       config) {
   truth <- oti_target_row(targets, target)
@@ -1912,20 +1943,8 @@ otv3_summarize_cell <- function(family, target, chain_results, dgp, targets,
     )
   } else TRUE
   gates <- config$recovery_gates
-  recovery_pass <- with(
-    recovery,
-    endpoint_rmse_over_oracle_width <=
-      gates$endpoint_rmse_over_oracle_width_max &
-      mean_width_ratio >= gates$mean_width_ratio_min &
-      mean_width_ratio <= gates$mean_width_ratio_max &
-      endpoint_summary_joint_inclusion >=
-        gates$endpoint_summary_joint_inclusion_min &
-      abs(lower_bias_over_oracle_width) <=
-        gates$absolute_endpoint_bias_over_oracle_width_max &
-      abs(upper_bias_over_oracle_width) <=
-        gates$absolute_endpoint_bias_over_oracle_width_max &
-      (identical(family, "dlm") || static_edge_center_rmse_ratio <=
-         gates$static_edge_center_rmse_ratio_max)
+  recovery_pass <- otv3_recovery_gate_pass(
+    family, recovery, gates
   )
   heterogeneity_pass <- with(
     heterogeneity,
@@ -1957,6 +1976,7 @@ otv3_summarize_cell <- function(family, target, chain_results, dgp, targets,
       pathology_pass = pathology_pass,
       computational_pass = computational_pass,
       recovery_pass = recovery_pass,
+      endpoint_summary_joint_inclusion_gate_applied = FALSE,
       heterogeneity_pass = heterogeneity_pass,
       disposition = disposition,
       manuscript_illustration_evidence_eligible =

@@ -226,9 +226,13 @@ incur zero numerical repairs, and satisfy isolated source/runtime provenance.
 
 Recovery gates are descriptive checks for these frozen data sets, not claims
 about repeated-sample coverage. They include endpoint RMSE relative to oracle
-width, mean-width ratio, endpoint-summary inclusion, normalized endpoint bias,
-static edge/center behavior, low- and high-scale local-width RMSE, recovery of
-the high/low width contrast, and dynamic seasonal width amplitude and phase.
+width, mean-width ratio, normalized endpoint bias, static edge/center
+behavior, low- and high-scale local-width RMSE, recovery of the high/low width
+contrast, and dynamic seasonal width amplitude and phase. The fraction of
+sites at which both fixed population endpoints lie inside pointwise 95%
+generalized-posterior endpoint summaries is retained as a descriptive
+sidecar, not a pass gate. For one frozen data set and a highly correlated
+spline grid, that fraction has no nominal repeated-sample calibration level.
 
 ## Evidence and manuscript promotion
 

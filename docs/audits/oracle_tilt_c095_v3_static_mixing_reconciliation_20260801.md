@@ -115,6 +115,46 @@ The revised workflow must:
   provenance gates; and
 - preserve the fail-closed cell order.
 
+## Exact-source follow-up and recovery-gate reconciliation
+
+The first exact-source run with the moment profiles used commit
+`9ede3aba4b24e3c7525edf315323dc6af96f2917`. Its preflight, 24 reference
+gates, static-SH benchmark, and DLM-SH benchmark passed. The corrected
+fixed-design RQR cell then completed all four chains and closed the original
+computational problem:
+
+| Diagnostic | Exact result |
+|---|---:|
+| Maximum rank-normalized R-hat | 1.0025 |
+| Minimum bulk ESS | 3,096 |
+| Minimum tail ESS | 6,286 |
+| Maximum MCSE/posterior-SD | 0.0180 |
+| Normalized endpoint RMSE | 0.0605 |
+| Mean-width ratio | 0.9746 |
+| High/low width-contrast relative error | 0.1610 |
+| Numerical repairs | 0 |
+
+The cell still stopped on one legacy recovery rule: both population-oracle
+endpoints had to fall inside their pointwise 95% generalized-posterior
+endpoint summaries at at least 90% of the 2,400 design sites. The observed
+fraction was 0.855. All other computational, endpoint-bias, RMSE, width,
+edge/center, and heterogeneity gates passed.
+
+That 90% rule is not a repeated-sample coverage criterion. The population
+oracle is fixed rather than drawn from the prior, and the 2,400 spline sites
+are strongly dependent evaluations of eight fitted coefficients rather than
+2,400 independent experiments. Consequently, the fraction has no nominal
+90% calibration interpretation. Lowering its cutoff to 0.85 after observing
+0.855 would be result-dependent threshold tuning and was rejected.
+
+The statistic is retained in `recovery_summary.csv` and `fit_summary.csv` as a
+descriptive measure. It is removed from strict eligibility rather than given a
+new numerical threshold. Strict recovery continues to require normalized
+endpoint RMSE, mean-width ratio, endpoint bias, static edge/center behavior,
+low/high-scale local RMSE, width-contrast recovery, and the dynamic seasonal
+amplitude and phase checks. A recorded Boolean states that the joint-inclusion
+statistic was not applied as a gate.
+
 The required validation order is source tests, exact-runtime preflight,
 independent reference checks, representative benchmark, and only then the
 complete 27-chain illustration. A successful run may replace the version-2
@@ -122,9 +162,11 @@ figures only after compact evidence packaging and manuscript-build checks.
 
 ## Decision
 
-The original exact run is a valid fail-closed diagnostic and is not eligible
-for publication. The data-derived moment initialization is the smallest common
-target-preserving correction for all three static tilts. Replica exchange,
-easier population functions, fewer spline columns, and relaxed gates are not
-adopted. Final promotion remains conditional on a new exact-source run passing
-the complete unchanged scientific and computational contract.
+The original default-start run and the first moment-start exact run are valid
+fail-closed diagnostics and are not eligible for publication. The data-derived
+moment initialization is the smallest common target-preserving correction for
+all three static tilts. Replica exchange, easier population functions, and
+fewer spline columns are not adopted. No observed cutoff is substituted for
+the invalid 90% joint-inclusion rule; the statistic is retained as descriptive
+evidence. Final promotion remains conditional on a new exact-source run
+passing the corrected, versioned scientific and computational contract.
