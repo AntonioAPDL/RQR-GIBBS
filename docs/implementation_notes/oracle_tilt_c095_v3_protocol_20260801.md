@@ -312,3 +312,9 @@ non-MCMC cells in different R processes using the actual static array
 dimensions. It tests endpoint reconstruction, atomic serialization, process
 cleanup, and memory headroom; it cannot be used to select a prior, DGP, seed,
 initialization, MCMC length, or diagnostic threshold.
+
+The rehearsal's inner manifest hashes only immutable rehearsal artifacts.
+Process-monitor telemetry and wrapper logs remain live until the monitored
+process group exits and are hashed separately by the wrapper afterward. This
+prevents a concurrent log append from being misclassified as source or data
+corruption while preserving both integrity layers.

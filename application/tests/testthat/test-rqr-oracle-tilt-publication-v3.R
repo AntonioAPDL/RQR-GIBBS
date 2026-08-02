@@ -610,3 +610,25 @@ testthat::test_that("resource rehearsal uses two clean sequential R processes", 
   testthat::expect_true(all(summary$pass))
   otp_verify_manifest(root)
 })
+
+testthat::test_that("resource rehearsal separates immutable and live wrapper evidence", {
+  rehearsal_script <- readLines(
+    file.path(
+      repo_root, "application", "scripts",
+      "44_run_oracle_tilt_v3_resource_rehearsal.sh"
+    ),
+    warn = FALSE
+  )
+  joined <- paste(rehearsal_script, collapse = "\n")
+  testthat::expect_match(joined, "wrapper_owned <- c", fixed = TRUE)
+  for (name in c(
+    "process_group_monitor.csv", "runner.stdout.log", "runner.stderr.log",
+    "resource_summary.csv", "wrapper_closeout.csv",
+    "wrapper_artifact_manifest.csv", "wrapper_failure_log.csv"
+  )) {
+    testthat::expect_match(joined, name, fixed = TRUE)
+  }
+  testthat::expect_match(
+    joined, "!relative %in% wrapper_owned", fixed = TRUE
+  )
+})

@@ -87,7 +87,20 @@ summary$pass <- summary$pass & summary$distinct_process &
   summary$post_stage_r_processes == 0L & summary$full_production_dimensions
 write.csv(summary, file.path(root, "rehearsal_summary.csv"), row.names = FALSE)
 files <- list.files(root, recursive = TRUE, full.names = TRUE)
-files <- files[basename(files) != "artifact_manifest.csv"]
+relative <- sub(
+  paste0("^", normalizePath(root, winslash = "/", mustWork = TRUE), "/?"),
+  "", normalizePath(files, winslash = "/", mustWork = TRUE)
+)
+# The outer monitored wrapper is still appending to its telemetry and log files
+# while this inner manifest is created. Bind immutable rehearsal artifacts
+# here; the wrapper hashes its own final files after the process group exits.
+wrapper_owned <- c(
+  "process_group_monitor.csv", "runner.stdout.log", "runner.stderr.log",
+  "resource_summary.csv", "wrapper_closeout.csv",
+  "wrapper_artifact_manifest.csv", "wrapper_failure_log.csv"
+)
+files <- files[relative != "artifact_manifest.csv" &
+                 !relative %in% wrapper_owned]
 manifest <- oti_file_hashes(files, root)
 names(manifest)[names(manifest) == "relative_path"] <- "path"
 write.csv(manifest, file.path(root, "artifact_manifest.csv"), row.names = FALSE)
