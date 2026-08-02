@@ -280,6 +280,12 @@ make oracle-tilt-v3-package-evidence \
   ORACLE_TILT_V3_RUN_DIR=<completed execute directory>
 ```
 
+The monitored wrapper reads the installed package path from the attestation
+and prepends its library to the ordinary R user/site libraries. This preserves
+the exact `rqrgibbs` source binding without hiding declared dependencies that
+reside in the standard user library; callers should not replace
+`R_LIBS_USER` with the isolated library alone.
+
 Exact output directories and artifact hashes belong in the eventual validation
 closeout, not in this prospective protocol.
 

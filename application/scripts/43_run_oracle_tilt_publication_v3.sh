@@ -22,6 +22,29 @@ for command_name in setsid ps awk sha256sum stat find sort date df Rscript; do
   }
 done
 
+# Promotion runs must load rqrgibbs from the attested isolated library while
+# retaining the ordinary user/site libraries that provide audited
+# dependencies such as jsonlite and posterior.  Derive the isolated library
+# from the attestation itself so callers cannot accidentally bind a different
+# installation through an incomplete R_LIBS_USER setting.
+if [[ -n "${RQR_PRIMARY_RUNTIME_ATTESTATION:-}" ]]; then
+  default_r_library_path="$(Rscript -e 'cat(paste(.libPaths(), collapse=.Platform$path.sep))')"
+  attested_runtime_library="$(Rscript -e '
+    args <- commandArgs(trailingOnly = TRUE)
+    if (length(args) != 1L || !file.exists(args[[1L]])) {
+      stop("The runtime attestation does not exist.", call. = FALSE)
+    }
+    attestation <- readRDS(args[[1L]])
+    runtime_path <- attestation$runtime_package_path
+    if (!is.character(runtime_path) || length(runtime_path) != 1L ||
+        !dir.exists(runtime_path)) {
+      stop("The attested runtime package path is invalid.", call. = FALSE)
+    }
+    cat(dirname(normalizePath(runtime_path, winslash = "/", mustWork = TRUE)))
+  ' "$RQR_PRIMARY_RUNTIME_ATTESTATION")"
+  export R_LIBS_USER="${attested_runtime_library}${PATH_SEPARATOR:-:}${default_r_library_path}"
+fi
+
 if [[ "$mode" == benchmark || "$mode" == resource-rehearsal ||
       "$mode" == execute ]]; then
   if [[ ! "${RQR_EXPECTED_PRIMARY_COMMIT:-}" =~ ^[0-9a-fA-F]{40}$ ]]; then
