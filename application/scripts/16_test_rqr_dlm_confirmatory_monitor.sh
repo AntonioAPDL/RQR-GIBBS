@@ -7,7 +7,7 @@ set -euo pipefail
 
 repo_root="$(pwd -P)"
 wrapper="$repo_root/application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh"
-if [[ ! -x "$wrapper" || ! -f "$repo_root/application/DESCRIPTION" ]]; then
+if [[ ! -f "$wrapper" || ! -f "$repo_root/application/DESCRIPTION" ]]; then
   echo "Run this test from the RQR-GIBBS repository root." >&2
   exit 64
 fi
@@ -31,7 +31,7 @@ RQR_MAX_PROCESS_WAVE_SECONDS=60 \
 RQR_MAX_PROCESS_GROUP_RSS_KIB=52428800 \
 RQR_MAX_PROCESS_GROUP_THREADS=0 \
 RQR_MONITOR_POLL_SECONDS=0.05 \
-  "$wrapper" preflight "$output_dir"
+  bash "$wrapper" preflight "$output_dir"
 status=$?
 set -e
 if [[ "$status" -eq 0 ]]; then

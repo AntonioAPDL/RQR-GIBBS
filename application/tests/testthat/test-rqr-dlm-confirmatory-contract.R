@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.11.0"
+    "rqrgibbs_dlm_main_correction/1.12.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -100,6 +100,23 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   )
   expect_false(
     contract$config$implementation_correction$failed_outputs_reused
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      production_seed_binding_failed_authorization_commit,
+    "281802e9a51f4e739bdb9b5211bbea5d1fd8ba29"
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      production_seed_binding_failed_outputs_reused
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      production_seed_binding_failed_scientific_metrics_used
+  )
+  expect_true(
+    contract$config$implementation_correction$
+      production_seed_binding_fresh_relaunch_required
   )
   expect_false(
     contract$config$implementation_correction$
@@ -796,11 +813,15 @@ test_that("execution publishes diagnostic failures without duplicate RDS reads",
     runner, fixed = TRUE
   )))
   expect_true(any(grepl(
-    '"rqrgibbs_dlm_compact_mcmc_diagnostics/1.1.0"',
+    "rqr_confirm_compact_mcmc_diagnostic(",
     runner, fixed = TRUE
   )))
   expect_true(any(grepl(
-    "method_seed_state_digests =",
+    "diagnostics = diagnostics",
+    runner, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "rqr_confirm_compact_mcmc_diagnostic(",
     runner, fixed = TRUE
   )))
   compact_assignment <- grep(
@@ -816,6 +837,27 @@ test_that("execution publishes diagnostic failures without duplicate RDS reads",
   expect_false(any(grepl(
     '"sentinel_chains_ignored.rds"',
     runner, fixed = TRUE
+  )))
+})
+
+test_that("the wave launcher validates endpoint bindings without printing the ledger", {
+  launcher <- readLines(
+    testthat::test_path(
+      "..", "..", "scripts",
+      "17_launch_rqr_dlm_confirmatory_wave.R"
+    ),
+    warn = FALSE
+  )
+  expect_true(any(grepl(
+    "validated_seed_ledger <- rqr_confirm_validate_seed_ledger(",
+    launcher, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "rqr_confirm_validate_planned_method_rng_bindings(",
+    launcher, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "rm(validated_seed_ledger)", launcher, fixed = TRUE
   )))
 })
 
@@ -1152,6 +1194,170 @@ test_that("complete seed ledgers reject altered serialized states", {
     ),
     "digest does not match"
   )
+})
+
+test_that("endpoint-aware method RNG bindings cover M02 and joint intervals", {
+  environment <- load_confirmatory_helpers()
+  make_ledger <- function(method, cell_id, replication, chains) {
+    endpoints <- environment$rqr_confirm_method_endpoint_ids(method)
+    grid <- expand.grid(
+      endpoint = endpoints, chain = seq_len(chains),
+      KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE
+    )
+    keys <- unlist(lapply(c("method", "forecast"), function(kind) {
+      environment$rqr_confirm_rng_task_key(
+        kind, cell_id, replication, grid$endpoint, grid$chain
+      )
+    }), use.names = FALSE)
+    data.frame(
+      task_key = keys,
+      state_digest = vapply(
+        keys, digest::digest, character(1L),
+        algo = "sha256", serialize = FALSE
+      ),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  m02_ledger <- make_ledger("M02", "C01M02", 39L, 4L)
+  m02 <- environment$rqr_confirm_method_rng_bindings(
+    m02_ledger, "C01M02", 39L, "M02", 4L
+  )
+  expect_identical(nrow(m02), 16L)
+  expect_identical(unique(m02$endpoint), c("lower", "upper"))
+  expect_identical(sort(unique(m02$chain)), 1:4)
+  expect_identical(
+    as.integer(table(m02$stream_kind)[c("forecast", "method")]),
+    c(8L, 8L)
+  )
+  expect_false(any(grepl("\\|interval\\|", m02$task_key)))
+  expect_error(
+    environment$rqr_confirm_method_endpoint_ids("M99"),
+    "method must"
+  )
+  expect_error(
+    environment$rqr_confirm_rng_task_key(
+      "method", "C01M02", 1:2, c("lower", "upper", "lower"), 1L
+    ),
+    "incompatible vector lengths"
+  )
+
+  m01_ledger <- make_ledger("M01", "C01M01", 39L, 4L)
+  m01 <- environment$rqr_confirm_method_rng_bindings(
+    m01_ledger, "C01M01", 39L, "M01", 4L
+  )
+  expect_identical(nrow(m01), 8L)
+  expect_true(all(m01$endpoint == "interval"))
+
+  m03_ledger <- make_ledger("M03", "C01M03", 39L, 4L)
+  m03 <- environment$rqr_confirm_method_rng_bindings(
+    m03_ledger, "C01M03", 39L, "M03", 4L
+  )
+  expect_identical(nrow(m03), 4L)
+  expect_true(all(m03$endpoint == "interval"))
+  expect_true(all(m03$stream_kind == "method"))
+  expect_false(any(grepl("^forecast\\|", m03$task_key)))
+
+  expect_error(
+    environment$rqr_confirm_method_rng_bindings(
+      m02_ledger[-1L, , drop = FALSE],
+      "C01M02", 39L, "M02", 4L
+    ),
+    "binding is incomplete"
+  )
+})
+
+test_that("the complete production plan resolves every method RNG binding", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  keys <- environment$rqr_confirm_rng_task_keys(
+    contract, planning = "initial"
+  )
+  ledger <- data.frame(
+    task_key = keys,
+    state_digest = sprintf("planned-state-%07d", seq_along(keys)),
+    stringsAsFactors = FALSE
+  )
+  summary <- environment$rqr_confirm_validate_planned_method_rng_bindings(
+    ledger, contract, planning = "initial"
+  )
+  expect_gt(attr(summary, "binding_rows"), 0L)
+  expect_match(attr(summary, "binding_digest"), "^[0-9a-f]{64}$")
+  expect_true(all(c("lower", "upper") %in%
+    summary$endpoint[summary$method == "M02"]))
+  expect_false(any(
+    summary$method == "M02" & summary$endpoint == "interval"
+  ))
+
+  missing_key <- environment$rqr_confirm_rng_task_key(
+    "method", "C01M02", 1L, "lower", 1L
+  )
+  expect_error(
+    environment$rqr_confirm_validate_planned_method_rng_bindings(
+      ledger[ledger$task_key != missing_key, , drop = FALSE],
+      contract, planning = "initial"
+    ),
+    "binding contract is incomplete"
+  )
+})
+
+test_that("compact M02 diagnostics serialize every consumed RNG stream", {
+  environment <- load_confirmatory_helpers()
+  endpoints <- c("lower", "upper")
+  grid <- expand.grid(
+    endpoint = endpoints, chain = 1:4,
+    KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE
+  )
+  keys <- unlist(lapply(c("method", "forecast"), function(kind) {
+    environment$rqr_confirm_rng_task_key(
+      kind, "C01M02", 39L, grid$endpoint, grid$chain
+    )
+  }), use.names = FALSE)
+  ledger <- data.frame(
+    task_key = keys,
+    state_digest = vapply(
+      keys, digest::digest, character(1L),
+      algo = "sha256", serialize = FALSE
+    ),
+    stringsAsFactors = FALSE
+  )
+  hashes <- setNames(rep(paste(rep("a", 64L), collapse = ""), 5L), c(
+    "source_commit", "config_digest", "incidence_digest",
+    "seed_ledger_digest", "runtime_digest"
+  ))
+  hashes[["source_commit"]] <- paste(rep("b", 40L), collapse = "")
+  object <- environment$rqr_confirm_compact_mcmc_diagnostic(
+    metadata = as.list(c(hashes, DGP = "S01")),
+    ledger = ledger, cell_id = "C01M02", replication = 39L,
+    method = "M02", sentinel = TRUE,
+    chain_profiles = c("A", "B", "C", "D"),
+    schedules = data.frame(
+      profile = c("A", "B", "C", "D"),
+      burn = 1L, retain = 2L, thin = 1L,
+      stringsAsFactors = FALSE
+    ),
+    scalar_chains = replicate(
+      4L, data.frame(value = c(0, 1)), simplify = FALSE
+    ),
+    diagnostics = data.frame(
+      estimand = "fixture", pass = TRUE,
+      stringsAsFactors = FALSE
+    )
+  )
+  expect_identical(
+    object$schema_version,
+    "rqrgibbs_dlm_compact_mcmc_diagnostics/1.2.0"
+  )
+  expect_identical(object$rng_bindings$task_key, keys)
+  expect_identical(nrow(object$rng_bindings), 16L)
+  expect_true(object$diagnostic_pass)
+  expect_true(object$exact_refit_inputs_bound)
+  expect_false(object$response_likelihood)
+
+  path <- tempfile(fileext = ".rds")
+  on.exit(unlink(path, force = TRUE), add = TRUE)
+  saveRDS(object, path, compress = "xz")
+  expect_identical(readRDS(path), object)
 })
 
 test_that("canonical DGPs separate state, response, and oracle quantities", {

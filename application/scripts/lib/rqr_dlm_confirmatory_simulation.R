@@ -153,7 +153,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$implementation_correction,
         list(
-          schema_version = "rqrgibbs_dlm_main_correction/1.11.0",
+          schema_version = "rqrgibbs_dlm_main_correction/1.12.0",
           failed_authorization_commit =
             "b8b7748ab181a006611b602f64d4edf5be591de6",
           failed_wave_id =
@@ -269,6 +269,22 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           true_fixed_W_schedule_correction =
             "M08_uniform_B1000_R4000_method_level_schedule",
           true_fixed_W_schedule_applies_to_M06 = FALSE,
+          production_seed_binding_failed_authorization_commit =
+            "281802e9a51f4e739bdb9b5211bbea5d1fd8ba29",
+          production_seed_binding_failed_run_id =
+            "rqr_dlm_main_20260801_281802e",
+          production_seed_binding_failed_wave_id =
+            "static_gaussian_T200__target0200__sentinel",
+          production_seed_binding_failed_wave_artifact_hashes_sha256 =
+            "2d2e357798c8652e678292216885ca8015e7215865eecd2834e206d5d22d62f8",
+          production_seed_binding_failure = paste(
+            "M02 correctly consumed endpoint-specific lower and upper RNG streams;",
+            "the post-fit compact diagnostic serializer incorrectly requested",
+            "a nonexistent interval stream"
+          ),
+          production_seed_binding_failed_outputs_reused = FALSE,
+          production_seed_binding_failed_scientific_metrics_used = FALSE,
+          production_seed_binding_fresh_relaunch_required = TRUE,
           correction_budget_path =
             "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
           correction_budget_sha256 =
@@ -902,6 +918,114 @@ rqr_confirm_with_state <- function(state, expression) {
   force(expression)
 }
 
+rqr_confirm_method_endpoint_ids <- function(method) {
+  if (!is.character(method) || length(method) != 1L || is.na(method) ||
+      !nzchar(method) ||
+      !method %in% sprintf("M%02d", seq_len(13L))) {
+    stop("method must be one nonempty string.", call. = FALSE)
+  }
+  if (identical(method, "M02")) c("lower", "upper") else "interval"
+}
+
+rqr_confirm_method_rng_streams <- function(method) {
+  rqr_confirm_method_endpoint_ids(method)
+  if (identical(method, "M03")) "method" else c("method", "forecast")
+}
+
+rqr_confirm_rng_task_key <- function(
+    stream_kind, cell_id, replication, endpoint, chain) {
+  if (!is.character(stream_kind) || length(stream_kind) != 1L ||
+      is.na(stream_kind) ||
+      !stream_kind %in% c("method", "initialization", "forecast")) {
+    stop("stream_kind is not a supported method RNG stream.", call. = FALSE)
+  }
+  if (!is.character(cell_id) || length(cell_id) != 1L || is.na(cell_id) ||
+      !nzchar(cell_id)) {
+    stop("cell_id must be one nonempty string.", call. = FALSE)
+  }
+  if (!is.numeric(replication) || !length(replication) ||
+      anyNA(replication) || any(!is.finite(replication)) ||
+      any(replication != floor(replication)) || any(replication < 1L) ||
+      any(replication > .Machine$integer.max)) {
+    stop("replication must contain positive exact integers.", call. = FALSE)
+  }
+  replication <- as.integer(replication)
+  if (!is.character(endpoint) || !length(endpoint) || anyNA(endpoint) ||
+      any(!endpoint %in% c("interval", "lower", "upper"))) {
+    stop("endpoint contains an unsupported RNG endpoint ID.", call. = FALSE)
+  }
+  if (identical(stream_kind, "initialization")) {
+    if (!is.character(chain) || !length(chain) || anyNA(chain) ||
+        any(!nzchar(chain))) {
+      stop("Initialization RNG bindings require profile names.", call. = FALSE)
+    }
+  } else {
+    if (!is.numeric(chain) || !length(chain) || anyNA(chain) ||
+        any(!is.finite(chain)) || any(chain != floor(chain)) ||
+        any(chain < 1L) || any(chain > 4L)) {
+      stop("Method RNG bindings require chain indices in 1,...,4.",
+           call. = FALSE)
+    }
+    chain <- as.integer(chain)
+  }
+  field_lengths <- c(
+    replication = length(replication), endpoint = length(endpoint),
+    chain = length(chain)
+  )
+  output_length <- max(field_lengths)
+  if (any(!field_lengths %in% c(1L, output_length))) {
+    stop("RNG task-key fields have incompatible vector lengths.",
+         call. = FALSE)
+  }
+  paste(stream_kind, cell_id, replication, endpoint, chain, sep = "|")
+}
+
+rqr_confirm_method_rng_bindings <- function(
+    ledger, cell_id, replication, method, chains) {
+  if (!is.data.frame(ledger) ||
+      !all(c("task_key", "state_digest") %in% names(ledger)) ||
+      anyNA(ledger[c("task_key", "state_digest")]) ||
+      anyDuplicated(ledger$task_key)) {
+    stop("The RNG binding ledger has an invalid schema.", call. = FALSE)
+  }
+  chains <- rqr_confirm_strict_integer(chains, "chains", 1L, 4L)
+  endpoints <- rqr_confirm_method_endpoint_ids(method)
+  grid <- expand.grid(
+    endpoint = endpoints,
+    chain = seq_len(chains),
+    KEEP.OUT.ATTRS = FALSE,
+    stringsAsFactors = FALSE
+  )
+  rows <- lapply(
+    rqr_confirm_method_rng_streams(method), function(stream_kind) {
+      keys <- rqr_confirm_rng_task_key(
+        stream_kind, cell_id, replication, grid$endpoint, grid$chain
+      )
+      ledger_rows <- match(keys, ledger$task_key)
+      if (anyNA(ledger_rows)) {
+        stop(
+          sprintf(
+            "Method RNG binding is incomplete for %s: %s.",
+            method, paste(keys[is.na(ledger_rows)], collapse = ", ")
+          ),
+          call. = FALSE
+        )
+      }
+      data.frame(
+        stream_kind = stream_kind,
+        endpoint = grid$endpoint,
+        chain = as.integer(grid$chain),
+        task_key = keys,
+        state_digest = ledger$state_digest[ledger_rows],
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+  binding <- do.call(rbind, rows)
+  rownames(binding) <- NULL
+  binding
+}
+
 rqr_confirm_rng_task_keys <- function(contract, planning = "maximum") {
   plan <- rqr_confirm_fit_plan(contract, planning)
   sentinel_blueprint <- rqr_confirm_sentinel_blueprint(contract, planning)
@@ -931,11 +1055,7 @@ rqr_confirm_rng_task_keys <- function(contract, planning = "maximum") {
   for (row_index in seq_len(nrow(plan))) {
     cell <- plan$cell_id[[row_index]]
     method <- plan$method[[row_index]]
-    endpoint_ids <- if (method == "M02") {
-      c("lower", "upper")
-    } else {
-      "interval"
-    }
+    endpoint_ids <- rqr_confirm_method_endpoint_ids(method)
     replications <- seq_len(plan$replications[[row_index]])
     sentinel_replications <- sentinel$replication[
       sentinel$cell_id == cell
@@ -946,17 +1066,15 @@ rqr_confirm_rng_task_keys <- function(contract, planning = "maximum") {
     for (endpoint in endpoint_ids) {
       if (length(standard_replications)) {
         append_chunk(c(
-          paste(
-            "method", cell, standard_replications, endpoint, 1L,
-            sep = "|"
+          rqr_confirm_rng_task_key(
+            "method", cell, standard_replications, endpoint, 1L
           ),
-          paste(
+          rqr_confirm_rng_task_key(
             "initialization", cell, standard_replications, endpoint,
-            "standard", sep = "|"
+            "standard"
           ),
-          paste(
-            "forecast", cell, standard_replications, endpoint, 1L,
-            sep = "|"
+          rqr_confirm_rng_task_key(
+            "forecast", cell, standard_replications, endpoint, 1L
           )
         ))
       }
@@ -964,17 +1082,15 @@ rqr_confirm_rng_task_keys <- function(contract, planning = "maximum") {
         for (chain in seq_len(4L)) {
           profile <- c("A", "B", "C", "D")[[chain]]
           append_chunk(c(
-            paste(
-              "method", cell, sentinel_replications, endpoint, chain,
-              sep = "|"
+            rqr_confirm_rng_task_key(
+              "method", cell, sentinel_replications, endpoint, chain
             ),
-            paste(
+            rqr_confirm_rng_task_key(
               "initialization", cell, sentinel_replications, endpoint,
-              profile, sep = "|"
+              profile
             ),
-            paste(
-              "forecast", cell, sentinel_replications, endpoint, chain,
-              sep = "|"
+            rqr_confirm_rng_task_key(
+              "forecast", cell, sentinel_replications, endpoint, chain
             )
           ))
         }
@@ -1202,6 +1318,99 @@ rqr_confirm_validate_seed_ledger <- function(
   }
   attr(ledger, "states") <- setNames(states, ledger$task_key)
   ledger
+}
+
+rqr_confirm_expected_method_rng_bindings <- function(
+    contract, planning = "maximum") {
+  planning <- match.arg(planning, c("initial", "central", "maximum"))
+  plan <- rqr_confirm_fit_plan(contract, planning)
+  plan <- plan[vapply(
+    plan$method, rqr_confirm_method_mcmc_chains, integer(1L)
+  ) > 0L, , drop = FALSE]
+  sentinel <- rqr_confirm_sentinel_map(contract, planning)
+  chunks <- list()
+  chunk_index <- 0L
+  append_group <- function(cell_id, method, replications, chains) {
+    if (!length(replications)) return(invisible(NULL))
+    endpoints <- rqr_confirm_method_endpoint_ids(method)
+    grid <- expand.grid(
+      replication = as.integer(replications),
+      endpoint = endpoints,
+      chain = seq_len(chains),
+      KEEP.OUT.ATTRS = FALSE,
+      stringsAsFactors = FALSE
+    )
+    for (stream_kind in rqr_confirm_method_rng_streams(method)) {
+      chunk_index <<- chunk_index + 1L
+      chunks[[chunk_index]] <<- data.frame(
+        cell_id = cell_id,
+        method = method,
+        replication = as.integer(grid$replication),
+        stream_kind = stream_kind,
+        endpoint = grid$endpoint,
+        chain = as.integer(grid$chain),
+        task_key = rqr_confirm_rng_task_key(
+          stream_kind, cell_id, grid$replication,
+          grid$endpoint, grid$chain
+        ),
+        stringsAsFactors = FALSE
+      )
+    }
+    invisible(NULL)
+  }
+  for (row_index in seq_len(nrow(plan))) {
+    cell_id <- plan$cell_id[[row_index]]
+    method <- plan$method[[row_index]]
+    replications <- seq_len(plan$replications[[row_index]])
+    sentinel_replications <- sentinel$replication[
+      sentinel$cell_id == cell_id
+    ]
+    append_group(
+      cell_id, method,
+      setdiff(replications, sentinel_replications), 1L
+    )
+    append_group(cell_id, method, sentinel_replications, 4L)
+  }
+  expected <- do.call(rbind, chunks)
+  rownames(expected) <- NULL
+  if (anyDuplicated(expected$task_key)) {
+    stop("The production RNG binding contract contains duplicate keys.",
+         call. = FALSE)
+  }
+  expected
+}
+
+rqr_confirm_validate_planned_method_rng_bindings <- function(
+    ledger, contract, planning = "maximum") {
+  expected <- rqr_confirm_expected_method_rng_bindings(contract, planning)
+  rows <- match(expected$task_key, ledger$task_key)
+  if (anyNA(rows)) {
+    missing <- expected$task_key[is.na(rows)]
+    stop(
+      sprintf(
+        "The production RNG binding contract is incomplete: %s%s",
+        paste(utils::head(missing, 8L), collapse = ", "),
+        if (length(missing) > 8L) " ..." else "."
+      ),
+      call. = FALSE
+    )
+  }
+  expected$state_digest <- ledger$state_digest[rows]
+  summary <- stats::aggregate(
+    list(binding_rows = rep.int(1L, nrow(expected))),
+    expected[c("method", "stream_kind", "endpoint")],
+    sum
+  )
+  summary <- summary[order(
+    summary$method, summary$stream_kind, summary$endpoint,
+    method = "radix"
+  ), , drop = FALSE]
+  rownames(summary) <- NULL
+  attr(summary, "binding_digest") <- digest::digest(
+    expected, algo = "sha256", serialize = TRUE
+  )
+  attr(summary, "binding_rows") <- nrow(expected)
+  summary
 }
 
 rqr_confirm_error_draw <- function(family, n) {
@@ -2766,6 +2975,74 @@ rqr_confirm_compact_method_result <- function(value) {
   c(endpoints, list(endpoint_target = value$endpoint_target))
 }
 
+rqr_confirm_compact_mcmc_diagnostic <- function(
+    metadata, ledger, cell_id, replication, method, sentinel,
+    chain_profiles, schedules, scalar_chains, diagnostics) {
+  required_metadata <- c(
+    "source_commit", "config_digest", "incidence_digest",
+    "seed_ledger_digest", "runtime_digest"
+  )
+  if (!is.list(metadata) ||
+      !all(required_metadata %in% names(metadata)) ||
+      any(vapply(metadata[required_metadata], function(value) {
+        !is.character(value) || length(value) != 1L || is.na(value) ||
+          !nzchar(value)
+      }, logical(1L)))) {
+    stop("Compact MCMC diagnostic metadata are incomplete.", call. = FALSE)
+  }
+  if (!grepl("^[0-9a-f]{40}$", metadata$source_commit) ||
+      any(!vapply(
+        metadata[c(
+          "config_digest", "incidence_digest", "seed_ledger_digest",
+          "runtime_digest"
+        )],
+        function(value) grepl("^[0-9a-f]{64}$", value),
+        logical(1L)
+      ))) {
+    stop("Compact MCMC diagnostic source digests are invalid.",
+         call. = FALSE)
+  }
+  if (!is.logical(sentinel) || length(sentinel) != 1L || is.na(sentinel) ||
+      !is.character(chain_profiles) || !length(chain_profiles) ||
+      anyNA(chain_profiles) || any(!nzchar(chain_profiles)) ||
+      !is.data.frame(schedules) || nrow(schedules) != length(chain_profiles) ||
+      !is.list(scalar_chains) ||
+      length(scalar_chains) != length(chain_profiles) ||
+      any(vapply(scalar_chains, is.null, logical(1L))) ||
+      !is.data.frame(diagnostics) || !"pass" %in% names(diagnostics) ||
+      !is.logical(diagnostics$pass) || anyNA(diagnostics$pass)) {
+    stop("Compact MCMC diagnostic contents are invalid.", call. = FALSE)
+  }
+  rng_bindings <- rqr_confirm_method_rng_bindings(
+    ledger = ledger, cell_id = cell_id, replication = replication,
+    method = method, chains = length(chain_profiles)
+  )
+  list(
+    schema_version = "rqrgibbs_dlm_compact_mcmc_diagnostics/1.2.0",
+    source_commit = metadata$source_commit,
+    config_digest = metadata$config_digest,
+    incidence_digest = metadata$incidence_digest,
+    seed_ledger_digest = metadata$seed_ledger_digest,
+    runtime_digest = metadata$runtime_digest,
+    DGP = metadata$DGP %||% NA_character_,
+    replication = as.integer(replication),
+    cell_id = cell_id,
+    method = method,
+    sentinel = sentinel,
+    chain_profiles = chain_profiles,
+    rng_bindings = rng_bindings,
+    schedules = schedules,
+    scalar_chains = scalar_chains,
+    diagnostics = diagnostics,
+    diagnostic_pass = all(diagnostics$pass),
+    full_fit_objects_retained = FALSE,
+    exact_refit_inputs_bound = TRUE,
+    generalized_bayes = TRUE,
+    response_likelihood = FALSE,
+    response_prediction_contract = FALSE
+  )
+}
+
 rqr_confirm_state_ordinate_mean <- function(FF, state_mean,
                                             label = "state mean") {
   FF <- as.matrix(FF)
@@ -3509,9 +3786,8 @@ rqr_confirm_dynamic_fit <- function(
     generated, model, profile, component_scale = component_method,
     component_scale_base = prior_median
   )
-  method_key <- paste(
-    "method", cell_id, generated$replication, "interval", chain,
-    sep = "|"
+  method_key <- rqr_confirm_rng_task_key(
+    "method", cell_id, generated$replication, "interval", chain
   )
   initial$rng_state <- rqr_confirm_state_from_ledger(ledger, method_key)
   learning_rate <- switch(
@@ -3649,9 +3925,8 @@ rqr_confirm_dynamic_fit <- function(
     stop("Unsupported dynamic RQR method.", call. = FALSE)
   }
   fit <- do.call(rqr_dlm_fit, common)
-  forecast_key <- paste(
-    "forecast", cell_id, generated$replication, "interval", chain,
-    sep = "|"
+  forecast_key <- rqr_confirm_rng_task_key(
+    "forecast", cell_id, generated$replication, "interval", chain
   )
   forecast <- rqr_confirm_with_state(
     rqr_confirm_state_from_ledger(ledger, forecast_key),
@@ -3742,9 +4017,8 @@ rqr_confirm_fixed_design <- function(
   )
   state <- rqr_confirm_state_from_ledger(
     ledger,
-    paste(
-      "method", cell_id, generated$replication, "interval", chain,
-      sep = "|"
+    rqr_confirm_rng_task_key(
+      "method", cell_id, generated$replication, "interval", chain
     )
   )
   schedule <- rqr_confirm_fixed_design_schedule(
@@ -4073,9 +4347,8 @@ rqr_confirm_dynamic_quantile <- function(
         sigma_initial = profile$component_scale_multiplier
       )
     initializations[[index]] <- endpoint_initialization
-    method_key <- paste(
-      "method", cell_id, generated$replication, endpoint, chain,
-      sep = "|"
+    method_key <- rqr_confirm_rng_task_key(
+      "method", cell_id, generated$replication, endpoint, chain
     )
     fits[[index]] <- rqr_confirm_with_state(
       rqr_confirm_state_from_ledger(ledger, method_key),
@@ -4091,9 +4364,8 @@ rqr_confirm_dynamic_quantile <- function(
         verbose = FALSE, trace.diagnostics = FALSE
       )
     )
-    forecast_key <- paste(
-      "forecast", cell_id, generated$replication, endpoint, chain,
-      sep = "|"
+    forecast_key <- rqr_confirm_rng_task_key(
+      "forecast", cell_id, generated$replication, endpoint, chain
     )
     forecasts[[index]] <- rqr_confirm_with_state(
       rqr_confirm_state_from_ledger(ledger, forecast_key),

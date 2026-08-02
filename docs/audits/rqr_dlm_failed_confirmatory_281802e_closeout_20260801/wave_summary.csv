@@ -1,0 +1,2 @@
+"canonical_wave_index","wave_id","phase","batch_group","task_count","workers_used","decision","all_workers_passed","source_commit","runtime_tree_digest","completion_sha256","artifact_manifest_sha256"
+1,"static_gaussian_T200__target0200__sentinel","sentinel","static_gaussian_T200",20,8,"failed",FALSE,"281802e9a51f4e739bdb9b5211bbea5d1fd8ba29","8a8d9a8dcf967532ec5a105d3acaf4e7bde227c89a64900ec0c22716073f3414","94442d9ea14dcd7e8b64b730a4c9a5b712ff57edcf19880cd4d9bda6a10c5fcb","2d2e357798c8652e678292216885ca8015e7215865eecd2834e206d5d22d62f8"

@@ -151,6 +151,9 @@ for (index in seq_along(wave_dirs)) {
 
 wave_summary <- do.call(rbind, wave_rows)
 artifact_verification <- do.call(rbind, artifact_rows)
+if (!any(wave_summary$decision == "failed")) {
+  stop("The supplied run has no terminal failed wave.", call. = FALSE)
+}
 results <- if (length(all_results)) do.call(rbind, all_results) else NULL
 diagnostics <- if (length(all_diagnostics)) {
   do.call(rbind, all_diagnostics)
@@ -162,6 +165,9 @@ failures <- if (length(all_failures)) do.call(rbind, all_failures) else NULL
 
 contract <- rqr_confirm_read_contract(repo_root)
 planned_tasks <- nrow(rqr_confirm_replication_plan(
+  contract, planning = "maximum"
+))
+canonical_wave_count <- nrow(rqr_confirm_wave_catalog(
   contract, planning = "maximum"
 ))
 budget <- rqr_confirm_budget_summary(contract, planning = "maximum")
@@ -189,7 +195,7 @@ progress <- data.frame(
   observed = c(
     nrow(wave_summary), sum(wave_summary$decision == "passed"),
     sum(wave_summary$decision == "failed"),
-    110L - nrow(wave_summary),
+    canonical_wave_count - nrow(wave_summary),
     if (is.null(status)) 0L else nrow(status),
     sum(fully_completed_task_status),
     if (is.null(results)) 0L else nrow(results),
@@ -200,20 +206,36 @@ progress <- data.frame(
     if (is.null(diagnostics)) 0L else sum(!diagnostics$pass)
   ),
   denominator = c(
-    110L, 110L, 110L, 110L, planned_tasks, planned_tasks,
+    canonical_wave_count, canonical_wave_count,
+    canonical_wave_count, canonical_wave_count,
+    planned_tasks, planned_tasks,
     planned_evaluations, NA, planned_chains, NA, NA, NA
   ),
   stringsAsFactors = FALSE
 )
 
+artifact_schemas <- rqr_confirm_artifact_schemas()
+empty_schema <- function(fields) {
+  as.data.frame(
+    setNames(
+      replicate(length(fields), character(), simplify = FALSE),
+      fields
+    ),
+    stringsAsFactors = FALSE, check.names = FALSE
+  )
+}
 failed_diagnostics <- if (is.null(diagnostics)) {
-  data.frame()
+  empty_schema(artifact_schemas$fit_diagnostics)
 } else {
   diagnostics[!diagnostics$pass, setdiff(
     names(diagnostics), "source_file"
   ), drop = FALSE]
 }
-failure_ledger <- if (is.null(failures)) data.frame() else failures
+failure_ledger <- if (is.null(failures)) {
+  empty_schema(artifact_schemas$failure_ledger)
+} else {
+  failures
+}
 
 resource_paths <- unlist(lapply(wave_dirs, function(wave) {
   list.files(
@@ -241,6 +263,40 @@ resource_summary <- data.frame(
     all(resources$ceiling_reason == "none"),
   stringsAsFactors = FALSE
 )
+
+error_paths <- unlist(lapply(wave_dirs, function(wave) {
+  list.files(
+    file.path(wave, "resource_monitor"),
+    pattern = "\\.stderr\\.log$", recursive = TRUE,
+    full.names = TRUE
+  )
+}), use.names = FALSE)
+worker_error_signatures <- if (!length(error_paths)) {
+  data.frame(
+    source_file = character(), error_message = character(),
+    message_digest = character(), file_sha256 = character(),
+    stringsAsFactors = FALSE
+  )
+} else {
+  do.call(rbind, lapply(error_paths, function(path) {
+    lines <- readLines(path, warn = FALSE)
+    messages <- grep("^Error:", lines, value = TRUE)
+    message <- if (length(messages)) tail(messages, 1L) else
+      "no_R_error_line_recorded"
+    data.frame(
+      source_file = substring(path, nchar(run_root) + 2L),
+      error_message = message,
+      message_digest = digest::digest(
+        message, algo = "sha256", serialize = FALSE
+      ),
+      file_sha256 = rqr_confirm_sha256(path),
+      stringsAsFactors = FALSE
+    )
+  }))
+}
+passed_workers <- if (is.null(resources)) 0L else
+  sum(resources$runner_status == 0L)
+observed_workers <- if (is.null(resources)) 0L else nrow(resources)
 
 lock_path <- file.path(run_root, ".coordinator.lock", "owner.json")
 lock_owner <- if (file.exists(lock_path)) {
@@ -318,6 +374,10 @@ rqr_confirm_atomic_write_csv(
   resource_summary, file.path(output_dir, "resource_summary.csv")
 )
 rqr_confirm_atomic_write_csv(
+  worker_error_signatures,
+  file.path(output_dir, "worker_error_signatures.csv")
+)
+rqr_confirm_atomic_write_csv(
   coordinator_lifecycle,
   file.path(output_dir, "coordinator_lifecycle.csv")
 )
@@ -329,8 +389,11 @@ run_contract_path <- file.path(run_root, "wave_state", "run_contract.json")
 run_contract <- jsonlite::read_json(
   run_contract_path, simplifyVector = TRUE
 )
+failed_wave_index <- min(wave_summary$canonical_wave_index[
+  wave_summary$decision == "failed"
+])
 closeout <- list(
-  schema_version = "rqrgibbs_dlm_failed_run_closeout/1.0.0",
+  schema_version = "rqrgibbs_dlm_failed_run_closeout/1.1.0",
   run_id = run_contract$run_id,
   authorization_commit = run_contract$authorization_commit,
   reviewed_implementation_commit =
@@ -342,7 +405,9 @@ closeout <- list(
   task_plan_sha256 = run_contract$task_plan_sha256,
   wave_plan_sha256 = run_contract$wave_plan_sha256,
   run_contract_sha256 = rqr_confirm_sha256(run_contract_path),
-  terminal_status = "failed_at_canonical_wave_2",
+  terminal_status = sprintf(
+    "failed_at_canonical_wave_%d", failed_wave_index
+  ),
   completed_waves = nrow(wave_summary),
   passed_waves = sum(wave_summary$decision == "passed"),
   failed_waves = sum(wave_summary$decision == "failed"),
@@ -370,19 +435,25 @@ readme <- c(
   "It is retained only as immutable computational failure evidence.",
   "No partial result is promoted or reused as confirmatory evidence.",
   "",
-  "The first canonical wave passed and the second failed. The failure was",
-  "diagnostic rather than numerical or resource-related: M08/S03 replication",
-  "13 had one marginal one-chain bulk-ESS failure, whereas M03/S03 replication",
-  "117 showed severe four-chain disagreement. Diagnostic thresholds, seeds,",
-  "targets, and response laws were not changed during this closeout.",
+  sprintf(
+    "The run stopped at canonical wave %d; %d of %d workers passed.",
+    failed_wave_index, passed_workers, observed_workers
+  ),
+  sprintf(
+    "The worker logs contain %d distinct authenticated error signature(s).",
+    length(unique(worker_error_signatures$message_digest))
+  ),
+  "See worker_error_signatures.csv for the compact failure evidence.",
+  "Diagnostic thresholds, seeds, targets, and response laws were not changed",
+  "during this closeout.",
   "",
   sprintf(
-    "All %d entries in the two completed wave manifests were rehashed and",
+    "All %d entries in the completed wave manifests were rehashed and",
     closeout$artifact_entries_verified
   ),
-  "verified from local bytes. The stale coordinator lock was observed but",
+  "verified from local bytes. Any stale coordinator lock was observed but",
   "left untouched as part of the failed-run evidence. Collection and final",
-  "audit artifacts are absent, as required after a wave failure.",
+  "audit artifacts remain absent after the wave failure.",
   "",
   "The generalized-Bayes update remains a loss update for interval roots;",
   "it is not an ordinary response likelihood and does not define posterior-",

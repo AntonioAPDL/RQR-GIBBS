@@ -212,10 +212,10 @@ diagnostic-pilot-preflight-dlm-main: package-install prepare-exdqlm-cran-runtime
 	$(R) application/scripts/13_run_rqr_dlm_main_simulation_references.R diagnostic-pilot-preflight
 
 preflight-dlm-confirmatory:
-	application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh preflight application/outputs/rqr_dlm_main_simulation_20260724/preflight
+	bash application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh preflight application/outputs/rqr_dlm_main_simulation_20260724/preflight
 
 oracle-reference-dlm-confirmatory:
-	application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh oracle-reference application/outputs/rqr_dlm_main_simulation_20260724/oracle-reference
+	bash application/scripts/15_run_rqr_dlm_confirmatory_simulation.sh oracle-reference application/outputs/rqr_dlm_main_simulation_20260724/oracle-reference
 
 validate-dlm-main-wave1-correction: package-install
 	$(R) application/scripts/22_validate_rqr_dlm_wave1_corrections.R
@@ -259,7 +259,7 @@ failclosed-dlm-confirmatory-wave:
 	@! $(R) application/scripts/17_launch_rqr_dlm_confirmatory_wave.R execute-confirmatory application/outputs/rqr_dlm_main_simulation_20260724/preflight/execution_wave_plan_maximum.csv invalid-wave application/outputs/rqr_dlm_main_simulation_20260724/forbidden-wave
 
 test-dlm-confirmatory-monitor:
-	application/scripts/16_test_rqr_dlm_confirmatory_monitor.sh
+	bash application/scripts/16_test_rqr_dlm_confirmatory_monitor.sh
 
 literature-manifest:
 	$(R) application/scripts/01_build_literature_manifest.R

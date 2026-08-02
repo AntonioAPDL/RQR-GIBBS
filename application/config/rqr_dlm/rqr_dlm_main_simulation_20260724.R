@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   implementation_correction = list(
-    schema_version = "rqrgibbs_dlm_main_correction/1.11.0",
+    schema_version = "rqrgibbs_dlm_main_correction/1.12.0",
     failed_authorization_commit =
       "b8b7748ab181a006611b602f64d4edf5be591de6",
     failed_wave_id =
@@ -127,6 +127,22 @@ rqr_dlm_main_simulation <- list(
     true_fixed_W_schedule_correction =
       "M08_uniform_B1000_R4000_method_level_schedule",
     true_fixed_W_schedule_applies_to_M06 = FALSE,
+    production_seed_binding_failed_authorization_commit =
+      "281802e9a51f4e739bdb9b5211bbea5d1fd8ba29",
+    production_seed_binding_failed_run_id =
+      "rqr_dlm_main_20260801_281802e",
+    production_seed_binding_failed_wave_id =
+      "static_gaussian_T200__target0200__sentinel",
+    production_seed_binding_failed_wave_artifact_hashes_sha256 =
+      "2d2e357798c8652e678292216885ca8015e7215865eecd2834e206d5d22d62f8",
+    production_seed_binding_failure = paste(
+      "M02 correctly consumed endpoint-specific lower and upper RNG streams;",
+      "the post-fit compact diagnostic serializer incorrectly requested",
+      "a nonexistent interval stream"
+    ),
+    production_seed_binding_failed_outputs_reused = FALSE,
+    production_seed_binding_failed_scientific_metrics_used = FALSE,
+    production_seed_binding_fresh_relaunch_required = TRUE,
     correction_budget_path =
       "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
     correction_budget_sha256 =
@@ -135,7 +151,7 @@ rqr_dlm_main_simulation <- list(
     mcmc_transition_and_fixed_role_schedule_changed = TRUE
   ),
   diagnostic_pilot_execution_authorized = FALSE,
-  confirmatory_execution_authorized = TRUE,
+  confirmatory_execution_authorized = FALSE,
   implemented_modes = c(
     "preflight", "oracle-reference", "sentinel-core",
     "execute-confirmatory", "collect", "audit"

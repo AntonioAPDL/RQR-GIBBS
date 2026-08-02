@@ -144,6 +144,27 @@ if (mode == "preflight") {
   ledger <- rqr_confirm_validate_seed_ledger(
     ledger, contract, planning = "maximum", require_complete = TRUE
   )
+  method_rng_binding_summary <-
+    rqr_confirm_validate_planned_method_rng_bindings(
+      ledger, contract, planning = "maximum"
+    )
+  method_rng_binding_contract <- data.frame(
+    schema_version = "rqrgibbs_dlm_method_rng_binding/1.0.0",
+    binding_rows = attr(method_rng_binding_summary, "binding_rows"),
+    binding_digest = attr(
+      method_rng_binding_summary, "binding_digest"
+    ),
+    all_planned_bindings_resolved = TRUE,
+    endpoint_specific_M02 = all(c("lower", "upper") %in%
+      method_rng_binding_summary$endpoint[
+        method_rng_binding_summary$method == "M02"
+      ]),
+    nonexistent_M02_interval_binding = any(
+      method_rng_binding_summary$method == "M02" &
+        method_rng_binding_summary$endpoint == "interval"
+    ),
+    stringsAsFactors = FALSE
+  )
   fit_plan <- rqr_confirm_fit_plan(contract, planning = "maximum")
   sentinels <- rqr_confirm_sentinel_map(contract, planning = "maximum")
   replication_plan <- rqr_confirm_replication_plan(
@@ -296,7 +317,7 @@ if (mode == "preflight") {
       "primary_runtime_binding_when_requested",
       "replication_task_ids_unique", "sentinel_tasks_preselected",
       "sentinel_selection_states_bound", "wave_tasks_exact",
-      "wave_worker_limits"
+      "wave_worker_limits", "production_method_rng_bindings_complete"
     ),
     value = c(
       TRUE, nrow(contract$incidence) == 208L,
@@ -342,6 +363,11 @@ if (mode == "preflight") {
         all(
           wave_plan$worker_limit[wave_plan$phase == "standard"] ==
             contract$config$resources$workers
+        ),
+      isTRUE(method_rng_binding_contract$all_planned_bindings_resolved) &&
+        isTRUE(method_rng_binding_contract$endpoint_specific_M02) &&
+        !isTRUE(
+          method_rng_binding_contract$nonexistent_M02_interval_binding
         )
     ),
     stringsAsFactors = FALSE
@@ -428,6 +454,14 @@ if (mode == "preflight") {
   write_csv(sentinels, "sentinel_ledger_maximum.csv")
   write_csv(budget_rows, "recomputed_budget.csv")
   write_csv(ledger, "seed_ledger_maximum.csv")
+  write_csv(
+    method_rng_binding_summary,
+    "method_rng_binding_summary.csv"
+  )
+  write_csv(
+    method_rng_binding_contract,
+    "method_rng_binding_contract.csv"
+  )
   write_csv(resources, "resource_preflight.csv")
   write_csv(schema_rows, "artifact_schemas.csv")
   write_csv(initialization_manifest, "initialization_manifest.csv")
@@ -977,6 +1011,9 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
   ledger <- rqr_confirm_validate_seed_ledger(
     ledger, contract, planning = "maximum", require_complete = TRUE
   )
+  invisible(rqr_confirm_validate_planned_method_rng_bindings(
+    ledger, contract, planning = "maximum"
+  ))
   provenance_control <- rqr_confirm_primary_provenance_control(
     repo_root, expected_commit, primary_attestation_path
   )
@@ -1395,17 +1432,6 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           },
           character(1L)
         )
-        method_seed_keys <- paste(
-          "method", method_cell_id, task$replication[[1L]],
-          "interval", seq_len(chains), sep = "|"
-        )
-        method_seed_rows <- match(method_seed_keys, ledger$task_key)
-        if (anyNA(method_seed_rows)) {
-          stop(
-            "A compact diagnostic object lacks a bound method seed.",
-            call. = FALSE
-          )
-        }
         schedule_rows <- lapply(chain_profiles, function(profile_name) {
           schedule <- rqr_confirm_method_schedule(
             contract, method, profile_name
@@ -1424,32 +1450,24 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
             stringsAsFactors = FALSE
           )
         })
-        compact_diagnostic_object <- list(
-          schema_version =
-            "rqrgibbs_dlm_compact_mcmc_diagnostics/1.1.0",
-          source_commit = source_commit,
-          config_digest = contract_digests$config_sha256,
-          incidence_digest = contract_digests$incidence_sha256,
-          seed_ledger_digest = rqr_confirm_sha256(ledger_path),
-          runtime_digest = primary_binding$runtime_tree_digest,
-          DGP = task$DGP[[1L]],
-          replication = task$replication[[1L]],
+        compact_diagnostic_object <- rqr_confirm_compact_mcmc_diagnostic(
+          metadata = list(
+            source_commit = source_commit,
+            config_digest = contract_digests$config_sha256,
+            incidence_digest = contract_digests$incidence_sha256,
+            seed_ledger_digest = rqr_confirm_sha256(ledger_path),
+            runtime_digest = primary_binding$runtime_tree_digest,
+            DGP = task$DGP[[1L]]
+          ),
+          ledger = ledger,
           cell_id = method_cell_id,
+          replication = task$replication[[1L]],
           method = method,
           sentinel = method_is_sentinel,
           chain_profiles = chain_profiles,
-          method_seed_keys = method_seed_keys,
-          method_seed_state_digests =
-            ledger$state_digest[method_seed_rows],
           schedules = do.call(rbind, schedule_rows),
           scalar_chains = scalar_chains,
-          diagnostics = diagnostics,
-          diagnostic_pass = all(diagnostics$pass),
-          full_fit_objects_retained = FALSE,
-          exact_refit_inputs_bound = TRUE,
-          generalized_bayes = TRUE,
-          response_likelihood = FALSE,
-          response_prediction_contract = FALSE
+          diagnostics = diagnostics
         )
         if (method_is_sentinel) {
           sentinel_objects[[method]] <- compact_diagnostic_object

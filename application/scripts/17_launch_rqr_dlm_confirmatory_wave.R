@@ -201,13 +201,17 @@ if (!identical(supplied_tasks, canonical_tasks)) {
   stop("The authorization-bound canonical task plan changed.",
        call. = FALSE)
 }
-rqr_confirm_validate_seed_ledger(
+validated_seed_ledger <- rqr_confirm_validate_seed_ledger(
   utils::read.csv(
     required_files[["seed_ledger"]],
     stringsAsFactors = FALSE, check.names = FALSE
   ),
   contract, planning = "maximum", require_complete = TRUE
 )
+invisible(rqr_confirm_validate_planned_method_rng_bindings(
+  validated_seed_ledger, contract, planning = "maximum"
+))
+rm(validated_seed_ledger)
 
 config_path <- file.path(
   repo_root, "application", "config", "rqr_dlm",
