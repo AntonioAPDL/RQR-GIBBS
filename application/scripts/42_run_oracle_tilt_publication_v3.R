@@ -23,6 +23,25 @@ allowed_modes <- c("preflight", "reference-only", "benchmark", "execute")
 if (!mode %in% allowed_modes) {
   oti_stop("--mode must be preflight, reference-only, benchmark, or execute.")
 }
+execute_stage <- tolower(arg_value("--execute-stage=", ""))
+execute_family <- tolower(arg_value("--family=", ""))
+execute_target <- toupper(arg_value("--target=", ""))
+if (identical(mode, "execute")) {
+  if (!execute_stage %in% c("prepare", "cell", "finalize")) {
+    oti_stop(
+      "execute must be invoked through the process-isolated orchestrator ",
+      "with --execute-stage=prepare, cell, or finalize."
+    )
+  }
+  if (identical(execute_stage, "cell") &&
+      (!execute_family %in% c("fixed_design", "dlm") ||
+       !execute_target %in% c("RQR", "ET", "SH"))) {
+    oti_stop("A cell stage requires a valid --family and --target.")
+  }
+} else if (nzchar(execute_stage) || nzchar(execute_family) ||
+           nzchar(execute_target)) {
+  oti_stop("Internal execute-stage arguments are valid only in execute mode.")
+}
 
 repo_root <- normalizePath(file.path(script_dir, "..", ".."), mustWork = TRUE)
 setwd(repo_root)
@@ -135,7 +154,9 @@ existing_entries <- if (dir.exists(output_root)) {
   list.files(output_root, all.files = TRUE, no.. = TRUE)
 } else character(0)
 wrapper_placeholders <- c(
-  "process_group_monitor.csv", "runner.stdout.log", "runner.stderr.log"
+  "process_group_monitor.csv", "runner.stdout.log", "runner.stderr.log",
+  "process_lifecycle.csv", "current_stage.csv",
+  "orchestrator_failure_log.csv"
 )
 unexpected_entries <- setdiff(existing_entries, wrapper_placeholders)
 resume <- identical(mode, "execute") && length(unexpected_entries) > 0L
@@ -479,29 +500,65 @@ if (identical(mode, "benchmark")) {
 }
 
 worker_contract_base <- list(
-  schema_version = otv3_schema(), source_commit = source_commit,
+  schema_version = otv3_worker_schema(), source_commit = source_commit,
   config_sha256 = config_sha256, runtime_tree_digest = runtime_digest,
   package_version = runtime_binding$package_version,
   coverage_level = config$coverage_level,
-  learning_rate = config$learning_rate
+  learning_rate = config$learning_rate,
+  prediction_storage_contract = "ordered_endpoints_only"
 )
 
-run_worker <- function(family, target, chain) {
+cell_components <- c(
+  "fit_summary", "fit_curves", "endpoint_error_density",
+  "endpoint_error_summary", "endpoint_error_by_index", "chain_summary",
+  "mcmc_diagnostics", "conditional_parity", "pathology_summary",
+  "recovery_summary", "heterogeneity_summary"
+)
+
+cell_key <- function(family, target) {
+  paste(family, tolower(target), sep = "_")
+}
+
+cell_directory <- function(family, target) {
+  file.path(output_root, "cells", cell_key(family, target))
+}
+
+cell_dgp <- function(family) {
+  if (identical(family, "fixed_design")) preflight$fixed_dgp else
+    preflight$dlm_dgp
+}
+
+cell_targets <- function(family) {
+  if (identical(family, "fixed_design")) preflight$fixed_targets else
+    preflight$dlm_targets
+}
+
+expected_worker_contract <- function(family, target, chain) {
   selected <- preflight$plan$family == family &
     preflight$plan$target == target & preflight$plan$chain == chain
-  profile <- preflight$plan$profile[selected][1L]
-  seed <- preflight$plan$seed[selected][1L]
-  dgp <- if (identical(family, "fixed_design")) {
-    preflight$fixed_dgp
-  } else preflight$dlm_dgp
-  target_values <- if (identical(family, "fixed_design")) {
-    preflight$fixed_targets
-  } else preflight$dlm_targets
-  contract <- c(worker_contract_base, list(
-    family = family, target = target, chain = chain, profile = profile,
-    seed = seed, dgp_digest = otf_object_sha256(dgp),
-    target_digest = otf_object_sha256(target_values)
+  if (sum(selected) != 1L) oti_stop("Worker plan selection is not unique.")
+  c(worker_contract_base, list(
+    family = family, target = target, chain = as.integer(chain),
+    profile = preflight$plan$profile[selected][1L],
+    seed = as.integer(preflight$plan$seed[selected][1L]),
+    dgp_digest = otf_object_sha256(cell_dgp(family)),
+    target_digest = otf_object_sha256(cell_targets(family))
   ))
+}
+
+validate_worker_envelope <- function(envelope, contract, path) {
+  tryCatch(
+    otv3_validate_worker_artifact(envelope, contract),
+    error = function(error) oti_stop(
+      "Worker artifact contract failed: ", path, "; ",
+      conditionMessage(error)
+    )
+  )
+  invisible(envelope)
+}
+
+run_worker <- function(family, target, chain) {
+  contract <- expected_worker_contract(family, target, chain)
   digest <- otf_object_sha256(contract)
   path <- file.path(
     worker_root,
@@ -509,143 +566,334 @@ run_worker <- function(family, target, chain) {
   )
   if (file.exists(path)) {
     existing <- tryCatch(readRDS(path), error = function(error) NULL)
-    if (is.list(existing) && identical(existing$contract_digest, digest)) {
-      return(list(path = path, resumed = TRUE))
-    }
-    oti_stop("A worker result exists with a mismatched contract: ", path)
+    validate_worker_envelope(existing, contract, path)
+    return(list(path = path, resumed = TRUE))
   }
   result <- if (identical(family, "fixed_design")) {
     otv3_fixed_chain(
-      config, dgp, target_values, target, chain, provenance_control,
-      preflight$fixed_initializations[[target]]$profiles
+      config, cell_dgp(family), cell_targets(family), target, chain,
+      provenance_control, preflight$fixed_initializations[[target]]$profiles
     )
   } else {
     otv3_dlm_chain(
-      config, dgp, target_values, target, chain, provenance_control
+      config, cell_dgp(family), cell_targets(family), target, chain,
+      provenance_control
     )
   }
-  otf_atomic_save_rds(list(
-    contract = contract, contract_digest = digest, result = result
-  ), path, compress = FALSE)
+  result <- otv3_compact_chain_result(result)
+  envelope <- list(
+    schema_version = otv3_worker_schema(), contract = contract,
+    contract_digest = digest, result = result
+  )
+  validate_worker_envelope(envelope, contract, path)
+  otf_atomic_save_rds(envelope, path, compress = FALSE)
   list(path = path, resumed = FALSE)
 }
 
-cell_results <- list()
-worker_manifest_rows <- list()
-run_status <- data.frame()
-failure_log <- data.frame()
-for (family in c("fixed_design", "dlm")) {
-  for (target in c("RQR", "ET", "SH")) {
-    rows <- preflight$plan$family == family & preflight$plan$target == target
-    chains <- preflight$plan$chain[rows]
-    workers <- min(
-      as.integer(config[[family]]$workers), length(chains)
+append_failure <- function(family, target, chain, stage, message) {
+  path <- file.path(output_root, "failure_log.csv")
+  prior <- if (file.exists(path)) {
+    utils::read.csv(path, stringsAsFactors = FALSE)
+  } else data.frame()
+  row <- data.frame(
+    recorded_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    family = family, target = target, chain = chain, stage = stage,
+    message = message, stringsAsFactors = FALSE
+  )
+  otf_atomic_write_csv(oti_rbind_fill(list(prior, row)), path)
+}
+
+process_peak_rss_kib <- function() {
+  status <- tryCatch(readLines("/proc/self/status", warn = FALSE),
+                     error = function(error) character(0))
+  line <- status[startsWith(status, "VmHWM:")]
+  if (!length(line)) return(NA_real_)
+  as.numeric(sub("^VmHWM:[[:space:]]*([0-9]+).*", "\\1", line[1L]))
+}
+
+cell_contract_from_manifest <- function(family, target, manifest) {
+  otv3_build_cell_contract(
+    source_commit, config_sha256, runtime_digest, family, target, manifest
+  )
+}
+
+validate_cell_bundle <- function(family, target, require_eligible = TRUE) {
+  root <- cell_directory(family, target)
+  required <- c(
+    "cell_receipt.json", "worker_manifest.csv", "fit_summary.csv",
+    "artifact_manifest.csv"
+  )
+  if (!dir.exists(root) || any(!file.exists(file.path(root, required)))) {
+    oti_stop("Cell bundle is incomplete: ", family, "/", target)
+  }
+  otp_verify_manifest(root)
+  receipt <- jsonlite::read_json(
+    file.path(root, "cell_receipt.json"), simplifyVector = TRUE
+  )
+  manifest <- utils::read.csv(
+    file.path(root, "worker_manifest.csv"), stringsAsFactors = FALSE
+  )
+  expected_rows <- preflight$plan$family == family &
+    preflight$plan$target == target
+  expected_chains <- as.integer(preflight$plan$chain[expected_rows])
+  checks <- c(
+    identical(receipt$schema_version, otv3_cell_schema()),
+    identical(receipt$source_commit, source_commit),
+    identical(receipt$config_sha256, config_sha256),
+    identical(receipt$runtime_tree_digest, runtime_digest),
+    identical(receipt$family, family), identical(receipt$target, target),
+    identical(as.integer(manifest$chain), expected_chains),
+    nrow(manifest) == length(expected_chains), !anyDuplicated(manifest$path),
+    identical(receipt$prediction_storage_contract,
+              "ordered_endpoints_only")
+  )
+  worker_checks <- vapply(seq_len(nrow(manifest)), function(index) {
+    path <- file.path(output_root, manifest$path[index])
+    if (!file.exists(path) || dir.exists(path) ||
+        unname(file.info(path)$size) != manifest$bytes[index] ||
+        !identical(oti_file_sha256(path), manifest$sha256[index])) {
+      return(FALSE)
+    }
+    envelope <- tryCatch(readRDS(path), error = function(error) NULL)
+    contract <- expected_worker_contract(
+      family, target, as.integer(manifest$chain[index])
     )
-    message(
-      "[oracle-tilt-v3] ", family, "/", target, ": ", length(chains),
-      " chains; workers=", workers
-    )
-    started <- Sys.time()
-    run_one <- function(chain) {
-      tryCatch(
-        run_worker(family, target, chain),
-        error = function(error) structure(
-          list(message = conditionMessage(error)), class = "otv3_worker_error"
-        )
+    tryCatch({
+      validate_worker_envelope(envelope, contract, path)
+      identical(envelope$contract_digest, manifest$contract_digest[index])
+    }, error = function(error) FALSE)
+  }, logical(1L))
+  contract <- cell_contract_from_manifest(family, target, manifest)
+  checks <- c(
+    checks, all(worker_checks),
+    identical(receipt$cell_contract_digest, otf_object_sha256(contract)),
+    !require_eligible || isTRUE(receipt$eligible)
+  )
+  if (!all(checks)) oti_stop("Cell bundle validation failed: ", family, "/", target)
+  list(root = root, receipt = receipt, worker_manifest = manifest)
+}
+
+refresh_run_status <- function() {
+  rows <- list()
+  for (family in c("fixed_design", "dlm")) {
+    for (target in c("RQR", "ET", "SH")) {
+      root <- cell_directory(family, target)
+      receipt_path <- file.path(root, "cell_receipt.json")
+      receipt <- if (file.exists(receipt_path)) {
+        jsonlite::read_json(receipt_path, simplifyVector = TRUE)
+      } else NULL
+      rows[[length(rows) + 1L]] <- data.frame(
+        family = family, target = target,
+        status = if (is.null(receipt)) "pending" else "completed",
+        chains_completed = if (is.null(receipt)) 0L else
+          as.integer(receipt$completed_chains),
+        elapsed_seconds = if (is.null(receipt)) 0 else
+          as.numeric(receipt$elapsed_seconds),
+        computational_pass = if (is.null(receipt)) NA else
+          isTRUE(receipt$computational_pass),
+        recovery_pass = if (is.null(receipt)) NA else
+          isTRUE(receipt$recovery_pass),
+        disposition = if (is.null(receipt)) "pending" else
+          as.character(receipt$disposition),
+        stringsAsFactors = FALSE
       )
     }
-    batches <- otv3_chain_batches(chains, workers)
-    returns <- unlist(lapply(batches, function(batch) {
-      if (length(batch) > 1L && .Platform$OS.type != "windows") {
-        parallel::mclapply(
-          batch,
-          run_one,
-          mc.cores = length(batch), mc.preschedule = TRUE, mc.set.seed = FALSE
-        )
-      } else {
-        lapply(batch, run_one)
-      }
-    }), recursive = FALSE, use.names = FALSE)
-    failed <- which(vapply(
-      returns, inherits, logical(1L), what = "otv3_worker_error"
-    ))
-    if (length(failed)) {
-      failure_log <- rbind(failure_log, data.frame(
-        recorded_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-        family = family, target = target, chain = chains[failed],
-        stage = "fit", message = vapply(
-          returns[failed], `[[`, character(1L), "message"
-        ), stringsAsFactors = FALSE
-      ))
-      otf_atomic_write_csv(failure_log, file.path(output_root, "failure_log.csv"))
-      oti_stop("A chain failed; later cells were not launched.")
+  }
+  status <- do.call(rbind, rows)
+  otf_atomic_write_csv(status, file.path(output_root, "run_status.csv"))
+  status
+}
+
+write_cell_bundle <- function(family, target, cell, manifest, elapsed) {
+  final <- cell_directory(family, target)
+  if (dir.exists(final)) oti_stop("Cell bundle already exists: ", final)
+  cells_root <- oti_ensure_dir(file.path(output_root, "cells"))
+  stage <- tempfile(paste0(".", cell_key(family, target), "-"), cells_root)
+  if (!dir.create(stage, recursive = TRUE, showWarnings = FALSE)) {
+    oti_stop("Could not create the cell staging directory.")
+  }
+  on.exit(unlink(stage, recursive = TRUE, force = TRUE), add = TRUE)
+  for (name in cell_components) {
+    value <- cell[[name]]
+    if (is.data.frame(value) && nrow(value)) {
+      otf_atomic_write_csv(value, file.path(stage, paste0(name, ".csv")))
     }
-    paths <- vapply(returns, `[[`, character(1L), "path")
-    envelopes <- lapply(paths, readRDS)
-    results <- lapply(envelopes, `[[`, "result")
-    manifest_rows <- data.frame(
-      family = family, target = target, chain = chains,
-      profile = preflight$plan$profile[rows],
-      resumed = vapply(returns, `[[`, logical(1L), "resumed"),
-      path = file.path("worker_results", basename(paths)),
-      bytes = unname(file.info(paths)$size),
-      sha256 = vapply(paths, oti_file_sha256, character(1L)),
-      contract_digest = vapply(
-        envelopes, `[[`, character(1L), "contract_digest"
-      ), stringsAsFactors = FALSE
+  }
+  otf_atomic_write_csv(manifest, file.path(stage, "worker_manifest.csv"))
+  cell_contract <- cell_contract_from_manifest(family, target, manifest)
+  eligible <- isTRUE(
+    cell$fit_summary$manuscript_illustration_evidence_eligible
+  )
+  receipt <- list(
+    schema_version = otv3_cell_schema(), source_commit = source_commit,
+    config_sha256 = config_sha256, runtime_tree_digest = runtime_digest,
+    family = family, target = target,
+    expected_chains = nrow(manifest), completed_chains = nrow(manifest),
+    elapsed_seconds = elapsed,
+    cell_parent_peak_rss_kib = process_peak_rss_kib(),
+    computational_pass = isTRUE(cell$fit_summary$computational_pass),
+    recovery_pass = isTRUE(cell$fit_summary$recovery_pass),
+    heterogeneity_pass = isTRUE(cell$fit_summary$heterogeneity_pass),
+    disposition = as.character(cell$fit_summary$disposition),
+    eligible = eligible,
+    prediction_storage_contract = "ordered_endpoints_only",
+    cell_contract_digest = otf_object_sha256(cell_contract),
+    finished_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE)
+  )
+  atomic_json(receipt, file.path(stage, "cell_receipt.json"))
+  files <- list.files(stage, full.names = TRUE, recursive = TRUE)
+  hashes <- oti_file_hashes(files, stage)
+  names(hashes)[names(hashes) == "relative_path"] <- "path"
+  otf_atomic_write_csv(hashes, file.path(stage, "artifact_manifest.csv"))
+  otp_verify_manifest(stage)
+  if (!file.rename(stage, final)) oti_stop("Atomic cell publication failed.")
+  on.exit(NULL, add = FALSE)
+  validate_cell_bundle(family, target, require_eligible = FALSE)
+}
+
+if (identical(execute_stage, "prepare")) {
+  cell_plan <- unique(preflight$plan[, c("family", "target")])
+  cell_plan$order <- seq_len(nrow(cell_plan))
+  cell_plan$cell_key <- mapply(cell_key, cell_plan$family, cell_plan$target)
+  cell_plan$process_isolation <- TRUE
+  cell_plan$maximum_chain_workers <- 2L
+  otf_atomic_write_csv(cell_plan, file.path(output_root, "cell_plan.csv"))
+  refresh_run_status()
+  message("[oracle-tilt-v3] process-isolated execution prepared: ", output_root)
+  quit(save = "no", status = 0L)
+}
+
+if (identical(execute_stage, "cell")) {
+  family <- execute_family
+  target <- execute_target
+  final <- cell_directory(family, target)
+  if (dir.exists(final)) {
+    validate_cell_bundle(family, target)
+    refresh_run_status()
+    message("[oracle-tilt-v3] validated existing cell: ", family, "/", target)
+    quit(save = "no", status = 0L)
+  }
+  rows <- preflight$plan$family == family & preflight$plan$target == target
+  chains <- as.integer(preflight$plan$chain[rows])
+  workers <- min(as.integer(config[[family]]$workers), length(chains))
+  message(
+    "[oracle-tilt-v3] isolated cell ", family, "/", target, ": ",
+    length(chains), " chains; workers=", workers
+  )
+  started <- Sys.time()
+  run_one <- function(chain) {
+    tryCatch(
+      run_worker(family, target, chain),
+      error = function(error) structure(
+        list(message = conditionMessage(error)), class = "otv3_worker_error"
+      )
     )
-    worker_manifest_rows[[length(worker_manifest_rows) + 1L]] <- manifest_rows
-    cell <- otv3_summarize_cell(
-      family, target, results,
-      if (identical(family, "fixed_design")) preflight$fixed_dgp else
-        preflight$dlm_dgp,
-      if (identical(family, "fixed_design")) preflight$fixed_targets else
-        preflight$dlm_targets,
-      config
+  }
+  batches <- otv3_chain_batches(chains, workers)
+  returns <- unlist(lapply(batches, function(batch) {
+    if (length(batch) > 1L && .Platform$OS.type != "windows") {
+      parallel::mclapply(
+        batch, run_one, mc.cores = length(batch), mc.preschedule = TRUE,
+        mc.set.seed = FALSE
+      )
+    } else lapply(batch, run_one)
+  }), recursive = FALSE, use.names = FALSE)
+  failed <- which(vapply(
+    returns, inherits, logical(1L), what = "otv3_worker_error"
+  ))
+  if (length(failed)) {
+    for (index in failed) {
+      append_failure(
+        family, target, chains[index], "fit", returns[[index]]$message
+      )
+    }
+    oti_stop("A chain failed; later cells were not launched.")
+  }
+  paths <- vapply(returns, `[[`, character(1L), "path")
+  envelopes <- Map(function(path, chain) {
+    envelope <- readRDS(path)
+    validate_worker_envelope(
+      envelope, expected_worker_contract(family, target, chain), path
     )
-    cell_results[[paste(family, target, sep = "/")]] <- cell
-    run_status <- rbind(run_status, data.frame(
-      family = family, target = target, status = "completed",
-      chains_completed = length(chains),
-      elapsed_seconds = as.numeric(difftime(Sys.time(), started, units = "secs")),
-      computational_pass = cell$fit_summary$computational_pass,
-      recovery_pass = cell$fit_summary$recovery_pass,
-      disposition = cell$fit_summary$disposition,
+    envelope
+  }, paths, chains)
+  results <- lapply(envelopes, `[[`, "result")
+  manifest <- data.frame(
+    family = family, target = target, chain = chains,
+    profile = preflight$plan$profile[rows],
+    seed = as.integer(preflight$plan$seed[rows]),
+    resumed = vapply(returns, `[[`, logical(1L), "resumed"),
+    path = file.path("worker_results", basename(paths)),
+    bytes = unname(file.info(paths)$size),
+    sha256 = vapply(paths, oti_file_sha256, character(1L)),
+    contract_digest = vapply(
+      envelopes, `[[`, character(1L), "contract_digest"
+    ),
+    storage_contract = "ordered_endpoints_only",
+    stringsAsFactors = FALSE
+  )
+  cell <- otv3_summarize_cell(
+    family, target, results, cell_dgp(family), cell_targets(family), config
+  )
+  elapsed <- as.numeric(difftime(Sys.time(), started, units = "secs"))
+  write_cell_bundle(family, target, cell, manifest, elapsed)
+  refresh_run_status()
+  eligible <- isTRUE(
+    cell$fit_summary$manuscript_illustration_evidence_eligible
+  )
+  rm(envelopes, results, cell, returns)
+  invisible(gc(full = TRUE))
+  if (!eligible) {
+    append_failure(
+      family, target, NA_integer_, "cell_gate",
+      "The completed process-isolated cell did not pass all gates."
+    )
+    oti_stop("Cell gates failed; later cells were not launched.")
+  }
+  message("[oracle-tilt-v3] isolated cell passed: ", family, "/", target)
+  quit(save = "no", status = 0L)
+}
+
+cell_bundles <- list()
+cell_manifest_rows <- list()
+for (family in c("fixed_design", "dlm")) {
+  for (target in c("RQR", "ET", "SH")) {
+    bundle <- validate_cell_bundle(family, target)
+    cell_bundles[[paste(family, target, sep = "/")]] <- bundle
+    cell_manifest_rows[[length(cell_manifest_rows) + 1L]] <- data.frame(
+      family = family, target = target,
+      path = file.path("cells", cell_key(family, target)),
+      cell_receipt_sha256 = oti_file_sha256(
+        file.path(bundle$root, "cell_receipt.json")
+      ),
+      artifact_manifest_sha256 = oti_file_sha256(
+        file.path(bundle$root, "artifact_manifest.csv")
+      ),
+      cell_contract_digest = bundle$receipt$cell_contract_digest,
+      eligible = isTRUE(bundle$receipt$eligible),
       stringsAsFactors = FALSE
-    ))
-    otf_atomic_write_csv(run_status, file.path(output_root, "run_status.csv"))
-    if (!isTRUE(cell$fit_summary$manuscript_illustration_evidence_eligible)) {
-      failure_log <- rbind(failure_log, data.frame(
-        recorded_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-        family = family, target = target, chain = NA_integer_,
-        stage = "cell_gate",
-        message = "The completed four/five-chain cell did not pass all gates.",
-        stringsAsFactors = FALSE
-      ))
-      otf_atomic_write_csv(failure_log, file.path(output_root, "failure_log.csv"))
-      oti_stop("Cell gates failed; later cells were not launched.")
-    }
+    )
   }
 }
 
-bind_component <- function(name) {
-  values <- lapply(cell_results, `[[`, name)
+bind_cell_component <- function(name) {
+  values <- lapply(cell_bundles, function(bundle) {
+    path <- file.path(bundle$root, paste0(name, ".csv"))
+    if (file.exists(path)) {
+      utils::read.csv(path, stringsAsFactors = FALSE)
+    } else data.frame()
+  })
   values <- Filter(function(value) is.data.frame(value) && nrow(value), values)
   if (length(values)) oti_rbind_fill(values) else data.frame()
 }
-components <- c(
-  "fit_summary", "fit_curves", "endpoint_error_density",
-  "endpoint_error_summary", "endpoint_error_by_index", "chain_summary",
-  "mcmc_diagnostics", "conditional_parity", "pathology_summary",
-  "recovery_summary", "heterogeneity_summary"
-)
-for (name in components) {
-  value <- bind_component(name)
+
+for (name in cell_components) {
+  value <- bind_cell_component(name)
   if (nrow(value)) {
     otf_atomic_write_csv(value, file.path(output_root, paste0(name, ".csv")))
   }
 }
-fit_summary <- bind_component("fit_summary")
+fit_summary <- bind_cell_component("fit_summary")
 cell_disposition <- fit_summary[, c(
   "family", "target", "provenance_pass", "strict_diagnostics_pass",
   "conditional_parity_pass", "pathology_pass", "computational_pass",
@@ -655,19 +903,28 @@ cell_disposition <- fit_summary[, c(
 otf_atomic_write_csv(
   cell_disposition, file.path(output_root, "cell_disposition.csv")
 )
-worker_manifest <- do.call(rbind, worker_manifest_rows)
+worker_manifest <- do.call(
+  rbind, lapply(cell_bundles, `[[`, "worker_manifest")
+)
+cell_manifest <- do.call(rbind, cell_manifest_rows)
 otf_atomic_write_csv(worker_manifest, file.path(output_root, "worker_manifest.csv"))
+otf_atomic_write_csv(cell_manifest, file.path(output_root, "cell_manifest.csv"))
+run_status <- refresh_run_status()
 
-all_completed <- nrow(worker_manifest) == nrow(preflight$plan)
+all_completed <- nrow(worker_manifest) == nrow(preflight$plan) &&
+  all(run_status$status == "completed")
 all_passed <- nrow(fit_summary) == 6L &&
-  all(fit_summary$manuscript_illustration_evidence_eligible)
+  all(fit_summary$manuscript_illustration_evidence_eligible) &&
+  all(cell_manifest$eligible)
 close_and_manifest(list(
   pass = all_completed && all_passed,
   planned_chains = nrow(preflight$plan), completed_chains = nrow(worker_manifest),
   all_chains_completed = all_completed, all_cells_pass = all_passed,
   passed_cells = sum(fit_summary$disposition == "strict_pass"),
   failed_cells = sum(fit_summary$disposition == "fail"),
+  process_isolated_cells = TRUE,
+  prediction_storage_contract = "ordered_endpoints_only",
   compact_evidence_eligible = all_completed && all_passed
 ))
 if (!all_completed || !all_passed) oti_stop("The v3 execution did not pass.")
-message("[oracle-tilt-v3] execution passed and closed: ", output_root)
+message("[oracle-tilt-v3] process-isolated execution passed: ", output_root)

@@ -1,5 +1,5 @@
 {
-  "schema_version": "rqrgibbs_oracle_tilt_publication_config/3.2.0",
+  "schema_version": "rqrgibbs_oracle_tilt_publication_config/3.3.0",
   "execution_authorized": true,
   "coverage_level": 0.95,
   "learning_rate": 1,

@@ -453,3 +453,160 @@ testthat::test_that("two complete static transitions preserve a tilted target", 
     fit$diagnostics$root_swap_count_trace %in% 0:2
   ))
 })
+
+testthat::test_that("endpoint-only storage reconstructs redundant predictions exactly", {
+  lower <- matrix(seq(-2, -0.1, length.out = 60L), 10L, 6L)
+  upper <- lower + matrix(seq(0.5, 1.5, length.out = 60L), 10L, 6L)
+  full <- list(
+    lower_draws = lower, upper_draws = upper,
+    midpoint_draws = 0.5 * (lower + upper),
+    width_draws = upper - lower
+  )
+  compact <- otv3_endpoint_only_prediction(full)
+  testthat::expect_true(otv3_prediction_storage_contract(compact))
+  testthat::expect_false(any(
+    c("midpoint_draws", "width_draws") %in% names(compact)
+  ))
+  restored <- otv3_materialize_prediction(compact)
+  testthat::expect_identical(restored$lower_draws, lower)
+  testthat::expect_identical(restored$upper_draws, upper)
+  testthat::expect_identical(restored$midpoint_draws, full$midpoint_draws)
+  testthat::expect_identical(restored$width_draws, full$width_draws)
+  testthat::expect_identical(
+    restored$midpoint_mean, rowMeans(full$midpoint_draws)
+  )
+  testthat::expect_identical(
+    restored$width_mean, rowMeans(full$width_draws)
+  )
+  combined <- otv3_combine_endpoint_predictions(list(compact, compact))
+  testthat::expect_identical(
+    combined$lower_draws, cbind(lower, lower)
+  )
+  testthat::expect_identical(
+    combined$upper_draws, cbind(upper, upper)
+  )
+  testthat::expect_identical(
+    combined$midpoint_draws, cbind(full$midpoint_draws, full$midpoint_draws)
+  )
+})
+
+testthat::test_that("endpoint-only workers reject contract and payload drift", {
+  prediction <- otv3_endpoint_only_prediction(list(
+    lower_draws = matrix(-1, 3L, 4L),
+    upper_draws = matrix(1, 3L, 4L)
+  ))
+  contract <- list(
+    schema_version = otv3_worker_schema(), source_commit = strrep("a", 40L),
+    family = "fixed_design", target = "RQR", chain = 1L
+  )
+  envelope <- list(
+    schema_version = otv3_worker_schema(), contract = contract,
+    contract_digest = otf_object_sha256(contract),
+    result = list(pred = prediction)
+  )
+  testthat::expect_invisible(
+    otv3_validate_worker_artifact(envelope, contract)
+  )
+  bad <- envelope
+  bad$contract$chain <- 2L
+  testthat::expect_error(
+    otv3_validate_worker_artifact(bad, contract), "invalid"
+  )
+  bad <- envelope
+  bad$result$pred$midpoint_draws <- matrix(0, 3L, 4L)
+  testthat::expect_error(
+    otv3_validate_worker_artifact(bad, contract), "invalid"
+  )
+  bad <- envelope
+  bad$result$pred$upper_draws[1L, 1L] <- -2
+  testthat::expect_error(
+    otv3_validate_worker_artifact(bad, contract), "invalid"
+  )
+})
+
+testthat::test_that("cell contracts bind every ordered worker artifact", {
+  manifest <- data.frame(
+    chain = 1:4,
+    sha256 = vapply(1:4, function(index) strrep(index, 64L), character(1L)),
+    contract_digest = vapply(
+      5:8, function(index) strrep(index, 64L), character(1L)
+    ),
+    stringsAsFactors = FALSE
+  )
+  contract <- otv3_build_cell_contract(
+    strrep("a", 40L), strrep("b", 64L), strrep("c", 64L),
+    "fixed_design", "RQR", manifest
+  )
+  testthat::expect_identical(contract$schema_version, otv3_cell_schema())
+  testthat::expect_identical(contract$chains, 1:4)
+  testthat::expect_identical(
+    contract$prediction_storage_contract, "ordered_endpoints_only"
+  )
+  changed <- manifest
+  changed$sha256[1L] <- strrep("9", 64L)
+  testthat::expect_false(identical(
+    otf_object_sha256(contract),
+    otf_object_sha256(otv3_build_cell_contract(
+      strrep("a", 40L), strrep("b", 64L), strrep("c", 64L),
+      "fixed_design", "RQR", changed
+    ))
+  ))
+  duplicate <- manifest
+  duplicate$chain[2L] <- 1L
+  testthat::expect_error(
+    otv3_build_cell_contract(
+      strrep("a", 40L), strrep("b", 64L), strrep("c", 64L),
+      "fixed_design", "RQR", duplicate
+    ),
+    "cannot define"
+  )
+})
+
+testthat::test_that("execute is wired through a fresh-process cell orchestrator", {
+  wrapper <- readLines(file.path(
+    repo_root, "application", "scripts",
+    "43_run_oracle_tilt_publication_v3.sh"
+  ))
+  orchestrator <- readLines(file.path(
+    repo_root, "application", "scripts",
+    "44_orchestrate_oracle_tilt_v3_execute.sh"
+  ))
+  testthat::expect_true(any(grepl(
+    "44_orchestrate_oracle_tilt_v3_execute.sh", wrapper, fixed = TRUE
+  )))
+  testthat::expect_equal(sum(grepl("run_stage cell", orchestrator, fixed = TRUE)), 1L)
+  testthat::expect_true(any(grepl(
+    "post_stage_r_processes", orchestrator, fixed = TRUE
+  )))
+  testthat::expect_true(any(grepl(
+    "process-isolated stage failed", orchestrator, fixed = TRUE
+  )))
+})
+
+testthat::test_that("resource rehearsal uses two clean sequential R processes", {
+  root <- tempfile("otv3-rehearsal-")
+  dir.create(root, recursive = TRUE)
+  on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+  script <- file.path(
+    repo_root, "application", "scripts",
+    "44_run_oracle_tilt_v3_resource_rehearsal.sh"
+  )
+  output <- system2(
+    "setsid", c("bash", script, paste0("--output-dir=", root)),
+    stdout = TRUE, stderr = TRUE,
+    env = c(
+      "RQR_ORACLE_TILT_V3_REHEARSAL_N_INDEX=20",
+      "RQR_ORACLE_TILT_V3_REHEARSAL_N_DRAW=30",
+      "RQR_ORACLE_TILT_V3_REHEARSAL_N_CHAIN=2"
+    )
+  )
+  testthat::expect_null(attr(output, "status"), info = paste(output, collapse = "\n"))
+  summary <- utils::read.csv(
+    file.path(root, "rehearsal_summary.csv"), stringsAsFactors = FALSE
+  )
+  testthat::expect_equal(nrow(summary), 2L)
+  testthat::expect_equal(length(unique(summary$pid)), 2L)
+  testthat::expect_true(all(summary$post_stage_r_processes == 0L))
+  testthat::expect_true(all(summary$pass))
+  otp_verify_manifest(root)
+})

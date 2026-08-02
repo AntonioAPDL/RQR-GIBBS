@@ -270,6 +270,9 @@ export RQR_ORACLE_TILT_V3_BENCHMARK_CONFIRM=YES
 make oracle-tilt-v3-benchmark
 
 export RQR_ORACLE_TILT_V3_BENCHMARK_DIR=<completed benchmark directory>
+export RQR_ORACLE_TILT_V3_REHEARSAL_CONFIRM=YES
+make oracle-tilt-v3-resource-rehearsal
+
 export RQR_ORACLE_TILT_V3_CONFIRM=YES
 make oracle-tilt-v3-execute
 
@@ -279,3 +282,27 @@ make oracle-tilt-v3-package-evidence \
 
 Exact output directories and artifact hashes belong in the eventual validation
 closeout, not in this prospective protocol.
+
+## Process-isolated execution contract
+
+The 27-chain execution is not a single long-lived R session. A small shell
+orchestrator starts one fresh R process for each ordered family/target cell;
+that process runs no more than two chain workers concurrently, writes and
+validates a compact cell receipt, and exits before the next cell starts. The
+operating system therefore reclaims the complete cell heap before another
+`mclapply()` fork. Full garbage collection is only secondary telemetry.
+
+Heavy worker envelopes use the versioned `ordered_endpoints_only` contract.
+They retain lower and upper endpoint matrices and the low-dimensional chains
+needed by the maintained diagnostics. Midpoint and width matrices are exact
+deterministic transformations and are reconstructed once during cell
+summarization. Cell manifests bind every worker byte count, SHA-256 value,
+chain seed/profile, contract digest, source commit, runtime digest, DGP digest,
+and oracle-target digest. A source, runtime, configuration, or contract change
+requires a new output root.
+
+Before execution, the production-shape resource rehearsal runs two successive
+non-MCMC cells in different R processes using the actual static array
+dimensions. It tests endpoint reconstruction, atomic serialization, process
+cleanup, and memory headroom; it cannot be used to select a prior, DGP, seed,
+initialization, MCMC length, or diagnostic threshold.

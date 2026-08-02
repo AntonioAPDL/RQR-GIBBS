@@ -39,6 +39,9 @@ required_closeout <- c(
   identical(closeout$mode, "execute"), isTRUE(closeout$pass),
   isTRUE(closeout$exact_runtime_bound),
   isTRUE(closeout$all_chains_completed), isTRUE(closeout$all_cells_pass),
+  isTRUE(closeout$process_isolated_cells),
+  identical(closeout$prediction_storage_contract,
+            "ordered_endpoints_only"),
   isTRUE(closeout$compact_evidence_eligible),
   as.integer(closeout$completed_chains) == 27L,
   as.integer(closeout$passed_cells) == 6L,
@@ -71,6 +74,9 @@ input_binding <- utils::read.csv(
 worker_manifest <- utils::read.csv(
   file.path(run_dir, "worker_manifest.csv"), stringsAsFactors = FALSE
 )
+cell_manifest <- utils::read.csv(
+  file.path(run_dir, "cell_manifest.csv"), stringsAsFactors = FALSE
+)
 run_status <- utils::read.csv(
   file.path(run_dir, "run_status.csv"), stringsAsFactors = FALSE
 )
@@ -81,8 +87,38 @@ if (!isTRUE(runtime_binding$match) || !isTRUE(source_state$exact_runtime_bound) 
     nrow(input_binding) != 3L ||
     !setequal(input_binding$mode, c("preflight", "reference-only", "benchmark")) ||
     nrow(worker_manifest) != 27L || anyDuplicated(worker_manifest$path) ||
+    nrow(cell_manifest) != 6L || anyDuplicated(cell_manifest$path) ||
+    !all(cell_manifest$eligible) ||
     nrow(run_status) != 6L || !all(run_status$disposition == "strict_pass")) {
   oti_stop("The runtime, prior-bundle, worker, or cell ledger is incomplete.")
+}
+expected_cell_paths <- file.path(
+  "cells",
+  c("fixed_design_rqr", "fixed_design_et", "fixed_design_sh",
+    "dlm_rqr", "dlm_et", "dlm_sh")
+)
+if (!setequal(cell_manifest$path, expected_cell_paths) ||
+    !all(worker_manifest$storage_contract == "ordered_endpoints_only")) {
+  oti_stop("The process-isolated cell or endpoint-storage contract changed.")
+}
+cell_hash_pass <- vapply(seq_len(nrow(cell_manifest)), function(index) {
+  root <- file.path(run_dir, cell_manifest$path[index])
+  receipt <- file.path(root, "cell_receipt.json")
+  manifest <- file.path(root, "artifact_manifest.csv")
+  if (!dir.exists(root) || !file.exists(receipt) || !file.exists(manifest) ||
+      !identical(oti_file_sha256(receipt),
+                 cell_manifest$cell_receipt_sha256[index]) ||
+      !identical(oti_file_sha256(manifest),
+                 cell_manifest$artifact_manifest_sha256[index])) {
+    return(FALSE)
+  }
+  tryCatch({
+    otp_verify_manifest(root)
+    TRUE
+  }, error = function(error) FALSE)
+}, logical(1L))
+if (!all(cell_hash_pass)) {
+  oti_stop("One or more process-isolated cell bundles failed verification.")
 }
 reference <- utils::read.csv(
   file.path(run_dir, "reference_gates.csv"), stringsAsFactors = FALSE
@@ -165,7 +201,7 @@ config <- jsonlite::read_json(
 )
 otv3_validate_config(config)
 receipt <- list(
-  schema_version = "rqrgibbs_oracle_tilt_evidence/3.2.0",
+  schema_version = "rqrgibbs_oracle_tilt_evidence/3.3.0",
   source_commit = closeout$source_commit,
   config_sha256 = closeout$config_sha256,
   runtime_tree_digest = closeout$runtime_tree_digest,
@@ -182,6 +218,8 @@ receipt <- list(
     "with covariate-dependent population scale"
   ),
   target_cells = 6L, completed_chains = 27L,
+  process_isolated_cells = TRUE,
+  prediction_storage_contract = "ordered_endpoints_only",
   endpoint_summary_joint_inclusion_role = "descriptive_only",
   all_cells_strict_pass = TRUE,
   exact_population_oracle_tilts = TRUE, cornish_fisher_used = FALSE,

@@ -1,7 +1,19 @@
-otv3_schema <- function() "rqrgibbs_oracle_tilt_publication/3.2.0"
+otv3_schema <- function() "rqrgibbs_oracle_tilt_publication/3.3.0"
 
 otv3_config_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_config/3.2.0"
+  "rqrgibbs_oracle_tilt_publication_config/3.3.0"
+}
+
+otv3_worker_schema <- function() {
+  "rqrgibbs_oracle_tilt_publication_worker/1.0.0"
+}
+
+otv3_cell_schema <- function() {
+  "rqrgibbs_oracle_tilt_publication_cell/1.0.0"
+}
+
+otv3_lifecycle_schema <- function() {
+  "rqrgibbs_oracle_tilt_publication_lifecycle/1.0.0"
 }
 
 otv3_preflight_schema <- function() {
@@ -37,6 +49,115 @@ otv3_integer_scalar <- function(x, name, lower = 0L) {
     oti_stop(name, " must be one finite integer in the declared range.")
   }
   as.integer(value)
+}
+
+otv3_endpoint_only_prediction <- function(prediction) {
+  if (!is.list(prediction)) {
+    oti_stop("A prediction must be a list.")
+  }
+  lower <- as.matrix(prediction$lower_draws)
+  upper <- as.matrix(prediction$upper_draws)
+  if (!length(lower) || !identical(dim(lower), dim(upper)) ||
+      any(!is.finite(lower)) || any(!is.finite(upper)) ||
+      any(upper < lower)) {
+    oti_stop("Endpoint draws must be finite, conformable, and ordered.")
+  }
+  list(
+    schema_version = otv3_worker_schema(),
+    storage_contract = "ordered_endpoints_only",
+    lower_draws = lower,
+    upper_draws = upper,
+    lower_mean = rowMeans(lower),
+    upper_mean = rowMeans(upper)
+  )
+}
+
+otv3_materialize_prediction <- function(prediction) {
+  endpoint <- otv3_endpoint_only_prediction(prediction)
+  midpoint <- 0.5 * (endpoint$lower_draws + endpoint$upper_draws)
+  width <- endpoint$upper_draws - endpoint$lower_draws
+  c(endpoint, list(
+    midpoint_draws = midpoint,
+    width_draws = width,
+    midpoint_mean = rowMeans(midpoint),
+    width_mean = rowMeans(width)
+  ))
+}
+
+otv3_combine_endpoint_predictions <- function(predictions) {
+  if (!is.list(predictions) || !length(predictions)) {
+    oti_stop("At least one endpoint prediction is required.")
+  }
+  endpoints <- lapply(predictions, otv3_endpoint_only_prediction)
+  row_counts <- vapply(endpoints, function(value) {
+    nrow(value$lower_draws)
+  }, integer(1L))
+  if (length(unique(row_counts)) != 1L) {
+    oti_stop("Endpoint predictions must share an index dimension.")
+  }
+  otv3_materialize_prediction(list(
+    lower_draws = do.call(cbind, lapply(endpoints, `[[`, "lower_draws")),
+    upper_draws = do.call(cbind, lapply(endpoints, `[[`, "upper_draws"))
+  ))
+}
+
+otv3_prediction_storage_contract <- function(prediction) {
+  required <- c("lower_draws", "upper_draws")
+  forbidden <- c("midpoint_draws", "width_draws")
+  identical(
+    as.character(prediction$storage_contract), "ordered_endpoints_only"
+  ) && all(required %in% names(prediction)) &&
+    !any(forbidden %in% names(prediction))
+}
+
+otv3_compact_chain_result <- function(result) {
+  if (!is.list(result) || is.null(result$pred)) {
+    oti_stop("A chain result must contain a prediction object.")
+  }
+  result$pred <- otv3_endpoint_only_prediction(result$pred)
+  result
+}
+
+otv3_validate_worker_artifact <- function(envelope, expected_contract) {
+  expected_digest <- otf_object_sha256(expected_contract)
+  prediction_valid <- is.list(envelope) && is.list(envelope$result) &&
+    tryCatch({
+      otv3_endpoint_only_prediction(envelope$result$pred)
+      TRUE
+    }, error = function(error) FALSE)
+  valid <- is.list(envelope) &&
+    identical(envelope$schema_version, otv3_worker_schema()) &&
+    identical(envelope$contract_digest, expected_digest) &&
+    identical(envelope$contract, expected_contract) &&
+    identical(otf_object_sha256(envelope$contract), expected_digest) &&
+    is.list(envelope$result) && prediction_valid &&
+    otv3_prediction_storage_contract(envelope$result$pred)
+  if (!valid) oti_stop("The endpoint-only worker artifact is invalid.")
+  invisible(TRUE)
+}
+
+otv3_build_cell_contract <- function(source_commit, config_sha256,
+                                     runtime_tree_digest, family, target,
+                                     worker_manifest) {
+  required <- c("chain", "sha256", "contract_digest")
+  if (!is.data.frame(worker_manifest) || !nrow(worker_manifest) ||
+      !all(required %in% names(worker_manifest)) ||
+      anyDuplicated(worker_manifest$chain) ||
+      any(!is.finite(worker_manifest$chain)) ||
+      any(worker_manifest$chain != floor(worker_manifest$chain))) {
+    oti_stop("The worker manifest cannot define a cell contract.")
+  }
+  list(
+    schema_version = otv3_cell_schema(), source_commit = source_commit,
+    config_sha256 = config_sha256,
+    runtime_tree_digest = runtime_tree_digest,
+    family = family, target = target,
+    chains = as.integer(worker_manifest$chain),
+    worker_sha256 = as.character(worker_manifest$sha256),
+    worker_contract_digests =
+      as.character(worker_manifest$contract_digest),
+    prediction_storage_contract = "ordered_endpoints_only"
+  )
 }
 
 otv3_validate_config <- function(config) {
@@ -1606,11 +1727,12 @@ otv3_fixed_chain <- function(config, dgp, targets, target, chain,
     mcmc_control = control, init = init
   ))
   pred <- rqrgibbs::predict_interval(fit, X_new = dgp$X)
+  scalar_draws <- otv3_scalar_draw_matrix(
+    "fixed_design", pred, truth, dgp$y, config$coverage_level, dgp
+  )
   list(
-    pred = pred,
-    scalar_draws = otv3_scalar_draw_matrix(
-      "fixed_design", pred, truth, dgp$y, config$coverage_level, dgp
-    ),
+    pred = otv3_endpoint_only_prediction(pred),
+    scalar_draws = scalar_draws,
     chain_summary = cbind(
       oti_chain_summary("fixed_design", target, chain, seed, fit, elapsed),
       profile = profile, otp_provenance_summary(fit)
@@ -1676,6 +1798,7 @@ otv3_conditional_parity <- function(fit, dgp, truth, coverage_level,
 }
 
 otv3_pathology_summary <- function(pred, dgp, truth, config) {
+  pred <- otv3_materialize_prediction(pred)
   response_sd <- stats::sd(dgp$y[is.finite(dgp$y)])
   oracle_width <- mean(truth$oracle_width[truth$observed])
   endpoint_scale <- pmax(
@@ -1715,11 +1838,13 @@ otv3_dlm_chain <- function(config, dgp, targets, target, chain,
     mcmc_control = control, init = init
   ))
   pred <- rqrgibbs::predict_interval(fit)
+  scalar_draws <- otv3_scalar_draw_matrix(
+    "dlm", pred, truth, dgp$y, config$coverage_level, dgp
+  )
+  pathology <- otv3_pathology_summary(pred, dgp, truth, config)
   list(
-    pred = pred,
-    scalar_draws = otv3_scalar_draw_matrix(
-      "dlm", pred, truth, dgp$y, config$coverage_level, dgp
-    ),
+    pred = otv3_endpoint_only_prediction(pred),
+    scalar_draws = scalar_draws,
     chain_summary = cbind(
       oti_chain_summary("dlm", target, chain, seed, fit, elapsed),
       profile = profile, otp_provenance_summary(fit)
@@ -1727,7 +1852,7 @@ otv3_dlm_chain <- function(config, dgp, targets, target, chain,
     conditional_parity = otv3_conditional_parity(
       fit, dgp, truth, config$coverage_level
     ),
-    pathology = otv3_pathology_summary(pred, dgp, truth, config)
+    pathology = pathology
   )
 }
 
@@ -1843,6 +1968,7 @@ otv3_recovery_gate_pass <- function(family, recovery, gates) {
 otv3_benchmark_assessment <- function(family, target, result, dgp, targets,
                                       config) {
   truth <- oti_target_row(targets, target)
+  result$pred <- otv3_materialize_prediction(result$pred)
   x <- if (identical(family, "fixed_design")) dgp$x else dgp$time
   curves <- oti_curve_frame(family, target, x, dgp$y, result$pred, truth)
   metrics <- oti_interval_metrics(result$pred, truth, dgp$y)
@@ -1903,7 +2029,9 @@ otv3_benchmark_assessment <- function(family, target, result, dgp, targets,
 otv3_summarize_cell <- function(family, target, chain_results, dgp, targets,
                                 config) {
   truth <- oti_target_row(targets, target)
-  pred <- oti_combine_predictions(lapply(chain_results, `[[`, "pred"))
+  pred <- otv3_combine_endpoint_predictions(
+    lapply(chain_results, `[[`, "pred")
+  )
   chains <- do.call(rbind, lapply(chain_results, `[[`, "chain_summary"))
   diagnostics <- oti_mcmc_diagnostics(
     family, target, lapply(chain_results, `[[`, "scalar_draws"),
@@ -2016,7 +2144,7 @@ otv3_compact_files <- function() {
     "seasonal_prior_predictive.csv", "dlm_time_contract.csv",
     "fixed_horizon_audit.csv", "seasonal_covariance_audit.csv",
     "dynamic_observability_audit.csv", "scale_information.csv",
-    "fit_plan.csv", "preflight_gates.csv",
+    "fit_plan.csv", "cell_plan.csv", "preflight_gates.csv",
     "reference_gates.csv", "input_bundle_binding.csv",
     "benchmark_summary.csv", "fit_summary.csv",
     "fit_curves.csv", "endpoint_error_density.csv",
@@ -2025,7 +2153,7 @@ otv3_compact_files <- function() {
     "conditional_parity.csv", "pathology_summary.csv",
     "recovery_summary.csv", "heterogeneity_summary.csv",
     "cell_disposition.csv", "run_status.csv",
-    "worker_manifest.csv", "failure_log.csv",
+    "worker_manifest.csv", "cell_manifest.csv", "failure_log.csv",
     "closeout.json"
   )
 }

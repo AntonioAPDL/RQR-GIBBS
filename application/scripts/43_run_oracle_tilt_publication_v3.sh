@@ -3,9 +3,9 @@ set -euo pipefail
 
 mode="${1:-preflight}"
 case "$mode" in
-  preflight|reference-only|benchmark|execute) ;;
+  preflight|reference-only|benchmark|resource-rehearsal|execute) ;;
   *)
-    echo "Mode must be preflight, reference-only, benchmark, or execute." >&2
+    echo "Mode must be preflight, reference-only, benchmark, resource-rehearsal, or execute." >&2
     exit 2
     ;;
 esac
@@ -22,7 +22,8 @@ for command_name in setsid ps awk sha256sum stat find sort date df Rscript; do
   }
 done
 
-if [[ "$mode" == benchmark || "$mode" == execute ]]; then
+if [[ "$mode" == benchmark || "$mode" == resource-rehearsal ||
+      "$mode" == execute ]]; then
   if [[ ! "${RQR_EXPECTED_PRIMARY_COMMIT:-}" =~ ^[0-9a-fA-F]{40}$ ]]; then
     echo "Promotion modes require RQR_EXPECTED_PRIMARY_COMMIT as a full SHA." >&2
     exit 2
@@ -31,6 +32,11 @@ if [[ "$mode" == benchmark || "$mode" == execute ]]; then
     echo "Promotion modes require RQR_PRIMARY_RUNTIME_ATTESTATION." >&2
     exit 2
   fi
+fi
+if [[ "$mode" == resource-rehearsal &&
+      "${RQR_ORACLE_TILT_V3_REHEARSAL_CONFIRM:-}" != YES ]]; then
+  echo "resource-rehearsal is fail-closed; set RQR_ORACLE_TILT_V3_REHEARSAL_CONFIRM=YES." >&2
+  exit 2
 fi
 
 export OMP_NUM_THREADS=1
@@ -47,6 +53,7 @@ export RQR_MONITOR_KERNEL_HARD_MEMORY=FALSE
 case "$mode" in
   preflight|reference-only) timeout_seconds=1800 ;;
   benchmark) timeout_seconds=7200 ;;
+  resource-rehearsal) timeout_seconds=3600 ;;
   execute) timeout_seconds=28800 ;;
 esac
 max_rss_kib=12582912
@@ -141,12 +148,25 @@ trap 'if [[ -n "$pgid" ]]; then terminate_group "$pgid"; fi' EXIT
 printf '%s\n' \
   "sample_utc,elapsed_seconds,processes,r_processes,rss_kib,threads" \
   >"$monitor_csv"
-runner=(
-  Rscript application/scripts/42_run_oracle_tilt_publication_v3.R
-  "--mode=$mode"
-  "--config=application/config/oracle_tilt_c095_publication_v3_20260801.json"
-  "--output-dir=$output_dir"
-)
+if [[ "$mode" == execute ]]; then
+  runner=(
+    bash application/scripts/44_orchestrate_oracle_tilt_v3_execute.sh
+    "--config=application/config/oracle_tilt_c095_publication_v3_20260801.json"
+    "--output-dir=$output_dir"
+  )
+elif [[ "$mode" == resource-rehearsal ]]; then
+  runner=(
+    bash application/scripts/44_run_oracle_tilt_v3_resource_rehearsal.sh
+    "--output-dir=$output_dir"
+  )
+else
+  runner=(
+    Rscript application/scripts/42_run_oracle_tilt_publication_v3.R
+    "--mode=$mode"
+    "--config=application/config/oracle_tilt_c095_publication_v3_20260801.json"
+    "--output-dir=$output_dir"
+  )
+fi
 setsid "${runner[@]}" >"$stdout_log" 2>"$stderr_log" &
 root_pid=$!
 pgid=$root_pid
@@ -189,6 +209,12 @@ fi
 trap - EXIT
 
 elapsed_total=$(( $(date +%s) - start_epoch ))
+if [[ "$mode" == resource-rehearsal ]]; then
+  rehearsal_headroom_limit=$((max_rss_kib * 85 / 100))
+  if (( max_sampled_rss > rehearsal_headroom_limit )); then
+    limit_triggered=TRUE
+  fi
+fi
 wrapper_pass=TRUE
 if (( runner_status != 0 )) || [[ "$timed_out" != FALSE ]] ||
    [[ "$limit_triggered" != FALSE ]] || [[ "$final_pgid_empty" != TRUE ]] ||
