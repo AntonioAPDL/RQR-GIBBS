@@ -1,0 +1,4 @@
+"wave_id","manifest_entries","verified_entries","all_verified","manifest_sha256"
+"static_gaussian_T200__target0200__sentinel",208,208,TRUE,"6a84e0b421ad55347bb6e4c5fc69eb85485e75c4394804a62b12eee7f62ba85f"
+"local_level_gaussian_T200__target0200__sentinel",233,233,TRUE,"19ec9b4e3a39183e46c86f245840dedd9c0eb41cb661333b17dad8dd5f2c958e"
+"local_level_skewed_T200__target0200__sentinel",309,309,TRUE,"40583d1273290034411f89e1ab466a4ef8e224702b3f640cea99efcfcc28236a"

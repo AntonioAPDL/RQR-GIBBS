@@ -153,7 +153,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$implementation_correction,
         list(
-          schema_version = "rqrgibbs_dlm_main_correction/1.12.0",
+          schema_version = "rqrgibbs_dlm_main_correction/1.13.0",
           failed_authorization_commit =
             "b8b7748ab181a006611b602f64d4edf5be591de6",
           failed_wave_id =
@@ -285,6 +285,28 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           production_seed_binding_failed_outputs_reused = FALSE,
           production_seed_binding_failed_scientific_metrics_used = FALSE,
           production_seed_binding_fresh_relaunch_required = TRUE,
+          skewed_wave_failed_authorization_commit =
+            "32f6745369b83040c0b1c4bd385c17072ee912d8",
+          skewed_wave_failed_run_id = "rqr_dlm_main_20260802_32f6745",
+          skewed_wave_failed_wave_id =
+            "local_level_skewed_T200__target0200__sentinel",
+          skewed_wave_failed_artifact_hashes_sha256 =
+            "40583d1273290034411f89e1ab466a4ef8e224702b3f640cea99efcfcc28236a",
+          skewed_wave_closeout_manifest_sha256 =
+            "45e26c4ba643bb38fcb56beb77f421643e3493fa286588deac4ae4c70a10df74",
+          skewed_wave_forensic_manifest_sha256 =
+            "5a9b31135ef78e55c7b71b0b00ad45198d4f3c9a75537cc9e3b22c9a4d2ea5d3",
+          skewed_wave_failure = paste(
+            "local_level_skewed sentinel exposed systematic frozen MCMC",
+            "mixing failures concentrated in M10 and M11 with additional",
+            "near-boundary endpoint-method failures"
+          ),
+          skewed_wave_failed_outputs_reused = FALSE,
+          skewed_wave_failed_scientific_metrics_used = FALSE,
+          skewed_wave_diagnostics_used_for_transition_correction = TRUE,
+          skewed_wave_fresh_relaunch_required = TRUE,
+          skewed_wave_recovery_status =
+            "development_forensics_and_candidate_selection_pending",
           correction_budget_path =
             "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
           correction_budget_sha256 =
@@ -4274,7 +4296,17 @@ rqr_confirm_exdqlm_mcmc_initialization <- function(
 
 rqr_confirm_dynamic_quantile <- function(
     contract, generated, chain, ledger, exdqlm_attestation_path,
-    profile_name = NULL) {
+    profile_name = NULL, schedule_override = list()) {
+  if (!is.list(schedule_override) ||
+      (length(schedule_override) &&
+       (is.null(names(schedule_override)) ||
+        any(!nzchar(names(schedule_override))) ||
+        any(!names(schedule_override) %in% c("burn", "retain"))))) {
+    stop(
+      "schedule_override must be a named subset of burn and retain.",
+      call. = FALSE
+    )
+  }
   chain <- rqr_confirm_strict_integer(chain, "chain", 1L, 4L)
   specification <- contract$config$comparator$exdqlm
   attestation <- rqr_confirm_read_attestation(
@@ -4315,6 +4347,15 @@ rqr_confirm_dynamic_quantile <- function(
   )
   schedule <- rqr_confirm_dynamic_quantile_schedule(
     contract, profile_name
+  )
+  if (length(schedule_override)) {
+    schedule[names(schedule_override)] <- schedule_override
+  }
+  schedule$burn <- rqr_confirm_strict_integer(
+    schedule$burn, "dynamic quantile burn", 0L
+  )
+  schedule$retain <- rqr_confirm_strict_integer(
+    schedule$retain, "dynamic quantile retained draws", 1L
   )
   profile_endpoints <- rqr_confirm_profile_interval(generated, profile)
   cell_id <- contract$incidence$cell_id[
