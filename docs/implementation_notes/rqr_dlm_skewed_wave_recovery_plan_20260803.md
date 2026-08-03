@@ -105,12 +105,15 @@ S05/M09/replication 77, S05/M10/replication 104, and
 S05/M11/replications 74 and 172.  Replication 74 preserves the original
 four-chain sentinel failure; the others preserve the original one-chain
 standard role.  Each method also has a fixed passing guard in the opposite
-diagnostic role.  Guards were selected before candidate execution as the
-nearest fully passing replication in the same DGP after standardizing response
-mean, standard deviation, skewness, excess kurtosis, maximum absolute
-standardized response, latent range, latent-increment standard deviation, and
-maximum absolute latent increment.  The comparison therefore comprises 93
-fits: three candidates over 31 fixed chain jobs.
+diagnostic role.  Four-chain guards are restricted to replications in the
+reviewed maximum sentinel map so all A--D streams exist in the frozen seed
+ledger.  Within that constraint, guards were selected before candidate
+execution as the nearest method-passing replication in the same DGP after
+standardizing response mean, standard deviation, skewness, excess kurtosis,
+maximum absolute standardized response, latent range, latent-increment
+standard deviation, and maximum absolute latent increment.  The M11
+one-chain guard is fully passing.  The comparison therefore comprises 93 fits:
+three candidates over 31 fixed chain jobs.
 
 Selection is lexicographic:
 
@@ -128,6 +131,9 @@ objects are written atomically under the ignored cache tree, which makes an
 interrupted comparison resumable without retries or reseeding.  The detached
 launcher places PID, process-group, and logs under the ignored log tree; the
 read-only health checker reports exact published and remaining job counts.
+Preflight enumerates every method and forecast RNG key required by the 93 jobs
+and regenerates every fixed DGP case; missing reviewed streams are therefore a
+pre-execution failure rather than a worker failure.
 
 ### Stage 4: complete affected-wave gate
 
