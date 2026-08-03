@@ -131,8 +131,8 @@ cases <- data.frame(
     "S05", "S05", "S05", "S05", "S05", "S05", "S05"
   ),
   replication = c(
-    186L, 181L, 194L, 76L, 196L, 104L,
-    77L, 181L, 104L, 190L, 74L, 172L, 190L
+    186L, 188L, 194L, 41L, 196L, 104L,
+    77L, 113L, 104L, 129L, 74L, 172L, 190L
   ),
   case_role = c(
     rep(c("hard", "guard"), 5L), "hard", "hard", "guard"
@@ -156,16 +156,16 @@ cases <- data.frame(
     "learned_rate_component_scale_guard"
   ),
   guard_selection_rule = c(
-    NA, "nearest_fully_passing_same_DGP_response_path",
-    NA, "nearest_fully_passing_same_DGP_response_path",
-    NA, "nearest_fully_passing_same_DGP_response_path",
-    NA, "nearest_fully_passing_same_DGP_response_path",
-    NA, "nearest_fully_passing_same_DGP_response_path",
+    NA, "nearest_seeded_method_passing_same_DGP_response_path",
+    NA, "nearest_seeded_method_passing_same_DGP_response_path",
+    NA, "nearest_seeded_method_passing_same_DGP_response_path",
+    NA, "nearest_seeded_method_passing_same_DGP_response_path",
+    NA, "nearest_seeded_method_passing_same_DGP_response_path",
     NA, NA, "nearest_fully_passing_same_DGP_response_path"
   ),
   guard_standardized_distance = c(
-    NA, 3.280669, NA, 3.981827, NA, 1.502989,
-    NA, 3.597450, NA, 2.288210, NA, NA, 2.818763
+    NA, 4.842241333, NA, 5.125196888, NA, 1.502989020,
+    NA, 2.953863567, NA, 2.491990196, NA, NA, 2.818763292
   ),
   stringsAsFactors = FALSE
 )
@@ -191,6 +191,49 @@ jobs$job_id <- sprintf(
 rownames(jobs) <- NULL
 candidate_digest <- digest::digest(
   list(candidates = candidates, cases = cases, jobs = jobs),
+  algo = "sha256", serialize = TRUE
+)
+
+required_rng_keys <- unique(unlist(lapply(seq_len(nrow(jobs)), function(index) {
+  job <- jobs[index, , drop = FALSE]
+  cell_id <- contract$incidence$cell_id[
+    contract$incidence$DGP == job$DGP[[1L]] &
+      contract$incidence$method == job$method[[1L]]
+  ]
+  if (length(cell_id) != 1L) {
+    stop("A candidate job does not map to one incidence cell.", call. = FALSE)
+  }
+  endpoints <- if (identical(job$method[[1L]], "M02")) {
+    c("lower", "upper")
+  } else {
+    "interval"
+  }
+  unlist(lapply(c("method", "forecast"), function(stage) {
+    vapply(endpoints, function(endpoint) {
+      rqr_confirm_rng_task_key(
+        stage, cell_id, job$replication[[1L]], endpoint, job$chain[[1L]]
+      )
+    }, character(1L))
+  }), use.names = FALSE)
+}), use.names = FALSE))
+missing_rng_keys <- setdiff(required_rng_keys, ledger$task_key)
+if (length(missing_rng_keys)) {
+  stop(
+    paste(
+      "The reviewed seed ledger lacks candidate task keys:",
+      paste(head(missing_rng_keys, 8L), collapse = ", ")
+    ),
+    call. = FALSE
+  )
+}
+# Regenerating each fixed case is a read-only preflight of its DGP stream keys.
+invisible(lapply(seq_len(nrow(cases)), function(index) {
+  rqr_confirm_generate_dgp(
+    contract, cases$DGP[[index]], cases$replication[[index]], ledger
+  )
+}))
+rng_key_digest <- digest::digest(
+  sort(required_rng_keys, method = "radix"),
   algo = "sha256", serialize = TRUE
 )
 
@@ -221,6 +264,9 @@ if (identical(mode, "preflight")) {
     exdqlm_attestation_sha256 =
       rqr_confirm_sha256(exdqlm_attestation_path),
     candidate_digest = candidate_digest,
+    rng_task_keys = length(required_rng_keys),
+    rng_task_key_digest = rng_key_digest,
+    all_rng_task_keys_present = TRUE,
     candidates = nrow(candidates),
     cases = nrow(cases),
     one_chain_standard_cases = sum(
@@ -298,6 +344,8 @@ if (!identical(preflight$source_commit, source_commit) ||
     !identical(preflight$exdqlm_attestation_sha256,
                rqr_confirm_sha256(exdqlm_attestation_path)) ||
     !identical(preflight$candidate_digest, candidate_digest) ||
+    !identical(preflight$rng_task_key_digest, rng_key_digest) ||
+    !isTRUE(preflight$all_rng_task_keys_present) ||
     !identical(stored_candidates, candidates) ||
     !identical(stored_cases, cases) ||
     !identical(stored_jobs, jobs)) {
