@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.12.0"
+    "rqrgibbs_dlm_main_correction/1.13.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -117,6 +117,31 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_true(
     contract$config$implementation_correction$
       production_seed_binding_fresh_relaunch_required
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      skewed_wave_failed_authorization_commit,
+    "32f6745369b83040c0b1c4bd385c17072ee912d8"
+  )
+  expect_identical(
+    contract$config$implementation_correction$skewed_wave_failed_run_id,
+    "rqr_dlm_main_20260802_32f6745"
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      skewed_wave_failed_outputs_reused
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      skewed_wave_failed_scientific_metrics_used
+  )
+  expect_true(
+    contract$config$implementation_correction$
+      skewed_wave_diagnostics_used_for_transition_correction
+  )
+  expect_true(
+    contract$config$implementation_correction$
+      skewed_wave_fresh_relaunch_required
   )
   expect_false(
     contract$config$implementation_correction$
@@ -427,6 +452,17 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     "not fail closed"
   )
   expect_invisible(environment$rqr_confirm_validate_contract(altered))
+})
+
+test_that("dynamic-quantile development schedule overrides are bounded", {
+  environment <- load_confirmatory_helpers()
+  body_text <- paste(
+    deparse(body(environment$rqr_confirm_dynamic_quantile)),
+    collapse = "\n"
+  )
+  expect_match(body_text, "schedule_override", fixed = TRUE)
+  expect_match(body_text, "named subset of burn and retain", fixed = TRUE)
+  expect_match(body_text, "dynamic quantile retained draws", fixed = TRUE)
 })
 
 test_that("M01 construction forwards the selected rootwise2-ASIS2 kernel", {

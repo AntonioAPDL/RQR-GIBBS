@@ -1,0 +1,4 @@
+"canonical_wave_index","wave_id","decision","planned_tasks","attempted_tasks","fully_completed_tasks","tasks_with_fit_failure","not_run_tasks","diagnostic_rows","diagnostic_rows_failed"
+1,"static_gaussian_T200__target0200__sentinel","passed",20,20,20,0,0,2312,0
+2,"local_level_gaussian_T200__target0200__sentinel","passed",25,25,25,0,0,4502,0
+3,"local_level_skewed_T200__target0200__sentinel","failed",35,33,15,18,2,9213,72
