@@ -1,15 +1,15 @@
-otv3_schema <- function() "rqrgibbs_oracle_tilt_publication/3.3.0"
+otv3_schema <- function() "rqrgibbs_oracle_tilt_publication/3.4.0"
 
 otv3_config_schema <- function() {
   "rqrgibbs_oracle_tilt_publication_config/3.3.0"
 }
 
 otv3_worker_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_worker/1.0.0"
+  "rqrgibbs_oracle_tilt_publication_worker/1.1.0"
 }
 
 otv3_cell_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_cell/1.0.0"
+  "rqrgibbs_oracle_tilt_publication_cell/1.1.0"
 }
 
 otv3_lifecycle_schema <- function() {
@@ -18,6 +18,14 @@ otv3_lifecycle_schema <- function() {
 
 otv3_preflight_schema <- function() {
   "rqrgibbs_oracle_tilt_publication_preflight/1.2.0"
+}
+
+otv3_provenance_audit_schema <- function() {
+  "rqrgibbs_oracle_tilt_publication_provenance_audit/1.0.0"
+}
+
+otv3_failure_schema <- function() {
+  "rqrgibbs_oracle_tilt_publication_failure/1.0.0"
 }
 
 otv3_close <- function(x, y, tolerance = 1e-12) {
@@ -49,6 +57,211 @@ otv3_integer_scalar <- function(x, name, lower = 0L) {
     oti_stop(name, " must be one finite integer in the declared range.")
   }
   as.integer(value)
+}
+
+otv3_cell_plan <- function(fit_plan) {
+  required <- c("family", "target")
+  if (!is.data.frame(fit_plan) || !nrow(fit_plan) ||
+      !all(required %in% names(fit_plan))) {
+    oti_stop("The fit plan cannot define an authoritative cell plan.")
+  }
+  key <- paste(fit_plan$family, fit_plan$target, sep = "\r")
+  first <- !duplicated(key)
+  out <- fit_plan[first, required, drop = FALSE]
+  rownames(out) <- NULL
+  allowed_families <- c("fixed_design", "dlm")
+  allowed_targets <- c("RQR", "ET", "SH")
+  if (nrow(out) != 6L || anyDuplicated(out) ||
+      !setequal(as.character(out$family), allowed_families) ||
+      !setequal(as.character(out$target), allowed_targets) ||
+      !setequal(
+        paste(out$family, out$target, sep = "/"),
+        as.vector(outer(allowed_families, allowed_targets, paste, sep = "/"))
+      )) {
+    oti_stop("The authoritative cell plan must contain six unique cells.")
+  }
+  out$order <- seq_len(nrow(out))
+  out$cell_key <- paste(out$family, tolower(out$target), sep = "_")
+  out$process_isolation <- TRUE
+  out$maximum_chain_workers <- 2L
+  out
+}
+
+otv3_provenance_gate_names <- function() {
+  c(
+    "git_commit_available", "git_status_available",
+    "expected_git_commit_match", "provenance_complete",
+    "reproducibility_eligible", "runtime_package_available",
+    "runtime_attestation_available", "runtime_attestation_match",
+    "source_archive_verified", "source_archive_tree_match",
+    "source_package_verified", "source_package_archive_match",
+    "build_evidence_verified", "install_evidence_verified",
+    "runtime_lineage_marker_match", "runtime_install_receipt_match",
+    "source_archive_isolated_from_source", "source_checkout_unchanged",
+    "runtime_isolated_from_source", "runtime_source_match",
+    "runtime_provenance_complete"
+  )
+}
+
+otv3_primary_provenance_state <- function(provenance_control) {
+  if (!is.list(provenance_control) ||
+      is.null(provenance_control$repo_root) ||
+      is.null(provenance_control$expected_git_commit) ||
+      is.null(provenance_control$primary_runtime_attestation)) {
+    oti_stop("The primary provenance control is incomplete.")
+  }
+  verifier <- tryCatch(
+    getFromNamespace(".rqr_repository_provenance", "rqrgibbs"),
+    error = function(error) NULL
+  )
+  if (!is.function(verifier)) {
+    oti_stop("The primary provenance verifier is unavailable.")
+  }
+  verifier(list(
+    repo_root = provenance_control$repo_root,
+    expected_git_commit = provenance_control$expected_git_commit,
+    runtime_package = "rqrgibbs",
+    runtime_attestation =
+      provenance_control$primary_runtime_attestation,
+    require_isolated_runtime = TRUE,
+    source_subdir = "application"
+  ))
+}
+
+otv3_provenance_snapshot <- function(state, phase, family, target, chain) {
+  phases <- c("worker_entry", "fit_recorded", "worker_exit")
+  if (!is.list(state) || !phase %in% phases) {
+    oti_stop("A provenance snapshot requires a valid state and phase.")
+  }
+  scalar_text <- function(name) {
+    value <- state[[name]]
+    if (is.null(value) || !length(value) || is.na(value[1L])) {
+      return(NA_character_)
+    }
+    as.character(value[1L])
+  }
+  scalar_logical <- function(name) isTRUE(state[[name]])
+  gates <- otv3_provenance_gate_names()
+  gate_values <- vapply(gates, scalar_logical, logical(1L))
+  # Cleanliness is the single required false-valued repository fact.
+  clean <- is.logical(state$git_dirty) && length(state$git_dirty) == 1L &&
+    !is.na(state$git_dirty) && !state$git_dirty
+  failed <- c(gates[!gate_values], if (!clean) "git_clean" else character(0))
+  out <- data.frame(
+    schema_version = otv3_provenance_audit_schema(),
+    phase = phase,
+    family = as.character(family), target = as.character(target),
+    chain = as.integer(chain), pid = Sys.getpid(),
+    recorded_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    git_commit = scalar_text("git_commit"),
+    expected_git_commit = scalar_text("expected_git_commit"),
+    git_dirty = if (is.null(state$git_dirty)) NA else
+      as.logical(state$git_dirty[1L]),
+    runtime_package_path = scalar_text("runtime_package_path"),
+    runtime_package_version = scalar_text("runtime_package_version"),
+    runtime_attestation = scalar_text("runtime_attestation"),
+    runtime_attestation_schema = scalar_text("runtime_attestation_schema"),
+    source_tree_digest = scalar_text("source_tree_digest"),
+    runtime_package_tree_digest =
+      scalar_text("runtime_package_tree_digest"),
+    failed_gates = if (length(failed)) paste(failed, collapse = ";") else "",
+    snapshot_pass = !length(failed),
+    stringsAsFactors = FALSE
+  )
+  for (name in gates) out[[name]] <- scalar_logical(name)
+  out
+}
+
+otv3_live_provenance_snapshot <- function(provenance_control, phase,
+                                           family, target, chain) {
+  state <- otv3_primary_provenance_state(provenance_control)
+  otv3_provenance_snapshot(state, phase, family, target, chain)
+}
+
+otv3_fit_provenance_snapshot <- function(fit, family, target, chain) {
+  state <- fit$provenance$primary_repository
+  otv3_provenance_snapshot(state, "fit_recorded", family, target, chain)
+}
+
+otv3_validate_provenance_audit <- function(audit, family = NULL,
+                                            target = NULL, chain = NULL) {
+  required <- c(
+    "schema_version", "phase", "family", "target", "chain", "pid",
+    "recorded_at_utc", "git_commit", "expected_git_commit", "git_dirty",
+    "runtime_package_path", "runtime_package_version",
+    "runtime_attestation", "runtime_attestation_schema",
+    "source_tree_digest", "runtime_package_tree_digest", "failed_gates",
+    "snapshot_pass", otv3_provenance_gate_names()
+  )
+  phases <- c("worker_entry", "fit_recorded", "worker_exit")
+  identity_fields <- c(
+    "git_commit", "expected_git_commit", "runtime_package_path",
+    "runtime_package_version", "runtime_attestation",
+    "runtime_attestation_schema", "source_tree_digest",
+    "runtime_package_tree_digest"
+  )
+  gate_fields <- otv3_provenance_gate_names()
+  identity_complete <- function(name) {
+    value <- as.character(audit[[name]])
+    length(value) == 3L && !anyNA(value) && all(nzchar(value)) &&
+      length(unique(value)) == 1L
+  }
+  gate_complete <- function(name) {
+    value <- audit[[name]]
+    is.logical(value) && length(value) == 3L && !anyNA(value)
+  }
+  valid <- is.data.frame(audit) && nrow(audit) == 3L &&
+    all(required %in% names(audit)) &&
+    identical(as.character(audit$phase), phases) &&
+    all(audit$schema_version == otv3_provenance_audit_schema()) &&
+    length(unique(audit$family)) == 1L &&
+    length(unique(audit$target)) == 1L &&
+    length(unique(audit$chain)) == 1L &&
+    all(is.finite(audit$chain)) && all(audit$chain == floor(audit$chain)) &&
+    all(is.finite(audit$pid)) && all(audit$pid == floor(audit$pid)) &&
+    length(unique(audit$pid)) == 1L &&
+    is.logical(audit$git_dirty) && !anyNA(audit$git_dirty) &&
+    length(unique(audit$git_dirty)) == 1L &&
+    is.logical(audit$snapshot_pass) && !anyNA(audit$snapshot_pass)
+  if (valid) {
+    valid <- all(vapply(identity_fields, identity_complete, logical(1L))) &&
+      all(vapply(gate_fields, gate_complete, logical(1L))) &&
+      all(audit$git_commit == audit$expected_git_commit)
+  }
+  if (!is.null(family)) valid <- valid && all(audit$family == family)
+  if (!is.null(target)) valid <- valid && all(audit$target == target)
+  if (!is.null(chain)) valid <- valid && all(audit$chain == chain)
+  if (!valid) oti_stop("The compact worker provenance audit is invalid.")
+  invisible(TRUE)
+}
+
+otv3_append_failure <- function(path, family, target, chain, stage, message) {
+  if (!is.character(path) || length(path) != 1L || is.na(path) ||
+      !nzchar(path) || !is.character(message) || length(message) != 1L ||
+      is.na(message) || !nzchar(message)) {
+    oti_stop("Failure-ledger path and message must be nonempty strings.")
+  }
+  prior <- if (file.exists(path)) {
+    utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+  } else data.frame()
+  sequence_id <- if (nrow(prior)) {
+    if (!"sequence" %in% names(prior) || any(!is.finite(prior$sequence))) {
+      oti_stop("The existing failure ledger has an invalid sequence.")
+    }
+    max(as.integer(prior$sequence)) + 1L
+  } else 1L
+  row <- data.frame(
+    schema_version = otv3_failure_schema(), sequence = sequence_id,
+    recorded_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    pid = Sys.getpid(), family = as.character(family),
+    target = as.character(target),
+    chain = if (length(chain) && !is.na(chain)) as.integer(chain) else NA_integer_,
+    stage = as.character(stage), message = message,
+    stringsAsFactors = FALSE
+  )
+  value <- oti_rbind_fill(list(prior, row))
+  otf_atomic_write_csv(value, path)
+  value
 }
 
 otv3_endpoint_only_prediction <- function(prediction) {
@@ -125,12 +338,30 @@ otv3_validate_worker_artifact <- function(envelope, expected_contract) {
       otv3_endpoint_only_prediction(envelope$result$pred)
       TRUE
     }, error = function(error) FALSE)
+  provenance_valid <- is.list(envelope) && is.list(envelope$result) &&
+    tryCatch({
+      otv3_validate_provenance_audit(
+        envelope$result$provenance_audit,
+        expected_contract$family, expected_contract$target,
+        expected_contract$chain
+      )
+      TRUE
+    }, error = function(error) FALSE)
+  summary_valid <- is.list(envelope) && is.list(envelope$result) &&
+    is.data.frame(envelope$result$chain_summary) &&
+    nrow(envelope$result$chain_summary) == 1L &&
+    all(c(
+      "worker_entry_provenance_match",
+      "fit_recorded_provenance_match",
+      "worker_exit_provenance_match"
+    ) %in% names(envelope$result$chain_summary))
   valid <- is.list(envelope) &&
     identical(envelope$schema_version, otv3_worker_schema()) &&
     identical(envelope$contract_digest, expected_digest) &&
     identical(envelope$contract, expected_contract) &&
     identical(otf_object_sha256(envelope$contract), expected_digest) &&
-    is.list(envelope$result) && prediction_valid &&
+    is.list(envelope$result) && prediction_valid && provenance_valid &&
+    summary_valid &&
     otv3_prediction_storage_contract(envelope$result$pred)
   if (!valid) oti_stop("The endpoint-only worker artifact is invalid.")
   invisible(TRUE)
@@ -1736,6 +1967,9 @@ otv3_fixed_chain <- function(config, dgp, targets, target, chain,
     chain_summary = cbind(
       oti_chain_summary("fixed_design", target, chain, seed, fit, elapsed),
       profile = profile, otp_provenance_summary(fit)
+    ),
+    provenance_audit = otv3_fit_provenance_snapshot(
+      fit, "fixed_design", target, chain
     )
   )
 }
@@ -1848,6 +2082,9 @@ otv3_dlm_chain <- function(config, dgp, targets, target, chain,
     chain_summary = cbind(
       oti_chain_summary("dlm", target, chain, seed, fit, elapsed),
       profile = profile, otp_provenance_summary(fit)
+    ),
+    provenance_audit = otv3_fit_provenance_snapshot(
+      fit, "dlm", target, chain
     ),
     conditional_parity = otv3_conditional_parity(
       fit, dgp, truth, config$coverage_level
@@ -2033,6 +2270,9 @@ otv3_summarize_cell <- function(family, target, chain_results, dgp, targets,
     lapply(chain_results, `[[`, "pred")
   )
   chains <- do.call(rbind, lapply(chain_results, `[[`, "chain_summary"))
+  provenance_audit <- do.call(
+    rbind, lapply(chain_results, `[[`, "provenance_audit")
+  )
   diagnostics <- oti_mcmc_diagnostics(
     family, target, lapply(chain_results, `[[`, "scalar_draws"),
     otp_diagnostic_contract(config)
@@ -2050,10 +2290,26 @@ otv3_summarize_cell <- function(family, target, chain_results, dgp, targets,
   pathology <- if (identical(family, "dlm")) {
     do.call(rbind, lapply(chain_results, `[[`, "pathology"))
   } else data.frame()
-  provenance_pass <- all(
+  provenance_audit_pass <-
+    nrow(provenance_audit) == 3L * nrow(chains) &&
+    all(provenance_audit$snapshot_pass) &&
+    all(vapply(seq_len(nrow(chains)), function(index) {
+      selected <- provenance_audit$chain == chains$chain[index]
+      tryCatch({
+        otv3_validate_provenance_audit(
+          provenance_audit[selected, , drop = FALSE], family, target,
+          chains$chain[index]
+        )
+        TRUE
+      }, error = function(error) FALSE)
+    }, logical(1L)))
+  provenance_pass <- provenance_audit_pass && all(
     chains$numerical_repair_count == 0L & chains$exact_joint_target &
       chains$target_numerical_eligible & chains$reproducibility_eligible &
-      chains$promotion_eligible & chains$primary_runtime_source_match
+      chains$promotion_eligible & chains$primary_runtime_source_match &
+      chains$worker_entry_provenance_match &
+      chains$fit_recorded_provenance_match &
+      chains$worker_exit_provenance_match
   )
   diagnostics_pass <- nrow(diagnostics) > 0L && all(diagnostics$pass)
   parity_pass <- if (identical(family, "dlm")) {
@@ -2099,6 +2355,7 @@ otv3_summarize_cell <- function(family, target, chain_results, dgp, targets,
     data.frame(
       family = family, target = target,
       provenance_pass = provenance_pass,
+      provenance_snapshots_pass = provenance_audit_pass,
       strict_diagnostics_pass = diagnostics_pass,
       conditional_parity_pass = parity_pass,
       pathology_pass = pathology_pass,
@@ -2126,7 +2383,8 @@ otv3_summarize_cell <- function(family, target, chain_results, dgp, targets,
     endpoint_error_by_index = oti_endpoint_error_by_index_frame(
       family, target, pred, truth
     ),
-    chain_summary = chains, mcmc_diagnostics = diagnostics,
+    chain_summary = chains, provenance_audit = provenance_audit,
+    mcmc_diagnostics = diagnostics,
     conditional_parity = parity, pathology_summary = pathology,
     recovery_summary = recovery,
     heterogeneity_summary = heterogeneity
@@ -2149,7 +2407,7 @@ otv3_compact_files <- function() {
     "benchmark_summary.csv", "fit_summary.csv",
     "fit_curves.csv", "endpoint_error_density.csv",
     "endpoint_error_summary.csv", "endpoint_error_by_index.csv",
-    "chain_summary.csv", "mcmc_diagnostics.csv",
+    "chain_summary.csv", "provenance_audit.csv", "mcmc_diagnostics.csv",
     "conditional_parity.csv", "pathology_summary.csv",
     "recovery_summary.csv", "heterogeneity_summary.csv",
     "cell_disposition.csv", "run_status.csv",

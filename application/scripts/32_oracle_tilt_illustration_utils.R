@@ -1404,10 +1404,16 @@ oti_plan_rows <- function(families, targets, run_control = NULL) {
 oti_rbind_fill <- function(x) {
   x <- Filter(Negate(is.null), x)
   if (!length(x)) return(data.frame())
+  if (!all(vapply(x, is.data.frame, logical(1L)))) {
+    oti_stop("oti_rbind_fill requires data-frame inputs.")
+  }
   cols <- unique(unlist(lapply(x, names), use.names = FALSE))
   rows <- lapply(x, function(z) {
     missing <- setdiff(cols, names(z))
-    for (nm in missing) z[[nm]] <- NA
+    # A scalar replacement is invalid for a zero-row data frame.  Preserve
+    # each input's row count so first-write failure ledgers can safely combine
+    # data.frame() with their first material row.
+    for (nm in missing) z[[nm]] <- rep(NA, nrow(z))
     z[, cols, drop = FALSE]
   })
   do.call(rbind, rows)

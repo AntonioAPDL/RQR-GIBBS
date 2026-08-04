@@ -20,6 +20,34 @@ config_path <- file.path(
 )
 read_config <- function() oti_read_json(config_path)
 
+valid_provenance_state <- function() {
+  state <- as.list(setNames(
+    rep(TRUE, length(otv3_provenance_gate_names())),
+    otv3_provenance_gate_names()
+  ))
+  state$git_dirty <- FALSE
+  state$git_commit <- strrep("a", 40L)
+  state$expected_git_commit <- state$git_commit
+  state$runtime_package_path <- "/isolated/library/rqrgibbs"
+  state$runtime_package_version <- "0.1.0.9030"
+  state$runtime_attestation <- "/isolated/attestation.rds"
+  state$runtime_attestation_schema <- "rqrgibbs_runtime_attestation/5.0.0"
+  state$source_tree_digest <- strrep("b", 40L)
+  state$runtime_package_tree_digest <- strrep("c", 64L)
+  state
+}
+
+valid_provenance_audit <- function(family = "fixed_design", target = "RQR",
+                                   chain = 1L) {
+  state <- valid_provenance_state()
+  do.call(rbind, lapply(
+    c("worker_entry", "fit_recorded", "worker_exit"),
+    function(phase) otv3_provenance_snapshot(
+      state, phase, family, target, chain
+    )
+  ))
+}
+
 testthat::test_that("v3 freezes the 0.80/95-percent exact-oracle contract", {
   config <- read_config()
   testthat::expect_invisible(otv3_validate_config(config))
@@ -294,6 +322,76 @@ testthat::test_that("chain batches enforce the worker ceiling deterministically"
   testthat::expect_error(otv3_chain_batches(c(1L, 1L), 2L), "unique")
 })
 
+testthat::test_that("the fit plan is the single authoritative cell order", {
+  plan <- otv3_plan(read_config())
+  cells <- otv3_cell_plan(plan)
+  expected <- plan[!duplicated(paste(plan$family, plan$target)),
+                   c("family", "target")]
+  rownames(expected) <- NULL
+  testthat::expect_identical(cells[, c("family", "target")], expected)
+  testthat::expect_identical(cells$order, 1:6)
+  testthat::expect_true(all(cells$process_isolation))
+  testthat::expect_true(all(cells$maximum_chain_workers == 2L))
+  bad <- plan[plan$target != "SH", , drop = FALSE]
+  testthat::expect_error(otv3_cell_plan(bad), "six unique cells")
+})
+
+testthat::test_that("failure ledgers handle first and heterogeneous rows", {
+  root <- tempfile("otv3-failure-ledger-")
+  dir.create(root)
+  on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+  path <- file.path(root, "failure_log.csv")
+  first <- otv3_append_failure(
+    path, "fixed_design", "RQR", NA_integer_, "cell_gate",
+    "first, quoted failure"
+  )
+  testthat::expect_equal(nrow(first), 1L)
+  testthat::expect_identical(first$sequence, 1L)
+  testthat::expect_identical(first$schema_version, otv3_failure_schema())
+  second <- otv3_append_failure(
+    path, "dlm", "ET", 3L, "fit", "second failure"
+  )
+  testthat::expect_equal(nrow(second), 2L)
+  testthat::expect_identical(second$sequence, 1:2)
+  testthat::expect_identical(second$chain, c(NA_integer_, 3L))
+  reread <- utils::read.csv(path, stringsAsFactors = FALSE)
+  testthat::expect_identical(reread$message, second$message)
+  bad <- reread
+  bad$sequence[2L] <- NA
+  otf_atomic_write_csv(bad, path)
+  testthat::expect_error(
+    otv3_append_failure(path, "dlm", "SH", 1L, "fit", "third"),
+    "invalid sequence"
+  )
+})
+
+testthat::test_that("provenance audits expose phase-specific failures", {
+  audit <- valid_provenance_audit()
+  testthat::expect_invisible(
+    otv3_validate_provenance_audit(audit, "fixed_design", "RQR", 1L)
+  )
+  testthat::expect_true(all(audit$snapshot_pass))
+  failed_state <- valid_provenance_state()
+  failed_state$runtime_attestation_match <- FALSE
+  failed <- otv3_provenance_snapshot(
+    failed_state, "worker_exit", "fixed_design", "RQR", 1L
+  )
+  testthat::expect_false(failed$snapshot_pass)
+  testthat::expect_match(
+    failed$failed_gates, "runtime_attestation_match", fixed = TRUE
+  )
+  malformed <- audit[c(1L, 3L, 2L), ]
+  testthat::expect_error(
+    otv3_validate_provenance_audit(malformed), "invalid"
+  )
+  mismatched <- audit
+  mismatched$runtime_package_tree_digest[2L] <- strrep("d", 64L)
+  testthat::expect_error(
+    otv3_validate_provenance_audit(mismatched), "invalid"
+  )
+  testthat::expect_true("provenance_audit.csv" %in% otv3_compact_files())
+})
+
 testthat::test_that("preflight and independent conditional references pass", {
   config <- read_config()
   preflight <- otv3_design_preflight(config)
@@ -502,7 +600,15 @@ testthat::test_that("endpoint-only workers reject contract and payload drift", {
   envelope <- list(
     schema_version = otv3_worker_schema(), contract = contract,
     contract_digest = otf_object_sha256(contract),
-    result = list(pred = prediction)
+    result = list(
+      pred = prediction,
+      provenance_audit = valid_provenance_audit(),
+      chain_summary = data.frame(
+        worker_entry_provenance_match = TRUE,
+        fit_recorded_provenance_match = TRUE,
+        worker_exit_provenance_match = TRUE
+      )
+    )
   )
   testthat::expect_invisible(
     otv3_validate_worker_artifact(envelope, contract)
@@ -519,6 +625,11 @@ testthat::test_that("endpoint-only workers reject contract and payload drift", {
   )
   bad <- envelope
   bad$result$pred$upper_draws[1L, 1L] <- -2
+  testthat::expect_error(
+    otv3_validate_worker_artifact(bad, contract), "invalid"
+  )
+  bad <- envelope
+  bad$result$provenance_audit$phase[2L] <- "worker_exit"
   testthat::expect_error(
     otv3_validate_worker_artifact(bad, contract), "invalid"
   )
@@ -576,10 +687,29 @@ testthat::test_that("execute is wired through a fresh-process cell orchestrator"
   )))
   testthat::expect_equal(sum(grepl("run_stage cell", orchestrator, fixed = TRUE)), 1L)
   testthat::expect_true(any(grepl(
+    "cell_plan.csv", orchestrator, fixed = TRUE
+  )))
+  testthat::expect_true(any(grepl(
+    "planned_cells", orchestrator, fixed = TRUE
+  )))
+  testthat::expect_false(any(grepl(
+    "for family in fixed_design dlm", orchestrator, fixed = TRUE
+  )))
+  testthat::expect_true(any(grepl(
     "post_stage_r_processes", orchestrator, fixed = TRUE
   )))
   testthat::expect_true(any(grepl(
     "process-isolated stage failed", orchestrator, fixed = TRUE
+  )))
+  acceptance <- readLines(file.path(
+    repo_root, "application", "scripts",
+    "45_launch_oracle_tilt_v3_acceptance.sh"
+  ))
+  testthat::expect_true(any(grepl(
+    "RQR_ORACLE_TILT_V3_ACCEPTANCE_CONFIRM", acceptance, fixed = TRUE
+  )))
+  testthat::expect_true(any(grepl(
+    "MemoryMax=14G", acceptance, fixed = TRUE
   )))
 })
 

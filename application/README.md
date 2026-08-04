@@ -65,12 +65,17 @@ layer for the standalone article.
 - **scripts/43_run_oracle_tilt_publication_v3.sh** enforces the fail-closed
   process-group, thread, sampled-RSS, timeout, free-space, and artifact-hash
   contract. Execute mode delegates to
-  **scripts/44_orchestrate_oracle_tilt_v3_execute.sh**, which starts each of
-  the six family/target cells in a fresh R process, admits at most two chain
-  workers, validates an atomic cell receipt, and requires the cell process to
-  disappear before continuing. Worker files retain only ordered lower and
-  upper endpoint draws; midpoint and width draws are reconstructed exactly
-  during cell summarization. The production-shape, non-MCMC lifecycle check is
+  **scripts/44_orchestrate_oracle_tilt_v3_execute.sh**, which reads the single
+  authoritative `cell_plan.csv`, starts each of its six family/target cells in
+  a fresh R process, admits at most two chain workers, validates an atomic cell
+  receipt, and requires the cell process to disappear before continuing.
+  Every worker records compact primary-runtime provenance at entry, from the
+  fit object, and again at exit; all three snapshots are required for
+  promotion and name any failed lineage subgate. Worker files retain only
+  ordered lower and upper endpoint draws; midpoint and width draws are
+  reconstructed exactly during cell summarization. Failure ledgers support an
+  empty first write, sequence every record, and are included in the monitored
+  wrapper's recursive hash manifest. The production-shape, non-MCMC lifecycle check is
   implemented by **scripts/44_run_oracle_tilt_v3_resource_rehearsal.sh** and
   **scripts/44_oracle_tilt_v3_resource_cell.R**.
   **scripts/43_package_oracle_tilt_v3_evidence.R** can publish only a complete
@@ -78,6 +83,9 @@ layer for the standalone article.
   After exact-source authorization,
   **scripts/45_launch_oracle_tilt_v3_overnight.sh** starts the run in a
   user-level `systemd` scope with independent time, task, and memory ceilings;
+  **scripts/45_launch_oracle_tilt_v3_acceptance.sh** first exercises the full
+  four-chain fixed-design RQR cell under those same ceilings and stops before
+  the remaining cells;
   **scripts/45_oracle_tilt_v3_health.sh** reports read-only cell, chain,
   process, RSS, time, and storage progress.
 

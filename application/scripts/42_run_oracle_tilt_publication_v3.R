@@ -207,6 +207,7 @@ if (resume) {
 
 preflight <- otv3_design_preflight(config)
 if (!preflight$pass) oti_stop("The v3 design preflight did not pass.")
+authoritative_cell_plan <- otv3_cell_plan(preflight$plan)
 
 write_preflight_artifacts <- function(root, preflight) {
   design <- data.frame(
@@ -511,7 +512,8 @@ worker_contract_base <- list(
 cell_components <- c(
   "fit_summary", "fit_curves", "endpoint_error_density",
   "endpoint_error_summary", "endpoint_error_by_index", "chain_summary",
-  "mcmc_diagnostics", "conditional_parity", "pathology_summary",
+  "provenance_audit", "mcmc_diagnostics", "conditional_parity",
+  "pathology_summary",
   "recovery_summary", "heterogeneity_summary"
 )
 
@@ -569,6 +571,15 @@ run_worker <- function(family, target, chain) {
     validate_worker_envelope(existing, contract, path)
     return(list(path = path, resumed = TRUE))
   }
+  entry_provenance <- otv3_live_provenance_snapshot(
+    provenance_control, "worker_entry", family, target, chain
+  )
+  if (!isTRUE(entry_provenance$snapshot_pass)) {
+    oti_stop(
+      "Worker-entry provenance failed: ",
+      entry_provenance$failed_gates
+    )
+  }
   result <- if (identical(family, "fixed_design")) {
     otv3_fixed_chain(
       config, cell_dgp(family), cell_targets(family), target, chain,
@@ -580,6 +591,35 @@ run_worker <- function(family, target, chain) {
       provenance_control
     )
   }
+  exit_provenance <- otv3_live_provenance_snapshot(
+    provenance_control, "worker_exit", family, target, chain
+  )
+  result$provenance_audit <- oti_rbind_fill(list(
+    entry_provenance, result$provenance_audit, exit_provenance
+  ))
+  otv3_validate_provenance_audit(
+    result$provenance_audit, family, target, chain
+  )
+  identity_fields <- c(
+    "git_commit", "expected_git_commit", "runtime_package_path",
+    "runtime_package_version", "runtime_attestation",
+    "runtime_attestation_schema", "source_tree_digest",
+    "runtime_package_tree_digest"
+  )
+  phase_identity_match <- all(vapply(identity_fields, function(name) {
+    value <- as.character(result$provenance_audit[[name]])
+    !anyNA(value) && all(nzchar(value)) && length(unique(value)) == 1L
+  }, logical(1L)))
+  phase_pass <- setNames(
+    result$provenance_audit$snapshot_pass,
+    result$provenance_audit$phase
+  )
+  result$chain_summary$worker_entry_provenance_match <-
+    phase_identity_match && isTRUE(phase_pass[["worker_entry"]])
+  result$chain_summary$fit_recorded_provenance_match <-
+    phase_identity_match && isTRUE(phase_pass[["fit_recorded"]])
+  result$chain_summary$worker_exit_provenance_match <-
+    phase_identity_match && isTRUE(phase_pass[["worker_exit"]])
   result <- otv3_compact_chain_result(result)
   envelope <- list(
     schema_version = otv3_worker_schema(), contract = contract,
@@ -592,15 +632,9 @@ run_worker <- function(family, target, chain) {
 
 append_failure <- function(family, target, chain, stage, message) {
   path <- file.path(output_root, "failure_log.csv")
-  prior <- if (file.exists(path)) {
-    utils::read.csv(path, stringsAsFactors = FALSE)
-  } else data.frame()
-  row <- data.frame(
-    recorded_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-    family = family, target = target, chain = chain, stage = stage,
-    message = message, stringsAsFactors = FALSE
+  otv3_append_failure(
+    path, family, target, chain, stage, as.character(message)
   )
-  otf_atomic_write_csv(oti_rbind_fill(list(prior, row)), path)
 }
 
 process_peak_rss_kib <- function() {
@@ -675,8 +709,9 @@ validate_cell_bundle <- function(family, target, require_eligible = TRUE) {
 
 refresh_run_status <- function() {
   rows <- list()
-  for (family in c("fixed_design", "dlm")) {
-    for (target in c("RQR", "ET", "SH")) {
+  for (plan_index in seq_len(nrow(authoritative_cell_plan))) {
+      family <- authoritative_cell_plan$family[plan_index]
+      target <- authoritative_cell_plan$target[plan_index]
       root <- cell_directory(family, target)
       receipt_path <- file.path(root, "cell_receipt.json")
       receipt <- if (file.exists(receipt_path)) {
@@ -697,7 +732,6 @@ refresh_run_status <- function() {
           as.character(receipt$disposition),
         stringsAsFactors = FALSE
       )
-    }
   }
   status <- do.call(rbind, rows)
   otf_atomic_write_csv(status, file.path(output_root, "run_status.csv"))
@@ -752,12 +786,9 @@ write_cell_bundle <- function(family, target, cell, manifest, elapsed) {
 }
 
 if (identical(execute_stage, "prepare")) {
-  cell_plan <- unique(preflight$plan[, c("family", "target")])
-  cell_plan$order <- seq_len(nrow(cell_plan))
-  cell_plan$cell_key <- mapply(cell_key, cell_plan$family, cell_plan$target)
-  cell_plan$process_isolation <- TRUE
-  cell_plan$maximum_chain_workers <- 2L
-  otf_atomic_write_csv(cell_plan, file.path(output_root, "cell_plan.csv"))
+  otf_atomic_write_csv(
+    authoritative_cell_plan, file.path(output_root, "cell_plan.csv")
+  )
   refresh_run_status()
   message("[oracle-tilt-v3] process-isolated execution prepared: ", output_root)
   quit(save = "no", status = 0L)
@@ -856,8 +887,9 @@ if (identical(execute_stage, "cell")) {
 
 cell_bundles <- list()
 cell_manifest_rows <- list()
-for (family in c("fixed_design", "dlm")) {
-  for (target in c("RQR", "ET", "SH")) {
+for (plan_index in seq_len(nrow(authoritative_cell_plan))) {
+    family <- authoritative_cell_plan$family[plan_index]
+    target <- authoritative_cell_plan$target[plan_index]
     bundle <- validate_cell_bundle(family, target)
     cell_bundles[[paste(family, target, sep = "/")]] <- bundle
     cell_manifest_rows[[length(cell_manifest_rows) + 1L]] <- data.frame(
@@ -873,7 +905,6 @@ for (family in c("fixed_design", "dlm")) {
       eligible = isTRUE(bundle$receipt$eligible),
       stringsAsFactors = FALSE
     )
-  }
 }
 
 bind_cell_component <- function(name) {
@@ -895,7 +926,8 @@ for (name in cell_components) {
 }
 fit_summary <- bind_cell_component("fit_summary")
 cell_disposition <- fit_summary[, c(
-  "family", "target", "provenance_pass", "strict_diagnostics_pass",
+  "family", "target", "provenance_pass", "provenance_snapshots_pass",
+  "strict_diagnostics_pass",
   "conditional_parity_pass", "pathology_pass", "computational_pass",
   "recovery_pass", "heterogeneity_pass", "disposition",
   "manuscript_illustration_evidence_eligible"

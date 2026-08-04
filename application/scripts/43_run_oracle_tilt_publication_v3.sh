@@ -3,9 +3,9 @@ set -euo pipefail
 
 mode="${1:-preflight}"
 case "$mode" in
-  preflight|reference-only|benchmark|resource-rehearsal|execute) ;;
+  preflight|reference-only|benchmark|resource-rehearsal|acceptance|execute) ;;
   *)
-    echo "Mode must be preflight, reference-only, benchmark, resource-rehearsal, or execute." >&2
+    echo "Mode must be preflight, reference-only, benchmark, resource-rehearsal, acceptance, or execute." >&2
     exit 2
     ;;
 esac
@@ -46,6 +46,7 @@ if [[ -n "${RQR_PRIMARY_RUNTIME_ATTESTATION:-}" ]]; then
 fi
 
 if [[ "$mode" == benchmark || "$mode" == resource-rehearsal ||
+      "$mode" == acceptance ||
       "$mode" == execute ]]; then
   if [[ ! "${RQR_EXPECTED_PRIMARY_COMMIT:-}" =~ ^[0-9a-fA-F]{40}$ ]]; then
     echo "Promotion modes require RQR_EXPECTED_PRIMARY_COMMIT as a full SHA." >&2
@@ -60,6 +61,19 @@ if [[ "$mode" == resource-rehearsal &&
       "${RQR_ORACLE_TILT_V3_REHEARSAL_CONFIRM:-}" != YES ]]; then
   echo "resource-rehearsal is fail-closed; set RQR_ORACLE_TILT_V3_REHEARSAL_CONFIRM=YES." >&2
   exit 2
+fi
+if [[ "$mode" == acceptance &&
+      "${RQR_ORACLE_TILT_V3_ACCEPTANCE_CONFIRM:-}" != YES ]]; then
+  echo "acceptance is fail-closed; set RQR_ORACLE_TILT_V3_ACCEPTANCE_CONFIRM=YES." >&2
+  exit 2
+fi
+if [[ "$mode" == acceptance ]]; then
+  # The acceptance launcher has its own explicit confirmation boundary, but
+  # it deliberately reuses the ordinary execute code path for one planned
+  # cell. Translate the accepted boundary into the execute confirmation that
+  # the inner runner already requires; users still cannot enter this branch
+  # by setting the execute confirmation alone.
+  export RQR_ORACLE_TILT_V3_CONFIRM=YES
 fi
 
 export OMP_NUM_THREADS=1
@@ -77,6 +91,7 @@ case "$mode" in
   preflight|reference-only) timeout_seconds=1800 ;;
   benchmark) timeout_seconds=7200 ;;
   resource-rehearsal) timeout_seconds=3600 ;;
+  acceptance) timeout_seconds=3600 ;;
   execute) timeout_seconds=28800 ;;
 esac
 max_rss_kib=12582912
@@ -171,12 +186,15 @@ trap 'if [[ -n "$pgid" ]]; then terminate_group "$pgid"; fi' EXIT
 printf '%s\n' \
   "sample_utc,elapsed_seconds,processes,r_processes,rss_kib,threads" \
   >"$monitor_csv"
-if [[ "$mode" == execute ]]; then
+if [[ "$mode" == execute || "$mode" == acceptance ]]; then
   runner=(
     bash application/scripts/44_orchestrate_oracle_tilt_v3_execute.sh
     "--config=application/config/oracle_tilt_c095_publication_v3_20260801.json"
     "--output-dir=$output_dir"
   )
+  if [[ "$mode" == acceptance ]]; then
+    runner+=("--acceptance-only")
+  fi
 elif [[ "$mode" == resource-rehearsal ]]; then
   runner=(
     bash application/scripts/44_run_oracle_tilt_v3_resource_rehearsal.sh

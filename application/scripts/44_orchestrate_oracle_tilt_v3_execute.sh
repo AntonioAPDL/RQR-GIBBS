@@ -7,16 +7,23 @@ cd "$repo_root"
 
 config=""
 output_dir=""
+acceptance_only=FALSE
 for argument in "$@"; do
   case "$argument" in
     --config=*) config="${argument#--config=}" ;;
     --output-dir=*) output_dir="${argument#--output-dir=}" ;;
+    --acceptance-only) acceptance_only=TRUE ;;
     *)
       echo "Unknown process-isolated orchestrator argument: $argument" >&2
       exit 2
       ;;
   esac
 done
+if [[ "$acceptance_only" == TRUE &&
+      "${RQR_ORACLE_TILT_V3_ACCEPTANCE_CONFIRM:-}" != YES ]]; then
+  echo "Acceptance execution is fail-closed." >&2
+  exit 2
+fi
 if [[ -z "$config" || -z "$output_dir" ]]; then
   echo "--config and --output-dir are required." >&2
   exit 2
@@ -130,11 +137,73 @@ run_stage() {
 }
 
 run_stage prepare
-for family in fixed_design dlm; do
-  for target in RQR ET SH; do
-    run_stage cell "$family" "$target"
-  done
+cell_plan="$output_dir/cell_plan.csv"
+if [[ ! -f "$cell_plan" ]]; then
+  echo "The prepare stage did not publish cell_plan.csv." >&2
+  exit 1
+fi
+mapfile -t planned_cells < <(
+  Rscript --vanilla - "$cell_plan" <<'RSCRIPT'
+args <- commandArgs(trailingOnly = TRUE)
+plan <- utils::read.csv(args[[1L]], stringsAsFactors = FALSE)
+required <- c(
+  "family", "target", "order", "cell_key", "process_isolation",
+  "maximum_chain_workers"
+)
+valid <- nrow(plan) == 6L && all(required %in% names(plan)) &&
+  identical(as.integer(plan$order), 1:6) &&
+  !anyDuplicated(paste(plan$family, plan$target, sep = "/")) &&
+  all(plan$process_isolation) && all(plan$maximum_chain_workers == 2L)
+if (!valid) quit(save = "no", status = 1L)
+for (index in seq_len(nrow(plan))) {
+  cat(plan$family[index], plan$target[index], sep = "\t")
+  cat("\n")
+}
+RSCRIPT
+)
+if [[ "${#planned_cells[@]}" -ne 6 ]]; then
+  echo "The authoritative cell plan is invalid." >&2
+  exit 1
+fi
+completed_plan_cells=0
+for planned_cell in "${planned_cells[@]}"; do
+  IFS=$'\t' read -r family target <<<"$planned_cell"
+  run_stage cell "$family" "$target"
+  completed_plan_cells=$((completed_plan_cells + 1))
+  if [[ "$acceptance_only" == TRUE && "$completed_plan_cells" -eq 1 ]]; then
+    break
+  fi
 done
+if [[ "$acceptance_only" == TRUE ]]; then
+  Rscript --vanilla - "$output_dir" <<'RSCRIPT'
+args <- commandArgs(trailingOnly = TRUE)
+root <- normalizePath(args[[1L]], mustWork = TRUE)
+status <- utils::read.csv(
+  file.path(root, "run_status.csv"), stringsAsFactors = FALSE
+)
+receipt_path <- file.path(root, "cells", "fixed_design_rqr", "cell_receipt.json")
+if (!requireNamespace("jsonlite", quietly = TRUE) ||
+    !file.exists(receipt_path)) quit(save = "no", status = 1L)
+receipt <- jsonlite::read_json(receipt_path, simplifyVector = TRUE)
+pass <- nrow(status) == 6L && status$status[1L] == "completed" &&
+  all(status$status[-1L] == "pending") && isTRUE(receipt$eligible) &&
+  identical(receipt$family, "fixed_design") && identical(receipt$target, "RQR")
+out <- data.frame(
+  schema_version = "rqrgibbs_oracle_tilt_publication_acceptance/1.0.0",
+  completed_cells = sum(status$status == "completed"),
+  completed_chains = sum(status$chains_completed),
+  accepted_family = receipt$family, accepted_target = receipt$target,
+  eligible = isTRUE(receipt$eligible), pass = pass,
+  finished_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+  stringsAsFactors = FALSE
+)
+write.csv(out, file.path(root, "acceptance_closeout.csv"), row.names = FALSE)
+if (!pass) quit(save = "no", status = 1L)
+RSCRIPT
+  write_current_stage acceptance "fixed_design" "RQR" "0" "completed"
+  echo "[oracle-tilt-v3-orchestrator] monitored acceptance cell passed"
+  exit 0
+fi
 run_stage finalize
 write_current_stage complete "" "" "0" "completed"
 

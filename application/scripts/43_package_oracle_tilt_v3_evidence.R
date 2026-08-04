@@ -59,8 +59,33 @@ disposition <- utils::read.csv(
 )
 if (nrow(disposition) != 6L ||
     !all(disposition$manuscript_illustration_evidence_eligible) ||
+    !"provenance_snapshots_pass" %in% names(disposition) ||
+    !all(disposition$provenance_snapshots_pass) ||
     !all(disposition$disposition == "strict_pass")) {
   oti_stop("Exactly six strict-passing family/target cells are required.")
+}
+provenance_audit <- utils::read.csv(
+  file.path(run_dir, "provenance_audit.csv"), stringsAsFactors = FALSE
+)
+provenance_groups <- split(
+  seq_len(nrow(provenance_audit)),
+  interaction(
+    provenance_audit$family, provenance_audit$target,
+    provenance_audit$chain, drop = TRUE
+  )
+)
+provenance_pass <- nrow(provenance_audit) == 81L &&
+  length(provenance_groups) == 27L && all(provenance_audit$snapshot_pass) &&
+  all(vapply(provenance_groups, function(index) {
+    tryCatch({
+      otv3_validate_provenance_audit(
+        provenance_audit[index, , drop = FALSE]
+      )
+      TRUE
+    }, error = function(error) FALSE)
+  }, logical(1L)))
+if (!provenance_pass) {
+  oti_stop("The three-phase chain provenance audit is incomplete.")
 }
 runtime_binding <- jsonlite::read_json(
   file.path(run_dir, "runtime_binding.json"), simplifyVector = TRUE
