@@ -107,7 +107,7 @@ build_arguments <- c(
   "CMD", "build", "--no-manual", "--no-build-vignettes", "exdqlm"
 )
 build_input_path <- file.path(staging, "exdqlm")
-build_input_digest <- rqr_directory_digest(build_input_path)
+build_input_digest <- rqr_source_tree_digest(build_input_path)
 if (file.exists(package_archive)) unlink(package_archive)
 build_started_at <- as.numeric(Sys.time())
 build_status <- system2(

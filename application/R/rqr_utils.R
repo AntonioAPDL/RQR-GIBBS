@@ -1536,6 +1536,39 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   tolower(value)
 }
 
+.rqr_source_tree_digest <- function(path) {
+  path <- normalizePath(path, winslash = "/", mustWork = TRUE)
+  files <- sort(list.files(
+    path, recursive = TRUE, all.files = TRUE, full.names = TRUE,
+    include.dirs = FALSE, no.. = TRUE
+  ))
+  relative <- substring(files, nchar(path) + 2L)
+  info <- file.info(files)
+  links <- Sys.readlink(files)
+  if (!length(files) || anyNA(info$mode) || anyDuplicated(relative)) {
+    stop("The source directory is not a unique readable file set.", call. = FALSE)
+  }
+  modes <- vapply(seq_along(files), function(index) {
+    if (nzchar(links[index])) return("120000")
+    if (bitwAnd(as.integer(info$mode[index]), 73L) != 0L) {
+      "100755"
+    } else {
+      "100644"
+    }
+  }, character(1L))
+  objects <- vapply(seq_along(files), function(index) {
+    if (nzchar(links[index])) {
+      .rqr_hash_archive_blob(files[index], links[index])
+    } else {
+      .rqr_hash_archive_blob(files[index])
+    }
+  }, character(1L))
+  payload <- paste(
+    modes, "blob", objects, relative, sep = "\t", collapse = "\n"
+  )
+  digest::digest(payload, algo = "sha256", serialize = FALSE)
+}
+
 .rqr_archive_manifest_payload <- function(archive_path, archive_prefix) {
   archive_prefix <- sub("/+$", "", as.character(archive_prefix)[1L])
   if (is.na(archive_prefix) || !nzchar(archive_prefix) ||
@@ -1790,8 +1823,7 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
       algo = "sha256", serialize = FALSE
     ),
     expected_source_manifest_entries = length(expected_relative),
-    source_input_tree_digest =
-      .rqr_directory_digest(source$package_root),
+    source_input_tree_digest = .rqr_source_tree_digest(source$package_root),
     built_source_manifest_digest =
       .rqr_directory_digest(built$package_root),
     built_source_manifest_entries = length(built_files)

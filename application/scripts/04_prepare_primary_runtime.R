@@ -147,7 +147,7 @@ build_arguments <- c(
   "rqrgibbs"
 )
 build_input_path <- file.path(staging, "rqrgibbs")
-build_input_digest <- rqr_directory_digest(build_input_path)
+build_input_digest <- rqr_source_tree_digest(build_input_path)
 built_archive <- file.path(
   staging, paste0("rqrgibbs_", source_version, ".tar.gz")
 )

@@ -1841,6 +1841,7 @@ test_that("runtime lineage binds one complete build and install", {
   source_archive_sha <- file_sha(source_archive)
   r_bin <- file.path(R.home("bin"), "R")
   directory_sha <- rqrgibbs:::.rqr_directory_digest
+  source_tree_sha <- rqrgibbs:::.rqr_source_tree_digest
   command_receipt <- function(
       path, phase, executable, arguments, workdir,
       input_path, input_sha, output_path, output_sha,
@@ -1895,7 +1896,7 @@ test_that("runtime lineage binds one complete build and install", {
     "CMD", "build", "--no-manual", "--no-build-vignettes", package
   )
   build_input <- file.path(staging, package)
-  build_input_sha <- directory_sha(build_input)
+  build_input_sha <- source_tree_sha(build_input)
   old <- setwd(staging)
   on.exit(setwd(old), add = TRUE)
   build_started <- as.numeric(Sys.time())
@@ -1925,6 +1926,23 @@ test_that("runtime lineage binds one complete build and install", {
     source_archive, package, source_package
   )
   expect_true(source_lineage$match)
+  original_umask <- Sys.umask("0002")
+  on.exit(Sys.umask(original_umask), add = TRUE)
+  lineage_umask_0002 <- rqrgibbs:::.rqr_source_package_lineage(
+    source_archive, package, source_package
+  )
+  Sys.umask("0022")
+  lineage_umask_0022 <- rqrgibbs:::.rqr_source_package_lineage(
+    source_archive, package, source_package
+  )
+  Sys.umask(original_umask)
+  expect_identical(
+    lineage_umask_0002$source_input_tree_digest,
+    lineage_umask_0022$source_input_tree_digest
+  )
+  expect_identical(
+    source_lineage$source_input_tree_digest, build_input_sha
+  )
   install_stdout <- file.path(artifacts, "install.stdout.log")
   install_stderr <- file.path(artifacts, "install.stderr.log")
   install_arguments <- c(

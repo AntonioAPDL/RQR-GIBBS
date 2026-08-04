@@ -28,6 +28,18 @@ run. The compact failed workers did not retain the individual lineage
 subgates, so the original false aggregate cannot be decomposed
 retrospectively.
 
+The monitored acceptance stage later isolated the environmental trigger:
+`git archive` source files were extracted under login-shell umask `0002` when
+the runtime was built and under systemd umask `0022` when the attestation was
+verified. The original build-input digest included all nine permission bits,
+so the harmless group-write difference changed the digest even though Git
+content, executable bits, archive contents, built package, and installed
+runtime were identical. Source-input digests now use Git-compatible modes
+(`100644`, `100755`, or `120000`) plus blob content and path. Installed-runtime
+digests continue to bind their complete realized permission modes. Tests
+verify source-lineage invariance across both umasks; no lineage gate is
+removed or weakened.
+
 Earlier execution attempts show that process isolation is necessary. A
 monolithic attempt obtained a strict-passing fixed-design RQR cell but crossed
 the sampled 12-GiB RSS threshold. Fresh cell processes reduced the observed

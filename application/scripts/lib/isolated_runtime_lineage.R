@@ -226,6 +226,47 @@ rqr_directory_digest <- function(path) {
   )
 }
 
+# Hash an extracted source tree using Git's only meaningful file-mode states.
+# A tar extraction may apply the caller's umask to group/other write bits; that
+# must not make the same immutable Git archive attest differently in a login
+# shell and a systemd service. Executability and symlink identity remain bound.
+rqr_source_tree_manifest <- function(path) {
+  path <- normalizePath(path, winslash = "/", mustWork = TRUE)
+  files <- sort(list.files(
+    path, recursive = TRUE, all.files = TRUE, full.names = TRUE,
+    include.dirs = FALSE, no.. = TRUE
+  ))
+  relative <- substring(files, nchar(path) + 2L)
+  info <- file.info(files)
+  links <- Sys.readlink(files)
+  if (!length(files) || anyNA(info$mode) || anyDuplicated(relative)) {
+    stop("The source directory is not a unique readable file set.", call. = FALSE)
+  }
+  modes <- vapply(seq_along(files), function(index) {
+    if (nzchar(links[index])) return("120000")
+    if (bitwAnd(as.integer(info$mode[index]), 73L) != 0L) {
+      "100755"
+    } else {
+      "100644"
+    }
+  }, character(1L))
+  objects <- vapply(seq_along(files), function(index) {
+    if (nzchar(links[index])) {
+      rqr_git_blob_id(files[index], link_target = links[index])
+    } else {
+      rqr_git_blob_id(files[index])
+    }
+  }, character(1L))
+  data.frame(
+    mode = modes, type = "blob", object = objects, path = relative,
+    stringsAsFactors = FALSE
+  )
+}
+
+rqr_source_tree_digest <- function(path) {
+  rqr_manifest_digest(rqr_source_tree_manifest(path))
+}
+
 rqr_normalized_file_sha256 <- function(path) {
   con <- file(path, open = "rb")
   on.exit(close(con), add = TRUE)
@@ -418,8 +459,7 @@ rqr_source_package_lineage <- function(
       algo = "sha256", serialize = FALSE
     ),
     expected_source_manifest_entries = length(expected_relative),
-    source_input_tree_digest =
-      rqr_directory_digest(source$package_root),
+    source_input_tree_digest = rqr_source_tree_digest(source$package_root),
     built_source_manifest_digest = built_manifest_digest,
     built_source_manifest_entries = length(built_files),
     built_package = if (is.null(built_description)) {
