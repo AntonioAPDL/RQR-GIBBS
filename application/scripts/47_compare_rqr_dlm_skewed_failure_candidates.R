@@ -206,6 +206,7 @@ cases <- data.frame(
 if (identical(candidate_family, "joint_elliptical")) {
   cases <- cases[cases$method %in% c("M10", "M11"), , drop = FALSE]
 }
+rownames(cases) <- NULL
 jobs <- merge(candidates, cases, by = NULL, sort = FALSE)
 jobs <- do.call(rbind, lapply(seq_len(nrow(jobs)), function(index) {
   job <- jobs[index, , drop = FALSE]
