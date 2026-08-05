@@ -2,10 +2,11 @@
 
 set -euo pipefail
 
-if [[ $# -ne 4 ]]; then
+if [[ $# -lt 4 || $# -gt 5 ]]; then
   cat >&2 <<'EOF'
 Usage: 48_launch_rqr_dlm_skewed_candidates.sh \
-  <seed-ledger.csv> <exdqlm-attestation.json> <output-root> <workers>
+  <seed-ledger.csv> <exdqlm-attestation.json> <output-root> <workers> \
+  [whole_scan|joint_elliptical]
 
 The output root and its sibling control directory must not already exist.
 The script runs the authenticated preflight synchronously, then starts the
@@ -19,6 +20,15 @@ seed_ledger="$(realpath "$1")"
 exdqlm_attestation="$(realpath "$2")"
 output_root="$3"
 workers="$4"
+candidate_family="${5:-whole_scan}"
+
+case "$candidate_family" in
+  whole_scan|joint_elliptical) ;;
+  *)
+    echo "candidate family must be whole_scan or joint_elliptical." >&2
+    exit 64
+    ;;
+esac
 
 case "$workers" in
   ''|*[!0-9]*)
@@ -57,6 +67,7 @@ common=(
   "--exdqlm-attestation=$exdqlm_attestation"
   "--output-root=$output_root"
   "--workers=$workers"
+  "--candidate-family=$candidate_family"
 )
 
 thread_env=(
@@ -91,9 +102,10 @@ started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 runner_pid="$(cat "$control_root/runner.pid")"
 cat >"$control_root/launch.tsv" <<EOF
 field	value
-schema_version	rqrgibbs_dlm_skewed_candidate_launch/1.0.0
+schema_version	rqrgibbs_dlm_skewed_candidate_launch/1.1.0
 source_commit	$source_commit
 source_clean	TRUE
+candidate_family	$candidate_family
 seed_ledger	$seed_ledger
 exdqlm_attestation	$exdqlm_attestation
 output_root	$output_root

@@ -1,0 +1,7 @@
+"method","selected_candidate","selected_transition_multiplier","selection_status","thresholds_changed","target_changed","replication_specific_schedule","confirmatory_authorization"
+"M01","whole_scan_x2",2,"minimum_transition_multiplier_eligible",FALSE,FALSE,FALSE,FALSE
+"M02","whole_scan_x2",2,"minimum_transition_multiplier_eligible",FALSE,FALSE,FALSE,FALSE
+"M06","whole_scan_x2",2,"minimum_transition_multiplier_eligible",FALSE,FALSE,FALSE,FALSE
+"M09","whole_scan_x2",2,"minimum_transition_multiplier_eligible",FALSE,FALSE,FALSE,FALSE
+"M10","none",,"no_eligible_candidate",FALSE,FALSE,FALSE,FALSE
+"M11","none",,"no_eligible_candidate",FALSE,FALSE,FALSE,FALSE

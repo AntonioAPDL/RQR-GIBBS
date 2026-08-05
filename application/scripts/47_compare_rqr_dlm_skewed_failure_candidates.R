@@ -15,6 +15,7 @@ if (any(args %in% c("-h", "--help"))) {
   cat(paste(
     "Usage: 47_compare_rqr_dlm_skewed_failure_candidates.R",
     "  --mode=<preflight|execute>",
+    "  --candidate-family=<whole_scan|joint_elliptical>",
     "  --seed-ledger=<reviewed seed_ledger_maximum.csv>",
     "  --exdqlm-attestation=<attested CRAN 1.1.0 runtime JSON>",
     "  --output-root=<fresh ignored directory>",
@@ -31,6 +32,11 @@ if (!file.exists(file.path(repo_root, "application", "DESCRIPTION"))) {
 mode <- parse_arg("mode", "preflight")
 if (!mode %in% c("preflight", "execute")) {
   stop("--mode must be preflight or execute.", call. = FALSE)
+}
+candidate_family <- parse_arg("candidate-family", "whole_scan")
+if (!candidate_family %in% c("whole_scan", "joint_elliptical")) {
+  stop("--candidate-family must be whole_scan or joint_elliptical.",
+       call. = FALSE)
 }
 seed_ledger_path <- parse_arg("seed-ledger", "")
 exdqlm_attestation_path <- parse_arg("exdqlm-attestation", "")
@@ -112,15 +118,43 @@ invisible(rqr_confirm_read_attestation(
 # retained transition count is multiplied and the scalar diagnostics are then
 # thinned back to the frozen retained size.  This makes the diagnostic sample
 # size identical across candidates.
-candidates <- data.frame(
-  candidate_id = c("whole_scan_x2", "whole_scan_x4", "whole_scan_x8"),
-  candidate_order = 1:3,
-  transition_multiplier = c(2L, 4L, 8L),
-  target_change = FALSE,
-  threshold_change = FALSE,
-  adaptive_chain_extension = FALSE,
-  stringsAsFactors = FALSE
-)
+candidates <- if (identical(candidate_family, "whole_scan")) {
+  data.frame(
+    candidate_id = c("whole_scan_x2", "whole_scan_x4", "whole_scan_x8"),
+    candidate_order = 1:3,
+    transition_multiplier = c(2L, 4L, 8L),
+    joint_state_elliptical_slice = FALSE,
+    joint_state_elliptical_cycles = 0L,
+    transition_order = "rootwise_then_interweave",
+    target_change = FALSE,
+    threshold_change = FALSE,
+    adaptive_chain_extension = FALSE,
+    stringsAsFactors = FALSE
+  )
+} else {
+  # The predeclared recovery family changes only exact transition kernels.
+  # Candidate 1 asks whether one joint path move can remove the need for
+  # increased whole-scan distance. Candidates 2--4 retain the already useful
+  # x2 distance and isolate joint-move cycles and composition order.
+  data.frame(
+    candidate_id = c(
+      "joint_ess1_x1", "joint_ess1_x2", "joint_ess2_x2",
+      "joint_ess1_reverse_x2"
+    ),
+    candidate_order = 1:4,
+    transition_multiplier = c(1L, 2L, 2L, 2L),
+    joint_state_elliptical_slice = TRUE,
+    joint_state_elliptical_cycles = c(1L, 1L, 2L, 1L),
+    transition_order = c(
+      "rootwise_then_interweave", "rootwise_then_interweave",
+      "rootwise_then_interweave", "interweave_then_rootwise"
+    ),
+    target_change = FALSE,
+    threshold_change = FALSE,
+    adaptive_chain_extension = FALSE,
+    stringsAsFactors = FALSE
+  )
+}
 cases <- data.frame(
   method = c(
     "M01", "M01", "M02", "M02", "M06", "M06",
@@ -169,6 +203,9 @@ cases <- data.frame(
   ),
   stringsAsFactors = FALSE
 )
+if (identical(candidate_family, "joint_elliptical")) {
+  cases <- cases[cases$method %in% c("M10", "M11"), , drop = FALSE]
+}
 jobs <- merge(candidates, cases, by = NULL, sort = FALSE)
 jobs <- do.call(rbind, lapply(seq_len(nrow(jobs)), function(index) {
   job <- jobs[index, , drop = FALSE]
@@ -190,7 +227,10 @@ jobs$job_id <- sprintf(
 )
 rownames(jobs) <- NULL
 candidate_digest <- digest::digest(
-  list(candidates = candidates, cases = cases, jobs = jobs),
+  list(
+    candidate_family = candidate_family,
+    candidates = candidates, cases = cases, jobs = jobs
+  ),
   algo = "sha256", serialize = TRUE
 )
 
@@ -255,7 +295,8 @@ if (identical(mode, "preflight")) {
   )
   rqr_confirm_atomic_write_csv(jobs, file.path(output_root, "jobs.csv"))
   manifest <- list(
-    schema_version = "rqrgibbs_dlm_skewed_candidate_preflight/1.0.0",
+    schema_version = "rqrgibbs_dlm_skewed_candidate_preflight/1.1.0",
+    candidate_family = candidate_family,
     source_commit = source_commit,
     source_clean = TRUE,
     seed_ledger_path = seed_ledger_path,
@@ -339,6 +380,7 @@ stored_jobs <- utils::read.csv(
   stringsAsFactors = FALSE, check.names = FALSE
 )
 if (!identical(preflight$source_commit, source_commit) ||
+    !identical(preflight$candidate_family, candidate_family) ||
     !identical(preflight$seed_ledger_sha256,
                rqr_confirm_sha256(seed_ledger_path)) ||
     !identical(preflight$exdqlm_attestation_sha256,
@@ -405,7 +447,18 @@ if (length(incomplete)) {
             mcmc_control_override = list(
               n_burn = as.integer(base_schedule$burn * multiplier),
               n_mcmc = as.integer(base_schedule$retain),
-              thin = as.integer(base_schedule$thin * multiplier)
+              thin = as.integer(base_schedule$thin * multiplier),
+              component_scale_joint_elliptical_slice =
+                isTRUE(job$joint_state_elliptical_slice[[1L]]),
+              component_scale_joint_elliptical_cycles = if (
+                  isTRUE(job$joint_state_elliptical_slice[[1L]])
+                ) {
+                as.integer(job$joint_state_elliptical_cycles[[1L]])
+              } else {
+                1L
+              },
+              component_scale_transition_order =
+                job$transition_order[[1L]]
             )
           )
         }
@@ -506,6 +559,7 @@ for (index in seq_along(group_levels)) {
       rhat = NA_real_, ess_bulk = NA_real_, ess_tail = NA_real_,
       mcse_mean = NA_real_, mcse_over_sd = NA_real_, pass = FALSE,
       candidate_id = job$candidate_id,
+      candidate_order = job$candidate_order,
       transition_multiplier = job$transition_multiplier,
       method = job$method, DGP = job$DGP,
       replication = job$replication, case_role = job$case_role,
@@ -525,6 +579,7 @@ for (index in seq_along(group_levels)) {
       method = job$method[[1L]], generated = generated
     )
     value$candidate_id <- job$candidate_id
+    value$candidate_order <- job$candidate_order
     value$transition_multiplier <- job$transition_multiplier
     value$method <- job$method
     value$DGP <- job$DGP
@@ -536,7 +591,7 @@ for (index in seq_along(group_levels)) {
 }
 diagnostics <- do.call(rbind, diagnostic_list)
 diagnostics <- diagnostics[order(
-  diagnostics$method, diagnostics$transition_multiplier,
+  diagnostics$method, diagnostics$candidate_order,
   diagnostics$case_role, diagnostics$DGP,
   diagnostics$replication, diagnostics$estimand
 ), , drop = FALSE]
@@ -553,6 +608,7 @@ candidate_summary <- do.call(rbind, lapply(
     data.frame(
       method = value$method[[1L]],
       candidate_id = value$candidate_id[[1L]],
+      candidate_order = value$candidate_order[[1L]],
       transition_multiplier = value$transition_multiplier[[1L]],
       cases = length(unique(paste(value$DGP, value$replication))),
       jobs = nrow(status),
@@ -573,7 +629,7 @@ candidate_summary <- do.call(rbind, lapply(
   }
 ))
 candidate_summary <- candidate_summary[order(
-  candidate_summary$method, candidate_summary$transition_multiplier
+  candidate_summary$method, candidate_summary$candidate_order
 ), , drop = FALSE]
 
 decisions <- do.call(rbind, lapply(
@@ -585,17 +641,19 @@ decisions <- do.call(rbind, lapply(
     eligible <- value[value$eligible, , drop = FALSE]
     selected <- if (nrow(eligible)) {
       eligible[order(
-        eligible$transition_multiplier, eligible$elapsed_seconds
+        eligible$candidate_order, eligible$elapsed_seconds
       ), , drop = FALSE][1L, ]
     } else NULL
     data.frame(
       method = method,
       selected_candidate = if (is.null(selected)) "none" else
         selected$candidate_id,
+      selected_candidate_order = if (is.null(selected)) NA_integer_ else
+        selected$candidate_order,
       selected_transition_multiplier = if (is.null(selected)) NA_integer_
         else selected$transition_multiplier,
       selection_status = if (is.null(selected)) "no_eligible_candidate"
-        else "minimum_transition_multiplier_eligible",
+        else "minimum_predeclared_candidate_eligible",
       thresholds_changed = FALSE,
       target_changed = FALSE,
       replication_specific_schedule = FALSE,
@@ -619,7 +677,8 @@ rqr_confirm_atomic_write_csv(
 )
 completed_at <- format(Sys.time(), tz = "UTC", usetz = TRUE)
 manifest <- list(
-  schema_version = "rqrgibbs_dlm_skewed_candidate_comparison/1.0.0",
+  schema_version = "rqrgibbs_dlm_skewed_candidate_comparison/1.1.0",
+  candidate_family = candidate_family,
   source_commit = source_commit,
   source_clean = TRUE,
   seed_ledger_sha256 = rqr_confirm_sha256(seed_ledger_path),
@@ -630,7 +689,7 @@ manifest <- list(
   all_exact_joint_target = all(job_status$exact_joint_target),
   all_zero_repairs = all(job_status$numerical_repair_count == 0L),
   all_methods_selected = all(decisions$selection_status ==
-                               "minimum_transition_multiplier_eligible"),
+                               "minimum_predeclared_candidate_eligible"),
   threshold_changes = FALSE,
   target_changes = FALSE,
   retries = sum(job_status$retry_count),
@@ -656,7 +715,7 @@ rqr_confirm_atomic_write_csv(
 cat(sprintf(
   "Candidate comparison complete: %d/%d jobs succeeded; %d/%d methods selected.\n",
   sum(job_status$ok), nrow(job_status),
-  sum(decisions$selection_status == "minimum_transition_multiplier_eligible"),
+  sum(decisions$selection_status == "minimum_predeclared_candidate_eligible"),
   nrow(decisions)
 ))
 if (!isTRUE(manifest$all_methods_selected)) {

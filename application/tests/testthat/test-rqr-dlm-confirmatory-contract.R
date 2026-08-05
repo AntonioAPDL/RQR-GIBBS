@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.13.0"
+    "rqrgibbs_dlm_main_correction/1.14.0"
   )
   expect_identical(
     contract$config$implementation_correction$

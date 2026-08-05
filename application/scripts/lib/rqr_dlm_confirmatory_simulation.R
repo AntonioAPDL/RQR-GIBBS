@@ -153,7 +153,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$implementation_correction,
         list(
-          schema_version = "rqrgibbs_dlm_main_correction/1.13.0",
+          schema_version = "rqrgibbs_dlm_main_correction/1.14.0",
           failed_authorization_commit =
             "b8b7748ab181a006611b602f64d4edf5be591de6",
           failed_wave_id =
@@ -306,7 +306,31 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           skewed_wave_diagnostics_used_for_transition_correction = TRUE,
           skewed_wave_fresh_relaunch_required = TRUE,
           skewed_wave_recovery_status =
-            "development_forensics_and_candidate_selection_pending",
+            "joint_elliptical_development_comparison_pending",
+          skewed_whole_scan_candidate_source_commit =
+            "5086fac191255a79514475f6dbacddfae4c328ed",
+          skewed_whole_scan_candidate_jobs = 93L,
+          skewed_whole_scan_candidate_diagnostics = 1791L,
+          skewed_whole_scan_candidate_failed_diagnostics = 32L,
+          skewed_whole_scan_selected_methods =
+            c("M01", "M02", "M06", "M09"),
+          skewed_whole_scan_unresolved_methods = c("M10", "M11"),
+          skewed_whole_scan_candidate_closeout_path = paste0(
+            "docs/audits/rqr_dlm_skewed_candidate_closeout_20260804/",
+            "closeout.json"
+          ),
+          skewed_whole_scan_candidate_closeout_sha256 =
+            "f8b82ef8e0ba51fe4fe9a7ccb34bf62c04013e918c5d88518a3401f4b7e19f4f",
+          skewed_whole_scan_candidate_artifact_manifest_sha256 =
+            "198e131e234563f9503bb1cb8fee27d81f9d9494461afdf9a79e0529907b7274",
+          skewed_joint_elliptical_plan_path = paste0(
+            "docs/implementation_notes/",
+            "rqr_dlm_joint_elliptical_recovery_plan_20260804.md"
+          ),
+          skewed_joint_elliptical_plan_sha256 =
+            "879c5c7b5672aadbb9f8d491e96c4412f35e57158be30b65ac34489a9c001f32",
+          skewed_joint_elliptical_target_change = FALSE,
+          skewed_joint_elliptical_outputs_reusable = FALSE,
           correction_budget_path =
             "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
           correction_budget_sha256 =

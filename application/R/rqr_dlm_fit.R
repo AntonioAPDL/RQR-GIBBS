@@ -464,6 +464,46 @@ rqr_dlm_fit <- function(
       call. = FALSE
     )
   }
+  component_scale_joint_elliptical_slice <-
+    mcmc_control$component_scale_joint_elliptical_slice %||% FALSE
+  if (!is.logical(component_scale_joint_elliptical_slice) ||
+      length(component_scale_joint_elliptical_slice) != 1L ||
+      is.na(component_scale_joint_elliptical_slice)) {
+    stop(
+      paste(
+        "mcmc_control$component_scale_joint_elliptical_slice must be",
+        "one logical value."
+      ),
+      call. = FALSE
+    )
+  }
+  if (isTRUE(component_scale_joint_elliptical_slice) && !component_mode) {
+    stop(
+      paste(
+        "The joint state elliptical slice move requires",
+        "evolution_mode='component_scale'."
+      ),
+      call. = FALSE
+    )
+  }
+  component_scale_joint_elliptical_cycles <- .rqr_scalar_integer(
+    mcmc_control$component_scale_joint_elliptical_cycles %||% 1L,
+    "mcmc_control$component_scale_joint_elliptical_cycles", 1L
+  )
+  if (!isTRUE(component_scale_joint_elliptical_slice) &&
+      component_scale_joint_elliptical_cycles != 1L) {
+    stop(
+      paste(
+        "mcmc_control$component_scale_joint_elliptical_cycles can differ",
+        "from one only when the joint move is enabled."
+      ),
+      call. = FALSE
+    )
+  }
+  component_scale_joint_elliptical_max_shrink <- .rqr_scalar_integer(
+    mcmc_control$component_scale_joint_elliptical_max_shrink %||% 1000L,
+    "mcmc_control$component_scale_joint_elliptical_max_shrink", 1L
+  )
   component_scale_kernel_contract <- list(
     symmetric_rootwise_partially_collapsed =
       component_mode && isTRUE(component_scale_collapsed_update),
@@ -494,6 +534,17 @@ rqr_dlm_fit <- function(
     slice_sweeps_per_cycle = component_scale_slice_sweeps,
     slice_max_steps = component_scale_slice_max_steps,
     slice_max_shrink = component_scale_slice_max_shrink,
+    joint_state_elliptical_slice =
+      component_mode && isTRUE(component_scale_joint_elliptical_slice),
+    joint_state_elliptical_cycles = if (
+        component_mode && isTRUE(component_scale_joint_elliptical_slice)
+      ) {
+      component_scale_joint_elliptical_cycles
+    } else {
+      0L
+    },
+    joint_state_elliptical_max_shrink =
+      component_scale_joint_elliptical_max_shrink,
     target_change = FALSE
   )
   time0_completion_mode <- component_mode ||
@@ -582,6 +633,13 @@ rqr_dlm_fit <- function(
   }
   component_scale_collapsed_iteration <- if (
       component_mode && isTRUE(component_scale_collapsed_update)
+    ) {
+    vector("list", total_iter)
+  } else {
+    NULL
+  }
+  component_scale_joint_elliptical_iteration <- if (
+      component_mode && isTRUE(component_scale_joint_elliptical_slice)
     ) {
     vector("list", total_iter)
   } else {
@@ -817,6 +875,73 @@ rqr_dlm_fit <- function(
         run_rootwise_cycle(cycle)
       }
       if (component_mode) run_interweave_cycles()
+    }
+
+    if (component_mode && isTRUE(component_scale_joint_elliptical_slice)) {
+      joint_rows <- vector(
+        "list", component_scale_joint_elliptical_cycles
+      )
+      for (cycle in seq_len(component_scale_joint_elliptical_cycles)) {
+        evolution_iter <- .rqr_materialize_component_evolution(
+          evolution, q_evolution, T, p
+        )
+        joint_move <- .rqr_joint_state_elliptical_slice(
+          theta1 = theta1, theta2 = theta2,
+          theta01 = theta01, theta02 = theta02,
+          GG = expanded$GG, FF = expanded$FF,
+          m0 = expanded$m0, C0 = expanded$C0,
+          W = evolution_iter$W,
+          y = y, observed = observed, v = v,
+          xi = constants$xi, obs_variance = obs_variance,
+          jitter_ladder = jitter_ladder,
+          numerical_policy = numerical_policy,
+          max_shrink = component_scale_joint_elliptical_max_shrink
+        )
+        theta1 <- joint_move$theta1
+        theta2 <- joint_move$theta2
+        theta01 <- joint_move$theta01
+        theta02 <- joint_move$theta02
+        joint_diagnostics <- joint_move$diagnostics
+        if (!is.null(joint_diagnostics$repair_records) &&
+            nrow(joint_diagnostics$repair_records)) {
+          current_repairs <- joint_diagnostics$repair_records
+          current_repairs$iteration <- as.integer(iter)
+          current_repairs$root <- "joint_elliptical_direction"
+          current_repairs <- current_repairs[, c(
+            "iteration", "root", "stage", "time", "strategy",
+            "jitter", "relative_jitter", "min_eigenvalue",
+            "matrix_scale", "jitter_scale", "absolute_jitter_fallback",
+            "clamped_eigenvalues"
+          )]
+          repair_records <- if (is.null(repair_records)) {
+            current_repairs
+          } else {
+            rbind(repair_records, current_repairs)
+          }
+        }
+        joint_rows[[cycle]] <- data.frame(
+          iteration = iter, cycle = cycle,
+          evaluations = joint_diagnostics$evaluations,
+          shrink_steps = joint_diagnostics$shrink_steps,
+          current_log_likelihood =
+            joint_diagnostics$current_log_likelihood,
+          accepted_log_likelihood =
+            joint_diagnostics$accepted_log_likelihood,
+          exact_joint_elliptical_slice = TRUE,
+          stringsAsFactors = FALSE
+        )
+      }
+      component_scale_joint_elliptical_iteration[[iter]] <-
+        do.call(rbind, joint_rows)
+      # The joint path move changes the sufficient innovation energies. Keep
+      # retained inverse-Gamma conditional metadata synchronized with the
+      # final path state even though q itself is unchanged by this block.
+      q_update <- list(
+        draw = q_evolution,
+        posterior = .rqr_component_scale_posterior(
+          theta1, theta2, theta01, theta02, expanded$GG, evolution
+        )
+      )
     }
 
     if (stats::runif(1L) < 0.5) {
@@ -1077,6 +1202,12 @@ rqr_dlm_fit <- function(
       } else {
         do.call(rbind, component_scale_collapsed_iteration)
       },
+      component_scale_joint_elliptical = if (
+          is.null(component_scale_joint_elliptical_iteration)) {
+        data.frame()
+      } else {
+        do.call(rbind, component_scale_joint_elliptical_iteration)
+      },
       template_construction_audit = evolution$construction_audit %||% NULL,
       partial_collapse_order = c(
         "lambda_collapsed", "latent_v_refresh",
@@ -1108,6 +1239,13 @@ rqr_dlm_fit <- function(
           "component_scale_centered_update"
         } else if (!component_mode && time0_completion_mode) {
           "fixed_evolution_time0_completion"
+        } else NULL,
+        if (component_mode &&
+            isTRUE(component_scale_joint_elliptical_slice)) {
+          sprintf(
+            "joint_state_elliptical_slice_cycles_%d",
+            component_scale_joint_elliptical_cycles
+          )
         } else NULL,
         "global_root_swap"
       )
@@ -1147,6 +1285,12 @@ rqr_dlm_fit <- function(
         component_scale_slice_max_steps,
       component_scale_slice_max_shrink =
         component_scale_slice_max_shrink,
+      component_scale_joint_elliptical_slice =
+        component_scale_joint_elliptical_slice,
+      component_scale_joint_elliptical_cycles =
+        component_scale_joint_elliptical_cycles,
+      component_scale_joint_elliptical_max_shrink =
+        component_scale_joint_elliptical_max_shrink,
       note = paste(
         "Root trajectory draws arise from a generalized-Bayes loss update;",
         "they are not response draws."
@@ -1273,6 +1417,19 @@ rqr_dlm_fit <- function(
       object$misc$component_scale_slice_max_steps %||% 100L,
     slice_max_shrink =
       object$misc$component_scale_slice_max_shrink %||% 1000L,
+    joint_state_elliptical_slice =
+      identical(object$model_spec$evolution_mode, "component_scale") &&
+        isTRUE(object$misc$component_scale_joint_elliptical_slice),
+    joint_state_elliptical_cycles = if (
+        identical(object$model_spec$evolution_mode, "component_scale") &&
+          isTRUE(object$misc$component_scale_joint_elliptical_slice)
+      ) {
+      object$misc$component_scale_joint_elliptical_cycles %||% 1L
+    } else {
+      0L
+    },
+    joint_state_elliptical_max_shrink =
+      object$misc$component_scale_joint_elliptical_max_shrink %||% 1000L,
     target_change = FALSE
   )
   if (!identical(
@@ -1477,7 +1634,13 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
       component_scale_slice_max_steps =
         object$misc$component_scale_slice_max_steps %||% 100L,
       component_scale_slice_max_shrink =
-        object$misc$component_scale_slice_max_shrink %||% 1000L
+        object$misc$component_scale_slice_max_shrink %||% 1000L,
+      component_scale_joint_elliptical_slice =
+        isTRUE(object$misc$component_scale_joint_elliptical_slice),
+      component_scale_joint_elliptical_cycles =
+        object$misc$component_scale_joint_elliptical_cycles %||% 1L,
+      component_scale_joint_elliptical_max_shrink =
+        object$misc$component_scale_joint_elliptical_max_shrink %||% 1000L
     ),
     init = list(
       state_root1 = checkpoint$theta_root1,

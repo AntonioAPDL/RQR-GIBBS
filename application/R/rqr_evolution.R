@@ -499,6 +499,171 @@ rqr_evolution_component_scale <- function(
   )
 }
 
+.rqr_zero_mean_state_prior_draw <- function(
+    GG, C0, W, jitter_ladder, numerical_policy) {
+  C0 <- as.matrix(C0)
+  p <- nrow(C0)
+  if (ncol(C0) != p || length(dim(W)) != 3L ||
+      !all(dim(W)[1:2] == c(p, p))) {
+    stop("The joint state-prior draw dimensions are invalid.", call. = FALSE)
+  }
+  T <- dim(W)[3L]
+  GG <- .rqr_expand_cube(GG, T, p, "GG")
+  theta <- matrix(NA_real_, p, T)
+  repairs <- .rqr_empty_repair_records()
+  initial <- .rqr_sample_mvnorm_covariance(
+    rep(0, p), C0, jitter_ladder, numerical_policy
+  )
+  repairs <- .rqr_add_repair_record(
+    repairs, "joint_elliptical_prior_initial", 0L, initial$info
+  )
+  previous <- initial$draw
+  for (tt in seq_len(T)) {
+    innovation <- .rqr_sample_mvnorm_covariance(
+      rep(0, p), W[, , tt], jitter_ladder, numerical_policy
+    )
+    repairs <- .rqr_add_repair_record(
+      repairs, "joint_elliptical_prior_innovation", tt,
+      innovation$info
+    )
+    theta[, tt] <- drop(GG[, , tt] %*% previous) + innovation$draw
+    previous <- theta[, tt]
+  }
+  list(theta0 = initial$draw, theta = theta, repair_records = repairs)
+}
+
+.rqr_state_prior_mean <- function(GG, m0, n_time) {
+  m0 <- as.numeric(m0)
+  p <- length(m0)
+  GG <- .rqr_expand_cube(GG, n_time, p, "GG")
+  value <- matrix(NA_real_, p, n_time)
+  previous <- m0
+  for (tt in seq_len(n_time)) {
+    value[, tt] <- drop(GG[, , tt] %*% previous)
+    previous <- value[, tt]
+  }
+  value
+}
+
+.rqr_joint_state_augmented_log_likelihood <- function(
+    theta1, theta2, FF, y, observed, v, xi, obs_variance) {
+  theta1 <- as.matrix(theta1)
+  theta2 <- as.matrix(theta2)
+  FF <- as.matrix(FF)
+  y <- as.numeric(y)
+  observed <- as.logical(observed)
+  v <- as.numeric(v)
+  obs_variance <- as.numeric(obs_variance)
+  T <- length(y)
+  if (!identical(dim(theta1), dim(theta2)) || ncol(theta1) != T ||
+      !identical(dim(FF), c(nrow(theta1), T)) || length(observed) != T ||
+      length(v) != T || length(obs_variance) != T || anyNA(observed) ||
+      any(!is.finite(c(theta1, theta2, FF, y[observed], v,
+                       obs_variance, xi))) || any(v <= 0) ||
+      any(obs_variance <= 0)) {
+    stop("The joint elliptical likelihood inputs are invalid.",
+         call. = FALSE)
+  }
+  eta1 <- .rqr_state_ordinates(FF, theta1)
+  eta2 <- .rqr_state_ordinates(FF, theta2)
+  residual <- rqr_residual_product(
+    y[observed], eta1[observed], eta2[observed]
+  ) - xi * v[observed]
+  value <- -0.5 * sum(residual^2 / obs_variance[observed])
+  if (!is.finite(value)) -Inf else value
+}
+
+# Exact joint path move for the two roots conditional on component scales and
+# pseudo-AL latent variables. The stacked state prior is Gaussian even though
+# the augmented observation kernel is quartic jointly in the roots. Elliptical
+# slice sampling therefore supplies a joint, rejection-free-in-stationarity
+# transition without pretending that a simultaneous Gaussian FFBS draw exists.
+.rqr_joint_state_elliptical_slice <- function(
+    theta1, theta2, theta01, theta02, GG, FF, m0, C0, W,
+    y, observed, v, xi, obs_variance,
+    jitter_ladder = 0, numerical_policy = c("fail", "record_repair"),
+    max_shrink = 1000L) {
+  theta1 <- as.matrix(theta1)
+  theta2 <- as.matrix(theta2)
+  theta01 <- as.numeric(theta01)
+  theta02 <- as.numeric(theta02)
+  m0 <- as.numeric(m0)
+  C0 <- as.matrix(C0)
+  p <- length(m0)
+  T <- length(y)
+  if (!identical(dim(theta1), c(p, T)) ||
+      !identical(dim(theta2), c(p, T)) || length(theta01) != p ||
+      length(theta02) != p || !identical(dim(C0), c(p, p)) ||
+      length(dim(W)) != 3L || !all(dim(W) == c(p, p, T)) ||
+      any(!is.finite(c(theta1, theta2, theta01, theta02, m0, C0, W)))) {
+    stop("The joint elliptical state dimensions are invalid.",
+         call. = FALSE)
+  }
+  numerical_policy <- .rqr_numerical_policy(numerical_policy)
+  jitter_ladder <- .rqr_jitter_ladder(numerical_policy, jitter_ladder)
+  max_shrink <- .rqr_scalar_integer(
+    max_shrink, "joint state elliptical max_shrink", 1L
+  )
+  GG <- .rqr_expand_cube(GG, T, p, "GG")
+  prior_mean <- .rqr_state_prior_mean(GG, m0, T)
+  direction1 <- .rqr_zero_mean_state_prior_draw(
+    GG, C0, W, jitter_ladder, numerical_policy
+  )
+  direction2 <- .rqr_zero_mean_state_prior_draw(
+    GG, C0, W, jitter_ladder, numerical_policy
+  )
+  current_log_likelihood <- .rqr_joint_state_augmented_log_likelihood(
+    theta1, theta2, FF, y, observed, v, xi, obs_variance
+  )
+  if (!is.finite(current_log_likelihood)) {
+    stop("The current joint-state augmented likelihood is nonfinite.",
+         call. = FALSE)
+  }
+  log_height <- current_log_likelihood + log(stats::runif(1L))
+  angle <- stats::runif(1L, 0, 2 * pi)
+  lower <- angle - 2 * pi
+  upper <- angle
+  # The path must be centered at its time-specific prior mean, not at m0.
+  centered1 <- theta1 - prior_mean
+  centered2 <- theta2 - prior_mean
+  centered01 <- theta01 - m0
+  centered02 <- theta02 - m0
+  for (attempt in seq_len(max_shrink)) {
+    cosine <- cos(angle)
+    sine <- sin(angle)
+    proposal1 <- prior_mean + centered1 * cosine +
+      direction1$theta * sine
+    proposal2 <- prior_mean + centered2 * cosine +
+      direction2$theta * sine
+    proposal01 <- m0 + centered01 * cosine + direction1$theta0 * sine
+    proposal02 <- m0 + centered02 * cosine + direction2$theta0 * sine
+    proposal_log_likelihood <- .rqr_joint_state_augmented_log_likelihood(
+      proposal1, proposal2, FF, y, observed, v, xi, obs_variance
+    )
+    if (proposal_log_likelihood >= log_height) {
+      repairs <- rbind(
+        direction1$repair_records, direction2$repair_records
+      )
+      return(list(
+        theta1 = proposal1, theta2 = proposal2,
+        theta01 = proposal01, theta02 = proposal02,
+        diagnostics = list(
+          evaluations = attempt,
+          shrink_steps = attempt - 1L,
+          current_log_likelihood = current_log_likelihood,
+          accepted_log_likelihood = proposal_log_likelihood,
+          exact_joint_elliptical_slice = TRUE,
+          repair_records = repairs
+        )
+      ))
+    }
+    if (angle < 0) lower <- angle else upper <- angle
+    angle <- stats::runif(1L, lower, upper)
+  }
+  stop("The joint state elliptical slice shrink limit was reached.",
+       call. = FALSE)
+}
+
 .rqr_component_noncentered_innovations <- function(
     theta, theta0, GG, evolution, q) {
   theta <- as.matrix(theta)
