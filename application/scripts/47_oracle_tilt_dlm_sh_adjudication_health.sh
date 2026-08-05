@@ -18,7 +18,10 @@ fi
 active="$(systemctl --user show "$unit.service" -p ActiveState --value 2>/dev/null || printf unknown)"
 sub="$(systemctl --user show "$unit.service" -p SubState --value 2>/dev/null || printf unknown)"
 result="$(systemctl --user show "$unit.service" -p Result --value 2>/dev/null || printf unavailable)"
-workers="$(find "$output_dir/worker_results" -maxdepth 1 -type f -name 'dlm_sh_chain*.rds' 2>/dev/null | wc -l)"
+workers=0
+if [[ -d "$output_dir/worker_results" ]]; then
+  workers="$(find "$output_dir/worker_results" -maxdepth 1 -type f -name 'dlm_sh_chain*.rds' | wc -l)"
+fi
 elapsed=0
 rss=0
 processes=0
