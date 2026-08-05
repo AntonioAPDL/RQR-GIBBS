@@ -6,6 +6,15 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `implementation_notes/oracle_tilt_dlm_sh_adjudication_recovery_protocol_20260805.md`
+  defines the bounded second software execution after the first job failed
+  before publishing a worker artifact. It preserves one statistical attempt,
+  validates a production-shaped worker contract during preflight, and requires
+  chain 1 and its bitwise prefix to pass before chains 2--5 begin.
+- `audits/oracle_tilt_dlm_sh_adjudication_infrastructure_failure_20260805.md`
+  records the failed source, artifact hashes, resource envelope, exact
+  Boolean-versus-string validator defect, singleton error-path defect, and the
+  unchanged scientific boundary for the replacement.
 - `implementation_notes/oracle_tilt_dlm_sh_adjudication_protocol_20260805.md`
   defines the single permitted follow-up to the version-3 DLM/SH marginal
   failure: unchanged scientific specification and gates, 12,000 retained

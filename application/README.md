@@ -215,6 +215,15 @@ identity for each original 6,000-draw prefix. It changes neither the model nor
 the gates. A non-strict closeout can request descriptive review, but cannot
 authorize automatic figure promotion or another automatic rerun.
 
+The first adjudication execution produced no worker artifact because its
+post-fit validator compared a logical storage-contract predicate with a text
+label. The bounded replacement is defined in
+`config/oracle_tilt_c095_dlm_sh_adjudication_recovery_20260805.json` and
+`docs/implementation_notes/oracle_tilt_dlm_sh_adjudication_recovery_protocol_20260805.md`.
+It treats the failed job as a software execution rather than a statistical
+attempt, validates chain 1 and its bitwise prefix before starting chains 2--5,
+and retains every scientific and decision threshold unchanged.
+
 The tracked high-content forensic configuration is
 `config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.
 The exact revised DLM-SH acceptance template is

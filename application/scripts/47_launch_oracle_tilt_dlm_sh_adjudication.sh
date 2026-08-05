@@ -14,6 +14,12 @@ for command_name in git systemd-run systemctl sha256sum; do
 done
 
 source_commit="$(git rev-parse HEAD)"
+config_path="$repo_root/application/config/oracle_tilt_c095_dlm_sh_adjudication_recovery_20260805.json"
+if [[ ! -f "$config_path" ]]; then
+  echo "The versioned adjudication recovery configuration is missing." >&2
+  exit 2
+fi
+config_sha256="$(sha256sum "$config_path" | awk '{print $1}')"
 if [[ ! "$source_commit" =~ ^[0-9a-f]{40}$ ]] ||
    [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
   echo "The adjudication launcher requires a clean committed worktree." >&2
@@ -45,11 +51,12 @@ log_root="$repo_root/application/logs/oracle_tilt_dlm_sh_adjudication"
 mkdir -p "$log_root"
 receipt="$log_root/${unit}_launch.csv"
 printf '%s\n' \
-  "launched_at_utc,unit,source_commit,output_dir,baseline_dir,runtime_attestation" \
+  "launched_at_utc,unit,source_commit,config_sha256,execution_attempt,statistical_attempt,output_dir,baseline_dir,runtime_attestation" \
   >"$receipt"
-printf '%s,%s,%s,%s,%s,%s\n' \
+printf '%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$unit" "$source_commit" \
-  "$output_dir" "$RQR_ORACLE_TILT_V3_BASELINE_DIR" \
+  "$config_sha256" "2" "1" "$output_dir" \
+  "$RQR_ORACLE_TILT_V3_BASELINE_DIR" \
   "$RQR_PRIMARY_RUNTIME_ATTESTATION" >>"$receipt"
 
 systemd-run --user --unit="$unit" --collect \

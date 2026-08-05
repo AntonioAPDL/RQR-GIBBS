@@ -6,7 +6,19 @@ The version-3, 95% single-data illustration completed all 27 planned chains.
 Five family/target cells passed every frozen gate. The dynamic-linear
 shortest-interval cell completed all five chains without repairs or pathological
 draws, but missed one bulk-ESS threshold and one width-heterogeneity threshold
-by narrow margins. This protocol defines one—and only one—adjudication run.
+by narrow margins. This protocol defines one—and only one—statistical
+adjudication run.
+
+The first execution of this protocol, at source commit
+`3ac3a05db420bf17cdeffbb41f0b6b8947b373f4`, produced no worker artifact. A
+Boolean-versus-string error in the post-fit worker validator rejected every
+valid payload before its atomic write, and a singleton-batch error escaped the
+structured worker-failure path. The execution is therefore classified as a
+prepublication software failure rather than a statistical adjudication. Its
+evidence and the bounded replacement contract are documented in
+`docs/audits/oracle_tilt_dlm_sh_adjudication_infrastructure_failure_20260805.md`
+and
+`docs/implementation_notes/oracle_tilt_dlm_sh_adjudication_recovery_protocol_20260805.md`.
 
 The exercise concerns interval-root generalized posteriors. It is not a
 response-likelihood analysis, a posterior-predictive response calculation, or
@@ -69,7 +81,9 @@ transparently as an illustration limitation or omit the DLM/SH panel.
 1. Verify the immutable baseline and run adjudication preflight.
 2. Commit the adjudication source and build an isolated runtime from that exact
    full SHA.
-3. Launch the five-chain run under the monitored process-group wrapper.
+3. Validate and publish chain 1 and its three prefix checks before starting
+   chains 2--5, then complete the remaining chains under the same monitored
+   process-group wrapper.
 4. Require zero residual processes, no timeout, no resource-limit event, exact
    runtime provenance, all five worker artifacts, and 15/15 prefix checks.
 5. If and only if strict status is obtained, reconcile the five original strict

@@ -218,7 +218,7 @@ elif [[ "$mode" == adjudication ]]; then
   runner=(
     Rscript application/scripts/46_run_oracle_tilt_dlm_sh_adjudication.R
     "--mode=execute"
-    "--config=application/config/oracle_tilt_c095_dlm_sh_adjudication_20260805.json"
+    "--config=application/config/oracle_tilt_c095_dlm_sh_adjudication_recovery_20260805.json"
     "--baseline-dir=$RQR_ORACLE_TILT_V3_BASELINE_DIR"
     "--output-dir=$output_dir"
   )

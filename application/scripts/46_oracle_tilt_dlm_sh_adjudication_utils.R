@@ -1,13 +1,13 @@
 otad_config_schema <- function() {
-  "rqrgibbs_oracle_tilt_dlm_sh_adjudication_config/1.0.0"
+  "rqrgibbs_oracle_tilt_dlm_sh_adjudication_config/1.1.0"
 }
 
 otad_worker_schema <- function() {
-  "rqrgibbs_oracle_tilt_dlm_sh_adjudication_worker/1.0.0"
+  "rqrgibbs_oracle_tilt_dlm_sh_adjudication_worker/1.1.0"
 }
 
 otad_closeout_schema <- function() {
-  "rqrgibbs_oracle_tilt_dlm_sh_adjudication/1.0.0"
+  "rqrgibbs_oracle_tilt_dlm_sh_adjudication/1.1.0"
 }
 
 otad_sha256 <- function(x, name) {
@@ -24,9 +24,19 @@ otad_validate_config <- function(config, repo_root) {
     oti_stop("Unsupported DLM/SH adjudication configuration schema.")
   }
   otv3_required_logical(config$execution_authorized, "execution_authorized")
-  if (otv3_integer_scalar(config$attempt, "attempt", 1L) != 1L ||
-      otv3_integer_scalar(config$maximum_attempts, "maximum_attempts", 1L) !=
-        1L ||
+  if (otv3_integer_scalar(
+        config$execution_attempt, "execution_attempt", 1L
+      ) != 2L ||
+      otv3_integer_scalar(
+        config$maximum_execution_attempts, "maximum_execution_attempts", 1L
+      ) != 2L ||
+      otv3_integer_scalar(
+        config$statistical_attempt, "statistical_attempt", 1L
+      ) != 1L ||
+      otv3_integer_scalar(
+        config$maximum_statistical_attempts,
+        "maximum_statistical_attempts", 1L
+      ) != 1L ||
       !identical(as.character(config$family), "dlm") ||
       !identical(as.character(config$target), "SH") ||
       otv3_integer_scalar(config$n_chains, "n_chains", 2L) != 5L ||
@@ -35,6 +45,37 @@ otad_validate_config <- function(config, repo_root) {
         config$baseline_retained_draws, "baseline_retained_draws", 1L
       ) != 6000L) {
     oti_stop("The one-shot DLM/SH adjudication identity changed.")
+  }
+  recovery <- config$software_recovery_contract %||% list()
+  expected_recovery <- list(
+    invalidated_execution_source_commit =
+      "3ac3a05db420bf17cdeffbb41f0b6b8947b373f4",
+    failure_class = "prepublication_worker_contract_validation_defect",
+    invalidated_wrapper_manifest_sha256 =
+      "2e41a28dab0d201e34672b05e47a5a2045a2511367bb8bb6189bfa23b4732f61",
+    invalidated_runner_stderr_sha256 =
+      "2e65a88ce504ee2625763decf946ca74833f68cc62c3f7dbdeffb7d7de246094",
+    invalidated_resource_summary_sha256 =
+      "65059192c22e7aaf4b67b1db5a27c31f402728b4b41878589ca7dffcf8c69b8b",
+    invalidated_wrapper_closeout_sha256 =
+      "d86189c7d1bd349221555dc0da22cbedcc54dc78ec0c81fd831677feaf2ce04b",
+    invalidated_worker_artifact_count = 0L,
+    scientific_contract_changed = FALSE,
+    failed_execution_is_statistical_attempt = FALSE,
+    replacement_is_automatic_rerun = FALSE
+  )
+  if (!identical(recovery, expected_recovery)) {
+    oti_stop("The software-recovery evidence contract changed.")
+  }
+  staging <- config$staging_contract %||% list()
+  if (otv3_integer_scalar(
+        staging$acceptance_chain, "acceptance_chain", 1L
+      ) != 1L ||
+      !identical(as.integer(unlist(staging$remaining_chains)), 2:5) ||
+      !identical(staging$acceptance_prefix_required, TRUE) ||
+      !identical(staging$fail_before_remaining_on_acceptance_failure, TRUE) ||
+      !identical(staging$all_workers_persist_before_summary, TRUE)) {
+    oti_stop("The staged software-recovery execution contract changed.")
   }
   base_path <- normalizePath(
     file.path(repo_root, as.character(config$base_config)),
@@ -232,18 +273,166 @@ otad_build_worker_contract <- function(source_commit, config_sha256,
 }
 
 otad_validate_worker <- function(envelope, expected_contract) {
+  expected_draws <- tryCatch(
+    otv3_integer_scalar(
+      expected_contract$mcmc_override$n_mcmc, "worker retained draws", 1L
+    ),
+    error = function(error) NA_integer_
+  )
+  prediction_valid <- is.list(envelope) && is.list(envelope$result) &&
+    tryCatch({
+      prediction <- envelope$result$pred
+      lower <- prediction$lower_draws
+      upper <- prediction$upper_draws
+      isTRUE(otv3_prediction_storage_contract(prediction)) &&
+        is.matrix(lower) && is.numeric(lower) &&
+        is.matrix(upper) && is.numeric(upper) &&
+        identical(dim(lower), dim(upper)) &&
+        ncol(lower) == expected_draws &&
+        all(is.finite(lower)) && all(is.finite(upper)) &&
+        !any(upper < lower)
+    }, error = function(error) FALSE)
+  scalar_valid <- is.list(envelope) && is.list(envelope$result) &&
+    tryCatch({
+      scalar <- envelope$result$scalar_draws
+      is.matrix(scalar) && is.numeric(scalar) &&
+        nrow(scalar) == expected_draws && ncol(scalar) >= 1L &&
+        all(is.finite(scalar))
+    }, error = function(error) FALSE)
+  provenance_valid <- is.list(envelope) && is.list(envelope$result) &&
+    tryCatch({
+      audit <- envelope$result$provenance_audit
+      otv3_validate_provenance_audit(
+        audit, expected_contract$family, expected_contract$target,
+        expected_contract$chain
+      )
+      source_match <- all(
+        audit$git_commit == expected_contract$source_commit
+      )
+      runtime_match <- if (grepl(
+        "^[0-9a-f]{64}$", expected_contract$runtime_tree_digest %||% ""
+      )) {
+        all(
+          audit$runtime_package_tree_digest ==
+            expected_contract$runtime_tree_digest
+        )
+      } else TRUE
+      source_match && runtime_match
+    }, error = function(error) FALSE)
+  summary_valid <- is.list(envelope) && is.list(envelope$result) &&
+    is.data.frame(envelope$result$chain_summary) &&
+    nrow(envelope$result$chain_summary) == 1L &&
+    all(vapply(c(
+      "worker_entry_provenance_match", "fit_recorded_provenance_match",
+      "worker_exit_provenance_match"
+    ), function(name) {
+      name %in% names(envelope$result$chain_summary) &&
+        isTRUE(envelope$result$chain_summary[[name]][1L])
+    }, logical(1L)))
   pass <- is.list(envelope) &&
     identical(envelope$schema_version, otad_worker_schema()) &&
     identical(envelope$contract, expected_contract) &&
     identical(envelope$contract_digest, otf_object_sha256(expected_contract)) &&
-    is.list(envelope$result) &&
-    identical(otv3_prediction_storage_contract(envelope$result$pred),
-              "ordered_endpoints_only") &&
-    ncol(envelope$result$pred$lower_draws) == 12000L &&
-    ncol(envelope$result$pred$upper_draws) == 12000L &&
-    nrow(envelope$result$scalar_draws) == 12000L
+    identical(
+      otf_object_sha256(envelope$contract),
+      otf_object_sha256(expected_contract)
+    ) &&
+    is.list(envelope$result) && prediction_valid && scalar_valid &&
+    provenance_valid && summary_valid
   if (!pass) oti_stop("The adjudication worker envelope is invalid.")
-  invisible(envelope)
+  invisible(TRUE)
+}
+
+otad_worker_error <- function(chain, stage, error) {
+  structure(
+    list(
+      chain = as.integer(chain), stage = as.character(stage),
+      message = conditionMessage(error)
+    ),
+    class = "otad_worker_error"
+  )
+}
+
+otad_run_batches <- function(chains, workers, worker, stage = "worker") {
+  chains <- as.integer(chains)
+  if (!is.function(worker)) oti_stop("worker must be a function.")
+  run_one <- function(chain) {
+    tryCatch(
+      worker(chain),
+      error = function(error) otad_worker_error(chain, stage, error)
+    )
+  }
+  batches <- otv3_chain_batches(chains, workers)
+  unlist(lapply(batches, function(batch) {
+    if (length(batch) > 1L && .Platform$OS.type != "windows") {
+      parallel::mclapply(
+        batch, run_one, mc.cores = length(batch), mc.preschedule = TRUE,
+        mc.set.seed = FALSE
+      )
+    } else lapply(batch, run_one)
+  }), recursive = FALSE, use.names = FALSE)
+}
+
+otad_worker_contract_self_test <- function(expected_contract) {
+  retained <- expected_contract$mcmc_override$n_mcmc
+  state <- as.list(setNames(
+    rep(TRUE, length(otv3_provenance_gate_names())),
+    otv3_provenance_gate_names()
+  ))
+  state$git_dirty <- FALSE
+  state$git_commit <- expected_contract$source_commit
+  state$expected_git_commit <- expected_contract$source_commit
+  state$runtime_package_path <- "/synthetic/preflight/rqrgibbs"
+  state$runtime_package_version <- "preflight-self-test"
+  state$runtime_attestation <- "/synthetic/preflight/attestation.rds"
+  state$runtime_attestation_schema <- "preflight-self-test/1.0.0"
+  state$source_tree_digest <- strrep("a", 40L)
+  state$runtime_package_tree_digest <- if (grepl(
+    "^[0-9a-f]{64}$", expected_contract$runtime_tree_digest %||% ""
+  )) expected_contract$runtime_tree_digest else strrep("b", 64L)
+  audit <- do.call(rbind, lapply(
+    c("worker_entry", "fit_recorded", "worker_exit"),
+    function(phase) otv3_provenance_snapshot(
+      state, phase, expected_contract$family, expected_contract$target,
+      expected_contract$chain
+    )
+  ))
+  envelope <- list(
+    schema_version = otad_worker_schema(), contract = expected_contract,
+    contract_digest = otf_object_sha256(expected_contract),
+    result = list(
+      pred = otv3_endpoint_only_prediction(list(
+        lower_draws = matrix(-1, 1L, retained),
+        upper_draws = matrix(1, 1L, retained)
+      )),
+      scalar_draws = matrix(
+        0, retained, 1L, dimnames = list(NULL, "observed_loss")
+      ),
+      provenance_audit = audit,
+      chain_summary = data.frame(
+        worker_entry_provenance_match = TRUE,
+        fit_recorded_provenance_match = TRUE,
+        worker_exit_provenance_match = TRUE
+      )
+    )
+  )
+  accepted <- tryCatch({
+    otad_validate_worker(envelope, expected_contract)
+    TRUE
+  }, error = function(error) FALSE)
+  malformed <- envelope
+  malformed$result$pred$midpoint_draws <- matrix(0, 1L, retained)
+  rejected <- inherits(
+    try(otad_validate_worker(malformed, expected_contract), silent = TRUE),
+    "try-error"
+  )
+  data.frame(
+    gate = c(
+      "production_shaped_worker_acceptance",
+      "forbidden_prediction_payload_rejection"
+    ),
+    pass = c(accepted, rejected), stringsAsFactors = FALSE
+  )
 }
 
 otad_block_stability <- function(chain_results, dgp, targets) {

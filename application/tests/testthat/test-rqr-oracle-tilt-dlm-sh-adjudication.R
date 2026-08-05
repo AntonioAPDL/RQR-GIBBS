@@ -13,9 +13,17 @@ for (file in c(
 testthat::test_that("DLM/SH adjudication configuration is frozen", {
   config <- oti_read_json(file.path(
     repo_root, "application", "config",
-    "oracle_tilt_c095_dlm_sh_adjudication_20260805.json"
+    "oracle_tilt_c095_dlm_sh_adjudication_recovery_20260805.json"
   ))
   testthat::expect_silent(otad_validate_config(config, repo_root))
+  testthat::expect_identical(config$execution_attempt, 2L)
+  testthat::expect_identical(config$statistical_attempt, 1L)
+  testthat::expect_false(
+    config$software_recovery_contract$failed_execution_is_statistical_attempt
+  )
+  testthat::expect_false(
+    config$software_recovery_contract$scientific_contract_changed
+  )
   bad <- config
   bad$mcmc_override$n_mcmc <- 12001
   testthat::expect_error(
@@ -26,6 +34,70 @@ testthat::test_that("DLM/SH adjudication configuration is frozen", {
   testthat::expect_error(
     otad_validate_config(bad, repo_root), "decision contract"
   )
+  bad <- config
+  bad$software_recovery_contract$invalidated_worker_artifact_count <- 1L
+  testthat::expect_error(
+    otad_validate_config(bad, repo_root), "software-recovery evidence"
+  )
+  bad <- config
+  bad$staging_contract$remaining_chains <- c(2L, 3L, 5L, 4L)
+  testthat::expect_error(
+    otad_validate_config(bad, repo_root), "staged software-recovery"
+  )
+  historical <- oti_read_json(file.path(
+    repo_root, "application", "config",
+    "oracle_tilt_c095_dlm_sh_adjudication_20260805.json"
+  ))
+  testthat::expect_error(
+    otad_validate_config(historical, repo_root), "Unsupported"
+  )
+})
+
+testthat::test_that("production-shaped adjudication workers validate", {
+  contract <- list(
+    source_commit = strrep("a", 40L),
+    runtime_tree_digest = strrep("b", 64L),
+    family = "dlm", target = "SH", chain = 1L,
+    mcmc_override = list(n_mcmc = 12000L)
+  )
+  gates <- otad_worker_contract_self_test(contract)
+  testthat::expect_identical(
+    gates$gate,
+    c(
+      "production_shaped_worker_acceptance",
+      "forbidden_prediction_payload_rejection"
+    )
+  )
+  testthat::expect_true(all(gates$pass))
+})
+
+testthat::test_that("singleton and parallel worker errors share one contract", {
+  successful <- otad_run_batches(
+    1:5, 2L, function(chain) list(chain = chain), "test"
+  )
+  testthat::expect_identical(
+    vapply(successful, `[[`, integer(1L), "chain"), 1:5
+  )
+  singleton_failure <- otad_run_batches(
+    1:5, 2L, function(chain) {
+      if (chain == 5L) stop("singleton failure")
+      list(chain = chain)
+    }, "test"
+  )
+  testthat::expect_s3_class(singleton_failure[[5L]], "otad_worker_error")
+  testthat::expect_identical(singleton_failure[[5L]]$chain, 5L)
+  testthat::expect_identical(singleton_failure[[5L]]$stage, "test")
+  testthat::expect_match(
+    singleton_failure[[5L]]$message, "singleton failure"
+  )
+  parallel_failure <- otad_run_batches(
+    1:2, 2L, function(chain) {
+      if (chain == 2L) stop("parallel failure")
+      list(chain = chain)
+    }, "test"
+  )
+  testthat::expect_s3_class(parallel_failure[[2L]], "otad_worker_error")
+  testthat::expect_identical(parallel_failure[[2L]]$chain, 2L)
 })
 
 testthat::test_that("prefix parity is bitwise and mutation sensitive", {

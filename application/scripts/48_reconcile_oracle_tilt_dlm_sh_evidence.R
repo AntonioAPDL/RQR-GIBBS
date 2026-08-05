@@ -66,12 +66,30 @@ adj_closeout <- jsonlite::read_json(
   file.path(adjudication, "closeout.json"), simplifyVector = TRUE
 )
 if (!identical(adj_closeout$schema_version, otad_closeout_schema()) ||
+    adj_closeout$execution_attempt != 2L ||
+    adj_closeout$statistical_attempt != 1L ||
+    !isTRUE(adj_closeout$software_recovery) ||
+    !isTRUE(adj_closeout$staged_execution_pass) ||
     !isTRUE(adj_closeout$strict_pass) ||
     !isTRUE(adj_closeout$automatic_promotion_eligible) ||
     !isTRUE(adj_closeout$prefix_parity_pass) ||
     !isTRUE(adj_closeout$exact_runtime_bound) ||
     adj_closeout$completed_chains != 5L) {
   oti_stop("The DLM/SH adjudication is not a strict promotable result.")
+}
+stage_status <- utils::read.csv(
+  file.path(adjudication, "stage_status.csv"), stringsAsFactors = FALSE
+)
+self_test <- utils::read.csv(
+  file.path(adjudication, "worker_contract_self_test.csv"),
+  stringsAsFactors = FALSE
+)
+if (nrow(stage_status) != 2L ||
+    !identical(stage_status$stage, c("acceptance", "remaining")) ||
+    !all(stage_status$status == "completed") ||
+    !all(stage_status$prefix_pass) ||
+    nrow(self_test) != 2L || !all(self_test$pass)) {
+  oti_stop("The staged software-recovery gates did not pass.")
 }
 verify_hash_manifest(adjudication, "artifact_manifest.csv")
 verify_hash_manifest(adjudication, "wrapper_artifact_manifest.csv")
@@ -158,6 +176,7 @@ if (nrow(fit) != 6L || !all(fit$disposition == "strict_pass") ||
 
 support <- c(
   "baseline_audit.csv", "design_binding.csv", "prefix_parity.csv",
+  "worker_contract_self_test.csv", "stage_status.csv",
   "block_stability.csv", "decision.csv", "baseline_comparison.csv",
   "worker_manifest.csv", "adjudication_config.json", "source_state.json",
   "runtime_binding.json", "closeout.json", "resource_summary.csv",
@@ -175,6 +194,9 @@ receipt <- list(
   schema_version = "rqrgibbs_oracle_tilt_evidence/3.1.0",
   baseline_source_commit = baseline_source$source_commit,
   adjudication_source_commit = adj_closeout$source_commit,
+  adjudication_execution_attempt = adj_closeout$execution_attempt,
+  adjudication_statistical_attempt = adj_closeout$statistical_attempt,
+  adjudication_software_recovery = adj_closeout$software_recovery,
   base_config_sha256 = baseline_source$config_sha256,
   adjudication_config_sha256 = adj_closeout$adjudication_config_sha256,
   baseline_runtime_tree_digest = baseline_source$runtime_tree_digest,

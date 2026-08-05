@@ -31,7 +31,7 @@ config_path <- normalizePath(arg_value(
   "--config=",
   file.path(
     repo_root, "application", "config",
-    "oracle_tilt_c095_dlm_sh_adjudication_20260805.json"
+    "oracle_tilt_c095_dlm_sh_adjudication_recovery_20260805.json"
   )
 ), winslash = "/", mustWork = TRUE)
 config <- oti_read_json(config_path)
@@ -139,6 +139,12 @@ source_state <- list(
   started_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
   repository = oti_git_state(repo_root), source_commit = source_commit,
   adjudication_config_sha256 = config_sha256,
+  execution_attempt = config$execution_attempt,
+  statistical_attempt = config$statistical_attempt,
+  invalidated_execution_source_commit =
+    config$software_recovery_contract$invalidated_execution_source_commit,
+  software_recovery_failure_class =
+    config$software_recovery_contract$failure_class,
   base_source_commit = config$base_source_commit,
   base_config_sha256 = config$base_config_sha256,
   runtime_tree_digest = runtime_digest,
@@ -177,12 +183,40 @@ design_binding$pass <- design_binding$expected_digest ==
 otf_atomic_write_csv(
   design_binding, file.path(output_root, "design_binding.csv")
 )
+expected_contract <- function(chain) {
+  row <- baseline_manifest[baseline_manifest$chain == chain, , drop = FALSE]
+  otad_build_worker_contract(
+    source_commit, config_sha256, runtime_digest, config$base_config_sha256,
+    chain, row$seed, row$profile, dgp_digest, target_digest,
+    config$mcmc_override, row
+  )
+}
+worker_contract_self_test <- otad_worker_contract_self_test(
+  expected_contract(config$staging_contract$acceptance_chain)
+)
+otf_atomic_write_csv(
+  worker_contract_self_test,
+  file.path(output_root, "worker_contract_self_test.csv")
+)
 preflight_gates <- rbind(
   data.frame(gate = "baseline_binding", pass = all(baseline$audit$pass)),
   data.frame(gate = "design_binding", pass = all(design_binding$pass)),
   data.frame(
-    gate = "single_predeclared_attempt",
-    pass = config$attempt == 1L && config$maximum_attempts == 1L
+    gate = "single_statistical_attempt",
+    pass = config$statistical_attempt == 1L &&
+      config$maximum_statistical_attempts == 1L
+  ),
+  data.frame(
+    gate = "bounded_software_recovery",
+    pass = config$execution_attempt == 2L &&
+      config$maximum_execution_attempts == 2L &&
+      !isTRUE(
+        config$software_recovery_contract$
+          failed_execution_is_statistical_attempt
+      ) &&
+      !isTRUE(
+        config$software_recovery_contract$replacement_is_automatic_rerun
+      )
   ),
   data.frame(
     gate = "frozen_scientific_specification",
@@ -192,7 +226,8 @@ preflight_gates <- rbind(
     gate = "extended_draw_contract",
     pass = config$mcmc_override$n_mcmc == 12000L &&
       config$baseline_retained_draws == 6000L
-  )
+  ),
+  worker_contract_self_test
 )
 otf_atomic_write_csv(
   preflight_gates, file.path(output_root, "preflight_gates.csv")
@@ -218,16 +253,7 @@ if (identical(mode, "preflight")) {
   quit(save = "no", status = 0L)
 }
 
-profiles <- as.character(unlist(base_config$dlm$initial_profiles))
 chains <- seq_len(config$n_chains)
-expected_contract <- function(chain) {
-  row <- baseline_manifest[baseline_manifest$chain == chain, , drop = FALSE]
-  otad_build_worker_contract(
-    source_commit, config_sha256, runtime_digest, config$base_config_sha256,
-    chain, row$seed, row$profile, dgp_digest, target_digest,
-    config$mcmc_override, row
-  )
-}
 
 run_chain <- function(chain) {
   contract <- expected_contract(chain)
@@ -276,47 +302,149 @@ run_chain <- function(chain) {
   )
   otad_validate_worker(envelope, contract)
   otf_atomic_save_rds(envelope, path, compress = FALSE)
-  list(path = path, envelope = envelope)
+  list(
+    chain = as.integer(chain), path = path,
+    contract_digest = envelope$contract_digest
+  )
 }
 
 started <- Sys.time()
-batches <- otv3_chain_batches(chains, config$workers)
-returns <- unlist(lapply(batches, function(batch) {
-  if (length(batch) > 1L && .Platform$OS.type != "windows") {
-    parallel::mclapply(
-      batch, function(chain) tryCatch(
-        run_chain(chain),
-        error = function(error) structure(
-          list(message = conditionMessage(error)), class = "otad_worker_error"
-        )
-      ), mc.cores = length(batch), mc.preschedule = TRUE, mc.set.seed = FALSE
-    )
-  } else lapply(batch, run_chain)
-}), recursive = FALSE)
-failed <- vapply(returns, inherits, logical(1L), "otad_worker_error")
-if (any(failed)) {
-  failure <- data.frame(
-    chain = chains[failed], stage = "worker",
-    message = vapply(returns[failed], `[[`, character(1L), "message"),
-    stringsAsFactors = FALSE
+failure_path <- file.path(output_root, "failure_log.csv")
+stage_status_path <- file.path(output_root, "stage_status.csv")
+stage_status <- data.frame()
+append_failure <- function(rows) {
+  prior <- if (file.exists(failure_path)) {
+    utils::read.csv(failure_path, stringsAsFactors = FALSE)
+  } else data.frame()
+  otf_atomic_write_csv(
+    oti_rbind_fill(list(prior, rows)), failure_path
   )
-  otf_atomic_write_csv(failure, file.path(output_root, "failure_log.csv"))
-  oti_stop("One or more adjudication workers failed.")
+}
+record_stage <- function(stage, stage_chains, status, stage_started,
+                         worker_files = 0L, prefix_checks = 0L,
+                         prefix_pass = FALSE) {
+  stage_status <<- oti_rbind_fill(list(stage_status, data.frame(
+    stage = stage, chains = paste(stage_chains, collapse = ";"),
+    status = status,
+    started_at_utc = format(stage_started, tz = "UTC", usetz = TRUE),
+    finished_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    worker_files = as.integer(worker_files),
+    prefix_checks = as.integer(prefix_checks),
+    prefix_pass = isTRUE(prefix_pass), stringsAsFactors = FALSE
+  )))
+  otf_atomic_write_csv(stage_status, stage_status_path)
+}
+verify_saved_chain <- function(value) {
+  chain <- value$chain
+  envelope <- readRDS(value$path)
+  otad_validate_worker(envelope, expected_contract(chain))
+  manifest_row <- baseline_manifest[
+    baseline_manifest$chain == chain, , drop = FALSE
+  ]
+  baseline_envelope <- readRDS(file.path(baseline$root, manifest_row$path))
+  parity <- otad_prefix_parity(
+    baseline_envelope, envelope, chain, config$baseline_retained_draws
+  )
+  list(value = value, parity = parity)
+}
+run_stage <- function(stage, stage_chains, workers) {
+  stage_started <- Sys.time()
+  returns <- otad_run_batches(stage_chains, workers, run_chain, stage)
+  failed <- vapply(returns, inherits, logical(1L), "otad_worker_error")
+  if (any(failed)) {
+    errors <- returns[failed]
+    append_failure(data.frame(
+      recorded_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+      chain = vapply(errors, `[[`, integer(1L), "chain"),
+      stage = vapply(errors, `[[`, character(1L), "stage"),
+      message = vapply(errors, `[[`, character(1L), "message"),
+      stringsAsFactors = FALSE
+    ))
+    record_stage(
+      stage, stage_chains, "worker_failed", stage_started,
+      worker_files = sum(!failed)
+    )
+    oti_stop("One or more adjudication workers failed during ", stage, ".")
+  }
+  verified <- lapply(returns, function(value) {
+    tryCatch(
+      verify_saved_chain(value),
+      error = function(error) otad_worker_error(
+        value$chain, paste0(stage, "_saved_artifact"), error
+      )
+    )
+  })
+  invalid <- vapply(verified, inherits, logical(1L), "otad_worker_error")
+  if (any(invalid)) {
+    errors <- verified[invalid]
+    append_failure(data.frame(
+      recorded_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+      chain = vapply(errors, `[[`, integer(1L), "chain"),
+      stage = vapply(errors, `[[`, character(1L), "stage"),
+      message = vapply(errors, `[[`, character(1L), "message"),
+      stringsAsFactors = FALSE
+    ))
+    record_stage(
+      stage, stage_chains, "saved_artifact_failed", stage_started,
+      worker_files = length(returns)
+    )
+    oti_stop("Saved adjudication artifacts failed validation during ", stage, ".")
+  }
+  parity <- do.call(rbind, lapply(verified, `[[`, "parity"))
+  if (!all(parity$pass)) {
+    append_failure(data.frame(
+      recorded_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+      chain = unique(parity$chain[!parity$pass]),
+      stage = paste0(stage, "_prefix"),
+      message = "The retained-draw prefix was not bitwise identical.",
+      stringsAsFactors = FALSE
+    ))
+    record_stage(
+      stage, stage_chains, "prefix_failed", stage_started,
+      worker_files = length(returns), prefix_checks = nrow(parity)
+    )
+    oti_stop("The adjudication prefix failed during ", stage, ".")
+  }
+  record_stage(
+    stage, stage_chains, "completed", stage_started,
+    worker_files = length(returns), prefix_checks = nrow(parity),
+    prefix_pass = TRUE
+  )
+  list(returns = returns, parity = parity)
+}
+
+acceptance_chain <- config$staging_contract$acceptance_chain
+acceptance <- run_stage("acceptance", acceptance_chain, 1L)
+if (!all(acceptance$parity$pass)) {
+  oti_stop("The acceptance-chain prefix gate failed closed.")
+}
+remaining_chains <- as.integer(unlist(
+  config$staging_contract$remaining_chains
+))
+remaining <- run_stage(
+  "remaining", remaining_chains,
+  min(config$workers, length(remaining_chains))
+)
+returns <- c(acceptance$returns, remaining$returns)
+return_chains <- vapply(returns, `[[`, integer(1L), "chain")
+if (!identical(sort(return_chains), chains)) {
+  oti_stop("The staged adjudication did not return all five chains exactly once.")
+}
+returns <- returns[match(chains, return_chains)]
+prefix <- rbind(acceptance$parity, remaining$parity)
+prefix <- prefix[order(prefix$chain, prefix$object), , drop = FALSE]
+rownames(prefix) <- NULL
+otf_atomic_write_csv(prefix, file.path(output_root, "prefix_parity.csv"))
+if (nrow(prefix) != 15L || !all(prefix$pass)) {
+  oti_stop("The complete adjudication prefix contract failed.")
 }
 elapsed <- as.numeric(difftime(Sys.time(), started, units = "secs"))
 
-extended <- lapply(seq_along(returns), `[[`, "envelope")
-baseline_envelopes <- lapply(seq_len(nrow(baseline_manifest)), function(index) {
-  readRDS(file.path(baseline$root, baseline_manifest$path[index]))
+extended <- lapply(returns, function(value) {
+  envelope <- readRDS(value$path)
+  otad_validate_worker(envelope, expected_contract(value$chain))
+  envelope
 })
-prefix <- do.call(rbind, lapply(chains, function(chain) {
-  otad_prefix_parity(
-    baseline_envelopes[[chain]], extended[[chain]], chain,
-    config$baseline_retained_draws
-  )
-}))
-otf_atomic_write_csv(prefix, file.path(output_root, "prefix_parity.csv"))
-if (!all(prefix$pass)) oti_stop("The adjudication prefix is not bitwise exact.")
 
 chain_results <- lapply(extended, `[[`, "result")
 cell <- otv3_summarize_cell("dlm", "SH", chain_results, dgp, targets, base_config)
@@ -367,11 +495,20 @@ closeout <- list(
   schema_version = otad_closeout_schema(), mode = mode,
   source_commit = source_commit,
   adjudication_config_sha256 = config_sha256,
+  execution_attempt = config$execution_attempt,
+  statistical_attempt = config$statistical_attempt,
+  invalidated_execution_source_commit =
+    config$software_recovery_contract$invalidated_execution_source_commit,
+  software_recovery = TRUE,
   runtime_tree_digest = runtime_digest,
   exact_runtime_bound = isTRUE(runtime_binding$match),
   baseline_bound = all(baseline$audit$pass),
   design_bound = all(design_binding$pass),
   completed_chains = length(chain_results),
+  completed_stages = as.character(stage_status$stage),
+  staged_execution_pass = nrow(stage_status) == 2L &&
+    all(stage_status$status == "completed") &&
+    all(stage_status$prefix_pass),
   retained_draws_per_chain = config$mcmc_override$n_mcmc,
   prefix_draws_per_chain = config$baseline_retained_draws,
   prefix_parity_pass = all(prefix$pass),
