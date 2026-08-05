@@ -205,6 +205,16 @@ nonlinear target. Its diagnosis and the common target-preserving moment-start
 correction are recorded in
 `docs/audits/oracle_tilt_c095_v3_static_mixing_reconciliation_20260801.md`.
 
+The completed version-3 execution retained all 27 chains but failed closed at
+the final DLM/SH cell: one bulk ESS was 998.79 against 1,000, and the fitted
+high-to-low width-contrast error was 20.104% against 20%. The one-shot
+adjudication in
+`docs/implementation_notes/oracle_tilt_dlm_sh_adjudication_protocol_20260805.md`
+recomputes the same five chains to 12,000 retained draws and requires bitwise
+identity for each original 6,000-draw prefix. It changes neither the model nor
+the gates. A non-strict closeout can request descriptive review, but cannot
+authorize automatic figure promotion or another automatic rerun.
+
 The tracked high-content forensic configuration is
 `config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.
 The exact revised DLM-SH acceptance template is

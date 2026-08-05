@@ -6,6 +6,11 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `implementation_notes/oracle_tilt_dlm_sh_adjudication_protocol_20260805.md`
+  defines the single permitted follow-up to the version-3 DLM/SH marginal
+  failure: unchanged scientific specification and gates, 12,000 retained
+  draws, bitwise reproduction of the original 6,000-draw prefixes, exact
+  runtime binding, and no automatic second attempt.
 - `implementation_notes/oracle_tilt_c095_v3_protocol_20260801.md` freezes the
   nonlinear heteroscedastic fixed-design and seasonal varying-scale DLM
   single-data illustration protocol, exact-oracle targets, independent

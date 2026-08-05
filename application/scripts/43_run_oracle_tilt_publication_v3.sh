@@ -3,9 +3,9 @@ set -euo pipefail
 
 mode="${1:-preflight}"
 case "$mode" in
-  preflight|reference-only|benchmark|resource-rehearsal|acceptance|execute) ;;
+  preflight|reference-only|benchmark|resource-rehearsal|acceptance|execute|adjudication) ;;
   *)
-    echo "Mode must be preflight, reference-only, benchmark, resource-rehearsal, acceptance, or execute." >&2
+    echo "Mode must be preflight, reference-only, benchmark, resource-rehearsal, acceptance, execute, or adjudication." >&2
     exit 2
     ;;
 esac
@@ -47,7 +47,7 @@ fi
 
 if [[ "$mode" == benchmark || "$mode" == resource-rehearsal ||
       "$mode" == acceptance ||
-      "$mode" == execute ]]; then
+      "$mode" == execute || "$mode" == adjudication ]]; then
   if [[ ! "${RQR_EXPECTED_PRIMARY_COMMIT:-}" =~ ^[0-9a-fA-F]{40}$ ]]; then
     echo "Promotion modes require RQR_EXPECTED_PRIMARY_COMMIT as a full SHA." >&2
     exit 2
@@ -65,6 +65,11 @@ fi
 if [[ "$mode" == acceptance &&
       "${RQR_ORACLE_TILT_V3_ACCEPTANCE_CONFIRM:-}" != YES ]]; then
   echo "acceptance is fail-closed; set RQR_ORACLE_TILT_V3_ACCEPTANCE_CONFIRM=YES." >&2
+  exit 2
+fi
+if [[ "$mode" == adjudication &&
+      "${RQR_ORACLE_TILT_DLM_SH_ADJUDICATION_CONFIRM:-}" != YES ]]; then
+  echo "adjudication is fail-closed; set RQR_ORACLE_TILT_DLM_SH_ADJUDICATION_CONFIRM=YES." >&2
   exit 2
 fi
 if [[ "$mode" == acceptance ]]; then
@@ -93,6 +98,7 @@ case "$mode" in
   resource-rehearsal) timeout_seconds=3600 ;;
   acceptance) timeout_seconds=3600 ;;
   execute) timeout_seconds=28800 ;;
+  adjudication) timeout_seconds=21600 ;;
 esac
 max_rss_kib=12582912
 max_threads=8
@@ -115,7 +121,11 @@ fi
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 short_sha="${RQR_EXPECTED_PRIMARY_COMMIT:-exploratory}"
 short_sha="${short_sha:0:12}"
-requested_output="${RQR_ORACLE_TILT_V3_OUTPUT_DIR:-$repo_root/application/outputs/oracle_tilt_c095_publication_v3/${mode}_${timestamp}_${short_sha}}"
+if [[ "$mode" == adjudication ]]; then
+  requested_output="${RQR_ORACLE_TILT_DLM_SH_ADJUDICATION_OUTPUT_DIR:-$repo_root/application/outputs/oracle_tilt_dlm_sh_adjudication/${mode}_${timestamp}_${short_sha}}"
+else
+  requested_output="${RQR_ORACLE_TILT_V3_OUTPUT_DIR:-$repo_root/application/outputs/oracle_tilt_c095_publication_v3/${mode}_${timestamp}_${short_sha}}"
+fi
 if [[ -L "$requested_output" ]]; then
   echo "The output directory must not be a symbolic link." >&2
   exit 2
@@ -198,6 +208,18 @@ if [[ "$mode" == execute || "$mode" == acceptance ]]; then
 elif [[ "$mode" == resource-rehearsal ]]; then
   runner=(
     bash application/scripts/44_run_oracle_tilt_v3_resource_rehearsal.sh
+    "--output-dir=$output_dir"
+  )
+elif [[ "$mode" == adjudication ]]; then
+  if [[ -z "${RQR_ORACLE_TILT_V3_BASELINE_DIR:-}" ]]; then
+    echo "adjudication requires RQR_ORACLE_TILT_V3_BASELINE_DIR." >&2
+    exit 2
+  fi
+  runner=(
+    Rscript application/scripts/46_run_oracle_tilt_dlm_sh_adjudication.R
+    "--mode=execute"
+    "--config=application/config/oracle_tilt_c095_dlm_sh_adjudication_20260805.json"
+    "--baseline-dir=$RQR_ORACLE_TILT_V3_BASELINE_DIR"
     "--output-dir=$output_dir"
   )
 else
