@@ -352,6 +352,7 @@ verify_input_bundle <- function(path, expected_mode, require_wrapper = TRUE) {
   )
   if (!all(checks)) oti_stop("Input bundle failed exact binding: ", expected_mode)
   if (require_wrapper) {
+    otv4_verify_wrapper_manifest(path)
     resource_path <- file.path(path, "resource_summary.csv")
     wrapper_path <- file.path(path, "wrapper_closeout.csv")
     if (!file.exists(resource_path) || !file.exists(wrapper_path)) {

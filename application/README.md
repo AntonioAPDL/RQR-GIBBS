@@ -97,6 +97,11 @@ layer for the standalone article.
   single-worker cells concurrently while chains remain sequential within each
   process. **scripts/53_run_oracle_tilt_publication_v4.sh** enforces exact
   runtime binding, process-group limits, headroom, and fail-closed execution.
+  Its host-exclusion guard recognizes the complete V4 runner range even when
+  R records a relative `--file=application/scripts/...` path. Every downstream
+  stage rehashes the monitored wrapper's complete file inventory in addition
+  to the runner-owned compact manifest, so changed telemetry, logs, manifests,
+  or unrecorded files invalidate the bundle.
   The production-shape concurrency contract is exercised separately by
   **scripts/54_run_oracle_tilt_v4_resource_rehearsal.sh**. Read-only health,
   deterministic family-level selector replay, compact review packaging, and

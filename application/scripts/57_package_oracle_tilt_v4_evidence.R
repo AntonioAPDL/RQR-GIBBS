@@ -25,6 +25,7 @@ output_dir <- normalizePath(
   )), mustWork = FALSE
 )
 otp_verify_manifest(run_dir)
+otv4_verify_wrapper_manifest(run_dir)
 closeout <- jsonlite::read_json(
   file.path(run_dir, "closeout.json"), simplifyVector = TRUE
 )

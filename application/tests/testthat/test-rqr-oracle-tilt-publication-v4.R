@@ -199,3 +199,42 @@ testthat::test_that("production execution and launch stay fail-closed", {
     "automatic_manuscript_promotion = FALSE", runner, fixed = TRUE
   )))
 })
+
+testthat::test_that("wrapper manifests require exact file and content identity", {
+  root <- tempfile("v4-wrapper-manifest-")
+  dir.create(file.path(root, "nested"), recursive = TRUE)
+  on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+  writeLines("alpha", file.path(root, "alpha.txt"))
+  writeLines("beta", file.path(root, "nested", "beta.txt"))
+  paths <- c("alpha.txt", "nested/beta.txt")
+  files <- file.path(root, paths)
+  manifest <- data.frame(
+    sha256 = vapply(files, oti_file_sha256, character(1L)),
+    bytes = unname(file.info(files)$size), path = paths,
+    stringsAsFactors = FALSE
+  )
+  utils::write.csv(
+    manifest, file.path(root, "wrapper_artifact_manifest.csv"),
+    row.names = FALSE, quote = TRUE
+  )
+  testthat::expect_invisible(otv4_verify_wrapper_manifest(root))
+
+  writeLines("changed", file.path(root, "alpha.txt"))
+  testthat::expect_error(
+    otv4_verify_wrapper_manifest(root), "content verification"
+  )
+  writeLines("alpha", file.path(root, "alpha.txt"))
+  writeLines("unrecorded", file.path(root, "extra.txt"))
+  testthat::expect_error(
+    otv4_verify_wrapper_manifest(root), "inventory is incomplete"
+  )
+})
+
+testthat::test_that("the heavy-process guard includes every V4 runner", {
+  wrapper <- readLines(file.path(
+    repo_root, "application", "scripts",
+    "53_run_oracle_tilt_publication_v4.sh"
+  ), warn = FALSE)
+  testthat::expect_true(any(grepl("5[0-7]", wrapper, fixed = TRUE)))
+  testthat::expect_false(any(grepl("5[0-1]", wrapper, fixed = TRUE)))
+})

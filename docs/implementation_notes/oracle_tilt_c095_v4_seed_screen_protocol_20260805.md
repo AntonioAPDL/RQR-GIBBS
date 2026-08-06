@@ -138,6 +138,16 @@ SHA, configuration SHA-256, runtime-tree digest, closeout digest, artifact
 manifest, and monitored-wrapper evidence. Production cannot begin if any
 bundle differs.
 
+The runner and wrapper inventories are independently verified. The compact
+runner manifest protects the declared scientific artifacts, while the wrapper
+manifest must exactly enumerate and rehash every closed-bundle file other than
+itself, including logs, resource telemetry, closeouts, and the runner manifest.
+Missing, added, or modified files invalidate an input bundle. The host-exclusion
+check recognizes R scripts invoked with either absolute or relative
+`--file=.../application/scripts/` paths and covers the complete V4 script range,
+preventing a second campaign from bypassing the concurrency gate merely because
+it was launched from another worktree.
+
 ## Cell eligibility
 
 Computational eligibility requires:

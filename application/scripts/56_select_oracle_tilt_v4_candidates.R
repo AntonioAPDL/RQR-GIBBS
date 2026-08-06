@@ -27,6 +27,7 @@ if (dir.exists(output_dir) && length(list.files(output_dir, all.files = TRUE,
 }
 oti_ensure_dir(output_dir)
 otp_verify_manifest(run_dir)
+otv4_verify_wrapper_manifest(run_dir)
 config <- oti_read_json(file.path(run_dir, "config.json"))
 otv4_validate_config(config)
 closeout <- jsonlite::read_json(

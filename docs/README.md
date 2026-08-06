@@ -6,6 +6,11 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/oracle_tilt_c095_v4_prelaunch_hardening_20260806.md` records the
+  complete wrapper-inventory verifier and V4-aware concurrent-process guard
+  added before any candidate execution. These corrections alter provenance
+  and host-exclusion boundaries only; the frozen scientific design is
+  unchanged.
 - `audits/oracle_tilt_c095_v4_source_implementation_closeout_20260805.md`
   records the passing source/package/exact-runtime preflight and 29-gate
   reference validation at the disabled V4 implementation commit. It also

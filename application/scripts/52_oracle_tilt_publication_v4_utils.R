@@ -1141,3 +1141,53 @@ otv4_compact_files <- function() {
     "selected_candidates.csv", "failure_log.csv", "closeout.json"
   )
 }
+
+# Verify the monitored wrapper's complete file inventory independently of the
+# runner-owned compact artifact manifest.  The wrapper manifest intentionally
+# hashes every closed-bundle file except itself, including the runner manifest,
+# resource telemetry, logs, and wrapper closeout.  Requiring an exact two-way
+# file-set match prevents a stale manifest, an unrecorded extra file, or a
+# post-closeout mutation from being accepted as promotion evidence.
+otv4_verify_wrapper_manifest <- function(root) {
+  root <- normalizePath(root, winslash = "/", mustWork = TRUE)
+  manifest_path <- file.path(root, "wrapper_artifact_manifest.csv")
+  if (!file.exists(manifest_path)) {
+    oti_stop("The V4 bundle lacks wrapper_artifact_manifest.csv.")
+  }
+  manifest <- utils::read.csv(
+    manifest_path, stringsAsFactors = FALSE, check.names = FALSE
+  )
+  required <- c("sha256", "bytes", "path")
+  if (!identical(names(manifest), required) || !nrow(manifest) ||
+      anyNA(manifest) || anyDuplicated(manifest$path) ||
+      any(!grepl("^[0-9a-f]{64}$", manifest$sha256)) ||
+      any(!is.finite(manifest$bytes)) || any(manifest$bytes < 0) ||
+      any(manifest$bytes != floor(manifest$bytes)) ||
+      any(!nzchar(manifest$path)) ||
+      any(startsWith(manifest$path, "/")) ||
+      any(grepl("(^|/)\\.\\.(/|$)", manifest$path))) {
+    oti_stop("The V4 wrapper artifact manifest is malformed.")
+  }
+  files <- list.files(
+    root, recursive = TRUE, full.names = TRUE, all.files = TRUE,
+    no.. = TRUE, include.dirs = FALSE
+  )
+  relative <- substring(files, nchar(root) + 2L)
+  keep <- relative != "wrapper_artifact_manifest.csv"
+  files <- files[keep]
+  relative <- relative[keep]
+  if (!setequal(relative, manifest$path)) {
+    oti_stop("The V4 wrapper manifest file inventory is incomplete.")
+  }
+  index <- match(manifest$path, relative)
+  actual_bytes <- unname(file.info(files[index])$size)
+  actual_sha256 <- unname(vapply(
+    files[index], oti_file_sha256, character(1L)
+  ))
+  if (anyNA(actual_bytes) ||
+      !identical(as.numeric(manifest$bytes), as.numeric(actual_bytes)) ||
+      !identical(as.character(manifest$sha256), actual_sha256)) {
+    oti_stop("The V4 wrapper artifact manifest failed content verification.")
+  }
+  invisible(TRUE)
+}

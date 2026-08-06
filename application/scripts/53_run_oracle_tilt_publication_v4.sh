@@ -101,7 +101,7 @@ if [[ "$mode" =~ ^(resource-rehearsal|execute)$ ]]; then
   other_heavy="$(ps -eo pid=,comm=,args= | awk -v self="$$" '
     $1 != self && $2 == "R" &&
       ($0 ~ /\.rqr_gibbs_launch_checkouts/ ||
-       $0 ~ /RQR-GIBBS\/application\/scripts\/(3[0-9]|4[0-9]|5[0-1])_/) {
+       $0 ~ /--file=([^ ]*\/)?application\/scripts\/(3[0-9]|4[0-9]|5[0-7])_/) {
         print $1
       }
   ')"
