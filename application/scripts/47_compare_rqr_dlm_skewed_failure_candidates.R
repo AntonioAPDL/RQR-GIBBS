@@ -425,7 +425,7 @@ if (length(incomplete)) {
         generated <- rqr_confirm_generate_dgp(
           contract, job$DGP[[1L]], job$replication[[1L]], ledger
         )
-        base_schedule <- rqr_confirm_method_schedule(
+        base_schedule <- rqr_confirm_base_method_schedule(
           contract, job$method[[1L]], job$profile[[1L]]
         )
         multiplier <- job$transition_multiplier[[1L]]

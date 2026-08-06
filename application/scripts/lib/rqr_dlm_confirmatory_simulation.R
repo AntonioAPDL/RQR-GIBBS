@@ -153,7 +153,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$implementation_correction,
         list(
-          schema_version = "rqrgibbs_dlm_main_correction/1.14.0",
+          schema_version = "rqrgibbs_dlm_main_correction/1.15.0",
           failed_authorization_commit =
             "b8b7748ab181a006611b602f64d4edf5be591de6",
           failed_wave_id =
@@ -306,7 +306,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           skewed_wave_diagnostics_used_for_transition_correction = TRUE,
           skewed_wave_fresh_relaunch_required = TRUE,
           skewed_wave_recovery_status =
-            "joint_elliptical_development_comparison_pending",
+            "joint_elliptical_selected_affected_wave_pending",
           skewed_whole_scan_candidate_source_commit =
             "5086fac191255a79514475f6dbacddfae4c328ed",
           skewed_whole_scan_candidate_jobs = 93L,
@@ -331,10 +331,41 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
             "879c5c7b5672aadbb9f8d491e96c4412f35e57158be30b65ac34489a9c001f32",
           skewed_joint_elliptical_target_change = FALSE,
           skewed_joint_elliptical_outputs_reusable = FALSE,
+          skewed_joint_elliptical_candidate_source_commit =
+            "2901770ec25fb6042cbc2c8227478a31bdb0dc1a",
+          skewed_joint_elliptical_candidate_jobs = 44L,
+          skewed_joint_elliptical_candidate_diagnostics = 932L,
+          skewed_joint_elliptical_candidate_failed_diagnostics = 22L,
+          skewed_joint_elliptical_selected_methods = c("M10", "M11"),
+          skewed_joint_elliptical_unresolved_methods = character(),
+          skewed_joint_elliptical_selection = list(
+            M10 = list(
+              candidate = "joint_ess1_x1", transition_multiplier = 1L,
+              joint_elliptical_cycles = 1L
+            ),
+            M11 = list(
+              candidate = "joint_ess1_x2", transition_multiplier = 2L,
+              joint_elliptical_cycles = 1L
+            )
+          ),
+          skewed_joint_elliptical_candidate_closeout_path = paste0(
+            "docs/audits/",
+            "rqr_dlm_joint_elliptical_candidate_closeout_20260805/",
+            "closeout.json"
+          ),
+          skewed_joint_elliptical_candidate_closeout_sha256 =
+            "ffbd98d36afce2a6a64352e75d7eca17c48074435c744d9a52f4916b8ddf4a26",
+          skewed_joint_elliptical_candidate_artifact_manifest_sha256 =
+            "6551e96f940dd0ddccf6ea3adc6e42902162cf3d288fd802a1c911fc53679b02",
+          skewed_joint_elliptical_candidate_decisions_sha256 =
+            "ff5395261176a06287af460a1beb243f494bc03035e4c92609e05ccb10d08ad0",
+          skewed_joint_elliptical_development_outputs_reused = FALSE,
+          skewed_joint_elliptical_scientific_metrics_used = FALSE,
+          skewed_affected_wave_required_before_promotion = TRUE,
           correction_budget_path =
             "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
           correction_budget_sha256 =
-            "719c8260abb19b2dd0c06ba584bbe4bea79d5dfe423690212b55a334687db64b",
+            "fdee8c042a7ebcc9a1a9c1f8d704be530487fcbc098cdc0572f09daadfd9cdb9",
           target_prior_seed_or_diagnostic_threshold_changed = FALSE,
           mcmc_transition_and_fixed_role_schedule_changed = TRUE
         )
@@ -356,6 +387,59 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           slice_max_steps = 100L,
           slice_max_shrink = 1000L,
           target_change = FALSE
+        )
+      ) ||
+      !identical(
+        config$frozen_tuning$method_transition_policies,
+        list(
+          M01 = list(
+            transition_multiplier = 2L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "whole_scan_x2"
+          ),
+          M02 = list(
+            transition_multiplier = 2L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "whole_scan_x2"
+          ),
+          M06 = list(
+            transition_multiplier = 2L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "whole_scan_x2"
+          ),
+          M07 = list(
+            transition_multiplier = 1L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "unchanged"
+          ),
+          M08 = list(
+            transition_multiplier = 1L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "unchanged"
+          ),
+          M09 = list(
+            transition_multiplier = 2L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "whole_scan_x2"
+          ),
+          M10 = list(
+            transition_multiplier = 1L,
+            joint_state_elliptical_slice = TRUE,
+            joint_state_elliptical_cycles = 1L,
+            selected_candidate = "joint_ess1_x1"
+          ),
+          M11 = list(
+            transition_multiplier = 2L,
+            joint_state_elliptical_slice = TRUE,
+            joint_state_elliptical_cycles = 1L,
+            selected_candidate = "joint_ess1_x2"
+          )
         )
       ) ||
       !identical(
@@ -439,7 +523,8 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
   }
   expected_modes <- c(
     "preflight", "oracle-reference", "sentinel-core",
-    "execute-confirmatory", "collect", "audit"
+    "execute-confirmatory", "development-affected-wave",
+    "collect", "audit"
   )
   if (!identical(config$implemented_modes, expected_modes)) {
     stop("Runner modes differ from the frozen contract.", call. = FALSE)
@@ -478,6 +563,21 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
         wave2_recovery_selection_path,
       sha256 = config$implementation_correction$
         wave2_recovery_selection_sha256
+    ),
+    skewed_joint_closeout = c(
+      path = config$implementation_correction$
+        skewed_joint_elliptical_candidate_closeout_path,
+      sha256 = config$implementation_correction$
+        skewed_joint_elliptical_candidate_closeout_sha256
+    ),
+    skewed_joint_decisions = c(
+      path = paste0(
+        "docs/audits/",
+        "rqr_dlm_joint_elliptical_candidate_closeout_20260805/",
+        "candidate_decisions.csv"
+      ),
+      sha256 = config$implementation_correction$
+        skewed_joint_elliptical_candidate_decisions_sha256
     )
   )
   for (evidence in correction_evidence) {
@@ -3715,7 +3815,55 @@ rqr_confirm_fixed_design_replica_initialization <- function(
   )
 }
 
-rqr_confirm_method_schedule <- function(
+rqr_confirm_method_transition_policy <- function(contract, method) {
+  policies <- contract$config$frozen_tuning$method_transition_policies
+  policy <- policies[[method]]
+  if (is.null(policy)) {
+    return(list(
+      transition_multiplier = 1L,
+      joint_state_elliptical_slice = FALSE,
+      joint_state_elliptical_cycles = 0L,
+      selected_candidate = "not_applicable"
+    ))
+  }
+  required <- c(
+    "transition_multiplier", "joint_state_elliptical_slice",
+    "joint_state_elliptical_cycles", "selected_candidate"
+  )
+  if (!identical(names(policy), required) ||
+      !is.numeric(policy$transition_multiplier) ||
+      length(policy$transition_multiplier) != 1L ||
+      is.na(policy$transition_multiplier) ||
+      !is.finite(policy$transition_multiplier) ||
+      policy$transition_multiplier != floor(policy$transition_multiplier) ||
+      policy$transition_multiplier < 1L ||
+      !is.logical(policy$joint_state_elliptical_slice) ||
+      length(policy$joint_state_elliptical_slice) != 1L ||
+      is.na(policy$joint_state_elliptical_slice) ||
+      !is.numeric(policy$joint_state_elliptical_cycles) ||
+      length(policy$joint_state_elliptical_cycles) != 1L ||
+      is.na(policy$joint_state_elliptical_cycles) ||
+      !is.finite(policy$joint_state_elliptical_cycles) ||
+      policy$joint_state_elliptical_cycles !=
+        floor(policy$joint_state_elliptical_cycles) ||
+      policy$joint_state_elliptical_cycles < 0L ||
+      !is.character(policy$selected_candidate) ||
+      length(policy$selected_candidate) != 1L ||
+      is.na(policy$selected_candidate) ||
+      !nzchar(policy$selected_candidate) ||
+      isTRUE(policy$joint_state_elliptical_slice) !=
+        (policy$joint_state_elliptical_cycles > 0L) ||
+      (isTRUE(policy$joint_state_elliptical_slice) &&
+       !method %in% c("M10", "M11"))) {
+    stop("A method transition policy is malformed.", call. = FALSE)
+  }
+  policy$transition_multiplier <- as.integer(policy$transition_multiplier)
+  policy$joint_state_elliptical_cycles <-
+    as.integer(policy$joint_state_elliptical_cycles)
+  policy
+}
+
+rqr_confirm_base_method_schedule <- function(
     contract, method, profile_name = "standard") {
   switch(
     method,
@@ -3748,6 +3896,23 @@ rqr_confirm_method_schedule <- function(
     ),
     NULL
   )
+}
+
+rqr_confirm_method_schedule <- function(
+    contract, method, profile_name = "standard") {
+  schedule <- rqr_confirm_base_method_schedule(
+    contract, method, profile_name
+  )
+  if (is.null(schedule)) return(NULL)
+  policy <- rqr_confirm_method_transition_policy(contract, method)
+  multiplier <- policy$transition_multiplier
+  schedule$burn <- as.integer(schedule$burn * multiplier)
+  if (identical(method, "M02")) {
+    schedule$retain <- as.integer(schedule$retain * multiplier)
+  } else if (!identical(method, "M03")) {
+    schedule$thin <- as.integer(schedule$thin * multiplier)
+  }
+  schedule
 }
 
 rqr_confirm_initialization <- function(generated, model, profile,
@@ -3844,8 +4009,11 @@ rqr_confirm_dynamic_fit <- function(
   } else {
     "fixed_rate"
   }
-  schedule <- rqr_confirm_dynamic_schedule(
-    contract, method, component_evolution_method, profile_name
+  transition_policy <- rqr_confirm_method_transition_policy(
+    contract, method
+  )
+  schedule <- rqr_confirm_method_schedule(
+    contract, method, profile_name
   )
   common <- list(
     y = generated$training_y,
@@ -3892,6 +4060,18 @@ rqr_confirm_dynamic_fit <- function(
         contract$config$frozen_tuning$
           component_scale_kernel$slice_max_steps,
       component_scale_slice_max_shrink =
+        contract$config$frozen_tuning$
+          component_scale_kernel$slice_max_shrink,
+      component_scale_joint_elliptical_slice =
+        isTRUE(transition_policy$joint_state_elliptical_slice),
+      component_scale_joint_elliptical_cycles = if (
+          isTRUE(transition_policy$joint_state_elliptical_slice)
+        ) {
+        transition_policy$joint_state_elliptical_cycles
+      } else {
+        1L
+      },
+      component_scale_joint_elliptical_max_shrink =
         contract$config$frozen_tuning$
           component_scale_kernel$slice_max_shrink
     ),
@@ -4009,7 +4189,8 @@ rqr_confirm_dynamic_fit <- function(
         isTRUE(fit$provenance$reproducibility_eligible),
       profile = profile_name,
       learned_lambda =
-        identical(method, "M11")
+        identical(method, "M11"),
+      transition_policy = transition_policy
     )
   )
 }
@@ -4369,9 +4550,17 @@ rqr_confirm_dynamic_quantile <- function(
     lower = (1 - generated$coverage_level) / 2,
     upper = 1 - (1 - generated$coverage_level) / 2
   )
-  schedule <- rqr_confirm_dynamic_quantile_schedule(
-    contract, profile_name
+  transition_policy <- rqr_confirm_method_transition_policy(
+    contract, "M02"
   )
+  schedule <- rqr_confirm_method_schedule(
+    contract, "M02", profile_name
+  )
+  diagnostic_thin <- if (length(schedule_override)) {
+    1L
+  } else {
+    transition_policy$transition_multiplier
+  }
   if (length(schedule_override)) {
     schedule[names(schedule_override)] <- schedule_override
   }
@@ -4460,6 +4649,7 @@ rqr_confirm_dynamic_quantile <- function(
     future_lower = pmin(raw_future[, 1L], raw_future[, 2L]),
     future_upper = pmax(raw_future[, 1L], raw_future[, 2L]),
     fits = fits, forecasts = forecasts,
+    diagnostic_thin = diagnostic_thin,
     diagnostics = list(
       dqlm_ind = all(vapply(
         fits, function(fit) isTRUE(fit$dqlm.ind), logical(1L)
@@ -4475,7 +4665,8 @@ rqr_confirm_dynamic_quantile <- function(
         "target_preserving_precomputed_mcmc_state",
       common_target_digest = common_target_digest,
       profile_changed_target = FALSE,
-      response_predictive_draws = FALSE
+      response_predictive_draws = FALSE,
+      transition_policy = transition_policy
     )
   )
 }
@@ -6283,6 +6474,16 @@ rqr_confirm_scalar_draws <- function(
     }
     raw_lower <- ordinate_draws(result$fits[[1L]])
     raw_upper <- ordinate_draws(result$fits[[2L]])
+    diagnostic_thin <- result$diagnostic_thin %||% 1L
+    diagnostic_thin <- rqr_confirm_strict_integer(
+      diagnostic_thin, "dynamic-quantile diagnostic thinning", 1L
+    )
+    retained_index <- seq.int(
+      from = diagnostic_thin, to = ncol(raw_lower),
+      by = diagnostic_thin
+    )
+    raw_lower <- raw_lower[, retained_index, drop = FALSE]
+    raw_upper <- raw_upper[, retained_index, drop = FALSE]
     lower <- pmin(raw_lower, raw_upper)
     upper <- pmax(raw_lower, raw_upper)
     values <- cbind(

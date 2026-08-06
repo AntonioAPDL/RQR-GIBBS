@@ -3,8 +3,10 @@
 # Fail-closed main RQR-DLM simulation runner.
 #
 # Output-15 authorizes implementation and reference work only.  The checked-in
-# config keeps both execution flags false, so sentinel-core and
-# execute-confirmatory stop before creating an output directory.
+# Config keeps both execution flags false, so sentinel-core and
+# execute-confirmatory stop before creating an output directory. The bounded
+# development-affected-wave mode is separately constrained to the exact S05
+# sentinel wave and can never authorize or feed scientific collection.
 
 arguments <- commandArgs(trailingOnly = TRUE)
 if (!length(arguments) %in% c(1L, 2L)) {
@@ -12,6 +14,7 @@ if (!length(arguments) %in% c(1L, 2L)) {
     paste(
       "Usage: 15_run_rqr_dlm_confirmatory_simulation.R",
       "<preflight|oracle-reference|sentinel-core|execute-confirmatory|",
+      "development-affected-wave|",
       "collect|audit> [output_dir]"
     ),
     call. = FALSE
@@ -20,7 +23,8 @@ if (!length(arguments) %in% c(1L, 2L)) {
 mode <- arguments[[1L]]
 modes <- c(
   "preflight", "oracle-reference", "sentinel-core",
-  "execute-confirmatory", "collect", "audit"
+  "execute-confirmatory", "development-affected-wave",
+  "collect", "audit"
 )
 if (!mode %in% modes) stop("Unknown confirmatory runner mode.",
                            call. = FALSE)
@@ -43,6 +47,23 @@ rqr_confirm_validate_contract(
   require_closed = FALSE
 )
 rqr_confirm_validate_budget(contract)
+development_affected_mode <- identical(
+  mode, "development-affected-wave"
+)
+if (development_affected_mode) {
+  rqr_confirm_validate_contract(contract, require_closed = TRUE)
+  if (!identical(
+      Sys.getenv("RQR_DLM_DEVELOPMENT_GATE_CONFIRM", unset = ""),
+      "TRUE"
+    ) ||
+      !isTRUE(contract$config$implementation_correction$
+        skewed_affected_wave_required_before_promotion)) {
+    stop(
+      "The bounded affected-wave development gate was not explicitly enabled.",
+      call. = FALSE
+    )
+  }
+}
 
 expected_commit <- Sys.getenv("RQR_EXPECTED_PRIMARY_COMMIT", unset = "")
 primary_attestation_path <- Sys.getenv(
@@ -812,7 +833,10 @@ if (mode == "oracle-reference") {
   write_json(contract_digests, "contract_digests.json")
 }
 
-if (mode %in% c("sentinel-core", "execute-confirmatory")) {
+if (mode %in% c(
+    "sentinel-core", "execute-confirmatory",
+    "development-affected-wave"
+  )) {
   if (!requireNamespace("rqrgibbs", quietly = TRUE) ||
       !requireNamespace("posterior", quietly = TRUE) ||
       is.null(primary_binding)) {
@@ -947,42 +971,50 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
   )
   git_status_code <- attr(git_status, "status")
   if (is.null(git_status_code)) git_status_code <- 0L
-  reviewed_implementation_commit <-
-    authorization$reviewed_implementation_commit %||% ""
-  observed_authorization <- list(
-    reviewed_implementation_commit =
-      reviewed_implementation_commit,
-    authorization_diff_only_flag =
-      rqr_confirm_flag_only_authorization_diff(
-        repo_root, reviewed_implementation_commit, expected_commit
-      ),
-    primary_worktree_clean =
-      identical(as.integer(git_status_code), 0L) &&
-      !length(git_status),
-    primary_runtime_tree_digest =
-      primary_binding$runtime_tree_digest,
-    preflight_artifact_hashes_sha256 =
-      rqr_confirm_sha256(preflight_hashes_path),
-    reference_artifact_hashes_sha256 =
-      rqr_confirm_sha256(reference_hashes_path),
-    seed_ledger_sha256 = rqr_confirm_sha256(ledger_path),
-    task_plan_sha256 = rqr_confirm_sha256(canonical_task_path),
-    exdqlm_source_sha256 =
-      exdqlm_attestation$source_package_sha256,
-    quantreg_source_sha256 =
-      quantreg_attestation$source_package_sha256,
-    reference_runtime_bundle_match = reference_runtime_bundle_match,
-    comparator_dependency_runtime_match =
-      comparator_dependency_runtime_match,
-    toolchain_match = toolchain_match,
-    protected_checkout_used =
-      isTRUE(exdqlm_attestation$protected_exdqlm_checkout_used) ||
-      isTRUE(quantreg_attestation$protected_exdqlm_checkout_used)
-  )
-  rqr_confirm_authorized(
-    contract, mode, expected_commit, authorization,
-    observed = observed_authorization
-  )
+  observed_authorization <- NULL
+  if (!development_affected_mode) {
+    reviewed_implementation_commit <-
+      authorization$reviewed_implementation_commit %||% ""
+    observed_authorization <- list(
+      reviewed_implementation_commit =
+        reviewed_implementation_commit,
+      authorization_diff_only_flag =
+        rqr_confirm_flag_only_authorization_diff(
+          repo_root, reviewed_implementation_commit, expected_commit
+        ),
+      primary_worktree_clean =
+        identical(as.integer(git_status_code), 0L) &&
+        !length(git_status),
+      primary_runtime_tree_digest =
+        primary_binding$runtime_tree_digest,
+      preflight_artifact_hashes_sha256 =
+        rqr_confirm_sha256(preflight_hashes_path),
+      reference_artifact_hashes_sha256 =
+        rqr_confirm_sha256(reference_hashes_path),
+      seed_ledger_sha256 = rqr_confirm_sha256(ledger_path),
+      task_plan_sha256 = rqr_confirm_sha256(canonical_task_path),
+      exdqlm_source_sha256 =
+        exdqlm_attestation$source_package_sha256,
+      quantreg_source_sha256 =
+        quantreg_attestation$source_package_sha256,
+      reference_runtime_bundle_match = reference_runtime_bundle_match,
+      comparator_dependency_runtime_match =
+        comparator_dependency_runtime_match,
+      toolchain_match = toolchain_match,
+      protected_checkout_used =
+        isTRUE(exdqlm_attestation$protected_exdqlm_checkout_used) ||
+        isTRUE(quantreg_attestation$protected_exdqlm_checkout_used)
+    )
+    rqr_confirm_authorized(
+      contract, mode, expected_commit, authorization,
+      observed = observed_authorization
+    )
+  } else if (!is.null(authorization)) {
+    stop(
+      "Development affected-wave validation must not use an authorization bundle.",
+      call. = FALSE
+    )
+  }
   tasks <- utils::read.csv(
     task_path, stringsAsFactors = FALSE, check.names = FALSE
   )
@@ -999,6 +1031,39 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
       "The authorization-bound task plan is not the complete canonical plan.",
       call. = FALSE
     )
+  }
+  if (development_affected_mode) {
+    worker_slot <- suppressWarnings(as.integer(Sys.getenv(
+      "RQR_DLM_DEVELOPMENT_WORKER_SLOT", unset = ""
+    )))
+    if (length(worker_slot) != 1L || is.na(worker_slot) ||
+        worker_slot < 1L || worker_slot > 8L) {
+      stop("A development worker slot in 1,...,8 is required.",
+           call. = FALSE)
+    }
+    affected_wave_id <-
+      "local_level_skewed_T200__target0200__sentinel"
+    affected <- rqr_confirm_wave_plan(
+      contract, planning = "maximum"
+    )
+    affected <- affected[
+      affected$wave_id == affected_wave_id &
+        affected$worker_slot == worker_slot,
+      , drop = FALSE
+    ]
+    expected_tasks <- canonical_tasks[match(
+      affected$replication_task_id,
+      canonical_tasks$replication_task_id
+    ), , drop = FALSE]
+    rownames(expected_tasks) <- rownames(tasks) <- NULL
+    if (!nrow(affected) || anyNA(expected_tasks$replication_task_id) ||
+        !all(affected$embedded_sentinel) ||
+        !identical(tasks, expected_tasks)) {
+      stop(
+        "The development task file is not one exact affected-wave worker slot.",
+        call. = FALSE
+      )
+    }
   }
   if (mode == "sentinel-core" &&
       any(!tasks$embedded_sentinel)) {
@@ -1831,6 +1896,9 @@ run_manifest <- list(
   generalized_bayes = TRUE,
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
+  development_validation = development_affected_mode,
+  development_outputs_reusable = FALSE,
+  scientific_promotion = FALSE,
   status = stage_status
 )
 write_json(run_manifest, "run_manifest.json")

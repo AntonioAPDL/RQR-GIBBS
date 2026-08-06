@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   implementation_correction = list(
-    schema_version = "rqrgibbs_dlm_main_correction/1.14.0",
+    schema_version = "rqrgibbs_dlm_main_correction/1.15.0",
     failed_authorization_commit =
       "b8b7748ab181a006611b602f64d4edf5be591de6",
     failed_wave_id =
@@ -164,7 +164,7 @@ rqr_dlm_main_simulation <- list(
     skewed_wave_diagnostics_used_for_transition_correction = TRUE,
     skewed_wave_fresh_relaunch_required = TRUE,
     skewed_wave_recovery_status =
-      "joint_elliptical_development_comparison_pending",
+      "joint_elliptical_selected_affected_wave_pending",
     skewed_whole_scan_candidate_source_commit =
       "5086fac191255a79514475f6dbacddfae4c328ed",
     skewed_whole_scan_candidate_jobs = 93L,
@@ -188,10 +188,40 @@ rqr_dlm_main_simulation <- list(
       "879c5c7b5672aadbb9f8d491e96c4412f35e57158be30b65ac34489a9c001f32",
     skewed_joint_elliptical_target_change = FALSE,
     skewed_joint_elliptical_outputs_reusable = FALSE,
+    skewed_joint_elliptical_candidate_source_commit =
+      "2901770ec25fb6042cbc2c8227478a31bdb0dc1a",
+    skewed_joint_elliptical_candidate_jobs = 44L,
+    skewed_joint_elliptical_candidate_diagnostics = 932L,
+    skewed_joint_elliptical_candidate_failed_diagnostics = 22L,
+    skewed_joint_elliptical_selected_methods = c("M10", "M11"),
+    skewed_joint_elliptical_unresolved_methods = character(),
+    skewed_joint_elliptical_selection = list(
+      M10 = list(
+        candidate = "joint_ess1_x1", transition_multiplier = 1L,
+        joint_elliptical_cycles = 1L
+      ),
+      M11 = list(
+        candidate = "joint_ess1_x2", transition_multiplier = 2L,
+        joint_elliptical_cycles = 1L
+      )
+    ),
+    skewed_joint_elliptical_candidate_closeout_path = paste0(
+      "docs/audits/rqr_dlm_joint_elliptical_candidate_closeout_20260805/",
+      "closeout.json"
+    ),
+    skewed_joint_elliptical_candidate_closeout_sha256 =
+      "ffbd98d36afce2a6a64352e75d7eca17c48074435c744d9a52f4916b8ddf4a26",
+    skewed_joint_elliptical_candidate_artifact_manifest_sha256 =
+      "6551e96f940dd0ddccf6ea3adc6e42902162cf3d288fd802a1c911fc53679b02",
+    skewed_joint_elliptical_candidate_decisions_sha256 =
+      "ff5395261176a06287af460a1beb243f494bc03035e4c92609e05ccb10d08ad0",
+    skewed_joint_elliptical_development_outputs_reused = FALSE,
+    skewed_joint_elliptical_scientific_metrics_used = FALSE,
+    skewed_affected_wave_required_before_promotion = TRUE,
     correction_budget_path =
       "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
     correction_budget_sha256 =
-      "719c8260abb19b2dd0c06ba584bbe4bea79d5dfe423690212b55a334687db64b",
+      "fdee8c042a7ebcc9a1a9c1f8d704be530487fcbc098cdc0572f09daadfd9cdb9",
     target_prior_seed_or_diagnostic_threshold_changed = FALSE,
     mcmc_transition_and_fixed_role_schedule_changed = TRUE
   ),
@@ -199,7 +229,8 @@ rqr_dlm_main_simulation <- list(
   confirmatory_execution_authorized = FALSE,
   implemented_modes = c(
     "preflight", "oracle-reference", "sentinel-core",
-    "execute-confirmatory", "collect", "audit"
+    "execute-confirmatory", "development-affected-wave",
+    "collect", "audit"
   ),
   review_contract = list(
     review = "ChatGPT Pro Output-15",
@@ -343,6 +374,56 @@ rqr_dlm_main_simulation <- list(
       slice_max_steps = 100L,
       slice_max_shrink = 1000L,
       target_change = FALSE
+    ),
+    method_transition_policies = list(
+      M01 = list(
+        transition_multiplier = 2L,
+        joint_state_elliptical_slice = FALSE,
+        joint_state_elliptical_cycles = 0L,
+        selected_candidate = "whole_scan_x2"
+      ),
+      M02 = list(
+        transition_multiplier = 2L,
+        joint_state_elliptical_slice = FALSE,
+        joint_state_elliptical_cycles = 0L,
+        selected_candidate = "whole_scan_x2"
+      ),
+      M06 = list(
+        transition_multiplier = 2L,
+        joint_state_elliptical_slice = FALSE,
+        joint_state_elliptical_cycles = 0L,
+        selected_candidate = "whole_scan_x2"
+      ),
+      M07 = list(
+        transition_multiplier = 1L,
+        joint_state_elliptical_slice = FALSE,
+        joint_state_elliptical_cycles = 0L,
+        selected_candidate = "unchanged"
+      ),
+      M08 = list(
+        transition_multiplier = 1L,
+        joint_state_elliptical_slice = FALSE,
+        joint_state_elliptical_cycles = 0L,
+        selected_candidate = "unchanged"
+      ),
+      M09 = list(
+        transition_multiplier = 2L,
+        joint_state_elliptical_slice = FALSE,
+        joint_state_elliptical_cycles = 0L,
+        selected_candidate = "whole_scan_x2"
+      ),
+      M10 = list(
+        transition_multiplier = 1L,
+        joint_state_elliptical_slice = TRUE,
+        joint_state_elliptical_cycles = 1L,
+        selected_candidate = "joint_ess1_x1"
+      ),
+      M11 = list(
+        transition_multiplier = 2L,
+        joint_state_elliptical_slice = TRUE,
+        joint_state_elliptical_cycles = 1L,
+        selected_candidate = "joint_ess1_x2"
+      )
     ),
     fixed_design_replica_exchange = list(
       enabled = TRUE,

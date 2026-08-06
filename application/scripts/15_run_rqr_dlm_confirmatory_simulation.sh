@@ -13,7 +13,7 @@ fi
 mode="$1"
 output_dir="$2"
 case "$mode" in
-  preflight|oracle-reference|sentinel-core|execute-confirmatory|collect|audit)
+  preflight|oracle-reference|sentinel-core|execute-confirmatory|development-affected-wave|collect|audit)
     ;;
   *)
     echo "Unknown mode: $mode" >&2
