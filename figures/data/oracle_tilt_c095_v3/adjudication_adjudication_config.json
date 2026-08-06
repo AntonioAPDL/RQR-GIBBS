@@ -1,0 +1,82 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_dlm_sh_adjudication_config/1.1.0",
+  "execution_authorized": true,
+  "execution_attempt": 2,
+  "maximum_execution_attempts": 2,
+  "statistical_attempt": 1,
+  "maximum_statistical_attempts": 1,
+  "family": "dlm",
+  "target": "SH",
+  "base_config": "application/config/oracle_tilt_c095_publication_v3_20260801.json",
+  "base_source_commit": "99a088fbdd7c3f3ed18f99197294038f62dbfe41",
+  "base_config_sha256": "585e7258451690c94a153fad50fc6a72a60137bca6447e1b851050b4ed8ca5d7",
+  "base_runtime_tree_digest": "c5a0cbffb384b777af873dfadae77d6a0909af6387c9f6ca001147f6ded568c9",
+  "base_dgp_digest": "0080f129e651bc8228597f96ff077d4b6fca62a79dbf741b9c80e53605371e55",
+  "base_target_digest": "5e310b3765acbe996442cc71b16bd3e7f904768b113cc205fcf6cfd6a004ccad",
+  "baseline_manifest": "application/config/oracle_tilt_c095_dlm_sh_baseline_manifest_20260805.csv",
+  "baseline_source_state_sha256": "7c1e3de29e8f70c36e90451c1616d08f88168aade6dc6c75c11b22f2e68bddf6",
+  "baseline_runtime_binding_sha256": "5e75f62c1e10d1f892a293ec5a621eeeec3a1191b7089aa35f6981c22ec32931",
+  "baseline_cell_receipt_sha256": "9bc4a70097de33bf2c9650ad3f6cafbe01dfd1b049396751968a9ca01c6f83ff",
+  "baseline_cell_manifest_sha256": "0ff701efc8a9f3ace81a2f14f7599ddd3c6fb2264c03184273e00a7be0ef37f9",
+  "baseline_wrapper_manifest_sha256": "d7af04556b7350535a77b279eb488b13054f9397caf640f3a4d47fd85dd35849",
+  "baseline_retained_draws": 6000,
+  "n_chains": 5,
+  "workers": 2,
+  "mcmc_override": {
+    "n_burn": 2500,
+    "n_mcmc": 12000,
+    "thin": 1,
+    "backend": "cpp",
+    "store_state_draws": false,
+    "store_latent_draws": false,
+    "verbose": false
+  },
+  "prefix_contract": {
+    "bitwise_required": true,
+    "objects": [
+      "lower_draws",
+      "upper_draws",
+      "scalar_draws"
+    ]
+  },
+  "software_recovery_contract": {
+    "invalidated_execution_source_commit": "3ac3a05db420bf17cdeffbb41f0b6b8947b373f4",
+    "failure_class": "prepublication_worker_contract_validation_defect",
+    "invalidated_wrapper_manifest_sha256": "2e41a28dab0d201e34672b05e47a5a2045a2511367bb8bb6189bfa23b4732f61",
+    "invalidated_runner_stderr_sha256": "2e65a88ce504ee2625763decf946ca74833f68cc62c3f7dbdeffb7d7de246094",
+    "invalidated_resource_summary_sha256": "65059192c22e7aaf4b67b1db5a27c31f402728b4b41878589ca7dffcf8c69b8b",
+    "invalidated_wrapper_closeout_sha256": "d86189c7d1bd349221555dc0da22cbedcc54dc78ec0c81fd831677feaf2ce04b",
+    "invalidated_worker_artifact_count": 0,
+    "scientific_contract_changed": false,
+    "failed_execution_is_statistical_attempt": false,
+    "replacement_is_automatic_rerun": false
+  },
+  "staging_contract": {
+    "acceptance_chain": 1,
+    "remaining_chains": [
+      2,
+      3,
+      4,
+      5
+    ],
+    "acceptance_prefix_required": true,
+    "fail_before_remaining_on_acceptance_failure": true,
+    "all_workers_persist_before_summary": true
+  },
+  "decision_contract": {
+    "strict_thresholds_unchanged": true,
+    "strict_pass_required_for_automatic_promotion": true,
+    "qualified_descriptive_is_not_a_strict_pass": true,
+    "no_additional_automatic_rerun": true,
+    "no_gate_relaxation": true,
+    "no_model_or_dgp_retuning": true
+  },
+  "interpretation": {
+    "response_likelihood": false,
+    "response_predictive_draws": false,
+    "population_oracle_tilt": true,
+    "cornish_fisher_used": false,
+    "simulation_study": false,
+    "single_dataset_adjudication": true
+  }
+}

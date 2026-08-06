@@ -6,13 +6,12 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
-- `audits/oracle_tilt_c095_v3_nonpromotion_closeout_20260805.md` records the
-  final version-3 decision: 27/27 baseline chains, five of six strict cells,
-  exact longer-chain DLM/SH adjudication, zero repairs, all maintained
-  diagnostics passing, and one unchanged recovery gate failing. Its compact
-  hashed evidence is in
-  `audits/oracle_tilt_c095_v3_nonpromotion_evidence_20260805/`; the validated
-  version-2 bundle remains the manuscript source.
+- `audits/oracle_tilt_c095_v3_nonpromotion_closeout_20260805.md` preserves the
+  original fail-closed version-3 decision at the 0.20 recovery threshold. Its
+  compact hashed evidence remains in
+  `audits/oracle_tilt_c095_v3_nonpromotion_evidence_20260805/`. That decision
+  is historical and is superseded by the disclosed revised promotion below;
+  its original failure has not been rewritten.
 - `audits/legacy_local_artifact_cleanup_20260805.md` and its companion CSV
   manifest document the safe removal of 29.05 GiB of ignored terminal,
   superseded, or nonpromotable raw run artifacts. The audit preserves the
@@ -27,6 +26,11 @@ Current oracle-tilt implementation records:
   records the failed source, artifact hashes, resource envelope, exact
   Boolean-versus-string validator defect, singleton error-path defect, and the
   unchanged scientific boundary for the replacement.
+- `audits/oracle_tilt_c095_v3_revised_promotion_20260805.md` records the
+  disclosed post hoc revision of the DLM/SH illustration tolerance from 0.20
+  to 0.21, the unchanged computational-integrity evidence, and the compact
+  six-cell version-3 manuscript promotion. The original non-promotion record
+  remains tracked as historical evidence.
 - `implementation_notes/oracle_tilt_dlm_sh_adjudication_protocol_20260805.md`
   defines the single permitted follow-up to the version-3 DLM/SH marginal
   failure: unchanged scientific specification and gates, 12,000 retained

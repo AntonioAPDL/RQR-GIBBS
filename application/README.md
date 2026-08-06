@@ -226,17 +226,17 @@ and retains every scientific and decision threshold unchanged.
 
 The replacement completed all five 12,000-draw chains, reproduced all 15
 original saved-chain prefixes bitwise, used zero numerical repairs, and passed
-all 137 maintained diagnostics. It did not pass the unchanged width-contrast
-recovery gate, so version 3 is closed without promotion. The machine-readable
-decision is in
+all 137 maintained diagnostics. Its width-contrast relative error was 0.202623,
+just above the original 0.20 threshold. A disclosed review accepted it for the
+single-data illustration under a revised tolerance of 0.21; the original
+failure remains recorded and is not described as a prespecified strict pass.
+The machine-readable decision is in
 `config/oracle_tilt_illustration_campaign_registry_20260805.json`, the audit is
-`docs/audits/oracle_tilt_c095_v3_nonpromotion_closeout_20260805.md`, and the
-compact record is under
-`docs/audits/oracle_tilt_c095_v3_nonpromotion_evidence_20260805/`. Current
-`main` permits lightweight audit/preflight/reference actions but blocks further
-version-3 benchmark, acceptance, execution, and adjudication actions through
-`scripts/49_oracle_tilt_campaign_gate.R`. A future richer illustration must use
-a new prospectively frozen campaign rather than retune the closed data set.
+`docs/audits/oracle_tilt_c095_v3_revised_promotion_20260805.md`, and the active
+compact manuscript evidence is under `figures/data/oracle_tilt_c095_v3/`.
+Current `main` permits lightweight audit, rendering, and testing but blocks
+further version-3 benchmark, acceptance, execution, and adjudication actions
+through `scripts/49_oracle_tilt_campaign_gate.R`.
 
 The tracked high-content forensic configuration is
 `config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.

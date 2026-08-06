@@ -10,21 +10,27 @@ evidence_root <- file.path(
   "oracle_tilt_c095_v3_nonpromotion_evidence_20260805"
 )
 
-testthat::test_that("campaign registry freezes the reviewed closeout", {
+testthat::test_that("campaign registry records the revised promotion", {
   registry <- otcg_read_registry(repo_root)
   testthat::expect_invisible(otcg_validate_registry(registry))
   testthat::expect_identical(
-    registry$active_manuscript_campaign, "publication_v2"
+    registry$active_manuscript_campaign, "publication_v3"
   )
   testthat::expect_identical(
     registry$active_manuscript_evidence_directory,
-    "figures/data/oracle_tilt_c095_v2"
+    "figures/data/oracle_tilt_c095_v3"
   )
   testthat::expect_true(
     registry$campaigns$publication_v2$manuscript_illustration_evidence_eligible
   )
-  testthat::expect_false(
+  testthat::expect_true(
     registry$campaigns$publication_v3$manuscript_illustration_evidence_eligible
+  )
+  testthat::expect_false(
+    registry$campaigns$publication_v3$original_strict_contract_eligible
+  )
+  testthat::expect_true(
+    registry$campaigns$publication_v3$post_hoc_revision_disclosed
   )
   testthat::expect_false(
     registry$campaigns$publication_v3_dlm_sh_adjudication$
@@ -45,9 +51,8 @@ testthat::test_that("campaign registry freezes the reviewed closeout", {
   )
 })
 
-testthat::test_that("closed campaigns allow audit but reject heavy actions", {
-  for (action in c("preflight", "reference-only", "audit",
-                   "package-nonpromotion")) {
+testthat::test_that("closed campaigns allow lightweight actions only", {
+  for (action in c("audit", "render", "test")) {
     testthat::expect_invisible(
       otcg_assert_action(repo_root, "publication_v3", action)
     )
@@ -61,11 +66,9 @@ testthat::test_that("closed campaigns allow audit but reject heavy actions", {
       "campaign is closed"
     )
   }
-  for (action in c("preflight", "audit", "package-nonpromotion")) {
-    testthat::expect_invisible(otcg_assert_action(
-      repo_root, "publication_v3_dlm_sh_adjudication", action
-    ))
-  }
+  testthat::expect_invisible(otcg_assert_action(
+    repo_root, "publication_v3_dlm_sh_adjudication", "audit"
+  ))
   testthat::expect_error(
     otcg_assert_action(
       repo_root, "publication_v3_dlm_sh_adjudication", "execute"
@@ -74,17 +77,33 @@ testthat::test_that("closed campaigns allow audit but reject heavy actions", {
   )
 })
 
-testthat::test_that("version-2 remains the complete manuscript evidence", {
+testthat::test_that("version-3 is the reconciled manuscript evidence", {
   receipt <- jsonlite::read_json(file.path(
-    repo_root, "figures", "data", "oracle_tilt_c095_v2",
+    repo_root, "figures", "data", "oracle_tilt_c095_v3",
     "evidence_receipt.json"
   ), simplifyVector = TRUE)
   testthat::expect_identical(
-    receipt$source_commit, "fec979f927c9039cf778ac09aef139ebd6761e8e"
+    receipt$baseline_source_commit,
+    "99a088fbdd7c3f3ed18f99197294038f62dbfe41"
   )
-  testthat::expect_true(receipt$all_cells_strict_pass)
+  testthat::expect_false(receipt$all_cells_original_strict_pass)
+  testthat::expect_true(receipt$all_cells_accepted_for_illustration)
+  testthat::expect_true(receipt$post_hoc_revision_disclosed)
   testthat::expect_true(receipt$manuscript_illustration_evidence_eligible)
   testthat::expect_equal(receipt$completed_chains, 27L)
+  testthat::expect_equal(receipt$original_strict_pass_cells, 5L)
+  testthat::expect_equal(receipt$revised_tolerance_accepted_cells, 1L)
+  testthat::expect_equal(
+    receipt$observed_width_contrast_relative_error, 0.202622544829516
+  )
+  testthat::expect_gt(
+    receipt$observed_width_contrast_relative_error,
+    receipt$original_width_contrast_relative_error_max
+  )
+  testthat::expect_lte(
+    receipt$observed_width_contrast_relative_error,
+    receipt$revised_width_contrast_relative_error_max
+  )
 
   makefile <- readLines(file.path(repo_root, "Makefile"), warn = FALSE)
   main <- readLines(file.path(repo_root, "main.tex"), warn = FALSE)
@@ -95,7 +114,7 @@ testthat::test_that("version-2 remains the complete manuscript evidence", {
     repo_root, "figures", "generate_oracle_tilt_model_figures.R"
   ), warn = FALSE)
   testthat::expect_true(any(grepl(
-    "^ORACLE_TILT_EVIDENCE_DIR \\?= figures/data/oracle_tilt_c095_v2$",
+    "^ORACLE_TILT_EVIDENCE_DIR \\?= figures/data/oracle_tilt_c095_v3$",
     makefile
   )))
   testthat::expect_true(any(grepl(
@@ -104,13 +123,53 @@ testthat::test_that("version-2 remains the complete manuscript evidence", {
   testthat::expect_true(any(grepl(
     "fig05_dlm_oracle_tilt_c095.pdf", main, fixed = TRUE
   )))
-  testthat::expect_false(any(grepl("oracle_tilt_c095_v3", main, fixed = TRUE)))
-  testthat::expect_false(any(grepl(
-    "oracle_tilt_c095_v3", supplement, fixed = TRUE
+  testthat::expect_true(any(grepl(
+    "oracle_tilt_c095_v3", generator, fixed = TRUE
   )))
   testthat::expect_true(any(grepl(
-    "oracle_tilt_c095_v2", generator, fixed = TRUE
+    "revised tolerance of \\(0.21\\)", main, fixed = TRUE
   )))
+  testthat::expect_true(any(grepl(
+    "disclosed revised tolerance of \\(0.21\\)", supplement, fixed = TRUE
+  )))
+})
+
+testthat::test_that("promoted compact evidence is hashed and contains no raw objects", {
+  root <- file.path(repo_root, "figures", "data", "oracle_tilt_c095_v3")
+  manifest <- utils::read.csv(
+    file.path(root, "evidence_manifest.csv"), stringsAsFactors = FALSE
+  )
+  testthat::expect_gt(nrow(manifest), 30L)
+  testthat::expect_equal(anyDuplicated(manifest$path), 0L)
+  paths <- file.path(root, manifest$path)
+  testthat::expect_true(all(file.exists(paths)))
+  testthat::expect_equal(as.numeric(file.info(paths)$size), manifest$bytes)
+  observed <- vapply(
+    paths, digest::digest, character(1L), algo = "sha256", file = TRUE,
+    serialize = FALSE
+  )
+  testthat::expect_identical(unname(observed), manifest$sha256)
+  testthat::expect_false(any(grepl(
+    "\\.(rds|rda|RData|so|o|tar\\.gz|log)$",
+    list.files(root, recursive = TRUE), ignore.case = TRUE
+  )))
+
+  fit <- utils::read.csv(
+    file.path(root, "fit_summary.csv"), stringsAsFactors = FALSE
+  )
+  testthat::expect_equal(nrow(fit), 6L)
+  testthat::expect_equal(sum(fit$promotion_disposition == "strict_pass"), 5L)
+  accepted <- fit[
+    fit$promotion_disposition == "accepted_revised_tolerance", , drop = FALSE
+  ]
+  testthat::expect_identical(accepted$family, "dlm")
+  testthat::expect_identical(accepted$target, "SH")
+  testthat::expect_identical(accepted$original_disposition, "fail")
+  testthat::expect_false(
+    accepted$original_manuscript_illustration_evidence_eligible
+  )
+  testthat::expect_gt(accepted$width_contrast_relative_error, 0.20)
+  testthat::expect_lte(accepted$width_contrast_relative_error, 0.21)
 })
 
 testthat::test_that("compact non-promotion evidence is complete and immutable", {

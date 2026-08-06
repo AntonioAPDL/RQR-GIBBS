@@ -1,0 +1,4 @@
+"target","u","lower_innovation","upper_innovation","width_innovation","retained_mean_innovation","delta_innovation","content","coverage_level","law_family","law_tau","law_standardized","oracle_construction","uses_cornish_fisher"
+"RQR",0.0120825038692552,-3.34005829130687,1.13092051114993,4.4709788024568,0,0,0.95,0.95,"asymmetric_laplace",0.8,TRUE,"population_quantile_truncated_moment",FALSE
+"ET",0.025,-2.63465081847657,1.23194552914683,3.8665963476234,0.0532578041064861,0.0532578041064861,0.95,0.95,"asymmetric_laplace",0.8,TRUE,"population_quantile_truncated_moment",FALSE
+"SH",0.0399999991286914,-2.17868034365507,1.45417865338459,3.63285899703966,0.108985766746848,0.108985766746848,0.95,0.95,"asymmetric_laplace",0.8,TRUE,"population_quantile_truncated_moment",FALSE

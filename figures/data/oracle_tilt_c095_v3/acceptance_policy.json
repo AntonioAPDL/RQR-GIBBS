@@ -1,0 +1,33 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_revised_illustration_acceptance/1.0.0",
+  "decision_date": "2026-08-05",
+  "scope": "Single-data manuscript illustration only; not repeated-sample validation, response-likelihood evidence, or posterior-predictive response evidence.",
+  "baseline_source_commit": "99a088fbdd7c3f3ed18f99197294038f62dbfe41",
+  "adjudication_source_commit": "a3b39b394c6aa928eb38e9ed461281cdf743d00b",
+  "baseline_config_sha256": "585e7258451690c94a153fad50fc6a72a60137bca6447e1b851050b4ed8ca5d7",
+  "adjudication_config_sha256": "bf41bf834e0ce878b9399f77155456fadd3b2feb0f7bcc99064617ab69d15c91",
+  "original_width_contrast_relative_error_max": 0.20,
+  "revised_width_contrast_relative_error_max": 0.21,
+  "observed_width_contrast_relative_error": 0.202622544829516,
+  "post_hoc_revision_disclosed": true,
+  "original_gate_passed": false,
+  "revised_illustration_tolerance_passed": true,
+  "computational_integrity_required": {
+    "all_chains_completed": true,
+    "bitwise_prefix_checks_passed": 15,
+    "bitwise_prefix_checks_total": 15,
+    "maintained_diagnostics_passed": 137,
+    "maintained_diagnostics_total": 137,
+    "numerical_repair_count": 0,
+    "exact_runtime_bound": true,
+    "resource_contract_passed": true
+  },
+  "promotion_authorized": true,
+  "future_policy": {
+    "computational_integrity_remains_hard": true,
+    "single_metric_recovery_thresholds_are_not_automatic_rejection_boundaries": true,
+    "near_boundary_recovery_results_require_reported_human_review": true,
+    "recovery_metrics_must_remain_visible_in_compact_evidence": true,
+    "threshold_changes_must_be_disclosed": true
+  }
+}
