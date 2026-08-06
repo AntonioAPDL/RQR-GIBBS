@@ -6,6 +6,12 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `implementation_notes/oracle_tilt_c095_v4_seed_screen_protocol_20260805.md`
+  freezes the prospective best-of-three single-data illustration screen. It
+  requires one selected candidate per model family shared across RQR, ET, and
+  SH; named and digested random streams; 18 single-worker cells; deterministic
+  truth-based ranking; exact-runtime validation; and a separate review before
+  any flag-only launch authorization or manuscript promotion.
 - `audits/oracle_tilt_c095_v3_nonpromotion_closeout_20260805.md` preserves the
   original fail-closed version-3 decision at the 0.20 recovery threshold. Its
   compact hashed evidence remains in

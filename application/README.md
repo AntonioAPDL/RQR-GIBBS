@@ -88,6 +88,22 @@ layer for the standalone article.
   the remaining cells;
   **scripts/45_oracle_tilt_v3_health.sh** reports read-only cell, chain,
   process, RSS, time, and storage progress.
+- **scripts/52_run_oracle_tilt_publication_v4.R** and
+  **scripts/52_oracle_tilt_publication_v4_utils.R** implement a prospectively
+  frozen three-candidate illustration screen without changing closed V3
+  evidence. Each candidate contains target-shared fixed-design and DLM data,
+  named L'Ecuyer streams, 18 family/target/candidate cells, and 81 unique chain
+  seeds. **scripts/53_orchestrate_oracle_tilt_v4_execute.sh** starts the 18
+  single-worker cells concurrently while chains remain sequential within each
+  process. **scripts/53_run_oracle_tilt_publication_v4.sh** enforces exact
+  runtime binding, process-group limits, headroom, and fail-closed execution.
+  The production-shape concurrency contract is exercised separately by
+  **scripts/54_run_oracle_tilt_v4_resource_rehearsal.sh**. Read-only health,
+  deterministic family-level selector replay, compact review packaging, and
+  the disabled overnight launcher are provided by scripts 55--57. The tracked
+  V4 config has `execution_authorized=false`; no source target launches the
+  production grid until an independently reviewed flag-only commit. See
+  `docs/implementation_notes/oracle_tilt_c095_v4_seed_screen_protocol_20260805.md`.
 
 Install and run the native gates from the repository root:
 

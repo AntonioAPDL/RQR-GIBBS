@@ -31,8 +31,13 @@ ORACLE_TILT_DLM_SH_ADJUDICATION_RUN_DIR ?=
 ORACLE_TILT_DLM_SH_BASELINE_DIR ?=
 ORACLE_TILT_V3_NONPROMOTION_EVIDENCE_DIR ?= docs/audits/oracle_tilt_c095_v3_nonpromotion_evidence_20260805
 ORACLE_TILT_V3_ACCEPTANCE_POLICY ?= application/config/oracle_tilt_c095_v3_revised_illustration_acceptance_20260805.json
+ORACLE_TILT_V4_CONFIG ?= application/config/oracle_tilt_c095_publication_v4_seed_screen_20260805.json
+ORACLE_TILT_V4_DIR ?= application/outputs/oracle_tilt_c095_publication_v4_seed_screen
+ORACLE_TILT_V4_RUN_DIR ?=
+ORACLE_TILT_V4_SELECTOR_DIR ?=
+ORACLE_TILT_V4_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095_v4_selected
 
-.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication test-oracle-tilt-publication-v2 test-oracle-tilt-publication-v3 test-oracle-tilt-dlm-sh-adjudication test-oracle-tilt-campaign-closeout test-oracle-tilt-v2-workflow oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence oracle-tilt-v2-preflight oracle-tilt-v2-reference oracle-tilt-v2-benchmark oracle-tilt-v2-execute oracle-tilt-v2-package-evidence oracle-tilt-v3-preflight oracle-tilt-v3-reference oracle-tilt-v3-benchmark oracle-tilt-v3-resource-rehearsal oracle-tilt-v3-acceptance oracle-tilt-v3-execute oracle-tilt-v3-package-evidence oracle-tilt-v3-package-nonpromotion-evidence oracle-tilt-v3-promote-revised-evidence oracle-tilt-dlm-sh-adjudication-preflight oracle-tilt-dlm-sh-adjudication-execute oracle-tilt-dlm-sh-reconcile-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication test-oracle-tilt-publication-v2 test-oracle-tilt-publication-v3 test-oracle-tilt-publication-v4 test-oracle-tilt-dlm-sh-adjudication test-oracle-tilt-campaign-closeout test-oracle-tilt-v2-workflow oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence oracle-tilt-v2-preflight oracle-tilt-v2-reference oracle-tilt-v2-benchmark oracle-tilt-v2-execute oracle-tilt-v2-package-evidence oracle-tilt-v3-preflight oracle-tilt-v3-reference oracle-tilt-v3-benchmark oracle-tilt-v3-resource-rehearsal oracle-tilt-v3-acceptance oracle-tilt-v3-execute oracle-tilt-v3-package-evidence oracle-tilt-v3-package-nonpromotion-evidence oracle-tilt-v3-promote-revised-evidence oracle-tilt-v4-preflight oracle-tilt-v4-reference oracle-tilt-v4-benchmark oracle-tilt-v4-resource-rehearsal oracle-tilt-v4-launch oracle-tilt-v4-select oracle-tilt-v4-package-evidence oracle-tilt-dlm-sh-adjudication-preflight oracle-tilt-dlm-sh-adjudication-execute oracle-tilt-dlm-sh-reconcile-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
@@ -112,6 +117,9 @@ test-oracle-tilt-publication-v2: package-install
 test-oracle-tilt-publication-v3: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-publication-v3.R", reporter = "summary")'
 
+test-oracle-tilt-publication-v4: package-install
+	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-publication-v4.R", reporter = "summary")'
+
 test-oracle-tilt-dlm-sh-adjudication: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-dlm-sh-adjudication.R", reporter = "summary")'
 
@@ -190,6 +198,29 @@ oracle-tilt-v3-promote-revised-evidence:
 	@test -n "$(strip $(ORACLE_TILT_DLM_SH_BASELINE_DIR))" || { echo "Set ORACLE_TILT_DLM_SH_BASELINE_DIR." >&2; exit 64; }
 	@test -n "$(strip $(ORACLE_TILT_DLM_SH_ADJUDICATION_RUN_DIR))" || { echo "Set ORACLE_TILT_DLM_SH_ADJUDICATION_RUN_DIR." >&2; exit 64; }
 	$(R) application/scripts/51_promote_oracle_tilt_v3_revised_evidence.R --baseline-dir=$(ORACLE_TILT_DLM_SH_BASELINE_DIR) --adjudication-dir=$(ORACLE_TILT_DLM_SH_ADJUDICATION_RUN_DIR) --policy=$(ORACLE_TILT_V3_ACCEPTANCE_POLICY) --output-dir=$(ORACLE_TILT_V3_EVIDENCE_DIR) --replace
+
+oracle-tilt-v4-preflight:
+	RQR_ORACLE_TILT_V4_CONFIG=$(ORACLE_TILT_V4_CONFIG) RQR_ORACLE_TILT_V4_OUTPUT_DIR=$(ORACLE_TILT_V4_DIR)/preflight application/scripts/53_run_oracle_tilt_publication_v4.sh preflight
+
+oracle-tilt-v4-reference:
+	RQR_ORACLE_TILT_V4_CONFIG=$(ORACLE_TILT_V4_CONFIG) RQR_ORACLE_TILT_V4_OUTPUT_DIR=$(ORACLE_TILT_V4_DIR)/reference-only application/scripts/53_run_oracle_tilt_publication_v4.sh reference-only
+
+oracle-tilt-v4-benchmark:
+	RQR_ORACLE_TILT_V4_CONFIG=$(ORACLE_TILT_V4_CONFIG) RQR_ORACLE_TILT_V4_OUTPUT_DIR=$(ORACLE_TILT_V4_DIR)/benchmark application/scripts/53_run_oracle_tilt_publication_v4.sh benchmark
+
+oracle-tilt-v4-resource-rehearsal:
+	RQR_ORACLE_TILT_V4_CONFIG=$(ORACLE_TILT_V4_CONFIG) RQR_ORACLE_TILT_V4_OUTPUT_DIR=$(ORACLE_TILT_V4_DIR)/resource-rehearsal application/scripts/53_run_oracle_tilt_publication_v4.sh resource-rehearsal
+
+oracle-tilt-v4-launch:
+	application/scripts/55_launch_oracle_tilt_v4_overnight.sh
+
+oracle-tilt-v4-select:
+	@test -n "$(strip $(ORACLE_TILT_V4_RUN_DIR))" || { echo "Set ORACLE_TILT_V4_RUN_DIR to one completed V4 execute run." >&2; exit 64; }
+	$(R) application/scripts/56_select_oracle_tilt_v4_candidates.R --run-dir=$(ORACLE_TILT_V4_RUN_DIR) $(if $(strip $(ORACLE_TILT_V4_SELECTOR_DIR)),--output-dir=$(ORACLE_TILT_V4_SELECTOR_DIR),)
+
+oracle-tilt-v4-package-evidence:
+	@test -n "$(strip $(ORACLE_TILT_V4_RUN_DIR))" || { echo "Set ORACLE_TILT_V4_RUN_DIR to one completed V4 execute run." >&2; exit 64; }
+	$(R) application/scripts/57_package_oracle_tilt_v4_evidence.R --run-dir=$(ORACLE_TILT_V4_RUN_DIR) --output-dir=$(ORACLE_TILT_V4_EVIDENCE_DIR) --replace
 
 oracle-tilt-dlm-sh-adjudication-preflight:
 	@test -n "$(strip $(ORACLE_TILT_DLM_SH_BASELINE_DIR))" || { echo "Set ORACLE_TILT_DLM_SH_BASELINE_DIR." >&2; exit 64; }
