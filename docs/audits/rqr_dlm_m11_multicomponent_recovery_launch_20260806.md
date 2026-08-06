@@ -74,6 +74,16 @@ written through a temporary file and renamed atomically.  Zero published fit
 objects during that setup phase is therefore expected and is not evidence of
 a stalled or stopped launch.
 
+The eight worker children subsequently started and remained CPU-bound.  The
+authenticated predecessor S10 guard required 9,841--10,085 seconds per M11
+chain and 3,769--3,961 seconds per M10 chain.  Because the first eight fixed
+jobs are the two four-chain M11 baseline cases, the first atomic job result is
+not expected for roughly 2.7--2.9 hours after worker creation.  The stronger
+directional and second-joint-cycle candidates can take longer.  Progress is
+therefore judged by live process-group membership and increasing worker CPU
+time until the first result is atomically published, not by a short polling
+interval.
+
 ## Promotion boundary and next gates
 
 This comparison may only select an exact target-preserving transition for a
@@ -83,13 +93,16 @@ on.  The remaining order is:
 1. require all 48 bounded fits to finish, all 572 diagnostics to be evaluated,
    zero numerical repairs, matching target/model/evolution digests, and passing
    resource checks;
-2. if a candidate is eligible, rerun the complete M01 local-level wave-2 gate
-   from a fresh ignored root and require all 1,150 diagnostics;
-3. commit the selected correction while still fail-closed and build a fresh
-   isolated runtime from that exact commit;
-4. rerun the full exact-promotion matrix and the package, native, manuscript,
-   literature, and resource gates;
-5. only after those gates pass, create a separate flag-only authorization
+2. if a candidate is eligible, commit the selected M11 transition while still
+   fail-closed and build a fresh isolated runtime from that exact commit;
+3. rerun the complete S10 M10/M11 multicomponent guard from a fresh ignored
+   root;
+4. only after the S10 guard passes, rerun the complete affected S05/S06 wave
+   and the full exact-promotion matrix, including both M01 waves, both M02
+   waves, horizon/fixed-design, and resource gates;
+5. pass the package, native, manuscript, literature, artifact, and protected-
+   repository read-only checks;
+6. only after every gate passes, create a separate flag-only authorization
    commit and launch the confirmatory study under a new run ID.
 
 Failure at any stage remains evidence to diagnose, not a reason to weaken the
