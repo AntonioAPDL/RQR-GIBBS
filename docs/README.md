@@ -6,6 +6,11 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/legacy_local_artifact_cleanup_20260805.md` and its companion CSV
+  manifest document the safe removal of 29.05 GiB of ignored terminal,
+  superseded, or nonpromotable raw run artifacts. The audit preserves the
+  tracked version-2 manuscript evidence, compact version-3/adjudication
+  closeouts, active validation work, and all exact source contracts.
 - `implementation_notes/oracle_tilt_dlm_sh_adjudication_recovery_protocol_20260805.md`
   defines the bounded second software execution after the first job failed
   before publishing a worker artifact. It preserves one statistical attempt,

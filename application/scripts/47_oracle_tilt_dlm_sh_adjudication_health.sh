@@ -22,6 +22,21 @@ workers=0
 if [[ -d "$output_dir/worker_results" ]]; then
   workers="$(find "$output_dir/worker_results" -maxdepth 1 -type f -name 'dlm_sh_chain*.rds' | wc -l)"
 fi
+completed_chains="$workers"
+if [[ -f "$output_dir/closeout.json" ]]; then
+  recorded_completed="$(awk -F: '
+    /"completed_chains"/ {
+      value = $2
+      gsub(/[[:space:],]/, "", value)
+      print value
+      exit
+    }
+  ' "$output_dir/closeout.json")"
+  if [[ "$recorded_completed" =~ ^[0-9]+$ ]] &&
+     (( recorded_completed >= 0 && recorded_completed <= 5 )); then
+    completed_chains="$recorded_completed"
+  fi
+fi
 elapsed=0
 rss=0
 processes=0
@@ -84,8 +99,9 @@ elif [[ "$active" == inactive ]]; then
 fi
 printf '%-30s %s\n' \
   service "$active/$sub ($result)" \
-  valid_saved_chains "$workers/5" \
-  remaining_chains "$((5-workers))" \
+  completed_chains "$completed_chains/5" \
+  retained_worker_artifacts "$workers/5" \
+  remaining_chains "$((5-completed_chains))" \
   workflow_status "$disposition" \
   latest_stage "$stage" \
   prefix_checks "$prefix_passes/$prefix_checks" \
