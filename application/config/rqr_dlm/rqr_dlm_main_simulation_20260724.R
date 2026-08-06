@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   implementation_correction = list(
-    schema_version = "rqrgibbs_dlm_main_correction/1.15.0",
+    schema_version = "rqrgibbs_dlm_main_correction/1.16.0",
     failed_authorization_commit =
       "b8b7748ab181a006611b602f64d4edf5be591de6",
     failed_wave_id =
@@ -164,7 +164,7 @@ rqr_dlm_main_simulation <- list(
     skewed_wave_diagnostics_used_for_transition_correction = TRUE,
     skewed_wave_fresh_relaunch_required = TRUE,
     skewed_wave_recovery_status =
-      "joint_elliptical_selected_affected_wave_pending",
+      "joint_elliptical_selected_s10_guard_failed",
     skewed_whole_scan_candidate_source_commit =
       "5086fac191255a79514475f6dbacddfae4c328ed",
     skewed_whole_scan_candidate_jobs = 93L,
@@ -218,6 +218,27 @@ rqr_dlm_main_simulation <- list(
     skewed_joint_elliptical_development_outputs_reused = FALSE,
     skewed_joint_elliptical_scientific_metrics_used = FALSE,
     skewed_affected_wave_required_before_promotion = TRUE,
+    higher_dimensional_guard_source_commit =
+      "73f9918deb91539f06ced88c7803877a3065f42f",
+    higher_dimensional_guard_status =
+      "failed_closed_before_affected_wave",
+    higher_dimensional_guard_jobs = 8L,
+    higher_dimensional_guard_diagnostics = 95L,
+    higher_dimensional_guard_failed_diagnostics = 16L,
+    higher_dimensional_guard_failed_method = "M11",
+    higher_dimensional_guard_failed_estimand = "log_q_2",
+    higher_dimensional_guard_closeout_path = paste0(
+      "docs/audits/rqr_dlm_s10_guard_failure_20260806/",
+      "closeout.json"
+    ),
+    higher_dimensional_guard_closeout_sha256 =
+      "d33d7119d49c15154512dc711ec32a1684d25e13f44b60f7898a38d93e07c372",
+    higher_dimensional_guard_artifact_manifest_sha256 =
+      "2fa819c0e991eba7a3574bcf081f38f715dce13d49527798e541ade0356bd78d",
+    higher_dimensional_guard_outputs_reused = FALSE,
+    higher_dimensional_guard_scientific_metrics_used = FALSE,
+    higher_dimensional_recovery_status =
+      "predeclared_exact_candidate_comparison_pending",
     correction_budget_path =
       "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
     correction_budget_sha256 =

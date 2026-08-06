@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.15.0"
+    "rqrgibbs_dlm_main_correction/1.16.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -146,7 +146,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_identical(
     contract$config$implementation_correction$
       skewed_wave_recovery_status,
-    "joint_elliptical_selected_affected_wave_pending"
+    "joint_elliptical_selected_s10_guard_failed"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -174,6 +174,43 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_true(
     contract$config$implementation_correction$
       skewed_affected_wave_required_before_promotion
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_status,
+    "failed_closed_before_affected_wave"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_failed_method,
+    "M11"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_failed_estimand,
+    "log_q_2"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_closeout_sha256,
+    environment$rqr_confirm_sha256(file.path(
+      contract$repo_root,
+      contract$config$implementation_correction$
+        higher_dimensional_guard_closeout_path
+    ))
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_outputs_reused
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_scientific_metrics_used
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      higher_dimensional_recovery_status,
+    "predeclared_exact_candidate_comparison_pending"
   )
   expect_false(
     contract$config$implementation_correction$

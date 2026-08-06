@@ -153,7 +153,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$implementation_correction,
         list(
-          schema_version = "rqrgibbs_dlm_main_correction/1.15.0",
+          schema_version = "rqrgibbs_dlm_main_correction/1.16.0",
           failed_authorization_commit =
             "b8b7748ab181a006611b602f64d4edf5be591de6",
           failed_wave_id =
@@ -306,7 +306,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           skewed_wave_diagnostics_used_for_transition_correction = TRUE,
           skewed_wave_fresh_relaunch_required = TRUE,
           skewed_wave_recovery_status =
-            "joint_elliptical_selected_affected_wave_pending",
+            "joint_elliptical_selected_s10_guard_failed",
           skewed_whole_scan_candidate_source_commit =
             "5086fac191255a79514475f6dbacddfae4c328ed",
           skewed_whole_scan_candidate_jobs = 93L,
@@ -362,6 +362,27 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           skewed_joint_elliptical_development_outputs_reused = FALSE,
           skewed_joint_elliptical_scientific_metrics_used = FALSE,
           skewed_affected_wave_required_before_promotion = TRUE,
+          higher_dimensional_guard_source_commit =
+            "73f9918deb91539f06ced88c7803877a3065f42f",
+          higher_dimensional_guard_status =
+            "failed_closed_before_affected_wave",
+          higher_dimensional_guard_jobs = 8L,
+          higher_dimensional_guard_diagnostics = 95L,
+          higher_dimensional_guard_failed_diagnostics = 16L,
+          higher_dimensional_guard_failed_method = "M11",
+          higher_dimensional_guard_failed_estimand = "log_q_2",
+          higher_dimensional_guard_closeout_path = paste0(
+            "docs/audits/rqr_dlm_s10_guard_failure_20260806/",
+            "closeout.json"
+          ),
+          higher_dimensional_guard_closeout_sha256 =
+            "d33d7119d49c15154512dc711ec32a1684d25e13f44b60f7898a38d93e07c372",
+          higher_dimensional_guard_artifact_manifest_sha256 =
+            "2fa819c0e991eba7a3574bcf081f38f715dce13d49527798e541ade0356bd78d",
+          higher_dimensional_guard_outputs_reused = FALSE,
+          higher_dimensional_guard_scientific_metrics_used = FALSE,
+          higher_dimensional_recovery_status =
+            "predeclared_exact_candidate_comparison_pending",
           correction_budget_path =
             "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
           correction_budget_sha256 =
@@ -578,6 +599,20 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       ),
       sha256 = config$implementation_correction$
         skewed_joint_elliptical_candidate_decisions_sha256
+    ),
+    higher_dimensional_guard_closeout = c(
+      path = config$implementation_correction$
+        higher_dimensional_guard_closeout_path,
+      sha256 = config$implementation_correction$
+        higher_dimensional_guard_closeout_sha256
+    ),
+    higher_dimensional_guard_artifacts = c(
+      path = paste0(
+        "docs/audits/rqr_dlm_s10_guard_failure_20260806/",
+        "artifact_hashes.csv"
+      ),
+      sha256 = config$implementation_correction$
+        higher_dimensional_guard_artifact_manifest_sha256
     )
   )
   for (evidence in correction_evidence) {
@@ -4192,6 +4227,116 @@ rqr_confirm_dynamic_fit <- function(
         identical(method, "M11"),
       transition_policy = transition_policy
     )
+  )
+}
+
+# Compact transition telemetry for development and promotion gates. This
+# deliberately excludes state paths, latent variables, and simulation
+# performance summaries. Directional summaries are de-duplicated by
+# iteration/cycle because the fit-level table repeats cycle-wide directional
+# information on each component row.
+rqr_confirm_transition_telemetry <- function(fit) {
+  if (!inherits(fit, "rqr_dlm_mcmc")) {
+    stop("Transition telemetry requires an rqr_dlm_mcmc fit.",
+         call. = FALSE)
+  }
+  interweave <- fit$diagnostics$component_scale_interweave
+  joint <- fit$diagnostics$component_scale_joint_elliptical
+  directional <- if (is.data.frame(interweave) && nrow(interweave) &&
+      all(c(
+        "iteration", "cycle", "directional_sweeps",
+        "directional_evaluations", "directional_shrink_steps",
+        "directional_max_distance", "exact_random_direction_slice"
+      ) %in% names(interweave))) {
+    interweave[
+      !duplicated(interweave[c("iteration", "cycle")]),
+      c(
+        "iteration", "cycle", "directional_sweeps",
+        "directional_evaluations", "directional_shrink_steps",
+        "directional_max_distance", "exact_random_direction_slice"
+      ),
+      drop = FALSE
+    ]
+  } else {
+    data.frame()
+  }
+  safe_sum <- function(value) {
+    if (!length(value)) 0 else sum(value)
+  }
+  safe_max <- function(value) {
+    if (!length(value)) 0 else max(value)
+  }
+  data.frame(
+    schema_version = "rqrgibbs_dlm_transition_telemetry/1.0.0",
+    interweave_rows = if (is.data.frame(interweave)) {
+      nrow(interweave)
+    } else {
+      0L
+    },
+    coordinate_evaluations = if (is.data.frame(interweave) &&
+        "evaluations" %in% names(interweave)) {
+      safe_sum(interweave$evaluations)
+    } else {
+      0L
+    },
+    coordinate_shrink_steps = if (is.data.frame(interweave) &&
+        "shrink_steps" %in% names(interweave)) {
+      safe_sum(interweave$shrink_steps)
+    } else {
+      0L
+    },
+    directional_updates = if (nrow(directional)) {
+      safe_sum(directional$directional_sweeps)
+    } else {
+      0L
+    },
+    directional_evaluations = if (nrow(directional)) {
+      safe_sum(directional$directional_evaluations)
+    } else {
+      0L
+    },
+    directional_shrink_steps = if (nrow(directional)) {
+      safe_sum(directional$directional_shrink_steps)
+    } else {
+      0L
+    },
+    directional_max_distance = if (nrow(directional)) {
+      safe_max(directional$directional_max_distance)
+    } else {
+      0
+    },
+    all_directional_updates_exact = if (nrow(directional) &&
+        any(directional$directional_sweeps > 0L)) {
+      all(directional$exact_random_direction_slice)
+    } else {
+      TRUE
+    },
+    joint_updates = if (is.data.frame(joint)) nrow(joint) else 0L,
+    joint_evaluations = if (is.data.frame(joint) &&
+        "evaluations" %in% names(joint)) {
+      safe_sum(joint$evaluations)
+    } else {
+      0L
+    },
+    joint_shrink_steps = if (is.data.frame(joint) &&
+        "shrink_steps" %in% names(joint)) {
+      safe_sum(joint$shrink_steps)
+    } else {
+      0L
+    },
+    all_joint_updates_exact = if (is.data.frame(joint) && nrow(joint)) {
+      all(joint$exact_joint_elliptical_slice)
+    } else {
+      TRUE
+    },
+    target_digest = fit$provenance$object_digests$target,
+    model_digest = fit$provenance$object_digests$model,
+    evolution_digest = fit$provenance$object_digests$evolution,
+    transition_kernel_digest = digest::digest(
+      fit$model_spec$component_scale_transition_kernel,
+      algo = "sha256", serialize = TRUE
+    ),
+    stringsAsFactors = FALSE
   )
 }
 

@@ -1,0 +1,9 @@
+"job_id","method","DGP","replication","chain","profile","ok","exact_joint_target","numerical_repair_count","elapsed_seconds","peak_RSS_KiB","message","retry_count","reseeded"
+"M10__S10_rep0077__chain01","M10","S10",77,1,"A",TRUE,TRUE,0,3960.941,646688,,0,FALSE
+"M10__S10_rep0077__chain02","M10","S10",77,2,"B",TRUE,TRUE,0,3919.038,716548,,0,FALSE
+"M10__S10_rep0077__chain03","M10","S10",77,3,"C",TRUE,TRUE,0,3838.164,706644,,0,FALSE
+"M10__S10_rep0077__chain04","M10","S10",77,4,"D",TRUE,TRUE,0,3768.641,706792,,0,FALSE
+"M11__S10_rep0166__chain01","M11","S10",166,1,"A",TRUE,TRUE,0,10071.895,941636,,0,FALSE
+"M11__S10_rep0166__chain02","M11","S10",166,2,"B",TRUE,TRUE,0,10085.107,1012580,,0,FALSE
+"M11__S10_rep0166__chain03","M11","S10",166,3,"C",TRUE,TRUE,0,9840.98,969040,,0,FALSE
+"M11__S10_rep0166__chain04","M11","S10",166,4,"D",TRUE,TRUE,0,9913.141,1020044,,0,FALSE

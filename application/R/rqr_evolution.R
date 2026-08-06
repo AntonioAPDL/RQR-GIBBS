@@ -879,6 +879,47 @@ rqr_evolution_component_scale <- function(
        call. = FALSE)
 }
 
+# Exact random-direction slice update for a vector on the log scale. Given a
+# direction that is symmetric about zero, the scalar stepping-out/shrinkage
+# transition samples the target restricted to the corresponding line. Mixing
+# over independent spherical directions yields a hit-and-run slice kernel that
+# preserves the full multivariate target. This supplements, rather than
+# replaces, the coordinate-wise ASIS scale updates.
+.rqr_slice_log_direction <- function(
+    current, log_density, width = 1, max_steps = 100L,
+    max_shrink = 1000L, direction = NULL) {
+  current <- as.numeric(current)
+  if (!length(current) || any(!is.finite(current))) {
+    stop("The directional slice state must be a finite vector.",
+         call. = FALSE)
+  }
+  if (is.null(direction)) direction <- stats::rnorm(length(current))
+  direction <- as.numeric(direction)
+  direction_norm <- sqrt(sum(direction^2))
+  if (length(direction) != length(current) ||
+      any(!is.finite(direction)) || !is.finite(direction_norm) ||
+      direction_norm <= 0) {
+    stop("The directional slice direction is invalid.", call. = FALSE)
+  }
+  direction <- direction / direction_norm
+  line_density <- function(distance) {
+    log_density(current + direction * distance)
+  }
+  update <- .rqr_slice_log_coordinate(
+    0, line_density, width = width, max_steps = max_steps,
+    max_shrink = max_shrink
+  )
+  list(
+    value = current + direction * update$value,
+    direction = direction,
+    signed_distance = update$value,
+    distance = abs(update$value),
+    evaluations = update$evaluations,
+    shrink_steps = update$shrink_steps,
+    exact_random_direction_slice = TRUE
+  )
+}
+
 .rqr_component_noncentered_log_density <- function(
     log_q, ordinate_basis1, ordinate_basis2, y, observed, v, xi,
     obs_variance, evolution) {
@@ -912,7 +953,8 @@ rqr_evolution_component_scale <- function(
 .rqr_interweave_component_scales <- function(
     theta1, theta2, theta01, theta02, GG, FF, y, observed, v,
     xi, obs_variance, evolution, q, width = 1, sweeps = 1L,
-    max_steps = 100L, max_shrink = 1000L) {
+    max_steps = 100L, max_shrink = 1000L,
+    directional_sweeps = 0L) {
   q <- as.numeric(q)
   log_q <- log(q)
   path_basis1 <- rqr_noncentered_basis_cpp(
@@ -951,6 +993,18 @@ rqr_evolution_component_scale <- function(
   sweeps <- .rqr_scalar_integer(
     sweeps, "component-scale slice sweeps", 1L
   )
+  directional_sweeps <- as.numeric(directional_sweeps)
+  if (length(directional_sweeps) != 1L ||
+      is.na(directional_sweeps) || !is.finite(directional_sweeps) ||
+      directional_sweeps != floor(directional_sweeps) ||
+      directional_sweeps < 0L ||
+      directional_sweeps > .Machine$integer.max) {
+    stop(
+      "component-scale directional_sweeps must be one nonnegative integer.",
+      call. = FALSE
+    )
+  }
+  directional_sweeps <- as.integer(directional_sweeps)
   evaluation_count <- shrink_count <- integer(length(q))
   for (sweep in seq_len(sweeps)) {
     for (j in seq_along(q)) {
@@ -970,6 +1024,21 @@ rqr_evolution_component_scale <- function(
         shrink_count[[j]] + update$shrink_steps
     }
   }
+  directional_evaluations <- directional_shrink_count <-
+    integer(directional_sweeps)
+  directional_distance <- numeric(directional_sweeps)
+  if (directional_sweeps > 0L) {
+    for (sweep in seq_len(directional_sweeps)) {
+      update <- .rqr_slice_log_direction(
+        log_q, evaluate, width = width,
+        max_steps = max_steps, max_shrink = max_shrink
+      )
+      log_q <- update$value
+      directional_evaluations[[sweep]] <- update$evaluations
+      directional_shrink_count[[sweep]] <- update$shrink_steps
+      directional_distance[[sweep]] <- update$distance
+    }
+  }
   q <- exp(log_q)
   list(
     q = q,
@@ -979,6 +1048,11 @@ rqr_evolution_component_scale <- function(
       evaluations = evaluation_count,
       shrink_steps = shrink_count,
       sweeps = sweeps,
+      directional_sweeps = directional_sweeps,
+      directional_evaluations = directional_evaluations,
+      directional_shrink_steps = directional_shrink_count,
+      directional_distance = directional_distance,
+      exact_random_direction_slice = directional_sweeps > 0L,
       exact_noncentered_slice = TRUE
     )
   )

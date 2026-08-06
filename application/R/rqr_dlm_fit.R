@@ -384,6 +384,31 @@ rqr_dlm_fit <- function(
       call. = FALSE
     )
   }
+  component_scale_directional_interweave <-
+    mcmc_control$component_scale_directional_interweave %||% FALSE
+  if (!is.logical(component_scale_directional_interweave) ||
+      length(component_scale_directional_interweave) != 1L ||
+      is.na(component_scale_directional_interweave)) {
+    stop(
+      paste(
+        "mcmc_control$component_scale_directional_interweave must be",
+        "one logical value."
+      ),
+      call. = FALSE
+    )
+  }
+  if (isTRUE(component_scale_directional_interweave) &&
+      (!component_mode || !isTRUE(component_scale_interweave) ||
+       length(evolution$component_dims) < 2L)) {
+    stop(
+      paste(
+        "Directional component-scale interweaving requires",
+        "multicomponent evolution_mode='component_scale' and",
+        "component_scale_interweave=TRUE."
+      ),
+      call. = FALSE
+    )
+  }
   component_scale_collapsed_update <-
     mcmc_control$component_scale_collapsed_update %||% FALSE
   if (!is.logical(component_scale_collapsed_update) ||
@@ -432,6 +457,20 @@ rqr_dlm_fit <- function(
     mcmc_control$component_scale_interweave_cycles %||% 1L,
     "mcmc_control$component_scale_interweave_cycles", 1L
   )
+  component_scale_directional_sweeps <- .rqr_scalar_integer(
+    mcmc_control$component_scale_directional_sweeps %||% 1L,
+    "mcmc_control$component_scale_directional_sweeps", 1L
+  )
+  if (!isTRUE(component_scale_directional_interweave) &&
+      component_scale_directional_sweeps != 1L) {
+    stop(
+      paste(
+        "mcmc_control$component_scale_directional_sweeps can differ",
+        "from one only when directional interweaving is enabled."
+      ),
+      call. = FALSE
+    )
+  }
   component_scale_collapsed_cycles <- .rqr_scalar_integer(
     mcmc_control$component_scale_collapsed_cycles %||% 1L,
     "mcmc_control$component_scale_collapsed_cycles", 1L
@@ -525,6 +564,15 @@ rqr_dlm_fit <- function(
     noncentered_slice_interweave =
       component_mode && isTRUE(component_scale_interweave),
     interweave_cycles = component_scale_interweave_cycles,
+    noncentered_directional_slice =
+      component_mode && isTRUE(component_scale_directional_interweave),
+    directional_sweeps_per_cycle = if (
+        component_mode && isTRUE(component_scale_directional_interweave)
+      ) {
+      component_scale_directional_sweeps
+    } else {
+      0L
+    },
     transition_order = if (component_mode) {
       component_scale_transition_order
     } else {
@@ -818,7 +866,14 @@ rqr_dlm_fit <- function(
             width = component_scale_slice_width,
             sweeps = component_scale_slice_sweeps,
             max_steps = component_scale_slice_max_steps,
-            max_shrink = component_scale_slice_max_shrink
+            max_shrink = component_scale_slice_max_shrink,
+            directional_sweeps = if (
+                isTRUE(component_scale_directional_interweave)
+              ) {
+              component_scale_directional_sweeps
+            } else {
+              0L
+            }
           )
           q_evolution <<- interweave$q
           theta1 <<- interweave$theta1
@@ -830,6 +885,24 @@ rqr_dlm_fit <- function(
             evaluations = interweave$diagnostics$evaluations,
             shrink_steps = interweave$diagnostics$shrink_steps,
             sweeps_per_cycle = interweave$diagnostics$sweeps,
+            directional_sweeps =
+              interweave$diagnostics$directional_sweeps,
+            directional_evaluations = sum(
+              interweave$diagnostics$directional_evaluations
+            ),
+            directional_shrink_steps = sum(
+              interweave$diagnostics$directional_shrink_steps
+            ),
+            directional_max_distance = if (
+                length(interweave$diagnostics$directional_distance)
+              ) {
+              max(interweave$diagnostics$directional_distance)
+            } else {
+              0
+            },
+            exact_random_direction_slice = isTRUE(
+              interweave$diagnostics$exact_random_direction_slice
+            ),
             exact_noncentered_slice = TRUE,
             stringsAsFactors = FALSE
           )
@@ -1214,10 +1287,21 @@ rqr_dlm_fit <- function(
         if (component_mode &&
             identical(component_scale_transition_order,
                       "interweave_then_rootwise")) {
-          sprintf(
-            "component_scale_centered_noncentered_cycles_%d",
-            component_scale_interweave_cycles
-          )
+          if (isTRUE(component_scale_directional_interweave)) {
+            sprintf(
+              paste0(
+                "component_scale_centered_noncentered_directional_",
+                "cycles_%d_sweeps_%d"
+              ),
+              component_scale_interweave_cycles,
+              component_scale_directional_sweeps
+            )
+          } else {
+            sprintf(
+              "component_scale_centered_noncentered_cycles_%d",
+              component_scale_interweave_cycles
+            )
+          }
         } else NULL,
         if (component_mode && isTRUE(component_scale_collapsed_update)) {
           sprintf(
@@ -1229,10 +1313,21 @@ rqr_dlm_fit <- function(
             identical(component_scale_transition_order,
                       "rootwise_then_interweave") &&
             isTRUE(component_scale_interweave)) {
-          sprintf(
-            "component_scale_centered_noncentered_cycles_%d",
-            component_scale_interweave_cycles
-          )
+          if (isTRUE(component_scale_directional_interweave)) {
+            sprintf(
+              paste0(
+                "component_scale_centered_noncentered_directional_",
+                "cycles_%d_sweeps_%d"
+              ),
+              component_scale_interweave_cycles,
+              component_scale_directional_sweeps
+            )
+          } else {
+            sprintf(
+              "component_scale_centered_noncentered_cycles_%d",
+              component_scale_interweave_cycles
+            )
+          }
         } else if (component_mode &&
                    identical(component_scale_transition_order,
                              "rootwise_then_interweave")) {
@@ -1275,6 +1370,10 @@ rqr_dlm_fit <- function(
       component_scale_interweave = component_scale_interweave,
       component_scale_interweave_cycles =
         component_scale_interweave_cycles,
+      component_scale_directional_interweave =
+        component_scale_directional_interweave,
+      component_scale_directional_sweeps =
+        component_scale_directional_sweeps,
       component_scale_collapsed_cycles =
         component_scale_collapsed_cycles,
       component_scale_transition_order =
@@ -1402,6 +1501,17 @@ rqr_dlm_fit <- function(
         isTRUE(object$misc$component_scale_interweave),
     interweave_cycles =
       object$misc$component_scale_interweave_cycles %||% 1L,
+    noncentered_directional_slice =
+      identical(object$model_spec$evolution_mode, "component_scale") &&
+        isTRUE(object$misc$component_scale_directional_interweave),
+    directional_sweeps_per_cycle = if (
+        identical(object$model_spec$evolution_mode, "component_scale") &&
+          isTRUE(object$misc$component_scale_directional_interweave)
+      ) {
+      object$misc$component_scale_directional_sweeps %||% 1L
+    } else {
+      0L
+    },
     transition_order = if (
         identical(object$model_spec$evolution_mode, "component_scale")
       ) {
@@ -1622,6 +1732,10 @@ rqr_dlm_continue <- function(object, n_mcmc, thin = object$misc$thin,
         isTRUE(object$misc$component_scale_interweave),
       component_scale_interweave_cycles =
         object$misc$component_scale_interweave_cycles %||% 1L,
+      component_scale_directional_interweave =
+        isTRUE(object$misc$component_scale_directional_interweave),
+      component_scale_directional_sweeps =
+        object$misc$component_scale_directional_sweeps %||% 1L,
       component_scale_collapsed_cycles =
         object$misc$component_scale_collapsed_cycles %||% 1L,
       component_scale_transition_order =

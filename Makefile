@@ -34,8 +34,12 @@ RQR_DLM_AFFECTED_PRIMARY_ATTESTATION ?=
 RQR_DLM_AFFECTED_EXDQLM_ATTESTATION ?=
 RQR_DLM_AFFECTED_QUANTREG_ATTESTATION ?=
 RQR_DLM_AFFECTED_OUTPUT_ROOT ?=
+RQR_DLM_RECOVERY_PRIMARY_ATTESTATION ?=
+RQR_DLM_RECOVERY_OUTPUT_ROOT ?=
+RQR_DLM_RECOVERY_CONTROL_ROOT ?=
+RQR_DLM_RECOVERY_WORKERS ?= 8
 
-.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication test-oracle-tilt-publication-v2 test-oracle-tilt-publication-v3 test-oracle-tilt-dlm-sh-adjudication test-oracle-tilt-campaign-closeout test-oracle-tilt-v2-workflow oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence oracle-tilt-v2-preflight oracle-tilt-v2-reference oracle-tilt-v2-benchmark oracle-tilt-v2-execute oracle-tilt-v2-package-evidence oracle-tilt-v3-preflight oracle-tilt-v3-reference oracle-tilt-v3-benchmark oracle-tilt-v3-resource-rehearsal oracle-tilt-v3-acceptance oracle-tilt-v3-execute oracle-tilt-v3-package-evidence oracle-tilt-v3-package-nonpromotion-evidence oracle-tilt-dlm-sh-adjudication-preflight oracle-tilt-dlm-sh-adjudication-execute oracle-tilt-dlm-sh-reconcile-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor launch-dlm-affected-wave-validation health-dlm-affected-wave-validation literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication test-oracle-tilt-publication-v2 test-oracle-tilt-publication-v3 test-oracle-tilt-dlm-sh-adjudication test-oracle-tilt-campaign-closeout test-oracle-tilt-v2-workflow oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence oracle-tilt-v2-preflight oracle-tilt-v2-reference oracle-tilt-v2-benchmark oracle-tilt-v2-execute oracle-tilt-v2-package-evidence oracle-tilt-v3-preflight oracle-tilt-v3-reference oracle-tilt-v3-benchmark oracle-tilt-v3-resource-rehearsal oracle-tilt-v3-acceptance oracle-tilt-v3-execute oracle-tilt-v3-package-evidence oracle-tilt-v3-package-nonpromotion-evidence oracle-tilt-dlm-sh-adjudication-preflight oracle-tilt-dlm-sh-adjudication-execute oracle-tilt-dlm-sh-reconcile-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor launch-dlm-affected-wave-validation health-dlm-affected-wave-validation launch-dlm-multicomponent-recovery health-dlm-multicomponent-recovery literature-manifest clean-tex
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
@@ -320,6 +324,22 @@ health-dlm-affected-wave-validation:
 		(echo "RQR_DLM_AFFECTED_OUTPUT_ROOT is required"; exit 1)
 	$(R) application/scripts/53_healthcheck_rqr_dlm_affected_wave_validation.R \
 		"$(RQR_DLM_AFFECTED_OUTPUT_ROOT)"
+
+launch-dlm-multicomponent-recovery:
+	@test -n "$(RQR_DLM_RECOVERY_PRIMARY_ATTESTATION)" || \
+		(echo "RQR_DLM_RECOVERY_PRIMARY_ATTESTATION is required"; exit 1)
+	@test -n "$(RQR_DLM_RECOVERY_OUTPUT_ROOT)" || \
+		(echo "RQR_DLM_RECOVERY_OUTPUT_ROOT is required"; exit 1)
+	application/scripts/56_launch_rqr_dlm_multicomponent_recovery.sh \
+		"$(RQR_DLM_RECOVERY_PRIMARY_ATTESTATION)" \
+		"$(RQR_DLM_RECOVERY_OUTPUT_ROOT)" \
+		"$(or $(RQR_DLM_RECOVERY_WORKERS),8)"
+
+health-dlm-multicomponent-recovery:
+	@test -n "$(RQR_DLM_RECOVERY_CONTROL_ROOT)" || \
+		(echo "RQR_DLM_RECOVERY_CONTROL_ROOT is required"; exit 1)
+	$(R) application/scripts/57_healthcheck_rqr_dlm_multicomponent_recovery.R \
+		"$(RQR_DLM_RECOVERY_CONTROL_ROOT)"
 
 literature-manifest:
 	$(R) application/scripts/01_build_literature_manifest.R

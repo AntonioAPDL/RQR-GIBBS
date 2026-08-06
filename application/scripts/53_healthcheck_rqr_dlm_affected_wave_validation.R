@@ -26,6 +26,12 @@ guard <- if (file.exists(guard_status_path)) {
   utils::read.csv(guard_status_path, stringsAsFactors = FALSE,
                   check.names = FALSE)
 } else data.frame()
+guard_manifest_path <- file.path(
+  run_root, "s10_guard", "guard_manifest.json"
+)
+guard_manifest <- if (file.exists(guard_manifest_path)) {
+  jsonlite::read_json(guard_manifest_path, simplifyVector = TRUE)
+} else NULL
 worker_status_paths <- file.path(
   run_root, sprintf("worker_%02d", 1:8), "run_status.csv"
 )
@@ -39,13 +45,34 @@ if (is.null(worker_status)) worker_status <- data.frame()
 compact_closeout <- file.exists(file.path(
   run_root, "compact_closeout", "closeout.json"
 ))
-live <- system2(
-  "pgrep", c("-af", shQuote(basename(run_root))),
-  stdout = TRUE, stderr = FALSE
+coordinator_pid <- suppressWarnings(as.integer(field(
+  "coordinator_pid", NA_character_
+)))
+coordinator_pgid <- suppressWarnings(as.integer(field(
+  "coordinator_pgid", NA_character_
+)))
+coordinator_live <- length(coordinator_pid) == 1L &&
+  !is.na(coordinator_pid) && dir.exists(sprintf("/proc/%d", coordinator_pid))
+process_table <- tryCatch(
+  utils::read.table(
+    pipe("ps -eo pid=,pgid=,stat="),
+    col.names = c("pid", "pgid", "stat"), stringsAsFactors = FALSE
+  ),
+  error = function(error) data.frame()
 )
-live_status <- attr(live, "status")
-if (is.null(live_status)) live_status <- 0L
-live_count <- if (identical(as.integer(live_status), 0L)) length(live) else 0L
+live_count <- if (nrow(process_table) &&
+    length(coordinator_pgid) == 1L && !is.na(coordinator_pgid)) {
+  sum(
+    process_table$pgid == coordinator_pgid &
+      !grepl("^Z", process_table$stat)
+  )
+} else {
+  as.integer(coordinator_live)
+}
+guard_failed <- !is.null(guard_manifest) &&
+  identical(guard_manifest$selected_policies_passed, FALSE)
+effective_status <- if (guard_failed) "failed" else field("status")
+effective_stage <- if (guard_failed) "s10_guard" else field("stage")
 
 completed_tasks <- if (nrow(worker_status)) {
   sum(worker_status$status == "completed")
@@ -55,16 +82,21 @@ failed_tasks <- if (nrow(worker_status)) {
 } else 0L
 summary <- data.frame(
   item = c(
-    "coordinator_status", "coordinator_stage", "live_matching_processes",
+    "coordinator_status", "coordinator_stage", "coordinator_live",
+    "live_process_group_members",
     "S10_guard_jobs_succeeded", "S10_guard_jobs_planned",
+    "S10_guard_diagnostics_passed", "S10_guard_diagnostics_planned",
     "affected_tasks_completed", "affected_tasks_planned",
     "affected_tasks_failed", "affected_tasks_remaining",
     "worker_outputs_published", "compact_closeout_present"
   ),
   value = c(
-    field("status"), field("stage"), live_count,
+    effective_status, effective_stage, coordinator_live, live_count,
     if (nrow(guard)) sum(guard$ok) else 0L,
-    8L, completed_tasks, 35L, failed_tasks,
+    8L,
+    if (is.null(guard_manifest)) 0L else guard_manifest$diagnostics_passed,
+    if (is.null(guard_manifest)) 95L else guard_manifest$diagnostics,
+    completed_tasks, 35L, failed_tasks,
     max(0L, 35L - completed_tasks - failed_tasks),
     sum(file.exists(worker_status_paths)), compact_closeout
   ),
@@ -82,7 +114,8 @@ if (compact_closeout) {
     closeout$affected_wave_passed,
     closeout$diagnostics_passed, closeout$diagnostics
   ))
-} else if (failed_tasks > 0L || identical(field("status"), "failed")) {
+} else if (guard_failed || failed_tasks > 0L ||
+           identical(effective_status, "failed")) {
   cat("\nTerminal decision: FAIL-CLOSED.\n")
 } else {
   cat("\nTerminal decision: validation is incomplete.\n")
