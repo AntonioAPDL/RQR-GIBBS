@@ -1,0 +1,3 @@
+"stage","chains","status","started_at_utc","finished_at_utc","worker_files","prefix_checks","prefix_pass"
+"acceptance","1","completed","2026-08-05 19:29:05 UTC","2026-08-05 20:15:12 UTC",1,3,TRUE
+"remaining","2;3;4;5","completed","2026-08-05 20:15:12 UTC","2026-08-05 21:51:07 UTC",4,12,TRUE

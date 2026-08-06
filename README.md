@@ -96,34 +96,29 @@ make literature-manifest
 Long-running simulation and validation targets require explicit reviewed
 configuration and should write only under ignored local output roots.
 
-The 95% single-data oracle-tilt illustrations are reproduced in two stages.
-The publication runner writes raw chain envelopes only under ignored output
-storage; after all hard gates pass, the evidence packager promotes a compact,
-hashed allowlist to `figures/data/oracle_tilt_c095/`. The command
+The 95% single-data oracle-tilt illustrations are rendered from the validated
+version-2 compact evidence bundle under
+`figures/data/oracle_tilt_c095_v2/`. The command
 
 ```bash
 make model-illustration-figures
 ```
 
 then verifies that evidence and renders the article and supplement figures
-without fitting a model. Five of the six family/target cells pass every strict
-gate. The dynamic shortest-window cell has a disclosed ESS-only warning while
-passing all numerical, provenance, conditional-reference, scale-pathology,
-R-hat, and MCSE gates. See
-`docs/audits/oracle_tilt_c095_publication_closeout_20260731.md`.
+without fitting a model. All 27 chains and all six family/target cells passed
+the frozen computational and recovery gates. See
+`docs/audits/oracle_tilt_c095_v2_validation_closeout_20260801.md`.
 
-A separately versioned replacement workflow is implemented but has not been
-promoted into the manuscript. It uses exact population tilts under affinely
-standardized `AL_0.80(0,1)` innovations, 1,200 observations in each family,
-an empirical orthogonal quadratic fixed design, and a local-linear DLM whose
-transition and innovation covariance preserve the physical horizon as the time
-grid is refined. The deterministic design preflight and independent
-fixed-design/DLM conditional-reference suite are source-level gates; monitored
-benchmark and execute modes additionally require an isolated runtime bound to
-a clean, complete `main` SHA. The tracked configuration keeps execution
-disabled. See `application/README.md` for the staged commands. This remains a
-single-data method illustration, not a repeated-sample coverage study or a
-response-predictive analysis.
+The richer version-3 campaign completed all 27 baseline chains and passed five
+of six cells. Its one prespecified DLM/SH adjudication reproduced all original
+prefixes bitwise and passed every maintained diagnostic, but did not pass the
+unchanged width-contrast recovery gate. Version 3 is therefore closed without
+promotion, and current `main` blocks another same-data heavy run. Its compact
+audit record is under
+`docs/audits/oracle_tilt_c095_v3_nonpromotion_evidence_20260805/`; see
+`docs/audits/oracle_tilt_c095_v3_nonpromotion_closeout_20260805.md` for the
+decision. Both campaigns are single-data method illustrations, not
+repeated-sample coverage studies or response-predictive analyses.
 
 ## arXiv source package
 

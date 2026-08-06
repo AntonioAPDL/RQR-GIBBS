@@ -1,0 +1,82 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_campaign_registry/1.0.0",
+  "registry_date": "2026-08-05",
+  "scope": "Single-data interval-root generalized-posterior illustrations; not response-likelihood, posterior-predictive response, or repeated-sample simulation evidence.",
+  "active_manuscript_campaign": "publication_v2",
+  "active_manuscript_evidence_directory": "figures/data/oracle_tilt_c095_v2",
+  "campaigns": {
+    "publication_v2": {
+      "role": "active_manuscript_evidence",
+      "status": "validated_and_promoted",
+      "source_commit": "fec979f927c9039cf778ac09aef139ebd6761e8e",
+      "config_sha256": "e037461a3adf3a98065af9718daf636e6fbbd54ec00cc2fd71c9404f6ba50587",
+      "runtime_tree_digest": "d7890468c42d046697a11fe6784e7f08ac26a72c4764d5adb9ecca37931158b9",
+      "coverage_level": 0.95,
+      "target_cells": 6,
+      "strict_pass_cells": 6,
+      "completed_chains": 27,
+      "manuscript_illustration_evidence_eligible": true,
+      "heavy_execution_authorized_on_current_main": false,
+      "allowed_current_main_actions": [
+        "audit",
+        "render",
+        "test"
+      ]
+    },
+    "publication_v3": {
+      "role": "closed_nonpromotion_evidence",
+      "status": "completed_not_promoted",
+      "source_commit": "99a088fbdd7c3f3ed18f99197294038f62dbfe41",
+      "config_sha256": "585e7258451690c94a153fad50fc6a72a60137bca6447e1b851050b4ed8ca5d7",
+      "runtime_tree_digest": "c5a0cbffb384b777af873dfadae77d6a0909af6387c9f6ca001147f6ded568c9",
+      "coverage_level": 0.95,
+      "target_cells": 6,
+      "strict_pass_cells": 5,
+      "completed_chains": 27,
+      "failed_cell": "dlm/SH",
+      "manuscript_illustration_evidence_eligible": false,
+      "heavy_execution_authorized_on_current_main": false,
+      "allowed_current_main_actions": [
+        "preflight",
+        "reference-only",
+        "audit",
+        "package-nonpromotion"
+      ],
+      "closeout_reason": "The complete run passed five of six cells. The DLM/SH cell failed its frozen computational gate and was adjudicated once under an unchanged scientific contract."
+    },
+    "publication_v3_dlm_sh_adjudication": {
+      "role": "closed_descriptive_adjudication",
+      "status": "completed_descriptive_only",
+      "source_commit": "a3b39b394c6aa928eb38e9ed461281cdf743d00b",
+      "base_source_commit": "99a088fbdd7c3f3ed18f99197294038f62dbfe41",
+      "config_sha256": "bf41bf834e0ce878b9399f77155456fadd3b2feb0f7bcc99064617ab69d15c91",
+      "runtime_tree_digest": "ac1d402f8dc1c724032396b20862e273bf6ec34a005dc24dd2bdbbc3ba5f58f2",
+      "completed_chains": 5,
+      "retained_draws": 60000,
+      "bitwise_prefix_checks_passed": 15,
+      "bitwise_prefix_checks_total": 15,
+      "numerical_repair_count": 0,
+      "strict_diagnostics_pass": true,
+      "heterogeneity_pass": false,
+      "width_contrast_relative_error": 0.202622544829516,
+      "maximum_width_contrast_relative_error": 0.20,
+      "automatic_promotion_eligible": false,
+      "manuscript_illustration_evidence_eligible": false,
+      "heavy_execution_authorized_on_current_main": false,
+      "allowed_current_main_actions": [
+        "preflight",
+        "audit",
+        "package-nonpromotion"
+      ],
+      "closeout_reason": "Longer-chain exact continuation eliminated the computational concern but did not pass the prespecified width-contrast recovery gate. The residual discrepancy is scientific/model-fit evidence, not a Monte Carlo failure."
+    }
+  },
+  "future_campaign_contract": {
+    "requires_new_campaign_identifier": true,
+    "requires_new_frozen_configuration": true,
+    "requires_new_exact_source_commit": true,
+    "requires_prospective_gates_before_data_generation": true,
+    "prohibits_same_data_seed_or_gate_tuning": true,
+    "prohibits_automatic_reuse_of_closed_campaign_output": true
+  }
+}

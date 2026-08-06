@@ -6,12 +6,16 @@ if [[ ! -f "$repo_root/application/DESCRIPTION" ]]; then
   echo "Run this launcher from the RQR-GIBBS repository root." >&2
   exit 2
 fi
-for command_name in git systemd-run systemctl sha256sum; do
+for command_name in git systemd-run systemctl sha256sum Rscript; do
   command -v "$command_name" >/dev/null 2>&1 || {
     echo "$command_name is required." >&2
     exit 2
   }
 done
+Rscript application/scripts/49_oracle_tilt_campaign_gate.R \
+  "--repo-root=$repo_root" \
+  --campaign=publication_v3_dlm_sh_adjudication \
+  --action=adjudication
 
 source_commit="$(git rev-parse HEAD)"
 config_path="$repo_root/application/config/oracle_tilt_c095_dlm_sh_adjudication_recovery_20260805.json"

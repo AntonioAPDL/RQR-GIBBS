@@ -45,6 +45,8 @@ if (identical(mode, "execute")) {
 
 repo_root <- normalizePath(file.path(script_dir, "..", ".."), mustWork = TRUE)
 setwd(repo_root)
+source(file.path(script_dir, "49_oracle_tilt_campaign_gate.R"))
+otcg_assert_action(repo_root, "publication_v3", mode)
 config_path <- normalizePath(
   arg_value(
     "--config=",

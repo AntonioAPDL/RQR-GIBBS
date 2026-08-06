@@ -29,8 +29,9 @@ ORACLE_TILT_DLM_SH_ADJUDICATION_CONFIG ?= application/config/oracle_tilt_c095_dl
 ORACLE_TILT_DLM_SH_ADJUDICATION_DIR ?= application/outputs/oracle_tilt_dlm_sh_adjudication
 ORACLE_TILT_DLM_SH_ADJUDICATION_RUN_DIR ?=
 ORACLE_TILT_DLM_SH_BASELINE_DIR ?=
+ORACLE_TILT_V3_NONPROMOTION_EVIDENCE_DIR ?= docs/audits/oracle_tilt_c095_v3_nonpromotion_evidence_20260805
 
-.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication test-oracle-tilt-publication-v2 test-oracle-tilt-publication-v3 test-oracle-tilt-dlm-sh-adjudication test-oracle-tilt-v2-workflow oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence oracle-tilt-v2-preflight oracle-tilt-v2-reference oracle-tilt-v2-benchmark oracle-tilt-v2-execute oracle-tilt-v2-package-evidence oracle-tilt-v3-preflight oracle-tilt-v3-reference oracle-tilt-v3-benchmark oracle-tilt-v3-resource-rehearsal oracle-tilt-v3-acceptance oracle-tilt-v3-execute oracle-tilt-v3-package-evidence oracle-tilt-dlm-sh-adjudication-preflight oracle-tilt-dlm-sh-adjudication-execute oracle-tilt-dlm-sh-reconcile-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
+.PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication test-oracle-tilt-publication-v2 test-oracle-tilt-publication-v3 test-oracle-tilt-dlm-sh-adjudication test-oracle-tilt-campaign-closeout test-oracle-tilt-v2-workflow oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence oracle-tilt-v2-preflight oracle-tilt-v2-reference oracle-tilt-v2-benchmark oracle-tilt-v2-execute oracle-tilt-v2-package-evidence oracle-tilt-v3-preflight oracle-tilt-v3-reference oracle-tilt-v3-benchmark oracle-tilt-v3-resource-rehearsal oracle-tilt-v3-acceptance oracle-tilt-v3-execute oracle-tilt-v3-package-evidence oracle-tilt-v3-package-nonpromotion-evidence oracle-tilt-dlm-sh-adjudication-preflight oracle-tilt-dlm-sh-adjudication-execute oracle-tilt-dlm-sh-reconcile-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor literature-manifest clean-tex
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
@@ -113,6 +114,9 @@ test-oracle-tilt-publication-v3: package-install
 test-oracle-tilt-dlm-sh-adjudication: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-dlm-sh-adjudication.R", reporter = "summary")'
 
+test-oracle-tilt-campaign-closeout:
+	$(R) -e 'testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-campaign-closeout.R", reporter = "summary")'
+
 test-oracle-tilt-v2-workflow:
 	application/scripts/42_test_oracle_tilt_v2_workflow.sh
 
@@ -175,6 +179,11 @@ oracle-tilt-v3-execute:
 oracle-tilt-v3-package-evidence:
 	@test -n "$(strip $(ORACLE_TILT_V3_RUN_DIR))" || { echo "Set ORACLE_TILT_V3_RUN_DIR to one completed v3 execute run." >&2; exit 64; }
 	$(R) application/scripts/43_package_oracle_tilt_v3_evidence.R --run-dir=$(ORACLE_TILT_V3_RUN_DIR) --output-dir=$(ORACLE_TILT_V3_EVIDENCE_DIR) --replace
+
+oracle-tilt-v3-package-nonpromotion-evidence:
+	@test -n "$(strip $(ORACLE_TILT_DLM_SH_BASELINE_DIR))" || { echo "Set ORACLE_TILT_DLM_SH_BASELINE_DIR." >&2; exit 64; }
+	@test -n "$(strip $(ORACLE_TILT_DLM_SH_ADJUDICATION_RUN_DIR))" || { echo "Set ORACLE_TILT_DLM_SH_ADJUDICATION_RUN_DIR." >&2; exit 64; }
+	$(R) application/scripts/50_package_oracle_tilt_v3_nonpromotion_evidence.R --baseline-dir=$(ORACLE_TILT_DLM_SH_BASELINE_DIR) --adjudication-dir=$(ORACLE_TILT_DLM_SH_ADJUDICATION_RUN_DIR) --output-dir=$(ORACLE_TILT_V3_NONPROMOTION_EVIDENCE_DIR) --replace
 
 oracle-tilt-dlm-sh-adjudication-preflight:
 	@test -n "$(strip $(ORACLE_TILT_DLM_SH_BASELINE_DIR))" || { echo "Set ORACLE_TILT_DLM_SH_BASELINE_DIR." >&2; exit 64; }

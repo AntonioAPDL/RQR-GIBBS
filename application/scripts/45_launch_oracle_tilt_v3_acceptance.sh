@@ -6,12 +6,16 @@ if [[ ! -f "$repo_root/application/DESCRIPTION" ]]; then
   echo "Run this launcher from the RQR-GIBBS repository root." >&2
   exit 2
 fi
-for command_name in git systemd-run systemctl; do
+for command_name in git systemd-run systemctl Rscript; do
   command -v "$command_name" >/dev/null 2>&1 || {
     echo "$command_name is required." >&2
     exit 2
   }
 done
+Rscript application/scripts/49_oracle_tilt_campaign_gate.R \
+  "--repo-root=$repo_root" \
+  --campaign=publication_v3 \
+  --action=acceptance
 
 source_commit="$(git rev-parse HEAD)"
 if [[ ! "$source_commit" =~ ^[0-9a-f]{40}$ ]] ||

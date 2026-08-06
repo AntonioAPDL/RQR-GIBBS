@@ -1,0 +1,23 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_dlm_sh_adjudication/1.1.0",
+  "mode": "execute",
+  "started_at_utc": "2026-08-05 19:29:04 UTC",
+  "repository": {
+    "branch": "main",
+    "commit": "a3b39b394c6aa928eb38e9ed461281cdf743d00b",
+    "clean": true,
+    "status_short": []
+  },
+  "source_commit": "a3b39b394c6aa928eb38e9ed461281cdf743d00b",
+  "adjudication_config_sha256": "bf41bf834e0ce878b9399f77155456fadd3b2feb0f7bcc99064617ab69d15c91",
+  "execution_attempt": 2,
+  "statistical_attempt": 1,
+  "invalidated_execution_source_commit": "3ac3a05db420bf17cdeffbb41f0b6b8947b373f4",
+  "software_recovery_failure_class": "prepublication_worker_contract_validation_defect",
+  "base_source_commit": "99a088fbdd7c3f3ed18f99197294038f62dbfe41",
+  "base_config_sha256": "585e7258451690c94a153fad50fc6a72a60137bca6447e1b851050b4ed8ca5d7",
+  "runtime_tree_digest": "ac1d402f8dc1c724032396b20862e273bf6ec34a005dc24dd2bdbbc3ba5f58f2",
+  "exact_runtime_bound": true,
+  "baseline_root_recorded": "execute",
+  "interpretation": "One-shot single-data DLM/SH interval-root adjudication; not a response likelihood, posterior-predictive response analysis, or simulation study."
+}

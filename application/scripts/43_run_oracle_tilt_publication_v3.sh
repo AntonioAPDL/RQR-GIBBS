@@ -22,6 +22,16 @@ for command_name in setsid ps awk sha256sum stat find sort date df Rscript; do
   }
 done
 
+if [[ "$mode" == adjudication ]]; then
+  gate_campaign="publication_v3_dlm_sh_adjudication"
+else
+  gate_campaign="publication_v3"
+fi
+Rscript application/scripts/49_oracle_tilt_campaign_gate.R \
+  "--repo-root=$repo_root" \
+  "--campaign=$gate_campaign" \
+  "--action=$mode"
+
 # Promotion runs must load rqrgibbs from the attested isolated library while
 # retaining the ordinary user/site libraries that provide audited
 # dependencies such as jsonlite and posterior.  Derive the isolated library

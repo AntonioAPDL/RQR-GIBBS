@@ -1,0 +1,2 @@
+mode,runner_status,elapsed_seconds,available_bytes_at_start,minimum_free_bytes,max_sampled_rss_kib,max_sampled_threads,max_sampled_processes,max_sampled_r_processes,timeout_seconds,rss_limit_kib,thread_limit,process_limit,r_process_limit,timezone,timed_out,sampled_limit_triggered,signal_received,final_pgid_empty,telemetry_kind,pass
+execute,1,16650,386629439488,21474836480,7726312,7,6,3,28800,12582912,8,7,3,UTC,FALSE,FALSE,NONE,TRUE,sampled_pgid_not_kernel_hard,FALSE

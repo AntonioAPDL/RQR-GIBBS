@@ -6,6 +6,13 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/oracle_tilt_c095_v3_nonpromotion_closeout_20260805.md` records the
+  final version-3 decision: 27/27 baseline chains, five of six strict cells,
+  exact longer-chain DLM/SH adjudication, zero repairs, all maintained
+  diagnostics passing, and one unchanged recovery gate failing. Its compact
+  hashed evidence is in
+  `audits/oracle_tilt_c095_v3_nonpromotion_evidence_20260805/`; the validated
+  version-2 bundle remains the manuscript source.
 - `audits/legacy_local_artifact_cleanup_20260805.md` and its companion CSV
   manifest document the safe removal of 29.05 GiB of ignored terminal,
   superseded, or nonpromotable raw run artifacts. The audit preserves the

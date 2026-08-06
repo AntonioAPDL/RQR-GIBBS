@@ -1,0 +1,6 @@
+"family","target","chain","seed","n_draws","numerical_repair_count","elapsed_seconds","root_swap_fraction","profile","exact_joint_target","target_numerical_eligible","reproducibility_eligible","promotion_eligible","primary_runtime_source_match","worker_entry_provenance_match","fit_recorded_provenance_match","worker_exit_provenance_match"
+"dlm","SH",1,202608312,12000,0,2736.18,0.498206896551724,"default",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
+"dlm","SH",2,202618312,12000,0,2826.883,0.496827586206897,"oracle_centered",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
+"dlm","SH",3,202628312,12000,0,2741.794,0.503931034482759,"narrow",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
+"dlm","SH",4,202638312,12000,0,2697.56,0.492758620689655,"wide",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
+"dlm","SH",5,202648312,12000,0,2857.853,0.501793103448276,"trend_seasonal_stress",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
