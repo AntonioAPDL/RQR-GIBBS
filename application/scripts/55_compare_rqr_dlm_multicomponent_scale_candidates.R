@@ -52,14 +52,17 @@ if (!mode %in% c("preflight", "execute") || !nzchar(output_root) ||
   )
 }
 output_root <- normalizePath(output_root, winslash = "/", mustWork = FALSE)
-if (!startsWith(
-    output_root,
-    paste0(normalizePath(
-      file.path(repo_root, "application", "cache"),
-      winslash = "/", mustWork = TRUE
-    ), "/")
-  )) {
+cache_root <- normalizePath(
+  file.path(repo_root, "application", "cache"),
+  winslash = "/", mustWork = FALSE
+)
+if (!startsWith(output_root, paste0(cache_root, "/"))) {
   stop("The recovery output must be under application/cache/.",
+       call. = FALSE)
+}
+dir.create(cache_root, recursive = TRUE, showWarnings = FALSE)
+if (!dir.exists(cache_root)) {
+  stop("Could not create the ignored recovery cache root.",
        call. = FALSE)
 }
 
