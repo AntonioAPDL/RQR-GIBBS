@@ -43,6 +43,7 @@ test_that("multicomponent recovery remains fixed and fail closed", {
   expect_match(coordinator, "mktemp", fixed = TRUE)
   expect_false(grepl("pgrep", health, fixed = TRUE))
   expect_match(health, "ps -eo pid=,pgid=,stat=", fixed = TRUE)
+  expect_match(health, "published_job_results", fixed = TRUE)
   expect_match(health, "main_launch_authorized", fixed = TRUE)
 })
 

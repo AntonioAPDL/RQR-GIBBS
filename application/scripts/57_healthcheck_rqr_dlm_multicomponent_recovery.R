@@ -54,6 +54,15 @@ jobs <- if (!is.na(job_status_path) && file.exists(job_status_path)) {
 } else {
   data.frame()
 }
+published_job_results <- if (!is.na(output_root) &&
+    dir.exists(file.path(output_root, "job_results"))) {
+  length(list.files(
+    file.path(output_root, "job_results"), pattern = "\\.rds$"
+  ))
+} else {
+  0L
+}
+published_jobs <- max(nrow(jobs), published_job_results)
 manifest_path <- if (!is.na(output_root)) {
   file.path(output_root, "comparison_manifest.json")
 } else {
@@ -88,9 +97,9 @@ summary <- data.frame(
   ),
   value = c(
     field("status", "not_started"), field("stage", "unknown"),
-    coordinator_live, group_live, nrow(jobs), 48L,
+    coordinator_live, group_live, published_jobs, 48L,
     if (nrow(jobs) && "ok" %in% names(jobs)) sum(jobs$ok) else 0L,
-    max(0L, 48L - nrow(jobs)),
+    max(0L, 48L - published_jobs),
     if (nrow(diagnostics) && "pass" %in% names(diagnostics)) {
       sum(diagnostics$pass)
     } else {
