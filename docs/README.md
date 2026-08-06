@@ -6,6 +6,11 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/oracle_tilt_c095_v4_source_implementation_closeout_20260805.md`
+  records the passing source/package/exact-runtime preflight and 29-gate
+  reference validation at the disabled V4 implementation commit. It also
+  records that the full benchmark, full-scale resource rehearsal, production
+  fits, selection, and manuscript promotion were not run.
 - `implementation_notes/oracle_tilt_c095_v4_seed_screen_protocol_20260805.md`
   freezes the prospective best-of-three single-data illustration screen. It
   requires one selected candidate per model family shared across RQR, ET, and
