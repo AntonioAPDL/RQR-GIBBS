@@ -1,0 +1,9 @@
+"method","candidate_id","candidate_order","transition_multiplier","cases","jobs","fits_succeeded","exact_target_fits","total_repairs","diagnostics","diagnostics_passed","all_hard_and_guard_diagnostics_pass","elapsed_seconds","max_peak_RSS_KiB","eligible"
+"M10","joint_ess1_x1",1,1,2,5,5,5,0,92,92,TRUE,16992.668,652676,TRUE
+"M10","joint_ess1_x2",2,2,2,5,5,5,0,92,88,FALSE,31600.929,799580,FALSE
+"M10","joint_ess2_x2",3,2,2,5,5,5,0,92,92,TRUE,35486.301,786884,TRUE
+"M10","joint_ess1_reverse_x2",4,2,2,5,5,5,0,92,89,FALSE,32930.052,721476,FALSE
+"M11","joint_ess1_x1",1,1,3,6,6,6,0,141,133,FALSE,30112.657,756864,FALSE
+"M11","joint_ess1_x2",2,2,3,6,6,6,0,141,141,TRUE,54423.127,914492,TRUE
+"M11","joint_ess2_x2",3,2,3,6,6,6,0,141,141,TRUE,61467.021,922848,TRUE
+"M11","joint_ess1_reverse_x2",4,2,3,6,6,6,0,141,134,FALSE,57256.838,926084,FALSE

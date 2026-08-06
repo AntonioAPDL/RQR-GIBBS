@@ -1,0 +1,23 @@
+{
+  "schema_version": "rqrgibbs_dlm_skewed_candidate_closeout/1.1.0",
+  "candidate_family": "joint_elliptical",
+  "candidate_source_commit": "2901770ec25fb6042cbc2c8227478a31bdb0dc1a",
+  "input_artifact_manifest_sha256": "6551e96f940dd0ddccf6ea3adc6e42902162cf3d288fd802a1c911fc53679b02",
+  "artifacts_verified": 54,
+  "artifacts_failed": 0,
+  "jobs_planned": 44,
+  "jobs_succeeded": 44,
+  "diagnostics": 932,
+  "diagnostics_passed": 910,
+  "diagnostics_failed": 22,
+  "selected_methods": 2,
+  "unresolved_methods": [],
+  "all_exact_joint_target": true,
+  "all_zero_repairs": true,
+  "all_methods_selected": true,
+  "thresholds_changed": false,
+  "target_changed": false,
+  "scientific_promotion": false,
+  "confirmatory_launch_authorized": false,
+  "completed_at_utc": "2026-08-06 00:10:09 UTC"
+}
