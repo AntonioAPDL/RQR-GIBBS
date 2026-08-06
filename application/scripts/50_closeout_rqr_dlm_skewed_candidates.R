@@ -17,6 +17,7 @@ if (any(args %in% c("-h", "--help"))) {
     "  --input-root=<completed ignored candidate root>",
     "  --output-root=<new compact closeout directory>",
     "  --expected-source-commit=<full SHA>",
+    "  --expected-candidate-family=<whole_scan|joint_elliptical>",
     sep = "\n"
   ), "\n")
   quit(save = "no", status = 0L, runLast = FALSE)
@@ -25,9 +26,14 @@ if (any(args %in% c("-h", "--help"))) {
 input_root <- parse_arg("input-root", "")
 output_root <- parse_arg("output-root", "")
 expected_source <- tolower(parse_arg("expected-source-commit", ""))
+expected_family <- parse_arg("expected-candidate-family", "")
 if (!nzchar(input_root) || !dir.exists(input_root) ||
-    !nzchar(output_root) || !grepl("^[0-9a-f]{40}$", expected_source)) {
-  stop("Existing input, new output, and a full source SHA are required.",
+    !nzchar(output_root) || !grepl("^[0-9a-f]{40}$", expected_source) ||
+    !expected_family %in% c("whole_scan", "joint_elliptical")) {
+  stop(paste(
+    "Existing input, new output, a full source SHA, and an allowed",
+    "candidate family are required."
+  ),
        call. = FALSE)
 }
 input_root <- normalizePath(input_root, winslash = "/", mustWork = TRUE)
@@ -35,6 +41,18 @@ output_root <- normalizePath(output_root, winslash = "/", mustWork = FALSE)
 if (file.exists(output_root) || dir.exists(output_root)) {
   stop("The compact closeout output root must be new.", call. = FALSE)
 }
+
+family_contract <- switch(
+  expected_family,
+  whole_scan = list(
+    jobs = 93L, diagnostics = 1791L, diagnostics_failed = 32L,
+    selected_methods = 4L, methods = 6L, all_methods_selected = FALSE
+  ),
+  joint_elliptical = list(
+    jobs = 44L, diagnostics = 932L, diagnostics_failed = 22L,
+    selected_methods = 2L, methods = 2L, all_methods_selected = TRUE
+  )
+)
 
 sha256 <- function(path) {
   value <- system2("sha256sum", shQuote(path), stdout = TRUE, stderr = TRUE)
@@ -75,14 +93,22 @@ if (any(!file.exists(file.path(input_root, required)))) {
 manifest <- jsonlite::read_json(
   file.path(input_root, "comparison_manifest.json"), simplifyVector = TRUE
 )
+observed_family <- if (is.null(manifest$candidate_family)) {
+  "whole_scan"
+} else {
+  manifest$candidate_family
+}
 if (!identical(tolower(manifest$source_commit), expected_source) ||
-    !identical(as.integer(manifest$jobs), 93L) ||
-    !identical(as.integer(manifest$jobs_succeeded), 93L) ||
+    !identical(observed_family, expected_family) ||
+    !identical(as.integer(manifest$jobs), family_contract$jobs) ||
+    !identical(as.integer(manifest$jobs_succeeded), family_contract$jobs) ||
     !isTRUE(manifest$all_exact_joint_target) ||
     !isTRUE(manifest$all_zero_repairs) ||
-    isTRUE(manifest$all_methods_selected) ||
+    !identical(isTRUE(manifest$all_methods_selected),
+               family_contract$all_methods_selected) ||
     isTRUE(manifest$threshold_changes) || isTRUE(manifest$target_changes) ||
     as.integer(manifest$retries) != 0L || isTRUE(manifest$reseeding) ||
+    isTRUE(manifest$scientific_metrics_used) ||
     isTRUE(manifest$scientific_promotion) ||
     isTRUE(manifest$confirmatory_launch_authorized)) {
   stop("The candidate comparison does not match the fail-closed contract.",
@@ -138,10 +164,15 @@ jobs <- utils::read.csv(
   file.path(input_root, "jobs.csv"),
   stringsAsFactors = FALSE, check.names = FALSE
 )
-if (nrow(status) != 93L || nrow(jobs) != 93L || any(!status$ok) ||
+if (nrow(status) != family_contract$jobs ||
+    nrow(jobs) != family_contract$jobs || any(!status$ok) ||
     any(!status$exact_joint_target) || any(status$numerical_repair_count != 0L) ||
     any(status$retry_count != 0L) || any(status$reseeded) ||
-    nrow(diagnostics) != 1791L || sum(!diagnostics$pass) != 32L) {
+    nrow(diagnostics) != family_contract$diagnostics ||
+    sum(!diagnostics$pass) != family_contract$diagnostics_failed ||
+    nrow(decisions) != family_contract$methods ||
+    sum(decisions$selected_candidate != "none") !=
+      family_contract$selected_methods) {
   stop("Candidate tables disagree with the authenticated comparison.",
        call. = FALSE)
 }
@@ -254,7 +285,8 @@ input_hashes <- data.frame(
 )
 atomic_csv(input_hashes, file.path(output_root, "input_artifact_hashes.csv"))
 closeout <- list(
-  schema_version = "rqrgibbs_dlm_skewed_candidate_closeout/1.0.0",
+  schema_version = "rqrgibbs_dlm_skewed_candidate_closeout/1.1.0",
+  candidate_family = expected_family,
   candidate_source_commit = expected_source,
   input_artifact_manifest_sha256 = sha256(file.path(
     input_root, "candidate_artifact_hashes.csv"
@@ -271,7 +303,7 @@ closeout <- list(
   ]),
   all_exact_joint_target = all(status$exact_joint_target),
   all_zero_repairs = all(status$numerical_repair_count == 0L),
-  all_methods_selected = FALSE,
+  all_methods_selected = family_contract$all_methods_selected,
   thresholds_changed = FALSE, target_changed = FALSE,
   scientific_promotion = FALSE,
   confirmatory_launch_authorized = FALSE,
@@ -288,16 +320,32 @@ atomic_lines(c(
           sum(diagnostics$pass), nrow(diagnostics), sum(!diagnostics$pass)),
   sprintf("- Methods selected: %d/%d; unresolved: %s.",
           sum(decisions$selected_candidate != "none"), nrow(decisions),
-          paste(decisions$method[decisions$selected_candidate == "none"],
-                collapse = ", ")),
+          if (any(decisions$selected_candidate == "none")) {
+            paste(decisions$method[decisions$selected_candidate == "none"],
+                  collapse = ", ")
+          } else {
+            "none"
+          }),
   "- Thresholds, target, seeds, and replication roles were unchanged.",
   "- No fit, retry, reseeding, scientific promotion, or launch authorization",
   "  was performed by this read-only closeout.",
   "",
-  "The failure is computational mixing in M10/M11. The compact tables retain",
-  "the exact failed rows, long-lag autocorrelation, scale/root correlations,",
-  "split-chain location summaries, effective draws per second, and complete",
-  "input/artifact hashes. Heavy per-chain objects remain ignored."
+  if (family_contract$all_methods_selected) {
+    paste(
+      "The joint-elliptical development comparison selected exact,",
+      "method-wide transitions for all targeted methods. This is bounded",
+      "computational evidence, not scientific promotion or launch authority."
+    )
+  } else {
+    paste(
+      "The whole-scan comparison left computational mixing unresolved in",
+      "M10/M11 and therefore remained fail closed."
+    )
+  },
+  "The compact tables retain the exact failed rows, long-lag",
+  "autocorrelation, scale/root correlations, split-chain location summaries,",
+  "effective draws per second, and complete input/artifact hashes. Heavy",
+  "per-chain objects remain ignored."
 ), file.path(output_root, "README.md"))
 
 compact_files <- sort(list.files(output_root), method = "radix")

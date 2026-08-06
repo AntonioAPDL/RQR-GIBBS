@@ -1,0 +1,8 @@
+"path","bytes","sha256"
+"comparison_manifest.json",918,"84408170e147cee959bf85f6daa733c084405f96b416e5c0445c170c39333218"
+"candidate_artifact_hashes.csv",7877,"6551e96f940dd0ddccf6ea3adc6e42902162cf3d288fd802a1c911fc53679b02"
+"candidate_decisions.csv",390,"ff5395261176a06287af460a1beb243f494bc03035e4c92609e05ccb10d08ad0"
+"candidate_diagnostics.csv",163616,"a10306b7e37a7e5b4c0a6362c0be86b91f3c98bf82d15ead777a381dc2c366a1"
+"candidate_summary.csv",839,"44496755e656f63b9a252f3b7e3d6e19dcb853304db6a478ddfe6487b6efb991"
+"job_status.csv",8088,"a7517174a93f847899c611521471b1d8251f4a2d8a6f24a50b333deedd56e994"
+"jobs.csv",12001,"bbf45cd6fffbea737e8cc87bbe1eca9382e1a8adc4e81d26531470e66d8debac"

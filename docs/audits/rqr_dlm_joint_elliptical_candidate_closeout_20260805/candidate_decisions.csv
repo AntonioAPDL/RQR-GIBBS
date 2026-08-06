@@ -1,0 +1,3 @@
+"method","selected_candidate","selected_candidate_order","selected_transition_multiplier","selection_status","thresholds_changed","target_changed","replication_specific_schedule","confirmatory_authorization"
+"M10","joint_ess1_x1",1,1,"minimum_predeclared_candidate_eligible",FALSE,FALSE,FALSE,FALSE
+"M11","joint_ess1_x2",2,2,"minimum_predeclared_candidate_eligible",FALSE,FALSE,FALSE,FALSE
