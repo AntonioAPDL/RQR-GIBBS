@@ -1,0 +1,15 @@
+check,source_commit,result,details
+reviewed_worktree_status,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,clean main worktree at exact source
+focused_v4_tests,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,test-rqr-oracle-tilt-publication-v4.R completed without failures
+v4_R_parse,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,scripts 52 54 56 and 57 parsed
+v4_shell_parse,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,wrappers orchestrator rehearsal launcher and health scripts passed bash -n
+preflight_runner_manifest,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,closed local bundle independently verified
+preflight_wrapper_manifest,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,closed local bundle independently verified
+reference_runner_manifest,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,closed local bundle independently verified
+reference_wrapper_manifest,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,closed local bundle independently verified
+benchmark_runner_manifest,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,closed local bundle independently verified
+benchmark_wrapper_manifest,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,closed local bundle independently verified
+resource_runner_manifest,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,15 GiB closed local bundle independently rehashed in 158.769 seconds
+resource_wrapper_manifest,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,15 GiB closed local bundle independently rehashed in 158.403 seconds
+primary_repository_status,4b38e6a556e6848c7ed6e077dad0d22a00367382,PASS,clean and synchronized with origin/main during reconciliation
+

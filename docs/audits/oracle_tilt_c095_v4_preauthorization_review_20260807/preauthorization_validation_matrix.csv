@@ -1,0 +1,30 @@
+gate_id,area,claim,evidence,observed,required,status,blocks_authorization
+SRC-001,source,authoritative source identity,Git parent commit,4b38e6a556e6848c7ed6e077dad0d22a00367382,exact full SHA,PASS,TRUE
+SRC-002,source,reviewed worktree cleanliness,local source audit,clean,clean,PASS,TRUE
+SRC-003,configuration,production remains disabled,application/config/oracle_tilt_c095_publication_v4_seed_screen_20260805.json,FALSE,FALSE,PASS,TRUE
+SRC-004,interpretation,screen is a single-data generalized-posterior illustration,closeouts and protocol,not response-predictive or repeated-sample,explicitly scoped,PASS,TRUE
+RUN-001,runtime,all stages use exact isolated runtime,stage runtime_binding.json files,TRUE,TRUE,PASS,TRUE
+RUN-002,runtime,common runtime tree digest,all closeout.json files,2dd6ec13e61e1218558cf037bd55be1338bb43586978baabd7c1d5cab02218b6,identical,PASS,TRUE
+CFG-001,configuration,common configuration digest,all closeout.json files,3fbbf25d1ad3c588bf13ce4268401601f6f567ecbdeab636d081a2e409542794,identical,PASS,TRUE
+PRE-001,preflight,candidate scientific-design gates,candidate_preflight_gates.csv,51/51,51/51,PASS,TRUE
+PRE-002,preflight,cross-candidate design and stream gates,cross_candidate_gates.csv,11/11,11/11,PASS,TRUE
+REF-001,reference,conditional and numerical reference gates,reference_gates.csv,29/29,29/29,PASS,TRUE
+BEN-001,benchmark,production-schedule hard cells,benchmark_summary.csv,2/2,2/2,PASS,TRUE
+BEN-002,benchmark,numerical repairs,benchmark_summary.csv,0,0,PASS,TRUE
+BEN-003,benchmark,fixed-design SH recovery,benchmark_summary.csv,endpoint RMSE/oracle width 0.06655 and width ratio 0.98854,all declared gates,PASS,TRUE
+BEN-004,benchmark,DLM SH recovery,benchmark_summary.csv,endpoint RMSE/oracle width 0.10380 and width ratio 1.06126,all declared gates,PASS,TRUE
+RES-001,resource,full-scale cells,rehearsal_summary.csv,18/18,18/18,PASS,TRUE
+RES-002,resource,distinct worker processes,rehearsal_summary.csv,18,18,PASS,TRUE
+RES-003,resource,production-shaped endpoint draws,rehearsal_summary.csv,576000,576000,PASS,TRUE
+RES-004,resource,endpoint algebra identities,rehearsal_summary.csv,maximum error 0,0,PASS,TRUE
+RES-005,resource,peak sampled RSS,resource_summary.csv,51.02 GiB,<96 GiB,PASS,TRUE
+RES-006,resource,process and thread topology,resource_summary.csv,19 processes / 18 R / 19 threads,<=64 / <=19 / <=64,PASS,TRUE
+RES-007,resource,timeout and limit state,resource_summary.csv,FALSE/FALSE,no timeout or sampled trigger,PASS,TRUE
+RES-008,resource,final process group,resource_summary.csv,empty,empty,PASS,TRUE
+RES-009,resource,worker stderr logs,resource-rehearsal logs,0 nonempty,0,PASS,TRUE
+INT-001,integrity,runner manifests independently rehashed,local reconciliation,all four PASS,all four PASS,PASS,TRUE
+INT-002,integrity,wrapper manifests independently rehashed,local reconciliation,all four PASS,all four PASS,PASS,TRUE
+INT-003,integrity,resource runner rehash elapsed,local reconciliation,158.769 seconds,completed,PASS,FALSE
+INT-004,integrity,resource wrapper rehash elapsed,local reconciliation,158.403 seconds,completed,PASS,FALSE
+AUT-001,authorization,independent review decision,independent reviewer output,PENDING,GO required,PENDING,TRUE
+

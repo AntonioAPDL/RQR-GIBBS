@@ -1,0 +1,17 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_v4_resource_rehearsal/1.0.0",
+  "mode": "resource-rehearsal",
+  "pass": true,
+  "source_commit": "4b38e6a556e6848c7ed6e077dad0d22a00367382",
+  "config_sha256": "3fbbf25d1ad3c588bf13ce4268401601f6f567ecbdeab636d081a2e409542794",
+  "scale": 1,
+  "runtime_tree_digest": "2dd6ec13e61e1218558cf037bd55be1338bb43586978baabd7c1d5cab02218b6",
+  "exact_runtime_bound": true,
+  "compact_evidence_eligible": true,
+  "completed_cells": 18,
+  "expected_cells": 18,
+  "distinct_processes": 18,
+  "full_production_shape": true,
+  "endpoint_storage_contract": "ordered_endpoints_only",
+  "interpretation": "process-concurrency and endpoint-storage rehearsal; not MCMC, not a response-predictive analysis, not a simulation study"
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_v4_preauthorization_review/1.0.0",
+  "authoritative_source_commit": "4b38e6a556e6848c7ed6e077dad0d22a00367382",
+  "decision": "GO_or_NO_GO",
+  "flag_only_authorization_permitted": false,
+  "reuse_preflag_evidence_permitted": false,
+  "production_launch_permitted_without_regenerated_evidence": false,
+  "raw_resource_payload_independently_rehashed": false,
+  "blocking_findings": [],
+  "nonblocking_findings": []
+}

@@ -1,0 +1,12 @@
+"gate","value","threshold","comparison","pass"
+"candidate_count",3,3,"==",TRUE
+"cell_count",18,18,"==",TRUE
+"chain_count",81,81,"==",TRUE
+"unique_chain_seeds",81,81,"==",TRUE
+"unique_dgp_streams",9,9,"==",TRUE
+"fixed_responses_differ",3,3,"==",TRUE
+"dlm_responses_differ",3,3,"==",TRUE
+"dlm_states_differ",3,3,"==",TRUE
+"fixed_design_shared",1,1,"==",TRUE
+"dlm_design_shared",1,1,"==",TRUE
+"candidate_preflights",3,3,"==",TRUE
