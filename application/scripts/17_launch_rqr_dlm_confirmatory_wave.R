@@ -42,10 +42,28 @@ sys.source(
   ),
   envir = environment()
 )
+sys.source(
+  file.path(
+    repo_root, "application", "scripts", "lib",
+    "rqr_dlm_diagnostic_aware_completion.R"
+  ),
+  envir = environment()
+)
 contract <- rqr_confirm_read_contract(repo_root)
 rqr_confirm_validate_contract(contract)
 rqr_confirm_validate_budget(contract)
-if (!isTRUE(contract$config$confirmatory_execution_authorized)) {
+diagnostic_aware_completion <- rqr_completion_active()
+completion_policy_record <- NULL
+if (diagnostic_aware_completion) {
+  completion_policy_record <- rqr_completion_read_policy(repo_root)
+  contract <- rqr_completion_apply_policy(
+    contract, completion_policy_record$policy
+  )
+}
+if (diagnostic_aware_completion) {
+  # The complete bundle is checked after it is read below.
+  invisible(TRUE)
+} else if (!isTRUE(contract$config$confirmatory_execution_authorized)) {
   rqr_confirm_authorized(
     contract, mode, expected_commit = "",
     authorization_bundle = NULL
@@ -125,26 +143,41 @@ authorization <- jsonlite::read_json(
 primary_attestation <- readRDS(
   required_files[["primary_attestation"]]
 )
-required_authorization <- c(
-  "schema_version", "reviewed_implementation_commit",
-  "authorization_commit", "authorization_diff_only_flag",
-  "explicit_user_confirmation", "all_reference_gates_pass",
-  "primary_worktree_clean", "primary_runtime_tree_digest",
-  "seed_ledger_sha256", "task_plan_sha256"
-)
-if (!all(required_authorization %in% names(authorization)) ||
-    !identical(
-      authorization$schema_version,
-      "rqrgibbs_dlm_confirmatory_authorization/1.0.0"
-    ) ||
-    !identical(
+authorization_valid <- if (diagnostic_aware_completion) {
+  isTRUE(rqr_completion_authorized(
+    completion_policy_record, expected_commit, authorization
+  )) &&
+    identical(
       tolower(as.character(authorization$authorization_commit)),
       expected_commit
-    ) ||
-    !isTRUE(authorization$authorization_diff_only_flag) ||
-    !isTRUE(authorization$explicit_user_confirmation) ||
-    !isTRUE(authorization$all_reference_gates_pass) ||
-    !isTRUE(authorization$primary_worktree_clean) ||
+    ) &&
+    identical(
+      tolower(as.character(authorization$reviewed_implementation_commit)),
+      expected_commit
+    )
+} else {
+  required_authorization <- c(
+    "schema_version", "reviewed_implementation_commit",
+    "authorization_commit", "authorization_diff_only_flag",
+    "explicit_user_confirmation", "all_reference_gates_pass",
+    "primary_worktree_clean", "primary_runtime_tree_digest",
+    "seed_ledger_sha256", "task_plan_sha256"
+  )
+  all(required_authorization %in% names(authorization)) &&
+    identical(
+      authorization$schema_version,
+      "rqrgibbs_dlm_confirmatory_authorization/1.0.0"
+    ) &&
+    identical(
+      tolower(as.character(authorization$authorization_commit)),
+      expected_commit
+    ) &&
+    isTRUE(authorization$authorization_diff_only_flag) &&
+    isTRUE(authorization$explicit_user_confirmation) &&
+    isTRUE(authorization$all_reference_gates_pass) &&
+    isTRUE(authorization$primary_worktree_clean)
+}
+if (!authorization_valid ||
     !identical(
       as.character(primary_attestation$schema_version),
       "rqrgibbs_runtime_attestation/5.0.0"
@@ -563,6 +596,13 @@ rqr_confirm_atomic_write_json(
     workers_used = length(worker_slots),
     task_count = nrow(selected),
     all_workers_passed = all_workers_passed,
+    diagnostic_aware_completion = diagnostic_aware_completion,
+    diagnostic_failures_nonblocking = diagnostic_aware_completion,
+    execution_policy_sha256 = if (diagnostic_aware_completion) {
+      rqr_confirm_sha256(completion_policy_record$path)
+    } else {
+      ""
+    },
     no_retry = TRUE, no_reseed = TRUE,
     source_commit = source_commit,
     runtime_tree_digest = binding$runtime_tree_digest

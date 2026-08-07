@@ -46,6 +46,9 @@ binding_fields <- c(
   "task_plan_sha256", "wave_plan_sha256", "wave_output_base",
   "binding_digest"
 )
+if ("execution_policy_sha256" %in% names(binding)) {
+  binding_fields <- c(binding_fields, "execution_policy_sha256")
+}
 binding <- binding[binding_fields]
 records <- rqr_confirm_wave_state_records(
   state_root, catalog, binding, allow_active_start = TRUE
@@ -111,6 +114,79 @@ wave_bytes <- if (length(wave_files)) {
 } else {
   0
 }
+worker_status_paths <- list.files(
+  file.path(run_root, "waves"), pattern = "^run_status\\.csv$",
+  recursive = TRUE, full.names = TRUE
+)
+worker_status <- if (length(worker_status_paths)) {
+  do.call(rbind, lapply(worker_status_paths, function(path) {
+    utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+  }))
+} else {
+  data.frame()
+}
+terminal_task_statuses <- c(
+  "completed", "completed_with_fit_failure",
+  "completed_with_diagnostic_warning", "cell_stop_failure",
+  "global_stop_failure", "infrastructure_invalid"
+)
+planned_tasks <- nrow(rqr_confirm_replication_plan(
+  contract, planning = "maximum"
+))
+terminal_tasks <- if (nrow(worker_status)) {
+  sum(worker_status$status %in% terminal_task_statuses)
+} else {
+  0L
+}
+result_paths <- list.files(
+  file.path(run_root, "waves"),
+  pattern = "^replication_results\\.csv$",
+  recursive = TRUE, full.names = TRUE
+)
+result_paths <- result_paths[grepl("/replications/", result_paths, fixed = TRUE)]
+result_tables <- lapply(result_paths, function(path) {
+  utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+})
+result_rows <- if (length(result_tables)) sum(vapply(
+  result_tables, nrow, integer(1L)
+)) else 0L
+planned_result_rows <- sum(rqr_confirm_fit_plan(
+  contract, planning = "maximum"
+)$replications)
+diagnostic_paths <- list.files(
+  file.path(run_root, "waves"), pattern = "^fit_diagnostics\\.csv$",
+  recursive = TRUE, full.names = TRUE
+)
+diagnostic_paths <- diagnostic_paths[
+  grepl("/replications/", diagnostic_paths, fixed = TRUE)
+]
+diagnostic_counts <- if (length(diagnostic_paths)) {
+  rows <- lapply(diagnostic_paths, function(path) {
+    value <- utils::read.csv(
+      path, stringsAsFactors = FALSE, check.names = FALSE
+    )
+    c(total = nrow(value), passed = sum(as.logical(value$pass)))
+  })
+  colSums(do.call(rbind, rows))
+} else {
+  c(total = 0L, passed = 0L)
+}
+warning_rows <- if (length(result_tables)) sum(vapply(
+  result_tables,
+  function(value) sum(value$failure_class == "mcmc_diagnostic_warning"),
+  integer(1L)
+)) else 0L
+wave_manifest_paths <- list.files(
+  file.path(run_root, "waves"), pattern = "^wave_manifest\\.json$",
+  recursive = TRUE, full.names = TRUE
+)
+diagnostic_aware <- if (length(wave_manifest_paths)) {
+  isTRUE(jsonlite::read_json(
+    wave_manifest_paths[[1L]], simplifyVector = TRUE
+  )$diagnostic_aware_completion)
+} else {
+  FALSE
+}
 latest_collection <- sort(
   list.files(
     file.path(run_root, "collections"),
@@ -123,7 +199,11 @@ latest_collection <- if (length(latest_collection)) {
 } else {
   "none"
 }
-cat("RQR-DLM confirmatory health check\n")
+cat(if (diagnostic_aware) {
+  "RQR-DLM diagnostic-aware completion health check\n"
+} else {
+  "RQR-DLM confirmatory health check\n"
+})
 cat("  state:", run_state, "\n")
 cat("  run ID:", binding$run_id, "\n")
 cat("  authorization commit:", binding$authorization_commit, "\n")
@@ -138,6 +218,15 @@ cat("  precision-stop skips:",
 cat("  failed waves:", sum(decisions == "failed"), "\n")
 cat("  active canonical wave:", active_wave, "\n")
 cat("  next canonical wave:", next_wave, "\n")
+cat("  terminal DGP-replication tasks:", terminal_tasks, "/",
+    planned_tasks, "\n")
+cat("  remaining DGP-replication tasks:",
+    planned_tasks - terminal_tasks, "\n")
+cat("  completed method-replication results:", result_rows, "/",
+    planned_result_rows, "\n")
+cat("  frozen diagnostics passed:", diagnostic_counts[["passed"]],
+    "/", diagnostic_counts[["total"]], "\n")
+cat("  result rows with diagnostic warnings:", warning_rows, "\n")
 cat("  latest collection:", latest_collection, "\n")
 cat("  current wave artifact GiB:",
     sprintf("%.3f", wave_bytes / 1024^3), "\n")

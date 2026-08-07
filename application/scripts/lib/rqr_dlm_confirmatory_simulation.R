@@ -2481,6 +2481,7 @@ rqr_confirm_collect_outputs <- function(run_root, planned_tasks, contract) {
     if (!manifest$mode %in% c("sentinel-core", "execute-confirmatory") ||
         !manifest$status %in% c(
           "passed", "completed_with_fit_failures",
+          "completed_with_diagnostic_warnings",
           "failed_cell_stop", "failed_global_stop"
         ) ||
         !isTRUE(manifest$generalized_bayes) ||
@@ -2525,7 +2526,8 @@ rqr_confirm_collect_outputs <- function(run_root, planned_tasks, contract) {
          call. = FALSE)
   }
   allowed_status <- c(
-    "completed", "completed_with_fit_failure", "cell_stop_failure",
+    "completed", "completed_with_fit_failure",
+    "completed_with_diagnostic_warning", "cell_stop_failure",
     "global_stop_failure", "infrastructure_invalid",
     "not_run_cell_stop", "not_run_global_stop"
   )
@@ -2543,6 +2545,7 @@ rqr_confirm_collect_outputs <- function(run_root, planned_tasks, contract) {
   ]
   published_status <- statuses$status %in% c(
     "completed", "completed_with_fit_failure",
+    "completed_with_diagnostic_warning",
     "cell_stop_failure", "global_stop_failure"
   )
   if (length(result_paths) != sum(published_status)) {
@@ -2803,7 +2806,8 @@ rqr_confirm_collect_outputs <- function(run_root, planned_tasks, contract) {
     wave_directories = unique(stage_wave_owner),
     replications = replications,
     analysis_complete = all(statuses$status %in% c(
-      "completed", "completed_with_fit_failure"
+      "completed", "completed_with_fit_failure",
+      "completed_with_diagnostic_warning"
     )) && all(vapply(
       replication_rows, `[[`, logical(1L), "exact_method_set"
     ))
@@ -4112,6 +4116,16 @@ rqr_confirm_dynamic_fit <- function(
     ),
     init = initial
   )
+  policy_override <- contract$mcmc_control_overrides[[method]] %||% list()
+  if (!is.list(policy_override) ||
+      (length(policy_override) &&
+       (is.null(names(policy_override)) ||
+        any(!nzchar(names(policy_override)))))) {
+    stop("A policy MCMC-control override is malformed.", call. = FALSE)
+  }
+  if (length(policy_override)) {
+    common$mcmc_control[names(policy_override)] <- policy_override
+  }
   if (length(mcmc_control_override)) {
     common$mcmc_control[names(mcmc_control_override)] <-
       mcmc_control_override
@@ -5244,8 +5258,21 @@ rqr_confirm_wave_binding <- function(
   wave_output_base <- normalizePath(
     wave_output_base, winslash = "/", mustWork = TRUE
   )
+  execution_policy_sha256 <- tolower(as.character(
+    authorization$execution_policy_sha256 %||% ""
+  ))
+  if (length(execution_policy_sha256) != 1L ||
+      is.na(execution_policy_sha256) ||
+      !grepl("^$|^[0-9a-f]{64}$", execution_policy_sha256)) {
+    stop("The wave-state execution-policy digest is invalid.",
+         call. = FALSE)
+  }
   binding <- list(
-    schema_version = "rqrgibbs_dlm_wave_run/1.1.0",
+    schema_version = if (nzchar(execution_policy_sha256)) {
+      "rqrgibbs_dlm_wave_run/1.2.0"
+    } else {
+      "rqrgibbs_dlm_wave_run/1.1.0"
+    },
     run_id = scalar_text(
       run_id, "run_id", "^[a-z0-9][a-z0-9._-]{0,127}$"
     ),
@@ -5278,6 +5305,9 @@ rqr_confirm_wave_binding <- function(
     ),
     wave_output_base = wave_output_base
   )
+  if (nzchar(execution_policy_sha256)) {
+    binding$execution_policy_sha256 <- execution_policy_sha256
+  }
   expected_commit <- scalar_text(
     expected_commit, "expected_commit", "^[0-9a-f]{40}$"
   )
@@ -5301,9 +5331,9 @@ rqr_confirm_wave_binding <- function(
 
 rqr_confirm_wave_output_root <- function(binding, catalog_row) {
   if (!is.list(binding) ||
-      !identical(
-        as.character(binding$schema_version),
-        "rqrgibbs_dlm_wave_run/1.1.0"
+      !as.character(binding$schema_version) %in% c(
+        "rqrgibbs_dlm_wave_run/1.1.0",
+        "rqrgibbs_dlm_wave_run/1.2.0"
       ) ||
       !is.character(binding$wave_output_base) ||
       length(binding$wave_output_base) != 1L ||

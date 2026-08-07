@@ -41,12 +41,27 @@ sys.source(
   ),
   envir = environment()
 )
+sys.source(
+  file.path(
+    repo_root, "application", "scripts", "lib",
+    "rqr_dlm_diagnostic_aware_completion.R"
+  ),
+  envir = environment()
+)
 contract <- rqr_confirm_read_contract(repo_root)
 rqr_confirm_validate_contract(
   contract,
   require_closed = FALSE
 )
 rqr_confirm_validate_budget(contract)
+diagnostic_aware_completion <- rqr_completion_active()
+completion_policy_record <- NULL
+if (diagnostic_aware_completion) {
+  completion_policy_record <- rqr_completion_read_policy(repo_root)
+  contract <- rqr_completion_apply_policy(
+    contract, completion_policy_record$policy
+  )
+}
 development_affected_mode <- identical(
   mode, "development-affected-wave"
 )
@@ -104,11 +119,18 @@ authorization <- if (nzchar(authorization_path)) {
 } else {
   NULL
 }
-if (mode %in% c("sentinel-core", "execute-confirmatory") &&
-    !isTRUE(contract$config$confirmatory_execution_authorized)) {
-  rqr_confirm_authorized(
-    contract, mode, expected_commit, authorization
-  )
+if (mode %in% c("sentinel-core", "execute-confirmatory")) {
+  if (diagnostic_aware_completion) {
+    rqr_completion_authorized(
+      completion_policy_record, expected_commit, authorization
+    )
+  } else if (!isTRUE(
+      contract$config$confirmatory_execution_authorized
+    )) {
+    rqr_confirm_authorized(
+      contract, mode, expected_commit, authorization
+    )
+  }
 }
 output_dir <- if (length(arguments) == 2L) {
   normalizePath(arguments[[2L]], winslash = "/", mustWork = FALSE)
@@ -155,7 +177,12 @@ contract_digests <- list(
   config_sha256 = rqr_confirm_sha256(config_path),
   incidence_sha256 = contract$config$review_contract$incidence_sha256,
   budget_sha256 = contract$config$review_contract$budget_sha256,
-  gates_sha256 = contract$config$review_contract$gates_sha256
+  gates_sha256 = contract$config$review_contract$gates_sha256,
+  execution_policy_sha256 = if (diagnostic_aware_completion) {
+    rqr_confirm_sha256(completion_policy_record$path)
+  } else {
+    ""
+  }
 )
 stage_status <- "passed"
 stage_exit_status <- 0L
@@ -1350,7 +1377,9 @@ if (mode %in% c(
           stage_exit_status <- 1L
           break
         }
-        if (identical(stage_status, "passed")) {
+        if (stage_status %in% c(
+            "passed", "completed_with_diagnostic_warnings"
+          )) {
           stage_status <- "completed_with_fit_failures"
         }
         next
@@ -1545,10 +1574,19 @@ if (mode %in% c(
           )
           replication_result_index <-
             length(replication_results)
-          replication_results[[replication_result_index]]$status <-
-            "diagnostic_failed"
-          replication_results[[replication_result_index]]$failure_class <-
+          diagnostic_class <- if (diagnostic_aware_completion) {
+            completion_policy_record$policy$result_contract$failure_class
+          } else {
             "mcmc_diagnostic_failure"
+          }
+          replication_results[[replication_result_index]]$status <- if (
+              diagnostic_aware_completion) {
+            "completed"
+          } else {
+            "diagnostic_failed"
+          }
+          replication_results[[replication_result_index]]$failure_class <-
+            diagnostic_class
           replication_failure_index <- replication_failure_index + 1L
           failure_index <- failure_index + 1L
           failure_row <- data.frame(
@@ -1556,7 +1594,7 @@ if (mode %in% c(
             cell_id = method_cell_id,
             replication = task$replication[[1L]],
             method = method,
-            failure_class = "mcmc_diagnostic_failure",
+            failure_class = diagnostic_class,
             message_digest = digest::digest(
               diagnostic_message, algo = "sha256", serialize = FALSE
             ),
@@ -1567,7 +1605,7 @@ if (mode %in% c(
           replication_failures[[replication_failure_index]] <-
             failure_row
           failure_rows[[failure_index]] <- failure_row
-          if (method_is_sentinel) {
+          if (method_is_sentinel && !diagnostic_aware_completion) {
             cell_stop <- TRUE
             cell_stop_message <- diagnostic_message
             stage_status <- "failed_cell_stop"
@@ -1575,7 +1613,11 @@ if (mode %in% c(
             break
           }
           if (identical(stage_status, "passed")) {
-            stage_status <- "completed_with_fit_failures"
+            stage_status <- if (diagnostic_aware_completion) {
+              completion_policy_record$policy$result_contract$stage_status
+            } else {
+              "completed_with_fit_failures"
+            }
           }
         }
       }
@@ -1695,8 +1737,20 @@ if (mode %in% c(
       all_diagnostic_rows[[diagnostic_index]] <-
         do.call(rbind, replication_diagnostics)
     }
+    diagnostic_warning_present <- length(replication_failures) && all(
+      vapply(
+        replication_failures,
+        function(value) identical(
+          as.character(value$failure_class[[1L]]),
+          "mcmc_diagnostic_warning"
+        ),
+        logical(1L)
+      )
+    )
     run_status$status[[task_index]] <- if (cell_stop) {
       if (global_stop) "global_stop_failure" else "cell_stop_failure"
+    } else if (diagnostic_warning_present) {
+      "completed_with_diagnostic_warning"
     } else if (length(replication_failures)) {
       "completed_with_fit_failure"
     } else {
@@ -1829,6 +1883,90 @@ if (mode %in% c("collect", "audit")) {
   }
   results <- collected$results
   write_csv(results, "collected_replication_results.csv")
+  if (diagnostic_aware_completion) {
+    diagnostic_methods <- unique(results$method[
+      results$method %in% c(
+        "M01", "M02", "M03", "M06", "M07", "M08", "M09",
+        "M10", "M11"
+      )
+    ])
+    diagnostic_rows <- results[
+      results$method %in% diagnostic_methods, , drop = FALSE
+    ]
+    warning_cells <- split(
+      diagnostic_rows,
+      interaction(
+        diagnostic_rows$cell_id, diagnostic_rows$method,
+        drop = TRUE, lex.order = TRUE
+      )
+    )
+    warning_summary <- do.call(rbind, lapply(warning_cells, function(value) {
+      warned <- value$failure_class == "mcmc_diagnostic_warning"
+      data.frame(
+        cell_id = value$cell_id[[1L]],
+        method = value$method[[1L]],
+        attempted = nrow(value),
+        diagnostic_warning_rows = sum(warned),
+        diagnostic_warning_fraction = mean(warned),
+        primary_metrics_retained = all(
+          !warned | is.finite(value$heldout_rqr_loss)
+        ),
+        stringsAsFactors = FALSE
+      )
+    }))
+    rownames(warning_summary) <- NULL
+    write_csv(
+      warning_summary[order(warning_summary$cell_id), , drop = FALSE],
+      "diagnostic_warning_summary.csv"
+    )
+    sensitivity_measures <- c(
+      "heldout_rqr_loss", "aggregate_coverage", "mean_width",
+      "central_interval_score", "future_mean_lower",
+      "future_mean_upper", "future_mean_midpoint",
+      "endpoint_rmse_lower", "endpoint_rmse_upper",
+      "realized_root_rmse",
+      sprintf("coverage_h%02d", c(1L, 5L, 10L, 20L))
+    )
+    sensitivity_rows <- list()
+    sensitivity_index <- 0L
+    for (cell_id in sort(unique(diagnostic_rows$cell_id), method = "radix")) {
+      cell <- diagnostic_rows[
+        diagnostic_rows$cell_id == cell_id, , drop = FALSE
+      ]
+      unflagged <- cell$failure_class != "mcmc_diagnostic_warning"
+      for (measure in sensitivity_measures) {
+        all_values <- cell[[measure]][is.finite(cell[[measure]])]
+        clean_values <- cell[[measure]][
+          unflagged & is.finite(cell[[measure]])
+        ]
+        sensitivity_index <- sensitivity_index + 1L
+        sensitivity_rows[[sensitivity_index]] <- data.frame(
+          cell_id = cell_id,
+          method = cell$method[[1L]],
+          measure = measure,
+          all_rows = length(all_values),
+          unflagged_rows = length(clean_values),
+          all_mean = if (length(all_values)) mean(all_values) else NA_real_,
+          unflagged_mean = if (length(clean_values)) {
+            mean(clean_values)
+          } else {
+            NA_real_
+          },
+          unflagged_minus_all = if (
+              length(all_values) && length(clean_values)) {
+            mean(clean_values) - mean(all_values)
+          } else {
+            NA_real_
+          },
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+    write_csv(
+      do.call(rbind, sensitivity_rows),
+      "diagnostic_warning_sensitivity.csv"
+    )
+  }
   if (isTRUE(collected$analysis_complete)) {
     summaries <- rqr_confirm_summarize_results(results, contract)
     contrasts <- rqr_confirm_paired_contrasts(results, contract)
@@ -1853,6 +1991,11 @@ if (mode %in% c("collect", "audit")) {
       write_csv(contrasts, "paired_contrasts.csv")
     }
     if (nrow(decisions)) {
+      if (diagnostic_aware_completion) {
+        decisions <- rqr_completion_force_maximum_decisions(
+          decisions, contract
+        )
+      }
       if (!identical(
           names(decisions),
           rqr_confirm_artifact_schemas()$batch_decision
@@ -1892,6 +2035,13 @@ run_manifest <- list(
     contract$config$diagnostic_pilot_execution_authorized,
   confirmatory_execution_authorized =
     contract$config$confirmatory_execution_authorized,
+  diagnostic_aware_completion = diagnostic_aware_completion,
+  execution_policy_id = if (diagnostic_aware_completion) {
+    completion_policy_record$policy$policy_id
+  } else {
+    ""
+  },
+  execution_policy_sha256 = contract_digests$execution_policy_sha256,
   primary_runtime_binding = primary_binding,
   generalized_bayes = TRUE,
   response_likelihood = FALSE,
