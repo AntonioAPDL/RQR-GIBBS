@@ -1032,10 +1032,19 @@ if (mode %in% c(
         isTRUE(exdqlm_attestation$protected_exdqlm_checkout_used) ||
         isTRUE(quantreg_attestation$protected_exdqlm_checkout_used)
     )
-    rqr_confirm_authorized(
-      contract, mode, expected_commit, authorization,
-      observed = observed_authorization
-    )
+    if (diagnostic_aware_completion) {
+      rqr_completion_authorized(
+        completion_policy_record, expected_commit, authorization
+      )
+      rqr_completion_observed_authorization_matches(
+        authorization, observed_authorization
+      )
+    } else {
+      rqr_confirm_authorized(
+        contract, mode, expected_commit, authorization,
+        observed = observed_authorization
+      )
+    }
   } else if (!is.null(authorization)) {
     stop(
       "Development affected-wave validation must not use an authorization bundle.",

@@ -92,10 +92,14 @@ to the frozen maximum replication count unless a hard failure stops the run.
 
 The detached coordinator entered canonical wave 1,
 `static_gaussian_T200__target0200__sentinel`, and started all eight authorized
-sentinel workers.  At this initial health check, the coordinator and workers
-were live, worker stderr logs were empty, and no resource failure had been
-recorded.  The result count was still zero because the first sentinel fits had
-not yet published.
+sentinel workers.  The workers subsequently stopped before any fit because a
+second worker-side authorization boundary incorrectly called the legacy
+flag-only validator instead of the diagnostic-aware validator.  Every worker
+reported `Confirmatory execution is disabled in the reviewed configuration`;
+the wave and coordinator then stopped fail closed.  This was an orchestration
+defect, not an MCMC diagnostic failure.  It produced zero scientific results,
+used no retry or reseed, and did not authorize a later wave.  The failed run
+root is retained as immutable launch-failure evidence and must not be resumed.
 
 ## Monitoring and closeout
 

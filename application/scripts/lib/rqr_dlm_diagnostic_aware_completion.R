@@ -245,3 +245,46 @@ rqr_completion_authorized <- function(
   }
   TRUE
 }
+
+rqr_completion_observed_authorization_matches <- function(
+    authorization_bundle, observed) {
+  required <- c(
+    "primary_worktree_clean", "primary_runtime_tree_digest",
+    "preflight_artifact_hashes_sha256",
+    "reference_artifact_hashes_sha256", "seed_ledger_sha256",
+    "task_plan_sha256", "exdqlm_source_sha256",
+    "quantreg_source_sha256", "reference_runtime_bundle_match",
+    "comparator_dependency_runtime_match", "toolchain_match",
+    "protected_checkout_used"
+  )
+  digest_fields <- c(
+    "primary_runtime_tree_digest", "preflight_artifact_hashes_sha256",
+    "reference_artifact_hashes_sha256", "seed_ledger_sha256",
+    "task_plan_sha256", "exdqlm_source_sha256",
+    "quantreg_source_sha256"
+  )
+  if (!is.list(authorization_bundle) || !is.list(observed) ||
+      !all(required %in% names(authorization_bundle)) ||
+      !all(required %in% names(observed)) ||
+      !isTRUE(observed$primary_worktree_clean) ||
+      !isTRUE(observed$reference_runtime_bundle_match) ||
+      !isTRUE(observed$comparator_dependency_runtime_match) ||
+      !isTRUE(observed$toolchain_match) ||
+      isTRUE(observed$protected_checkout_used) ||
+      !all(vapply(
+        digest_fields,
+        function(field) {
+          identical(
+            tolower(as.character(observed[[field]])[[1L]]),
+            tolower(as.character(authorization_bundle[[field]])[[1L]])
+          )
+        },
+        logical(1L)
+      ))) {
+    stop(
+      "Observed diagnostic-aware execution inputs do not match authorization.",
+      call. = FALSE
+    )
+  }
+  TRUE
+}

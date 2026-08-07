@@ -2547,7 +2547,7 @@ test_that("the direct wave launcher rejects alternate output before publication"
     "^primary_attestation <- readRDS\\(", launcher
   )
   authorization_fields <- grep(
-    "^required_authorization <- c\\(", launcher
+    "^[[:space:]]*required_authorization <- c\\(", launcher
   )
   expect_length(primary_start, 1L)
   expect_length(authorization_fields, 1L)

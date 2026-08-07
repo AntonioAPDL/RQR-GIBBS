@@ -106,6 +106,58 @@ test_that("runner records diagnostics without hiding their failures", {
   expect_match(launcher, "diagnostic_failures_nonblocking", fixed = TRUE)
   expect_match(runner, "mcmc_diagnostic_construction_failure", fixed = TRUE)
   expect_match(runner, "failed_global_stop", fixed = TRUE)
+  expect_match(
+    runner, "rqr_completion_observed_authorization_matches", fixed = TRUE
+  )
+})
+
+test_that("observed diagnostic-aware inputs are authorization-bound", {
+  repo_root <- testthat::test_path("..", "..", "..")
+  environment <- new.env(parent = globalenv())
+  sys.source(
+    file.path(
+      repo_root, "application", "scripts", "lib",
+      "rqr_dlm_diagnostic_aware_completion.R"
+    ),
+    envir = environment
+  )
+  digest_a <- paste(rep("a", 64L), collapse = "")
+  digest_b <- paste(rep("b", 64L), collapse = "")
+  authorization <- list(
+    primary_worktree_clean = TRUE,
+    primary_runtime_tree_digest = digest_a,
+    preflight_artifact_hashes_sha256 = digest_a,
+    reference_artifact_hashes_sha256 = digest_a,
+    seed_ledger_sha256 = digest_a,
+    task_plan_sha256 = digest_a,
+    exdqlm_source_sha256 = digest_a,
+    quantreg_source_sha256 = digest_a,
+    reference_runtime_bundle_match = TRUE,
+    comparator_dependency_runtime_match = TRUE,
+    toolchain_match = TRUE,
+    protected_checkout_used = FALSE
+  )
+  observed <- authorization
+  expect_true(environment$rqr_completion_observed_authorization_matches(
+    authorization, observed
+  ))
+  observed$task_plan_sha256 <- digest_b
+  expect_error(
+    environment$rqr_completion_observed_authorization_matches(
+      authorization, observed
+    ),
+    "do not match authorization",
+    fixed = TRUE
+  )
+  observed <- authorization
+  observed$toolchain_match <- FALSE
+  expect_error(
+    environment$rqr_completion_observed_authorization_matches(
+      authorization, observed
+    ),
+    "do not match authorization",
+    fixed = TRUE
+  )
 })
 
 test_that("wave state cryptographically binds the completion policy", {
