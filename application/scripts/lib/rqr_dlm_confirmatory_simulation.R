@@ -153,7 +153,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$implementation_correction,
         list(
-          schema_version = "rqrgibbs_dlm_main_correction/1.16.0",
+          schema_version = "rqrgibbs_dlm_main_correction/1.17.0",
           failed_authorization_commit =
             "b8b7748ab181a006611b602f64d4edf5be591de6",
           failed_wave_id =
@@ -383,6 +383,28 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           higher_dimensional_guard_scientific_metrics_used = FALSE,
           higher_dimensional_recovery_status =
             "predeclared_exact_candidate_comparison_pending",
+          diagnostic_aware_failed_authorization_commit =
+            "ea8ea8d17c6f7bb34b015472e4f60f62e547c942",
+          diagnostic_aware_failed_run_id =
+            "rqr_dlm_diagnostic_aware_maximum_20260807_ea8ea8d",
+          diagnostic_aware_failed_wave_id =
+            "static_gaussian_T200__target0200__sentinel",
+          diagnostic_aware_failed_wave_artifact_hashes_sha256 =
+            "1f62f7a31780bede379d50cca4d0f8170211c72a6b3390a608ef97dbfc50715c",
+          diagnostic_aware_failure_class =
+            "mcmc_diagnostic_construction_failure",
+          diagnostic_aware_failure_message_digest =
+            "6495bf2b41dc1e26ee4112cd6e30200ca35aa20b34792f1e7f953b9a79210ef5",
+          diagnostic_aware_m01_diagnostics_passed = 368L,
+          diagnostic_aware_m01_diagnostics_total = 368L,
+          diagnostic_aware_m02_construction_failures = 8L,
+          diagnostic_aware_failed_outputs_reused = FALSE,
+          diagnostic_aware_failed_scientific_metrics_used = FALSE,
+          diagnostic_aware_fresh_relaunch_required = TRUE,
+          dynamic_quantile_retained_draw_correction = paste(
+            "apply one validated diagnostic-thinning index to training ordinates,",
+            "terminal states, and deterministic future-root functions"
+          ),
           correction_budget_path =
             "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
           correction_budget_sha256 =
@@ -6649,10 +6671,30 @@ rqr_confirm_scalar_draws <- function(
     }
     raw_lower <- ordinate_draws(result$fits[[1L]])
     raw_upper <- ordinate_draws(result$fits[[2L]])
+    if (!identical(dim(raw_lower), dim(raw_upper))) {
+      stop(
+        paste(
+          "Dynamic-quantile endpoint diagnostics require identical",
+          "raw training-draw dimensions."
+        ),
+        call. = FALSE
+      )
+    }
+    raw_draw_count <- ncol(raw_lower)
     diagnostic_thin <- result$diagnostic_thin %||% 1L
     diagnostic_thin <- rqr_confirm_strict_integer(
       diagnostic_thin, "dynamic-quantile diagnostic thinning", 1L
     )
+    if (diagnostic_thin > raw_draw_count ||
+        raw_draw_count %% diagnostic_thin != 0L) {
+      stop(
+        paste(
+          "Dynamic-quantile diagnostic thinning must divide the raw",
+          "retained-draw count exactly."
+        ),
+        call. = FALSE
+      )
+    }
     retained_index <- seq.int(
       from = diagnostic_thin, to = ncol(raw_lower),
       by = diagnostic_thin
@@ -6669,10 +6711,20 @@ rqr_confirm_scalar_draws <- function(
       observed_loss = loss_draws(lower, upper)
     )
     terminal_draws <- function(fit) {
-      rqr_confirm_terminal_state_draws(
+      terminal <- rqr_confirm_terminal_state_draws(
         fit$samp.theta,
         label = "The exdqlm retained terminal states"
       )
+      if (ncol(terminal) != raw_draw_count) {
+        stop(
+          paste(
+            "Dynamic-quantile terminal and training diagnostics must",
+            "share the same raw retained draws."
+          ),
+          call. = FALSE
+        )
+      }
+      terminal[, retained_index, drop = FALSE]
     }
     model_bundle <- rqr_confirm_model_bundle(generated)
     future_root1 <- rqr_confirm_conditional_root_draws(
@@ -6685,6 +6737,16 @@ rqr_confirm_scalar_draws <- function(
       model_bundle$future$FF, model_bundle$future$GG,
       horizon = generated$H
     )
+    if (ncol(future_root1) != nrow(values) ||
+        ncol(future_root2) != nrow(values)) {
+      stop(
+        paste(
+          "Dynamic-quantile training and future diagnostics must",
+          "preserve one shared retained-draw index."
+        ),
+        call. = FALSE
+      )
+    }
     values <- append_functions(
       values, lower, upper,
       pmin(future_root1, future_root2),

@@ -415,3 +415,15 @@ compaction before atomic sentinel-diagnostic serialization.
 `scripts/25_validate_rqr_dlm_resource_envelope.R` exercises the largest
 planned retained-state shapes.  The execution flag remains false until these
 gates pass from a clean exact isolated runtime.
+
+The first diagnostic-aware maximum-design launch at commit `ea8ea8d` also
+stopped fail-closed in its first canonical wave. All eight completed M01 fits
+produced 368 passing diagnostics, while all eight M02 endpoint-fit pairs hit
+the same post-fit diagnostic-construction error. M02 training ordinates had
+been thinned by the transition multiplier but terminal states used for future
+root functions had not. The corrected extractor applies one validated retained
+index to training ordinates, terminal states, and future-root functions, and
+rejects any dimension or divisibility disagreement explicitly. The failed run
+is not resumable or scientifically promotable; a replacement requires the
+fresh exact-runtime and production-path gates in
+`docs/implementation_notes/rqr_dlm_m02_diagnostic_recovery_plan_20260808.md`.

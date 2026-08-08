@@ -6,6 +6,14 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `implementation_notes/rqr_dlm_m02_diagnostic_recovery_plan_20260808.md`
+  defines the retained-draw identity correction, exact-runtime validation
+  ladder, and fresh maximum-run boundary after the first diagnostic-aware
+  launch stopped during M02 diagnostic assembly.
+- `audits/rqr_dlm_diagnostic_aware_maximum_failure_20260808/` contains the
+  compact closeout, failure rows, health counts, and hashes for that immutable
+  failed run. No partial result from the run is scientifically promotable.
+
 - `audits/oracle_tilt_c095_v4_prelaunch_hardening_20260806.md` records the
   complete wrapper-inventory verifier and V4-aware concurrent-process guard
   added before any candidate execution. These corrections alter provenance

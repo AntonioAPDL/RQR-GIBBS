@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.16.0"
+    "rqrgibbs_dlm_main_correction/1.17.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -2741,6 +2741,68 @@ test_that("diagnostics require time-local terminal and future estimands", {
     GG_future = diag(2L)
   )
   expect_identical(conditional, matrix(c(1, 1, 2, 2), 2L, 2L))
+})
+
+test_that("M02 diagnostics thin training and future draws identically", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  ledger <- small_confirmatory_ledger(environment, contract)
+  generated <- environment$rqr_confirm_generate_dgp(
+    contract, "S01", 1L, ledger
+  )
+  model_bundle <- environment$rqr_confirm_model_bundle(generated)
+  p <- length(model_bundle$training$m0)
+  T <- generated$T
+  draws <- 12L
+  state_array <- function(offset, n_draws = draws) {
+    output <- array(0, dim = c(p, T, n_draws))
+    for (draw in seq_len(n_draws)) {
+      output[, , draw] <- offset + draw / 100
+    }
+    output
+  }
+  make_fit <- function(offset, n_draws = draws) {
+    structure(
+      list(
+        samp.theta = state_array(offset, n_draws),
+        model = list(FF = model_bundle$training$FF)
+      ),
+      class = "exdqlmMCMC"
+    )
+  }
+  result <- list(
+    fits = list(make_fit(-1), make_fit(1)),
+    diagnostic_thin = 2L
+  )
+  extracted <- environment$rqr_confirm_scalar_draws(
+    result, generated, contract, "M02"
+  )
+  expect_equal(nrow(extracted), draws / 2L)
+  expect_identical(
+    colnames(extracted),
+    environment$rqr_confirm_diagnostic_schema(
+      "M02", generated, contract
+    )
+  )
+  expect_true(all(is.finite(extracted)))
+
+  bad_endpoint <- result
+  bad_endpoint$fits[[2L]] <- make_fit(1, draws - 2L)
+  expect_error(
+    environment$rqr_confirm_scalar_draws(
+      bad_endpoint, generated, contract, "M02"
+    ),
+    "identical raw training-draw dimensions"
+  )
+
+  bad_thin <- result
+  bad_thin$diagnostic_thin <- 5L
+  expect_error(
+    environment$rqr_confirm_scalar_draws(
+      bad_thin, generated, contract, "M02"
+    ),
+    "divide the raw retained-draw count exactly"
+  )
 })
 
 test_that("recursive manifests reject altered bytes, file sets, and symlinks", {
