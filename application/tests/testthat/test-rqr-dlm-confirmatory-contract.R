@@ -2743,6 +2743,84 @@ test_that("diagnostics require time-local terminal and future estimands", {
   expect_identical(conditional, matrix(c(1, 1, 2, 2), 2L, 2L))
 })
 
+test_that("M02 production thinning aligns training terminal and future draws", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  ledger <- small_confirmatory_ledger(environment, contract)
+  generated <- environment$rqr_confirm_generate_dgp(
+    contract, "S01", 1L, ledger
+  )
+  policy <- environment$rqr_confirm_method_transition_policy(
+    contract, "M02"
+  )
+  schedule <- environment$rqr_confirm_method_schedule(
+    contract, "M02", "standard"
+  )
+  expect_identical(policy$transition_multiplier, 2L)
+  expect_identical(schedule$retain, 8000L)
+
+  model_bundle <- environment$rqr_confirm_model_bundle(generated)
+  p <- length(model_bundle$training$m0)
+  raw_draws <- 8L
+  state_for_root <- function(sign = 1, draws = raw_draws) {
+    state <- array(0, dim = c(p, generated$T, draws))
+    for (draw in seq_len(draws)) {
+      state[1L, , draw] <- sign * draw
+    }
+    state
+  }
+  exdqlm_fit <- function(state) {
+    structure(
+      list(
+        samp.theta = state,
+        model = list(FF = model_bundle$training$FF)
+      ),
+      class = "exdqlmMCMC"
+    )
+  }
+  result <- list(
+    fits = list(
+      exdqlm_fit(state_for_root(-1)),
+      exdqlm_fit(state_for_root(1))
+    ),
+    diagnostic_thin = policy$transition_multiplier
+  )
+  extracted <- environment$rqr_confirm_scalar_draws(
+    result, generated, contract, "M02"
+  )
+  expected_draws <- seq.int(2L, raw_draws, by = 2L)
+  expect_identical(nrow(extracted), length(expected_draws))
+  expect_identical(
+    colnames(extracted),
+    environment$rqr_confirm_diagnostic_schema(
+      "M02", generated, contract
+    )
+  )
+  expect_equal(extracted[, "mean_lower"], -expected_draws)
+  expect_equal(extracted[, "terminal_lower"], -expected_draws)
+  expect_equal(extracted[, "future_h01_lower"], -expected_draws)
+  expect_equal(extracted[, "future_h20_upper"], expected_draws)
+
+  unequal_endpoints <- result
+  unequal_endpoints$fits[[2L]] <- exdqlm_fit(
+    state_for_root(1, draws = raw_draws - 1L)
+  )
+  expect_error(
+    environment$rqr_confirm_scalar_draws(
+      unequal_endpoints, generated, contract, "M02"
+    ),
+    "endpoint diagnostic draw counts differ"
+  )
+  excessive_thin <- result
+  excessive_thin$diagnostic_thin <- raw_draws + 1L
+  expect_error(
+    environment$rqr_confirm_scalar_draws(
+      excessive_thin, generated, contract, "M02"
+    ),
+    "thinning exceeds the retained draws"
+  )
+})
+
 test_that("recursive manifests reject altered bytes, file sets, and symlinks", {
   environment <- load_confirmatory_helpers()
   directory <- tempfile("rqr-confirm-manifest-")

@@ -6649,12 +6649,25 @@ rqr_confirm_scalar_draws <- function(
     }
     raw_lower <- ordinate_draws(result$fits[[1L]])
     raw_upper <- ordinate_draws(result$fits[[2L]])
+    raw_draw_count <- ncol(raw_lower)
+    if (!identical(ncol(raw_upper), raw_draw_count)) {
+      stop(
+        "Dynamic-quantile endpoint diagnostic draw counts differ.",
+        call. = FALSE
+      )
+    }
     diagnostic_thin <- result$diagnostic_thin %||% 1L
     diagnostic_thin <- rqr_confirm_strict_integer(
       diagnostic_thin, "dynamic-quantile diagnostic thinning", 1L
     )
+    if (diagnostic_thin > raw_draw_count) {
+      stop(
+        "Dynamic-quantile diagnostic thinning exceeds the retained draws.",
+        call. = FALSE
+      )
+    }
     retained_index <- seq.int(
-      from = diagnostic_thin, to = ncol(raw_lower),
+      from = diagnostic_thin, to = raw_draw_count,
       by = diagnostic_thin
     )
     raw_lower <- raw_lower[, retained_index, drop = FALSE]
@@ -6675,16 +6688,43 @@ rqr_confirm_scalar_draws <- function(
       )
     }
     model_bundle <- rqr_confirm_model_bundle(generated)
+    terminal_root1 <- terminal_draws(result$fits[[1L]])
+    terminal_root2 <- terminal_draws(result$fits[[2L]])
+    terminal_draw_counts <- c(
+      root1 = ncol(terminal_root1), root2 = ncol(terminal_root2)
+    )
+    if (!identical(unname(terminal_draw_counts), rep(raw_draw_count, 2L))) {
+      stop(
+        paste(
+          "Dynamic-quantile ordinate and terminal diagnostic draw",
+          "counts differ."
+        ),
+        call. = FALSE
+      )
+    }
+    terminal_root1 <- terminal_root1[, retained_index, drop = FALSE]
+    terminal_root2 <- terminal_root2[, retained_index, drop = FALSE]
     future_root1 <- rqr_confirm_conditional_root_draws(
-      terminal_draws(result$fits[[1L]]),
+      terminal_root1,
       model_bundle$future$FF, model_bundle$future$GG,
       horizon = generated$H
     )
     future_root2 <- rqr_confirm_conditional_root_draws(
-      terminal_draws(result$fits[[2L]]),
+      terminal_root2,
       model_bundle$future$FF, model_bundle$future$GG,
       horizon = generated$H
     )
+    diagnostic_draw_counts <- c(
+      training = ncol(lower),
+      future_root1 = ncol(future_root1),
+      future_root2 = ncol(future_root2)
+    )
+    if (length(unique(diagnostic_draw_counts)) != 1L) {
+      stop(
+        "Dynamic-quantile thinned diagnostic draw counts differ.",
+        call. = FALSE
+      )
+    }
     values <- append_functions(
       values, lower, upper,
       pmin(future_root1, future_root2),
