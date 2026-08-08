@@ -1,0 +1,22 @@
+stage,check,result,evidence
+source,exact_source_commit,PASS,031595bbbca5c59673faed10087faaf450c15a5a
+source,diagnostic_thresholds_unchanged,PASS,no threshold or blocking-policy source change
+tests,focused_confirmatory_contract,PASS,342 expectations
+tests,expanded_native_confirmatory_diagnostic_aware_suite,PASS,one pre-existing warning and one capability-dependent skip
+repository,smoke,PASS,make smoke
+repository,package_check,PASS,R CMD check status OK
+repository,main_pdf,PASS,make all-pdf main target
+repository,supplement_pdf,PASS,make all-pdf supplement target
+repository,literature_manifest,PASS,make literature-manifest
+runtime,isolated_primary_runtime,PASS,runtime tree 89a650024735aac6e6536a502d500e6ff14ca2f3189547d222649d9d6e160ac6
+runtime,protected_exdqlm_checkout_unused,PASS,attested isolated CRAN runtime only
+canary,production_m02_draw_alignment,PASS,8000 raw draws thinned to 4000 common diagnostic rows
+canary,hard_checks,PASS,9 of 9
+canary,frozen_diagnostics,PASS,45 of 45 with zero warnings
+preflight,maximum_plan_gates,PASS,23 of 23
+reference,oracle_comparator_gates,PASS,15 of 15
+authorization,fresh_bound_inputs,PASS,source runtime preflight reference toolchain and seed ledger bound
+launch,detached_coordinator,PASS,PID 2784661
+launch,eight_workers_live,PASS,all eight worker R processes and monitors observed
+launch,initial_coordinator_stderr,PASS,zero bytes
+launch,final_closeout,PENDING,background study is running
