@@ -6,6 +6,10 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/rqr_dlm_m02_recovery_validation_and_relaunch_20260808/` records
+  the exact isolated runtime, passing 23-gate preflight, 15-gate reference
+  suite, 900/900 production-path M02 diagnostics, fresh authorization hashes,
+  and the initial health state of the replacement maximum-design launch.
 - `implementation_notes/rqr_dlm_m02_diagnostic_recovery_plan_20260808.md`
   defines the retained-draw identity correction, exact-runtime validation
   ladder, and fresh maximum-run boundary after the first diagnostic-aware

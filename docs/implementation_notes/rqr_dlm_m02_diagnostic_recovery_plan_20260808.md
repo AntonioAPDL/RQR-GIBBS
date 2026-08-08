@@ -95,37 +95,37 @@ thinning is allowed.
 
 ### Gate 3: exact runtime and non-MCMC evidence
 
-- [ ] Commit the fail-closed implementation.
-- [ ] Require a clean checkout at that complete commit.
-- [ ] Build a fresh isolated `rqrgibbs` runtime from the exact Git archive.
-- [ ] Reuse comparator runtimes only if their attestations and protected
+- [x] Commit the fail-closed implementation.
+- [x] Require a clean checkout at that complete commit.
+- [x] Build a fresh isolated `rqrgibbs` runtime from the exact Git archive.
+- [x] Reuse comparator runtimes only if their attestations and protected
   checkout guards still verify.
-- [ ] Regenerate fresh confirmatory preflight and oracle-reference bundles.
-- [ ] Verify recursive manifests, runtime digests, toolchain identity, task
+- [x] Regenerate fresh confirmatory preflight and oracle-reference bundles.
+- [x] Verify recursive manifests, runtime digests, toolchain identity, task
   plan, wave plan, and maximum seed ledger.
 
 ### Gate 4: production-path M02 validation
 
-- [ ] Run the canonical M02 correction-wave validator through the real exdqlm
+- [x] Run the canonical M02 correction-wave validator through the real exdqlm
   adapter and production scalar extractor.
-- [ ] Require every endpoint fit to complete without retry or reseeding.
-- [ ] Require exact target status, zero numerical repairs, finite ordered
+- [x] Require every endpoint fit to complete without retry or reseeding.
+- [x] Require exact target status, zero numerical repairs, finite ordered
   endpoints, and the complete time-local, terminal, and future-root schema.
-- [ ] Require the corrected shared retained-draw count for all training and
+- [x] Require the corrected shared retained-draw count for all training and
   future functions.
-- [ ] Preserve diagnostic pass/fail values as results; construction failures
+- [x] Preserve diagnostic pass/fail values as results; construction failures
   remain a hard stop.
 
 ### Gate 5: fresh maximum run
 
-- [ ] Prepare a new diagnostic-aware authorization bound to the exact source,
+- [x] Prepare a new diagnostic-aware authorization bound to the exact source,
   isolated runtime, preflight, reference bundle, comparator attestations,
   seed ledger, task plan, and wave plan.
-- [ ] Use a new run ID, run root, and supervisor-log root.
-- [ ] Verify fail-closed startup before detached execution.
-- [ ] Launch only the complete maximum design; do not resume or copy the
+- [x] Use a new run ID, run root, and supervisor-log root.
+- [x] Verify fail-closed startup before detached execution.
+- [x] Launch only the complete maximum design; do not resume or copy the
   failed wave.
-- [ ] Record frozen diagnostics without weakening thresholds. MCMC diagnostic
+- [x] Record frozen diagnostics without weakening thresholds. MCMC diagnostic
   failures are nonblocking metadata under the diagnostic-aware policy;
   construction, provenance, target, numerical, and resource failures remain
   hard stops.

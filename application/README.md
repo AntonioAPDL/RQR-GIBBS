@@ -424,6 +424,12 @@ been thinned by the transition multiplier but terminal states used for future
 root functions had not. The corrected extractor applies one validated retained
 index to training ordinates, terminal states, and future-root functions, and
 rejects any dimension or divisibility disagreement explicitly. The failed run
-is not resumable or scientifically promotable; a replacement requires the
-fresh exact-runtime and production-path gates in
-`docs/implementation_notes/rqr_dlm_m02_diagnostic_recovery_plan_20260808.md`.
+is not resumable or scientifically promotable. The correction subsequently
+passed a fresh 23/23 exact-runtime preflight, 15/15 oracle/reference gates, and
+the real exdqlm production path for all 20 canonical M02 validation tasks,
+44 interval chains, 88 endpoint fits, and 900/900 unchanged diagnostics. A
+fresh maximum-design run was therefore launched from the exact committed
+source and new local roots; it reuses no scientific output from the failed
+run. The plan and compact launch evidence are in
+`docs/implementation_notes/rqr_dlm_m02_diagnostic_recovery_plan_20260808.md`
+and `docs/audits/rqr_dlm_m02_recovery_validation_and_relaunch_20260808/`.
