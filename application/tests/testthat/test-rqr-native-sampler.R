@@ -1028,6 +1028,275 @@ test_that("component-scale transition controls expose exact cycle variants", {
   )
 })
 
+test_that("random-direction log-scale slice is exact and resumable", {
+  target_covariance <- matrix(c(1, 0.9, 0.9, 1), 2L, 2L)
+  target_precision <- solve(target_covariance)
+  log_density <- function(value) {
+    -0.5 * drop(crossprod(value, target_precision %*% value))
+  }
+  set.seed(1281)
+  n_draw <- 6000L
+  initial <- matrix(stats::rnorm(2L * n_draw), ncol = 2L) %*%
+    chol(target_covariance)
+  updated <- t(vapply(seq_len(n_draw), function(index) {
+    rqrgibbs:::.rqr_slice_log_direction(
+      initial[index, ], log_density, width = 1,
+      max_steps = 100L, max_shrink = 1000L
+    )$value
+  }, numeric(2L)))
+  expect_lt(max(abs(colMeans(updated))), 0.05)
+  expect_lt(max(abs(stats::cov(updated) - target_covariance)), 0.07)
+  expect_error(
+    rqrgibbs:::.rqr_slice_log_direction(
+      c(0, 0), log_density, direction = c(0, 0)
+    ),
+    "direction is invalid"
+  )
+  expect_error(
+    rqrgibbs:::.rqr_slice_log_direction(
+      c(0, 0), log_density, direction = 1
+    ),
+    "direction is invalid"
+  )
+
+  y <- c(-1.1, -0.7, -0.2, 0.1, 0.5, 0.9, 1.2, 1.5)
+  x <- matrix(seq(-1, 1, length.out = length(y)), ncol = 1L)
+  model <- rqr_polytrend(1L, C0 = 2, name = "level") +
+    rqr_regression(x, C0 = 1, name = "regression")
+  fit_args <- list(
+    y = y, model = model, coverage_level = 0.8,
+    evolution_mode = "component_scale",
+    component_templates = list(matrix(1, 1L, 1L), matrix(1, 1L, 1L)),
+    evolution_scale_prior = list(
+      shape = c(3, 3), rate = c(0.2, 0.2)
+    ),
+    numerical_policy = "fail"
+  )
+  directional_control <- list(
+    n_burn = 2L, n_mcmc = 3L, seed = 1282L,
+    backend = "cpp", store_state_draws = TRUE,
+    component_scale_collapsed_update = TRUE,
+    component_scale_collapsed_cycles = 1L,
+    component_scale_interweave = TRUE,
+    component_scale_interweave_cycles = 1L,
+    component_scale_directional_interweave = TRUE,
+    component_scale_directional_sweeps = 1L
+  )
+  fit <- do.call(
+    rqr_dlm_fit,
+    c(fit_args, list(mcmc_control = directional_control))
+  )
+  kernel <- fit$model_spec$component_scale_transition_kernel
+  expect_true(kernel$noncentered_directional_slice)
+  expect_identical(kernel$directional_sweeps_per_cycle, 1L)
+  expect_true(all(
+    fit$diagnostics$component_scale_interweave$
+      exact_random_direction_slice
+  ))
+  expect_true(all(
+    fit$diagnostics$component_scale_interweave$directional_sweeps == 1L
+  ))
+  expect_true(all(
+    fit$diagnostics$component_scale_interweave$
+      directional_evaluations >= 1L
+  ))
+  expect_true(all(
+    fit$diagnostics$component_scale_interweave$
+      directional_max_distance >= 0
+  ))
+  expect_match(
+    fit$diagnostics$partial_collapse_order[[4L]],
+    "centered_noncentered_directional"
+  )
+  continued <- rqr_dlm_continue(fit, n_mcmc = 2L)
+  full_control <- directional_control
+  full_control$n_mcmc <- 5L
+  uninterrupted <- do.call(
+    rqr_dlm_fit,
+    c(fit_args, list(mcmc_control = full_control))
+  )
+  expect_identical(
+    continued$samp.eta_root1,
+    uninterrupted$samp.eta_root1[, 4:5, drop = FALSE]
+  )
+  expect_identical(
+    continued$samp.eta_root2,
+    uninterrupted$samp.eta_root2[, 4:5, drop = FALSE]
+  )
+  expect_identical(
+    continued$samp.evolution_scale,
+    uninterrupted$samp.evolution_scale[4:5, , drop = FALSE]
+  )
+  expect_identical(
+    continued$checkpoint_state$rng_state,
+    uninterrupted$checkpoint_state$rng_state
+  )
+
+  baseline_control <- directional_control
+  baseline_control$component_scale_directional_interweave <- FALSE
+  baseline_control$component_scale_directional_sweeps <- 1L
+  baseline <- do.call(
+    rqr_dlm_fit,
+    c(fit_args, list(mcmc_control = baseline_control))
+  )
+  expect_identical(
+    fit$provenance$object_digests,
+    baseline$provenance$object_digests
+  )
+  expect_false(
+    identical(
+      fit$checkpoint_state$transition_kernel,
+      baseline$checkpoint_state$transition_kernel
+    )
+  )
+  expect_error(
+    do.call(
+      rqr_dlm_fit,
+      c(
+        fit_args,
+        list(mcmc_control = modifyList(
+          directional_control,
+          list(component_scale_interweave = FALSE)
+        ))
+      )
+    ),
+    "Directional component-scale interweaving requires"
+  )
+})
+
+test_that("joint state elliptical slice is exact, recorded, and resumable", {
+  theta1 <- matrix(c(-0.5, -0.2, 0.1), 1L)
+  theta2 <- matrix(c(0.6, 0.8, 1.0), 1L)
+  FF <- matrix(1, 1L, 3L)
+  y <- c(-1, 0.2, 1.3)
+  observed <- c(TRUE, FALSE, TRUE)
+  v <- c(0.7, 1.1, 0.9)
+  obs_variance <- c(0.8, 1.2, 1.4)
+  xi <- -0.3
+  expected <- -0.5 * sum(
+    (
+      rqr_residual_product(
+        y[observed], theta1[observed], theta2[observed]
+      ) - xi * v[observed]
+    )^2 / obs_variance[observed]
+  )
+  expect_equal(
+    rqrgibbs:::.rqr_joint_state_augmented_log_likelihood(
+      theta1, theta2, FF, y, observed, v, xi, obs_variance
+    ),
+    expected,
+    tolerance = 1e-14
+  )
+
+  fit_args <- list(
+    y = c(-1.2, -0.4, 0.1, 0.8, 1.4),
+    model = rqr_polytrend(1L, C0 = 2),
+    coverage_level = 0.8,
+    evolution_mode = "component_scale",
+    component_templates = list(matrix(1, 1, 1)),
+    evolution_scale_prior = list(shape = 3, rate = 0.2),
+    numerical_policy = "fail"
+  )
+  short_control <- list(
+    n_burn = 2L, n_mcmc = 3L, seed = 1291L,
+    backend = "cpp", store_state_draws = TRUE,
+    component_scale_collapsed_update = TRUE,
+    component_scale_collapsed_cycles = 1L,
+    component_scale_interweave = TRUE,
+    component_scale_interweave_cycles = 1L,
+    component_scale_joint_elliptical_slice = TRUE,
+    component_scale_joint_elliptical_cycles = 2L
+  )
+  fit <- do.call(
+    rqr_dlm_fit,
+    c(fit_args, list(mcmc_control = short_control))
+  )
+  expect_true(
+    fit$model_spec$component_scale_transition_kernel$
+      joint_state_elliptical_slice
+  )
+  expect_identical(
+    fit$model_spec$component_scale_transition_kernel$
+      joint_state_elliptical_cycles,
+    2L
+  )
+  expect_identical(
+    nrow(fit$diagnostics$component_scale_joint_elliptical),
+    10L
+  )
+  expect_true(all(
+    fit$diagnostics$component_scale_joint_elliptical$
+      exact_joint_elliptical_slice
+  ))
+  expect_true(all(
+    fit$diagnostics$component_scale_joint_elliptical$evaluations >= 1L
+  ))
+  expect_true(fit$model_spec$exact_joint_target)
+  expect_identical(fit$model_spec$numerical_repair_count, 0L)
+  expect_identical(
+    fit$diagnostics$partial_collapse_order,
+    c(
+      "lambda_collapsed", "latent_v_refresh",
+      "component_scale_rootwise_collapsed_cycles_1",
+      "component_scale_centered_noncentered_cycles_1",
+      "joint_state_elliptical_slice_cycles_2",
+      "global_root_swap"
+    )
+  )
+  recomputed <- lapply(seq_len(3L), function(draw) {
+    rqrgibbs:::.rqr_component_scale_posterior(
+      matrix(fit$samp.theta_root1[, , draw], nrow = 1L),
+      matrix(fit$samp.theta_root2[, , draw], nrow = 1L),
+      fit$samp.theta0_root1[, draw], fit$samp.theta0_root2[, draw],
+      fit$expanded_model$GG, fit$evolution
+    )
+  })
+  expect_equal(
+    unname(fit$samp.evolution_scale_shape),
+    do.call(rbind, lapply(recomputed, `[[`, "shape"))
+  )
+  expect_equal(
+    unname(fit$samp.evolution_scale_rate),
+    do.call(rbind, lapply(recomputed, `[[`, "rate"))
+  )
+
+  continued <- rqr_dlm_continue(fit, n_mcmc = 2L)
+  full_control <- short_control
+  full_control$n_mcmc <- 5L
+  uninterrupted <- do.call(
+    rqr_dlm_fit,
+    c(fit_args, list(mcmc_control = full_control))
+  )
+  expect_identical(
+    continued$samp.eta_root1,
+    uninterrupted$samp.eta_root1[, 4:5, drop = FALSE]
+  )
+  expect_identical(
+    continued$samp.eta_root2,
+    uninterrupted$samp.eta_root2[, 4:5, drop = FALSE]
+  )
+  expect_identical(
+    continued$samp.evolution_scale,
+    uninterrupted$samp.evolution_scale[4:5, , drop = FALSE]
+  )
+  expect_identical(
+    continued$checkpoint_state$rng_state,
+    uninterrupted$checkpoint_state$rng_state
+  )
+
+  expect_error(
+    rqr_dlm_fit(
+      y = c(-1, 0, 1), model = rqr_polytrend(1L, C0 = 2),
+      coverage_level = 0.8, evolution_mode = "fixed_W", W = 0.1,
+      mcmc_control = list(
+        n_burn = 1L, n_mcmc = 1L, seed = 1292L,
+        component_scale_joint_elliptical_slice = TRUE
+      )
+    ),
+    "requires evolution_mode='component_scale'"
+  )
+})
+
 test_that("fixed-W state storage completes retained paths at time zero", {
   fit <- rqr_dlm_fit(
     y = c(-1, -0.2, 0.5, 1.1),
@@ -1176,7 +1445,7 @@ test_that("DLM checkpoints continue with the same RNG stream", {
     cbind(first$samp.eta_root2, second$samp.eta_root2)
   )
   expect_equal(second$checkpoint_state$completed_iterations, 6L)
-  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.17.0")
+  expect_identical(second$provenance$schema_version, "rqrgibbs_fit/1.19.0")
   expect_true(nzchar(second$provenance$data_digest))
   expect_null(second$provenance$initial_seed)
   expect_true(all(c("FF", "GG", "C0", "evolution_W") %in%

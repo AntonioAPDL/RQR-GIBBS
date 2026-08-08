@@ -53,6 +53,17 @@ authorization_bundle="$(read_json_path authorization_bundle)"
 seed_ledger="$(read_json_path seed_ledger)"
 canonical_task_plan="$(read_json_path canonical_task_plan)"
 canonical_wave_plan="$(read_json_path canonical_wave_plan)"
+authorization_schema="$(jq -er '.schema_version' "$authorization_bundle")"
+diagnostic_aware_completion="FALSE"
+if [[ "$authorization_schema" == \
+      "rqrgibbs_dlm_diagnostic_aware_authorization/1.0.0" ]]; then
+  diagnostic_aware_completion="TRUE"
+  export RQR_DLM_EXECUTION_POLICY="diagnostic-aware-completion"
+elif [[ "$authorization_schema" != \
+        "rqrgibbs_dlm_confirmatory_authorization/1.0.0" ]]; then
+  echo "The authorization bundle schema is unsupported." >&2
+  exit 65
+fi
 
 if [[ ! "$reviewed_commit" =~ ^[0-9a-f]{40}$ ||
       ! "$authorization_commit" =~ ^[0-9a-f]{40}$ ]]; then
@@ -133,6 +144,8 @@ done
   printf 'launch_inputs_sha256,%s\n' "$(sha256sum "$launch_inputs" | awk '{print $1}')"
   printf 'authorization_bundle_sha256,%s\n' "$(sha256sum "$authorization_bundle" | awk '{print $1}')"
   printf 'canonical_wave_plan_sha256,%s\n' "$(sha256sum "$canonical_wave_plan" | awk '{print $1}')"
+  printf 'diagnostic_aware_completion,%s\n' "$diagnostic_aware_completion"
+  printf 'authorization_schema,%s\n' "$authorization_schema"
   printf 'run_root,%s\n' "$run_root"
 } >"$environment_csv"
 
@@ -148,7 +161,11 @@ if ! kill -0 "$coordinator_pid" 2>/dev/null; then
   exit 70
 fi
 
-echo "Confirmatory coordinator started."
+if [[ "$diagnostic_aware_completion" == "TRUE" ]]; then
+  echo "Diagnostic-aware completion coordinator started."
+else
+  echo "Confirmatory coordinator started."
+fi
 echo "  PID: $coordinator_pid"
 echo "  run root: $run_root"
 echo "  stdout: $stdout_path"

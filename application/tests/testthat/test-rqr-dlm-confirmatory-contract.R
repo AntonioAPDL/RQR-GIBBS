@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.12.0"
+    "rqrgibbs_dlm_main_correction/1.16.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -117,6 +117,100 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_true(
     contract$config$implementation_correction$
       production_seed_binding_fresh_relaunch_required
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      skewed_wave_failed_authorization_commit,
+    "32f6745369b83040c0b1c4bd385c17072ee912d8"
+  )
+  expect_identical(
+    contract$config$implementation_correction$skewed_wave_failed_run_id,
+    "rqr_dlm_main_20260802_32f6745"
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      skewed_wave_failed_outputs_reused
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      skewed_wave_failed_scientific_metrics_used
+  )
+  expect_true(
+    contract$config$implementation_correction$
+      skewed_wave_diagnostics_used_for_transition_correction
+  )
+  expect_true(
+    contract$config$implementation_correction$
+      skewed_wave_fresh_relaunch_required
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      skewed_wave_recovery_status,
+    "joint_elliptical_selected_s10_guard_failed"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      skewed_joint_elliptical_candidate_source_commit,
+    "2901770ec25fb6042cbc2c8227478a31bdb0dc1a"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      skewed_joint_elliptical_selected_methods,
+    c("M10", "M11")
+  )
+  expect_length(
+    contract$config$implementation_correction$
+      skewed_joint_elliptical_unresolved_methods,
+    0L
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      skewed_joint_elliptical_development_outputs_reused
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      skewed_joint_elliptical_scientific_metrics_used
+  )
+  expect_true(
+    contract$config$implementation_correction$
+      skewed_affected_wave_required_before_promotion
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_status,
+    "failed_closed_before_affected_wave"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_failed_method,
+    "M11"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_failed_estimand,
+    "log_q_2"
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_closeout_sha256,
+    environment$rqr_confirm_sha256(file.path(
+      contract$repo_root,
+      contract$config$implementation_correction$
+        higher_dimensional_guard_closeout_path
+    ))
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_outputs_reused
+  )
+  expect_false(
+    contract$config$implementation_correction$
+      higher_dimensional_guard_scientific_metrics_used
+  )
+  expect_identical(
+    contract$config$implementation_correction$
+      higher_dimensional_recovery_status,
+    "predeclared_exact_candidate_comparison_pending"
   )
   expect_false(
     contract$config$implementation_correction$
@@ -260,7 +354,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
       correction_budget$section == "mcmc" &
         correction_budget$planning == "maximum"
     ],
-    265376000
+    442350000
   )
   expect_false(
     contract$config$implementation_correction$
@@ -429,7 +523,18 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_invisible(environment$rqr_confirm_validate_contract(altered))
 })
 
-test_that("M01 construction forwards the selected rootwise2-ASIS2 kernel", {
+test_that("dynamic-quantile development schedule overrides are bounded", {
+  environment <- load_confirmatory_helpers()
+  body_text <- paste(
+    deparse(body(environment$rqr_confirm_dynamic_quantile)),
+    collapse = "\n"
+  )
+  expect_match(body_text, "schedule_override", fixed = TRUE)
+  expect_match(body_text, "named subset of burn and retain", fixed = TRUE)
+  expect_match(body_text, "dynamic quantile retained draws", fixed = TRUE)
+})
+
+test_that("dynamic construction forwards the frozen exact transition policy", {
   environment <- load_confirmatory_helpers()
   body_text <- paste(
     deparse(environment$rqr_confirm_dynamic_fit),
@@ -452,6 +557,16 @@ test_that("M01 construction forwards the selected rootwise2-ASIS2 kernel", {
   ))
   expect_true(grepl(
     "component_scale_kernel$transition_order",
+    body_text,
+    fixed = TRUE
+  ))
+  expect_true(grepl(
+    "component_scale_joint_elliptical_slice =",
+    body_text,
+    fixed = TRUE
+  ))
+  expect_true(grepl(
+    "component_scale_joint_elliptical_cycles = if",
     body_text,
     fixed = TRUE
   ))
@@ -879,6 +994,73 @@ test_that("one schedule router binds every MCMC method", {
   expect_null(environment$rqr_confirm_method_schedule(
     contract, "M04", "standard"
   ))
+  expect_identical(
+    environment$rqr_confirm_method_schedule(contract, "M01", "standard"),
+    list(burn = 2000L, retain = 6000L, thin = 2L)
+  )
+  expect_identical(
+    environment$rqr_confirm_method_schedule(contract, "M02", "standard"),
+    list(burn = 2000L, retain = 8000L, thin = 1L)
+  )
+  expect_identical(
+    environment$rqr_confirm_method_schedule(contract, "M06", "standard"),
+    list(burn = 2000L, retain = 2000L, thin = 2L)
+  )
+  expect_identical(
+    environment$rqr_confirm_method_schedule(contract, "M10", "standard"),
+    list(burn = 1000L, retain = 6000L, thin = 1L)
+  )
+  expect_identical(
+    environment$rqr_confirm_method_schedule(contract, "M11", "standard"),
+    list(burn = 3000L, retain = 9000L, thin = 2L)
+  )
+  expect_identical(
+    environment$rqr_confirm_method_transition_policy(contract, "M10"),
+    list(
+      transition_multiplier = 1L,
+      joint_state_elliptical_slice = TRUE,
+      joint_state_elliptical_cycles = 1L,
+      selected_candidate = "joint_ess1_x1"
+    )
+  )
+  expect_identical(
+    environment$rqr_confirm_method_transition_policy(contract, "M11"),
+    list(
+      transition_multiplier = 2L,
+      joint_state_elliptical_slice = TRUE,
+      joint_state_elliptical_cycles = 1L,
+      selected_candidate = "joint_ess1_x2"
+    )
+  )
+})
+
+test_that("affected-wave development execution is exact and nonpromotional", {
+  runner <- readLines(testthat::test_path(
+    "..", "..", "scripts", "15_run_rqr_dlm_confirmatory_simulation.R"
+  ), warn = FALSE)
+  runner_text <- paste(runner, collapse = "\n")
+  expect_match(
+    runner_text, "development-affected-wave", fixed = TRUE
+  )
+  expect_match(
+    runner_text,
+    "local_level_skewed_T200__target0200__sentinel",
+    fixed = TRUE
+  )
+  expect_match(
+    runner_text, "RQR_DLM_DEVELOPMENT_WORKER_SLOT", fixed = TRUE
+  )
+  expect_match(
+    runner_text, "development_outputs_reusable = FALSE", fixed = TRUE
+  )
+  expect_match(
+    runner_text, "scientific_promotion = FALSE", fixed = TRUE
+  )
+  expect_match(
+    runner_text,
+    "must not use an authorization bundle",
+    fixed = TRUE
+  )
 })
 
 test_that("fixed-design development overrides are explicit and named", {
@@ -1017,9 +1199,9 @@ test_that("all Output-15 budgets and sentinel counts are reproduced", {
     expect_identical(as.numeric(actual$value), expected[[planning]])
   }
   expected_iterations <- c(
-    initial = 97248000,
-    central = 181312000,
-    maximum = 265376000
+    initial = 161046000,
+    central = 301698000,
+    maximum = 442350000
   )
   for (planning in names(expected_iterations)) {
     actual <- environment$rqr_confirm_iteration_budget_summary(
@@ -2365,7 +2547,7 @@ test_that("the direct wave launcher rejects alternate output before publication"
     "^primary_attestation <- readRDS\\(", launcher
   )
   authorization_fields <- grep(
-    "^required_authorization <- c\\(", launcher
+    "^[[:space:]]*required_authorization <- c\\(", launcher
   )
   expect_length(primary_start, 1L)
   expect_length(authorization_fields, 1L)

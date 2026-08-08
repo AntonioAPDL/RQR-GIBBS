@@ -1,0 +1,19 @@
+{
+  "schema_version": "rqrgibbs_dlm_skewed_failure_forensics/1.0.0",
+  "run_id": "rqr_dlm_main_20260802_32f6745",
+  "authorization_commit": "32f6745369b83040c0b1c4bd385c17072ee912d8",
+  "runtime_tree_digest": "e6c42d648dffc8f3c4e98a2559e59bf4374db611a9565733979bc74c8bca3499",
+  "seed_ledger_sha256": "3dc8483f4a777ab766704b901997295bed1c89db0590429a70f3116b233e948f",
+  "completed_waves": 3,
+  "failed_wave": "local_level_skewed_T200__target0200__sentinel",
+  "failed_method_evaluations": 20,
+  "failed_diagnostic_rows": 72,
+  "model_fits_executed": 0,
+  "threshold_changes": false,
+  "scientific_metrics_used_for_selection": false,
+  "scientific_promotion": false,
+  "generalized_bayes": true,
+  "response_likelihood": false,
+  "source_run_mutated": false,
+  "completed_at_utc": "2026-08-03 19:18:10 UTC"
+}

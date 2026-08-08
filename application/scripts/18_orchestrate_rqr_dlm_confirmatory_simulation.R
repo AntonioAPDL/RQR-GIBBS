@@ -30,10 +30,26 @@ sys.source(
   ),
   envir = environment()
 )
+sys.source(
+  file.path(
+    repo_root, "application", "scripts", "lib",
+    "rqr_dlm_diagnostic_aware_completion.R"
+  ),
+  envir = environment()
+)
 contract <- rqr_confirm_read_contract(repo_root)
 rqr_confirm_validate_contract(contract)
 rqr_confirm_validate_budget(contract)
-if (!isTRUE(contract$config$confirmatory_execution_authorized)) {
+diagnostic_aware_completion <- rqr_completion_active()
+completion_policy_record <- NULL
+if (diagnostic_aware_completion) {
+  completion_policy_record <- rqr_completion_read_policy(repo_root)
+  contract <- rqr_completion_apply_policy(
+    contract, completion_policy_record$policy
+  )
+}
+if (!diagnostic_aware_completion &&
+    !isTRUE(contract$config$confirmatory_execution_authorized)) {
   stop("The confirmatory execution flag remains false.", call. = FALSE)
 }
 
@@ -94,6 +110,9 @@ validate_wave_state <- function(require_present = FALSE) {
     "task_plan_sha256", "wave_plan_sha256", "wave_output_base",
     "binding_digest"
   )
+  if ("execution_policy_sha256" %in% names(stored)) {
+    binding_fields <- c(binding_fields, "execution_policy_sha256")
+  }
   if (!all(binding_fields %in% names(stored))) {
     stop("The append-only run contract is incomplete.", call. = FALSE)
   }
@@ -399,11 +418,19 @@ rqr_confirm_atomic_write_json(
     passed_wave_count = length(passed_wave_ids()),
     skipped_wave_count = nrow(catalog) - length(passed_wave_ids()),
     final_audit = normalizePath(final_audit, winslash = "/"),
+    diagnostic_aware_completion = diagnostic_aware_completion,
+    diagnostic_failures_nonblocking = diagnostic_aware_completion,
+    convergence_validated = FALSE,
+    scientific_promotion = FALSE,
     completed_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE)
   ),
   closeout_path
 )
-cat("The complete confirmatory RQR-DLM study reached final audit.\n")
+cat(if (diagnostic_aware_completion) {
+  "The complete diagnostic-aware RQR-DLM study reached final audit.\n"
+} else {
+  "The complete confirmatory RQR-DLM study reached final audit.\n"
+})
 cat("  run root:", run_root, "\n")
 cat("  final audit:", final_audit, "\n")
 invisible(NULL)

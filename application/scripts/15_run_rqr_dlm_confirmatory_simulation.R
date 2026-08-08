@@ -3,8 +3,10 @@
 # Fail-closed main RQR-DLM simulation runner.
 #
 # Output-15 authorizes implementation and reference work only.  The checked-in
-# config keeps both execution flags false, so sentinel-core and
-# execute-confirmatory stop before creating an output directory.
+# Config keeps both execution flags false, so sentinel-core and
+# execute-confirmatory stop before creating an output directory. The bounded
+# development-affected-wave mode is separately constrained to the exact S05
+# sentinel wave and can never authorize or feed scientific collection.
 
 arguments <- commandArgs(trailingOnly = TRUE)
 if (!length(arguments) %in% c(1L, 2L)) {
@@ -12,6 +14,7 @@ if (!length(arguments) %in% c(1L, 2L)) {
     paste(
       "Usage: 15_run_rqr_dlm_confirmatory_simulation.R",
       "<preflight|oracle-reference|sentinel-core|execute-confirmatory|",
+      "development-affected-wave|",
       "collect|audit> [output_dir]"
     ),
     call. = FALSE
@@ -20,7 +23,8 @@ if (!length(arguments) %in% c(1L, 2L)) {
 mode <- arguments[[1L]]
 modes <- c(
   "preflight", "oracle-reference", "sentinel-core",
-  "execute-confirmatory", "collect", "audit"
+  "execute-confirmatory", "development-affected-wave",
+  "collect", "audit"
 )
 if (!mode %in% modes) stop("Unknown confirmatory runner mode.",
                            call. = FALSE)
@@ -37,12 +41,44 @@ sys.source(
   ),
   envir = environment()
 )
+sys.source(
+  file.path(
+    repo_root, "application", "scripts", "lib",
+    "rqr_dlm_diagnostic_aware_completion.R"
+  ),
+  envir = environment()
+)
 contract <- rqr_confirm_read_contract(repo_root)
 rqr_confirm_validate_contract(
   contract,
   require_closed = FALSE
 )
 rqr_confirm_validate_budget(contract)
+diagnostic_aware_completion <- rqr_completion_active()
+completion_policy_record <- NULL
+if (diagnostic_aware_completion) {
+  completion_policy_record <- rqr_completion_read_policy(repo_root)
+  contract <- rqr_completion_apply_policy(
+    contract, completion_policy_record$policy
+  )
+}
+development_affected_mode <- identical(
+  mode, "development-affected-wave"
+)
+if (development_affected_mode) {
+  rqr_confirm_validate_contract(contract, require_closed = TRUE)
+  if (!identical(
+      Sys.getenv("RQR_DLM_DEVELOPMENT_GATE_CONFIRM", unset = ""),
+      "TRUE"
+    ) ||
+      !isTRUE(contract$config$implementation_correction$
+        skewed_affected_wave_required_before_promotion)) {
+    stop(
+      "The bounded affected-wave development gate was not explicitly enabled.",
+      call. = FALSE
+    )
+  }
+}
 
 expected_commit <- Sys.getenv("RQR_EXPECTED_PRIMARY_COMMIT", unset = "")
 primary_attestation_path <- Sys.getenv(
@@ -83,11 +119,18 @@ authorization <- if (nzchar(authorization_path)) {
 } else {
   NULL
 }
-if (mode %in% c("sentinel-core", "execute-confirmatory") &&
-    !isTRUE(contract$config$confirmatory_execution_authorized)) {
-  rqr_confirm_authorized(
-    contract, mode, expected_commit, authorization
-  )
+if (mode %in% c("sentinel-core", "execute-confirmatory")) {
+  if (diagnostic_aware_completion) {
+    rqr_completion_authorized(
+      completion_policy_record, expected_commit, authorization
+    )
+  } else if (!isTRUE(
+      contract$config$confirmatory_execution_authorized
+    )) {
+    rqr_confirm_authorized(
+      contract, mode, expected_commit, authorization
+    )
+  }
 }
 output_dir <- if (length(arguments) == 2L) {
   normalizePath(arguments[[2L]], winslash = "/", mustWork = FALSE)
@@ -134,7 +177,12 @@ contract_digests <- list(
   config_sha256 = rqr_confirm_sha256(config_path),
   incidence_sha256 = contract$config$review_contract$incidence_sha256,
   budget_sha256 = contract$config$review_contract$budget_sha256,
-  gates_sha256 = contract$config$review_contract$gates_sha256
+  gates_sha256 = contract$config$review_contract$gates_sha256,
+  execution_policy_sha256 = if (diagnostic_aware_completion) {
+    rqr_confirm_sha256(completion_policy_record$path)
+  } else {
+    ""
+  }
 )
 stage_status <- "passed"
 stage_exit_status <- 0L
@@ -812,7 +860,10 @@ if (mode == "oracle-reference") {
   write_json(contract_digests, "contract_digests.json")
 }
 
-if (mode %in% c("sentinel-core", "execute-confirmatory")) {
+if (mode %in% c(
+    "sentinel-core", "execute-confirmatory",
+    "development-affected-wave"
+  )) {
   if (!requireNamespace("rqrgibbs", quietly = TRUE) ||
       !requireNamespace("posterior", quietly = TRUE) ||
       is.null(primary_binding)) {
@@ -947,42 +998,59 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
   )
   git_status_code <- attr(git_status, "status")
   if (is.null(git_status_code)) git_status_code <- 0L
-  reviewed_implementation_commit <-
-    authorization$reviewed_implementation_commit %||% ""
-  observed_authorization <- list(
-    reviewed_implementation_commit =
-      reviewed_implementation_commit,
-    authorization_diff_only_flag =
-      rqr_confirm_flag_only_authorization_diff(
-        repo_root, reviewed_implementation_commit, expected_commit
-      ),
-    primary_worktree_clean =
-      identical(as.integer(git_status_code), 0L) &&
-      !length(git_status),
-    primary_runtime_tree_digest =
-      primary_binding$runtime_tree_digest,
-    preflight_artifact_hashes_sha256 =
-      rqr_confirm_sha256(preflight_hashes_path),
-    reference_artifact_hashes_sha256 =
-      rqr_confirm_sha256(reference_hashes_path),
-    seed_ledger_sha256 = rqr_confirm_sha256(ledger_path),
-    task_plan_sha256 = rqr_confirm_sha256(canonical_task_path),
-    exdqlm_source_sha256 =
-      exdqlm_attestation$source_package_sha256,
-    quantreg_source_sha256 =
-      quantreg_attestation$source_package_sha256,
-    reference_runtime_bundle_match = reference_runtime_bundle_match,
-    comparator_dependency_runtime_match =
-      comparator_dependency_runtime_match,
-    toolchain_match = toolchain_match,
-    protected_checkout_used =
-      isTRUE(exdqlm_attestation$protected_exdqlm_checkout_used) ||
-      isTRUE(quantreg_attestation$protected_exdqlm_checkout_used)
-  )
-  rqr_confirm_authorized(
-    contract, mode, expected_commit, authorization,
-    observed = observed_authorization
-  )
+  observed_authorization <- NULL
+  if (!development_affected_mode) {
+    reviewed_implementation_commit <-
+      authorization$reviewed_implementation_commit %||% ""
+    observed_authorization <- list(
+      reviewed_implementation_commit =
+        reviewed_implementation_commit,
+      authorization_diff_only_flag =
+        rqr_confirm_flag_only_authorization_diff(
+          repo_root, reviewed_implementation_commit, expected_commit
+        ),
+      primary_worktree_clean =
+        identical(as.integer(git_status_code), 0L) &&
+        !length(git_status),
+      primary_runtime_tree_digest =
+        primary_binding$runtime_tree_digest,
+      preflight_artifact_hashes_sha256 =
+        rqr_confirm_sha256(preflight_hashes_path),
+      reference_artifact_hashes_sha256 =
+        rqr_confirm_sha256(reference_hashes_path),
+      seed_ledger_sha256 = rqr_confirm_sha256(ledger_path),
+      task_plan_sha256 = rqr_confirm_sha256(canonical_task_path),
+      exdqlm_source_sha256 =
+        exdqlm_attestation$source_package_sha256,
+      quantreg_source_sha256 =
+        quantreg_attestation$source_package_sha256,
+      reference_runtime_bundle_match = reference_runtime_bundle_match,
+      comparator_dependency_runtime_match =
+        comparator_dependency_runtime_match,
+      toolchain_match = toolchain_match,
+      protected_checkout_used =
+        isTRUE(exdqlm_attestation$protected_exdqlm_checkout_used) ||
+        isTRUE(quantreg_attestation$protected_exdqlm_checkout_used)
+    )
+    if (diagnostic_aware_completion) {
+      rqr_completion_authorized(
+        completion_policy_record, expected_commit, authorization
+      )
+      rqr_completion_observed_authorization_matches(
+        authorization, observed_authorization
+      )
+    } else {
+      rqr_confirm_authorized(
+        contract, mode, expected_commit, authorization,
+        observed = observed_authorization
+      )
+    }
+  } else if (!is.null(authorization)) {
+    stop(
+      "Development affected-wave validation must not use an authorization bundle.",
+      call. = FALSE
+    )
+  }
   tasks <- utils::read.csv(
     task_path, stringsAsFactors = FALSE, check.names = FALSE
   )
@@ -999,6 +1067,39 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
       "The authorization-bound task plan is not the complete canonical plan.",
       call. = FALSE
     )
+  }
+  if (development_affected_mode) {
+    worker_slot <- suppressWarnings(as.integer(Sys.getenv(
+      "RQR_DLM_DEVELOPMENT_WORKER_SLOT", unset = ""
+    )))
+    if (length(worker_slot) != 1L || is.na(worker_slot) ||
+        worker_slot < 1L || worker_slot > 8L) {
+      stop("A development worker slot in 1,...,8 is required.",
+           call. = FALSE)
+    }
+    affected_wave_id <-
+      "local_level_skewed_T200__target0200__sentinel"
+    affected <- rqr_confirm_wave_plan(
+      contract, planning = "maximum"
+    )
+    affected <- affected[
+      affected$wave_id == affected_wave_id &
+        affected$worker_slot == worker_slot,
+      , drop = FALSE
+    ]
+    expected_tasks <- canonical_tasks[match(
+      affected$replication_task_id,
+      canonical_tasks$replication_task_id
+    ), , drop = FALSE]
+    rownames(expected_tasks) <- rownames(tasks) <- NULL
+    if (!nrow(affected) || anyNA(expected_tasks$replication_task_id) ||
+        !all(affected$embedded_sentinel) ||
+        !identical(tasks, expected_tasks)) {
+      stop(
+        "The development task file is not one exact affected-wave worker slot.",
+        call. = FALSE
+      )
+    }
   }
   if (mode == "sentinel-core" &&
       any(!tasks$embedded_sentinel)) {
@@ -1285,7 +1386,9 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           stage_exit_status <- 1L
           break
         }
-        if (identical(stage_status, "passed")) {
+        if (stage_status %in% c(
+            "passed", "completed_with_diagnostic_warnings"
+          )) {
           stage_status <- "completed_with_fit_failures"
         }
         next
@@ -1480,10 +1583,19 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           )
           replication_result_index <-
             length(replication_results)
-          replication_results[[replication_result_index]]$status <-
-            "diagnostic_failed"
-          replication_results[[replication_result_index]]$failure_class <-
+          diagnostic_class <- if (diagnostic_aware_completion) {
+            completion_policy_record$policy$result_contract$failure_class
+          } else {
             "mcmc_diagnostic_failure"
+          }
+          replication_results[[replication_result_index]]$status <- if (
+              diagnostic_aware_completion) {
+            "completed"
+          } else {
+            "diagnostic_failed"
+          }
+          replication_results[[replication_result_index]]$failure_class <-
+            diagnostic_class
           replication_failure_index <- replication_failure_index + 1L
           failure_index <- failure_index + 1L
           failure_row <- data.frame(
@@ -1491,7 +1603,7 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
             cell_id = method_cell_id,
             replication = task$replication[[1L]],
             method = method,
-            failure_class = "mcmc_diagnostic_failure",
+            failure_class = diagnostic_class,
             message_digest = digest::digest(
               diagnostic_message, algo = "sha256", serialize = FALSE
             ),
@@ -1502,7 +1614,7 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
           replication_failures[[replication_failure_index]] <-
             failure_row
           failure_rows[[failure_index]] <- failure_row
-          if (method_is_sentinel) {
+          if (method_is_sentinel && !diagnostic_aware_completion) {
             cell_stop <- TRUE
             cell_stop_message <- diagnostic_message
             stage_status <- "failed_cell_stop"
@@ -1510,7 +1622,11 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
             break
           }
           if (identical(stage_status, "passed")) {
-            stage_status <- "completed_with_fit_failures"
+            stage_status <- if (diagnostic_aware_completion) {
+              completion_policy_record$policy$result_contract$stage_status
+            } else {
+              "completed_with_fit_failures"
+            }
           }
         }
       }
@@ -1630,8 +1746,20 @@ if (mode %in% c("sentinel-core", "execute-confirmatory")) {
       all_diagnostic_rows[[diagnostic_index]] <-
         do.call(rbind, replication_diagnostics)
     }
+    diagnostic_warning_present <- length(replication_failures) && all(
+      vapply(
+        replication_failures,
+        function(value) identical(
+          as.character(value$failure_class[[1L]]),
+          "mcmc_diagnostic_warning"
+        ),
+        logical(1L)
+      )
+    )
     run_status$status[[task_index]] <- if (cell_stop) {
       if (global_stop) "global_stop_failure" else "cell_stop_failure"
+    } else if (diagnostic_warning_present) {
+      "completed_with_diagnostic_warning"
     } else if (length(replication_failures)) {
       "completed_with_fit_failure"
     } else {
@@ -1764,6 +1892,90 @@ if (mode %in% c("collect", "audit")) {
   }
   results <- collected$results
   write_csv(results, "collected_replication_results.csv")
+  if (diagnostic_aware_completion) {
+    diagnostic_methods <- unique(results$method[
+      results$method %in% c(
+        "M01", "M02", "M03", "M06", "M07", "M08", "M09",
+        "M10", "M11"
+      )
+    ])
+    diagnostic_rows <- results[
+      results$method %in% diagnostic_methods, , drop = FALSE
+    ]
+    warning_cells <- split(
+      diagnostic_rows,
+      interaction(
+        diagnostic_rows$cell_id, diagnostic_rows$method,
+        drop = TRUE, lex.order = TRUE
+      )
+    )
+    warning_summary <- do.call(rbind, lapply(warning_cells, function(value) {
+      warned <- value$failure_class == "mcmc_diagnostic_warning"
+      data.frame(
+        cell_id = value$cell_id[[1L]],
+        method = value$method[[1L]],
+        attempted = nrow(value),
+        diagnostic_warning_rows = sum(warned),
+        diagnostic_warning_fraction = mean(warned),
+        primary_metrics_retained = all(
+          !warned | is.finite(value$heldout_rqr_loss)
+        ),
+        stringsAsFactors = FALSE
+      )
+    }))
+    rownames(warning_summary) <- NULL
+    write_csv(
+      warning_summary[order(warning_summary$cell_id), , drop = FALSE],
+      "diagnostic_warning_summary.csv"
+    )
+    sensitivity_measures <- c(
+      "heldout_rqr_loss", "aggregate_coverage", "mean_width",
+      "central_interval_score", "future_mean_lower",
+      "future_mean_upper", "future_mean_midpoint",
+      "endpoint_rmse_lower", "endpoint_rmse_upper",
+      "realized_root_rmse",
+      sprintf("coverage_h%02d", c(1L, 5L, 10L, 20L))
+    )
+    sensitivity_rows <- list()
+    sensitivity_index <- 0L
+    for (cell_id in sort(unique(diagnostic_rows$cell_id), method = "radix")) {
+      cell <- diagnostic_rows[
+        diagnostic_rows$cell_id == cell_id, , drop = FALSE
+      ]
+      unflagged <- cell$failure_class != "mcmc_diagnostic_warning"
+      for (measure in sensitivity_measures) {
+        all_values <- cell[[measure]][is.finite(cell[[measure]])]
+        clean_values <- cell[[measure]][
+          unflagged & is.finite(cell[[measure]])
+        ]
+        sensitivity_index <- sensitivity_index + 1L
+        sensitivity_rows[[sensitivity_index]] <- data.frame(
+          cell_id = cell_id,
+          method = cell$method[[1L]],
+          measure = measure,
+          all_rows = length(all_values),
+          unflagged_rows = length(clean_values),
+          all_mean = if (length(all_values)) mean(all_values) else NA_real_,
+          unflagged_mean = if (length(clean_values)) {
+            mean(clean_values)
+          } else {
+            NA_real_
+          },
+          unflagged_minus_all = if (
+              length(all_values) && length(clean_values)) {
+            mean(clean_values) - mean(all_values)
+          } else {
+            NA_real_
+          },
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+    write_csv(
+      do.call(rbind, sensitivity_rows),
+      "diagnostic_warning_sensitivity.csv"
+    )
+  }
   if (isTRUE(collected$analysis_complete)) {
     summaries <- rqr_confirm_summarize_results(results, contract)
     contrasts <- rqr_confirm_paired_contrasts(results, contract)
@@ -1788,6 +2000,11 @@ if (mode %in% c("collect", "audit")) {
       write_csv(contrasts, "paired_contrasts.csv")
     }
     if (nrow(decisions)) {
+      if (diagnostic_aware_completion) {
+        decisions <- rqr_completion_force_maximum_decisions(
+          decisions, contract
+        )
+      }
       if (!identical(
           names(decisions),
           rqr_confirm_artifact_schemas()$batch_decision
@@ -1827,10 +2044,20 @@ run_manifest <- list(
     contract$config$diagnostic_pilot_execution_authorized,
   confirmatory_execution_authorized =
     contract$config$confirmatory_execution_authorized,
+  diagnostic_aware_completion = diagnostic_aware_completion,
+  execution_policy_id = if (diagnostic_aware_completion) {
+    completion_policy_record$policy$policy_id
+  } else {
+    ""
+  },
+  execution_policy_sha256 = contract_digests$execution_policy_sha256,
   primary_runtime_binding = primary_binding,
   generalized_bayes = TRUE,
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
+  development_validation = development_affected_mode,
+  development_outputs_reusable = FALSE,
+  scientific_promotion = FALSE,
   status = stage_status
 )
 write_json(run_manifest, "run_manifest.json")

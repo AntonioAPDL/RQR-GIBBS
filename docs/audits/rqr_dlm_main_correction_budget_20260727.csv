@@ -2,19 +2,23 @@ section,planning,item,original_value,corrected_value,unit,multiplier,basis
 design,maximum,canonical_waves,110,110,waves,1.000000,Output-15 incidence and canonical wave plan unchanged
 design,maximum,replication_tasks,8400,8400,tasks,1.000000,maximum plan unchanged
 design,maximum,total_MCMC_chain_executions,40938,40938,chains,1.000000,chain and sentinel incidence unchanged
-mcmc,initial,total_MCMC_iterations,43332000,97248000,primitive_replica_iterations,2.244254,fixed role-specific schedules and M03 replica count reproduced from the incidence and sentinel plans
-mcmc,central,total_MCMC_iterations,80484000,181312000,primitive_replica_iterations,2.252771,fixed role-specific schedules and M03 replica count reproduced from the incidence and sentinel plans
-mcmc,maximum,total_MCMC_iterations,117636000,265376000,primitive_replica_iterations,2.255908,fixed role-specific schedules and M03 replica count reproduced from the incidence and sentinel plans
+mcmc,initial,total_MCMC_iterations,43332000,161046000,primitive_replica_iterations,3.716560,frozen method-wide transition policies and M03 replica count reproduced from the incidence and sentinel plans
+mcmc,central,total_MCMC_iterations,80484000,301698000,primitive_replica_iterations,3.748546,frozen method-wide transition policies and M03 replica count reproduced from the incidence and sentinel plans
+mcmc,maximum,total_MCMC_iterations,117636000,442350000,primitive_replica_iterations,3.760331,frozen method-wide transition policies and M03 replica count reproduced from the incidence and sentinel plans
 schedule,standard,M01_M07_M09_M10_retained_draws,2000,6000,draws,3.000000,one-chain component-scale diagnostic correction
 schedule,sentinel,M01_M07_M09_M10_retained_draws,2000,6000,draws,3.000000,four-chain component-scale schedule matched to the fixed standard role after local-level mixing failure
 schedule,standard,M11_retained_draws,3000,9000,draws,3.000000,one-chain learned-scale component diagnostic correction
 schedule,sentinel,M11_retained_draws,3000,9000,draws,3.000000,four-chain learned component-scale schedule matched prospectively to the fixed standard role
-schedule,standard,M02_retained_draws_per_endpoint,2000,4000,draws,2.000000,projection-correct one-chain comparator diagnostic correction
-schedule,sentinel,M02_retained_draws_per_endpoint,2000,4000,draws,2.000000,four-chain comparator schedule matched prospectively to its standard role after the complete projection-correct local-level gate
+schedule,standard,M02_MCMC_retained_draws_per_endpoint,2000,8000,draws,4.000000,selected whole-scan-x2 distance with 4000 diagnostic draws after fixed thinning
+schedule,sentinel,M02_MCMC_retained_draws_per_endpoint,2000,8000,draws,4.000000,selected whole-scan-x2 distance with 4000 diagnostic draws after fixed thinning
 schedule,standard,M03_retained_draws,1500,3000,draws,2.000000,one-chain fixed-design diagnostic correction
 schedule,sentinel,M03_retained_draws,1500,1500,draws,1.000000,four-chain fixed-design schedule unchanged
 schedule,all,M03_replica_count,1,4,replicas,4.000000,exact REX4 correction applied uniformly to standard and sentinel fixed-design roles
 schedule,all,M08_retained_draws,2000,4000,draws,2.000000,uniform true-fixed-W method schedule selected on one hard and two guard cases
+schedule,all,M01_M02_M06_M09_transition_multiplier,1,2,complete_transitions,2.000000,minimum predeclared whole-scan candidate eligible in the bounded skewed comparison
+schedule,all,M10_transition_multiplier,1,1,complete_transitions,1.000000,minimum eligible joint-ESS candidate retained the base whole-scan distance
+schedule,all,M11_transition_multiplier,1,2,complete_transitions,2.000000,minimum eligible joint-ESS candidate required the doubled whole-scan distance
+schedule,all,M10_M11_joint_elliptical_cycles,0,1,cycles_per_transition,,one exact joint path elliptical-slice cycle selected prospectively for both methods
 benchmark,development,M01_S01_rep0114_fit_elapsed,330.876,496.814,seconds,1.501511,identical 3000-iteration seed stream before versus after exact ASIS
 benchmark,development,M01_S01_rep0114_standard_fit_elapsed,,1083.578,seconds,,7000 total iterations under corrected standard schedule
 benchmark,development,M01_S01_rep0114_peak_RSS,,762672,KiB,,GNU time maximum resident set
@@ -42,6 +46,12 @@ benchmark,development,M08_S03_R4000_max_MCSE_over_SD,,0.05216983,ratio,,maximum 
 benchmark,development,M08_S03_R4000_max_fit_elapsed,,417.560,seconds,,maximum one-chain elapsed across replications 13 55 and 94
 benchmark,failed_run,maximum_sampled_worker_RSS,,1496068,KiB,,third launch wave-1 worker peak before deferred local-only RDS validation
 benchmark,failed_run,declared_worker_RSS_ceiling,,1572864,KiB,,1.5 GiB process-group ceiling
+benchmark,development,M10_S05_joint_ESS_selected_elapsed_sum,,16992.668,seconds,,five exact zero-repair jobs under joint_ess1_x1
+benchmark,development,M10_S05_joint_ESS_selected_peak_RSS,,652676,KiB,,maximum sampled process RSS under joint_ess1_x1
+benchmark,development,M11_S05_joint_ESS_selected_elapsed_sum,,54423.127,seconds,,six exact zero-repair jobs under joint_ess1_x2
+benchmark,development,M11_S05_joint_ESS_selected_peak_RSS,,914492,KiB,,maximum sampled process RSS under joint_ess1_x2
+projection,affected_wave,M10_M11_selected_CPU_hours,,318.654,CPU hours,,92 M10 and 92 M11 chain executions projected from authenticated selected-candidate elapsed totals
+projection,affected_wave,M10_M11_selected_wall_hours_8_workers,,39.832,hours,,theoretical lower bound before all other methods and orchestration overhead
 projection,initial,safeguarded_upper_CPU_hours_optimistic,947,3542.9,CPU hours,3.741183,prior safeguarded envelope scaled by the exact initial primitive-replica-iteration ratio
 projection,initial,safeguarded_upper_CPU_hours_central,1458,5454.5,CPU hours,3.741084,prior safeguarded envelope scaled by the exact initial primitive-replica-iteration ratio
 projection,initial,safeguarded_upper_CPU_hours_conservative,2551,9543.6,CPU hours,3.741121,prior safeguarded envelope scaled by the exact initial primitive-replica-iteration ratio

@@ -153,7 +153,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
       !identical(
         config$implementation_correction,
         list(
-          schema_version = "rqrgibbs_dlm_main_correction/1.12.0",
+          schema_version = "rqrgibbs_dlm_main_correction/1.16.0",
           failed_authorization_commit =
             "b8b7748ab181a006611b602f64d4edf5be591de6",
           failed_wave_id =
@@ -285,10 +285,108 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           production_seed_binding_failed_outputs_reused = FALSE,
           production_seed_binding_failed_scientific_metrics_used = FALSE,
           production_seed_binding_fresh_relaunch_required = TRUE,
+          skewed_wave_failed_authorization_commit =
+            "32f6745369b83040c0b1c4bd385c17072ee912d8",
+          skewed_wave_failed_run_id = "rqr_dlm_main_20260802_32f6745",
+          skewed_wave_failed_wave_id =
+            "local_level_skewed_T200__target0200__sentinel",
+          skewed_wave_failed_artifact_hashes_sha256 =
+            "40583d1273290034411f89e1ab466a4ef8e224702b3f640cea99efcfcc28236a",
+          skewed_wave_closeout_manifest_sha256 =
+            "45e26c4ba643bb38fcb56beb77f421643e3493fa286588deac4ae4c70a10df74",
+          skewed_wave_forensic_manifest_sha256 =
+            "5a9b31135ef78e55c7b71b0b00ad45198d4f3c9a75537cc9e3b22c9a4d2ea5d3",
+          skewed_wave_failure = paste(
+            "local_level_skewed sentinel exposed systematic frozen MCMC",
+            "mixing failures concentrated in M10 and M11 with additional",
+            "near-boundary endpoint-method failures"
+          ),
+          skewed_wave_failed_outputs_reused = FALSE,
+          skewed_wave_failed_scientific_metrics_used = FALSE,
+          skewed_wave_diagnostics_used_for_transition_correction = TRUE,
+          skewed_wave_fresh_relaunch_required = TRUE,
+          skewed_wave_recovery_status =
+            "joint_elliptical_selected_s10_guard_failed",
+          skewed_whole_scan_candidate_source_commit =
+            "5086fac191255a79514475f6dbacddfae4c328ed",
+          skewed_whole_scan_candidate_jobs = 93L,
+          skewed_whole_scan_candidate_diagnostics = 1791L,
+          skewed_whole_scan_candidate_failed_diagnostics = 32L,
+          skewed_whole_scan_selected_methods =
+            c("M01", "M02", "M06", "M09"),
+          skewed_whole_scan_unresolved_methods = c("M10", "M11"),
+          skewed_whole_scan_candidate_closeout_path = paste0(
+            "docs/audits/rqr_dlm_skewed_candidate_closeout_20260804/",
+            "closeout.json"
+          ),
+          skewed_whole_scan_candidate_closeout_sha256 =
+            "f8b82ef8e0ba51fe4fe9a7ccb34bf62c04013e918c5d88518a3401f4b7e19f4f",
+          skewed_whole_scan_candidate_artifact_manifest_sha256 =
+            "198e131e234563f9503bb1cb8fee27d81f9d9494461afdf9a79e0529907b7274",
+          skewed_joint_elliptical_plan_path = paste0(
+            "docs/implementation_notes/",
+            "rqr_dlm_joint_elliptical_recovery_plan_20260804.md"
+          ),
+          skewed_joint_elliptical_plan_sha256 =
+            "879c5c7b5672aadbb9f8d491e96c4412f35e57158be30b65ac34489a9c001f32",
+          skewed_joint_elliptical_target_change = FALSE,
+          skewed_joint_elliptical_outputs_reusable = FALSE,
+          skewed_joint_elliptical_candidate_source_commit =
+            "2901770ec25fb6042cbc2c8227478a31bdb0dc1a",
+          skewed_joint_elliptical_candidate_jobs = 44L,
+          skewed_joint_elliptical_candidate_diagnostics = 932L,
+          skewed_joint_elliptical_candidate_failed_diagnostics = 22L,
+          skewed_joint_elliptical_selected_methods = c("M10", "M11"),
+          skewed_joint_elliptical_unresolved_methods = character(),
+          skewed_joint_elliptical_selection = list(
+            M10 = list(
+              candidate = "joint_ess1_x1", transition_multiplier = 1L,
+              joint_elliptical_cycles = 1L
+            ),
+            M11 = list(
+              candidate = "joint_ess1_x2", transition_multiplier = 2L,
+              joint_elliptical_cycles = 1L
+            )
+          ),
+          skewed_joint_elliptical_candidate_closeout_path = paste0(
+            "docs/audits/",
+            "rqr_dlm_joint_elliptical_candidate_closeout_20260805/",
+            "closeout.json"
+          ),
+          skewed_joint_elliptical_candidate_closeout_sha256 =
+            "ffbd98d36afce2a6a64352e75d7eca17c48074435c744d9a52f4916b8ddf4a26",
+          skewed_joint_elliptical_candidate_artifact_manifest_sha256 =
+            "6551e96f940dd0ddccf6ea3adc6e42902162cf3d288fd802a1c911fc53679b02",
+          skewed_joint_elliptical_candidate_decisions_sha256 =
+            "ff5395261176a06287af460a1beb243f494bc03035e4c92609e05ccb10d08ad0",
+          skewed_joint_elliptical_development_outputs_reused = FALSE,
+          skewed_joint_elliptical_scientific_metrics_used = FALSE,
+          skewed_affected_wave_required_before_promotion = TRUE,
+          higher_dimensional_guard_source_commit =
+            "73f9918deb91539f06ced88c7803877a3065f42f",
+          higher_dimensional_guard_status =
+            "failed_closed_before_affected_wave",
+          higher_dimensional_guard_jobs = 8L,
+          higher_dimensional_guard_diagnostics = 95L,
+          higher_dimensional_guard_failed_diagnostics = 16L,
+          higher_dimensional_guard_failed_method = "M11",
+          higher_dimensional_guard_failed_estimand = "log_q_2",
+          higher_dimensional_guard_closeout_path = paste0(
+            "docs/audits/rqr_dlm_s10_guard_failure_20260806/",
+            "closeout.json"
+          ),
+          higher_dimensional_guard_closeout_sha256 =
+            "d33d7119d49c15154512dc711ec32a1684d25e13f44b60f7898a38d93e07c372",
+          higher_dimensional_guard_artifact_manifest_sha256 =
+            "2fa819c0e991eba7a3574bcf081f38f715dce13d49527798e541ade0356bd78d",
+          higher_dimensional_guard_outputs_reused = FALSE,
+          higher_dimensional_guard_scientific_metrics_used = FALSE,
+          higher_dimensional_recovery_status =
+            "predeclared_exact_candidate_comparison_pending",
           correction_budget_path =
             "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
           correction_budget_sha256 =
-            "719c8260abb19b2dd0c06ba584bbe4bea79d5dfe423690212b55a334687db64b",
+            "fdee8c042a7ebcc9a1a9c1f8d704be530487fcbc098cdc0572f09daadfd9cdb9",
           target_prior_seed_or_diagnostic_threshold_changed = FALSE,
           mcmc_transition_and_fixed_role_schedule_changed = TRUE
         )
@@ -310,6 +408,59 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           slice_max_steps = 100L,
           slice_max_shrink = 1000L,
           target_change = FALSE
+        )
+      ) ||
+      !identical(
+        config$frozen_tuning$method_transition_policies,
+        list(
+          M01 = list(
+            transition_multiplier = 2L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "whole_scan_x2"
+          ),
+          M02 = list(
+            transition_multiplier = 2L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "whole_scan_x2"
+          ),
+          M06 = list(
+            transition_multiplier = 2L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "whole_scan_x2"
+          ),
+          M07 = list(
+            transition_multiplier = 1L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "unchanged"
+          ),
+          M08 = list(
+            transition_multiplier = 1L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "unchanged"
+          ),
+          M09 = list(
+            transition_multiplier = 2L,
+            joint_state_elliptical_slice = FALSE,
+            joint_state_elliptical_cycles = 0L,
+            selected_candidate = "whole_scan_x2"
+          ),
+          M10 = list(
+            transition_multiplier = 1L,
+            joint_state_elliptical_slice = TRUE,
+            joint_state_elliptical_cycles = 1L,
+            selected_candidate = "joint_ess1_x1"
+          ),
+          M11 = list(
+            transition_multiplier = 2L,
+            joint_state_elliptical_slice = TRUE,
+            joint_state_elliptical_cycles = 1L,
+            selected_candidate = "joint_ess1_x2"
+          )
         )
       ) ||
       !identical(
@@ -393,7 +544,8 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
   }
   expected_modes <- c(
     "preflight", "oracle-reference", "sentinel-core",
-    "execute-confirmatory", "collect", "audit"
+    "execute-confirmatory", "development-affected-wave",
+    "collect", "audit"
   )
   if (!identical(config$implemented_modes, expected_modes)) {
     stop("Runner modes differ from the frozen contract.", call. = FALSE)
@@ -432,6 +584,35 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
         wave2_recovery_selection_path,
       sha256 = config$implementation_correction$
         wave2_recovery_selection_sha256
+    ),
+    skewed_joint_closeout = c(
+      path = config$implementation_correction$
+        skewed_joint_elliptical_candidate_closeout_path,
+      sha256 = config$implementation_correction$
+        skewed_joint_elliptical_candidate_closeout_sha256
+    ),
+    skewed_joint_decisions = c(
+      path = paste0(
+        "docs/audits/",
+        "rqr_dlm_joint_elliptical_candidate_closeout_20260805/",
+        "candidate_decisions.csv"
+      ),
+      sha256 = config$implementation_correction$
+        skewed_joint_elliptical_candidate_decisions_sha256
+    ),
+    higher_dimensional_guard_closeout = c(
+      path = config$implementation_correction$
+        higher_dimensional_guard_closeout_path,
+      sha256 = config$implementation_correction$
+        higher_dimensional_guard_closeout_sha256
+    ),
+    higher_dimensional_guard_artifacts = c(
+      path = paste0(
+        "docs/audits/rqr_dlm_s10_guard_failure_20260806/",
+        "artifact_hashes.csv"
+      ),
+      sha256 = config$implementation_correction$
+        higher_dimensional_guard_artifact_manifest_sha256
     )
   )
   for (evidence in correction_evidence) {
@@ -2300,6 +2481,7 @@ rqr_confirm_collect_outputs <- function(run_root, planned_tasks, contract) {
     if (!manifest$mode %in% c("sentinel-core", "execute-confirmatory") ||
         !manifest$status %in% c(
           "passed", "completed_with_fit_failures",
+          "completed_with_diagnostic_warnings",
           "failed_cell_stop", "failed_global_stop"
         ) ||
         !isTRUE(manifest$generalized_bayes) ||
@@ -2344,7 +2526,8 @@ rqr_confirm_collect_outputs <- function(run_root, planned_tasks, contract) {
          call. = FALSE)
   }
   allowed_status <- c(
-    "completed", "completed_with_fit_failure", "cell_stop_failure",
+    "completed", "completed_with_fit_failure",
+    "completed_with_diagnostic_warning", "cell_stop_failure",
     "global_stop_failure", "infrastructure_invalid",
     "not_run_cell_stop", "not_run_global_stop"
   )
@@ -2362,6 +2545,7 @@ rqr_confirm_collect_outputs <- function(run_root, planned_tasks, contract) {
   ]
   published_status <- statuses$status %in% c(
     "completed", "completed_with_fit_failure",
+    "completed_with_diagnostic_warning",
     "cell_stop_failure", "global_stop_failure"
   )
   if (length(result_paths) != sum(published_status)) {
@@ -2622,7 +2806,8 @@ rqr_confirm_collect_outputs <- function(run_root, planned_tasks, contract) {
     wave_directories = unique(stage_wave_owner),
     replications = replications,
     analysis_complete = all(statuses$status %in% c(
-      "completed", "completed_with_fit_failure"
+      "completed", "completed_with_fit_failure",
+      "completed_with_diagnostic_warning"
     )) && all(vapply(
       replication_rows, `[[`, logical(1L), "exact_method_set"
     ))
@@ -3669,7 +3854,55 @@ rqr_confirm_fixed_design_replica_initialization <- function(
   )
 }
 
-rqr_confirm_method_schedule <- function(
+rqr_confirm_method_transition_policy <- function(contract, method) {
+  policies <- contract$config$frozen_tuning$method_transition_policies
+  policy <- policies[[method]]
+  if (is.null(policy)) {
+    return(list(
+      transition_multiplier = 1L,
+      joint_state_elliptical_slice = FALSE,
+      joint_state_elliptical_cycles = 0L,
+      selected_candidate = "not_applicable"
+    ))
+  }
+  required <- c(
+    "transition_multiplier", "joint_state_elliptical_slice",
+    "joint_state_elliptical_cycles", "selected_candidate"
+  )
+  if (!identical(names(policy), required) ||
+      !is.numeric(policy$transition_multiplier) ||
+      length(policy$transition_multiplier) != 1L ||
+      is.na(policy$transition_multiplier) ||
+      !is.finite(policy$transition_multiplier) ||
+      policy$transition_multiplier != floor(policy$transition_multiplier) ||
+      policy$transition_multiplier < 1L ||
+      !is.logical(policy$joint_state_elliptical_slice) ||
+      length(policy$joint_state_elliptical_slice) != 1L ||
+      is.na(policy$joint_state_elliptical_slice) ||
+      !is.numeric(policy$joint_state_elliptical_cycles) ||
+      length(policy$joint_state_elliptical_cycles) != 1L ||
+      is.na(policy$joint_state_elliptical_cycles) ||
+      !is.finite(policy$joint_state_elliptical_cycles) ||
+      policy$joint_state_elliptical_cycles !=
+        floor(policy$joint_state_elliptical_cycles) ||
+      policy$joint_state_elliptical_cycles < 0L ||
+      !is.character(policy$selected_candidate) ||
+      length(policy$selected_candidate) != 1L ||
+      is.na(policy$selected_candidate) ||
+      !nzchar(policy$selected_candidate) ||
+      isTRUE(policy$joint_state_elliptical_slice) !=
+        (policy$joint_state_elliptical_cycles > 0L) ||
+      (isTRUE(policy$joint_state_elliptical_slice) &&
+       !method %in% c("M10", "M11"))) {
+    stop("A method transition policy is malformed.", call. = FALSE)
+  }
+  policy$transition_multiplier <- as.integer(policy$transition_multiplier)
+  policy$joint_state_elliptical_cycles <-
+    as.integer(policy$joint_state_elliptical_cycles)
+  policy
+}
+
+rqr_confirm_base_method_schedule <- function(
     contract, method, profile_name = "standard") {
   switch(
     method,
@@ -3702,6 +3935,23 @@ rqr_confirm_method_schedule <- function(
     ),
     NULL
   )
+}
+
+rqr_confirm_method_schedule <- function(
+    contract, method, profile_name = "standard") {
+  schedule <- rqr_confirm_base_method_schedule(
+    contract, method, profile_name
+  )
+  if (is.null(schedule)) return(NULL)
+  policy <- rqr_confirm_method_transition_policy(contract, method)
+  multiplier <- policy$transition_multiplier
+  schedule$burn <- as.integer(schedule$burn * multiplier)
+  if (identical(method, "M02")) {
+    schedule$retain <- as.integer(schedule$retain * multiplier)
+  } else if (!identical(method, "M03")) {
+    schedule$thin <- as.integer(schedule$thin * multiplier)
+  }
+  schedule
 }
 
 rqr_confirm_initialization <- function(generated, model, profile,
@@ -3798,8 +4048,11 @@ rqr_confirm_dynamic_fit <- function(
   } else {
     "fixed_rate"
   }
-  schedule <- rqr_confirm_dynamic_schedule(
-    contract, method, component_evolution_method, profile_name
+  transition_policy <- rqr_confirm_method_transition_policy(
+    contract, method
+  )
+  schedule <- rqr_confirm_method_schedule(
+    contract, method, profile_name
   )
   common <- list(
     y = generated$training_y,
@@ -3847,10 +4100,32 @@ rqr_confirm_dynamic_fit <- function(
           component_scale_kernel$slice_max_steps,
       component_scale_slice_max_shrink =
         contract$config$frozen_tuning$
+          component_scale_kernel$slice_max_shrink,
+      component_scale_joint_elliptical_slice =
+        isTRUE(transition_policy$joint_state_elliptical_slice),
+      component_scale_joint_elliptical_cycles = if (
+          isTRUE(transition_policy$joint_state_elliptical_slice)
+        ) {
+        transition_policy$joint_state_elliptical_cycles
+      } else {
+        1L
+      },
+      component_scale_joint_elliptical_max_shrink =
+        contract$config$frozen_tuning$
           component_scale_kernel$slice_max_shrink
     ),
     init = initial
   )
+  policy_override <- contract$mcmc_control_overrides[[method]] %||% list()
+  if (!is.list(policy_override) ||
+      (length(policy_override) &&
+       (is.null(names(policy_override)) ||
+        any(!nzchar(names(policy_override)))))) {
+    stop("A policy MCMC-control override is malformed.", call. = FALSE)
+  }
+  if (length(policy_override)) {
+    common$mcmc_control[names(policy_override)] <- policy_override
+  }
   if (length(mcmc_control_override)) {
     common$mcmc_control[names(mcmc_control_override)] <-
       mcmc_control_override
@@ -3963,8 +4238,119 @@ rqr_confirm_dynamic_fit <- function(
         isTRUE(fit$provenance$reproducibility_eligible),
       profile = profile_name,
       learned_lambda =
-        identical(method, "M11")
+        identical(method, "M11"),
+      transition_policy = transition_policy
     )
+  )
+}
+
+# Compact transition telemetry for development and promotion gates. This
+# deliberately excludes state paths, latent variables, and simulation
+# performance summaries. Directional summaries are de-duplicated by
+# iteration/cycle because the fit-level table repeats cycle-wide directional
+# information on each component row.
+rqr_confirm_transition_telemetry <- function(fit) {
+  if (!inherits(fit, "rqr_dlm_mcmc")) {
+    stop("Transition telemetry requires an rqr_dlm_mcmc fit.",
+         call. = FALSE)
+  }
+  interweave <- fit$diagnostics$component_scale_interweave
+  joint <- fit$diagnostics$component_scale_joint_elliptical
+  directional <- if (is.data.frame(interweave) && nrow(interweave) &&
+      all(c(
+        "iteration", "cycle", "directional_sweeps",
+        "directional_evaluations", "directional_shrink_steps",
+        "directional_max_distance", "exact_random_direction_slice"
+      ) %in% names(interweave))) {
+    interweave[
+      !duplicated(interweave[c("iteration", "cycle")]),
+      c(
+        "iteration", "cycle", "directional_sweeps",
+        "directional_evaluations", "directional_shrink_steps",
+        "directional_max_distance", "exact_random_direction_slice"
+      ),
+      drop = FALSE
+    ]
+  } else {
+    data.frame()
+  }
+  safe_sum <- function(value) {
+    if (!length(value)) 0 else sum(value)
+  }
+  safe_max <- function(value) {
+    if (!length(value)) 0 else max(value)
+  }
+  data.frame(
+    schema_version = "rqrgibbs_dlm_transition_telemetry/1.0.0",
+    interweave_rows = if (is.data.frame(interweave)) {
+      nrow(interweave)
+    } else {
+      0L
+    },
+    coordinate_evaluations = if (is.data.frame(interweave) &&
+        "evaluations" %in% names(interweave)) {
+      safe_sum(interweave$evaluations)
+    } else {
+      0L
+    },
+    coordinate_shrink_steps = if (is.data.frame(interweave) &&
+        "shrink_steps" %in% names(interweave)) {
+      safe_sum(interweave$shrink_steps)
+    } else {
+      0L
+    },
+    directional_updates = if (nrow(directional)) {
+      safe_sum(directional$directional_sweeps)
+    } else {
+      0L
+    },
+    directional_evaluations = if (nrow(directional)) {
+      safe_sum(directional$directional_evaluations)
+    } else {
+      0L
+    },
+    directional_shrink_steps = if (nrow(directional)) {
+      safe_sum(directional$directional_shrink_steps)
+    } else {
+      0L
+    },
+    directional_max_distance = if (nrow(directional)) {
+      safe_max(directional$directional_max_distance)
+    } else {
+      0
+    },
+    all_directional_updates_exact = if (nrow(directional) &&
+        any(directional$directional_sweeps > 0L)) {
+      all(directional$exact_random_direction_slice)
+    } else {
+      TRUE
+    },
+    joint_updates = if (is.data.frame(joint)) nrow(joint) else 0L,
+    joint_evaluations = if (is.data.frame(joint) &&
+        "evaluations" %in% names(joint)) {
+      safe_sum(joint$evaluations)
+    } else {
+      0L
+    },
+    joint_shrink_steps = if (is.data.frame(joint) &&
+        "shrink_steps" %in% names(joint)) {
+      safe_sum(joint$shrink_steps)
+    } else {
+      0L
+    },
+    all_joint_updates_exact = if (is.data.frame(joint) && nrow(joint)) {
+      all(joint$exact_joint_elliptical_slice)
+    } else {
+      TRUE
+    },
+    target_digest = fit$provenance$object_digests$target,
+    model_digest = fit$provenance$object_digests$model,
+    evolution_digest = fit$provenance$object_digests$evolution,
+    transition_kernel_digest = digest::digest(
+      fit$model_spec$component_scale_transition_kernel,
+      algo = "sha256", serialize = TRUE
+    ),
+    stringsAsFactors = FALSE
   )
 }
 
@@ -4274,7 +4660,17 @@ rqr_confirm_exdqlm_mcmc_initialization <- function(
 
 rqr_confirm_dynamic_quantile <- function(
     contract, generated, chain, ledger, exdqlm_attestation_path,
-    profile_name = NULL) {
+    profile_name = NULL, schedule_override = list()) {
+  if (!is.list(schedule_override) ||
+      (length(schedule_override) &&
+       (is.null(names(schedule_override)) ||
+        any(!nzchar(names(schedule_override))) ||
+        any(!names(schedule_override) %in% c("burn", "retain"))))) {
+    stop(
+      "schedule_override must be a named subset of burn and retain.",
+      call. = FALSE
+    )
+  }
   chain <- rqr_confirm_strict_integer(chain, "chain", 1L, 4L)
   specification <- contract$config$comparator$exdqlm
   attestation <- rqr_confirm_read_attestation(
@@ -4313,8 +4709,25 @@ rqr_confirm_dynamic_quantile <- function(
     lower = (1 - generated$coverage_level) / 2,
     upper = 1 - (1 - generated$coverage_level) / 2
   )
-  schedule <- rqr_confirm_dynamic_quantile_schedule(
-    contract, profile_name
+  transition_policy <- rqr_confirm_method_transition_policy(
+    contract, "M02"
+  )
+  schedule <- rqr_confirm_method_schedule(
+    contract, "M02", profile_name
+  )
+  diagnostic_thin <- if (length(schedule_override)) {
+    1L
+  } else {
+    transition_policy$transition_multiplier
+  }
+  if (length(schedule_override)) {
+    schedule[names(schedule_override)] <- schedule_override
+  }
+  schedule$burn <- rqr_confirm_strict_integer(
+    schedule$burn, "dynamic quantile burn", 0L
+  )
+  schedule$retain <- rqr_confirm_strict_integer(
+    schedule$retain, "dynamic quantile retained draws", 1L
   )
   profile_endpoints <- rqr_confirm_profile_interval(generated, profile)
   cell_id <- contract$incidence$cell_id[
@@ -4395,6 +4808,7 @@ rqr_confirm_dynamic_quantile <- function(
     future_lower = pmin(raw_future[, 1L], raw_future[, 2L]),
     future_upper = pmax(raw_future[, 1L], raw_future[, 2L]),
     fits = fits, forecasts = forecasts,
+    diagnostic_thin = diagnostic_thin,
     diagnostics = list(
       dqlm_ind = all(vapply(
         fits, function(fit) isTRUE(fit$dqlm.ind), logical(1L)
@@ -4410,7 +4824,8 @@ rqr_confirm_dynamic_quantile <- function(
         "target_preserving_precomputed_mcmc_state",
       common_target_digest = common_target_digest,
       profile_changed_target = FALSE,
-      response_predictive_draws = FALSE
+      response_predictive_draws = FALSE,
+      transition_policy = transition_policy
     )
   )
 }
@@ -4843,8 +5258,21 @@ rqr_confirm_wave_binding <- function(
   wave_output_base <- normalizePath(
     wave_output_base, winslash = "/", mustWork = TRUE
   )
+  execution_policy_sha256 <- tolower(as.character(
+    authorization$execution_policy_sha256 %||% ""
+  ))
+  if (length(execution_policy_sha256) != 1L ||
+      is.na(execution_policy_sha256) ||
+      !grepl("^$|^[0-9a-f]{64}$", execution_policy_sha256)) {
+    stop("The wave-state execution-policy digest is invalid.",
+         call. = FALSE)
+  }
   binding <- list(
-    schema_version = "rqrgibbs_dlm_wave_run/1.1.0",
+    schema_version = if (nzchar(execution_policy_sha256)) {
+      "rqrgibbs_dlm_wave_run/1.2.0"
+    } else {
+      "rqrgibbs_dlm_wave_run/1.1.0"
+    },
     run_id = scalar_text(
       run_id, "run_id", "^[a-z0-9][a-z0-9._-]{0,127}$"
     ),
@@ -4877,6 +5305,9 @@ rqr_confirm_wave_binding <- function(
     ),
     wave_output_base = wave_output_base
   )
+  if (nzchar(execution_policy_sha256)) {
+    binding$execution_policy_sha256 <- execution_policy_sha256
+  }
   expected_commit <- scalar_text(
     expected_commit, "expected_commit", "^[0-9a-f]{40}$"
   )
@@ -4900,9 +5331,9 @@ rqr_confirm_wave_binding <- function(
 
 rqr_confirm_wave_output_root <- function(binding, catalog_row) {
   if (!is.list(binding) ||
-      !identical(
-        as.character(binding$schema_version),
-        "rqrgibbs_dlm_wave_run/1.1.0"
+      !as.character(binding$schema_version) %in% c(
+        "rqrgibbs_dlm_wave_run/1.1.0",
+        "rqrgibbs_dlm_wave_run/1.2.0"
       ) ||
       !is.character(binding$wave_output_base) ||
       length(binding$wave_output_base) != 1L ||
@@ -6218,6 +6649,16 @@ rqr_confirm_scalar_draws <- function(
     }
     raw_lower <- ordinate_draws(result$fits[[1L]])
     raw_upper <- ordinate_draws(result$fits[[2L]])
+    diagnostic_thin <- result$diagnostic_thin %||% 1L
+    diagnostic_thin <- rqr_confirm_strict_integer(
+      diagnostic_thin, "dynamic-quantile diagnostic thinning", 1L
+    )
+    retained_index <- seq.int(
+      from = diagnostic_thin, to = ncol(raw_lower),
+      by = diagnostic_thin
+    )
+    raw_lower <- raw_lower[, retained_index, drop = FALSE]
+    raw_upper <- raw_upper[, retained_index, drop = FALSE]
     lower <- pmin(raw_lower, raw_upper)
     upper <- pmax(raw_lower, raw_upper)
     values <- cbind(
