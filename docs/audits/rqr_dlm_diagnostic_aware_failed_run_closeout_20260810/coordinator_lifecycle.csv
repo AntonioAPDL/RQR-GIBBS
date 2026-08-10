@@ -1,0 +1,2 @@
+"lock_present","owner_pid","owner_host","owner_alive","stale_lock_preserved_as_input_evidence","coordinator_closeout_present","final_audit_present"
+FALSE,NA,NA,FALSE,FALSE,FALSE,FALSE

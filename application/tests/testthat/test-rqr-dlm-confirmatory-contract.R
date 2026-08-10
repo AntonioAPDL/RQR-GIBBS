@@ -91,7 +91,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
   expect_false(contract$config$confirmatory_execution_authorized)
   expect_identical(
     contract$config$implementation_correction$schema_version,
-    "rqrgibbs_dlm_main_correction/1.16.0"
+    "rqrgibbs_dlm_main_correction/1.17.0"
   )
   expect_identical(
     contract$config$implementation_correction$
@@ -493,6 +493,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     contract$config$schedules$fixed_design_rqr
   )
   expect_identical(contract$config$resources$threads_per_worker, 1L)
+  expect_identical(contract$config$resources$per_worker_memory_GiB, 2.0)
   expect_identical(
     contract$config$resources$sampled_process_group_thread_ceiling, 4L
   )
@@ -944,7 +945,8 @@ test_that("execution publishes diagnostic failures without duplicate RDS reads",
     runner, fixed = TRUE
   )
   diagnostic_stop <- grep(
-    "if (!all(diagnostics$pass)) {", runner, fixed = TRUE
+    "if (frozen_diagnostic_failure || operational_activity_failure) {",
+    runner, fixed = TRUE
   )
   expect_length(compact_assignment, 1L)
   expect_length(diagnostic_stop, 1L)
@@ -1528,11 +1530,13 @@ test_that("compact M02 diagnostics serialize every consumed RNG stream", {
   )
   expect_identical(
     object$schema_version,
-    "rqrgibbs_dlm_compact_mcmc_diagnostics/1.2.0"
+    "rqrgibbs_dlm_compact_mcmc_diagnostics/1.3.0"
   )
   expect_identical(object$rng_bindings$task_key, keys)
   expect_identical(nrow(object$rng_bindings), 16L)
   expect_true(object$diagnostic_pass)
+  expect_true(object$operational_activity_pass)
+  expect_length(object$operational_sidecars, 4L)
   expect_true(object$exact_refit_inputs_bound)
   expect_false(object$response_likelihood)
 
@@ -1540,6 +1544,52 @@ test_that("compact M02 diagnostics serialize every consumed RNG stream", {
   on.exit(unlink(path, force = TRUE), add = TRUE)
   saveRDS(object, path, compress = "xz")
   expect_identical(readRDS(path), object)
+})
+
+test_that("replica exchange separates exact structure from activity", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  expected <- contract$config$frozen_tuning$fixed_design_replica_exchange
+  model_spec <- list(
+    replica_exchange_enabled = TRUE,
+    replica_exchange = list(
+      inverse_temperatures = expected$inverse_temperatures
+    )
+  )
+  attempts <- c(10L, 10L, 10L)
+  accepts <- c(0L, 3L, 2L)
+  diagnostics <- list(
+    replica_swap_attempts = attempts,
+    replica_swap_accepts = accepts,
+    replica_swap_acceptance = accepts / attempts,
+    replica_cold_label_trace = rep(1L, 12L),
+    replica_round_trips = rep(0L, 4L)
+  )
+  observed <- environment$rqr_confirm_replica_exchange_assessment(
+    model_spec, diagnostics, expected, TRUE
+  )
+  expect_true(observed$structural_pass)
+  expect_false(observed$activity_pass)
+  expect_setequal(
+    observed$activity_failures,
+    c(
+      "zero_acceptance_adjacent_pair", "single_cold_label_visited",
+      "zero_complete_round_trips"
+    )
+  )
+  expect_false(environment$rqr_confirm_operational_activity_pass(
+    "M03", list(observed)
+  ))
+
+  diagnostics$replica_swap_acceptance[[2L]] <- 0.9
+  invalid <- environment$rqr_confirm_replica_exchange_assessment(
+    model_spec, diagnostics, expected, TRUE
+  )
+  expect_false(invalid$structural_pass)
+  expect_true(
+    "inconsistent_acceptance_fractions" %in%
+      invalid$structural_failures
+  )
 })
 
 test_that("canonical DGPs separate state, response, and oracle quantities", {

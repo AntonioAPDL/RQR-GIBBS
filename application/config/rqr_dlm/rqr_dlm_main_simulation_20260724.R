@@ -12,7 +12,7 @@ rqr_dlm_main_simulation <- list(
   response_likelihood = FALSE,
   response_prediction_contract = FALSE,
   implementation_correction = list(
-    schema_version = "rqrgibbs_dlm_main_correction/1.16.0",
+    schema_version = "rqrgibbs_dlm_main_correction/1.17.0",
     failed_authorization_commit =
       "b8b7748ab181a006611b602f64d4edf5be591de6",
     failed_wave_id =
@@ -243,6 +243,29 @@ rqr_dlm_main_simulation <- list(
       "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
     correction_budget_sha256 =
       "fdee8c042a7ebcc9a1a9c1f8d704be530487fcbc098cdc0572f09daadfd9cdb9",
+    completion_recovery_failed_authorization_commit =
+      "031595bbbca5c59673faed10087faaf450c15a5a",
+    completion_recovery_failed_run_id =
+      "rqr_dlm_diagnostic_aware_maximum_20260808_031595b",
+    completion_recovery_failed_wave_id =
+      "trend_seasonal_gaussian_T200__target0200__sentinel",
+    completion_recovery_closeout_artifact_hashes_sha256 =
+      "e9d6197b813904b51f9da88f7511e673d33f7fb131f6b8cd0260281d27ab778b",
+    completion_recovery_failed_outputs_reused = FALSE,
+    completion_recovery_scientific_metrics_used = FALSE,
+    component_scale_directional_scope_correction = paste(
+      "apply the selected directional update only to models with at least",
+      "two evolution components; retain coordinate interweaving and joint",
+      "state elliptical updates for one-component M11 models"
+    ),
+    fixed_design_replica_exchange_activity_correction = paste(
+      "keep exact structure target and zero-repair checks as hard invariants;",
+      "record finite-run acceptance label and round-trip activity as",
+      "diagnostic-aware sidecars"
+    ),
+    sampled_worker_memory_ceiling_correction =
+      "uniform prospective increase from 1.5 GiB to 2.0 GiB",
+    completion_recovery_fresh_relaunch_required = TRUE,
     target_prior_seed_or_diagnostic_threshold_changed = FALSE,
     mcmc_transition_and_fixed_role_schedule_changed = TRUE
   ),
@@ -643,7 +666,7 @@ rqr_dlm_main_simulation <- list(
     sampled_reference_process_group_thread_ceiling = 4L,
     sampled_thread_ceiling_role =
       "hard_OS_thread_envelope_not_compute_parallelism",
-    per_worker_memory_GiB = 1.5, free_space_required_GiB = 50,
+    per_worker_memory_GiB = 2.0, free_space_required_GiB = 50,
     free_space_recommended_GiB = 100,
     process_wave_ceiling_hours = 14 * 24,
     resumable_only_at_completed_batch_boundaries = TRUE,

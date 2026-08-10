@@ -7,7 +7,7 @@
 # and Monte Carlo precision thresholds.
 
 rqr_dlm_diagnostic_aware_completion <- list(
-  schema_version = "rqrgibbs_dlm_diagnostic_aware_completion/1.0.0",
+  schema_version = "rqrgibbs_dlm_diagnostic_aware_completion/1.1.0",
   policy_id = "rqr_dlm_diagnostic_aware_completion_20260807",
   execution_authorized = TRUE,
   explicit_user_direction_recorded = TRUE,
@@ -36,6 +36,9 @@ rqr_dlm_diagnostic_aware_completion <- list(
     joint_state_elliptical_cycles = 1L,
     component_scale_directional_interweave = TRUE,
     component_scale_directional_sweeps = 1L,
+    component_scale_directional_min_components = 2L,
+    single_component_fallback =
+      "coordinate_interweave_plus_joint_state_elliptical",
     target_change = FALSE,
     schedule_change = FALSE
   ),

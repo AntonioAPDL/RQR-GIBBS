@@ -1244,6 +1244,11 @@ if (mode %in% c(
       }
       chain_results <- vector("list", chains)
       scalar_chains <- if (mcmc_method) vector("list", chains) else NULL
+      operational_sidecars <- if (mcmc_method) {
+        vector("list", chains)
+      } else {
+        NULL
+      }
       failure <- NULL
       diagnostic_failure <- NULL
       started <- proc.time()[["elapsed"]]
@@ -1270,6 +1275,19 @@ if (mode %in% c(
             rqr_confirm_scalar_draws(
               full_result, generated, contract, method
             ),
+            error = function(error) {
+              diagnostic_failure <<- error
+              NULL
+            }
+          )
+          if (!is.null(diagnostic_failure)) {
+            failure <- diagnostic_failure
+            full_result <- NULL
+            invisible(gc(full = TRUE))
+            break
+          }
+          operational_sidecars[[chain]] <- tryCatch(
+            rqr_confirm_method_operational_sidecar(full_result, method),
             error = function(error) {
               diagnostic_failure <<- error
               NULL
@@ -1570,17 +1588,33 @@ if (mode %in% c(
           chain_profiles = chain_profiles,
           schedules = do.call(rbind, schedule_rows),
           scalar_chains = scalar_chains,
-          diagnostics = diagnostics
+          diagnostics = diagnostics,
+          operational_sidecars = operational_sidecars
         )
         if (method_is_sentinel) {
           sentinel_objects[[method]] <- compact_diagnostic_object
         }
-        if (!all(diagnostics$pass)) {
-          failed_mcmc_objects[[method]] <- compact_diagnostic_object
-          diagnostic_message <- sprintf(
-            "Frozen MCMC diagnostics failed for %s/%s/rep%d.",
-            task$DGP[[1L]], method, task$replication[[1L]]
+        frozen_diagnostic_failure <- !all(diagnostics$pass)
+        operational_activity_failure <-
+          !rqr_confirm_operational_activity_pass(
+            method, operational_sidecars
           )
+        if (frozen_diagnostic_failure || operational_activity_failure) {
+          failed_mcmc_objects[[method]] <- compact_diagnostic_object
+          diagnostic_message <- if (frozen_diagnostic_failure) {
+            sprintf(
+              "Frozen MCMC diagnostics failed for %s/%s/rep%d.",
+              task$DGP[[1L]], method, task$replication[[1L]]
+            )
+          } else {
+            sprintf(
+              paste(
+                "Replica-exchange activity telemetry was below its",
+                "predeclared sidecar criterion for %s/%s/rep%d."
+              ),
+              task$DGP[[1L]], method, task$replication[[1L]]
+            )
+          }
           replication_result_index <-
             length(replication_results)
           diagnostic_class <- if (diagnostic_aware_completion) {
@@ -1776,7 +1810,7 @@ if (mode %in% c(
     for (object_name in c(
         "sentinel_objects", "failed_mcmc_objects", "chain_results",
         "diagnostic_payload", "compact_diagnostic_object",
-        "scalar_chains", "value", "generated", "forecast",
+        "scalar_chains", "operational_sidecars", "value", "generated", "forecast",
         "forecasts"
       )) {
       if (exists(object_name, inherits = FALSE)) {
@@ -1910,7 +1944,8 @@ if (mode %in% c("collect", "audit")) {
       )
     )
     warning_summary <- do.call(rbind, lapply(warning_cells, function(value) {
-      warned <- value$failure_class == "mcmc_diagnostic_warning"
+      warned <- !is.na(value$failure_class) &
+        value$failure_class == "mcmc_diagnostic_warning"
       data.frame(
         cell_id = value$cell_id[[1L]],
         method = value$method[[1L]],
@@ -1942,7 +1977,8 @@ if (mode %in% c("collect", "audit")) {
       cell <- diagnostic_rows[
         diagnostic_rows$cell_id == cell_id, , drop = FALSE
       ]
-      unflagged <- cell$failure_class != "mcmc_diagnostic_warning"
+      unflagged <- is.na(cell$failure_class) |
+        cell$failure_class != "mcmc_diagnostic_warning"
       for (measure in sensitivity_measures) {
         all_values <- cell[[measure]][is.finite(cell[[measure]])]
         clean_values <- cell[[measure]][

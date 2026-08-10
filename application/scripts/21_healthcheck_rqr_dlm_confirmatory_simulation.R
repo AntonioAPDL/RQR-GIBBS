@@ -173,7 +173,14 @@ diagnostic_counts <- if (length(diagnostic_paths)) {
 }
 warning_rows <- if (length(result_tables)) sum(vapply(
   result_tables,
-  function(value) sum(value$failure_class == "mcmc_diagnostic_warning"),
+  function(value) {
+    if (!"failure_class" %in% names(value)) return(0L)
+    sum(
+      !is.na(value$failure_class) &
+        value$failure_class == "mcmc_diagnostic_warning",
+      na.rm = TRUE
+    )
+  },
   integer(1L)
 )) else 0L
 wave_manifest_paths <- list.files(

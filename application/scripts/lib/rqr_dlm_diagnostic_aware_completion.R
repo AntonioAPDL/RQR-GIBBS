@@ -31,8 +31,9 @@ rqr_completion_read_policy <- function(repo_root) {
     "method", "candidate", "transition_multiplier",
     "joint_state_elliptical_cycles",
     "component_scale_directional_interweave",
-    "component_scale_directional_sweeps", "target_change",
-    "schedule_change"
+    "component_scale_directional_sweeps",
+    "component_scale_directional_min_components",
+    "single_component_fallback", "target_change", "schedule_change"
   )
   result_required <- c(
     "keep_primary_metrics_when_diagnostics_fail", "failure_class",
@@ -47,7 +48,7 @@ rqr_completion_read_policy <- function(repo_root) {
   if (!is.list(policy) || !identical(names(policy), required) ||
       !identical(
         policy$schema_version,
-        "rqrgibbs_dlm_diagnostic_aware_completion/1.0.0"
+        "rqrgibbs_dlm_diagnostic_aware_completion/1.1.0"
       ) ||
       !identical(
         policy$policy_id,
@@ -84,6 +85,14 @@ rqr_completion_read_policy <- function(repo_root) {
       ) ||
       !valid_count(
         policy$selected_transition$component_scale_directional_sweeps, 1L
+      ) ||
+      !valid_count(
+        policy$selected_transition$
+          component_scale_directional_min_components, 2L
+      ) ||
+      !identical(
+        policy$selected_transition$single_component_fallback,
+        "coordinate_interweave_plus_joint_state_elliptical"
       ) ||
       isTRUE(policy$selected_transition$target_change) ||
       isTRUE(policy$selected_transition$schedule_change) ||
@@ -129,8 +138,17 @@ rqr_completion_apply_policy <- function(contract, policy) {
   contract$execution_policy <- policy
   contract$mcmc_control_overrides <- list(
     M11 = list(
-      component_scale_directional_interweave = TRUE,
-      component_scale_directional_sweeps = 1L
+      control = list(
+        component_scale_directional_interweave = TRUE,
+        component_scale_directional_sweeps = 1L
+      ),
+      scope = list(
+        component_scale_directional_min_components =
+          policy$selected_transition$
+            component_scale_directional_min_components,
+        single_component_fallback =
+          policy$selected_transition$single_component_fallback
+      )
     )
   )
   contract

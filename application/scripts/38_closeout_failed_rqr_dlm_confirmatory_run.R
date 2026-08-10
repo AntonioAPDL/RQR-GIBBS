@@ -178,7 +178,10 @@ planned_chains <- budget$value[
   budget$item == "total_MCMC_chain_executions"
 ]
 fully_completed_task_status <- if (is.null(status)) logical() else {
-  status$status %in% c("completed", "completed_with_fit_failure")
+  status$status %in% c(
+    "completed", "completed_with_fit_failure",
+    "completed_with_diagnostic_warning"
+  )
 }
 mcmc_group <- if (is.null(diagnostics)) NULL else unique(diagnostics[c(
   "wave_id", "DGP", "replication", "method", "chains"
