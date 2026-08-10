@@ -707,7 +707,7 @@ validate_cell_bundle <- function(family, target, require_eligible = TRUE) {
   checks <- c(
     checks, all(worker_checks),
     identical(receipt$cell_contract_digest, otf_object_sha256(contract)),
-    !require_eligible || isTRUE(receipt$eligible)
+    !require_eligible || isTRUE(receipt$completion_eligible)
   )
   if (!all(checks)) oti_stop("Cell bundle validation failed: ", family, "/", target)
   list(root = root, receipt = receipt, worker_manifest = manifest)
@@ -732,8 +732,17 @@ refresh_run_status <- function() {
           as.numeric(receipt$elapsed_seconds),
         computational_pass = if (is.null(receipt)) NA else
           isTRUE(receipt$computational_pass),
+        completion_eligible = if (is.null(receipt)) NA else
+          isTRUE(receipt$completion_eligible),
+        strict_diagnostics_pass = if (is.null(receipt)) NA else
+          isTRUE(receipt$strict_diagnostics_pass),
         recovery_pass = if (is.null(receipt)) NA else
           isTRUE(receipt$recovery_pass),
+        broad_recovery_pass = if (is.null(receipt)) NA else
+          isTRUE(receipt$broad_recovery_pass),
+        manuscript_illustration_evidence_eligible =
+          if (is.null(receipt)) NA else
+            isTRUE(receipt$manuscript_illustration_evidence_eligible),
         disposition = if (is.null(receipt)) "pending" else
           as.character(receipt$disposition),
         stringsAsFactors = FALSE
@@ -761,7 +770,8 @@ write_cell_bundle <- function(family, target, cell, manifest, elapsed) {
   }
   otf_atomic_write_csv(manifest, file.path(stage, "worker_manifest.csv"))
   cell_contract <- cell_contract_from_manifest(family, target, manifest)
-  eligible <- isTRUE(
+  completion_eligible <- isTRUE(cell$fit_summary$completion_eligible)
+  manuscript_eligible <- isTRUE(
     cell$fit_summary$manuscript_illustration_evidence_eligible
   )
   receipt <- list(
@@ -772,10 +782,23 @@ write_cell_bundle <- function(family, target, cell, manifest, elapsed) {
     elapsed_seconds = elapsed,
     cell_parent_peak_rss_kib = process_peak_rss_kib(),
     computational_pass = isTRUE(cell$fit_summary$computational_pass),
+    strict_computational_pass =
+      isTRUE(cell$fit_summary$strict_computational_pass),
+    hard_computational_pass =
+      isTRUE(cell$fit_summary$hard_computational_pass),
+    strict_diagnostics_pass =
+      isTRUE(cell$fit_summary$strict_diagnostics_pass),
     recovery_pass = isTRUE(cell$fit_summary$recovery_pass),
+    broad_recovery_pass = isTRUE(cell$fit_summary$broad_recovery_pass),
     heterogeneity_pass = isTRUE(cell$fit_summary$heterogeneity_pass),
+    broad_heterogeneity_pass =
+      isTRUE(cell$fit_summary$broad_heterogeneity_pass),
+    diagnostic_warning_count =
+      as.integer(cell$fit_summary$diagnostic_warning_count),
+    warning_codes = as.character(cell$fit_summary$warning_codes),
     disposition = as.character(cell$fit_summary$disposition),
-    eligible = eligible,
+    completion_eligible = completion_eligible,
+    manuscript_illustration_evidence_eligible = manuscript_eligible,
     prediction_storage_contract = "ordered_endpoints_only",
     cell_contract_digest = otf_object_sha256(cell_contract),
     finished_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE)
@@ -872,22 +895,25 @@ if (identical(execute_stage, "cell")) {
   cell <- otv3_summarize_cell(
     family, target, results, cell_dgp(family), cell_targets(family), config
   )
+  cell <- otv5_apply_completion_policy(cell, family, config)
   elapsed <- as.numeric(difftime(Sys.time(), started, units = "secs"))
   write_cell_bundle(family, target, cell, manifest, elapsed)
   refresh_run_status()
-  eligible <- isTRUE(
-    cell$fit_summary$manuscript_illustration_evidence_eligible
-  )
+  completion_eligible <- isTRUE(cell$fit_summary$completion_eligible)
+  disposition <- as.character(cell$fit_summary$disposition)
   rm(envelopes, results, cell, returns)
   invisible(gc(full = TRUE))
-  if (!eligible) {
+  if (!completion_eligible) {
     append_failure(
       family, target, NA_integer_, "cell_gate",
-      "The completed process-isolated cell did not pass all gates."
+      "The completed process-isolated cell failed a hard computational gate."
     )
-    oti_stop("Cell gates failed; later cells were not launched.")
+    oti_stop("A hard cell gate failed; later cells were not launched.")
   }
-  message("[oracle-tilt-v5] isolated cell passed: ", family, "/", target)
+  message(
+    "[oracle-tilt-v5] isolated cell completed: ", family, "/", target,
+    " [", disposition, "]"
+  )
   quit(save = "no", status = 0L)
 }
 
@@ -908,7 +934,10 @@ for (plan_index in seq_len(nrow(authoritative_cell_plan))) {
         file.path(bundle$root, "artifact_manifest.csv")
       ),
       cell_contract_digest = bundle$receipt$cell_contract_digest,
-      eligible = isTRUE(bundle$receipt$eligible),
+      completion_eligible = isTRUE(bundle$receipt$completion_eligible),
+      manuscript_illustration_evidence_eligible = isTRUE(
+        bundle$receipt$manuscript_illustration_evidence_eligible
+      ),
       stringsAsFactors = FALSE
     )
 }
@@ -935,7 +964,10 @@ cell_disposition <- fit_summary[, c(
   "family", "target", "provenance_pass", "provenance_snapshots_pass",
   "strict_diagnostics_pass",
   "conditional_parity_pass", "pathology_pass", "computational_pass",
-  "recovery_pass", "heterogeneity_pass", "disposition",
+  "hard_computational_pass", "completion_eligible",
+  "recovery_pass", "broad_recovery_pass", "heterogeneity_pass",
+  "broad_heterogeneity_pass", "diagnostic_warning_count",
+  "warning_codes", "disposition",
   "manuscript_illustration_evidence_eligible"
 )]
 otf_atomic_write_csv(
@@ -951,18 +983,37 @@ run_status <- refresh_run_status()
 
 all_completed <- nrow(worker_manifest) == nrow(preflight$plan) &&
   all(run_status$status == "completed")
-all_passed <- nrow(fit_summary) == 6L &&
+all_hard_passed <- nrow(fit_summary) == 6L &&
+  all(fit_summary$completion_eligible) &&
+  all(cell_manifest$completion_eligible)
+all_manuscript_eligible <- nrow(fit_summary) == 6L &&
   all(fit_summary$manuscript_illustration_evidence_eligible) &&
-  all(cell_manifest$eligible)
+  all(cell_manifest$manuscript_illustration_evidence_eligible)
 close_and_manifest(list(
-  pass = all_completed && all_passed,
+  pass = all_completed && all_hard_passed,
   planned_chains = nrow(preflight$plan), completed_chains = nrow(worker_manifest),
-  all_chains_completed = all_completed, all_cells_pass = all_passed,
+  all_chains_completed = all_completed,
+  all_cells_hard_computational_pass = all_hard_passed,
+  all_cells_manuscript_illustration_eligible = all_manuscript_eligible,
   passed_cells = sum(fit_summary$disposition == "strict_pass"),
-  failed_cells = sum(fit_summary$disposition == "fail"),
+  warning_cells = sum(fit_summary$disposition == "diagnostic_aware_pass"),
+  review_required_cells = sum(
+    fit_summary$disposition == "completed_requires_recovery_review"
+  ),
+  failed_cells = sum(fit_summary$disposition == "hard_failure"),
   process_isolated_cells = TRUE,
+  completion_policy = config$completion_policy$policy_id,
+  strict_diagnostic_thresholds_relabelled = FALSE,
+  reseeded_or_selectively_extended = FALSE,
   prediction_storage_contract = "ordered_endpoints_only",
-  compact_evidence_eligible = all_completed && all_passed
+  compact_evidence_eligible = all_completed && all_hard_passed,
+  manuscript_promotion_authorized = FALSE
 ))
-if (!all_completed || !all_passed) oti_stop("The V5 execution did not pass.")
-message("[oracle-tilt-v5] process-isolated execution passed: ", output_root)
+if (!all_completed || !all_hard_passed) {
+  oti_stop("The V5 execution did not complete its hard computational contract.")
+}
+message(
+  "[oracle-tilt-v5] process-isolated execution completed: ", output_root,
+  if (all_manuscript_eligible) " [all cells broadly suitable]" else
+    " [recovery review required]"
+)

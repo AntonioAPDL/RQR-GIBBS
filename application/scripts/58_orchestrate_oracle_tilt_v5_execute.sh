@@ -167,4 +167,4 @@ done
 run_stage finalize
 write_current_stage complete "" "" "0" "completed"
 
-echo "[oracle-tilt-v5-orchestrator] all six isolated cells passed"
+echo "[oracle-tilt-v5-orchestrator] all six isolated cells completed their hard computational contract"

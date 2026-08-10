@@ -82,6 +82,11 @@ Current oracle-tilt implementation records:
 - `audits/oracle_tilt_c095_v3_static_mixing_reconciliation_20260801.md`
   diagnoses the failed default-start static RQR cell and records the selected
   data-derived, target-preserving moment initialization correction.
+- `audits/rqr_dlm_history_and_v5_diagnostic_aware_policy_20260810.md`
+  reconstructs the RQR-DLM mixing and infrastructure history used to freeze
+  the prospective V5 completion policy: hard computational defects still
+  stop, while unchanged strict diagnostic misses remain reported warnings and
+  cannot trigger reseeding, selective extension, or threshold relabeling.
 - `audits/oracle_tilt_c095_v2_validation_closeout_20260801.md` records the
   successful exact-source validation, all six strict-pass cells, compact
   evidence hashes, resource envelope, and manuscript-promotion decision.

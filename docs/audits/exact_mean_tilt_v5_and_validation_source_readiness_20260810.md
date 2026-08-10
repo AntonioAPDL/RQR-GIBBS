@@ -11,8 +11,10 @@ workflows:
    fixed-evolution RQR-DLM.
 
 The public oracle, runners, monitors, collectors, packagers, tests, and
-documentation are implemented. Heavy execution remains disabled. This is a
-source-readiness result, not empirical evidence and not launch authorization.
+documentation are implemented. The repeated-DGP validation remains disabled.
+The six-cell V5 illustration has separate explicit execution authorization,
+but this source-readiness result is not empirical evidence or manuscript
+promotion.
 
 ## Statistical correction
 
@@ -33,7 +35,7 @@ relabels prior runs.
 | Area | Implemented boundary |
 |---|---|
 | Oracle | Public schema-2 certificate for RQR, ET, and SH; exact AL partial moments; numerical quadrature cross-check; conditional content; expected tilted risk; minimizer and uniqueness evidence; deterministic digests |
-| V5 illustrations | Same V3 DGPs, designs, priors, seeds, and MCMC schedules; corrected oracle is the only scientific change; preflight/reference/benchmark/execute/package stages; legacy evidence rejection |
+| V5 illustrations | Same V3 DGPs, designs, priors, seeds, and MCMC schedules; corrected oracle is the only scientific change; preflight/reference/benchmark/execute/package stages; legacy evidence rejection; diagnostic-aware completion without seed replacement or threshold relabeling |
 | Repeated validation | Six prespecified scenarios, two model families, three target functionals, paired target triplets, ridge/fixed-W scope, 36-row incidence contract, 72 representability checks |
 | RNG | L'Ecuyer-CMRG master stream; one DGP stream per scenario/family/replication; distinct target MCMC streams; immutable RNG ledger; no seed screening or response replacement |
 | Computation | Four-chain sentinels; one-chain ordinary replications only after sentinel passage; maintained `posterior` R-hat, bulk/tail ESS, and mean MCSE; zero-repair exact-target requirements |
@@ -65,7 +67,7 @@ tracked as a scientific result.
 
 ## Deliberately open gates
 
-- [ ] Commit and independently review the exact source state.
+- [ ] Commit and review the exact authorized source state.
 - [ ] Build a fresh isolated primary runtime from that complete commit.
 - [ ] Run V5 production-shape benchmarks and freeze its launch decision.
 - [ ] Execute and close all six corrected V5 illustration cells.
@@ -74,7 +76,8 @@ tracked as a scientific result.
 - [ ] Freeze the excess-risk practical margin, replication checkpoints, wave
   size, timeouts, process-tree memory ceiling, and storage ceiling.
 - [ ] Pass every repeated-validation four-chain sentinel.
-- [ ] Obtain independent review and create a flag-only authorization commit.
+- [ ] Obtain independent review and explicit authorization for repeated-DGP
+  execution (separate from V5).
 - [ ] Execute bounded repeated-DGP waves and apply the prespecified stopping
   rule using dataset replication as the Monte Carlo unit.
 

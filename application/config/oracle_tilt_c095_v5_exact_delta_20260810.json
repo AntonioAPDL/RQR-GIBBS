@@ -1,7 +1,7 @@
 {
-  "schema_version": "rqrgibbs_oracle_tilt_publication_config/5.0.0",
+  "schema_version": "rqrgibbs_oracle_tilt_publication_config/5.1.0",
   "campaign_id": "oracle_tilt_c095_v5_exact_delta",
-  "execution_authorized": false,
+  "execution_authorized": true,
   "coverage_level": 0.95,
   "learning_rate": 1,
   "targets": ["RQR", "ET", "SH"],
@@ -167,6 +167,28 @@
     "remote_width_ratio_threshold": 20,
     "remote_endpoint_sd_threshold": 20,
     "maximum_remote_draw_fraction": 0.01
+  },
+  "completion_policy": {
+    "schema_version": "rqrgibbs_oracle_tilt_diagnostic_aware_completion/1.0.0",
+    "policy_id": "oracle_tilt_v5_diagnostic_aware_completion_20260810",
+    "strict_diagnostics_role": "recorded_nonblocking_warning",
+    "strict_recovery_role": "recorded_nonblocking_warning",
+    "later_cells_continue_after_warning": true,
+    "reseed_prohibited": true,
+    "selective_extension_prohibited": true,
+    "threshold_relabeling_prohibited": true,
+    "all_completed_cells_retained": true,
+    "broad_illustration_suitability": {
+      "endpoint_rmse_over_oracle_width_max": 0.40,
+      "mean_width_ratio_min": 0.65,
+      "mean_width_ratio_max": 1.40,
+      "absolute_endpoint_bias_over_oracle_width_max": 0.30,
+      "scale_stratum_endpoint_rmse_over_local_width_max": 0.50,
+      "scale_stratum_width_contrast_relative_error_max": 0.40,
+      "dlm_seasonal_width_amplitude_ratio_min": 0.50,
+      "dlm_seasonal_width_amplitude_ratio_max": 1.50,
+      "dlm_seasonal_width_phase_error_max": 0.70
+    }
   },
   "recovery_gates": {
     "endpoint_rmse_over_oracle_width_max": 0.2,

@@ -128,7 +128,10 @@ definition requires the conditional retained mean minus the population mean.
 The sampler's fixed-tilt update was already correctly scaled; the correction
 is confined to the oracle inputs. The append-only V5 source and schema-2
 certificate are implemented, but V3 remains the rendered historical evidence
-until all six corrected V5 cells pass under one reviewed isolated runtime.
+until all six corrected V5 cells complete under one reviewed isolated runtime
+and the results pass a separate recovery and visual promotion review. Strict
+R-hat, ESS, MCSE, and narrow recovery violations are retained as warnings;
+they are not relabeled, reseeded, or used to abort later cells.
 The correction protocol and the separate repeated-DGP validation protocol are
 in `docs/implementation_notes/exact_mean_tilt_oracle_and_v5_correction_protocol_20260810.md`
 and `docs/implementation_notes/oracle_mean_tilt_validation_v1_protocol_20260810.md`.

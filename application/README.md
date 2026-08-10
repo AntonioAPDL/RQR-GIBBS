@@ -115,7 +115,10 @@ layer for the standalone article.
   moments are checked against split quadrature. Scripts 58--59 define an
   append-only V5 rerun of all six single-data illustration cells while keeping
   the V3 DGPs, designs, priors, seeds, and MCMC schedules unchanged. V1--V4
-  evidence is historical and cannot authorize V5.
+  evidence is historical and cannot authorize V5. V5 uses a frozen
+  diagnostic-aware completion policy: hard computational failures stop, while
+  unchanged R-hat/ESS/MCSE and narrow recovery failures remain visible
+  warnings and cannot trigger reseeding or selective extension.
 - **scripts/60_run_oracle_mean_tilt_validation.R** and its monitored shell
   wrapper implement a separate ADEMP-style repeated-DGP workflow for paired
   RQR, ET, and SH targets under fixed-design ridge regression and fixed-W

@@ -2,10 +2,11 @@
 
 ## Status
 
-This document records the source implementation for the append-only V5
-correction. It does not authorize execution or manuscript promotion. The six
-V5 fits must use an isolated runtime built from a reviewed clean commit, and
-the active ordinary zero-tilt RQR-DLM study must remain undisturbed.
+This document records the source and launch protocol for the append-only V5
+correction. The user authorized execution on 2026-08-10, but not automatic
+manuscript promotion. The six V5 fits must use an isolated runtime built from
+one reviewed clean commit and may run independently of any separate RQR-DLM
+validation campaign.
 
 ## Correction
 
@@ -55,52 +56,63 @@ certificate rather than copied from this table.
 - scripts 58--59 implement monitored preflight, reference, benchmark,
   process-isolated execution, and append-only compact packaging.
 
-The tracked V5 configuration keeps `execution_authorized=false`. Preflight and
-reference perform no fits. Benchmark and execute bind their prerequisite
-manifests and exact isolated runtime, and execution cannot be enabled by an
-environment variable alone.
+The tracked V5 configuration records the explicit execution authorization.
+Preflight and reference perform no fits. Benchmark and execute still require
+separate confirmation variables, bind their prerequisite manifests and exact
+isolated runtime, and cannot run from authorization alone.
 
 V1--V4 files and compact evidence remain historical and are never
 reinterpreted as V5.
 
 ## Required execution order
 
-1. Commit and review the source with `execution_authorized=false`.
+1. Commit and review the complete source and diagnostic-aware completion
+   policy.
 2. Build an isolated primary runtime from the complete reviewed SHA.
 3. Run the monitored V5 preflight.
 4. Run the monitored 36-gate reference suite.
 5. Run the two production-shape benchmark cells.
-6. Review resource use and the exact source.
-7. Create a flag-only authorization commit.
-8. Rebuild the isolated runtime and rerun the bound inputs if the source SHA
-   changed.
-9. Execute all six family--target cells; RQR is rerun even though its tilt is
+6. Review resource use under the exact source.
+7. Execute all six family--target cells; RQR is rerun even though its tilt is
    still zero.
-10. Package compact V5 evidence and regenerate figures and tables.
-11. Reconcile the article, supplement, README, and arXiv source only after the
-    six-cell closeout passes.
+8. Package compact V5 evidence and regenerate figures and tables only after
+   the six-cell results receive recovery and visual review.
+9. Reconcile the article, supplement, README, and arXiv source only after that
+   review authorizes promotion.
 
 The source-stage preflight and 36 reference gates have passed locally. Those
 checks establish the oracle/design contracts only; they do not replace the
 post-commit isolated-runtime benchmark or authorize any of the six fits.
 
-## Promotion gates
+## Completion, diagnostics, and promotion
 
-- all 27 chains and six cells complete;
-- zero numerical repairs and exact-joint-target status;
-- maintained rank-normalized R-hat at most 1.01;
-- maintained bulk and tail ESS at least 1,000;
-- maintained MCSE/posterior-SD at most 0.05;
-- source, runtime, DGP, target, seed, and certificate digests agree;
-- no nonfinite or structurally invalid endpoint draw;
-- process-group monitoring and recursive artifact hashes close cleanly; and
-- the package accepts only schema-2 oracle evidence.
+V5 separates three decisions that earlier illustration attempts sometimes
+conflated:
+
+1. **Hard completion.** All planned chains complete; source, runtime, DGP,
+   target, seed, and certificate digests agree; the exact-joint target and
+   zero-repair contracts hold; conditional parity and endpoint pathology
+   checks pass; outputs are finite and structurally valid; and process-group
+   and artifact manifests close cleanly. Failure stops the campaign.
+2. **Prespecified diagnostic warnings.** Rank-normalized R-hat at most 1.01,
+   bulk and tail ESS at least 1,000, MCSE/posterior-SD at most 0.05, and the
+   original narrow recovery gates remain unchanged. A violation is recorded
+   as a warning and does not abort later cells. No seed replacement, selective
+   extension, or threshold relabeling is allowed.
+3. **Manuscript suitability.** A separately frozen broad recovery envelope
+   excludes pathological or seriously misleading illustrations. A hard-
+   complete cell outside that envelope is retained for review but cannot be
+   packaged as manuscript evidence automatically.
+
+This is the same diagnostic-aware-completion principle used after the long
+RQR-DLM validation history: strict diagnostics remain evidence, not an
+infinite relaunch rule. It does not turn a failed diagnostic into a pass.
 
 The compact package must also verify the run's inner and wrapper artifact
 manifests and preserve the exact source, runtime, DGP, MCMC, and oracle
 certificate identities. No V3 fitted object or compact summary is copied into
 the V5 evidence root.
 
-Recovery summaries are descriptive unless their thresholds were frozen
-before V5 execution. The fitted objects are generalized-posterior interval-root
-draws, not posterior-predictive response draws.
+The fitted objects are generalized-posterior interval-root draws, not
+posterior-predictive response draws. V5 is a six-cell single-data illustration,
+not a repeated-sample validation study.

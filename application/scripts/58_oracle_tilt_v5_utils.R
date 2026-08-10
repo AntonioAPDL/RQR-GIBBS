@@ -5,28 +5,32 @@
 # Historical V1--V4 code and artifacts remain unchanged and reproducible from
 # their recorded commits.
 
-otv5_schema <- function() "rqrgibbs_oracle_tilt_publication/5.0.0"
+otv5_schema <- function() "rqrgibbs_oracle_tilt_publication/5.1.0"
 
 otv5_config_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_config/5.0.0"
+  "rqrgibbs_oracle_tilt_publication_config/5.1.0"
 }
 
 otv5_worker_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_worker/5.0.0"
+  "rqrgibbs_oracle_tilt_publication_worker/5.1.0"
 }
 
 otv5_cell_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_cell/5.0.0"
+  "rqrgibbs_oracle_tilt_publication_cell/5.1.0"
 }
 
 otv5_preflight_schema <- function() {
-  "rqrgibbs_oracle_tilt_publication_preflight/5.0.0"
+  "rqrgibbs_oracle_tilt_publication_preflight/5.1.0"
 }
 
 otv5_oracle_schema <- function() "rqrgibbs_interval_oracle/2.0.0"
 
 otv5_tilt_definition <- function() {
   "conditional_retained_mean_minus_population_mean"
+}
+
+otv5_completion_policy_schema <- function() {
+  "rqrgibbs_oracle_tilt_diagnostic_aware_completion/1.0.0"
 }
 
 # Historical validators resolve these schema helpers dynamically. Rebinding
@@ -59,10 +63,46 @@ otv5_validate_config <- function(config) {
     identical(config$interpretation$simulation_study, FALSE),
     identical(config$interpretation$single_dataset_illustration, TRUE),
     identical(config$interpretation$historical_v1_v4_evidence_mutated, FALSE),
-    identical(config$interpretation$automatic_manuscript_promotion, FALSE)
+    identical(config$interpretation$automatic_manuscript_promotion, FALSE),
+    identical(as.character(config$completion_policy$schema_version),
+              otv5_completion_policy_schema()),
+    identical(as.character(config$completion_policy$policy_id),
+              "oracle_tilt_v5_diagnostic_aware_completion_20260810"),
+    identical(as.character(config$completion_policy$strict_diagnostics_role),
+              "recorded_nonblocking_warning"),
+    identical(as.character(config$completion_policy$strict_recovery_role),
+              "recorded_nonblocking_warning"),
+    identical(config$completion_policy$later_cells_continue_after_warning,
+              TRUE),
+    identical(config$completion_policy$reseed_prohibited, TRUE),
+    identical(config$completion_policy$selective_extension_prohibited, TRUE),
+    identical(config$completion_policy$threshold_relabeling_prohibited, TRUE),
+    identical(config$completion_policy$all_completed_cells_retained, TRUE)
   )
   if (!all(required)) {
     oti_stop("The corrected V5 oracle or interpretation contract changed.")
+  }
+  broad <- unlist(
+    config$completion_policy$broad_illustration_suitability,
+    use.names = TRUE
+  )
+  expected_broad <- c(
+    endpoint_rmse_over_oracle_width_max = 0.40,
+    mean_width_ratio_min = 0.65,
+    mean_width_ratio_max = 1.40,
+    absolute_endpoint_bias_over_oracle_width_max = 0.30,
+    scale_stratum_endpoint_rmse_over_local_width_max = 0.50,
+    scale_stratum_width_contrast_relative_error_max = 0.40,
+    dlm_seasonal_width_amplitude_ratio_min = 0.50,
+    dlm_seasonal_width_amplitude_ratio_max = 1.50,
+    dlm_seasonal_width_phase_error_max = 0.70
+  )
+  if (!identical(names(broad), names(expected_broad)) ||
+      any(!is.finite(as.numeric(broad))) ||
+      !isTRUE(all.equal(
+        as.numeric(broad), unname(expected_broad), tolerance = 0
+      ))) {
+    oti_stop("The prospective broad illustration-suitability contract changed.")
   }
 
   # Reuse the frozen V3 design/MCMC validator after changing only the two
@@ -74,6 +114,116 @@ otv5_validate_config <- function(config) {
   legacy$tilt_source <- "exact_population_oracle"
   otv3_validate_config(legacy)
   invisible(config)
+}
+
+otv5_apply_completion_policy <- function(cell, family, config) {
+  otv5_validate_config(config)
+  if (!is.list(cell) || !is.data.frame(cell$fit_summary) ||
+      nrow(cell$fit_summary) != 1L ||
+      !is.data.frame(cell$mcmc_diagnostics)) {
+    oti_stop("A V5 cell summary is required for completion-policy assessment.")
+  }
+  summary <- cell$fit_summary
+  required <- c(
+    "provenance_pass", "conditional_parity_pass", "pathology_pass",
+    "strict_diagnostics_pass", "recovery_pass", "heterogeneity_pass",
+    "numerical_repair_count", "endpoint_rmse_over_oracle_width",
+    "mean_width_ratio", "lower_bias_over_oracle_width",
+    "upper_bias_over_oracle_width",
+    "low_scale_endpoint_rmse_over_local_width",
+    "high_scale_endpoint_rmse_over_local_width",
+    "width_contrast_relative_error", "seasonal_width_amplitude_ratio",
+    "seasonal_width_phase_error"
+  )
+  if (!all(required %in% names(summary))) {
+    oti_stop("The V5 cell summary is missing completion-policy fields.")
+  }
+  policy <- config$completion_policy
+  broad <- policy$broad_illustration_suitability
+  scalar_finite <- function(value) {
+    length(value) == 1L && is.numeric(value) && is.finite(value)
+  }
+  numeric_fields <- unlist(summary[c(
+    "endpoint_rmse_over_oracle_width", "mean_width_ratio",
+    "lower_bias_over_oracle_width", "upper_bias_over_oracle_width",
+    "low_scale_endpoint_rmse_over_local_width",
+    "high_scale_endpoint_rmse_over_local_width",
+    "width_contrast_relative_error"
+  )], use.names = FALSE)
+  broad_recovery_pass <- all(is.finite(numeric_fields)) &&
+    summary$endpoint_rmse_over_oracle_width <=
+      broad$endpoint_rmse_over_oracle_width_max &&
+    summary$mean_width_ratio >= broad$mean_width_ratio_min &&
+    summary$mean_width_ratio <= broad$mean_width_ratio_max &&
+    abs(summary$lower_bias_over_oracle_width) <=
+      broad$absolute_endpoint_bias_over_oracle_width_max &&
+    abs(summary$upper_bias_over_oracle_width) <=
+      broad$absolute_endpoint_bias_over_oracle_width_max
+  broad_heterogeneity_pass <-
+    summary$low_scale_endpoint_rmse_over_local_width <=
+      broad$scale_stratum_endpoint_rmse_over_local_width_max &&
+    summary$high_scale_endpoint_rmse_over_local_width <=
+      broad$scale_stratum_endpoint_rmse_over_local_width_max &&
+    summary$width_contrast_relative_error <=
+      broad$scale_stratum_width_contrast_relative_error_max &&
+    (identical(family, "fixed_design") || (
+      scalar_finite(summary$seasonal_width_amplitude_ratio) &&
+      scalar_finite(summary$seasonal_width_phase_error) &&
+      summary$seasonal_width_amplitude_ratio >=
+        broad$dlm_seasonal_width_amplitude_ratio_min &&
+      summary$seasonal_width_amplitude_ratio <=
+        broad$dlm_seasonal_width_amplitude_ratio_max &&
+      summary$seasonal_width_phase_error <=
+        broad$dlm_seasonal_width_phase_error_max
+    ))
+  hard_computational_pass <-
+    isTRUE(summary$provenance_pass) &&
+    isTRUE(summary$conditional_parity_pass) &&
+    isTRUE(summary$pathology_pass) &&
+    identical(as.integer(summary$numerical_repair_count), 0L)
+  strict_pass <- hard_computational_pass &&
+    isTRUE(summary$strict_diagnostics_pass) &&
+    isTRUE(summary$recovery_pass) &&
+    isTRUE(summary$heterogeneity_pass)
+  manuscript_eligible <- hard_computational_pass &&
+    broad_recovery_pass && broad_heterogeneity_pass
+  warnings <- c(
+    if (!isTRUE(summary$strict_diagnostics_pass))
+      "mcmc_diagnostic_warning",
+    if (!isTRUE(summary$recovery_pass)) "strict_recovery_warning",
+    if (!isTRUE(summary$heterogeneity_pass)) "strict_heterogeneity_warning",
+    if (!broad_recovery_pass) "broad_recovery_review_required",
+    if (!broad_heterogeneity_pass)
+      "broad_heterogeneity_review_required"
+  )
+  disposition <- if (!hard_computational_pass) {
+    "hard_failure"
+  } else if (!manuscript_eligible) {
+    "completed_requires_recovery_review"
+  } else if (length(warnings)) {
+    "diagnostic_aware_pass"
+  } else {
+    "strict_pass"
+  }
+  summary$strict_computational_pass <-
+    isTRUE(summary$computational_pass)
+  summary$hard_computational_pass <- hard_computational_pass
+  summary$computational_pass <- hard_computational_pass
+  summary$broad_recovery_pass <- broad_recovery_pass
+  summary$broad_heterogeneity_pass <- broad_heterogeneity_pass
+  summary$completion_eligible <- hard_computational_pass
+  summary$diagnostic_warning_count <- sum(!cell$mcmc_diagnostics$pass)
+  summary$diagnostic_rows <- nrow(cell$mcmc_diagnostics)
+  summary$warning_codes <- if (length(warnings)) {
+    paste(warnings, collapse = "|")
+  } else {
+    "none"
+  }
+  summary$disposition <- disposition
+  summary$manuscript_illustration_evidence_eligible <- manuscript_eligible
+  summary$strict_pass <- strict_pass
+  cell$fit_summary <- summary
+  cell
 }
 
 otv5_design_preflight <- function(config) {

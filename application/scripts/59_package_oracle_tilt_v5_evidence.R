@@ -39,14 +39,21 @@ required_closeout <- c(
   identical(closeout$schema_version, otv5_schema()),
   identical(closeout$mode, "execute"), isTRUE(closeout$pass),
   isTRUE(closeout$exact_runtime_bound),
-  isTRUE(closeout$all_chains_completed), isTRUE(closeout$all_cells_pass),
+  isTRUE(closeout$all_chains_completed),
+  isTRUE(closeout$all_cells_hard_computational_pass),
+  isTRUE(closeout$all_cells_manuscript_illustration_eligible),
   isTRUE(closeout$process_isolated_cells),
   identical(closeout$prediction_storage_contract,
             "ordered_endpoints_only"),
   isTRUE(closeout$compact_evidence_eligible),
   as.integer(closeout$completed_chains) == 27L,
-  as.integer(closeout$passed_cells) == 6L,
+  as.integer(closeout$passed_cells) + as.integer(closeout$warning_cells) == 6L,
+  as.integer(closeout$review_required_cells) == 0L,
   as.integer(closeout$failed_cells) == 0L,
+  identical(closeout$completion_policy,
+            "oracle_tilt_v5_diagnostic_aware_completion_20260810"),
+  identical(closeout$strict_diagnostic_thresholds_relabelled, FALSE),
+  identical(closeout$reseeded_or_selectively_extended, FALSE),
   isTRUE(closeout$exact_population_oracle_tilts),
   identical(closeout$oracle_schema, otv5_oracle_schema()),
   identical(closeout$tilt_definition, otv5_tilt_definition()),
@@ -63,11 +70,16 @@ disposition <- utils::read.csv(
   file.path(run_dir, "cell_disposition.csv"), stringsAsFactors = FALSE
 )
 if (nrow(disposition) != 6L ||
+    !all(disposition$completion_eligible) ||
     !all(disposition$manuscript_illustration_evidence_eligible) ||
     !"provenance_snapshots_pass" %in% names(disposition) ||
     !all(disposition$provenance_snapshots_pass) ||
-    !all(disposition$disposition == "strict_pass")) {
-  oti_stop("Exactly six strict-passing family/target cells are required.")
+    !all(disposition$disposition %in%
+      c("strict_pass", "diagnostic_aware_pass"))) {
+  oti_stop(paste(
+    "Exactly six hard-complete and broadly suitable family/target cells",
+    "are required; strict diagnostic warnings may be retained."
+  ))
 }
 provenance_audit <- utils::read.csv(
   file.path(run_dir, "provenance_audit.csv"), stringsAsFactors = FALSE
@@ -118,8 +130,13 @@ if (!isTRUE(runtime_binding$match) || !isTRUE(source_state$exact_runtime_bound) 
     !setequal(input_binding$mode, c("preflight", "reference-only", "benchmark")) ||
     nrow(worker_manifest) != 27L || anyDuplicated(worker_manifest$path) ||
     nrow(cell_manifest) != 6L || anyDuplicated(cell_manifest$path) ||
-    !all(cell_manifest$eligible) ||
-    nrow(run_status) != 6L || !all(run_status$disposition == "strict_pass")) {
+    !all(cell_manifest$completion_eligible) ||
+    !all(cell_manifest$manuscript_illustration_evidence_eligible) ||
+    nrow(run_status) != 6L || !all(run_status$status == "completed") ||
+    !all(run_status$completion_eligible) ||
+    !all(run_status$manuscript_illustration_evidence_eligible) ||
+    !all(run_status$disposition %in%
+      c("strict_pass", "diagnostic_aware_pass"))) {
   oti_stop("The runtime, prior-bundle, worker, or cell ledger is incomplete.")
 }
 expected_cell_paths <- file.path(
@@ -231,7 +248,7 @@ config <- jsonlite::read_json(
 )
 otv5_validate_config(config)
 receipt <- list(
-  schema_version = "rqrgibbs_oracle_tilt_evidence/5.0.0",
+  schema_version = "rqrgibbs_oracle_tilt_evidence/5.1.0",
   source_commit = closeout$source_commit,
   config_sha256 = closeout$config_sha256,
   runtime_tree_digest = closeout$runtime_tree_digest,
@@ -251,7 +268,13 @@ receipt <- list(
   process_isolated_cells = TRUE,
   prediction_storage_contract = "ordered_endpoints_only",
   endpoint_summary_joint_inclusion_role = "descriptive_only",
-  all_cells_strict_pass = TRUE,
+  completion_policy = closeout$completion_policy,
+  strict_pass_cells = as.integer(closeout$passed_cells),
+  diagnostic_warning_cells = as.integer(closeout$warning_cells),
+  all_cells_hard_computational_pass = TRUE,
+  all_cells_strict_pass = as.integer(closeout$passed_cells) == 6L,
+  strict_diagnostic_thresholds_relabelled = FALSE,
+  reseeded_or_selectively_extended = FALSE,
   exact_population_oracle_tilts = TRUE,
   oracle_schema = otv5_oracle_schema(),
   tilt_definition = otv5_tilt_definition(),
@@ -293,6 +316,12 @@ writeLines(c(
     "Four static starts are dispersed around a data-derived first-absolute-",
     "moment pilot. They use standardized population endpoint anchors but not",
     "the population endpoint curves and do not alter the target."
+  ),
+  paste(
+    "All cells satisfy hard computational, provenance, finite-output, exact-",
+    "target, and zero-repair requirements. The original R-hat, ESS, MCSE,",
+    "and strict recovery thresholds are retained without relabeling; any",
+    "violations are recorded as nonblocking diagnostic warnings."
   ),
   paste(
     "These artifacts summarize loss-based generalized posteriors; they do",
