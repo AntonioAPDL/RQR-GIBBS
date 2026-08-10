@@ -6,6 +6,17 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `implementation_notes/exact_mean_tilt_oracle_and_v5_correction_protocol_20260810.md`
+  records the corrected conditional-retained-mean tilt definition, append-only
+  V5 illustration workflow, legacy isolation, and promotion gates.
+- `implementation_notes/oracle_mean_tilt_validation_v1_protocol_20260810.md`
+  defines the separate paired repeated-DGP validation for ridge fixed-design
+  roots and fixed-W dynamic roots. Its tracked execution remains disabled
+  until precision, resources, sentinels, and independent review are frozen.
+- `audits/exact_mean_tilt_v5_and_validation_source_readiness_20260810.md`
+  reconciles the implemented source contracts, completed no-fit/package gates,
+  and the heavy stages that remain deliberately unauthorized.
+
 - `audits/rqr_dlm_m02_recovery_validation_and_relaunch_20260808/` records
   the exact isolated runtime, passing 23-gate preflight, 15-gate reference
   suite, 900/900 production-path M02 diagnostics, fresh authorization hashes,

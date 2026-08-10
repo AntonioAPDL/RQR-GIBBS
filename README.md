@@ -122,6 +122,17 @@ superseded for rendering. Current `main` blocks another same-data heavy run.
 Both campaigns are single-data method illustrations, not
 repeated-sample coverage studies or response-predictive analyses.
 
+A subsequent oracle audit found that the historical illustration helper
+stored an unnormalized truncated first moment where the manuscript's recovery
+definition requires the conditional retained mean minus the population mean.
+The sampler's fixed-tilt update was already correctly scaled; the correction
+is confined to the oracle inputs. The append-only V5 source and schema-2
+certificate are implemented, but V3 remains the rendered historical evidence
+until all six corrected V5 cells pass under one reviewed isolated runtime.
+The correction protocol and the separate repeated-DGP validation protocol are
+in `docs/implementation_notes/exact_mean_tilt_oracle_and_v5_correction_protocol_20260810.md`
+and `docs/implementation_notes/oracle_mean_tilt_validation_v1_protocol_20260810.md`.
+
 ## arXiv source package
 
 The selected exact-target `rootwise2_ASIS2` transition repeats the symmetric

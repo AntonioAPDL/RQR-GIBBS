@@ -109,6 +109,21 @@ layer for the standalone article.
   V4 config has `execution_authorized=false`; no source target launches the
   production grid until an independently reviewed flag-only commit. See
   `docs/implementation_notes/oracle_tilt_c095_v4_seed_screen_protocol_20260805.md`.
+- **R/rqr_oracle.R** now exposes schema-versioned target-family certificates
+  through `rqr_interval_oracle()`. The fixed recovery tilt is the conditional
+  retained mean minus the population mean; analytic asymmetric-Laplace partial
+  moments are checked against split quadrature. Scripts 58--59 define an
+  append-only V5 rerun of all six single-data illustration cells while keeping
+  the V3 DGPs, designs, priors, seeds, and MCMC schedules unchanged. V1--V4
+  evidence is historical and cannot authorize V5.
+- **scripts/60_run_oracle_mean_tilt_validation.R** and its monitored shell
+  wrapper implement a separate ADEMP-style repeated-DGP workflow for paired
+  RQR, ET, and SH targets under fixed-design ridge regression and fixed-W
+  RQR-DLM. Scripts 61--62 provide strict collection and compact packaging.
+  The tracked config deliberately has no frozen replication count and keeps
+  execution disabled; benchmark, sentinel, and execution modes require staged
+  review and an exact isolated primary runtime. See
+  `docs/implementation_notes/oracle_mean_tilt_validation_v1_protocol_20260810.md`.
 
 Install and run the native gates from the repository root:
 
