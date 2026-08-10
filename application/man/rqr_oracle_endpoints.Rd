@@ -16,9 +16,12 @@ rqr_oracle_endpoints(
 \arguments{
 \item{mu, sigma}{Location and positive scale vectors.}
 
-\item{family}{Innovation family. Supported values are `"gaussian"`,
-`"laplace"`, `"student_t"`, `"centered_gamma"`,
-`"asymmetric_laplace"`, and `"gaussian_mixture"`.}
+\item{family}{Innovation family. Supported canonical values are
+`"gaussian"`, `"laplace"`, `"student_t"`, `"centered_gamma"`,
+`"centered_exponential"`, `"asymmetric_laplace"`,
+`"gaussian_mixture"`, `"centered_lognormal"`,
+`"centered_standardized_lognormal"`, `"normal_t_mixture"`, and
+`"standardized_skewed_normal_t_mixture"`.}
 
 \item{coverage_level}{Target interval coverage in `(0, 1)`.}
 

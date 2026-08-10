@@ -96,29 +96,45 @@ make literature-manifest
 Long-running simulation and validation targets require explicit reviewed
 configuration and should write only under ignored local output roots.
 
-The 95% single-data oracle-tilt illustrations are rendered from the validated
-version-2 compact evidence bundle under
-`figures/data/oracle_tilt_c095_v2/`. The command
+The 95% single-data oracle-tilt illustrations are rendered from the reconciled
+version-3 compact evidence bundle under
+`figures/data/oracle_tilt_c095_v3/`. The command
 
 ```bash
 make model-illustration-figures
 ```
 
 then verifies that evidence and renders the article and supplement figures
-without fitting a model. All 27 chains and all six family/target cells passed
-the frozen computational and recovery gates. See
-`docs/audits/oracle_tilt_c095_v2_validation_closeout_20260801.md`.
+without fitting a model. All 27 baseline chains completed; the longer-chain
+DLM/SH adjudication reproduced 15/15 prefixes bitwise, passed 137/137
+maintained diagnostics, and used zero repairs. Five cells passed every original
+recovery gate. The DLM/SH width-contrast error was 0.202623 against the original
+0.20 threshold and was accepted for this illustration under a disclosed
+revised tolerance of 0.21. See
+`docs/audits/oracle_tilt_c095_v3_revised_promotion_20260805.md`.
 
-The richer version-3 campaign completed all 27 baseline chains and passed five
-of six cells. Its one prespecified DLM/SH adjudication reproduced all original
-prefixes bitwise and passed every maintained diagnostic, but did not pass the
-unchanged width-contrast recovery gate. Version 3 is therefore closed without
-promotion, and current `main` blocks another same-data heavy run. Its compact
-audit record is under
+The earlier non-promotion decision and its original 0.20 failure remain
+available under
 `docs/audits/oracle_tilt_c095_v3_nonpromotion_evidence_20260805/`; see
-`docs/audits/oracle_tilt_c095_v3_nonpromotion_closeout_20260805.md` for the
-decision. Both campaigns are single-data method illustrations, not
+`docs/audits/oracle_tilt_c095_v3_nonpromotion_closeout_20260805.md` for that
+historical decision. Version 2 remains a validated prior bundle but is
+superseded for rendering. Current `main` blocks another same-data heavy run.
+Both campaigns are single-data method illustrations, not
 repeated-sample coverage studies or response-predictive analyses.
+
+A subsequent oracle audit found that the historical illustration helper
+stored an unnormalized truncated first moment where the manuscript's recovery
+definition requires the conditional retained mean minus the population mean.
+The sampler's fixed-tilt update was already correctly scaled; the correction
+is confined to the oracle inputs. The append-only V5 source and schema-2
+certificate are implemented, but V3 remains the rendered historical evidence
+until all six corrected V5 cells complete under one reviewed isolated runtime
+and the results pass a separate recovery and visual promotion review. Strict
+R-hat, ESS, MCSE, and narrow recovery violations are retained as warnings;
+they are not relabeled, reseeded, or used to abort later cells.
+The correction protocol and the separate repeated-DGP validation protocol are
+in `docs/implementation_notes/exact_mean_tilt_oracle_and_v5_correction_protocol_20260810.md`
+and `docs/implementation_notes/oracle_mean_tilt_validation_v1_protocol_20260810.md`.
 
 ## arXiv source package
 

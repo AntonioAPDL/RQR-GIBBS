@@ -88,6 +88,45 @@ layer for the standalone article.
   the remaining cells;
   **scripts/45_oracle_tilt_v3_health.sh** reports read-only cell, chain,
   process, RSS, time, and storage progress.
+- **scripts/52_run_oracle_tilt_publication_v4.R** and
+  **scripts/52_oracle_tilt_publication_v4_utils.R** implement a prospectively
+  frozen three-candidate illustration screen without changing closed V3
+  evidence. Each candidate contains target-shared fixed-design and DLM data,
+  named L'Ecuyer streams, 18 family/target/candidate cells, and 81 unique chain
+  seeds. **scripts/53_orchestrate_oracle_tilt_v4_execute.sh** starts the 18
+  single-worker cells concurrently while chains remain sequential within each
+  process. **scripts/53_run_oracle_tilt_publication_v4.sh** enforces exact
+  runtime binding, process-group limits, headroom, and fail-closed execution.
+  Its host-exclusion guard recognizes the complete V4 runner range even when
+  R records a relative `--file=application/scripts/...` path. Every downstream
+  stage rehashes the monitored wrapper's complete file inventory in addition
+  to the runner-owned compact manifest, so changed telemetry, logs, manifests,
+  or unrecorded files invalidate the bundle.
+  The production-shape concurrency contract is exercised separately by
+  **scripts/54_run_oracle_tilt_v4_resource_rehearsal.sh**. Read-only health,
+  deterministic family-level selector replay, compact review packaging, and
+  the disabled overnight launcher are provided by scripts 55--57. The tracked
+  V4 config has `execution_authorized=false`; no source target launches the
+  production grid until an independently reviewed flag-only commit. See
+  `docs/implementation_notes/oracle_tilt_c095_v4_seed_screen_protocol_20260805.md`.
+- **R/rqr_oracle.R** now exposes schema-versioned target-family certificates
+  through `rqr_interval_oracle()`. The fixed recovery tilt is the conditional
+  retained mean minus the population mean; analytic asymmetric-Laplace partial
+  moments are checked against split quadrature. Scripts 58--59 define an
+  append-only V5 rerun of all six single-data illustration cells while keeping
+  the V3 DGPs, designs, priors, seeds, and MCMC schedules unchanged. V1--V4
+  evidence is historical and cannot authorize V5. V5 uses a frozen
+  diagnostic-aware completion policy: hard computational failures stop, while
+  unchanged R-hat/ESS/MCSE and narrow recovery failures remain visible
+  warnings and cannot trigger reseeding or selective extension.
+- **scripts/60_run_oracle_mean_tilt_validation.R** and its monitored shell
+  wrapper implement a separate ADEMP-style repeated-DGP workflow for paired
+  RQR, ET, and SH targets under fixed-design ridge regression and fixed-W
+  RQR-DLM. Scripts 61--62 provide strict collection and compact packaging.
+  The tracked config deliberately has no frozen replication count and keeps
+  execution disabled; benchmark, sentinel, and execution modes require staged
+  review and an exact isolated primary runtime. See
+  `docs/implementation_notes/oracle_mean_tilt_validation_v1_protocol_20260810.md`.
 
 Install and run the native gates from the repository root:
 
@@ -226,17 +265,17 @@ and retains every scientific and decision threshold unchanged.
 
 The replacement completed all five 12,000-draw chains, reproduced all 15
 original saved-chain prefixes bitwise, used zero numerical repairs, and passed
-all 137 maintained diagnostics. It did not pass the unchanged width-contrast
-recovery gate, so version 3 is closed without promotion. The machine-readable
-decision is in
+all 137 maintained diagnostics. Its width-contrast relative error was 0.202623,
+just above the original 0.20 threshold. A disclosed review accepted it for the
+single-data illustration under a revised tolerance of 0.21; the original
+failure remains recorded and is not described as a prespecified strict pass.
+The machine-readable decision is in
 `config/oracle_tilt_illustration_campaign_registry_20260805.json`, the audit is
-`docs/audits/oracle_tilt_c095_v3_nonpromotion_closeout_20260805.md`, and the
-compact record is under
-`docs/audits/oracle_tilt_c095_v3_nonpromotion_evidence_20260805/`. Current
-`main` permits lightweight audit/preflight/reference actions but blocks further
-version-3 benchmark, acceptance, execution, and adjudication actions through
-`scripts/49_oracle_tilt_campaign_gate.R`. A future richer illustration must use
-a new prospectively frozen campaign rather than retune the closed data set.
+`docs/audits/oracle_tilt_c095_v3_revised_promotion_20260805.md`, and the active
+compact manuscript evidence is under `figures/data/oracle_tilt_c095_v3/`.
+Current `main` permits lightweight audit, rendering, and testing but blocks
+further version-3 benchmark, acceptance, execution, and adjudication actions
+through `scripts/49_oracle_tilt_campaign_gate.R`.
 
 The tracked high-content forensic configuration is
 `config/oracle_tilt_forensics_20260730.json`; it keeps execution disabled.
@@ -394,3 +433,21 @@ compaction before atomic sentinel-diagnostic serialization.
 `scripts/25_validate_rqr_dlm_resource_envelope.R` exercises the largest
 planned retained-state shapes.  The execution flag remains false until these
 gates pass from a clean exact isolated runtime.
+
+The first diagnostic-aware maximum-design launch at commit `ea8ea8d` also
+stopped fail-closed in its first canonical wave. All eight completed M01 fits
+produced 368 passing diagnostics, while all eight M02 endpoint-fit pairs hit
+the same post-fit diagnostic-construction error. M02 training ordinates had
+been thinned by the transition multiplier but terminal states used for future
+root functions had not. The corrected extractor applies one validated retained
+index to training ordinates, terminal states, and future-root functions, and
+rejects any dimension or divisibility disagreement explicitly. The failed run
+is not resumable or scientifically promotable. The correction subsequently
+passed a fresh 23/23 exact-runtime preflight, 15/15 oracle/reference gates, and
+the real exdqlm production path for all 20 canonical M02 validation tasks,
+44 interval chains, 88 endpoint fits, and 900/900 unchanged diagnostics. A
+fresh maximum-design run was therefore launched from the exact committed
+source and new local roots; it reuses no scientific output from the failed
+run. The plan and compact launch evidence are in
+`docs/implementation_notes/rqr_dlm_m02_diagnostic_recovery_plan_20260808.md`
+and `docs/audits/rqr_dlm_m02_recovery_validation_and_relaunch_20260808/`.

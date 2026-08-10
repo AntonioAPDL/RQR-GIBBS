@@ -2859,15 +2859,15 @@ test_that("M02 production thinning aligns training terminal and future draws", {
     environment$rqr_confirm_scalar_draws(
       unequal_endpoints, generated, contract, "M02"
     ),
-    "endpoint diagnostic draw counts differ"
+    "identical raw training-draw dimensions"
   )
-  excessive_thin <- result
-  excessive_thin$diagnostic_thin <- raw_draws + 1L
+  indivisible_thin <- result
+  indivisible_thin$diagnostic_thin <- 3L
   expect_error(
     environment$rqr_confirm_scalar_draws(
-      excessive_thin, generated, contract, "M02"
+      indivisible_thin, generated, contract, "M02"
     ),
-    "thinning exceeds the retained draws"
+    "divide the raw retained-draw count exactly"
   )
 })
 

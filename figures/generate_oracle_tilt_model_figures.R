@@ -23,7 +23,7 @@ arg_value <- function(prefix, default = NULL) {
 evidence_dir <- normalizePath(
   arg_value(
     "--evidence-dir=",
-    file.path(repo_root, "figures", "data", "oracle_tilt_c095_v2")
+    file.path(repo_root, "figures", "data", "oracle_tilt_c095_v3")
   ),
   winslash = "/", mustWork = TRUE
 )
@@ -59,6 +59,7 @@ receipt <- jsonlite::read_json(
   file.path(evidence_dir, "evidence_receipt.json"), simplifyVector = TRUE
 )
 if (!isTRUE(receipt$manuscript_illustration_evidence_eligible) ||
+    !isTRUE(receipt$all_cells_accepted_for_illustration) ||
     !isTRUE(receipt$exact_population_oracle_tilts) ||
     isTRUE(receipt$cornish_fisher_used)) {
   oti_stop("The evidence receipt does not authorize figure rendering.")
@@ -90,7 +91,7 @@ figure_specs <- list(
   fixed_design = list(
     fit = "fig04_fixed_design_oracle_tilt_c095",
     error = "figS03_fixed_design_endpoint_error_c095",
-    title = "Fixed-design interval-root fits at 95% content",
+    title = "Nonlinear heteroscedastic interval-root fits at 95% content",
     error_title = "Fixed-design endpoint errors at 95% content",
     xlab = "Covariate x",
     note = paste(
@@ -101,7 +102,7 @@ figure_specs <- list(
   dlm = list(
     fit = "fig05_dlm_oracle_tilt_c095",
     error = "figS04_dlm_endpoint_error_c095",
-    title = "Dynamic linear interval-root fits at 95% content",
+    title = "Seasonal dynamic interval-root fits at 95% content",
     error_title = "Dynamic linear endpoint errors at 95% content",
     xlab = "Time",
     note = paste(
@@ -139,10 +140,26 @@ for (family in names(figure_specs)) {
 family_label <- ifelse(
   summary$family == "fixed_design", "Fixed design", "Dynamic linear roots"
 )
-if (!all(summary$disposition == "strict_pass")) {
-  oti_stop("Every promoted illustration cell must have strict-pass status.")
+allowed_dispositions <- c("strict_pass", "accepted_revised_tolerance")
+if (!"promotion_disposition" %in% names(summary) ||
+    !all(summary$promotion_disposition %in% allowed_dispositions) ||
+    sum(summary$promotion_disposition == "accepted_revised_tolerance") != 1L ||
+    !identical(
+      paste(
+        summary$family[
+          summary$promotion_disposition == "accepted_revised_tolerance"
+        ],
+        summary$target[
+          summary$promotion_disposition == "accepted_revised_tolerance"
+        ], sep = "/"
+      ), "dlm/SH"
+    )) {
+  oti_stop("The revised six-cell illustration disposition is invalid.")
 }
-disposition_label <- rep("Strict pass", nrow(summary))
+disposition_label <- ifelse(
+  summary$promotion_disposition == "strict_pass",
+  "Strict", "Accepted (0.21)"
+)
 rows <- sprintf(
   "%s & %s & %.3f & %.3f & %.3f & %.3f & %s \\\\",
   family_label, summary$target,
@@ -158,7 +175,7 @@ writeLines(
     "\\toprule",
     paste(
       "Family & Target & Endpoint RMSE & Width RMSE & Realized coverage",
-      "& Mean width & Gate \\\\"
+      "& Mean width & Disposition \\\\"
     ),
     "\\midrule",
     rows,

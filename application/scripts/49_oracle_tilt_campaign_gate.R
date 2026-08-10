@@ -4,7 +4,7 @@
 # Historical source commits remain reproducible, but current-main heavy actions
 # are permitted only when the tracked registry says so explicitly.
 
-otcg_schema <- function() "rqrgibbs_oracle_tilt_campaign_registry/1.0.0"
+otcg_schema <- function() "rqrgibbs_oracle_tilt_campaign_registry/1.1.0"
 
 otcg_stop <- function(...) {
   stop(paste0(...), call. = FALSE)
@@ -62,17 +62,17 @@ otcg_validate_registry <- function(registry) {
       !identical(sort(names(registry$campaigns)), sort(required))) {
     otcg_stop("The campaign registry must contain exactly the three closed campaigns.")
   }
-  if (!identical(registry$active_manuscript_campaign, "publication_v2") ||
+  if (!identical(registry$active_manuscript_campaign, "publication_v3") ||
       !identical(
         registry$active_manuscript_evidence_directory,
-        "figures/data/oracle_tilt_c095_v2"
+        "figures/data/oracle_tilt_c095_v3"
       )) {
-    otcg_stop("The validated version-2 campaign must remain the manuscript source.")
+    otcg_stop("The reconciled version-3 campaign must be the manuscript source.")
   }
 
   expected <- list(
     publication_v2 = list(
-      status = "validated_and_promoted",
+      status = "validated_and_superseded",
       source_commit = "fec979f927c9039cf778ac09aef139ebd6761e8e",
       config_sha256 =
         "e037461a3adf3a98065af9718daf636e6fbbd54ec00cc2fd71c9404f6ba50587",
@@ -81,22 +81,22 @@ otcg_validate_registry <- function(registry) {
       cells = 6L, passed = 6L, chains = 27L, eligible = TRUE
     ),
     publication_v3 = list(
-      status = "completed_not_promoted",
+      status = "promoted_under_revised_illustration_tolerance",
       source_commit = "99a088fbdd7c3f3ed18f99197294038f62dbfe41",
       config_sha256 =
         "585e7258451690c94a153fad50fc6a72a60137bca6447e1b851050b4ed8ca5d7",
       runtime_tree_digest =
         "c5a0cbffb384b777af873dfadae77d6a0909af6387c9f6ca001147f6ded568c9",
-      cells = 6L, passed = 5L, chains = 27L, eligible = FALSE
+      cells = 6L, passed = 5L, chains = 27L, eligible = TRUE
     ),
     publication_v3_dlm_sh_adjudication = list(
-      status = "completed_descriptive_only",
+      status = "accepted_under_revised_illustration_tolerance",
       source_commit = "a3b39b394c6aa928eb38e9ed461281cdf743d00b",
       config_sha256 =
         "bf41bf834e0ce878b9399f77155456fadd3b2feb0f7bcc99064617ab69d15c91",
       runtime_tree_digest =
         "ac1d402f8dc1c724032396b20862e273bf6ec34a005dc24dd2bdbbc3ba5f58f2",
-      chains = 5L, eligible = FALSE
+      chains = 5L, eligible = TRUE
     )
   )
   for (name in names(expected)) {
@@ -177,6 +177,7 @@ otcg_validate_registry <- function(registry) {
       !isTRUE(adjudication$strict_diagnostics_pass) ||
       isTRUE(adjudication$heterogeneity_pass) ||
       isTRUE(adjudication$automatic_promotion_eligible) ||
+      !identical(adjudication$original_strict_contract_eligible, FALSE) ||
       !isTRUE(all.equal(
         otcg_scalar_finite(
           adjudication$width_contrast_relative_error,
@@ -189,17 +190,63 @@ otcg_validate_registry <- function(registry) {
           "adjudication maximum width-contrast error"
         ), 0.20, tolerance = 0
       )) ||
+      !isTRUE(all.equal(
+        otcg_scalar_finite(
+          adjudication$revised_width_contrast_relative_error_max,
+          "adjudication revised width-contrast error"
+        ), 0.21, tolerance = 0
+      )) ||
       !(adjudication$width_contrast_relative_error >
-        adjudication$maximum_width_contrast_relative_error)) {
+        adjudication$maximum_width_contrast_relative_error) ||
+      !(adjudication$width_contrast_relative_error <=
+        adjudication$revised_width_contrast_relative_error_max)) {
     otcg_stop("The adjudication closeout invariants are inconsistent.")
+  }
+  promoted <- registry$campaigns$publication_v3
+  if (!identical(promoted$original_strict_contract_eligible, FALSE) ||
+      !identical(promoted$post_hoc_revision_disclosed, TRUE) ||
+      !identical(
+        promoted$acceptance_policy,
+        paste0(
+          "application/config/",
+          "oracle_tilt_c095_v3_revised_illustration_acceptance_20260805.json"
+        )
+      ) ||
+      !identical(
+        promoted$acceptance_policy_sha256,
+        "52e182a048999db6ce0308f8b792a250d6f7f6bbe4d1fbd208c2cf6b359f56d0"
+      ) ||
+      !isTRUE(all.equal(
+        otcg_scalar_finite(
+          promoted$original_width_contrast_relative_error_max,
+          "original promotion tolerance"
+        ), 0.20, tolerance = 0
+      )) ||
+      !isTRUE(all.equal(
+        otcg_scalar_finite(
+          promoted$revised_width_contrast_relative_error_max,
+          "revised promotion tolerance"
+        ), 0.21, tolerance = 0
+      )) ||
+      !isTRUE(all.equal(
+        otcg_scalar_finite(
+          promoted$observed_width_contrast_relative_error,
+          "observed promotion error"
+        ), 0.202622544829516, tolerance = 1e-15
+      ))) {
+    otcg_stop("The revised version-3 promotion contract is inconsistent.")
   }
   future <- registry$future_campaign_contract
   required_future <- c(
     "requires_new_campaign_identifier", "requires_new_frozen_configuration",
     "requires_new_exact_source_commit",
     "requires_prospective_gates_before_data_generation",
-    "prohibits_same_data_seed_or_gate_tuning",
-    "prohibits_automatic_reuse_of_closed_campaign_output"
+    "prohibits_same_data_seed_tuning",
+    "prohibits_automatic_reuse_of_closed_campaign_output",
+    "computational_integrity_gates_remain_hard",
+    "single_metric_recovery_thresholds_are_not_automatic_rejection_boundaries",
+    "near_boundary_recovery_results_require_reported_human_review",
+    "recovery_threshold_changes_require_disclosure"
   )
   if (!is.list(future) || !all(required_future %in% names(future)) ||
       !all(vapply(future[required_future], isTRUE, logical(1)))) {
@@ -216,6 +263,17 @@ otcg_read_registry <- function(repo_root) {
   if (!file.exists(path)) otcg_stop("Campaign registry not found: ", path)
   registry <- jsonlite::read_json(path, simplifyVector = TRUE)
   otcg_validate_registry(registry)
+  policy <- registry$campaigns$publication_v3$acceptance_policy
+  policy_path <- file.path(repo_root, policy)
+  if (!file.exists(policy_path) || !requireNamespace("digest", quietly = TRUE) ||
+      !identical(
+        unname(digest::digest(
+          policy_path, algo = "sha256", file = TRUE, serialize = FALSE
+        )),
+        registry$campaigns$publication_v3$acceptance_policy_sha256
+      )) {
+    otcg_stop("The revised illustration-acceptance policy hash is invalid.")
+  }
   registry
 }
 

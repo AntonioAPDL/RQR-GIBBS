@@ -239,6 +239,28 @@ rqr_dlm_main_simulation <- list(
     higher_dimensional_guard_scientific_metrics_used = FALSE,
     higher_dimensional_recovery_status =
       "predeclared_exact_candidate_comparison_pending",
+    diagnostic_aware_failed_authorization_commit =
+      "ea8ea8d17c6f7bb34b015472e4f60f62e547c942",
+    diagnostic_aware_failed_run_id =
+      "rqr_dlm_diagnostic_aware_maximum_20260807_ea8ea8d",
+    diagnostic_aware_failed_wave_id =
+      "static_gaussian_T200__target0200__sentinel",
+    diagnostic_aware_failed_wave_artifact_hashes_sha256 =
+      "1f62f7a31780bede379d50cca4d0f8170211c72a6b3390a608ef97dbfc50715c",
+    diagnostic_aware_failure_class =
+      "mcmc_diagnostic_construction_failure",
+    diagnostic_aware_failure_message_digest =
+      "6495bf2b41dc1e26ee4112cd6e30200ca35aa20b34792f1e7f953b9a79210ef5",
+    diagnostic_aware_m01_diagnostics_passed = 368L,
+    diagnostic_aware_m01_diagnostics_total = 368L,
+    diagnostic_aware_m02_construction_failures = 8L,
+    diagnostic_aware_failed_outputs_reused = FALSE,
+    diagnostic_aware_failed_scientific_metrics_used = FALSE,
+    diagnostic_aware_fresh_relaunch_required = TRUE,
+    dynamic_quantile_retained_draw_correction = paste(
+      "apply one validated diagnostic-thinning index to training ordinates,",
+      "terminal states, and deterministic future-root functions"
+    ),
     correction_budget_path =
       "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
     correction_budget_sha256 =

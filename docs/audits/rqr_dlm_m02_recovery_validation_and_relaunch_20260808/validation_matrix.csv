@@ -1,0 +1,16 @@
+gate,status,numerator,denominator,detail
+source_parse,passed,3,3,changed R files parsed
+standalone_contracts,passed,1,1,complete bounded main and confirmatory test filters
+package_check,passed,1,1,zero errors warnings or notes
+smoke,passed,1,1,environment preflight
+article_pdf,passed,1,1,22 pages
+supplement_pdf,passed,1,1,29 pages
+literature_manifest,passed,18,18,local PDF inventory
+exact_primary_runtime,passed,1,1,rqrgibbs runtime attestation schema 5
+confirmatory_preflight,passed,23,23,maximum design
+oracle_reference,passed,15,15,source runtime dependency and seed bound
+m02_tasks,passed,20,20,canonical first-wave task set
+m02_interval_chains,passed,44,44,no retry or reseed
+m02_endpoint_fits,passed,88,88,real exdqlm adapter
+m02_diagnostics,passed,900,900,unchanged thresholds
+fresh_maximum_startup,passed,1,1,active first canonical wave

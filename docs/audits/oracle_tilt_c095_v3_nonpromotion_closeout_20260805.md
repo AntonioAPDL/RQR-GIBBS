@@ -1,5 +1,12 @@
 # Oracle-tilt version-3 non-promotion closeout
 
+> **Historical decision superseded on 2026-08-05.** This file preserves the
+> original fail-closed decision under the 0.20 width-contrast threshold. After
+> a disclosed review, the DLM/SH result was accepted for the single-data
+> illustration under a revised tolerance of 0.21. The current decision is
+> documented in `oracle_tilt_c095_v3_revised_promotion_20260805.md`; the
+> original failure below has not been rewritten as a prespecified pass.
+
 ## Decision
 
 The version-3 oracle-tilt illustration campaign is complete and closed. It is
