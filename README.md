@@ -1,14 +1,19 @@
 # RQR-GIBBS
 
-Standalone manuscript and reproducibility workspace for relaxed quantile
-regression (RQR) with generalized-Bayes Gibbs computation.
+Standalone manuscript and reproducibility workspace for calibrated
+minimum-width tolerance intervals with relaxed quantile regression (RQR) and
+generalized-Bayes Gibbs computation.
 
 The project studies interval-root functionals: two regression roots are learned
 directly under a coverage-targeted loss rather than obtained by inverting a
-response likelihood. The current manuscript develops the population loss
-geometry, pseudo-asymmetric-Laplace augmentation, fixed-design Gibbs samplers,
-regularized regression extensions, frozen-feature DESN readouts, and dynamic
-linear root models.
+response likelihood. The current branch adds a proof-gated
+scan-calibrated tolerance layer: calibrate a retained count, select the
+shortest closed order-statistic window containing that count, freeze the
+induced MT-RQR target content and retained-mean tilt, and then fit the
+fixed-target generalized posterior. The manuscript also develops the
+population loss geometry, pseudo-asymmetric-Laplace augmentation,
+fixed-design Gibbs samplers, regularized regression extensions, frozen-feature
+DESN readouts, and dynamic linear root models.
 
 ## Repository contents
 
@@ -30,7 +35,9 @@ and local literature PDFs are intentionally excluded from version control.
 
 RQR is treated as a loss-based generalized-Bayes update. Interval-root draws
 are summaries of a generalized posterior over interval functionals; they are
-not posterior-predictive response draws.
+not posterior-predictive response draws. In the TCSP extension, tolerance
+confidence comes from the external scan-calibrated retained-count action, not
+from posterior credibility, the learning rate, or a response likelihood.
 
 The two root blocks are exchangeable under the symmetric ordinary and
 mean-tilted targets. Raw fields such as `samp.beta_root1` and
@@ -60,6 +67,14 @@ models with fixed or pre-frozen discount-template evolution. Nonzero tilt is
 not yet implemented for learned inverse-loss scales, RHS-NS priors,
 component-scale/adaptive dynamic evolution, VB/CAVI, or data-driven tilt
 selection.
+
+The TCSP scan layer currently exposes `rqr_tcsp_*` helpers for conservative
+scan calibration, canonical closed-window selection, shortest-path tilt
+metadata, fixed-target univariate fitting, path continuation diagnostics, and
+action-contract validation. Exact scan recursion, Tier-1 finite-sample proof
+promotion, posterior-action equivalence, and regression-family tolerance
+theorems remain pending; see
+`docs/theory/tcsp_mt_rqr_proof_ledger_20260811.md`.
 
 ## External reference implementation
 
