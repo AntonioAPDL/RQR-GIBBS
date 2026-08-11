@@ -4,7 +4,7 @@
 # Historical source commits remain reproducible, but current-main heavy actions
 # are permitted only when the tracked registry says so explicitly.
 
-otcg_schema <- function() "rqrgibbs_oracle_tilt_campaign_registry/1.1.0"
+otcg_schema <- function() "rqrgibbs_oracle_tilt_campaign_registry/1.2.0"
 
 otcg_stop <- function(...) {
   stop(paste0(...), call. = FALSE)
@@ -56,18 +56,18 @@ otcg_validate_registry <- function(registry) {
   }
   required <- c(
     "publication_v2", "publication_v3",
-    "publication_v3_dlm_sh_adjudication"
+    "publication_v3_dlm_sh_adjudication", "publication_v5"
   )
   if (!is.list(registry$campaigns) ||
       !identical(sort(names(registry$campaigns)), sort(required))) {
-    otcg_stop("The campaign registry must contain exactly the three closed campaigns.")
+    otcg_stop("The campaign registry must contain exactly the four closed campaigns.")
   }
-  if (!identical(registry$active_manuscript_campaign, "publication_v3") ||
+  if (!identical(registry$active_manuscript_campaign, "publication_v5") ||
       !identical(
         registry$active_manuscript_evidence_directory,
-        "figures/data/oracle_tilt_c095_v3"
+        "figures/data/oracle_tilt_c095_v5_exact_delta"
       )) {
-    otcg_stop("The reconciled version-3 campaign must be the manuscript source.")
+    otcg_stop("The completed version-5 campaign must be the manuscript source.")
   }
 
   expected <- list(
@@ -97,6 +97,15 @@ otcg_validate_registry <- function(registry) {
       runtime_tree_digest =
         "ac1d402f8dc1c724032396b20862e273bf6ec34a005dc24dd2bdbbc3ba5f58f2",
       chains = 5L, eligible = TRUE
+    ),
+    publication_v5 = list(
+      status = "completed_diagnostic_aware",
+      source_commit = "24065941c44a836d2f385b9fe4cf28fcd18d08bd",
+      config_sha256 =
+        "e0a603d05e01aecc8f6402d3303d90f62de20b4cdee1fa69f7118419b438f893",
+      runtime_tree_digest =
+        "20ca720b6d0874b11cdab342fcdfddd9be3c271fe81c5724ea6c3ca43a9c3614",
+      cells = 6L, passed = 5L, chains = 27L, eligible = TRUE
     )
   )
   for (name in names(expected)) {
@@ -138,7 +147,7 @@ otcg_validate_registry <- function(registry) {
       otcg_stop(name, " improperly authorizes a closed heavy action.")
     }
   }
-  for (name in c("publication_v2", "publication_v3")) {
+  for (name in c("publication_v2", "publication_v3", "publication_v5")) {
     campaign <- registry$campaigns[[name]]
     if (!identical(
       otcg_nonnegative_integer(campaign$target_cells, paste0(name, " cells")),
@@ -153,6 +162,24 @@ otcg_validate_registry <- function(registry) {
     ))) {
       otcg_stop("Campaign cell-count invariant failed for ", name, ".")
     }
+  }
+  v5 <- registry$campaigns$publication_v5
+  if (!identical(otcg_nonnegative_integer(
+        v5$diagnostic_warning_cells, "version-5 warning cells"
+      ), 1L) ||
+      !identical(v5$diagnostic_warning_cell, "dlm/SH") ||
+      !isTRUE(v5$all_cells_hard_computational_pass) ||
+      !isTRUE(v5$all_cells_broad_recovery_pass) ||
+      !isTRUE(v5$all_cells_broad_heterogeneity_pass) ||
+      !identical(v5$strict_diagnostic_thresholds_relabelled, FALSE) ||
+      !identical(v5$reseeded_or_selectively_extended, FALSE) ||
+      !isTRUE(v5$exact_population_oracle_tilts) ||
+      !identical(v5$oracle_schema, "rqrgibbs_interval_oracle/2.0.0") ||
+      !identical(
+        v5$tilt_definition,
+        "conditional_retained_mean_minus_population_mean"
+      )) {
+    otcg_stop("The version-5 diagnostic-aware closeout is inconsistent.")
   }
   adjudication <- registry$campaigns$publication_v3_dlm_sh_adjudication
   if (!identical(

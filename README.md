@@ -60,7 +60,10 @@ The implemented ordinary-RQR paths currently include:
    component-scale evolution modes.
 
 Mean-tilt and Cornish--Fisher calculations in the manuscript are population
-geometry and initialization diagnostics. The package now exposes a bounded
+geometry and initialization diagnostics. The main article's CF figure and
+cross-law population table deliberately show both near-Normal accuracy and
+breakdown under stronger skewness or support-boundary geometry; they do not
+enter the exact-oracle fits. The package now exposes a bounded
 fixed-tilt MCMC path for fixed-rate ridge readouts: fixed-design regression,
 frozen-feature DESN readouts through the same fixed-design kernel, and RQR-DLM
 models with fixed or pre-frozen discount-template evolution. Nonzero tilt is
@@ -97,6 +100,7 @@ from exact Git archives under ignored local cache directories.
 make smoke
 make test-theory-figures
 make test-theory-tables
+make test-manuscript-language
 make pdf
 make supplement
 make package-install
@@ -111,31 +115,44 @@ make literature-manifest
 Long-running simulation and validation targets require explicit reviewed
 configuration and should write only under ignored local output roots.
 
-The 95% single-data oracle-tilt illustrations are rendered from the reconciled
-version-3 compact evidence bundle under
-`figures/data/oracle_tilt_c095_v3/`. The command
+The 95% single-data oracle-tilt illustrations are rendered from the corrected
+version-5 compact evidence bundle under
+`figures/data/oracle_tilt_c095_v5_exact_delta/`. The command
 
 ```bash
 make model-illustration-figures
 ```
 
 then verifies that evidence and renders the article and supplement figures
-without fitting a model. All 27 baseline chains completed; the longer-chain
-DLM/SH adjudication reproduced 15/15 prefixes bitwise, passed 137/137
-maintained diagnostics, and used zero repairs. Five cells passed every original
-recovery gate. The DLM/SH width-contrast error was 0.202623 against the original
-0.20 threshold and was accepted for this illustration under a disclosed
-revised tolerance of 0.21. See
-`docs/audits/oracle_tilt_c095_v3_revised_promotion_20260805.md`.
+without fitting a model. All 27 chains and six cells completed with exact
+source/runtime binding and zero repairs. Five cells are strict passes. DLM/SH
+is a diagnostic-aware pass: five of 137 rows retain bulk-ESS warnings, while
+all R-hat, tail-ESS, MCSE/SD, hard-computational, and broad-recovery
+requirements pass. No threshold was relabeled, no seed was replaced, and no
+chain was selectively extended. See
+`docs/audits/oracle_tilt_c095_v5_promotion_reconciliation_20260810.md`.
 
-The earlier non-promotion decision and its original 0.20 failure remain
+The version-3 non-promotion decision and its original 0.20 failure remain
 available under
 `docs/audits/oracle_tilt_c095_v3_nonpromotion_evidence_20260805/`; see
 `docs/audits/oracle_tilt_c095_v3_nonpromotion_closeout_20260805.md` for that
-historical decision. Version 2 remains a validated prior bundle but is
+historical decision. Versions 2 and 3 remain validated prior bundles but are
 superseded for rendering. Current `main` blocks another same-data heavy run.
-Both campaigns are single-data method illustrations, not
+All campaigns are single-data method illustrations, not
 repeated-sample coverage studies or response-predictive analyses.
+
+A subsequent oracle audit found that the historical illustration helper
+stored an unnormalized truncated first moment where the manuscript's recovery
+definition requires the conditional retained mean minus the population mean.
+The sampler's fixed-tilt update was already correctly scaled; the correction
+is confined to the oracle inputs. The append-only V5 source and schema-2
+certificate are implemented, and the completed corrected V5 campaign is now
+the rendered evidence. Strict R-hat, ESS, MCSE, and narrow recovery violations
+remain visible warnings; they were not relabeled, reseeded, or used to abort
+later cells.
+The correction protocol and the separate repeated-DGP validation protocol are
+in `docs/implementation_notes/exact_mean_tilt_oracle_and_v5_correction_protocol_20260810.md`
+and `docs/implementation_notes/oracle_mean_tilt_validation_v1_protocol_20260810.md`.
 
 ## arXiv source package
 

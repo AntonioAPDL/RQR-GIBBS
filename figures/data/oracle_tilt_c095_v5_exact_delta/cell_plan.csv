@@ -1,0 +1,7 @@
+"family","target","order","cell_key","process_isolation","maximum_chain_workers"
+"fixed_design","RQR",1,"fixed_design_rqr",TRUE,2
+"dlm","RQR",2,"dlm_rqr",TRUE,2
+"fixed_design","ET",3,"fixed_design_et",TRUE,2
+"dlm","ET",4,"dlm_et",TRUE,2
+"fixed_design","SH",5,"fixed_design_sh",TRUE,2
+"dlm","SH",6,"dlm_sh",TRUE,2

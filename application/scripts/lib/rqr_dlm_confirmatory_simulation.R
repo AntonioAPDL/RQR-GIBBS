@@ -409,6 +409,29 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
             "docs/audits/rqr_dlm_main_correction_budget_20260727.csv",
           correction_budget_sha256 =
             "fdee8c042a7ebcc9a1a9c1f8d704be530487fcbc098cdc0572f09daadfd9cdb9",
+          completion_recovery_failed_authorization_commit =
+            "031595bbbca5c59673faed10087faaf450c15a5a",
+          completion_recovery_failed_run_id =
+            "rqr_dlm_diagnostic_aware_maximum_20260808_031595b",
+          completion_recovery_failed_wave_id =
+            "trend_seasonal_gaussian_T200__target0200__sentinel",
+          completion_recovery_closeout_artifact_hashes_sha256 =
+            "e9d6197b813904b51f9da88f7511e673d33f7fb131f6b8cd0260281d27ab778b",
+          completion_recovery_failed_outputs_reused = FALSE,
+          completion_recovery_scientific_metrics_used = FALSE,
+          component_scale_directional_scope_correction = paste(
+            "apply the selected directional update only to models with at least",
+            "two evolution components; retain coordinate interweaving and joint",
+            "state elliptical updates for one-component M11 models"
+          ),
+          fixed_design_replica_exchange_activity_correction = paste(
+            "keep exact structure target and zero-repair checks as hard invariants;",
+            "record finite-run acceptance label and round-trip activity as",
+            "diagnostic-aware sidecars"
+          ),
+          sampled_worker_memory_ceiling_correction =
+            "uniform prospective increase from 1.5 GiB to 2.0 GiB",
+          completion_recovery_fresh_relaunch_required = TRUE,
           target_prior_seed_or_diagnostic_threshold_changed = FALSE,
           mcmc_transition_and_fixed_role_schedule_changed = TRUE
         )
@@ -546,6 +569,7 @@ rqr_confirm_validate_contract <- function(contract, require_closed = FALSE) {
           explicit_user_confirmation_required
       ) ||
       !identical(config$resources$threads_per_worker, 1L) ||
+      !identical(config$resources$per_worker_memory_GiB, 2.0) ||
       !identical(
         config$resources$sampled_process_group_thread_ceiling, 4L
       ) ||
@@ -3182,9 +3206,43 @@ rqr_confirm_compact_method_result <- function(value) {
   c(endpoints, list(endpoint_target = value$endpoint_target))
 }
 
+rqr_confirm_method_operational_sidecar <- function(result, method) {
+  if (!identical(method, "M03")) return(list())
+  sidecar <- result$diagnostics$replica_exchange_activity
+  required <- c(
+    "schema_version", "enabled", "structural_pass",
+    "structural_failures", "activity_pass", "activity_failures",
+    "swap_attempts", "swap_accepts", "swap_acceptance",
+    "cold_labels_visited", "round_trips", "total_round_trips",
+    "exact_cold_target", "target_change"
+  )
+  if (!is.list(sidecar) || !identical(names(sidecar), required) ||
+      !identical(
+        sidecar$schema_version,
+        "rqrgibbs_replica_exchange_assessment/1.0.0"
+      ) || !isTRUE(sidecar$structural_pass) ||
+      !is.logical(sidecar$activity_pass) ||
+      length(sidecar$activity_pass) != 1L ||
+      is.na(sidecar$activity_pass)) {
+    stop("The M03 operational sidecar is invalid.", call. = FALSE)
+  }
+  sidecar
+}
+
+rqr_confirm_operational_activity_pass <- function(method, sidecars) {
+  if (!identical(method, "M03")) return(TRUE)
+  length(sidecars) > 0L && all(vapply(
+    sidecars,
+    function(sidecar) is.list(sidecar) &&
+      isTRUE(sidecar$structural_pass) && isTRUE(sidecar$activity_pass),
+    logical(1L)
+  ))
+}
+
 rqr_confirm_compact_mcmc_diagnostic <- function(
     metadata, ledger, cell_id, replication, method, sentinel,
-    chain_profiles, schedules, scalar_chains, diagnostics) {
+    chain_profiles, schedules, scalar_chains, diagnostics,
+    operational_sidecars = NULL) {
   required_metadata <- c(
     "source_commit", "config_digest", "incidence_digest",
     "seed_ledger_digest", "runtime_digest"
@@ -3209,6 +3267,11 @@ rqr_confirm_compact_mcmc_diagnostic <- function(
     stop("Compact MCMC diagnostic source digests are invalid.",
          call. = FALSE)
   }
+  if (is.null(operational_sidecars)) {
+    operational_sidecars <- replicate(
+      length(chain_profiles), list(), simplify = FALSE
+    )
+  }
   if (!is.logical(sentinel) || length(sentinel) != 1L || is.na(sentinel) ||
       !is.character(chain_profiles) || !length(chain_profiles) ||
       anyNA(chain_profiles) || any(!nzchar(chain_profiles)) ||
@@ -3216,6 +3279,9 @@ rqr_confirm_compact_mcmc_diagnostic <- function(
       !is.list(scalar_chains) ||
       length(scalar_chains) != length(chain_profiles) ||
       any(vapply(scalar_chains, is.null, logical(1L))) ||
+      !is.list(operational_sidecars) ||
+      length(operational_sidecars) != length(chain_profiles) ||
+      any(!vapply(operational_sidecars, is.list, logical(1L))) ||
       !is.data.frame(diagnostics) || !"pass" %in% names(diagnostics) ||
       !is.logical(diagnostics$pass) || anyNA(diagnostics$pass)) {
     stop("Compact MCMC diagnostic contents are invalid.", call. = FALSE)
@@ -3225,7 +3291,7 @@ rqr_confirm_compact_mcmc_diagnostic <- function(
     method = method, chains = length(chain_profiles)
   )
   list(
-    schema_version = "rqrgibbs_dlm_compact_mcmc_diagnostics/1.2.0",
+    schema_version = "rqrgibbs_dlm_compact_mcmc_diagnostics/1.3.0",
     source_commit = metadata$source_commit,
     config_digest = metadata$config_digest,
     incidence_digest = metadata$incidence_digest,
@@ -3240,8 +3306,11 @@ rqr_confirm_compact_mcmc_diagnostic <- function(
     rng_bindings = rng_bindings,
     schedules = schedules,
     scalar_chains = scalar_chains,
+    operational_sidecars = operational_sidecars,
     diagnostics = diagnostics,
     diagnostic_pass = all(diagnostics$pass),
+    operational_activity_pass =
+      rqr_confirm_operational_activity_pass(method, operational_sidecars),
     full_fit_objects_retained = FALSE,
     exact_refit_inputs_bound = TRUE,
     generalized_bayes = TRUE,
@@ -4019,6 +4088,89 @@ rqr_confirm_initialization <- function(generated, model, profile,
   initial
 }
 
+# Resolve an execution-policy override only after the DLM has been built.  The
+# diagnostic-aware M11 directional scale update is a multicomponent transition;
+# applying it to a one-component local-level model is a contract error rather
+# than a difficult MCMC draw. Legacy flat overrides remain available to bounded
+# development scripts, while production policy records use explicit control
+# and scope blocks.
+rqr_confirm_model_aware_mcmc_override <- function(contract, method, model) {
+  requested <- contract$mcmc_control_overrides[[method]] %||% list()
+  component_count <- length(model$component_dims)
+  if (!is.list(requested) || component_count < 1L) {
+    stop("A model-aware MCMC-control override is malformed.",
+         call. = FALSE)
+  }
+  audit <- list(
+    schema_version = "rqrgibbs_dlm_model_aware_override/1.0.0",
+    method = method,
+    component_count = as.integer(component_count),
+    requested_directional_interweave = FALSE,
+    effective_directional_interweave = FALSE,
+    directional_min_components = NA_integer_,
+    fallback = "none",
+    fallback_used = FALSE,
+    target_change = FALSE,
+    schedule_change = FALSE
+  )
+  if (!length(requested)) {
+    return(list(control = list(), audit = audit))
+  }
+  nested <- identical(names(requested), c("control", "scope"))
+  if (!nested) {
+    if (is.null(names(requested)) || any(!nzchar(names(requested)))) {
+      stop("A legacy policy MCMC-control override is malformed.",
+           call. = FALSE)
+    }
+    return(list(control = requested, audit = audit))
+  }
+  control <- requested$control
+  scope <- requested$scope
+  if (!is.list(control) || !identical(
+      names(control),
+      c(
+        "component_scale_directional_interweave",
+        "component_scale_directional_sweeps"
+      )
+    ) || !isTRUE(control$component_scale_directional_interweave) ||
+      !is.numeric(control$component_scale_directional_sweeps) ||
+      length(control$component_scale_directional_sweeps) != 1L ||
+      is.na(control$component_scale_directional_sweeps) ||
+      control$component_scale_directional_sweeps != 1L ||
+      !is.list(scope) || !identical(
+        names(scope),
+        c(
+          "component_scale_directional_min_components",
+          "single_component_fallback"
+        )
+      ) ||
+      !is.numeric(scope$component_scale_directional_min_components) ||
+      length(scope$component_scale_directional_min_components) != 1L ||
+      is.na(scope$component_scale_directional_min_components) ||
+      !is.finite(scope$component_scale_directional_min_components) ||
+      scope$component_scale_directional_min_components !=
+        floor(scope$component_scale_directional_min_components) ||
+      scope$component_scale_directional_min_components < 2L ||
+      !identical(
+        scope$single_component_fallback,
+        "coordinate_interweave_plus_joint_state_elliptical"
+      )) {
+    stop("A scoped policy MCMC-control override is malformed.",
+         call. = FALSE)
+  }
+  minimum <- as.integer(
+    scope$component_scale_directional_min_components
+  )
+  effective <- component_count >= minimum
+  control$component_scale_directional_interweave <- effective
+  audit$requested_directional_interweave <- TRUE
+  audit$effective_directional_interweave <- effective
+  audit$directional_min_components <- minimum
+  audit$fallback <- scope$single_component_fallback
+  audit$fallback_used <- !effective
+  list(control = control, audit = audit)
+}
+
 rqr_confirm_dynamic_fit <- function(
     contract, generated, method, chain, ledger,
     provenance_control = list(), profile_name = NULL,
@@ -4138,13 +4290,10 @@ rqr_confirm_dynamic_fit <- function(
     ),
     init = initial
   )
-  policy_override <- contract$mcmc_control_overrides[[method]] %||% list()
-  if (!is.list(policy_override) ||
-      (length(policy_override) &&
-       (is.null(names(policy_override)) ||
-        any(!nzchar(names(policy_override)))))) {
-    stop("A policy MCMC-control override is malformed.", call. = FALSE)
-  }
+  policy_resolution <- rqr_confirm_model_aware_mcmc_override(
+    contract, method, model
+  )
+  policy_override <- policy_resolution$control
   if (length(policy_override)) {
     common$mcmc_control[names(policy_override)] <- policy_override
   }
@@ -4261,7 +4410,8 @@ rqr_confirm_dynamic_fit <- function(
       profile = profile_name,
       learned_lambda =
         identical(method, "M11"),
-      transition_policy = transition_policy
+      transition_policy = transition_policy,
+      model_aware_policy_override = policy_resolution$audit
     )
   )
 }
@@ -4376,6 +4526,128 @@ rqr_confirm_transition_telemetry <- function(fit) {
   )
 }
 
+# Assess exact replica-exchange structure independently from finite-run
+# exchange activity. Zero accepted swaps or zero completed round trips can be
+# important mixing telemetry, but neither event changes the invariant cold
+# target or invalidates an otherwise well-formed exact transition.
+rqr_confirm_replica_exchange_assessment <- function(
+    model_spec, diagnostics, expected_control, enabled) {
+  if (!is.list(model_spec) || !is.list(diagnostics) ||
+      !is.list(expected_control) ||
+      !is.logical(enabled) || length(enabled) != 1L || is.na(enabled)) {
+    stop("Replica-exchange assessment inputs are malformed.",
+         call. = FALSE)
+  }
+  temperatures <- expected_control$inverse_temperatures
+  attempts <- diagnostics$replica_swap_attempts
+  accepts <- diagnostics$replica_swap_accepts
+  acceptance <- diagnostics$replica_swap_acceptance
+  cold_trace <- diagnostics$replica_cold_label_trace
+  round_trips <- diagnostics$replica_round_trips
+  structural_failures <- character()
+  add_failure <- function(label) {
+    structural_failures <<- c(structural_failures, label)
+  }
+  count_vector <- function(value, length_expected, positive = FALSE) {
+    is.numeric(value) && length(value) == length_expected &&
+      !anyNA(value) && all(is.finite(value)) &&
+      all(value == floor(value)) &&
+      all(value >= if (positive) 1 else 0)
+  }
+  if (isTRUE(enabled)) {
+    if (!is.numeric(temperatures) || length(temperatures) < 2L ||
+        anyNA(temperatures) || any(!is.finite(temperatures)) ||
+        temperatures[[1L]] != 1 || any(temperatures <= 0) ||
+        any(diff(temperatures) >= 0) ||
+        !isTRUE(expected_control$exact_cold_target) ||
+        isTRUE(expected_control$target_change)) {
+      add_failure("invalid_expected_exact_exchange_contract")
+    }
+    if (!isTRUE(model_spec$replica_exchange_enabled)) {
+      add_failure("runtime_exchange_disabled")
+    }
+    if (!identical(
+        model_spec$replica_exchange$inverse_temperatures, temperatures
+      )) {
+      add_failure("temperature_ladder_mismatch")
+    }
+    pairs <- length(temperatures) - 1L
+    if (!count_vector(attempts, pairs, positive = TRUE)) {
+      add_failure("invalid_attempt_counts")
+    }
+    if (!count_vector(accepts, pairs, positive = FALSE)) {
+      add_failure("invalid_accept_counts")
+    }
+    if (count_vector(attempts, pairs, positive = TRUE) &&
+        count_vector(accepts, pairs, positive = FALSE) &&
+        any(accepts > attempts)) {
+      add_failure("accepts_exceed_attempts")
+    }
+    if (!is.numeric(acceptance) || length(acceptance) != pairs ||
+        anyNA(acceptance) || any(!is.finite(acceptance)) ||
+        any(acceptance < 0 | acceptance > 1)) {
+      add_failure("invalid_acceptance_fractions")
+    } else if (count_vector(attempts, pairs, positive = TRUE) &&
+        count_vector(accepts, pairs, positive = FALSE) &&
+        !isTRUE(all.equal(
+          as.numeric(acceptance), as.numeric(accepts / attempts),
+          tolerance = sqrt(.Machine$double.eps), check.attributes = FALSE
+        ))) {
+      add_failure("inconsistent_acceptance_fractions")
+    }
+    replicas <- length(temperatures)
+    if (!count_vector(cold_trace, length(cold_trace), positive = TRUE) ||
+        !length(cold_trace) || any(cold_trace > replicas)) {
+      add_failure("invalid_cold_label_trace")
+    }
+    if (!count_vector(round_trips, replicas, positive = FALSE)) {
+      add_failure("invalid_round_trip_counts")
+    }
+  } else if (isTRUE(model_spec$replica_exchange_enabled)) {
+    add_failure("unexpected_runtime_exchange")
+  }
+  cold_labels <- if (is.numeric(cold_trace) && length(cold_trace) &&
+      !anyNA(cold_trace) && all(is.finite(cold_trace))) {
+    sort(unique(as.integer(cold_trace)))
+  } else {
+    integer()
+  }
+  activity_failures <- character()
+  if (isTRUE(enabled) && !length(structural_failures)) {
+    if (any(accepts == 0L)) {
+      activity_failures <- c(
+        activity_failures, "zero_acceptance_adjacent_pair"
+      )
+    }
+    if (length(cold_labels) <= 1L) {
+      activity_failures <- c(
+        activity_failures, "single_cold_label_visited"
+      )
+    }
+    if (sum(round_trips) == 0L) {
+      activity_failures <- c(activity_failures, "zero_complete_round_trips")
+    }
+  }
+  list(
+    schema_version = "rqrgibbs_replica_exchange_assessment/1.0.0",
+    enabled = enabled,
+    structural_pass = !length(structural_failures),
+    structural_failures = structural_failures,
+    activity_pass = !length(structural_failures) &&
+      !length(activity_failures),
+    activity_failures = activity_failures,
+    swap_attempts = as.numeric(attempts),
+    swap_accepts = as.numeric(accepts),
+    swap_acceptance = as.numeric(acceptance),
+    cold_labels_visited = cold_labels,
+    round_trips = as.numeric(round_trips),
+    total_round_trips = if (is.numeric(round_trips) &&
+        all(is.finite(round_trips))) sum(round_trips) else NA_real_,
+    exact_cold_target = isTRUE(expected_control$exact_cold_target),
+    target_change = isTRUE(expected_control$target_change)
+  )
+}
+
 rqr_confirm_fixed_design <- function(
     contract, generated, chain, ledger, provenance_control = list(),
     profile_name = NULL, mcmc_control_override = list(),
@@ -4478,39 +4750,16 @@ rqr_confirm_fixed_design <- function(
   )
   expected_replica <-
     contract$config$frozen_tuning$fixed_design_replica_exchange
-  attempts <- fit$diagnostics$replica_swap_attempts
-  accepts <- fit$diagnostics$replica_swap_accepts
-  acceptance <- fit$diagnostics$replica_swap_acceptance
-  cold_labels <- sort(unique(
-    fit$diagnostics$replica_cold_label_trace
-  ))
-  round_trips <- fit$diagnostics$replica_round_trips
-  replica_operational <- if (final_replica_enabled) {
-    isTRUE(fit$model_spec$replica_exchange_enabled) &&
-      identical(
-        fit$model_spec$replica_exchange$inverse_temperatures,
-        expected_replica$inverse_temperatures
-      ) &&
-      length(attempts) ==
-        length(expected_replica$inverse_temperatures) - 1L &&
-      length(accepts) == length(attempts) &&
-      length(acceptance) == length(attempts) &&
-      all(attempts > 0L) && all(accepts > 0L) &&
-      all(accepts <= attempts) &&
-      all(is.finite(acceptance)) && all(acceptance > 0) &&
-      length(cold_labels) > 1L &&
-      length(round_trips) ==
-        length(expected_replica$inverse_temperatures) &&
-      sum(round_trips) > 0L
-  } else {
-    !isTRUE(fit$model_spec$replica_exchange_enabled)
-  }
-  if (!isTRUE(replica_operational) ||
+  replica_assessment <- rqr_confirm_replica_exchange_assessment(
+    fit$model_spec, fit$diagnostics, expected_replica,
+    final_replica_enabled
+  )
+  if (!isTRUE(replica_assessment$structural_pass) ||
       !isTRUE(fit$model_spec$exact_joint_target) ||
       fit$model_spec$numerical_repair_count != 0L) {
     stop(
       paste(
-        "The exact joint target replica-exchange operational contract",
+        "The exact joint target replica-exchange structural contract",
         "failed."
       ),
       call. = FALSE
@@ -4527,14 +4776,18 @@ rqr_confirm_fixed_design <- function(
     diagnostics = list(
       numerical_repairs = fit$model_spec$numerical_repair_count,
       exact_joint_target = TRUE,
-      replica_exchange_operational = replica_operational,
-      replica_exchange_minimum_acceptance = if (length(acceptance)) {
-        min(acceptance)
+      replica_exchange_operational = replica_assessment$activity_pass,
+      replica_exchange_activity = replica_assessment,
+      replica_exchange_minimum_acceptance = if (
+          length(replica_assessment$swap_acceptance)) {
+        min(replica_assessment$swap_acceptance)
       } else {
         NA_real_
       },
-      replica_exchange_total_round_trips = sum(round_trips),
-      replica_exchange_cold_labels_visited = cold_labels,
+      replica_exchange_total_round_trips =
+        replica_assessment$total_round_trips,
+      replica_exchange_cold_labels_visited =
+        replica_assessment$cold_labels_visited,
       promotion_eligible =
         isTRUE(fit$provenance$reproducibility_eligible)
     )
@@ -6696,7 +6949,7 @@ rqr_confirm_scalar_draws <- function(
       )
     }
     retained_index <- seq.int(
-      from = diagnostic_thin, to = ncol(raw_lower),
+      from = diagnostic_thin, to = raw_draw_count,
       by = diagnostic_thin
     )
     raw_lower <- raw_lower[, retained_index, drop = FALSE]
@@ -6727,13 +6980,15 @@ rqr_confirm_scalar_draws <- function(
       terminal[, retained_index, drop = FALSE]
     }
     model_bundle <- rqr_confirm_model_bundle(generated)
+    terminal_root1 <- terminal_draws(result$fits[[1L]])
+    terminal_root2 <- terminal_draws(result$fits[[2L]])
     future_root1 <- rqr_confirm_conditional_root_draws(
-      terminal_draws(result$fits[[1L]]),
+      terminal_root1,
       model_bundle$future$FF, model_bundle$future$GG,
       horizon = generated$H
     )
     future_root2 <- rqr_confirm_conditional_root_draws(
-      terminal_draws(result$fits[[2L]]),
+      terminal_root2,
       model_bundle$future$FF, model_bundle$future$GG,
       horizon = generated$H
     )

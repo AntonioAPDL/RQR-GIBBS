@@ -55,9 +55,10 @@ fails, repository cleanliness is recorded as unknown (`NA`), never as clean.
 An explicit commit or archive digest is recorded separately from detected Git
 state.
 
-The nested `.gitignore` retains only the four publication PNGs and a lightweight
-provenance receipt. Redundant PDF, panel CSV, and full-manifest outputs remain
-ignored. The receipt records each publication PNG's byte count and SHA-256,
+The nested `.gitignore` retains the five deterministic publication PNGs, the
+compact model-illustration assets, and lightweight provenance receipts.
+Redundant PDF, panel CSV, and full-manifest outputs remain ignored. The theory
+receipt records each deterministic publication PNG's byte count and SHA-256,
 the generator hash, and the detected and declared source identities. The full
 local audit bundle remains under `application/cache/`, and the repository also
 retains the generator, tests, and vector-native TikZ schematics.
@@ -72,15 +73,16 @@ The generator uses analytic truncated first moments for its declared
 distributions and independent response-space integration in the tests. The
 asymmetric-Laplace population benchmark uses the quantile-regression
 parameterization
-`(mu_AL, s_AL, tau_AL) = (0, 1, 0.8)`, denoted
-`AL_0.8(0, 1)`. Under this convention it is left-skewed and `mu_AL` is its
-0.8 quantile. The distributional index `tau_AL` and interval content `c` are
-separate inputs; their shared value of 0.8 in the publication illustration is
-incidental. The publication receipt records them in separate columns. Interval
-targets are solved on the raw response scale and only then mapped to
-mean/standard-deviation standardized coordinates. This population benchmark
-is distinct from the pseudo-asymmetric-Laplace loss-kernel augmentation
-applied to the RQR pseudo-residual.
+`(mu_AL, s_AL, tau_AL) = (0, 1, 0.65)`, denoted internally by
+`AL_0.65(0, 1)`. Under this convention it is left-skewed and `mu_AL` is its
+0.65 quantile. The distributional index `tau_AL=0.65` and interval content
+`c=0.80` are separate inputs. Reader-facing figure labels intentionally
+describe only the illustrative shape and content; the publication receipt
+records both numerical inputs separately. Interval targets are solved on the
+raw response scale and only then mapped to mean/standard-deviation standardized
+coordinates. This population benchmark is distinct from the
+pseudo-asymmetric-Laplace loss-kernel augmentation applied to the RQR
+pseudo-residual.
 
 The manifest records the source revision, generator hash, configuration,
 numerical tolerances, dependencies, panel-data hashes, and output hashes. CSV
@@ -101,6 +103,14 @@ the blue zero-tilt marker in the window-to-tilt panel, and the orange `SH`
 label is centered above its marker in the width panel. The remaining labels
 retain fixed target-specific positions and colors, and the oracle test checks
 these mappings before rendering.
+
+The main-text Cornish--Fisher diagnostic is Figure 3. It keeps the exact
+population path and exact RQR, ET, and SH markers visually distinct from the
+open CF-ET and CF-SH approximation markers. Its population inputs use true
+skewness; no sample estimate, MCMC draw, or response-prediction object enters
+the figure. The accompanying generated table compares exact and first-order
+standardized tilts across symmetric, near-Normal, strongly skewed, reflected,
+bounded-support, and support-boundary population laws.
 
 The current base-R vector PDFs use unembedded device fonts, so TeX deliberately
 continues to use the audited 300-dpi PNGs. A future vector transition must use

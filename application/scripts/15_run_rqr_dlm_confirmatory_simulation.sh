@@ -49,7 +49,7 @@ stdout_file="$monitor_root/${mode}-${stamp}-$$.stdout.log"
 stderr_file="$monitor_root/${mode}-${stamp}-$$.stderr.log"
 
 max_seconds="${RQR_MAX_PROCESS_WAVE_SECONDS:-1209600}"
-max_rss_kib="${RQR_MAX_PROCESS_GROUP_RSS_KIB:-1572864}"
+max_rss_kib="${RQR_MAX_PROCESS_GROUP_RSS_KIB:-2097152}"
 # BLAS/OpenMP and other numerical libraries remain fixed at one compute
 # thread above.  NLWP counts every OS thread, including helper processes
 # created by `R CMD config` while the oracle stage records its toolchain.

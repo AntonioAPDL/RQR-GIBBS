@@ -10,21 +10,24 @@ evidence_root <- file.path(
   "oracle_tilt_c095_v3_nonpromotion_evidence_20260805"
 )
 
-testthat::test_that("campaign registry records the revised promotion", {
+testthat::test_that("campaign registry retains historical and current campaigns", {
   registry <- otcg_read_registry(repo_root)
   testthat::expect_invisible(otcg_validate_registry(registry))
   testthat::expect_identical(
-    registry$active_manuscript_campaign, "publication_v3"
+    registry$active_manuscript_campaign, "publication_v5"
   )
   testthat::expect_identical(
     registry$active_manuscript_evidence_directory,
-    "figures/data/oracle_tilt_c095_v3"
+    "figures/data/oracle_tilt_c095_v5_exact_delta"
   )
   testthat::expect_true(
     registry$campaigns$publication_v2$manuscript_illustration_evidence_eligible
   )
   testthat::expect_true(
     registry$campaigns$publication_v3$manuscript_illustration_evidence_eligible
+  )
+  testthat::expect_true(
+    registry$campaigns$publication_v5$manuscript_illustration_evidence_eligible
   )
   testthat::expect_false(
     registry$campaigns$publication_v3$original_strict_contract_eligible
@@ -77,7 +80,7 @@ testthat::test_that("closed campaigns allow lightweight actions only", {
   )
 })
 
-testthat::test_that("version-3 is the reconciled manuscript evidence", {
+testthat::test_that("version-3 remains reproducible historical evidence", {
   receipt <- jsonlite::read_json(file.path(
     repo_root, "figures", "data", "oracle_tilt_c095_v3",
     "evidence_receipt.json"
@@ -105,33 +108,8 @@ testthat::test_that("version-3 is the reconciled manuscript evidence", {
     receipt$revised_width_contrast_relative_error_max
   )
 
-  makefile <- readLines(file.path(repo_root, "Makefile"), warn = FALSE)
-  main <- readLines(file.path(repo_root, "main.tex"), warn = FALSE)
-  supplement <- readLines(
-    file.path(repo_root, "rqr-gibbs-supplement.tex"), warn = FALSE
-  )
-  generator <- readLines(file.path(
-    repo_root, "figures", "generate_oracle_tilt_model_figures.R"
-  ), warn = FALSE)
-  testthat::expect_true(any(grepl(
-    "^ORACLE_TILT_EVIDENCE_DIR \\?= figures/data/oracle_tilt_c095_v3$",
-    makefile
-  )))
-  testthat::expect_true(any(grepl(
-    "fig04_fixed_design_oracle_tilt_c095.pdf", main, fixed = TRUE
-  )))
-  testthat::expect_true(any(grepl(
-    "fig05_dlm_oracle_tilt_c095.pdf", main, fixed = TRUE
-  )))
-  testthat::expect_true(any(grepl(
-    "oracle_tilt_c095_v3", generator, fixed = TRUE
-  )))
-  testthat::expect_true(any(grepl(
-    "revised tolerance of \\(0.21\\)", main, fixed = TRUE
-  )))
-  testthat::expect_true(any(grepl(
-    "disclosed revised tolerance of \\(0.21\\)", supplement, fixed = TRUE
-  )))
+  testthat::expect_false(receipt$response_predictive_analysis)
+  testthat::expect_false(receipt$simulation_study)
 })
 
 testthat::test_that("promoted compact evidence is hashed and contains no raw objects", {

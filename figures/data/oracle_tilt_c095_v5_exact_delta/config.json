@@ -1,0 +1,315 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_publication_config/5.1.0",
+  "campaign_id": "oracle_tilt_c095_v5_exact_delta",
+  "execution_authorized": true,
+  "coverage_level": 0.95,
+  "learning_rate": 1,
+  "targets": [
+    "RQR",
+    "ET",
+    "SH"
+  ],
+  "tilt_source": "exact_population_conditional_mean_oracle",
+  "tilt_definition": "conditional_retained_mean_minus_population_mean",
+  "oracle_schema": "rqrgibbs_interval_oracle/2.0.0",
+  "legacy_oracle_schemas_authorized": false,
+  "historical_design_source": "oracle_tilt_c095_publication_v3_20260801",
+  "innovation": {
+    "family": "asymmetric_laplace",
+    "tau": 0.8,
+    "location": 0,
+    "scale": 1,
+    "standardized": true,
+    "expected_raw_mean": -3.75,
+    "expected_raw_sd": 5.15388203202208,
+    "expected_standardized_skewness": -1.79761698556341
+  },
+  "fixed_design": {
+    "seed": 202608011,
+    "n": 2400,
+    "basis": "empirical_orthogonal_cubic_bspline",
+    "basis_contract": {
+      "degree": 3,
+      "internal_knots": [
+        -0.6,
+        -0.2,
+        0.2,
+        0.6
+      ],
+      "boundary_knots": [
+        -1,
+        1
+      ],
+      "intercept": true,
+      "expected_dimension": 8,
+      "mean_control_coefficients": [
+        -0.35,
+        0.5,
+        1.1,
+        -0.8,
+        -0.1,
+        1.2,
+        0.65,
+        -0.25
+      ],
+      "scale_control_coefficients": [
+        0.38,
+        0.42,
+        0.75,
+        0.92,
+        0.48,
+        0.58,
+        0.88,
+        0.5
+      ],
+      "minimum_scale": 0.35,
+      "minimum_scale_ratio": 2,
+      "maximum_scale_ratio": 2.5
+    },
+    "ridge_prior_selection": {
+      "candidate_tau2": [
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.4,
+        0.5
+      ],
+      "center_half_width_min": 2,
+      "maximum_half_width_max": 7.5,
+      "probability": 0.95,
+      "selection_rule": "largest_passing",
+      "expected_tau2": 0.25
+    },
+    "n_chains": 4,
+    "workers": 2,
+    "initial_profiles": [
+      "moment_centered",
+      "moment_narrow",
+      "moment_wide",
+      "moment_shape_stress"
+    ],
+    "initialization_contract": {
+      "pilot": "known_law_first_absolute_moment",
+      "expected_standardized_absolute_moment": 0.733220589537895,
+      "uses_observed_response": true,
+      "uses_population_endpoint_anchors": true,
+      "uses_population_endpoint_curves": false,
+      "width_multipliers": [
+        1,
+        0.55,
+        1.45,
+        0.75
+      ],
+      "shape_stress_basis_indices": [
+        2,
+        7
+      ],
+      "shape_stress_coefficients": [
+        0.35,
+        -0.3
+      ],
+      "minimum_initial_width": 0.05,
+      "target_changed": false
+    },
+    "mcmc_control": {
+      "n_burn": 1500,
+      "n_mcmc": 6000,
+      "thin": 1,
+      "kernel_repetitions": 2,
+      "store_latent_draws": false,
+      "verbose": false
+    }
+  },
+  "dlm": {
+    "seed": 202608012,
+    "T": 1200,
+    "time_grid": "i_over_T",
+    "time_horizon": [
+      0,
+      1
+    ],
+    "missing_windows": [
+      [
+        0.345,
+        0.354
+      ],
+      [
+        0.695,
+        0.704
+      ]
+    ],
+    "expected_missing": 22,
+    "expected_observed": 1178,
+    "scale_contract": {
+      "baseline": 0.55,
+      "amplitude": 0.22,
+      "phase": -0.5,
+      "minimum_scale": 0.3,
+      "minimum_scale_ratio": 2,
+      "maximum_scale_ratio": 2.6
+    },
+    "seasonal_contract": {
+      "period": 300,
+      "harmonic": 1,
+      "mean_amplitude": 0.62,
+      "mean_phase": 0.25,
+      "expected_cycles": 4,
+      "evolution_variance": 1e-06
+    },
+    "initial_state": [
+      0.15,
+      0.6
+    ],
+    "evolution_prior_selection": {
+      "candidate_initial_level_variance": [
+        0.5,
+        1,
+        2
+      ],
+      "candidate_initial_slope_variance": [
+        0.1,
+        0.25,
+        0.5
+      ],
+      "candidate_q_level": [
+        0.01,
+        0.02,
+        0.04
+      ],
+      "candidate_q_slope": [
+        0.02,
+        0.04,
+        0.09
+      ],
+      "initial_level_half_width_min": 1.75,
+      "initial_level_half_width_max": 2.25,
+      "terminal_level_half_width_max": 2.5,
+      "terminal_root_difference_sd_max": 1.75,
+      "terminal_slope_half_width_min": 0.75,
+      "terminal_slope_half_width_max": 1.25,
+      "probability": 0.95,
+      "selection_rule": "componentwise_largest_passing",
+      "expected_initial_level_variance": 1,
+      "expected_initial_slope_variance": 0.25,
+      "expected_q_level": 0.04,
+      "expected_q_slope": 0.09
+    },
+    "seasonal_prior_selection": {
+      "candidate_initial_variance": [
+        0.25,
+        0.5,
+        1,
+        2
+      ],
+      "coefficient_half_width_min": 1.75,
+      "coefficient_half_width_max": 2.25,
+      "probability": 0.95,
+      "selection_rule": "largest_passing",
+      "expected_initial_variance": 1
+    },
+    "initial_profiles": [
+      "default",
+      "oracle_centered",
+      "narrow",
+      "wide",
+      "trend_seasonal_stress"
+    ],
+    "n_chains": 5,
+    "workers": 2,
+    "mcmc_control": {
+      "n_burn": 2500,
+      "n_mcmc": 6000,
+      "thin": 1,
+      "backend": "cpp",
+      "store_state_draws": false,
+      "store_latent_draws": false,
+      "verbose": false
+    }
+  },
+  "preflight_gates": {
+    "minimum_expected_rare_tail_count": 10,
+    "static_design_rank": 8,
+    "static_projection_max_abs": 1e-10,
+    "static_gram_max_abs_error": 1e-10,
+    "fixed_horizon_covariance_max_abs_error": 1e-10,
+    "dynamic_projection_max_abs": 1e-10,
+    "seasonal_covariance_recursion_max_abs_error": 1e-10,
+    "dynamic_observability_rank": 4,
+    "minimum_expected_rare_tail_count_per_scale_quintile": 2
+  },
+  "diagnostics": {
+    "rhat_max": 1.01,
+    "bulk_ess_min": 1000,
+    "tail_ess_min": 1000,
+    "mcse_over_sd_max": 0.05,
+    "conditional_reference_relative_tolerance": 1e-07,
+    "R_cpp_absolute_tolerance": 1e-10,
+    "remote_width_ratio_threshold": 20,
+    "remote_endpoint_sd_threshold": 20,
+    "maximum_remote_draw_fraction": 0.01
+  },
+  "completion_policy": {
+    "schema_version": "rqrgibbs_oracle_tilt_diagnostic_aware_completion/1.0.0",
+    "policy_id": "oracle_tilt_v5_diagnostic_aware_completion_20260810",
+    "strict_diagnostics_role": "recorded_nonblocking_warning",
+    "strict_recovery_role": "recorded_nonblocking_warning",
+    "later_cells_continue_after_warning": true,
+    "reseed_prohibited": true,
+    "selective_extension_prohibited": true,
+    "threshold_relabeling_prohibited": true,
+    "all_completed_cells_retained": true,
+    "broad_illustration_suitability": {
+      "endpoint_rmse_over_oracle_width_max": 0.4,
+      "mean_width_ratio_min": 0.65,
+      "mean_width_ratio_max": 1.4,
+      "absolute_endpoint_bias_over_oracle_width_max": 0.3,
+      "scale_stratum_endpoint_rmse_over_local_width_max": 0.5,
+      "scale_stratum_width_contrast_relative_error_max": 0.4,
+      "dlm_seasonal_width_amplitude_ratio_min": 0.5,
+      "dlm_seasonal_width_amplitude_ratio_max": 1.5,
+      "dlm_seasonal_width_phase_error_max": 0.7
+    }
+  },
+  "recovery_gates": {
+    "endpoint_rmse_over_oracle_width_max": 0.2,
+    "mean_width_ratio_min": 0.85,
+    "mean_width_ratio_max": 1.2,
+    "endpoint_summary_joint_inclusion_role": "descriptive_only",
+    "static_edge_center_rmse_ratio_max": 2.5,
+    "absolute_endpoint_bias_over_oracle_width_max": 0.15,
+    "static_edge_fraction": 0.2,
+    "scale_stratum_endpoint_rmse_over_local_width_max": 0.25,
+    "scale_stratum_width_contrast_relative_error_max": 0.2,
+    "dlm_seasonal_width_amplitude_ratio_min": 0.75,
+    "dlm_seasonal_width_amplitude_ratio_max": 1.25,
+    "dlm_seasonal_width_phase_error_max": 0.35
+  },
+  "benchmark": {
+    "fixed_design_target": "SH",
+    "dlm_target": "SH",
+    "chain": 1,
+    "maximum_elapsed_seconds": 7200,
+    "maximum_worker_bytes": 2147483648
+  },
+  "resources": {
+    "minimum_free_bytes": 21474836480,
+    "maximum_processes": 7,
+    "maximum_R_processes": 3,
+    "maximum_threads": 8,
+    "maximum_sampled_rss_kib": 12582912,
+    "maximum_execute_seconds": 28800,
+    "monitor_interval_seconds": 0.2
+  },
+  "interpretation": {
+    "response_likelihood": false,
+    "response_predictive_draws": false,
+    "population_oracle_tilts": true,
+    "cornish_fisher_used": false,
+    "simulation_study": false,
+    "single_dataset_illustration": true,
+    "historical_v1_v4_evidence_mutated": false,
+    "automatic_manuscript_promotion": false
+  }
+}

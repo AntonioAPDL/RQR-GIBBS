@@ -23,7 +23,9 @@ arg_value <- function(prefix, default = NULL) {
 evidence_dir <- normalizePath(
   arg_value(
     "--evidence-dir=",
-    file.path(repo_root, "figures", "data", "oracle_tilt_c095_v3")
+    file.path(
+      repo_root, "figures", "data", "oracle_tilt_c095_v5_exact_delta"
+    )
   ),
   winslash = "/", mustWork = TRUE
 )
@@ -58,11 +60,54 @@ if (any(!file.exists(paths)) ||
 receipt <- jsonlite::read_json(
   file.path(evidence_dir, "evidence_receipt.json"), simplifyVector = TRUE
 )
+v3_schema <- "rqrgibbs_oracle_tilt_evidence/3.2.0"
+v5_schema <- "rqrgibbs_oracle_tilt_evidence/5.1.0"
+if (!receipt$schema_version %in% c(v3_schema, v5_schema)) {
+  oti_stop("The compact evidence schema is not authorized for rendering.")
+}
 if (!isTRUE(receipt$manuscript_illustration_evidence_eligible) ||
-    !isTRUE(receipt$all_cells_accepted_for_illustration) ||
     !isTRUE(receipt$exact_population_oracle_tilts) ||
     isTRUE(receipt$cornish_fisher_used)) {
   oti_stop("The evidence receipt does not authorize figure rendering.")
+}
+if (identical(receipt$schema_version, v3_schema)) {
+  if (!isTRUE(receipt$all_cells_accepted_for_illustration)) {
+    oti_stop("The historical version-3 evidence is not fully accepted.")
+  }
+} else {
+  expected_v5 <- c(
+    identical(
+      receipt$source_commit,
+      "24065941c44a836d2f385b9fe4cf28fcd18d08bd"
+    ),
+    identical(
+      receipt$config_sha256,
+      "e0a603d05e01aecc8f6402d3303d90f62de20b4cdee1fa69f7118419b438f893"
+    ),
+    identical(
+      receipt$runtime_tree_digest,
+      "20ca720b6d0874b11cdab342fcdfddd9be3c271fe81c5724ea6c3ca43a9c3614"
+    ),
+    identical(receipt$oracle_schema, "rqrgibbs_interval_oracle/2.0.0"),
+    identical(
+      receipt$tilt_definition,
+      "conditional_retained_mean_minus_population_mean"
+    ),
+    identical(as.integer(receipt$target_cells), 6L),
+    identical(as.integer(receipt$completed_chains), 27L),
+    identical(as.integer(receipt$strict_pass_cells), 5L),
+    identical(as.integer(receipt$diagnostic_warning_cells), 1L),
+    isTRUE(receipt$all_cells_hard_computational_pass),
+    identical(receipt$all_cells_strict_pass, FALSE),
+    identical(receipt$strict_diagnostic_thresholds_relabelled, FALSE),
+    identical(receipt$reseeded_or_selectively_extended, FALSE),
+    identical(receipt$legacy_oracle_schemas_authorized, FALSE),
+    identical(receipt$response_predictive_analysis, FALSE),
+    identical(receipt$simulation_study, FALSE)
+  )
+  if (!all(expected_v5)) {
+    oti_stop("The corrected version-5 evidence contract is inconsistent.")
+  }
 }
 curves <- utils::read.csv(
   file.path(evidence_dir, "fit_curves.csv"), stringsAsFactors = FALSE
@@ -83,6 +128,9 @@ cell_key <- function(x) paste(x$family, x$target, sep = "/")
 if (!setequal(cell_key(unique(curves[c("family", "target")])),
               cell_key(required_cells)) ||
     !setequal(cell_key(unique(errors[c("family", "target")])),
+              cell_key(required_cells)) ||
+    nrow(summary) != 6L ||
+    !setequal(cell_key(summary[c("family", "target")]),
               cell_key(required_cells))) {
   oti_stop("Figure evidence does not contain the six required cells.")
 }
@@ -138,27 +186,40 @@ for (family in names(figure_specs)) {
 }
 
 family_label <- ifelse(
-  summary$family == "fixed_design", "Fixed design", "Dynamic linear roots"
+  summary$family == "fixed_design", "Fixed design", "Dynamic roots"
 )
-allowed_dispositions <- c("strict_pass", "accepted_revised_tolerance")
-if (!"promotion_disposition" %in% names(summary) ||
-    !all(summary$promotion_disposition %in% allowed_dispositions) ||
-    sum(summary$promotion_disposition == "accepted_revised_tolerance") != 1L ||
+if (identical(receipt$schema_version, v3_schema)) {
+  allowed_dispositions <- c("strict_pass", "accepted_revised_tolerance")
+  disposition <- summary$promotion_disposition
+  warning_disposition <- "accepted_revised_tolerance"
+  warning_label <- "Accepted (0.21)"
+} else {
+  allowed_dispositions <- c("strict_pass", "diagnostic_aware_pass")
+  disposition <- summary$disposition
+  warning_disposition <- "diagnostic_aware_pass"
+  warning_label <- "Diagnostic-aware"
+  if (!all(summary$hard_computational_pass) ||
+      !all(summary$broad_recovery_pass) ||
+      !all(summary$broad_heterogeneity_pass) ||
+      !all(summary$completion_eligible) ||
+      !all(summary$manuscript_illustration_evidence_eligible) ||
+      sum(summary$diagnostic_warning_count) != 5L) {
+    oti_stop("The version-5 six-cell completion evidence is invalid.")
+  }
+}
+if (length(disposition) != nrow(summary) ||
+    !all(disposition %in% allowed_dispositions) ||
+    sum(disposition == warning_disposition) != 1L ||
     !identical(
       paste(
-        summary$family[
-          summary$promotion_disposition == "accepted_revised_tolerance"
-        ],
-        summary$target[
-          summary$promotion_disposition == "accepted_revised_tolerance"
-        ], sep = "/"
+        summary$family[disposition == warning_disposition],
+        summary$target[disposition == warning_disposition], sep = "/"
       ), "dlm/SH"
     )) {
-  oti_stop("The revised six-cell illustration disposition is invalid.")
+  oti_stop("The six-cell illustration disposition is invalid.")
 }
 disposition_label <- ifelse(
-  summary$promotion_disposition == "strict_pass",
-  "Strict", "Accepted (0.21)"
+  disposition == "strict_pass", "Strict", warning_label
 )
 rows <- sprintf(
   "%s & %s & %.3f & %.3f & %.3f & %.3f & %s \\\\",
@@ -186,6 +247,8 @@ writeLines(
 )
 written <- c(written, table_path)
 manifest_out <- oti_file_hashes(written, repo_root)
+manifest_out$evidence_schema <- receipt$schema_version
+manifest_out$evidence_source_commit <- receipt$source_commit
 write.csv(
   manifest_out,
   file.path(output_dir, "oracle_tilt_c095_figure_manifest.csv"),

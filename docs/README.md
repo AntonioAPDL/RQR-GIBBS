@@ -6,6 +6,37 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/rqr_loss_exposition_audit_20260811.md` records the compact abstract
+  contract, the loss-first presentation, the exact piecewise/check-loss
+  equivalence, and the separation among target content, endpoint
+  interpretation, and the generalized-Bayes learning rate.
+- `audits/bayesian_manuscript_language_audit_20260811.md` records the complete
+  main-text and supplement terminology audit, the Bayesian-language contract,
+  and the automated guard that preserves the generalized-posterior versus
+  response-likelihood distinction.
+
+- `implementation_notes/cornish_fisher_main_text_restoration_20260810.md`
+  records the mathematical, editorial, testing, and arXiv-source contract for
+  restoring the first-order CF diagnostic figure and population comparison
+  table to the main article without changing any fitted target or simulation.
+- `audits/cornish_fisher_main_text_restoration_reconciliation_20260810.md`
+  records the implementation reconciliation, validation matrix, arXiv source
+  check, and evidence boundary for that restoration.
+- `audits/oracle_tilt_c095_v5_promotion_reconciliation_20260810.md`
+  records the exact V5 source/runtime/configuration identities, 27-chain
+  completion, five strict cells, the diagnostic-aware DLM/SH warnings,
+  resource closeout, compact evidence, and manuscript-promotion decision.
+- `implementation_notes/exact_mean_tilt_oracle_and_v5_correction_protocol_20260810.md`
+  records the corrected conditional-retained-mean tilt definition, append-only
+  V5 illustration workflow, legacy isolation, and promotion gates.
+- `implementation_notes/oracle_mean_tilt_validation_v1_protocol_20260810.md`
+  defines the separate paired repeated-DGP validation for ridge fixed-design
+  roots and fixed-W dynamic roots. Its tracked execution remains disabled
+  until precision, resources, sentinels, and independent review are frozen.
+- `audits/exact_mean_tilt_v5_and_validation_source_readiness_20260810.md`
+  reconciles the implemented source contracts, completed no-fit/package gates,
+  and the heavy stages that remain deliberately unauthorized.
+
 - `audits/rqr_dlm_m02_recovery_validation_and_relaunch_20260808/` records
   the exact isolated runtime, passing 23-gate preflight, 15-gate reference
   suite, 900/900 production-path M02 diagnostics, fresh authorization hashes,
@@ -71,6 +102,11 @@ Current oracle-tilt implementation records:
 - `audits/oracle_tilt_c095_v3_static_mixing_reconciliation_20260801.md`
   diagnoses the failed default-start static RQR cell and records the selected
   data-derived, target-preserving moment initialization correction.
+- `audits/rqr_dlm_history_and_v5_diagnostic_aware_policy_20260810.md`
+  reconstructs the RQR-DLM mixing and infrastructure history used to freeze
+  the prospective V5 completion policy: hard computational defects still
+  stop, while unchanged strict diagnostic misses remain reported warnings and
+  cannot trigger reseeding, selective extension, or threshold relabeling.
 - `audits/oracle_tilt_c095_v2_validation_closeout_20260801.md` records the
   successful exact-source validation, all six strict-pass cells, compact
   evidence hashes, resource envelope, and manuscript-promotion decision.

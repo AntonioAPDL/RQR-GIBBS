@@ -7,9 +7,12 @@
 #' `M(z) = E[E 1(E <= z)]`.  The helper is intended for simulation design and
 #' endpoint-recovery audits; it is not used as a fitted model.
 #'
-#' @param family Innovation family. Supported values are `"gaussian"`,
-#'   `"laplace"`, `"student_t"`, `"centered_gamma"`,
-#'   `"asymmetric_laplace"`, and `"gaussian_mixture"`.
+#' @param family Innovation family. Supported canonical values are
+#'   `"gaussian"`, `"laplace"`, `"student_t"`, `"centered_gamma"`,
+#'   `"centered_exponential"`, `"asymmetric_laplace"`,
+#'   `"gaussian_mixture"`, `"centered_lognormal"`,
+#'   `"centered_standardized_lognormal"`, `"normal_t_mixture"`, and
+#'   `"standardized_skewed_normal_t_mixture"`.
 #' @param coverage_level Target interval coverage in `(0, 1)`.
 #' @param params Optional family parameters.
 #' @param tol Numerical tolerance for the scalar root search.
@@ -90,6 +93,397 @@ rqr_oracle_endpoints <- function(mu, sigma = 1, family, coverage_level, params =
     width = upper - lower,
     lower_root = roots$lower_root,
     upper_root = roots$upper_root
+  )
+}
+
+#' Certified fixed-content interval oracle
+#'
+#' Constructs a population certificate for the ordinary mean-preserving RQR
+#' interval, the equal-tailed interval, or the shortest contiguous interval.
+#' The recovery tilt is the conditional retained mean minus the population
+#' mean. It is fixed target metadata for a generalized-Bayes loss update, not a
+#' response-likelihood parameter.
+#'
+#' @param target One of `"RQR"`, `"ET"`, or `"SH"`.
+#' @param grid_size Odd deterministic profile-grid size used for independent
+#'   optimization checks.
+#' @inheritParams rqr_oracle_roots
+#' @return A versioned `rqr_interval_oracle` certificate, including the
+#'   target-defining probabilities, exact recovery tilt, numerical checks,
+#'   uniqueness flag, and detected minimizer set.
+#' @export
+rqr_interval_oracle <- function(
+    family, coverage_level, target = c("RQR", "ET", "SH"),
+    params = list(), tol = 1e-10, grid_size = 1601L) {
+  `%||%` <- function(a, b) if (is.null(a)) b else a
+  family <- tolower(gsub("-", "_", as.character(family)[1L]))
+  target <- match.arg(toupper(as.character(target)[1L]), c("RQR", "ET", "SH"))
+  c0 <- as.numeric(coverage_level)[1L]
+  if (!is.finite(c0) || c0 <= 0 || c0 >= 1) {
+    stop("coverage_level must be a finite scalar in (0, 1).", call. = FALSE)
+  }
+  tol <- as.numeric(tol)[1L]
+  if (!is.finite(tol) || tol <= 0 || tol >= 0.01) {
+    stop("tol must be finite and in (0, 0.01).", call. = FALSE)
+  }
+  if (!is.numeric(grid_size) || length(grid_size) != 1L ||
+      is.na(grid_size) || !is.finite(grid_size) ||
+      grid_size != floor(grid_size) || grid_size < 101L ||
+      grid_size %% 2L != 1L || grid_size > .Machine$integer.max) {
+    stop("grid_size must be an odd finite integer of at least 101.", call. = FALSE)
+  }
+  grid_size <- as.integer(grid_size)
+  spec <- .rqr_oracle_family_spec(family, params %||% list())
+  upper_u <- 1 - c0
+  eps <- min(upper_u / 1000, max(1e-12, tol))
+  width_at <- function(u) as.numeric(spec$q(u + c0) - spec$q(u))
+
+  numerical_sh_u <- NA_real_
+  analytic_sh_u <- NA_real_
+  target_reference <- NULL
+  minimizer_set <- NULL
+  if (identical(target, "RQR")) {
+    target_reference <- rqr_oracle_certificate(
+      family, c0, params = params, tol = tol, grid_size = grid_size
+    )
+    retained_mean_balance <- function(u) {
+      lower <- spec$q(u)
+      upper <- spec$q(u + c0)
+      as.numeric(spec$M(upper) - spec$M(lower) - c0 * spec$mean)
+    }
+    root_grid <- seq(eps, upper_u - eps, length.out = grid_size)
+    balance_grid <- vapply(root_grid, retained_mean_balance, numeric(1L))
+    exact_index <- which(balance_grid == 0)
+    if (length(exact_index)) {
+      u <- root_grid[[exact_index[[which.min(abs(
+        root_grid[exact_index] - target_reference$lower_probability
+      ))]]]]
+    } else {
+      sign_change <- which(
+        balance_grid[-length(balance_grid)] * balance_grid[-1L] < 0
+      )
+      if (!length(sign_change)) {
+        stop(
+          "Could not bracket the retained-mean balance for the RQR oracle.",
+          call. = FALSE
+        )
+      }
+      nearest <- sign_change[[which.min(abs(
+        0.5 * (root_grid[sign_change] + root_grid[sign_change + 1L]) -
+          target_reference$lower_probability
+      ))]]
+      u <- stats::uniroot(
+        retained_mean_balance,
+        interval = root_grid[c(nearest, nearest + 1L)],
+        tol = .Machine$double.eps^0.75,
+        maxiter = 1000L
+      )$root
+    }
+    target_method <- "direct_retained_mean_balance_root"
+    unique_minimizer <- isTRUE(target_reference$unique_minimizer)
+    minimizer_set <- target_reference$minimizer_set
+  } else if (identical(target, "ET")) {
+    u <- upper_u / 2
+    target_method <- "equal_tail_probabilities"
+    unique_minimizer <- TRUE
+    minimizer_set <- data.frame(
+      lower_probability = u, objective = width_at(u),
+      stringsAsFactors = FALSE
+    )
+  } else {
+    grid <- seq(eps, upper_u - eps, length.out = grid_size)
+    widths <- vapply(grid, width_at, numeric(1L))
+    best <- which.min(widths)
+    lo <- grid[[max(1L, best - 1L)]]
+    hi <- grid[[min(grid_size, best + 1L)]]
+    numerical_sh_u <- if (lo < hi) {
+      stats::optimize(width_at, c(lo, hi), tol = tol)$minimum
+    } else {
+      grid[[best]]
+    }
+    if (identical(spec$family, "asymmetric_laplace")) {
+      analytic_sh_u <- spec$params$tau * upper_u
+      u <- analytic_sh_u
+      target_method <- "analytic_asymmetric_laplace_shortest_window"
+    } else {
+      u <- numerical_sh_u
+      target_method <- "deterministic_profile_shortest_window"
+    }
+    objective_tolerance <- max(100 * tol, 1e-10) *
+      max(1, abs(width_at(u)))
+    local <- c(
+      TRUE,
+      widths[2L:(grid_size - 1L)] <= widths[1L:(grid_size - 2L)] &
+        widths[2L:(grid_size - 1L)] <= widths[3L:grid_size],
+      TRUE
+    )
+    competing <- which(local & widths <= width_at(u) + objective_tolerance)
+    if (identical(spec$family, "asymmetric_laplace")) {
+      unique_minimizer <- TRUE
+      minimizer_set <- data.frame(
+        lower_probability = u, objective = width_at(u),
+        stringsAsFactors = FALSE
+      )
+    } else {
+      unique_minimizer <- length(competing) == 1L
+      minimizer_set <- data.frame(
+        lower_probability = grid[competing], objective = widths[competing],
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+
+  lower <- as.numeric(spec$q(u))
+  upper <- as.numeric(spec$q(u + c0))
+  if (!is.finite(lower) || !is.finite(upper) || lower >= upper) {
+    stop("The selected oracle does not have finite ordered roots.", call. = FALSE)
+  }
+  content <- as.numeric(spec$F(upper) - spec$F(lower))
+  truncated_first_moment <- as.numeric(spec$M(upper) - spec$M(lower))
+  conditional_retained_mean <- truncated_first_moment / c0
+  mean_tilt <- conditional_retained_mean - spec$mean
+  canonical_zero_tolerance <- max(100 * tol, 1e-12) *
+    max(1, sqrt(spec$second_moment))
+  if (abs(mean_tilt) <= canonical_zero_tolerance) mean_tilt <- 0
+
+  integration_cuts <- sort(unique(c(
+    lower,
+    (spec$kinks %||% numeric(0))[
+      (spec$kinks %||% numeric(0)) > lower &
+        (spec$kinks %||% numeric(0)) < upper
+    ],
+    upper
+  )))
+  numerical_pieces <- lapply(seq_len(length(integration_cuts) - 1L), function(ii) {
+    stats::integrate(
+      function(z) z * spec$d(z),
+      lower = integration_cuts[[ii]],
+      upper = integration_cuts[[ii + 1L]],
+      rel.tol = max(tol, .Machine$double.eps^0.75),
+      subdivisions = 1000L,
+      stop.on.error = TRUE
+    )
+  })
+  numerical_truncated_first_moment <- sum(vapply(
+    numerical_pieces, `[[`, numeric(1L), "value"
+  ))
+  estimated_quadrature_error <- sum(vapply(
+    numerical_pieces, `[[`, numeric(1L), "abs.error"
+  ))
+  numerical_moment_gap <-
+    numerical_truncated_first_moment - truncated_first_moment
+
+  interior <- u > eps && u < upper_u - eps
+  density_residual <- if (identical(target, "SH") && interior) {
+    as.numeric(spec$d(lower) - spec$d(upper))
+  } else {
+    NA_real_
+  }
+  sh_optimizer_gap <- if (identical(target, "SH") &&
+      is.finite(numerical_sh_u)) {
+    as.numeric(u - numerical_sh_u)
+  } else {
+    NA_real_
+  }
+  distribution_contract <- list(
+    family = spec$family,
+    params = spec$params,
+    mean = spec$mean,
+    second_moment = spec$second_moment,
+    support = spec$support
+  )
+  solver_contract <- list(
+    schema_version = "rqrgibbs_interval_oracle/2.0.0",
+    tolerance = tol,
+    grid_size = grid_size,
+    target_method = target_method,
+    numerical_moment_reference = "split_adaptive_quadrature",
+    numerical_error_role = "estimated_not_rigorous_bound",
+    tilt_definition =
+      "conditional_retained_mean_minus_population_mean"
+  )
+  certificate_contract <- list(
+    distribution = distribution_contract,
+    coverage_level = c0,
+    target = target,
+    lower_probability = u,
+    upper_probability = u + c0,
+    lower_root = lower,
+    upper_root = upper,
+    truncated_first_moment = truncated_first_moment,
+    conditional_retained_mean = conditional_retained_mean,
+    population_mean = spec$mean,
+    mean_tilt = mean_tilt,
+    unique_minimizer = unique_minimizer,
+    minimizer_lower_probabilities = minimizer_set$lower_probability,
+    target_method = target_method,
+    solver = solver_contract
+  )
+  out <- c(certificate_contract, list(
+    schema_version = solver_contract$schema_version,
+    midpoint = 0.5 * (lower + upper),
+    width = upper - lower,
+    content = content,
+    content_residual = content - c0,
+    retained_mean_residual =
+      truncated_first_moment - c0 * (spec$mean + mean_tilt),
+    density_residual = density_residual,
+    analytic_shortest_lower_probability = analytic_sh_u,
+    numerical_shortest_lower_probability = numerical_sh_u,
+    shortest_optimizer_gap = sh_optimizer_gap,
+    interior_target = interior,
+    unique_minimizer = unique_minimizer,
+    minimizer_set = minimizer_set,
+    numerical_truncated_first_moment =
+      numerical_truncated_first_moment,
+    numerical_moment_gap = numerical_moment_gap,
+    estimated_quadrature_error = estimated_quadrature_error,
+    quadrature_error_is_rigorous_bound = FALSE,
+    tilt_definition = solver_contract$tilt_definition,
+    uses_cornish_fisher = FALSE,
+    distribution_digest = digest::digest(
+      distribution_contract, algo = "sha256", serialize = TRUE
+    ),
+    solver_digest = digest::digest(
+      solver_contract, algo = "sha256", serialize = TRUE
+    ),
+    certificate_digest = digest::digest(
+      certificate_contract, algo = "sha256", serialize = TRUE
+    ),
+    rqr_reference = target_reference
+  ))
+  class(out) <- c("rqr_interval_oracle", "list")
+  out
+}
+
+#' Transform a fixed-content oracle to location-scale endpoints
+#'
+#' @param location Location vector for the innovation law.
+#' @param scale Positive response-scale vector.
+#' @param oracle A certificate returned by [rqr_interval_oracle()].
+#' @return A data frame of target endpoints, retained means, and fixed tilts.
+#' @export
+rqr_interval_oracle_endpoints <- function(location, scale = 1, oracle) {
+  if (!inherits(oracle, "rqr_interval_oracle") ||
+      !identical(
+        oracle$tilt_definition,
+        "conditional_retained_mean_minus_population_mean"
+      )) {
+    stop("oracle must be a current rqr_interval_oracle certificate.", call. = FALSE)
+  }
+  location <- as.numeric(location)
+  scale <- as.numeric(scale)
+  if (length(scale) == 1L) scale <- rep(scale, length(location))
+  if (!length(location) || length(location) != length(scale) ||
+      any(!is.finite(location)) || any(!is.finite(scale)) ||
+      any(scale <= 0)) {
+    stop("location and scale must be compatible; scale must be positive.", call. = FALSE)
+  }
+  lower <- location + scale * oracle$lower_root
+  upper <- location + scale * oracle$upper_root
+  population_mean <- location + scale * oracle$population_mean
+  conditional_retained_mean <-
+    location + scale * oracle$conditional_retained_mean
+  data.frame(
+    lower = lower,
+    upper = upper,
+    midpoint = 0.5 * (lower + upper),
+    width = upper - lower,
+    population_mean = population_mean,
+    conditional_retained_mean = conditional_retained_mean,
+    mean_tilt = scale * oracle$mean_tilt,
+    target = oracle$target,
+    coverage_level = oracle$coverage_level,
+    oracle_digest = oracle$certificate_digest,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Exact DGP content of candidate interval endpoints
+#'
+#' This evaluates content under a declared location-scale data-generating law.
+#' It does not construct response-predictive draws from an RQR fit.
+#'
+#' @param lower,upper Candidate ordered endpoint vectors.
+#' @param location,scale DGP location and positive scale vectors.
+#' @inheritParams rqr_oracle_roots
+#' @return Numeric conditional-content values.
+#' @export
+rqr_oracle_conditional_content <- function(
+    lower, upper, location = 0, scale = 1,
+    family, params = list()) {
+  values <- list(
+    lower = as.numeric(lower), upper = as.numeric(upper),
+    location = as.numeric(location), scale = as.numeric(scale)
+  )
+  n <- max(vapply(values, length, integer(1L)))
+  if (!n || any(!vapply(values, function(x) length(x) %in% c(1L, n), logical(1L)))) {
+    stop("lower, upper, location, and scale must have compatible lengths.", call. = FALSE)
+  }
+  values <- lapply(values, rep_len, length.out = n)
+  if (any(!is.finite(unlist(values, use.names = FALSE))) ||
+      any(values$lower >= values$upper) || any(values$scale <= 0)) {
+    stop("Candidate endpoints must be finite and ordered; scale must be positive.", call. = FALSE)
+  }
+  spec <- .rqr_oracle_family_spec(
+    tolower(gsub("-", "_", as.character(family)[1L])), params
+  )
+  z_lower <- (values$lower - values$location) / values$scale
+  z_upper <- (values$upper - values$location) / values$scale
+  as.numeric(spec$F(z_upper) - spec$F(z_lower))
+}
+
+#' Exact DGP mean-tilted RQR risk
+#'
+#' Evaluates the expected fixed-rate mean-tilted RQR loss under a declared
+#' location-scale data-generating law. This is a population loss calculation,
+#' not a response log score or likelihood evaluation.
+#'
+#' @param mean_tilt Fixed response-scale target tilt.
+#' @inheritParams rqr_oracle_conditional_content
+#' @inheritParams rqr_oracle_roots
+#' @return A data frame with ordinary, linear-tilt, and total expected loss.
+#' @export
+rqr_oracle_tilted_risk <- function(
+    lower, upper, coverage_level, mean_tilt = 0,
+    location = 0, scale = 1, family, params = list()) {
+  values <- list(
+    lower = as.numeric(lower), upper = as.numeric(upper),
+    mean_tilt = as.numeric(mean_tilt), location = as.numeric(location),
+    scale = as.numeric(scale)
+  )
+  n <- max(vapply(values, length, integer(1L)))
+  if (!n || any(!vapply(values, function(x) length(x) %in% c(1L, n), logical(1L)))) {
+    stop("Risk arguments must have compatible lengths.", call. = FALSE)
+  }
+  values <- lapply(values, rep_len, length.out = n)
+  if (any(!is.finite(unlist(values, use.names = FALSE))) ||
+      any(values$lower >= values$upper) || any(values$scale <= 0)) {
+    stop("Risk endpoints must be finite and ordered; scale must be positive.", call. = FALSE)
+  }
+  c0 <- rqr_constants(coverage_level)$alpha
+  spec <- .rqr_oracle_family_spec(
+    tolower(gsub("-", "_", as.character(family)[1L])), params
+  )
+  z_lower <- (values$lower - values$location) / values$scale
+  z_upper <- (values$upper - values$location) / values$scale
+  ordinary <- vapply(seq_len(n), function(ii) {
+    values$scale[[ii]]^2 * .rqr_oracle_moment_risk(
+      spec, z_lower[[ii]], z_upper[[ii]], c0
+    )
+  }, numeric(1L))
+  population_mean <- values$location + values$scale * spec$mean
+  linear_tilt <- c0 * values$mean_tilt *
+    (values$lower + values$upper - 2 * population_mean)
+  data.frame(
+    ordinary_product_check_risk = ordinary,
+    linear_tilt_expectation = linear_tilt,
+    mean_tilted_risk = ordinary - linear_tilt,
+    conditional_content = rqr_oracle_conditional_content(
+      values$lower, values$upper, values$location, values$scale,
+      family = family, params = params
+    ),
+    stringsAsFactors = FALSE
   )
 }
 
@@ -461,27 +855,105 @@ rqr_oracle_certificate <- function(
   }
   if (family == "asymmetric_laplace") {
     tau <- as.numeric(params$tau %||% params$p %||% 0.25)[1L]
-    scale <- as.numeric(params$scale %||% 1)[1L]
-    if (!is.finite(tau) || tau <= 0 || tau >= 1 || !is.finite(scale) || scale <= 0) {
+    raw_scale <- as.numeric(params$scale %||% 1)[1L]
+    variance_standardized <- isTRUE(
+      params$variance_standardized %||% FALSE
+    )
+    if (!is.finite(tau) || tau <= 0 || tau >= 1 ||
+        !is.finite(raw_scale) || raw_scale <= 0) {
       stop("asymmetric_laplace tau must be in (0,1) and scale must be positive.", call. = FALSE)
     }
-    raw_mean <- scale * (1 - 2 * tau) / (tau * (1 - tau))
+    raw_mean <- raw_scale * (1 - 2 * tau) / (tau * (1 - tau))
+    raw_variance <- raw_scale^2 *
+      (1 - 2 * tau + 2 * tau^2) / (tau^2 * (1 - tau)^2)
+    raw_second_moment <- raw_variance + raw_mean^2
+    normalization_scale <- if (variance_standardized) {
+      sqrt(raw_variance)
+    } else {
+      1
+    }
     rho <- function(z) z * (tau - as.numeric(z < 0))
-    d_raw <- function(z) tau * (1 - tau) / scale * exp(-rho(z / scale))
-    F_raw <- function(z) ifelse(z < 0, tau * exp((1 - tau) * z / scale), 1 - (1 - tau) * exp(-tau * z / scale))
-    q_raw <- function(p) ifelse(p < tau, scale * log(p / tau) / (1 - tau), -scale * log((1 - p) / (1 - tau)) / tau)
-    d <- function(x) d_raw(x + raw_mean)
+    d_raw <- function(z) {
+      tau * (1 - tau) / raw_scale * exp(-rho(z / raw_scale))
+    }
+    F_raw <- function(z) {
+      ifelse(
+        z < 0,
+        tau * exp((1 - tau) * z / raw_scale),
+        1 - (1 - tau) * exp(-tau * z / raw_scale)
+      )
+    }
+    q_raw <- function(p) {
+      ifelse(
+        p < tau,
+        raw_scale * log(p / tau) / (1 - tau),
+        -raw_scale * log((1 - p) / (1 - tau)) / tau
+      )
+    }
+    M_raw <- function(z) {
+      z <- as.numeric(z)
+      probability <- F_raw(z)
+      out <- ifelse(
+        z < 0,
+        probability * (z - raw_scale / (1 - tau)),
+        raw_mean - (1 - tau) * exp(-tau * z / raw_scale) *
+          (z + raw_scale / tau)
+      )
+      out[is.infinite(z) & z < 0] <- 0
+      out[is.infinite(z) & z > 0] <- raw_mean
+      out
+    }
+    M2_raw <- function(z) {
+      z <- as.numeric(z)
+      probability <- F_raw(z)
+      out <- ifelse(
+        z < 0,
+        probability * (
+          z^2 - 2 * raw_scale * z / (1 - tau) +
+            2 * raw_scale^2 / (1 - tau)^2
+        ),
+        raw_second_moment -
+          (1 - tau) * exp(-tau * z / raw_scale) * (
+            z^2 + 2 * raw_scale * z / tau +
+              2 * raw_scale^2 / tau^2
+          )
+      )
+      out[is.infinite(z) & z < 0] <- 0
+      out[is.infinite(z) & z > 0] <- raw_second_moment
+      out
+    }
+    to_raw <- function(x) raw_mean + normalization_scale * as.numeric(x)
+    F <- function(x) F_raw(to_raw(x))
+    d <- function(x) normalization_scale * d_raw(to_raw(x))
+    q <- function(p) (q_raw(p) - raw_mean) / normalization_scale
+    M <- function(x) {
+      raw_x <- to_raw(x)
+      (M_raw(raw_x) - raw_mean * F_raw(raw_x)) /
+        normalization_scale
+    }
+    M2 <- function(x) {
+      raw_x <- to_raw(x)
+      (
+        M2_raw(raw_x) - 2 * raw_mean * M_raw(raw_x) +
+          raw_mean^2 * F_raw(raw_x)
+      ) / normalization_scale^2
+    }
     return(list(
       family = "asymmetric_laplace", d = d,
-      F = function(z) F_raw(z + raw_mean),
-      q = function(p) q_raw(p) - raw_mean,
-      M = numeric_moment(d, -Inf, Inf, 1),
-      M2 = numeric_moment(d, -Inf, Inf, 2),
+      F = F, q = q, M = M, M2 = M2,
       mean = 0,
-      second_moment = scale^2 *
-        (1 - 2 * tau + 2 * tau^2) / (tau^2 * (1 - tau)^2),
+      second_moment = raw_variance / normalization_scale^2,
       support = c(-Inf, Inf),
-      params = list(tau = tau, scale = scale, center = raw_mean)
+      kinks = -raw_mean / normalization_scale,
+      params = list(
+        tau = tau,
+        scale = raw_scale,
+        center = raw_mean,
+        raw_mean = raw_mean,
+        raw_sd = sqrt(raw_variance),
+        normalization_scale = normalization_scale,
+        variance_standardized = variance_standardized
+      )
     ))
   }
   if (family == "gaussian_mixture") {

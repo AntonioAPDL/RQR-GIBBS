@@ -1,0 +1,17 @@
+{
+  "schema_version": "rqrgibbs_oracle_tilt_publication/5.1.0",
+  "mode": "execute",
+  "started_at_utc": "2026-08-10 19:49:00 UTC",
+  "repository": {
+    "branch": "main",
+    "commit": "24065941c44a836d2f385b9fe4cf28fcd18d08bd",
+    "clean": true,
+    "status_short": []
+  },
+  "source_commit": "24065941c44a836d2f385b9fe4cf28fcd18d08bd",
+  "config_sha256": "e0a603d05e01aecc8f6402d3303d90f62de20b4cdee1fa69f7118419b438f893",
+  "runtime_tree_digest": "20ca720b6d0874b11cdab342fcdfddd9be3c271fe81c5724ea6c3ca43a9c3614",
+  "exact_runtime_bound": true,
+  "resumed": false,
+  "interpretation": "Single-data interval-root generalized-posterior illustration; not a response likelihood, response-predictive analysis, or repeated-sample simulation study."
+}

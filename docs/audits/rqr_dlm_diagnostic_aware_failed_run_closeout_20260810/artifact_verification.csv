@@ -1,0 +1,5 @@
+"wave_id","manifest_entries","verified_entries","all_verified","manifest_sha256"
+"static_gaussian_T200__target0200__sentinel",208,208,TRUE,"efaebb3c8e6a7cb20c28d2bfad28945bbb465437baca54609d9446283f83da13"
+"local_level_gaussian_T200__target0200__sentinel",233,233,TRUE,"e5d0fac9629f95bea37d01358d896085323d11b4d6d1526d1e657c871a096052"
+"local_level_skewed_T200__target0200__sentinel",312,312,TRUE,"f30b8c20e39afc88632ef2d7191a3dfbdb41789e191a64dd65dcfec071967609"
+"trend_seasonal_gaussian_T200__target0200__sentinel",161,161,TRUE,"eb8a9a86218db5c41452263617d2f0ca1d6b4f89c641b922c6eeb726f736588c"

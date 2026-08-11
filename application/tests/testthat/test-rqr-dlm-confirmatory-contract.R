@@ -493,6 +493,7 @@ test_that("confirmatory contract imports Output-15 exactly and stays closed", {
     contract$config$schedules$fixed_design_rqr
   )
   expect_identical(contract$config$resources$threads_per_worker, 1L)
+  expect_identical(contract$config$resources$per_worker_memory_GiB, 2.0)
   expect_identical(
     contract$config$resources$sampled_process_group_thread_ceiling, 4L
   )
@@ -944,7 +945,8 @@ test_that("execution publishes diagnostic failures without duplicate RDS reads",
     runner, fixed = TRUE
   )
   diagnostic_stop <- grep(
-    "if (!all(diagnostics$pass)) {", runner, fixed = TRUE
+    "if (frozen_diagnostic_failure || operational_activity_failure) {",
+    runner, fixed = TRUE
   )
   expect_length(compact_assignment, 1L)
   expect_length(diagnostic_stop, 1L)
@@ -1528,11 +1530,13 @@ test_that("compact M02 diagnostics serialize every consumed RNG stream", {
   )
   expect_identical(
     object$schema_version,
-    "rqrgibbs_dlm_compact_mcmc_diagnostics/1.2.0"
+    "rqrgibbs_dlm_compact_mcmc_diagnostics/1.3.0"
   )
   expect_identical(object$rng_bindings$task_key, keys)
   expect_identical(nrow(object$rng_bindings), 16L)
   expect_true(object$diagnostic_pass)
+  expect_true(object$operational_activity_pass)
+  expect_length(object$operational_sidecars, 4L)
   expect_true(object$exact_refit_inputs_bound)
   expect_false(object$response_likelihood)
 
@@ -1540,6 +1544,52 @@ test_that("compact M02 diagnostics serialize every consumed RNG stream", {
   on.exit(unlink(path, force = TRUE), add = TRUE)
   saveRDS(object, path, compress = "xz")
   expect_identical(readRDS(path), object)
+})
+
+test_that("replica exchange separates exact structure from activity", {
+  environment <- load_confirmatory_helpers()
+  contract <- confirmatory_contract(environment)
+  expected <- contract$config$frozen_tuning$fixed_design_replica_exchange
+  model_spec <- list(
+    replica_exchange_enabled = TRUE,
+    replica_exchange = list(
+      inverse_temperatures = expected$inverse_temperatures
+    )
+  )
+  attempts <- c(10L, 10L, 10L)
+  accepts <- c(0L, 3L, 2L)
+  diagnostics <- list(
+    replica_swap_attempts = attempts,
+    replica_swap_accepts = accepts,
+    replica_swap_acceptance = accepts / attempts,
+    replica_cold_label_trace = rep(1L, 12L),
+    replica_round_trips = rep(0L, 4L)
+  )
+  observed <- environment$rqr_confirm_replica_exchange_assessment(
+    model_spec, diagnostics, expected, TRUE
+  )
+  expect_true(observed$structural_pass)
+  expect_false(observed$activity_pass)
+  expect_setequal(
+    observed$activity_failures,
+    c(
+      "zero_acceptance_adjacent_pair", "single_cold_label_visited",
+      "zero_complete_round_trips"
+    )
+  )
+  expect_false(environment$rqr_confirm_operational_activity_pass(
+    "M03", list(observed)
+  ))
+
+  diagnostics$replica_swap_acceptance[[2L]] <- 0.9
+  invalid <- environment$rqr_confirm_replica_exchange_assessment(
+    model_spec, diagnostics, expected, TRUE
+  )
+  expect_false(invalid$structural_pass)
+  expect_true(
+    "inconsistent_acceptance_fractions" %in%
+      invalid$structural_failures
+  )
 })
 
 test_that("canonical DGPs separate state, response, and oracle quantities", {
@@ -2743,63 +2793,79 @@ test_that("diagnostics require time-local terminal and future estimands", {
   expect_identical(conditional, matrix(c(1, 1, 2, 2), 2L, 2L))
 })
 
-test_that("M02 diagnostics thin training and future draws identically", {
+test_that("M02 production thinning aligns training terminal and future draws", {
   environment <- load_confirmatory_helpers()
   contract <- confirmatory_contract(environment)
   ledger <- small_confirmatory_ledger(environment, contract)
   generated <- environment$rqr_confirm_generate_dgp(
     contract, "S01", 1L, ledger
   )
+  policy <- environment$rqr_confirm_method_transition_policy(
+    contract, "M02"
+  )
+  schedule <- environment$rqr_confirm_method_schedule(
+    contract, "M02", "standard"
+  )
+  expect_identical(policy$transition_multiplier, 2L)
+  expect_identical(schedule$retain, 8000L)
+
   model_bundle <- environment$rqr_confirm_model_bundle(generated)
   p <- length(model_bundle$training$m0)
-  T <- generated$T
-  draws <- 12L
-  state_array <- function(offset, n_draws = draws) {
-    output <- array(0, dim = c(p, T, n_draws))
-    for (draw in seq_len(n_draws)) {
-      output[, , draw] <- offset + draw / 100
+  raw_draws <- 8L
+  state_for_root <- function(sign = 1, draws = raw_draws) {
+    state <- array(0, dim = c(p, generated$T, draws))
+    for (draw in seq_len(draws)) {
+      state[1L, , draw] <- sign * draw
     }
-    output
+    state
   }
-  make_fit <- function(offset, n_draws = draws) {
+  exdqlm_fit <- function(state) {
     structure(
       list(
-        samp.theta = state_array(offset, n_draws),
+        samp.theta = state,
         model = list(FF = model_bundle$training$FF)
       ),
       class = "exdqlmMCMC"
     )
   }
   result <- list(
-    fits = list(make_fit(-1), make_fit(1)),
-    diagnostic_thin = 2L
+    fits = list(
+      exdqlm_fit(state_for_root(-1)),
+      exdqlm_fit(state_for_root(1))
+    ),
+    diagnostic_thin = policy$transition_multiplier
   )
   extracted <- environment$rqr_confirm_scalar_draws(
     result, generated, contract, "M02"
   )
-  expect_equal(nrow(extracted), draws / 2L)
+  expected_draws <- seq.int(2L, raw_draws, by = 2L)
+  expect_identical(nrow(extracted), length(expected_draws))
   expect_identical(
     colnames(extracted),
     environment$rqr_confirm_diagnostic_schema(
       "M02", generated, contract
     )
   )
-  expect_true(all(is.finite(extracted)))
+  expect_equal(extracted[, "mean_lower"], -expected_draws)
+  expect_equal(extracted[, "terminal_lower"], -expected_draws)
+  expect_equal(extracted[, "future_h01_lower"], -expected_draws)
+  expect_equal(extracted[, "future_h20_upper"], expected_draws)
 
-  bad_endpoint <- result
-  bad_endpoint$fits[[2L]] <- make_fit(1, draws - 2L)
+  unequal_endpoints <- result
+  unequal_endpoints$fits[[2L]] <- exdqlm_fit(
+    state_for_root(1, draws = raw_draws - 1L)
+  )
   expect_error(
     environment$rqr_confirm_scalar_draws(
-      bad_endpoint, generated, contract, "M02"
+      unequal_endpoints, generated, contract, "M02"
     ),
     "identical raw training-draw dimensions"
   )
-
-  bad_thin <- result
-  bad_thin$diagnostic_thin <- 5L
+  indivisible_thin <- result
+  indivisible_thin$diagnostic_thin <- 3L
   expect_error(
     environment$rqr_confirm_scalar_draws(
-      bad_thin, generated, contract, "M02"
+      indivisible_thin, generated, contract, "M02"
     ),
     "divide the raw retained-draw count exactly"
   )

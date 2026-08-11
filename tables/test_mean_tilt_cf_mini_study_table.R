@@ -64,9 +64,58 @@ assert_true(
   identical(exponential$shortest_boundary, "lower"),
   "exponential shortest target is a boundary case"
 )
+expected <- data.frame(
+  dgp_id = c(
+    "normal", "gamma16", "gamma4", "lognormal", "exponential",
+    "beta_right", "beta_left"
+  ),
+  skewness = c(
+    0, 0.5, 1, 1.75018965506972, 2,
+    0.596284793999944, -0.596284793999944
+  ),
+  d_shortest = c(
+    -4.77415283434953e-09, -0.139715554010781,
+    -0.272727316161112, -0.322632068641998,
+    -0.402359478108525, -0.276779155185503, 0.27677916129714
+  ),
+  d_cf_shortest = c(
+    0, -0.14056885127409, -0.28113770254818,
+    -0.492044298649893, -0.562275405096361,
+    -0.167638137049559, 0.167638137049559
+  ),
+  d_equal_tailed = c(
+    0, -0.0466246371826502, -0.0917510930574674,
+    -0.128181031011528, -0.169292556509201,
+    -0.0690296872864341, 0.0690296872864351
+  ),
+  d_cf_equal_tailed = c(
+    0, -0.0468562837580301, -0.0937125675160602,
+    -0.164014766216631, -0.18742513503212,
+    -0.0558793790165198, 0.0558793790165198
+  ),
+  stringsAsFactors = FALSE
+)
+for (column in setdiff(names(expected), "dgp_id")) {
+  assert_close(
+    tab[[column]], expected[[column]], 5e-9,
+    paste("full population regression check for", column)
+  )
+}
+assert_close(
+  c(
+    tab$d_shortest[tab$dgp_id == "beta_right"],
+    tab$d_equal_tailed[tab$dgp_id == "beta_right"]
+  ),
+  -c(
+    tab$d_shortest[tab$dgp_id == "beta_left"],
+    tab$d_equal_tailed[tab$dgp_id == "beta_left"]
+  ),
+  1e-8, "reflected Beta oracle tilts reverse sign"
+)
 tex <- paste(readLines(result$tex, warn = FALSE), collapse = "\n")
 assert_true(
-  grepl("Population Cornish--Fisher tilt check", tex, fixed = TRUE),
+  grepl("Population accuracy of first-order Cornish--Fisher tilt anchors",
+        tex, fixed = TRUE),
   "caption states table purpose"
 )
 assert_true(
@@ -75,9 +124,19 @@ assert_true(
   "caption preserves claim boundary"
 )
 assert_true(
-  grepl("\\begin{tabular}{@{}l@{\\hspace{1.1em}}rrrrrrr@{}}",
+  grepl("\\begin{tabular}{@{}l@{\\hspace{0.8em}}rrrrrrr@{}}",
         tex, fixed = TRUE),
   "table uses natural-width first column"
+)
+assert_true(
+  grepl("\\multicolumn{3}{c}{Equal-tailed}", tex, fixed = TRUE) &&
+    grepl("\\multicolumn{3}{c}{Shortest-contiguous}", tex, fixed = TRUE),
+  "table groups exact and CF values by interval functional"
+)
+assert_true(
+  grepl("Exponential$^{\\dagger}$", tex, fixed = TRUE) &&
+    grepl("SH oracle at the lower support boundary", tex, fixed = TRUE),
+  "table identifies the boundary shortest-window case"
 )
 assert_true(
   !grepl("tabularx", tex, fixed = TRUE),

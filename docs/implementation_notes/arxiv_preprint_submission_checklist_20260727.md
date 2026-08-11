@@ -22,11 +22,13 @@ confirmatory simulation.
 
 ## Source package
 
-The main article uses `pdflatex`, `natbib`, and tracked PNG figures. The source
-package should include `main.tex`, `main.bbl`, `refs.bib`, the table input, the
-three main-text PNG figures, `SOURCE_MANIFEST.txt`, and `README.txt`. It should
-not include local PDFs, logs, aux files, caches, fitted models, or simulation
-outputs.
+The main article uses `pdflatex`, `natbib`, tracked deterministic PNG figures,
+tracked compact model-illustration PDFs, and one generated table input. The
+source package should include `main.tex`, `main.bbl`, `refs.bib`,
+`tables/mean_tilt_cf_mini_study.tex`, all five main-text figure assets,
+`SOURCE_MANIFEST.txt`, and `README.txt`. It should not include local PDFs other
+than the two figure assets used by `main.tex`, logs, aux files, caches, fitted
+models, or raw simulation outputs.
 
 Build and package the main source with:
 
@@ -60,6 +62,8 @@ Then inspect:
 - no missing included graphics or table inputs;
 - `main.bbl` exists and corresponds to the current `refs.bib`;
 - all included figures use relative paths and are present in the source zip;
+- the Cornish--Fisher figure and generated population table occur exactly once
+  in `main.tex` and are both present in the source zip;
 - the rendered PDF uses the fixed July 2026 date rather than `\today`;
 - the article does not report unapproved simulation results or imply a
   response-likelihood/posterior-predictive interpretation.

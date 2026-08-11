@@ -66,7 +66,11 @@ exdqlm namespace to match the pinned source for promotion eligibility.}
 
 \item{mcmc_control}{Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
 `verbose`, `progress_every`, `precision_beta`, `store_latent_draws`, and
-optional `root_label_control` and `kernel_repetitions`. The latter is a
+optional `root_label_control`, `kernel_repetitions`, and
+`replica_exchange`. The latter is an opt-in likelihood-tempered,
+alternating-adjacent replica-exchange kernel for fixed-rate ridge RQR;
+only draws from its inverse-temperature-one replica are retained. The
+cold target is unchanged. `kernel_repetitions` is a
 positive integer giving the number of complete, exact Gibbs transitions
 composed between recorded iterations; its default is one. Root-label
 control governs the complete-root swap probability and post-processing

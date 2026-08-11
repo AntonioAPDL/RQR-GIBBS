@@ -34,10 +34,36 @@ test_that("diagnostic-aware completion is explicit and separate", {
   expect_identical(
     applied$mcmc_control_overrides$M11,
     list(
-      component_scale_directional_interweave = TRUE,
-      component_scale_directional_sweeps = 1L
+      control = list(
+        component_scale_directional_interweave = TRUE,
+        component_scale_directional_sweeps = 1L
+      ),
+      scope = list(
+        component_scale_directional_min_components = 2L,
+        single_component_fallback =
+          "coordinate_interweave_plus_joint_state_elliptical"
+      )
     )
   )
+  one_component <- environment$rqr_confirm_model_aware_mcmc_override(
+    applied, "M11", list(component_dims = 1L)
+  )
+  expect_false(
+    one_component$control$component_scale_directional_interweave
+  )
+  expect_true(one_component$audit$fallback_used)
+  expect_identical(one_component$audit$component_count, 1L)
+  expect_false(one_component$audit$target_change)
+  expect_false(one_component$audit$schedule_change)
+
+  multicomponent <- environment$rqr_confirm_model_aware_mcmc_override(
+    applied, "M11", list(component_dims = c(2L, 1L))
+  )
+  expect_true(
+    multicomponent$control$component_scale_directional_interweave
+  )
+  expect_false(multicomponent$audit$fallback_used)
+  expect_identical(multicomponent$audit$component_count, 2L)
 })
 
 test_that("diagnostic-aware decisions always reach the frozen maximum", {
@@ -106,8 +132,32 @@ test_that("runner records diagnostics without hiding their failures", {
   expect_match(launcher, "diagnostic_failures_nonblocking", fixed = TRUE)
   expect_match(runner, "mcmc_diagnostic_construction_failure", fixed = TRUE)
   expect_match(runner, "failed_global_stop", fixed = TRUE)
+  expect_match(runner, "operational_sidecars", fixed = TRUE)
+  expect_match(runner, "operational_activity_failure", fixed = TRUE)
   expect_match(
     runner, "rqr_completion_observed_authorization_matches", fixed = TRUE
+  )
+})
+
+test_that("diagnostic-aware resource and health boundaries are explicit", {
+  repo_root <- testthat::test_path("..", "..", "..")
+  wrapper <- paste(readLines(file.path(
+    repo_root, "application", "scripts",
+    "15_run_rqr_dlm_confirmatory_simulation.sh"
+  ), warn = FALSE), collapse = "\n")
+  health <- paste(readLines(file.path(
+    repo_root, "application", "scripts",
+    "21_healthcheck_rqr_dlm_confirmatory_simulation.R"
+  ), warn = FALSE), collapse = "\n")
+  closeout <- paste(readLines(file.path(
+    repo_root, "application", "scripts",
+    "38_closeout_failed_rqr_dlm_confirmatory_run.R"
+  ), warn = FALSE), collapse = "\n")
+  expect_match(wrapper, "RQR_MAX_PROCESS_GROUP_RSS_KIB:-2097152",
+               fixed = TRUE)
+  expect_match(health, "na.rm = TRUE", fixed = TRUE)
+  expect_match(
+    closeout, "completed_with_diagnostic_warning", fixed = TRUE
   )
 })
 
