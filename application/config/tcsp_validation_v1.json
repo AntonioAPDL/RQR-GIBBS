@@ -1,0 +1,207 @@
+{
+  "schema_version": "rqrgibbs_tcsp_validation_study/1.0.0",
+  "study_id": "tcsp_validation_v1_20260811",
+  "status": "pilot_enabled_confirmatory_fail_closed",
+  "interpretation": "Repeated-sample validation for iid univariate TCSP tolerance actions and benchmark intervals. This is empirical validation evidence, not a proof of the finite-sample scan theorem.",
+  "generalized_bayes": true,
+  "response_likelihood": false,
+  "posterior_predictive_response_draws": false,
+  "claim_scope": {
+    "iid_univariate_continuous_only": true,
+    "regression_tolerance": false,
+    "dynamic_tolerance": false,
+    "posterior_summary_is_formal_tolerance_action": false,
+    "monte_carlo_scan_is_exact": false
+  },
+  "execution": {
+    "preflight_authorized": true,
+    "tiny_authorized": true,
+    "pilot_authorized": true,
+    "confirmatory_authorized": false,
+    "confirmatory_requires_new_config": true
+  },
+  "design": {
+    "guaranteed_contents": [0.80, 0.90],
+    "tolerance_confidences": [0.80, 0.90],
+    "sample_sizes": [80, 250, 600],
+    "summary_confidence": 0.95,
+    "success_tolerance": 1e-12
+  },
+  "modes": {
+    "preflight": {
+      "replications": 0,
+      "sample_sizes": [80, 250, 600],
+      "guaranteed_contents": [0.80, 0.90],
+      "tolerance_confidences": [0.80, 0.90],
+      "dgp_ids": ["normal", "lognormal", "student_t5", "mixture", "beta_skew"],
+      "method_ids": ["tcsp_dkw", "tcsp_mc", "wilks_symmetric", "wilks_minmax", "equal_tailed_tcsp_content", "normal_howe", "oracle_shortest"]
+    },
+    "tiny": {
+      "replications": 12,
+      "sample_sizes": [80, 250],
+      "guaranteed_contents": [0.80, 0.90],
+      "tolerance_confidences": [0.80],
+      "dgp_ids": ["normal", "lognormal", "mixture"],
+      "method_ids": ["tcsp_dkw", "tcsp_mc", "wilks_symmetric", "equal_tailed_tcsp_content", "normal_howe", "oracle_shortest"]
+    },
+    "pilot": {
+      "replications": 8,
+      "sample_sizes": [80, 250, 600],
+      "guaranteed_contents": [0.80, 0.90],
+      "tolerance_confidences": [0.80],
+      "dgp_ids": ["normal", "lognormal", "mixture"],
+      "method_ids": ["tcsp_dkw", "tcsp_mc", "wilks_symmetric", "normal_howe"]
+    }
+  },
+  "dgps": [
+    {
+      "dgp_id": "normal",
+      "label": "standard normal",
+      "family": "normal",
+      "enabled": true,
+      "location": 0,
+      "scale": 1,
+      "parametric_normal_correctly_specified": true
+    },
+    {
+      "dgp_id": "lognormal",
+      "label": "centered standardized lognormal",
+      "family": "standardized_lognormal",
+      "enabled": true,
+      "logmean": 0,
+      "logsd": 0.75,
+      "parametric_normal_correctly_specified": false
+    },
+    {
+      "dgp_id": "student_t5",
+      "label": "variance-standardized Student t5",
+      "family": "standardized_student_t",
+      "enabled": true,
+      "df": 5,
+      "parametric_normal_correctly_specified": false
+    },
+    {
+      "dgp_id": "mixture",
+      "label": "standardized separated normal mixture",
+      "family": "standardized_normal_mixture",
+      "enabled": true,
+      "weights": [0.80, 0.20],
+      "means": [-1.00, 2.00],
+      "sds": [0.60, 0.40],
+      "parametric_normal_correctly_specified": false
+    },
+    {
+      "dgp_id": "beta_skew",
+      "label": "bounded right-skewed beta",
+      "family": "beta",
+      "enabled": true,
+      "shape1": 2,
+      "shape2": 6,
+      "parametric_normal_correctly_specified": false
+    }
+  ],
+  "methods": [
+    {
+      "method_id": "tcsp_dkw",
+      "label": "TCSP shortest window with DKW scan calibration",
+      "family": "tcsp",
+      "enabled": true,
+      "formal_tolerance_action": true,
+      "calibration": "dkw_conservative"
+    },
+    {
+      "method_id": "tcsp_mc",
+      "label": "TCSP shortest window with conservative Uniform Monte Carlo scan calibration",
+      "family": "tcsp",
+      "enabled": true,
+      "formal_tolerance_action": true,
+      "calibration": "monte_carlo_conservative"
+    },
+    {
+      "method_id": "wilks_symmetric",
+      "label": "Exact symmetric Wilks/order-statistic interval",
+      "family": "nonparametric_order_statistic",
+      "enabled": true,
+      "formal_tolerance_action": true,
+      "adaptive_window": false
+    },
+    {
+      "method_id": "wilks_minmax",
+      "label": "Wilks min-max order-statistic interval",
+      "family": "nonparametric_order_statistic",
+      "enabled": true,
+      "formal_tolerance_action": true,
+      "adaptive_window": false
+    },
+    {
+      "method_id": "equal_tailed_tcsp_content",
+      "label": "Equal-tailed empirical interval at TCSP calibrated retained count",
+      "family": "empirical_equal_tailed",
+      "enabled": true,
+      "formal_tolerance_action": false,
+      "certificate": "none"
+    },
+    {
+      "method_id": "normal_howe",
+      "label": "Normal-theory Howe approximate two-sided tolerance interval",
+      "family": "parametric_normal",
+      "enabled": true,
+      "formal_tolerance_action": true,
+      "certificate": "approximate_when_normal"
+    },
+    {
+      "method_id": "oracle_shortest",
+      "label": "Population shortest interval with known DGP",
+      "family": "oracle_width_reference",
+      "enabled": true,
+      "formal_tolerance_action": false,
+      "benchmark_only": true
+    },
+    {
+      "method_id": "young_mathew",
+      "label": "Young-Mathew interpolated/extrapolated order-statistic interval",
+      "family": "nonparametric_interpolated_order_statistic",
+      "enabled": false,
+      "disabled_reason": "Exact implementation is not available in the tracked source and the tolerance package is not a declared dependency."
+    },
+    {
+      "method_id": "calibrated_bnp_gibbs",
+      "label": "Calibrated Bayesian nonparametric Gibbs tolerance interval",
+      "family": "calibrated_gibbs",
+      "enabled": false,
+      "disabled_reason": "No tracked implementation or validated learning-rate calibration exists for this repository."
+    }
+  ],
+  "scan_calibration": {
+    "tiny_n_sim": 600,
+    "pilot_n_sim": 250,
+    "numerical_confidence": 0.99,
+    "precompute_by_n_content_confidence": true,
+    "monte_carlo_lower_bound": "one_sided_clopper_pearson"
+  },
+  "seed_contract": {
+    "schema_version": "rqrgibbs_tcsp_validation_seed/1.0.0",
+    "master_seed": 91081101,
+    "streams": ["calibration", "data", "method", "audit"]
+  },
+  "outputs": {
+    "root": "application/outputs/tcsp_validation_v1",
+    "commit_generated_outputs": false,
+    "manifest_required": true,
+    "source_state_required": true
+  },
+  "gates": {
+    "required_preflight_gates": [
+      "schema",
+      "execution_flags",
+      "dgp_contract",
+      "method_contract",
+      "seed_contract",
+      "claim_scope",
+      "critical_counts",
+      "disabled_competitors_explicit"
+    ],
+    "tiny_required": true,
+    "confirmatory_fail_closed": true
+  }
+}
