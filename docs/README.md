@@ -6,6 +6,10 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/rqr_loss_exposition_audit_20260811.md` records the compact abstract
+  contract, the loss-first presentation, the exact piecewise/check-loss
+  equivalence, and the separation among target content, endpoint
+  interpretation, and the generalized-Bayes learning rate.
 - `audits/bayesian_manuscript_language_audit_20260811.md` records the complete
   main-text and supplement terminology audit, the Bayesian-language contract,
   and the automated guard that preserves the generalized-posterior versus

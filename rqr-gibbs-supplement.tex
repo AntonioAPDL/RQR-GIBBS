@@ -197,11 +197,35 @@ for this comparison
 \citep{GneitingRaftery2007,BrehmerGneiting2021Intervals,
 FisslerEtAl2021SetValued}.
 
-\section{Ordinary-RQR Score Derivations and Consequences}
+\section{Ordinary-RQR Loss, Score Derivations, and Consequences}
 \label{sec:supp-population-target}
 
-Fix a covariate value \(x\), write \(a=L(x)<U(x)=b\), and define
-\(I_{a,b}(Y)=\ind(a<Y<b)\). Assume
+Fix a covariate value \(x\), a desired content \(c\in(0,1)\), and endpoints
+\(a=L(x)<U(x)=b\). The pointwise loss is
+\begin{equation}
+\ell_c(a,b;y)
+=
+\begin{cases}
+(1-c)(y-a)(b-y), & a<y<b,\\
+c(y-a)(y-b), & y\le a\ \text{or}\ y\ge b.
+\end{cases}
+\label{eq:supp-rqr-loss-piecewise}
+\end{equation}
+Equivalently, with
+\(e(a,b;y)=(y-a)(y-b)\) and
+\(\rho_c(r)=r\{c-\ind(r<0)\}\),
+\begin{equation}
+\ell_c(a,b;y)=\rho_c\{e(a,b;y)\}.
+\label{eq:supp-rqr-check-representation}
+\end{equation}
+The check function is applied to the product residual. Its index \(c\) denotes
+the desired interval content rather than a prescribed response-quantile level
+for either endpoint or a generalized-Bayes learning rate. The loss is symmetric
+in its two roots; ordering is used only for the endpoint interpretation.
+
+Define \(I_{a,b}(Y)=\ind(a<Y<b)\). Away from the two roots, the derivative of
+the check loss with respect to its scalar argument is
+\(c-I_{a,b}(Y)\). Assume
 \(\E(Y^2\mid X=x)<\infty\), the conditional risk is differentiable at an
 interior stationary point, differentiation and conditional expectation may be
 interchanged, and the conditional distribution places no mass at \(a\) or
@@ -915,7 +939,7 @@ H=
 \E\{XX^\top w_0(X)f_{Y\mid X}(b_{\theta_0}\mid X)\}
 \end{pmatrix}.
 \]
-Under the standard nonsmooth M-estimation conditions for the product-check
+Under the standard nonsmooth M-estimation conditions for the ordinary-RQR
 loss, the empirical minimizer satisfies
 \[
 \sqrt n(\widehat\theta-\theta_0)
@@ -996,7 +1020,7 @@ Thus \(q=c+2\lambda_W\) restores content \(c\), subject to
 \]
 Except in special symmetric cases, RQR-W therefore changes the
 mean-preserving placement equation. It is a coverage-corrected compromise
-between product-check risk and squared width, not a tie-breaker among
+between ordinary-RQR risk and squared width, not a tie-breaker among
 unidentified ordinary-RQR minimizers.
 
 More generally, if a differentiable width penalty \(P(w)\), \(w=b-a\), is
@@ -1012,12 +1036,13 @@ not generally coincide with the shortest-contiguous path.
 \section{Pseudo-AL Augmentation of the Generalized Posterior}
 \label{sec:supp-pseudo-al}
 
-For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\) and
-\(\rho_c(e)=e\{c-\ind(e<0)\}\), the fixed-rate generalized posterior combines
-the prior with
-\(\exp\{-\omega_{\mathrm R}\sum_{i\in\mathcal O}\rho_c(e_i)\}\). The following
-normal--exponential identity provides a latent-variable representation adapted
-from the standard
+For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the ordinary-RQR contribution is
+\(\ell_c(\eta_{1i},\eta_{2i};y_i)=\rho_c(e_i)\), as in
+\eqref{eq:supp-rqr-check-representation}. The fixed-rate generalized posterior
+therefore updates the prior by
+\(\exp\{-\omega_{\mathrm R}\sum_{i\in\mathcal O}
+\ell_c(\eta_{1i},\eta_{2i};y_i)\}\). The following normal--exponential
+identity provides a latent-variable representation adapted from the standard
 asymmetric-Laplace quantile-regression augmentation
 \citep{KozumiKobayashi2011Gibbs}. Setting
 \[

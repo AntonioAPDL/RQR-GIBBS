@@ -55,13 +55,20 @@ for (file in source_files) {
 
 required <- list(
   "main.tex" = c(
-    "defines the generalized posterior induced by",
+    "defined by a nonnegative loss of the product of two endpoint residuals",
+    "These are loss-based generalized posteriors for interval",
+    "The pointwise ordinary-RQR loss is",
+    "The familiar check-loss notation gives an equivalent compact representation",
+    "The check loss therefore acts on the scalar product residual",
+    "Thus the prior is updated by the cumulative interval loss",
     "augmented generalized posterior",
     "Gaussian full conditional",
     "not a sampling model for \\(y_i\\)",
     "posterior predictive distribution for future responses"
   ),
   "rqr-gibbs-supplement.tex" = c(
+    "Ordinary-RQR Loss, Score Derivations, and Consequences",
+    "The check function is applied to the product residual",
     "Pseudo-AL Augmentation of the Generalized Posterior",
     "augmented generalized posterior",
     "generalized-posterior distributions for endpoint functions",

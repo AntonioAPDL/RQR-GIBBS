@@ -65,31 +65,29 @@
 \begin{abstract}
 \noindent
 Probability content does not by itself determine interval placement. We study
-the interval functional induced by relaxed quantile regression (RQR), whose
-residual-product check loss estimates two exchangeable roots without assigning
-endpoint quantile levels. Under explicit regularity conditions, the
-unrestricted population minimizer is the unique contiguous content-\(c\)
-interval whose retained mean equals the population mean. A fixed mean tilt
-preserves content while shifting the retained mean to \(\mu+\delta\), thereby
-indexing a family of fixed-content interval targets that includes
-distribution-specific recovery tilts for equal-tailed and shortest-contiguous
-intervals. We combine the interval loss with prior distributions to obtain
-generalized posteriors for these targets. A pseudo-asymmetric-Laplace
-normal--exponential augmentation yields generalized-inverse-Gaussian latent
-scale full conditionals and Gaussian root full conditionals. Static
-regression, frozen-feature DESN readouts, and dynamic linear root states are
-then treated as design or state-evolution restrictions on the same interval
-loss. In the dynamic case, the stacked state prior is Gaussian but the joint
-contribution to the augmented generalized posterior is quartic, so exact
-fixed-joint computation uses
-alternating root-specific FFBS rather than one stacked Gaussian FFBS draw. The
-ordinary RQR branches have the broader current validation program; fixed-rate
-nonzero mean tilt is implemented only for the proper-Gaussian ridge readout
-and fixed-\(W_t\) or frozen-template DLM cases. Learned rates, nonzero-tilt
-RHS-NS, adaptive or component-scale dynamic tilt, and VB/CAVI are separate
-projects. These generalized posteriors quantify uncertainty about interval-root
-functionals. Because no response likelihood is specified, they do not define a
-posterior predictive distribution for future responses.
+the population functional induced by relaxed quantile regression (RQR),
+defined by a nonnegative loss of the product of two endpoint residuals. Under
+explicit regularity conditions, its unrestricted population minimizer is the
+unique contiguous content-\(c\) interval whose retained mean equals the
+population mean. We introduce a fixed mean tilt \(\delta\) that preserves
+content while moving the retained mean to \(\mu+\delta\). The resulting family
+contains, at distribution-specific tilts, the equal-tailed and
+shortest-contiguous intervals. Combining the interval loss with priors yields
+generalized posteriors for the two interval roots. A pseudo-asymmetric-Laplace
+normal--exponential augmentation gives generalized-inverse-Gaussian latent-scale
+and Gaussian root full conditionals, providing a common Gibbs framework for
+regularized static regression, frozen-feature deep echo state network (DESN)
+readouts, and dynamic linear root states. In the dynamic model, the two state
+trajectories have a Gaussian prior but a quartic joint augmented observation
+term; exact fixed-joint computation therefore alternates root-specific
+forward-filtering backward-sampling updates. Population diagnostics and
+reproducible single-data illustrations show the target geometry and
+interval-root uncertainty in static and dynamic settings. Current nonzero-tilt
+computation is restricted to fixed-rate proper-Gaussian static models and
+fixed-\(W_t\) or frozen-template dynamic models; ordinary RQR is implemented
+more broadly. These are loss-based generalized posteriors for interval
+functionals, not posteriors derived from response likelihoods, and hence do not
+by themselves define a posterior predictive distribution for future responses.
 \end{abstract}
 
 \section{Introduction}
@@ -106,12 +104,14 @@ functional being targeted
 \citep{BrehmerGneiting2021Intervals,FisslerEtAl2021SetValued}.
 
 Relaxed quantile regression (RQR) instead estimates two interval roots directly
-\citep{PouplinEtAl2024RQR}. It applies a check loss to
+\citep{PouplinEtAl2024RQR}. Its nonnegative loss is constructed from
 \((y-\eta_1)(y-\eta_2)\), whose sign records whether \(y\) lies between the
-roots. The original article develops this loss as an optimization criterion.
-Here we first identify its population interval functional, then use that
-characterization to build a mean-tilted family, generalized posteriors, and
-Gibbs samplers for static, frozen-feature, and dynamic root models. Related
+roots. Equivalently, it is a check loss applied to this product residual, not
+to either response residual separately. The original article develops the
+loss as an optimization criterion. Here we first identify its population
+interval functional, then use that characterization to build a mean-tilted
+family, generalized posteriors, and Gibbs samplers for static, frozen-feature,
+and dynamic root models. Related
 coverage-constrained empirical optimization directly trades width against an
 empirical coverage constraint \citep{ChenEtAl2021PredictionIntervals}; that
 target and training criterion are distinct from the expected RQR loss studied
@@ -255,26 +255,72 @@ finite-sample or comparative-performance evidence.}
 \label{fig:three-interval-principles}
 \end{figure}
 
-\section{Ordinary RQR: The Zero-Tilt Foundation}
+\clearpage
+
+\section{Ordinary RQR: Product Loss and Population Target}
 \label{sec:rqr-loss}
 
-For generic ordered endpoints \(a<b\), define the residual product
+Fix a desired interval content \(c\in(0,1)\) and ordered endpoints \(a<b\).
+The pointwise ordinary-RQR loss is
+\begin{equation}
+\ell_c(a,b;y)=
+\begin{cases}
+(1-c)(y-a)(b-y), & a<y<b,\\
+c(y-a)(y-b), & y\le a\ \text{or}\ y\ge b.
+\end{cases}
+\label{eq:rqr-loss-piecewise}
+\end{equation}
+Both branches are nonnegative and meet continuously at zero when \(y=a\) or
+\(y=b\). An observation inside the interval is weighted by \(1-c\), whereas a
+miss is weighted by \(c\). The two factors also encode distance from both
+endpoints, so this is not a binary coverage penalty. Increasing \(c\) raises
+the relative cost of a miss; at a regular population optimum, this weighting
+produces the content equation established below. For data
+\(y_1,\ldots,y_n\), ordinary RQR minimizes
+\(\sum_{i=1}^n\ell_c(a,b;y_i)\), or the corresponding regression loss when the
+two endpoints depend on predictors.
+
+The familiar check-loss notation gives an equivalent compact representation.
+For a scalar argument \(r\), let
 \[
-e(a,b;y)=(y-a)(y-b)
+\rho_c(r)=r\{c-\ind(r<0)\}
+=
+\begin{cases}
+(1-c)|r|, & r<0,\\
+cr, & r\ge0.
+\end{cases}
 \]
-and the check loss
+Now define the product residual
 \[
-\rho_c(e)=e\{c-\ind(e<0)\}.
+e(a,b;y)=(y-a)(y-b).
 \]
-Thus \(e(a,b;y)<0\) if and only if \(y\) lies between the endpoints. Write
-\(a=m-h\) and \(b=m+h\), where \(h>0\). Then
+Because \(e(a,b;y)<0\) exactly when \(a<y<b\),
+\begin{equation}
+\ell_c(a,b;y)=\rho_c\{e(a,b;y)\}.
+\label{eq:rqr-check-representation}
+\end{equation}
+This representation also makes clear that the loss is symmetric in its two
+roots; the ordering \(a<b\) is imposed only to interpret them as lower and
+upper endpoints.
+The check loss therefore acts on the scalar product residual, not on
+\(y-a\) or \(y-b\) separately. In particular, \(c\) is the desired interval
+content; it is neither an assigned response-quantile level for either endpoint
+nor the generalized-Bayes learning rate.
+
+The midpoint--half-width parameterization makes the interval geometry
+explicit. Write \(a=m-h\) and \(b=m+h\), where \(h>0\). Then
 \[
-(Y-a)(Y-b)=(Y-m)^2-h^2.
+e(a,b;Y)=(Y-m)^2-h^2,
 \]
-The half-width \(h\) controls interval content, while the midpoint \(m\)
-controls which content-\(c\) interval is selected. The results below concern
-an unrestricted pointwise population problem. Restricted regression classes
-generally recover only design-weighted projections of these identities.
+so \(e<0\) means that \(Y\) is within distance \(h\) of \(m\). The half-width
+and midpoint are learned jointly by minimizing the expected loss
+\(R_c(a,b)=\E\{\ell_c(a,b;Y)\}\). Its first-order conditions determine both
+the interval content and its placement. The loss defines this population
+estimand; the generalized-Bayes learning rate introduced in
+Section~\ref{sec:posterior} separately controls how strongly the loss updates
+the prior. The results below concern an unrestricted pointwise population
+problem. Restricted regression classes generally recover only design-weighted
+projections of these identities.
 
 \begin{proposition}[Mean-preserving population target]
 \label{prop:population-characterization}
@@ -314,9 +360,9 @@ conditional mean, although the endpoint midpoint need not equal that mean.
 The supplement further shows that the retained core is a mean-preserving
 contraction of the full distribution in convex order. A finite first moment is
 enough for the retained-mean identity once the endpoint scores are valid. The
-stronger second-moment assumption ensures that the product-check risk is finite
-and supports the profiled-risk analysis. This distinction matters because the
-loss grows quadratically in an extreme response.
+stronger second-moment assumption ensures that the expected ordinary-RQR loss
+is finite and supports the profiled-risk analysis. This distinction matters
+because the loss grows quadratically in an extreme response.
 
 \begin{theorem}[Quantile-window identification]
 \label{prop:quantile-window}
@@ -592,7 +638,7 @@ separate propriety analysis before nonzero tilt is enabled.
 
 The preceding results are population identifications. They should not be
 replaced by a smooth-gradient finite-sample argument, because fitted endpoints
-are data dependent and the empirical product-check loss is nonsmooth at
+are data dependent and the empirical ordinary-RQR loss is nonsmooth at
 observations that fall exactly on a root. The correct finite-sample statement
 is fractional. For intercept-only MT-RQR with fixed \(\delta\), let
 \((\widehat a,\widehat b)\), \(\widehat a<\widehat b\), be an interior
@@ -695,8 +741,16 @@ root block is separated below the other across that design. If the fitted
 linear roots cross on the audit domain or the keep/swap assignment is
 ambiguous, the canonical coefficient chart is not reported; pointwise ordered
 endpoints remain well defined.
+
+For each observed row, define
+\[
+e_i=(y_i-\eta_{1i})(y_i-\eta_{2i}),\qquad
+\ell_{c,\delta_i}(\eta_{1i},\eta_{2i};y_i)
+=\rho_c(e_i)-c\delta_i(\eta_{1i}+\eta_{2i}-2y_i).
+\]
 For priors \(\pi_1,\pi_2\), a fixed externally declared
-\(\vect\delta\), and a fixed learning rate \(\omega_{\mathrm R}>0\), define
+\(\vect\delta\), and a fixed learning rate \(\omega_{\mathrm R}>0\), the
+generalized posterior is
 \begin{equation}
 \begin{split}
 \Pi_{\vect\delta}
@@ -705,16 +759,17 @@ For priors \(\pi_1,\pi_2\), a fixed externally declared
 \pi_1(d\vect\beta_1)\pi_2(d\vect\beta_2)\\
 &\times\exp\left\{-\omega_{\mathrm R}
 \sum_{i\in\mathcal O}
-\left[\rho_c(e_i)
--c\delta_i(\eta_{1i}+\eta_{2i}-2y_i)\right]\right\},
+\ell_{c,\delta_i}(\eta_{1i},\eta_{2i};y_i)\right\},
 \end{split}
 \label{eq:fixed-mt-target}
 \end{equation}
-where \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\). Equation~\eqref{eq:fixed-mt-target}
-defines the generalized posterior induced by the interval loss and the two root
-priors. Its exponential factor is a generalized-Bayes update, not a response
-likelihood. The tilt indexes the interval functional and is fixed before
-posterior computation rather than sampled as a response parameter.
+Thus the prior is updated by the cumulative interval loss. At
+\(\delta_i=0\), each contribution is the nonnegative ordinary-RQR loss in
+\eqref{eq:rqr-loss-piecewise}--\eqref{eq:rqr-check-representation}.
+Equation~\eqref{eq:fixed-mt-target} is a generalized posterior, not one derived
+from a response likelihood. The tilt indexes the interval functional and is
+fixed before posterior computation rather than sampled as a response
+parameter.
 Nonzero tilt uses a fixed learning rate and a proper Gaussian prior,
 including a ridge prior,
 in the present derivation.
