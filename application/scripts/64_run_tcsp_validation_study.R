@@ -20,7 +20,7 @@ arg_value <- function(prefix, default = NULL) {
 }
 
 mode <- tolower(arg_value("--mode=", "preflight"))
-allowed <- c("preflight", "tiny", "pilot", "health-check-read-only")
+allowed <- c("preflight", "tiny", "pilot", "full_pilot", "health-check-read-only")
 if (!mode %in% allowed) tcspv_stop("Unsupported TCSP validation mode: ", mode)
 
 config_path <- normalizePath(arg_value(
@@ -34,6 +34,10 @@ if (identical(mode, "tiny") && !isTRUE(config$execution$tiny_authorized)) {
 }
 if (identical(mode, "pilot") && !isTRUE(config$execution$pilot_authorized)) {
   tcspv_stop("Pilot TCSP validation is not authorized.")
+}
+if (identical(mode, "full_pilot") &&
+    !isTRUE(config$execution$full_pilot_authorized)) {
+  tcspv_stop("Full-pilot TCSP validation is not authorized.")
 }
 if (identical(mode, "preflight") &&
     !isTRUE(config$execution$preflight_authorized)) {

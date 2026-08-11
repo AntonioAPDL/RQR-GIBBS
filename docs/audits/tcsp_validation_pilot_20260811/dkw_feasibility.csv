@@ -1,0 +1,7 @@
+"n","guaranteed_content","tolerance_confidence","retained_count","retained_fraction","retained_fraction_excess_over_content","certificate","infeasible","usable_action"
+80,0.8,0.8,84,1.05,0.25,0,TRUE,FALSE
+80,0.9,0.8,92,1.15,0.25,0,TRUE,FALSE
+250,0.8,0.8,234,0.936,0.136,1,FALSE,TRUE
+250,0.9,0.8,259,1.036,0.136,0,TRUE,FALSE
+600,0.8,0.8,533,0.888333333333333,0.0883333333333333,1,FALSE,TRUE
+600,0.9,0.8,593,0.988333333333333,0.0883333333333333,1,FALSE,TRUE

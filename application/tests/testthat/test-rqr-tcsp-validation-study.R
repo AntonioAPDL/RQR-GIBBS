@@ -19,7 +19,10 @@ test_that("TCSP validation config is fail-closed and complete", {
   env <- tcsp_validation_environment()
   config <- tcsp_validation_config(env)
   expect_invisible(env$tcspv_validate_config(config))
+  expect_true(config$execution$full_pilot_authorized)
   expect_false(config$execution$confirmatory_authorized)
+  expect_true("full_pilot" %in% names(config$modes))
+  expect_true(1200L %in% as.integer(unlist(config$modes$full_pilot$sample_sizes)))
   methods <- env$tcspv_methods(config)
   expect_true(all(c(
     "tcsp_dkw", "tcsp_mc", "wilks_symmetric", "normal_howe",
@@ -27,6 +30,16 @@ test_that("TCSP validation config is fail-closed and complete", {
   ) %in% methods$method_id))
   disabled <- methods[!methods$enabled, , drop = FALSE]
   expect_true(all(nzchar(disabled$disabled_reason)))
+})
+
+test_that("TCSP full-pilot mode uses its own scan-calibration budget", {
+  env <- tcsp_validation_environment()
+  config <- tcsp_validation_config(env)
+  config$scan_calibration$full_pilot_n_sim <- 80L
+  mc <- env$tcspv_mc_count(config, 20L, 0.50, 0.80, "full_pilot")
+  expect_equal(mc$n_sim, 80L)
+  expect_true(isTRUE(mc$certified_lower_probability >= 0.80))
+  expect_true(is.finite(mc$seed))
 })
 
 test_that("TCSP validation DGP CDFs and quantiles are coherent", {
