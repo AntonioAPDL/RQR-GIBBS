@@ -15,7 +15,7 @@ ORACLE_TILT_FORENSIC_CONFIG ?= application/config/oracle_tilt_forensics_20260730
 ORACLE_TILT_PUBLICATION_CONFIG ?= application/config/oracle_tilt_c095_publication_20260731.json
 ORACLE_TILT_PUBLICATION_DIR ?= application/outputs/oracle_tilt_c095_publication
 ORACLE_TILT_PUBLICATION_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095
-ORACLE_TILT_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095_v3
+ORACLE_TILT_EVIDENCE_DIR ?= figures/data/oracle_tilt_c095_v5_exact_delta
 ORACLE_TILT_RUN_DIR ?=
 ORACLE_TILT_V2_CONFIG ?= application/config/oracle_tilt_c095_publication_v2_20260731.json
 ORACLE_TILT_V2_DIR ?= application/outputs/oracle_tilt_c095_publication_v2
@@ -145,7 +145,7 @@ test-oracle-tilt-publication-v4: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-publication-v4.R", reporter = "summary")'
 
 test-oracle-tilt-publication-v5: package-install
-	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-interval-oracle.R", reporter = "summary"); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-v5.R", reporter = "summary")'
+	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-interval-oracle.R", reporter = "summary"); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-v5.R", reporter = "summary"); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-v5-promotion.R", reporter = "summary")'
 
 test-oracle-tilt-dlm-sh-adjudication: package-install
 	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-oracle-tilt-dlm-sh-adjudication.R", reporter = "summary")'

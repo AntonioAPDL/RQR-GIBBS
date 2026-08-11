@@ -3,9 +3,11 @@
 ## Status
 
 This document records the source and launch protocol for the append-only V5
-correction. The user authorized execution on 2026-08-10, but not automatic
-manuscript promotion. The six V5 fits must use an isolated runtime built from
-one reviewed clean commit and may run independently of any separate RQR-DLM
+correction. Execution completed on 2026-08-10 from the reviewed source commit
+recorded below. All six cells passed the hard and broad manuscript-suitability
+boundaries; five are strict passes and DLM/SH is a diagnostic-aware pass.
+Compact V5 evidence has therefore superseded V3 for manuscript rendering.
+This campaign remains independent of every repeated-DGP or ordinary RQR-DLM
 validation campaign.
 
 ## Correction
@@ -37,7 +39,7 @@ content 0.95, the certified tilts are:
 
 | Target | Lower-tail index | Exact tilt |
 |---|---:|---:|
-| RQR | 0.012080802865419 | 0 |
+| RQR | 0.0120825038669297 | 0 |
 | ET | 0.025 | 0.0560608464325982 |
 | SH | 0.04 | 0.1147218630644100 |
 
@@ -116,3 +118,17 @@ the V5 evidence root.
 The fitted objects are generalized-posterior interval-root draws, not
 posterior-predictive response draws. V5 is a six-cell single-data illustration,
 not a repeated-sample validation study.
+
+## Completed closeout
+
+The immutable execution source is
+`24065941c44a836d2f385b9fe4cf28fcd18d08bd`; the configuration SHA-256 is
+`e0a603d05e01aecc8f6402d3303d90f62de20b4cdee1fa69f7118419b438f893`;
+and the isolated runtime-tree digest is
+`20ca720b6d0874b11cdab342fcdfddd9be3c271fe81c5724ea6c3ca43a9c3614`.
+All 27 chains completed with zero repairs. Five cells passed all strict gates.
+DLM/SH retained five bulk-ESS warnings and a narrow width-contrast warning,
+but passed every hard computational and broad recovery gate without a
+threshold change, replacement seed, or selective extension. The detailed
+decision and resource closeout are in
+`docs/audits/oracle_tilt_c095_v5_promotion_reconciliation_20260810.md`.

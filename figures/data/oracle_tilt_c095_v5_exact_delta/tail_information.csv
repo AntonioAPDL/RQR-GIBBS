@@ -1,0 +1,4 @@
+"target","lower_tail_probability","upper_tail_probability","rare_tail_probability","fixed_design_n","fixed_design_expected_rare_count","dlm_n_observed","dlm_expected_rare_count"
+"RQR",0.0120825038669297,0.0379174961330704,0.0120825038669297,2400,28.9980092806312,1178,14.2331895552431
+"ET",0.025,0.025,0.025,2400,60.0000000000001,1178,29.45
+"SH",0.04,0.01,0.01,2400,24,1178,11.78

@@ -1,0 +1,7 @@
+"family","target","provenance_pass","provenance_snapshots_pass","strict_diagnostics_pass","conditional_parity_pass","pathology_pass","computational_pass","hard_computational_pass","completion_eligible","recovery_pass","broad_recovery_pass","heterogeneity_pass","broad_heterogeneity_pass","diagnostic_warning_count","warning_codes","disposition","manuscript_illustration_evidence_eligible"
+"fixed_design","RQR",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,0,"none","strict_pass",TRUE
+"dlm","RQR",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,0,"none","strict_pass",TRUE
+"fixed_design","ET",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,0,"none","strict_pass",TRUE
+"dlm","ET",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,0,"none","strict_pass",TRUE
+"fixed_design","SH",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,0,"none","strict_pass",TRUE
+"dlm","SH",TRUE,TRUE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE,TRUE,5,"mcmc_diagnostic_warning|strict_heterogeneity_warning","diagnostic_aware_pass",TRUE

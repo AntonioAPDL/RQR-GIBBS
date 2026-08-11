@@ -6,6 +6,10 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/oracle_tilt_c095_v5_promotion_reconciliation_20260810.md`
+  records the exact V5 source/runtime/configuration identities, 27-chain
+  completion, five strict cells, the diagnostic-aware DLM/SH warnings,
+  resource closeout, compact evidence, and manuscript-promotion decision.
 - `implementation_notes/exact_mean_tilt_oracle_and_v5_correction_protocol_20260810.md`
   records the corrected conditional-retained-mean tilt definition, append-only
   V5 illustration workflow, legacy isolation, and promotion gates.

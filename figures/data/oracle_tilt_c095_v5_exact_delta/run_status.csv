@@ -1,0 +1,7 @@
+"family","target","status","chains_completed","elapsed_seconds","computational_pass","completion_eligible","strict_diagnostics_pass","recovery_pass","broad_recovery_pass","manuscript_illustration_evidence_eligible","disposition"
+"fixed_design","RQR","completed",4,322.435618877411,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,"strict_pass"
+"dlm","RQR","completed",5,4962.17129325867,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,"strict_pass"
+"fixed_design","ET","completed",4,308.109156608582,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,"strict_pass"
+"dlm","ET","completed",5,5059.3413002491,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,"strict_pass"
+"fixed_design","SH","completed",4,379.495809793472,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,"strict_pass"
+"dlm","SH","completed",5,5779.33747053146,TRUE,TRUE,FALSE,TRUE,TRUE,TRUE,"diagnostic_aware_pass"

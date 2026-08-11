@@ -119,6 +119,11 @@ layer for the standalone article.
   diagnostic-aware completion policy: hard computational failures stop, while
   unchanged R-hat/ESS/MCSE and narrow recovery failures remain visible
   warnings and cannot trigger reseeding or selective extension.
+  The completed V5 campaign is the active manuscript evidence: 27/27 chains
+  and six/six cells completed with zero repairs; five cells are strict passes
+  and DLM/SH is a diagnostic-aware pass with five retained bulk-ESS warnings.
+  Compact evidence is tracked under
+  `figures/data/oracle_tilt_c095_v5_exact_delta/`.
 - **scripts/60_run_oracle_mean_tilt_validation.R** and its monitored shell
   wrapper implement a separate ADEMP-style repeated-DGP workflow for paired
   RQR, ET, and SH targets under fixed-design ridge regression and fixed-W
@@ -160,7 +165,8 @@ under `figures/generated/`. The paper-figure path uses the declared
 four-chain illustration contract, writes deterministic seed, runtime,
 chain-summary, maintained-diagnostic, endpoint-error-by-index, and artifact
 hash ledgers, and keeps full fit objects under ignored local output roots.
-The publication configuration uses standardized asymmetric-Laplace response
+The legacy exploratory publication configuration uses standardized
+asymmetric-Laplace response
 innovations with quantile index `0.99` for both families. Its RQR, equal-tail,
 and shortest-window tilts are computed from exact population quantiles and
 truncated first moments (`uses_cornish_fisher = FALSE`). The fixed-design
@@ -269,12 +275,14 @@ all 137 maintained diagnostics. Its width-contrast relative error was 0.202623,
 just above the original 0.20 threshold. A disclosed review accepted it for the
 single-data illustration under a revised tolerance of 0.21; the original
 failure remains recorded and is not described as a prespecified strict pass.
-The machine-readable decision is in
+The historical machine-readable decision is retained in
 `config/oracle_tilt_illustration_campaign_registry_20260805.json`, the audit is
-`docs/audits/oracle_tilt_c095_v3_revised_promotion_20260805.md`, and the active
-compact manuscript evidence is under `figures/data/oracle_tilt_c095_v3/`.
-Current `main` permits lightweight audit, rendering, and testing but blocks
-further version-3 benchmark, acceptance, execution, and adjudication actions
+`docs/audits/oracle_tilt_c095_v3_revised_promotion_20260805.md`, and the
+historical version-3 compact evidence is retained under
+`figures/data/oracle_tilt_c095_v3/`. Version 5 supersedes it as the active
+manuscript source. Current `main` permits lightweight audit, rendering, and
+testing but blocks further closed-campaign benchmark, acceptance, execution,
+and adjudication actions
 through `scripts/49_oracle_tilt_campaign_gate.R`.
 
 The tracked high-content forensic configuration is

@@ -1,9 +1,9 @@
 {
-  "schema_version": "rqrgibbs_oracle_tilt_campaign_registry/1.1.0",
-  "registry_date": "2026-08-05",
+  "schema_version": "rqrgibbs_oracle_tilt_campaign_registry/1.2.0",
+  "registry_date": "2026-08-10",
   "scope": "Single-data interval-root generalized-posterior illustrations; not response-likelihood, posterior-predictive response, or repeated-sample simulation evidence.",
-  "active_manuscript_campaign": "publication_v3",
-  "active_manuscript_evidence_directory": "figures/data/oracle_tilt_c095_v3",
+  "active_manuscript_campaign": "publication_v5",
+  "active_manuscript_evidence_directory": "figures/data/oracle_tilt_c095_v5_exact_delta",
   "campaigns": {
     "publication_v2": {
       "role": "validated_previous_manuscript_evidence",
@@ -75,6 +75,35 @@
         "audit"
       ],
       "closeout_reason": "Longer-chain exact continuation eliminated the computational concern. The observed width-contrast error did not pass the original 0.20 gate and was accepted for this single-data illustration only under a disclosed revised tolerance of 0.21."
+    },
+    "publication_v5": {
+      "role": "active_manuscript_evidence",
+      "status": "completed_diagnostic_aware",
+      "source_commit": "24065941c44a836d2f385b9fe4cf28fcd18d08bd",
+      "config_sha256": "e0a603d05e01aecc8f6402d3303d90f62de20b4cdee1fa69f7118419b438f893",
+      "runtime_tree_digest": "20ca720b6d0874b11cdab342fcdfddd9be3c271fe81c5724ea6c3ca43a9c3614",
+      "coverage_level": 0.95,
+      "target_cells": 6,
+      "strict_pass_cells": 5,
+      "diagnostic_warning_cells": 1,
+      "completed_chains": 27,
+      "diagnostic_warning_cell": "dlm/SH",
+      "all_cells_hard_computational_pass": true,
+      "all_cells_broad_recovery_pass": true,
+      "all_cells_broad_heterogeneity_pass": true,
+      "strict_diagnostic_thresholds_relabelled": false,
+      "reseeded_or_selectively_extended": false,
+      "exact_population_oracle_tilts": true,
+      "oracle_schema": "rqrgibbs_interval_oracle/2.0.0",
+      "tilt_definition": "conditional_retained_mean_minus_population_mean",
+      "manuscript_illustration_evidence_eligible": true,
+      "heavy_execution_authorized_on_current_main": false,
+      "allowed_current_main_actions": [
+        "audit",
+        "render",
+        "test"
+      ],
+      "closeout_reason": "All 27 chains and six cells completed with exact source/runtime binding, zero repairs, and passing hard computational and broad recovery requirements. Five cells pass the full strict contract. DLM/SH retains five prospectively defined bulk-ESS and width-contrast warnings without threshold relabeling, reseeding, or selective extension."
     }
   },
   "future_campaign_contract": {

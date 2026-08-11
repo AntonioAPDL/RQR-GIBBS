@@ -12,9 +12,11 @@ workflows:
 
 The public oracle, runners, monitors, collectors, packagers, tests, and
 documentation are implemented. The repeated-DGP validation remains disabled.
-The six-cell V5 illustration has separate explicit execution authorization,
-but this source-readiness result is not empirical evidence or manuscript
-promotion.
+After this source-readiness audit, the six-cell V5 illustration completed
+under the separately authorized exact-runtime workflow and was promoted as
+single-data manuscript evidence. That later result is recorded in
+`docs/audits/oracle_tilt_c095_v5_promotion_reconciliation_20260810.md`; it is
+not repeated-sample empirical evidence.
 
 ## Statistical correction
 
@@ -67,11 +69,11 @@ tracked as a scientific result.
 
 ## Deliberately open gates
 
-- [ ] Commit and review the exact authorized source state.
-- [ ] Build a fresh isolated primary runtime from that complete commit.
-- [ ] Run V5 production-shape benchmarks and freeze its launch decision.
-- [ ] Execute and close all six corrected V5 illustration cells.
-- [ ] Promote V5 compact evidence and only then update article illustrations.
+- [x] Commit and review the exact authorized source state.
+- [x] Build a fresh isolated primary runtime from that complete commit.
+- [x] Run V5 production-shape benchmarks and freeze its launch decision.
+- [x] Execute and close all six corrected V5 illustration cells.
+- [x] Promote V5 compact evidence and only then update article illustrations.
 - [ ] Benchmark the repeated-DGP production shape without competing heavy work.
 - [ ] Freeze the excess-risk practical margin, replication checkpoints, wave
   size, timeouts, process-tree memory ceiling, and storage ceiling.
