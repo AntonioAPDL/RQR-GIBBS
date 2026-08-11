@@ -1,0 +1,6 @@
+"method_id","critical_rows","feasible_rows","infeasible_rows","min_certificate_all_rows","min_certificate_feasible","min_n_sim"
+"equal_tailed_tcsp_content",6,3,3,,,0
+"tcsp_dkw",6,3,3,0,1,0
+"tcsp_mc",6,6,0,0.803796308870389,0.803796308870389,250
+"wilks_minmax",6,6,0,0.997839529939219,0.997839529939219,0
+"wilks_symmetric",6,6,0,0.806492576824852,0.806492576824852,0

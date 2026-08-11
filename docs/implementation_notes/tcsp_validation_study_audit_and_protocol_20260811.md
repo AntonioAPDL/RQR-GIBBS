@@ -2,7 +2,7 @@
 
 Date: 2026-08-11
 Schema: `rqrgibbs_tcsp_validation_study_protocol/1.0.0`
-Status: implementation protocol and pilot harness
+Status: implementation protocol, pilot harness, and full-pilot wiring
 
 ## Audit Summary
 
@@ -63,9 +63,9 @@ adds larger sizes where DKW-calibrated TCSP actions can be exercised.
 The default pilot is a resource rehearsal: one tolerance-confidence level,
 three DGPs, four data-dependent methods, eight replications, and a modest
 Monte Carlo scan-calibration budget. The population oracle width reference
-remains in preflight and tiny checks. A later full pilot or confirmatory
-configuration should increase the calibration budget, DGP grid, confidence
-grid, method grid, and replication schedule after reviewing this bundle.
+remains in preflight and tiny checks. The full-pilot mode expands the
+calibration budget, DGP grid, confidence grid, method grid, and replication
+schedule after the compact pilot audit.
 
 Active methods:
 
@@ -103,8 +103,13 @@ Primary metrics:
    grid and writes replication-level and cell-level summaries.
 3. `pilot`: runs the configured pilot grid. This is empirical validation
    evidence only; it does not promote a theorem.
-4. `health-check-read-only`: verifies the artifact manifest of an existing run.
-5. Confirmatory execution remains fail-closed and requires a new config after
+4. `full_pilot`: runs the expanded iid univariate pilot grid with all tracked
+   DGPs, both tolerance-confidence levels, a larger MC scan-calibration budget,
+   and `n=1200` added for high-content DKW diagnostics.
+5. `health-check-read-only`: verifies the artifact manifest of an existing run.
+6. `audit`: publishes a compact source-controlled audit bundle from a closed
+   run while leaving raw replication outputs local-only.
+7. Confirmatory execution remains fail-closed and requires a new config after
    pilot review.
 
 ## Reproducibility Contract

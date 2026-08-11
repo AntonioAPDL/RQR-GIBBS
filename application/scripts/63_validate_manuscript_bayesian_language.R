@@ -55,7 +55,7 @@ for (file in source_files) {
 
 required <- list(
   "main.tex" = c(
-    "defined by a nonnegative loss of the product of two endpoint residuals",
+    "Its nonnegative loss is constructed from",
     "These are loss-based generalized posteriors for interval",
     "The pointwise ordinary-RQR loss is",
     "The familiar check-loss notation gives an equivalent compact representation",
@@ -64,7 +64,7 @@ required <- list(
     "augmented generalized posterior",
     "Gaussian full conditional",
     "not a sampling model for \\(y_i\\)",
-    "posterior predictive distribution for future responses"
+    "posterior predictive distributions for future responses"
   ),
   "rqr-gibbs-supplement.tex" = c(
     "Ordinary-RQR Loss, Score Derivations, and Consequences",

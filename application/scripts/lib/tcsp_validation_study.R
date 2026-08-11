@@ -51,6 +51,30 @@ tcspv_frame <- function(records) {
   }))
 }
 
+tcspv_finite <- function(x) {
+  x <- as.numeric(x)
+  x[is.finite(x)]
+}
+
+tcspv_mean_or_na <- function(x) {
+  x <- tcspv_finite(x)
+  if (length(x)) mean(x) else NA_real_
+}
+
+tcspv_median_or_na <- function(x) {
+  x <- tcspv_finite(x)
+  if (length(x)) stats::median(x) else NA_real_
+}
+
+tcspv_quantile_or_na <- function(x, probability) {
+  x <- tcspv_finite(x)
+  if (length(x)) {
+    as.numeric(stats::quantile(x, probability, names = FALSE, type = 8))
+  } else {
+    NA_real_
+  }
+}
+
 tcspv_dgps <- function(config) {
   rows <- lapply(config$dgps, function(x) {
     data.frame(
@@ -99,12 +123,17 @@ tcspv_validate_config <- function(config) {
     tcspv_stop("TCSP validation claim scope is not fail closed.")
   }
   execution <- config$execution
+  has_full_pilot <- !is.null(config$modes$full_pilot)
   if (!isTRUE(execution$preflight_authorized) ||
       !isTRUE(execution$tiny_authorized) ||
       !isTRUE(execution$pilot_authorized) ||
       isTRUE(execution$confirmatory_authorized) ||
       !isTRUE(execution$confirmatory_requires_new_config)) {
     tcspv_stop("TCSP execution flags are not in the expected fail-closed state.")
+  }
+  if ((has_full_pilot && !isTRUE(execution$full_pilot_authorized)) ||
+      (!has_full_pilot && isTRUE(execution$full_pilot_authorized))) {
+    tcspv_stop("TCSP full-pilot execution flag is inconsistent with modes.")
   }
   dgps <- tcspv_dgps(config)
   methods <- tcspv_methods(config)
@@ -342,6 +371,8 @@ tcspv_dkw_count <- function(n, content, confidence) {
 tcspv_mc_count <- function(config, n, content, confidence, mode) {
   n_sim <- as.integer(if (identical(mode, "tiny")) {
     config$scan_calibration$tiny_n_sim
+  } else if (identical(mode, "full_pilot")) {
+    config$scan_calibration$full_pilot_n_sim
   } else {
     config$scan_calibration$pilot_n_sim
   })
@@ -689,19 +720,15 @@ tcspv_summary <- function(results, summary_confidence = 0.95) {
       tolerance_success_rate = successes / attempted,
       tolerance_success_lower = lower,
       summary_confidence = summary_confidence,
-      mean_width = mean(finite_width),
-      median_width = stats::median(finite_width),
-      q90_width = as.numeric(stats::quantile(
-        finite_width, 0.90, names = FALSE, type = 8
-      )),
-      mean_true_content = mean(finite_content),
-      q10_true_content = as.numeric(stats::quantile(
-        finite_content, 0.10, names = FALSE, type = 8
-      )),
-      mean_content_deficit = mean(z$content_deficit, na.rm = TRUE),
-      mean_lower_omitted = mean(z$lower_omitted, na.rm = TRUE),
-      mean_upper_omitted = mean(z$upper_omitted, na.rm = TRUE),
-      mean_runtime_sec = mean(z$runtime_sec, na.rm = TRUE),
+      mean_width = tcspv_mean_or_na(finite_width),
+      median_width = tcspv_median_or_na(finite_width),
+      q90_width = tcspv_quantile_or_na(finite_width, 0.90),
+      mean_true_content = tcspv_mean_or_na(finite_content),
+      q10_true_content = tcspv_quantile_or_na(finite_content, 0.10),
+      mean_content_deficit = tcspv_mean_or_na(z$content_deficit),
+      mean_lower_omitted = tcspv_mean_or_na(z$lower_omitted),
+      mean_upper_omitted = tcspv_mean_or_na(z$upper_omitted),
+      mean_runtime_sec = tcspv_mean_or_na(z$runtime_sec),
       stringsAsFactors = FALSE
     )
   })
@@ -725,6 +752,15 @@ tcspv_atomic_json <- function(value, path) {
     value, tmp, pretty = TRUE, auto_unbox = TRUE, null = "null",
     na = "null", digits = NA
   )
+  if (!file.rename(tmp, path)) tcspv_stop("Could not write ", path)
+  invisible(path)
+}
+
+tcspv_atomic_text <- function(value, path) {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  tmp <- tempfile(paste0(".", basename(path), "-"), dirname(path))
+  on.exit(unlink(tmp, force = TRUE), add = TRUE)
+  writeLines(as.character(value), tmp, useBytes = TRUE)
   if (!file.rename(tmp, path)) tcspv_stop("Could not write ", path)
   invisible(path)
 }
@@ -839,4 +875,478 @@ tcspv_verify_run <- function(run_dir) {
     }, logical(1L)))
   if (!ok) tcspv_stop("Artifact manifest verification failed.")
   invisible(manifest)
+}
+
+tcspv_audit_schema <- function() {
+  "rqrgibbs_tcsp_validation_pilot_audit/1.0.0"
+}
+
+tcspv_read_csv_required <- function(run_dir, name) {
+  path <- file.path(run_dir, name)
+  if (!file.exists(path)) tcspv_stop("Missing required TCSP run file: ", name)
+  utils::read.csv(path, stringsAsFactors = FALSE)
+}
+
+tcspv_read_json_required <- function(run_dir, name) {
+  path <- file.path(run_dir, name)
+  if (!file.exists(path)) tcspv_stop("Missing required TCSP run file: ", name)
+  jsonlite::read_json(path, simplifyVector = TRUE)
+}
+
+tcspv_assert_completed_repeated_run <- function(run_dir) {
+  run_dir <- normalizePath(run_dir, winslash = "/", mustWork = TRUE)
+  manifest <- tcspv_verify_run(run_dir)
+  required <- c(
+    "config.json", "source_state.json", "design_grid.csv",
+    "critical_counts.csv", "replication_results.csv", "cell_summary.csv",
+    "failure_log.csv", "closeout.json"
+  )
+  missing <- required[!file.exists(file.path(run_dir, required))]
+  if (length(missing)) {
+    tcspv_stop("TCSP run is incomplete; missing: ", paste(missing, collapse = ", "))
+  }
+  config <- tcspv_read_config(file.path(run_dir, "config.json"))
+  tcspv_validate_config(config)
+  closeout <- tcspv_read_json_required(run_dir, "closeout.json")
+  if (!identical(closeout$schema_version, tcspv_schema())) {
+    tcspv_stop("TCSP run closeout has an unsupported schema.")
+  }
+  results <- tcspv_read_csv_required(run_dir, "replication_results.csv")
+  cell_summary <- tcspv_read_csv_required(run_dir, "cell_summary.csv")
+  failure_log <- tcspv_read_csv_required(run_dir, "failure_log.csv")
+  design_grid <- tcspv_read_csv_required(run_dir, "design_grid.csv")
+  criticals <- tcspv_read_csv_required(run_dir, "critical_counts.csv")
+  if (nrow(results) != as.integer(closeout$rows) ||
+      nrow(cell_summary) != as.integer(closeout$summary_rows) ||
+      nrow(failure_log) != as.integer(closeout$failures)) {
+    tcspv_stop("TCSP run closeout accounting does not match artifact rows.")
+  }
+  list(
+    run_dir = run_dir,
+    manifest = manifest,
+    config = config,
+    source_state = tcspv_read_json_required(run_dir, "source_state.json"),
+    closeout = closeout,
+    design_grid = design_grid,
+    critical_counts = criticals,
+    replication_results = results,
+    cell_summary = cell_summary,
+    failure_log = failure_log
+  )
+}
+
+tcspv_method_summary <- function(results) {
+  split_rows <- split(results, results$method_id, drop = TRUE)
+  rows <- lapply(split_rows, function(z) {
+    failed <- as.logical(z$failed)
+    success <- as.logical(z$tolerance_success) & !failed
+    attempted <- !failed
+    data.frame(
+      method_id = z$method_id[[1L]],
+      total_rows = nrow(z),
+      attempted_rows = sum(attempted, na.rm = TRUE),
+      failed_rows = sum(failed, na.rm = TRUE),
+      failure_rate_all_rows = sum(failed, na.rm = TRUE) / nrow(z),
+      tolerance_success_rows = sum(success, na.rm = TRUE),
+      tolerance_success_rate_all_rows = sum(success, na.rm = TRUE) / nrow(z),
+      tolerance_success_rate_attempted =
+        if (sum(attempted, na.rm = TRUE) > 0L) {
+          sum(success, na.rm = TRUE) / sum(attempted, na.rm = TRUE)
+        } else {
+          NA_real_
+        },
+      mean_width_attempted = tcspv_mean_or_na(z$width[attempted]),
+      median_width_attempted = tcspv_median_or_na(z$width[attempted]),
+      mean_true_content_attempted = tcspv_mean_or_na(z$true_content[attempted]),
+      q10_true_content_attempted =
+        tcspv_quantile_or_na(z$true_content[attempted], 0.10),
+      mean_content_deficit_all_rows = tcspv_mean_or_na(z$content_deficit),
+      max_content_deficit_all_rows =
+        if (length(tcspv_finite(z$content_deficit))) {
+          max(tcspv_finite(z$content_deficit))
+        } else {
+          NA_real_
+        },
+      mean_runtime_sec = tcspv_mean_or_na(z$runtime_sec),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, rows)
+  out[order(out$method_id), , drop = FALSE]
+}
+
+tcspv_critical_count_summary <- function(criticals) {
+  split_rows <- split(criticals, criticals$method_id, drop = TRUE)
+  rows <- lapply(split_rows, function(z) {
+    feasible <- !as.logical(z$infeasible)
+    all_certificates <- tcspv_finite(z$certificate)
+    feasible_certificates <- tcspv_finite(z$certificate[feasible])
+    data.frame(
+      method_id = z$method_id[[1L]],
+      critical_rows = nrow(z),
+      feasible_rows = sum(feasible, na.rm = TRUE),
+      infeasible_rows = sum(!feasible, na.rm = TRUE),
+      min_certificate_all_rows = if (length(all_certificates)) {
+        min(all_certificates)
+      } else {
+        NA_real_
+      },
+      min_certificate_feasible = if (length(feasible_certificates)) {
+        min(feasible_certificates)
+      } else {
+        NA_real_
+      },
+      min_n_sim = if (any(z$n_sim > 0L, na.rm = TRUE)) {
+        min(z$n_sim[z$n_sim > 0L], na.rm = TRUE)
+      } else {
+        0L
+      },
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, rows)
+  out[order(out$method_id), , drop = FALSE]
+}
+
+tcspv_dkw_feasibility <- function(criticals) {
+  dkw <- criticals[criticals$method_id == "tcsp_dkw", , drop = FALSE]
+  dkw$retained_fraction <- dkw$retained_count / dkw$n
+  dkw$retained_fraction_excess_over_content <-
+    dkw$retained_fraction - dkw$guaranteed_content
+  dkw$usable_action <- !as.logical(dkw$infeasible)
+  dkw[order(dkw$n, dkw$guaranteed_content, dkw$tolerance_confidence),
+      c(
+        "n", "guaranteed_content", "tolerance_confidence", "retained_count",
+        "retained_fraction", "retained_fraction_excess_over_content",
+        "certificate", "infeasible", "usable_action"
+      ), drop = FALSE]
+}
+
+tcspv_mc_calibration_health <- function(criticals) {
+  mc <- criticals[criticals$method_id == "tcsp_mc", , drop = FALSE]
+  if (!nrow(mc)) return(data.frame())
+  mc$certificate_margin <- mc$certificate - mc$tolerance_confidence
+  mc$certificate_gate_pass <- mc$certificate_margin >= -1e-12
+  mc[order(mc$n, mc$guaranteed_content, mc$tolerance_confidence),
+     c(
+       "n", "guaranteed_content", "tolerance_confidence", "retained_count",
+       "certificate", "certificate_margin", "certificate_gate_pass",
+       "n_sim", "seed", "infeasible"
+     ), drop = FALSE]
+}
+
+tcspv_normal_howe_sensitivity <- function(results, config) {
+  normal <- results[results$method_id == "normal_howe", , drop = FALSE]
+  if (!nrow(normal)) return(data.frame())
+  dgp_contract <- tcspv_dgps(config)[
+    , c("dgp_id", "parametric_normal_correctly_specified"), drop = FALSE
+  ]
+  split_rows <- split(normal, normal$dgp_id, drop = TRUE)
+  rows <- lapply(split_rows, function(z) {
+    failed <- as.logical(z$failed)
+    success <- as.logical(z$tolerance_success) & !failed
+    data.frame(
+      dgp_id = z$dgp_id[[1L]],
+      rows = nrow(z),
+      failures = sum(failed, na.rm = TRUE),
+      tolerance_success_rate_all_rows = sum(success, na.rm = TRUE) / nrow(z),
+      mean_width_attempted = tcspv_mean_or_na(z$width[!failed]),
+      mean_true_content_attempted = tcspv_mean_or_na(z$true_content[!failed]),
+      mean_content_deficit_all_rows = tcspv_mean_or_na(z$content_deficit),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- merge(do.call(rbind, rows), dgp_contract, by = "dgp_id", all.x = TRUE)
+  out[order(out$parametric_normal_correctly_specified, out$dgp_id,
+            decreasing = TRUE), , drop = FALSE]
+}
+
+tcspv_next_stage_plan <- function() {
+  data.frame(
+    stage = c(
+      "source-control gate",
+      "full pilot design",
+      "calibration budget",
+      "sample-size grid",
+      "competitor scope",
+      "confirmatory gate",
+      "manuscript integration"
+    ),
+    decision = c(
+      "Relaunch any promotion-eligible run from a committed source state with a recorded branch and commit.",
+      "Run a full iid univariate pilot before confirmatory promotion.",
+      "Increase Uniform scan calibration beyond the compact pilot budget.",
+      "Keep n=80 and n=250 as stress and transition points; add n=1200 before assessing DKW efficiency at high content/confidence.",
+      "Keep Young-Mathew and calibrated BNP Gibbs disabled until tracked, tested implementations are added.",
+      "Leave confirmatory execution fail-closed and require a new frozen config after the full pilot audit.",
+      "Use only audited full-pilot or confirmatory summaries in article prose; never reuse local pilot output as theorem evidence."
+    ),
+    minimum_next_action = c(
+      "Commit the audit plumbing, then launch the next run from that commit.",
+      "Use all five tracked DGPs, both contents, both tolerance confidences, and active non-oracle comparators.",
+      "Use at least 5000 Uniform calibration simulations per n/content/confidence cell for the full pilot; exact recursion remains a later theory task.",
+      "Evaluate n in {80,250,600,1200}; n=600 is near range-wide for c=0.90 at high confidence under DKW.",
+      "Add competitors only through source-controlled code, tests, and dependency declarations.",
+      "Require passing manifest, source-state, failure-accounting, and precision gates before a confirmatory config can be authorized.",
+      "Promote only claim-scoped empirical content/width statements, not response-likelihood or posterior-predictive claims."
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+tcspv_audit_gates <- function(bundle) {
+  config <- bundle$config
+  criticals <- bundle$critical_counts
+  results <- bundle$replication_results
+  source_state <- bundle$source_state
+  closeout <- bundle$closeout
+  disabled <- tcspv_methods(config)
+  disabled <- disabled[!disabled$enabled, , drop = FALSE]
+  source_status <- as.character(source_state$status_short %||% "")
+  dkw <- criticals[criticals$method_id == "tcsp_dkw", , drop = FALSE]
+  mc <- criticals[criticals$method_id == "tcsp_mc", , drop = FALSE]
+  gates <- list(
+    data.frame(
+      gate_id = "artifact_manifest_verified",
+      pass = TRUE,
+      severity = "required",
+      finding = "The source run artifact manifest verified by byte count and SHA-256.",
+      next_action = "Retain the ignored source run locally; commit only compact audit artifacts.",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      gate_id = "closeout_accounting_matches",
+      pass = nrow(results) == as.integer(closeout$rows) &&
+        nrow(bundle$cell_summary) == as.integer(closeout$summary_rows) &&
+        nrow(bundle$failure_log) == as.integer(closeout$failures),
+      severity = "required",
+      finding = "Closeout row counts match replication, summary, and failure artifacts.",
+      next_action = "Block audit publication if this gate fails.",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      gate_id = "claim_scope_fail_closed",
+      pass = isTRUE(config$generalized_bayes) &&
+        !isTRUE(config$response_likelihood) &&
+        !isTRUE(config$posterior_predictive_response_draws) &&
+        isTRUE(config$claim_scope$iid_univariate_continuous_only) &&
+        !isTRUE(config$claim_scope$regression_tolerance) &&
+        !isTRUE(config$claim_scope$dynamic_tolerance),
+      severity = "required",
+      finding = "The config evaluates iid univariate population content, not response-likelihood or posterior-predictive coverage.",
+      next_action = "Keep manuscript language within this scope.",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      gate_id = "confirmatory_fail_closed",
+      pass = !isTRUE(config$execution$confirmatory_authorized) &&
+        isTRUE(config$execution$confirmatory_requires_new_config),
+      severity = "required",
+      finding = "Confirmatory execution remains disabled in the pilot config.",
+      next_action = "Create a separate frozen confirmatory config only after full-pilot audit.",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      gate_id = "pilot_rehearsal_size",
+      pass = as.integer(closeout$replications) >= 8L,
+      severity = "rehearsal",
+      finding = paste0("The source run has ", closeout$replications,
+                       " replications per cell, enough for plumbing but not precision claims."),
+      next_action = "Use the run to validate wiring only.",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      gate_id = "publication_precision_not_met",
+      pass = FALSE,
+      severity = "promotion_blocker",
+      finding = "Eight replications per cell are not enough for publication-quality Monte Carlo precision.",
+      next_action = "Run a full pilot with a larger replication and calibration budget.",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      gate_id = "source_state_committed_for_rehearsal",
+      pass = grepl("^[0-9a-f]{40}$", as.character(source_state$commit)),
+      severity = "required",
+      finding = paste0("The source run recorded commit ", source_state$commit, "."),
+      next_action = "For promotion-eligible runs, require the exact committed audit and runner source.",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      gate_id = "source_state_clean_for_promotion",
+      pass = identical(trimws(source_status), ""),
+      severity = "promotion_blocker",
+      finding = if (identical(trimws(source_status), "")) {
+        "The source run recorded no local status changes."
+      } else {
+        "The source run recorded local status changes; treat it as a rehearsal."
+      },
+      next_action = "Relaunch the full pilot from a committed branch after this audit plumbing lands.",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      gate_id = "dkw_feasibility_mapped",
+      pass = nrow(dkw) > 0L && any(as.logical(dkw$infeasible)) &&
+        any(!as.logical(dkw$infeasible)),
+      severity = "required",
+      finding = "The pilot includes both infeasible and feasible DKW retained-count cells.",
+      next_action = "Use the DKW map to choose full-pilot sample sizes.",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      gate_id = "mc_calibration_conservative",
+      pass = nrow(mc) > 0L &&
+        all(mc$certificate + 1e-12 >= mc$tolerance_confidence) &&
+        all(!as.logical(mc$infeasible)),
+      severity = "required",
+      finding = "Monte Carlo scan retained counts meet the one-sided lower-bound certificate in the pilot.",
+      next_action = "Increase calibration simulations before the full pilot.",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      gate_id = "disabled_competitors_documented",
+      pass = all(c("young_mathew", "calibrated_bnp_gibbs") %in%
+                   disabled$method_id) &&
+        all(nzchar(disabled$disabled_reason)),
+      severity = "required",
+      finding = "Unavailable competitors are disabled with explicit reasons.",
+      next_action = "Do not include untracked competitors in the next launch.",
+      stringsAsFactors = FALSE
+    )
+  )
+  do.call(rbind, gates)
+}
+
+tcspv_audit_readme <- function(summary, gates) {
+  failing_required <- gates[!gates$pass & gates$severity == "required", ,
+                            drop = FALSE]
+  promotion_blockers <- gates[gates$severity == "promotion_blocker", ,
+                              drop = FALSE]
+  c(
+    "# TCSP validation pilot audit",
+    "",
+    "This compact bundle audits the ignored local TCSP validation pilot run.",
+    "It is a wiring and diagnosis record, not manuscript evidence and not a theorem proof.",
+    "",
+    "## Verdict",
+    "",
+    paste0("- status: `", summary$status, "`"),
+    paste0("- source run: `", summary$source_run_dir, "`"),
+    paste0("- rows: ", summary$rows),
+    paste0("- summary rows: ", summary$summary_rows),
+    paste0("- failures: ", summary$failures),
+    paste0("- required gate failures: ", nrow(failing_required)),
+    paste0("- promotion blockers recorded: ", nrow(promotion_blockers)),
+    "",
+    "The pilot validated the run plumbing, artifact manifest, DGP/method contracts,",
+    "failure accounting, and conservative TCSP scan-calibration behavior. It did",
+    "not meet promotion conditions because the source run was a compact",
+    "8-replication rehearsal and its recorded source state included local changes.",
+    "",
+    "## Next Step",
+    "",
+    "Launch a full iid univariate pilot only after this audit plumbing is merged.",
+    "The full pilot should use a committed source state, a larger Monte Carlo scan",
+    "calibration budget, all tracked DGPs, both tolerance-confidence levels, and",
+    "a sample-size grid that adds `n=1200` so high-content DKW intervals are not",
+    "only range-wide stress cases.",
+    "",
+    "## Files",
+    "",
+    "- `audit_summary.json`: machine-readable verdict and source-run accounting.",
+    "- `audit_gates.csv`: pass/fail gates and promotion blockers.",
+    "- `method_summary.csv`: method-level results from replication-level data.",
+    "- `cell_summary_compact.csv`: cell-level pilot summaries with failure cells retained.",
+    "- `critical_count_summary.csv`: calibration feasibility summary by method.",
+    "- `dkw_feasibility.csv`: DKW retained-count feasibility by sample size/content/confidence.",
+    "- `mc_calibration_health.csv`: Uniform Monte Carlo scan calibration certificates.",
+    "- `normal_howe_sensitivity.csv`: normal-theory competitor behavior by DGP.",
+    "- `next_stage_plan.csv`: source-controlled launch plan for the full pilot.",
+    "- `source_run_manifest.csv`: copied manifest for the ignored source run.",
+    "- `artifact_hashes.csv`: SHA-256 hashes for this audit bundle."
+  )
+}
+
+tcspv_write_pilot_audit <- function(run_dir, output_dir, replace = FALSE) {
+  bundle <- tcspv_assert_completed_repeated_run(run_dir)
+  output_dir <- normalizePath(output_dir, winslash = "/", mustWork = FALSE)
+  if ((dir.exists(output_dir) || file.exists(output_dir)) && !isTRUE(replace)) {
+    tcspv_stop("TCSP pilot audit output already exists: ", output_dir)
+  }
+  method_summary <- tcspv_method_summary(bundle$replication_results)
+  critical_summary <- tcspv_critical_count_summary(bundle$critical_counts)
+  dkw_feasibility <- tcspv_dkw_feasibility(bundle$critical_counts)
+  mc_health <- tcspv_mc_calibration_health(bundle$critical_counts)
+  normal_sensitivity <- tcspv_normal_howe_sensitivity(
+    bundle$replication_results, bundle$config
+  )
+  gates <- tcspv_audit_gates(bundle)
+  status <- if (any(!gates$pass & gates$severity == "required")) {
+    "audit_failed_required_gate"
+  } else {
+    "audited_rehearsal_not_promoted"
+  }
+  summary <- list(
+    schema_version = tcspv_audit_schema(),
+    status = status,
+    source_run_dir = bundle$run_dir,
+    source_run_commit = as.character(bundle$source_state$commit),
+    source_run_branch = as.character(bundle$source_state$branch),
+    source_state_clean = identical(
+      trimws(as.character(bundle$source_state$status_short %||% "")), ""
+    ),
+    mode = as.character(bundle$closeout$mode),
+    replications = as.integer(bundle$closeout$replications),
+    rows = as.integer(bundle$closeout$rows),
+    summary_rows = as.integer(bundle$closeout$summary_rows),
+    failures = as.integer(bundle$closeout$failures),
+    required_gate_failures = sum(!gates$pass & gates$severity == "required"),
+    promotion_blockers = sum(gates$severity == "promotion_blocker"),
+    full_pilot_recommended = TRUE,
+    confirmatory_ready = FALSE,
+    source_run_reusable_as_confirmatory_evidence = FALSE,
+    response_likelihood = FALSE,
+    posterior_predictive_response_draws = FALSE,
+    audited_at_utc = format(Sys.time(), tz = "UTC", usetz = TRUE)
+  )
+  dir.create(dirname(output_dir), recursive = TRUE, showWarnings = FALSE)
+  stage <- tempfile(paste0(".", basename(output_dir), "-"),
+                    tmpdir = dirname(output_dir))
+  dir.create(stage, recursive = TRUE, showWarnings = FALSE)
+  on.exit(unlink(stage, recursive = TRUE, force = TRUE), add = TRUE)
+  tcspv_atomic_json(summary, file.path(stage, "audit_summary.json"))
+  tcspv_atomic_csv(gates, file.path(stage, "audit_gates.csv"))
+  tcspv_atomic_csv(method_summary, file.path(stage, "method_summary.csv"))
+  compact_cols <- c(
+    "mode", "dgp_id", "n", "guaranteed_content", "tolerance_confidence",
+    "method_id", "replications", "failures", "failure_rate",
+    "tolerance_success_rate", "tolerance_success_lower", "mean_width",
+    "mean_true_content", "mean_content_deficit", "mean_runtime_sec"
+  )
+  tcspv_atomic_csv(
+    bundle$cell_summary[, compact_cols, drop = FALSE],
+    file.path(stage, "cell_summary_compact.csv")
+  )
+  tcspv_atomic_csv(critical_summary,
+                   file.path(stage, "critical_count_summary.csv"))
+  tcspv_atomic_csv(dkw_feasibility, file.path(stage, "dkw_feasibility.csv"))
+  tcspv_atomic_csv(mc_health, file.path(stage, "mc_calibration_health.csv"))
+  tcspv_atomic_csv(normal_sensitivity,
+                   file.path(stage, "normal_howe_sensitivity.csv"))
+  tcspv_atomic_csv(tcspv_next_stage_plan(),
+                   file.path(stage, "next_stage_plan.csv"))
+  tcspv_atomic_csv(bundle$manifest, file.path(stage, "source_run_manifest.csv"))
+  tcspv_atomic_text(tcspv_audit_readme(summary, gates),
+                    file.path(stage, "README.md"))
+  tcspv_atomic_csv(
+    tcspv_file_manifest(stage, exclude = "artifact_hashes.csv"),
+    file.path(stage, "artifact_hashes.csv")
+  )
+  if (dir.exists(output_dir) || file.exists(output_dir)) {
+    unlink(output_dir, recursive = TRUE, force = TRUE)
+  }
+  dir.create(dirname(output_dir), recursive = TRUE, showWarnings = FALSE)
+  if (!file.rename(stage, output_dir)) {
+    tcspv_stop("Could not publish TCSP pilot audit bundle.")
+  }
+  invisible(output_dir)
 }

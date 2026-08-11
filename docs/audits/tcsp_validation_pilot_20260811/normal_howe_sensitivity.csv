@@ -1,0 +1,4 @@
+"dgp_id","rows","failures","tolerance_success_rate_all_rows","mean_width_attempted","mean_true_content_attempted","mean_content_deficit_all_rows","parametric_normal_correctly_specified"
+"normal",48,0,0.833333333333333,3.08601240479029,0.867298491788507,0.00152421888078884,TRUE
+"mixture",48,0,0.166666666666667,3.07604821394941,0.838822777234119,0.0184908138468963,FALSE
+"lognormal",48,0,0.979166666666667,3.07225349043509,0.930606858775942,3.09149688275898e-05,FALSE

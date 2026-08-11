@@ -1,0 +1,21 @@
+{
+  "schema_version": "rqrgibbs_tcsp_validation_pilot_audit/1.0.0",
+  "status": "audited_rehearsal_not_promoted",
+  "source_run_dir": "/data/muscat_data/jaguir26/RQR-GIBBS/application/outputs/tcsp_validation_v1/pilot_codex_20260811",
+  "source_run_commit": "c2b03cbd8f9e5564123e2d7d60c303eb99837501",
+  "source_run_branch": "feature/tcsp-validation-study-20260811",
+  "source_state_clean": false,
+  "mode": "pilot",
+  "replications": 8,
+  "rows": 576,
+  "summary_rows": 72,
+  "failures": 72,
+  "required_gate_failures": 0,
+  "promotion_blockers": 2,
+  "full_pilot_recommended": true,
+  "confirmatory_ready": false,
+  "source_run_reusable_as_confirmatory_evidence": false,
+  "response_likelihood": false,
+  "posterior_predictive_response_draws": false,
+  "audited_at_utc": "2026-08-11 23:03:18 UTC"
+}

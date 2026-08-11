@@ -1,7 +1,7 @@
 {
   "schema_version": "rqrgibbs_tcsp_validation_study/1.0.0",
   "study_id": "tcsp_validation_v1_20260811",
-  "status": "pilot_enabled_confirmatory_fail_closed",
+  "status": "pilot_and_full_pilot_enabled_confirmatory_fail_closed",
   "interpretation": "Repeated-sample validation for iid univariate TCSP tolerance actions and benchmark intervals. This is empirical validation evidence, not a proof of the finite-sample scan theorem.",
   "generalized_bayes": true,
   "response_likelihood": false,
@@ -17,13 +17,14 @@
     "preflight_authorized": true,
     "tiny_authorized": true,
     "pilot_authorized": true,
+    "full_pilot_authorized": true,
     "confirmatory_authorized": false,
     "confirmatory_requires_new_config": true
   },
   "design": {
     "guaranteed_contents": [0.80, 0.90],
     "tolerance_confidences": [0.80, 0.90],
-    "sample_sizes": [80, 250, 600],
+    "sample_sizes": [80, 250, 600, 1200],
     "summary_confidence": 0.95,
     "success_tolerance": 1e-12
   },
@@ -51,6 +52,14 @@
       "tolerance_confidences": [0.80],
       "dgp_ids": ["normal", "lognormal", "mixture"],
       "method_ids": ["tcsp_dkw", "tcsp_mc", "wilks_symmetric", "normal_howe"]
+    },
+    "full_pilot": {
+      "replications": 250,
+      "sample_sizes": [80, 250, 600, 1200],
+      "guaranteed_contents": [0.80, 0.90],
+      "tolerance_confidences": [0.80, 0.90],
+      "dgp_ids": ["normal", "lognormal", "student_t5", "mixture", "beta_skew"],
+      "method_ids": ["tcsp_dkw", "tcsp_mc", "wilks_symmetric", "wilks_minmax", "equal_tailed_tcsp_content", "normal_howe", "oracle_shortest"]
     }
   },
   "dgps": [
@@ -175,6 +184,7 @@
   "scan_calibration": {
     "tiny_n_sim": 600,
     "pilot_n_sim": 250,
+    "full_pilot_n_sim": 5000,
     "numerical_confidence": 0.99,
     "precompute_by_n_content_confidence": true,
     "monte_carlo_lower_bound": "one_sided_clopper_pearson"
