@@ -6,6 +6,13 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `implementation_notes/cornish_fisher_main_text_restoration_20260810.md`
+  records the mathematical, editorial, testing, and arXiv-source contract for
+  restoring the first-order CF diagnostic figure and population comparison
+  table to the main article without changing any fitted target or simulation.
+- `audits/cornish_fisher_main_text_restoration_reconciliation_20260810.md`
+  records the implementation reconciliation, validation matrix, arXiv source
+  check, and evidence boundary for that restoration.
 - `audits/oracle_tilt_c095_v5_promotion_reconciliation_20260810.md`
   records the exact V5 source/runtime/configuration identities, 27-chain
   completion, five strict cells, the diagnostic-aware DLM/SH warnings,

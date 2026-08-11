@@ -691,6 +691,7 @@ the target to disconnected highest-density regions.
 The recovery identities also give a low-cost initialization diagnostic. Let
 \(Z=(Y-\mu)/\sigma\) have small standardized skewness \(\gamma_1\), and let
 \(z_p=\Phi^{-1}(p)\). The formal first-order Cornish--Fisher expansion
+\citep{CornishFisher1937}
 \[
 Q_Z(p)
  \approx
@@ -756,24 +757,12 @@ and heavy-tailed cases can move the first-order shortest approximation outside
 the admissible finite-root tilt range. The implementation records adjusted
 skewness, excess kurtosis, standardized sixth moment, probability-window
 clipping, boundary proximity, and bootstrap sidecars for this reason. The
-deterministic Cornish--Fisher figure and table below are therefore
-approximation diagnostics rather than empirical validation or held-out
-selection rules.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/generated/fig03_mean_tilt_cf_anchors.png}
-\caption{\textbf{Cornish--Fisher tilt-anchor diagnostic.}
-For content \(c=0.80\), the solid curves are the population window-to-tilt map
-and width profile from the main article's left-skewed illustration. Filled
-markers are the oracle RQR, ET, and SH tilts. Open markers show first-order
-Cornish--Fisher anchors computed from true population skewness. The display is
-an approximation diagnostic for initialization and screening, not a
-data-driven tilt estimator and not MCMC evidence.}
-\label{fig:supp-mean-tilt-cf-anchors}
-\end{figure}
-
-\input{tables/mean_tilt_cf_mini_study.tex}
+main article's deterministic Cornish--Fisher figure and population comparison
+table illustrate both near-Normal accuracy and material departures under
+stronger skewness or support-boundary geometry. They are approximation
+diagnostics rather than empirical validation or held-out selection rules. The
+machine-readable population values remain in
+\texttt{tables/mean\_tilt\_cf\_mini\_study.csv}.
 
 The tilt indexes the estimand and is initially treated like a fixed quantile
 level. A scalar tilt generally defines only a restricted global target in a

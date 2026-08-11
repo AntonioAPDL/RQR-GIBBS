@@ -61,11 +61,25 @@ load_validation_functions <- function(repo_root) {
 
 dgp_display_label <- function(dgp_id) {
   labels <- c(
+    normal = "Normal(mean=0, sd=1)",
+    gamma16 = "Gamma(shape=16, scale=0.25)",
+    gamma4 = "Gamma(shape=4, scale=1)",
+    lognormal = "Lognormal(meanlog=0, sdlog=0.5)",
+    exponential = "Exponential(rate=1)",
+    beta_right = "Beta(shape1=2, shape2=5)",
+    beta_left = "Beta(shape1=5, shape2=2)"
+  )
+  out <- unname(labels[dgp_id])
+  ifelse(is.na(out), dgp_id, out)
+}
+
+dgp_table_label <- function(dgp_id) {
+  labels <- c(
     normal = "Normal",
     gamma16 = "Gamma(16, 0.25)",
     gamma4 = "Gamma(4, 1)",
     lognormal = "Lognormal(0, 0.5)",
-    exponential = "Exponential",
+    exponential = "Exponential$^{\\dagger}$",
     beta_right = "Beta(2, 5)",
     beta_left = "Beta(5, 2)"
   )
@@ -117,14 +131,14 @@ build_cf_mini_study <- function(coverage = DEFAULT_COVERAGE,
 write_cf_table_tex <- function(table, path) {
   rows <- apply(table, 1L, function(row) {
     paste(
-      row[["dgp_label"]],
+      dgp_table_label(row[["dgp_id"]]),
       format_decimal(row[["skewness"]]),
-      format_decimal(row[["d_shortest"]]),
-      format_decimal(row[["d_cf_shortest"]]),
-      format_decimal(row[["abs_error_shortest"]]),
       format_decimal(row[["d_equal_tailed"]]),
       format_decimal(row[["d_cf_equal_tailed"]]),
       format_decimal(row[["abs_error_equal_tailed"]]),
+      format_decimal(row[["d_shortest"]]),
+      format_decimal(row[["d_cf_shortest"]]),
+      format_decimal(row[["abs_error_shortest"]]),
       sep = " & "
     )
   })
@@ -132,12 +146,14 @@ write_cf_table_tex <- function(table, path) {
   header <- c(
     "\\begin{table}[H]",
     "\\centering",
-    "\\caption{\\textbf{Population Cornish--Fisher tilt check.} Each row uses a known population law with content $c=0.80$ and true population skewness $\\gamma_1$. The oracle columns report standardized recovery tilts $d=\\delta/\\operatorname{SD}(Y)$ for the shortest-contiguous (SH) and equal-tailed (ET) windows. The CF columns use $d_{\\mathrm{SH}}^{\\mathrm{CF}}=-\\gamma_1 q_c\\phi(q_c)/c$ and $d_{\\mathrm{ET}}^{\\mathrm{CF}}=d_{\\mathrm{SH}}^{\\mathrm{CF}}/3$; $|e|$ is the absolute population approximation gap. The table is a deterministic approximation diagnostic, not MCMC, tilt-selection, or response-prediction evidence.}",
+    "\\caption{\\textbf{Population accuracy of first-order Cornish--Fisher tilt anchors.} Each row uses a known population law, content $c=0.80$, and true skewness $\\gamma_1$. Oracle and CF columns report standardized recovery tilts $d=\\delta/\\operatorname{SD}(Y)$; $|e|$ is their absolute gap. Gamma arguments are shape and scale, lognormal arguments are meanlog and sdlog, and the exponential law has unit rate. $^{\\dagger}$ denotes an SH oracle at the lower support boundary. This is a deterministic population diagnostic, not MCMC, tilt-selection, or response-prediction evidence.}",
     "\\label{tab:mean-tilt-cf-mini-study}",
     "\\TableStyle",
-    "\\begin{tabular}{@{}l@{\\hspace{1.1em}}rrrrrrr@{}}",
+    "\\begin{tabular}{@{}l@{\\hspace{0.8em}}rrrrrrr@{}}",
     "\\toprule",
-    "DGP & $\\gamma_1$ & $d_{\\mathrm{SH}}$ & $d_{\\mathrm{SH}}^{\\mathrm{CF}}$ & $|e_{\\mathrm{SH}}|$ & $d_{\\mathrm{ET}}$ & $d_{\\mathrm{ET}}^{\\mathrm{CF}}$ & $|e_{\\mathrm{ET}}|$ \\\\",
+    "DGP & $\\gamma_1$ & \\multicolumn{3}{c}{Equal-tailed} & \\multicolumn{3}{c}{Shortest-contiguous} \\\\",
+    "\\cmidrule(lr){3-5} \\cmidrule(l){6-8}",
+    "& & Oracle $d$ & CF $d$ & $|e|$ & Oracle $d$ & CF $d$ & $|e|$ \\\\",
     "\\midrule"
   )
   footer <- c(

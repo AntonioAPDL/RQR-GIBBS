@@ -509,7 +509,8 @@ skewness and set
 \[
 q_c=\Phi^{-1}\{(1+c)/2\},\qquad K_c=q_c\phi(q_c)/c.
 \]
-A Cornish--Fisher expansion around a standardized Normal law gives the
+A Cornish--Fisher expansion around a standardized Normal law
+\citep{CornishFisher1937} gives the
 shortest-oriented and equal-tailed standardized tilt anchors
 \[
 d_{\mathrm{SH}}^{\mathrm{CF}}=-\gamma_1K_c,\qquad
@@ -520,10 +521,37 @@ These formulas are not new interval targets; they are local skewness-based
 approximations to the population recovery tilts. Right skewness gives a
 negative shortest-oriented tilt, while left skewness gives a positive tilt.
 They supply cheap, interpretable starting anchors for tilt exploration, not
-automatic shortest-interval estimators. Implementation diagnostics record
-moment shape, probability-window boundary behavior, and bootstrap sensitivity.
-The supplement gives the corresponding diagnostic figure and finite-population
-comparison table.
+automatic shortest-interval estimators. Figure~\ref{fig:mean-tilt-cf-anchors}
+places the two approximations on the exact population tilt path using true
+population skewness rather than a sample estimate.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/fig03_mean_tilt_cf_anchors.png}
+\caption{\textbf{Cornish--Fisher tilt-anchor diagnostic.}
+For content \(c=0.80\), the solid curves are the population window-to-tilt
+map and width profile from the left-skewed illustration. Filled markers are
+the exact population RQR, ET, and SH tilts. Open markers are the first-order
+Cornish--Fisher anchors computed from true population skewness. The display
+diagnoses a population approximation for initialization and external
+screening; it is not a data-driven tilt estimator, MCMC evidence, or a
+response-prediction result.}
+\label{fig:mean-tilt-cf-anchors}
+\end{figure}
+
+\input{tables/mean_tilt_cf_mini_study.tex}
+
+Table~\ref{tab:mean-tilt-cf-mini-study} shows why the approximation should
+remain an anchor rather than a target definition. It is exact at symmetry and
+close for the near-Normal Gamma laws. Its errors are larger for lognormal and
+bounded Beta shapes and for the exponential law, whose shortest interval is a
+support-boundary solution. The reflected Beta rows verify the expected sign
+reversal but also show that skewness alone does not determine approximation
+accuracy. Across these examples the ET anchor is more accurate than the SH
+anchor, but that comparison is descriptive rather than a general ordering.
+Implementation diagnostics therefore record moment shape,
+probability-window boundary behavior, and bootstrap sensitivity whenever a
+sample plug-in anchor is constructed.
 
 These are population and oracle statements. A universal tilt does not recover
 the same interval functional across distributions, and conditional recovery
@@ -532,10 +560,14 @@ initially be fixed or selected in an external training/validation layer;
 sampling it as an ordinary parameter would mix distinct interval targets. The
 target is equivariant under positive affine changes of response scale when
 \(\delta\) and the fixed learning rate are transformed accordingly, but it is
-not invariant to arbitrary monotone response transformations. The current
-RQR-DLM implementation and validation protocol use \(\delta=0\). Mean-tilted
-computation and data-driven tilt selection require their own code and
-validation before empirical claims are made.
+not invariant to arbitrary monotone response transformations. The native
+implementation supports a fixed nonzero tilt for the declared fixed-rate
+ridge fixed-design and RQR-DESN readout contracts and, for RQR-DLM, under
+fixed evolution covariance or a frozen discount template. It does not yet
+cover every prior, learning-rate, and evolution-mode combination, and the
+repeated-sample validation program remains deepest at \(\delta=0\).
+Data-driven tilt selection requires a separate external protocol before
+empirical claims are made.
 
 The population score equations do not by themselves establish propriety of a
 finite-sample generalized posterior under an arbitrary root prior. For a fixed

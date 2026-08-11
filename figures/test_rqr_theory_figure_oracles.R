@@ -268,7 +268,7 @@ fig02_block <- extract_figure_block(
   "main.tex", "figS01_cross_distribution_recovery.png"
 )
 fig03_block <- extract_figure_block(
-  "rqr-gibbs-supplement.tex", "fig03_mean_tilt_cf_anchors.png"
+  "main.tex", "fig03_mean_tilt_cf_anchors.png"
 )
 public_figure_blocks <- c(
   extract_figure_block("main.tex", "fig01_three_balance_principles.png"),
@@ -281,8 +281,49 @@ assert_true(
 )
 assert_true(
   grepl("Cornish--Fisher", fig03_block, fixed = TRUE) &&
-    grepl("fig:supp-mean-tilt-cf-anchors", fig03_block, fixed = TRUE),
-  "Supplement CF-anchor diagnostic figure is labelled correctly"
+    grepl("fig:mean-tilt-cf-anchors", fig03_block, fixed = TRUE),
+  "Main Figure 3 is the labelled CF-anchor diagnostic"
+)
+main_text <- paste(
+  readLines(file.path(repository_root(), "main.tex"), warn = FALSE),
+  collapse = "\n"
+)
+supplement_text <- paste(
+  readLines(
+    file.path(repository_root(), "rqr-gibbs-supplement.tex"), warn = FALSE
+  ),
+  collapse = "\n"
+)
+assert_true(
+  lengths(regmatches(
+    main_text,
+    gregexpr("fig03_mean_tilt_cf_anchors.png", main_text, fixed = TRUE)
+  )) == 1L &&
+    !grepl("fig03_mean_tilt_cf_anchors.png", supplement_text, fixed = TRUE),
+  "CF figure is included exactly once in the main article"
+)
+assert_true(
+  lengths(regmatches(
+    main_text,
+    gregexpr("tables/mean_tilt_cf_mini_study.tex", main_text, fixed = TRUE)
+  )) == 1L &&
+    !grepl("tables/mean_tilt_cf_mini_study.tex", supplement_text,
+           fixed = TRUE),
+  "CF population table is included exactly once in the main article"
+)
+arxiv_script <- paste(
+  readLines(
+    file.path(repository_root(), "application", "scripts",
+              "31_prepare_arxiv_source.sh"),
+    warn = FALSE
+  ),
+  collapse = "\n"
+)
+assert_true(
+  grepl("figures/generated/fig03_mean_tilt_cf_anchors.png", arxiv_script,
+        fixed = TRUE) &&
+    grepl("tables/mean_tilt_cf_mini_study.tex", arxiv_script, fixed = TRUE),
+  "arXiv source contract includes the main-text CF figure and table"
 )
 for (term in c(
     "\\operatorname{AL}", "asymmetric-Laplace", "\\tau_{\\mathrm{AL}}"

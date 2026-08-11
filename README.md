@@ -53,7 +53,10 @@ The implemented ordinary-RQR paths currently include:
    component-scale evolution modes.
 
 Mean-tilt and Cornish--Fisher calculations in the manuscript are population
-geometry and initialization diagnostics. The package now exposes a bounded
+geometry and initialization diagnostics. The main article's CF figure and
+cross-law population table deliberately show both near-Normal accuracy and
+breakdown under stronger skewness or support-boundary geometry; they do not
+enter the exact-oracle fits. The package now exposes a bounded
 fixed-tilt MCMC path for fixed-rate ridge readouts: fixed-design regression,
 frozen-feature DESN readouts through the same fixed-design kernel, and RQR-DLM
 models with fixed or pre-frozen discount-template evolution. Nonzero tilt is
