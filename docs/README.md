@@ -6,6 +6,11 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/bayesian_manuscript_language_audit_20260811.md` records the complete
+  main-text and supplement terminology audit, the Bayesian-language contract,
+  and the automated guard that preserves the generalized-posterior versus
+  response-likelihood distinction.
+
 - `implementation_notes/cornish_fisher_main_text_restoration_20260810.md`
   records the mathematical, editorial, testing, and arXiv-source contract for
   restoring the first-order CF diagnostic figure and population comparison

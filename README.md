@@ -85,6 +85,7 @@ from exact Git archives under ignored local cache directories.
 make smoke
 make test-theory-figures
 make test-theory-tables
+make test-manuscript-language
 make pdf
 make supplement
 make package-install
