@@ -1100,6 +1100,10 @@ tcspv_audit_gates <- function(bundle) {
   results <- bundle$replication_results
   source_state <- bundle$source_state
   closeout <- bundle$closeout
+  mode <- as.character(closeout$mode)
+  replications <- as.integer(closeout$replications)
+  is_full_pilot <- identical(mode, "full_pilot")
+  replication_target <- if (is_full_pilot) 250L else 8L
   disabled <- tcspv_methods(config)
   disabled <- disabled[!disabled$enabled, , drop = FALSE]
   source_status <- as.character(source_state$status_short %||% "")
@@ -1142,25 +1146,41 @@ tcspv_audit_gates <- function(bundle) {
       pass = !isTRUE(config$execution$confirmatory_authorized) &&
         isTRUE(config$execution$confirmatory_requires_new_config),
       severity = "required",
-      finding = "Confirmatory execution remains disabled in the pilot config.",
+      finding = "Confirmatory execution remains disabled in the validation config.",
       next_action = "Create a separate frozen confirmatory config only after full-pilot audit.",
       stringsAsFactors = FALSE
     ),
     data.frame(
-      gate_id = "pilot_rehearsal_size",
-      pass = as.integer(closeout$replications) >= 8L,
-      severity = "rehearsal",
-      finding = paste0("The source run has ", closeout$replications,
-                       " replications per cell, enough for plumbing but not precision claims."),
-      next_action = "Use the run to validate wiring only.",
+      gate_id = "replication_budget_for_mode",
+      pass = replications >= replication_target,
+      severity = "required",
+      finding = paste0(
+        "The ", mode, " run has ", replications,
+        " replications per cell; the mode target is ", replication_target, "."
+      ),
+      next_action = if (is_full_pilot) {
+        "Use full-pilot summaries for review only, then decide whether to freeze a confirmatory config."
+      } else {
+        "Use the compact pilot to validate wiring only."
+      },
       stringsAsFactors = FALSE
     ),
     data.frame(
-      gate_id = "publication_precision_not_met",
-      pass = FALSE,
+      gate_id = "full_pilot_precision_budget",
+      pass = is_full_pilot && replications >= 250L,
       severity = "promotion_blocker",
-      finding = "Eight replications per cell are not enough for publication-quality Monte Carlo precision.",
-      next_action = "Run a full pilot with a larger replication and calibration budget.",
+      finding = if (is_full_pilot) {
+        paste0("The full-pilot run has ", replications,
+               " replications per cell for operational review.")
+      } else {
+        paste0("The compact pilot has ", replications,
+               " replications per cell and is not a full-pilot precision run.")
+      },
+      next_action = if (is_full_pilot) {
+        "Review full-pilot precision and failure accounting before any manuscript promotion."
+      } else {
+        "Run a full pilot with a larger replication and calibration budget."
+      },
       stringsAsFactors = FALSE
     ),
     data.frame(
@@ -1178,9 +1198,13 @@ tcspv_audit_gates <- function(bundle) {
       finding = if (identical(trimws(source_status), "")) {
         "The source run recorded no local status changes."
       } else {
-        "The source run recorded local status changes; treat it as a rehearsal."
+        "The source run recorded local status changes; do not promote it."
       },
-      next_action = "Relaunch the full pilot from a committed branch after this audit plumbing lands.",
+      next_action = if (is_full_pilot) {
+        "Relaunch the full pilot from a clean committed source state if this gate fails."
+      } else {
+        "Relaunch the full pilot from a committed branch after this audit plumbing lands."
+      },
       stringsAsFactors = FALSE
     ),
     data.frame(
@@ -1188,7 +1212,7 @@ tcspv_audit_gates <- function(bundle) {
       pass = nrow(dkw) > 0L && any(as.logical(dkw$infeasible)) &&
         any(!as.logical(dkw$infeasible)),
       severity = "required",
-      finding = "The pilot includes both infeasible and feasible DKW retained-count cells.",
+      finding = "The run includes both infeasible and feasible DKW retained-count cells.",
       next_action = "Use the DKW map to choose full-pilot sample sizes.",
       stringsAsFactors = FALSE
     ),
@@ -1198,8 +1222,12 @@ tcspv_audit_gates <- function(bundle) {
         all(mc$certificate + 1e-12 >= mc$tolerance_confidence) &&
         all(!as.logical(mc$infeasible)),
       severity = "required",
-      finding = "Monte Carlo scan retained counts meet the one-sided lower-bound certificate in the pilot.",
-      next_action = "Increase calibration simulations before the full pilot.",
+      finding = "Monte Carlo scan retained counts meet the one-sided lower-bound certificate in this run.",
+      next_action = if (is_full_pilot) {
+        "Retain calibration metadata for full-pilot review."
+      } else {
+        "Increase calibration simulations before the full pilot."
+      },
       stringsAsFactors = FALSE
     ),
     data.frame(
@@ -1219,36 +1247,60 @@ tcspv_audit_gates <- function(bundle) {
 tcspv_audit_readme <- function(summary, gates) {
   failing_required <- gates[!gates$pass & gates$severity == "required", ,
                             drop = FALSE]
-  promotion_blockers <- gates[gates$severity == "promotion_blocker", ,
+  promotion_blockers <- gates[!gates$pass & gates$severity == "promotion_blocker", ,
                               drop = FALSE]
+  is_full_pilot <- identical(summary$mode, "full_pilot")
   c(
-    "# TCSP validation pilot audit",
+    "# TCSP validation run audit",
     "",
-    "This compact bundle audits the ignored local TCSP validation pilot run.",
+    "This compact bundle audits an ignored local TCSP validation run.",
     "It is a wiring and diagnosis record, not manuscript evidence and not a theorem proof.",
     "",
     "## Verdict",
     "",
     paste0("- status: `", summary$status, "`"),
+    paste0("- mode: `", summary$mode, "`"),
     paste0("- source run: `", summary$source_run_dir, "`"),
+    paste0("- replications per cell: ", summary$replications),
     paste0("- rows: ", summary$rows),
     paste0("- summary rows: ", summary$summary_rows),
     paste0("- failures: ", summary$failures),
     paste0("- required gate failures: ", nrow(failing_required)),
-    paste0("- promotion blockers recorded: ", nrow(promotion_blockers)),
+    paste0("- failing promotion blockers: ", nrow(promotion_blockers)),
     "",
-    "The pilot validated the run plumbing, artifact manifest, DGP/method contracts,",
-    "failure accounting, and conservative TCSP scan-calibration behavior. It did",
-    "not meet promotion conditions because the source run was a compact",
-    "8-replication rehearsal and its recorded source state included local changes.",
+    if (is_full_pilot) {
+      "The full-pilot audit checks source state, artifact integrity, calibration metadata,"
+    } else {
+      "The compact pilot validated run plumbing, artifact integrity, calibration metadata,"
+    },
+    "DGP/method contracts, failure accounting, and claim-scope boundaries.",
+    if (is_full_pilot) {
+      "It remains a review gate; it does not authorize confirmatory execution by itself."
+    } else {
+      "It is a rehearsal audit and should not be promoted as publication evidence."
+    },
     "",
     "## Next Step",
     "",
-    "Launch a full iid univariate pilot only after this audit plumbing is merged.",
-    "The full pilot should use a committed source state, a larger Monte Carlo scan",
-    "calibration budget, all tracked DGPs, both tolerance-confidence levels, and",
-    "a sample-size grid that adds `n=1200` so high-content DKW intervals are not",
-    "only range-wide stress cases.",
+    if (is_full_pilot) {
+      "Review the full-pilot precision, failure, width, and content summaries before"
+    } else {
+      "Launch a full iid univariate pilot only after this audit plumbing is merged."
+    },
+    if (is_full_pilot) {
+      "freezing any confirmatory config or manuscript performance claims."
+    } else {
+      "The full pilot should use a committed source state, a larger Monte Carlo scan"
+    },
+    if (!is_full_pilot) {
+      "calibration budget, all tracked DGPs, both tolerance-confidence levels, and"
+    },
+    if (!is_full_pilot) {
+      "a sample-size grid that adds `n=1200` so high-content DKW intervals are not"
+    },
+    if (!is_full_pilot) {
+      "only range-wide stress cases."
+    },
     "",
     "## Files",
     "",
@@ -1280,8 +1332,13 @@ tcspv_write_pilot_audit <- function(run_dir, output_dir, replace = FALSE) {
     bundle$replication_results, bundle$config
   )
   gates <- tcspv_audit_gates(bundle)
-  status <- if (any(!gates$pass & gates$severity == "required")) {
+  required_gate_failures <- sum(!gates$pass & gates$severity == "required")
+  promotion_blockers <- sum(!gates$pass & gates$severity == "promotion_blocker")
+  mode <- as.character(bundle$closeout$mode)
+  status <- if (required_gate_failures > 0L) {
     "audit_failed_required_gate"
+  } else if (identical(mode, "full_pilot") && promotion_blockers == 0L) {
+    "audited_full_pilot_review_required"
   } else {
     "audited_rehearsal_not_promoted"
   }
@@ -1294,14 +1351,17 @@ tcspv_write_pilot_audit <- function(run_dir, output_dir, replace = FALSE) {
     source_state_clean = identical(
       trimws(as.character(bundle$source_state$status_short %||% "")), ""
     ),
-    mode = as.character(bundle$closeout$mode),
+    mode = mode,
     replications = as.integer(bundle$closeout$replications),
     rows = as.integer(bundle$closeout$rows),
     summary_rows = as.integer(bundle$closeout$summary_rows),
     failures = as.integer(bundle$closeout$failures),
-    required_gate_failures = sum(!gates$pass & gates$severity == "required"),
-    promotion_blockers = sum(gates$severity == "promotion_blocker"),
-    full_pilot_recommended = TRUE,
+    required_gate_failures = required_gate_failures,
+    promotion_blockers = promotion_blockers,
+    full_pilot_recommended = !identical(mode, "full_pilot"),
+    full_pilot_review_ready =
+      identical(mode, "full_pilot") && promotion_blockers == 0L &&
+        required_gate_failures == 0L,
     confirmatory_ready = FALSE,
     source_run_reusable_as_confirmatory_evidence = FALSE,
     response_likelihood = FALSE,

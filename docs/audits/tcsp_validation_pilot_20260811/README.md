@@ -1,22 +1,23 @@
-# TCSP validation pilot audit
+# TCSP validation run audit
 
-This compact bundle audits the ignored local TCSP validation pilot run.
+This compact bundle audits an ignored local TCSP validation run.
 It is a wiring and diagnosis record, not manuscript evidence and not a theorem proof.
 
 ## Verdict
 
 - status: `audited_rehearsal_not_promoted`
+- mode: `pilot`
 - source run: `/data/muscat_data/jaguir26/RQR-GIBBS/application/outputs/tcsp_validation_v1/pilot_codex_20260811`
+- replications per cell: 8
 - rows: 576
 - summary rows: 72
 - failures: 72
 - required gate failures: 0
-- promotion blockers recorded: 2
+- failing promotion blockers: 2
 
-The pilot validated the run plumbing, artifact manifest, DGP/method contracts,
-failure accounting, and conservative TCSP scan-calibration behavior. It did
-not meet promotion conditions because the source run was a compact
-8-replication rehearsal and its recorded source state included local changes.
+The compact pilot validated run plumbing, artifact integrity, calibration metadata,
+DGP/method contracts, failure accounting, and claim-scope boundaries.
+It is a rehearsal audit and should not be promoted as publication evidence.
 
 ## Next Step
 

@@ -45,7 +45,7 @@ test_that("TCSP summaries keep all-failed cells explicit", {
 test_that("TCSP pilot audit publishes compact reproducible evidence", {
   env <- tcsp_validation_audit_environment()
   config <- tcsp_validation_audit_config(env)
-  config$modes$pilot$replications <- 2L
+  config$modes$pilot$replications <- 8L
   config$modes$pilot$sample_sizes <- as.list(c(80L, 250L))
   config$modes$pilot$guaranteed_contents <- list(0.80)
   config$modes$pilot$tolerance_confidences <- list(0.80)
@@ -91,4 +91,47 @@ test_that("TCSP pilot audit publishes compact reproducible evidence", {
   )
   expect_true(all(file.exists(file.path(output_dir, manifest$path))))
   expect_true(any(manifest$path == "README.md"))
+})
+
+test_that("TCSP audit gates are mode-aware for full-pilot runs", {
+  env <- tcsp_validation_audit_environment()
+  config <- tcsp_validation_audit_config(env)
+  bundle <- list(
+    config = config,
+    critical_counts = data.frame(
+      method_id = c("tcsp_dkw", "tcsp_dkw", "tcsp_mc"),
+      n = c(80L, 250L, 80L),
+      guaranteed_content = c(0.80, 0.80, 0.80),
+      tolerance_confidence = c(0.80, 0.80, 0.80),
+      retained_count = c(84L, 234L, 72L),
+      certificate = c(0, 1, 0.85),
+      infeasible = c(TRUE, FALSE, FALSE),
+      n_sim = c(0L, 0L, 5000L),
+      stringsAsFactors = FALSE
+    ),
+    replication_results = data.frame(x = 1),
+    source_state = list(
+      commit = "0123456789abcdef0123456789abcdef01234567",
+      status_short = ""
+    ),
+    closeout = list(
+      mode = "full_pilot",
+      replications = 250L,
+      rows = 1L,
+      summary_rows = 1L,
+      failures = 0L
+    ),
+    cell_summary = data.frame(x = 1),
+    failure_log = data.frame()
+  )
+  gates <- env$tcspv_audit_gates(bundle)
+  precision <- gates[gates$gate_id == "full_pilot_precision_budget", ,
+                     drop = FALSE]
+  source <- gates[gates$gate_id == "source_state_clean_for_promotion", ,
+                  drop = FALSE]
+  reps <- gates[gates$gate_id == "replication_budget_for_mode", ,
+                drop = FALSE]
+  expect_true(precision$pass)
+  expect_true(source$pass)
+  expect_true(reps$pass)
 })

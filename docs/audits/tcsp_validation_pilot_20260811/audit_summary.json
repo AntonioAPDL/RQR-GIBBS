@@ -13,9 +13,10 @@
   "required_gate_failures": 0,
   "promotion_blockers": 2,
   "full_pilot_recommended": true,
+  "full_pilot_review_ready": false,
   "confirmatory_ready": false,
   "source_run_reusable_as_confirmatory_evidence": false,
   "response_likelihood": false,
   "posterior_predictive_response_draws": false,
-  "audited_at_utc": "2026-08-11 23:03:18 UTC"
+  "audited_at_utc": "2026-08-11 23:20:43 UTC"
 }
