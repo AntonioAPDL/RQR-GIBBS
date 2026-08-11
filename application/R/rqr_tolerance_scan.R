@@ -158,7 +158,7 @@ rqr_tcsp_calibrate_count <- function(
 
   if (identical(method, "dkw_conservative")) {
     eps <- sqrt(log(2 / (1 - tolerance_confidence)) / (2 * n))
-    k <- as.integer(ceiling(n * (c_target + 2 * eps)))
+    k <- as.integer(floor(n * (c_target + 2 * eps)) + 1L)
     if (k > n) {
       stop(
         paste(

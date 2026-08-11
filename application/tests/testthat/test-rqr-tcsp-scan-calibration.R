@@ -27,6 +27,11 @@ test_that("TCSP DKW calibration returns a conservative retained count", {
   expect_lte(cal$retained_count, 500)
   expect_equal(cal$target_content, cal$retained_count / 500)
   expect_equal(cal$content_buffer, cal$target_content - 0.50)
+  eps <- sqrt(log(2 / (1 - cal$tolerance_confidence)) / (2 * cal$n))
+  expect_gt(cal$retained_count / cal$n - 2 * eps,
+            cal$guaranteed_content)
+  expect_lte((cal$retained_count - 1L) / cal$n - 2 * eps,
+             cal$guaranteed_content)
   expect_false(cal$finite_sample_claim_available)
 })
 

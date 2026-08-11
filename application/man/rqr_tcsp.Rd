@@ -112,7 +112,9 @@ The tolerance certificate comes from scan calibration, not from posterior
 credibility, the learning rate, or a response likelihood. The current
 implementation provides conservative Monte Carlo and DKW calibration paths;
 Monte Carlo calibration is explicitly numerical and is not labeled exact.
-Unsupported or infeasible requests fail closed.
+The DKW path uses the strict retained-count rule
+\eqn{k/n > c + 2\epsilon_n} implied by the uniform band. Unsupported or
+infeasible requests fail closed.
 }
 \value{
 Lists with schema-versioned calibration, action, path, or validation metadata.
