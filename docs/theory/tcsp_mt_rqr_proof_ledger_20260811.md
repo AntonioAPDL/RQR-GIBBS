@@ -10,6 +10,8 @@ Allowed statuses:
 
 - `PROVED-AND-AUDITED`
 - `DERIVED-PENDING`
+- `IMPLEMENTED-AUDITED`
+- `IMPLEMENTED-AUDITED-COMPUTATIONAL`
 - `IMPLEMENTED-AUDIT-PENDING`
 - `BLOCKING`
 - `LATER`
@@ -20,7 +22,8 @@ Allowed statuses:
 | T-ACTION | Software action matches the theorem action: the first global minimum-width closed order-statistic window \([Y_{(j)},Y_{(j+k-1)}]\). | `IMPLEMENTED-AUDIT-PENDING` | `rqr_tcsp_shortest_window()` scans integer closed windows directly, uses a deterministic first-tie rule, and tests brute-force agreement. |
 | T-SCAN-1 | Finite-sample scan theorem for \(k_{n,c,\alpha}\) under the canonical closed window \([Y_{(j)},Y_{(j+k-1)}]\). | `BLOCKING` | Definition is in the manuscript and software; proof/audit is not promoted. |
 | T-SCAN-2 | Critical-count numerical certification. | `IMPLEMENTED-AUDIT-PENDING` | Monte Carlo uses a simultaneous Massart-DKW empirical-CDF lower band over the simulated Uniform scan-statistic distribution; the separate DKW fallback is conservative but not exact scan recursion. |
-| T-FEAS | Feasibility and boundary-count handling for \(k\le n\), including the \(q=1\) empirical range action and posterior infeasibility at \(q=1\). | `IMPLEMENTED-AUDIT-PENDING` | Infeasible retained counts fail closed; \(q=1\) remains an empirical action but the MT-RQR sampler is rejected before calling `rqr_mcmc_fit()`. The q=1 error condition now preserves the empirical action object. |
+| T-FEAS | Feasibility and boundary-count handling for \(k\le n\), including the \(q=1\) empirical range action and posterior/ECM infeasibility at \(q=1\). | `IMPLEMENTED-AUDIT-PENDING` | Infeasible retained counts fail closed; \(q=1\) remains an empirical action and the wrapper returns `posterior_fit=NULL`, `ecm_fit=NULL`, and explicit engine-unavailable reasons without weakening \(q\). |
+| T-SPLIT-BETA | Split exact-spacing action: conditional on an independent pilot-selected fixed placement, \(F(Z_{(s)})-F(Z_{(r)})\sim\mathrm{Beta}(d,N+1-d)\) with \(d=s-r\). | `IMPLEMENTED-AUDIT-PENDING` | `rqr_tcsp_exact_spacing_gap()` and `rqr_tcsp_split_exact_fit()` store the Beta spacing, closed-count indexing, split seed, and pilot/main indices. Scope is continuous iid univariate only. |
 | T-OPT-1 | Exact sample-wise width optimality in the scan-certified class. | `IMPLEMENTED-AUDIT-PENDING` | Integer action minimizes empirical width among closed \(k\)-observation windows. This is class-restricted and not global optimality over all tolerance procedures. |
 | T-CT-1 | Full content-tilt coordinate theorem for arbitrary \(q\): existence, uniqueness of tilt coordinate under admissibility, boundary cases, and affine equivariance. | `DERIVED-PENDING` | Fixed-content quantile-window identification is in the manuscript/supplement. The arbitrary-\(q\) coordinate surface and boundary audit remain pending. |
 | T-CT-2 | Expansion closure, containment wedge, and nested content path conditions. | `DERIVED-PENDING` | Used for path interpretation and continuation diagnostics, but not promoted as a completed theorem. |
@@ -37,6 +40,8 @@ Allowed statuses:
 | T-REGRET | Width regret relative to the selected-action tolerance oracle. | `LATER` | Validation may report oracle width ratios descriptively; no oracle-regret theorem is promoted. |
 | T-SCAN-ASY | Scan-buffer asymptotics and the scan uniformity premium. | `LATER` | Current scan calibration is conservative; no first-order scan-oracle efficiency claim is made. |
 | T-GB-PROP | Fixed-target generalized-posterior propriety for every enabled TCSP posterior branch. | `DERIVED-PENDING` | Proper Gaussian/ridge fixed-rate branches are supported by current arguments; broader priors and learned-rate tilted paths remain gated. |
+| T-ECM-MOMENT | Fixed-target ECM inverse latent-scale moment and conditional Gaussian root systems. | `IMPLEMENTED-AUDITED` | ECM uses \(E(V_i^{-1}\mid\cdot)=1/[q(1-q)|e_i|]\), not the VB latent mean. Matrix equations are unit-tested against explicit algebra. |
+| T-ECM-MONO | Safeguarded ECM objective monotonicity. | `IMPLEMENTED-AUDITED-COMPUTATIONAL` | The default safeguarded ECM/MM run checks the exact observed objective after accepted cycles and backtracks on increases. No global convergence theorem is claimed. |
 | T-GB-PLUGIN | Same-sample shortest-tilt plug-in stability for generalized posteriors. | `LATER` | Fixed-target theory treats \(q,\delta\) as frozen. Same-sample shortest-tilt posterior uncertainty is conditional/descriptive until this theorem is proved or a sample-split alternative is added. |
 | T-LOCAL | Continuation correctness. | `IMPLEMENTED-AUDIT-PENDING` | Local path diagnostics are recorded, and every formal action is globally verified. |
 | T-GB-ACTION | Posterior action equivalence. | `BLOCKING` | Posterior mean/median endpoints are not claimed to inherit exact scan validity. |
@@ -56,6 +61,7 @@ Current unsupported interpretations:
 - posterior credibility equals tolerance confidence;
 - \(\omega\) is a tolerance factor;
 - posterior mean endpoints inherit exact scan validity;
+- ECM mode endpoints inherit scan or split-spacing validity;
 - interval-root draws are posterior-predictive response draws;
 - the Monte Carlo scan calibration is exact.
 
@@ -76,3 +82,9 @@ Current claim gates:
   `T-GB-PLUGIN`, and `T-SANDWICH` are completed. A posterior mean or median
   interval cannot replace the empirical tolerance action without
   `T-GB-ACTION` or direct action calibration.
+- Split exact-spacing tolerance wording is limited to continuous iid
+  univariate main-sample spacings conditional on an independent pilot and
+  requires `T-SPLIT-BETA`; it does not establish regression or pointwise
+  conditional tolerance.
+- ECM wording requires `T-ECM-MOMENT` and `T-ECM-MONO` and must describe
+  deterministic fixed-target mode computation only.

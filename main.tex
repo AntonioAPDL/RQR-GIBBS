@@ -75,16 +75,19 @@ family of contiguous intervals with the prescribed content. Equal-tailed and
 shortest-contiguous intervals arise at distribution-specific tilts. We update
 proper Gaussian priors by the MT-RQR loss and derive a pseudo-asymmetric-Laplace
 normal--exponential augmentation with generalized-inverse-Gaussian latent
-scales and conditionally Gaussian root updates. The resulting Gibbs
-construction covers ridge-regularized static regression and frozen-feature
-deep echo state network readouts, and extends to dynamic linear root states
-through alternating forward-filtering backward-sampling updates. Population
-calculations, Cornish--Fisher diagnostics, and reproducible single-data
-illustrations clarify target placement and computation. We also formulate a
-scan-calibrated shortest-window tolerance construction for continuous iid
-data. The proposed tolerance action is its empirical order-statistic window,
-not a generalized-posterior summary; action-matched scan certification and
-transfer of validity to posterior summaries remain open. These are loss-based
+scales and conditionally Gaussian root updates. For fixed content, tilt, and
+learning rate, the same augmentation gives a deterministic
+expectation/conditional-maximization mode computation based on exact inverse
+latent-scale moments. The resulting Gibbs construction covers
+ridge-regularized static regression and frozen-feature deep echo state network
+readouts, and extends to dynamic linear root states through alternating
+forward-filtering backward-sampling updates. Population calculations,
+Cornish--Fisher diagnostics, and reproducible single-data illustrations clarify
+target placement and computation. We also formulate scan-calibrated and
+pilot-selected exact-spacing tolerance constructions for continuous iid data.
+The proposed tolerance actions are empirical order-statistic intervals, not
+generalized-posterior summaries; action-matched scan certification and transfer
+of validity to posterior summaries remain open. These are loss-based
 generalized posteriors for interval functionals, not posteriors derived from
 response likelihoods, and hence do not by themselves define posterior
 predictive distributions for future responses.
@@ -151,6 +154,13 @@ information vectors. The same conditional structure supports static
 interval-root regression, frozen deep echo state network (DESN) feature readouts
 \citep{Jaeger2001EchoState,GallicchioMicheliPedrelli2018DeepESNDesign},
 and dynamic linear root states.
+For deterministic computation at a fixed target, the augmentation also yields
+an ECM algorithm \citep{DempsterLairdRubin1977EM,MengRubin1993ECM}: the
+E-step uses inverse latent-scale moments, and two conditional maximization
+steps solve the same Gaussian root systems. As in asymmetric-Laplace
+quantile-regression EM computations \citep{ZhaoLian2016EMBayesianQR}, this is
+a computational device for a fixed loss-defined target, not a response
+likelihood.
 
 The dynamic extension replaces each coefficient vector by a linear Gaussian
 state trajectory. The two trajectories have a jointly Gaussian stacked prior,
@@ -162,19 +172,24 @@ forward-filtering backward-sampling (FFBS) applies
 exact root-blocked Gibbs updates for the specified fixed-joint generalized
 posterior.
 
-The statistical contributions are threefold. First, ordinary RQR is identified
+The statistical and computational contributions are fourfold. First, ordinary
+RQR is identified
 as the mean-preserving member of the fixed-content interval class, and a fixed
 mean tilt indexes the remaining admissible windows; the resulting theory also
 gives exact fractional empirical balance relations. Second, a pseudo-AL Gibbs
 sampler is derived for fixed-rate static targets and extended to regularized
 static regression, frozen-feature DESN readouts, and root-blocked dynamic
-linear states. Third, a scan-calibrated shortest-window tolerance action is
-formulated while its repeated-sampling guarantee is kept separate from
-generalized-posterior uncertainty. The available nonzero-tilt computation uses
-proper Gaussian priors, a fixed learning rate, and fixed or frozen dynamic
-evolution covariances. Random shrinkage scales, learned-rate tilt, adaptive or
-component-scale dynamic tilt, data-driven tilt selection, and variational
-approximations require additional theory and validation.
+linear states. Third, a fixed-target MT-RQR-ECM optimizer is derived as a fast
+deterministic mode computation using exact inverse latent-scale moments and
+safeguarded objective descent. Fourth, scan-calibrated shortest-window and
+pilot-selected exact-spacing tolerance actions are formulated while their
+repeated-sampling guarantees are kept separate from generalized-posterior and
+ECM summaries. The available nonzero-tilt computation uses proper Gaussian
+priors, a fixed learning rate, and fixed or frozen dynamic evolution
+covariances. Random shrinkage scales, learned-rate tilt, adaptive or
+component-scale dynamic tilt, data-driven tilt selection, variational
+approximations, and regression-family tolerance calibration require additional
+theory and validation.
 
 The generalized posterior concerns interval-root functionals defined by a loss
 and prior. It is not derived from an ordinary response likelihood and does not
@@ -191,12 +206,14 @@ Shaby2014OpenFacedSandwich}.
 
 Section~\ref{sec:interval-functionals} defines the fixed-content class.
 Sections~\ref{sec:rqr-loss} and~\ref{sec:mean-tilt} identify ordinary and
-mean-tilted RQR. Section~\ref{sec:tcsp} states the proposed scan-calibrated
-tolerance action and its unresolved theoretical requirements.
+mean-tilted RQR. Section~\ref{sec:tcsp} states the proposed scan-calibrated and
+split exact-spacing tolerance actions and their unresolved theoretical
+requirements.
 Section~\ref{sec:static-theory-scope} gives finite-sample balance and the
 fixed-dimensional iid static uncertainty scope.
-Section~\ref{sec:posterior} develops the static generalized posterior, ordinary
-RHS-NS regularization, and the frozen-DESN specialization.
+Section~\ref{sec:posterior} develops the static generalized posterior,
+fixed-target ECM computation, ordinary RHS-NS regularization, and the
+frozen-DESN specialization.
 Section~\ref{sec:dynamic} develops dynamic linear root states.
 Section~\ref{sec:evaluation} presents the computational illustrations and
 evaluation scope, and
@@ -711,6 +728,25 @@ target and do not propagate shortest-window selection uncertainty. An
 unconditional interpretation requires a plug-in stability theorem or a
 separate target-selection sample.
 
+A sample-split alternative removes this same-sample placement issue for the
+univariate tolerance action. Randomly divide the observations into an
+independent pilot sample and an independent main sample. The pilot chooses a
+lower-tail placement \(\widehat u\). In the main sample, with order statistics
+\(Z_{(1)}\le\cdots\le Z_{(N)}\), fix indices \(r<s\) after the pilot and write
+\(d=s-r\). The spacing law
+\[
+F(Z_{(s)})-F(Z_{(r)})\sim \mathrm{Beta}(d,N+1-d)
+\]
+then gives an exact conditional distribution-free calibration
+\citep{DavidNagaraja2003OrderStatistics}. The closed interval contains
+\(d+1\) observed main-sample positions, so the probability-spacing index and
+the closed-count index differ by one. The pilot may use empirical shortest
+windows, Cornish--Fisher placement, or fixed-target ECM as a diagnostic
+placement engine. It affects efficiency and width, not the conditional Beta
+validity of the fixed main-sample spacing. This first split construction is
+continuous-iid-univariate; regression-family tolerance calibration remains a
+separate theorem.
+
 Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
 reported interval. The numerical procedure uses Monte Carlo calibration of
 the uniform scan distribution with a simultaneous
@@ -756,6 +792,13 @@ Empirical shortest window
 & This class-restricted property is not global optimality over all tolerance
   procedures. The full-range action \(k=n\) has no MT-RQR posterior fit because
   \(q=1\).\\
+Split exact-spacing action
+& Conditional on an independent pilot-selected placement, a fixed main-sample
+  order-statistic spacing has a \(\mathrm{Beta}(d,N+1-d)\) content law and can
+  be calibrated exactly.
+& The guarantee is iid univariate and conditional on the pilot; the pilot
+  method, including ECM, affects placement efficiency but is not the source of
+  the certificate.\\
 Numerical scan calibration
 & A common Monte Carlo scan distribution and simultaneous Massart--DKW lower
   band select a conservative retained count while recording numerical
@@ -1035,8 +1078,9 @@ RQR-FD
 & Proper Gaussian/ridge and ordinary RHS-NS modes\\
 MT-RQR-FD
 & Fixed only
-& Derived for proper Gaussian roots, including ridge
-& Fixed nonzero tilt with Gaussian/ridge roots\\
+& Exact Gibbs conditionals and deterministic ECM root solves for proper
+  Gaussian roots, including ridge
+& Fixed nonzero tilt with Gaussian/ridge roots; ECM returns a mode, not draws\\
 RQR-DESN
 & Fixed or ordinary learned \(\kappa\)
 & Exact full conditionals conditional on frozen features
@@ -1130,6 +1174,44 @@ The update for \(\vect\beta_2\) is identical after swapping root labels and
 conditioning on the newly drawn first root. The tilt changes only the two
 Gaussian information vectors: the latent-scale conditionals and Gaussian
 precision matrices are unchanged.
+
+For a deterministic fixed-target mode, the same augmentation gives an ECM
+algorithm. At the current roots, for nonzero residual product \(e_i\),
+\[
+\tau_i=E(v_i^{-1}\mid\cdot)=\frac{1}{c(1-c)|e_i|}.
+\]
+Holding the second root fixed, let
+\[
+\mat A_1=\diag(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
+\mat X_{\mathcal O},\qquad
+\vect c_1=\vect y_{\mathcal O}\circ
+(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O}).
+\]
+Replacing \(v_i^{-1}\) by \(\tau_i\) in the expected complete-data criterion
+gives a Gaussian conditional maximization with precision
+\[
+\mat Q_1^{\mathrm{ECM}}
+=\mat Q_{01}
++\frac{1}{\phi_c\sigma_{\mathrm R}}
+\mat A_1^\top\diag(\vect\tau)\mat A_1
+\]
+and canonical vector
+\[
+\vect h_1^{\mathrm{ECM}}
+=\vect h_{01}
++\frac{1}{\phi_c\sigma_{\mathrm R}}
+\mat A_1^\top\{\diag(\vect\tau)\vect c_1-\xi_c\vect 1\}
++\omega_{\mathrm R}c\mat X_{\mathcal O}^\top\vect\delta_{\mathcal O}.
+\]
+The first conditional maximization sets
+\(\vect\beta_1=(\mat Q_1^{\mathrm{ECM}})^{-1}\vect h_1^{\mathrm{ECM}}\);
+the second uses the updated first root and the same outer E-step
+\(\vect\tau\). This is ECM rather than a single EM maximization because the
+augmented pseudo-residual is quartic jointly in the two root blocks but
+quadratic in either block conditional on the other. The implemented algorithm
+uses a declared residual-product safeguard at \(e_i=0\), exact observed
+objective backtracking, and deterministic multi-start selection. Its endpoint
+output is a fixed-target mode summary and is not a tolerance certificate.
 
 \subsection{Regularized coefficient blocks and the static Gibbs sweep}
 

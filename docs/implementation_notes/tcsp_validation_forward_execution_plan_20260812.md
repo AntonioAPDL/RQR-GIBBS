@@ -4,6 +4,12 @@ Date: 2026-08-12
 Baseline source: `main@8d7b959aa664a491448e814f6939cd246ad6a3d3`
 Status: staged pilot and competitor-readiness plan
 
+Report5 addendum: the next-step execution path is superseded by
+`docs/implementation_notes/tcsp_ecm_split_exact_validation_plan_20260812.md`.
+After adding MT-RQR-ECM and pilot-selected exact-spacing TCSP, smoke validation
+for those two new components must pass before any full-pilot relaunch is
+considered.
+
 ## Purpose
 
 This plan turns the P0 hardening pass into a reproducible validation sequence.

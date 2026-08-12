@@ -1,0 +1,53 @@
+{
+  "schema_version": "rqrgibbs_tcsp_split_exact_validation/1.0.0",
+  "study_id": "tcsp_split_exact_validation_v1_20260812",
+  "status": "smoke_and_moderate_only",
+  "interpretation": "Repeated-sample pilot validation for iid univariate scan TCSP and pilot-selected exact-spacing competitors. Validity is assessed by population content under known simulation laws before width.",
+  "generalized_bayes": true,
+  "response_likelihood": false,
+  "posterior_predictive_response_draws": false,
+  "claim_scope": {
+    "iid_univariate_continuous_only": true,
+    "regression_tolerance": false,
+    "ecm_is_formal_tolerance_action": false,
+    "posterior_summary_is_formal_tolerance_action": false
+  },
+  "execution": {
+    "smoke_authorized": true,
+    "moderate_authorized": true,
+    "heavy_authorized": false
+  },
+  "modes": {
+    "smoke": {
+      "replications": 4,
+      "sample_sizes": [80],
+      "guaranteed_contents": [0.40, 0.50],
+      "tolerance_confidences": [0.70],
+      "dgp_ids": ["normal", "lognormal"],
+      "method_ids": ["tcsp_dkw", "split_empirical_shortest", "split_ecm_fixed_tilt", "split_cornish_fisher", "wilks_minmax"],
+      "pilot_fractions": [0.30]
+    },
+    "moderate": {
+      "replications": 30,
+      "sample_sizes": [100, 200],
+      "guaranteed_contents": [0.50, 0.80],
+      "tolerance_confidences": [0.70, 0.80],
+      "dgp_ids": ["normal", "lognormal", "mixture"],
+      "method_ids": ["tcsp_dkw", "split_empirical_shortest", "split_ecm_fixed_tilt", "split_cornish_fisher", "wilks_minmax"],
+      "pilot_fractions": [0.25, 0.35]
+    }
+  },
+  "dgps": [
+    {"dgp_id": "normal", "family": "normal"},
+    {"dgp_id": "lognormal", "family": "standardized_lognormal", "logsd": 0.75},
+    {"dgp_id": "mixture", "family": "standardized_normal_mixture", "weights": [0.80, 0.20], "means": [-1.00, 2.00], "sds": [0.60, 0.40]}
+  ],
+  "ecm_control": {
+    "max_iter": 40,
+    "stable_iterations": 1,
+    "tol_stationarity": 1000000,
+    "residual_product_floor": 1e-8
+  },
+  "base_seed": 812700,
+  "summary_confidence": 0.95
+}

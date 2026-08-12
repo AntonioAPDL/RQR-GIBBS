@@ -3079,27 +3079,89 @@ rqr_gig_params <- function(e, coverage_level, learning_rate = 1) {
   stop("RQR currently supports beta_prior_obj$type in {'ridge','rhs_ns'}.", call. = FALSE)
 }
 
-.rqr_beta_update <- function(y, X, beta_other, V, constants, prior_prec,
-                             precision_beta_cfg = list(), context = list(),
-                             mean_tilt_observed = NULL) {
+.rqr_root_gaussian_system <- function(y, X, beta_other, constants, prior_prec,
+                                      mean_tilt_observed = NULL,
+                                      latent_mode = c("draw", "inverse_moment"),
+                                      V = NULL, inverse_V_mean = NULL) {
+  latent_mode <- match.arg(latent_mode)
   eta_other <- drop(X %*% beta_other)
   A <- X * as.numeric(y - eta_other)
-  z <- y^2 - y * eta_other - constants$xi * V
-  W <- 1 / (constants$phi * constants$sigma * V)
+  c_component <- y^2 - y * eta_other
+  if (identical(latent_mode, "draw")) {
+    if (is.null(V)) {
+      stop("V must be supplied when latent_mode='draw'.", call. = FALSE)
+    }
+    V <- as.numeric(V)
+    if (length(V) != nrow(X) || any(!is.finite(V)) || any(V <= 0)) {
+      stop("V must be positive, finite, and match the fixed-design row count.",
+           call. = FALSE)
+    }
+    z <- c_component - constants$xi * V
+    W <- 1 / (constants$phi * constants$sigma * V)
+    rhs <- crossprod(A, W * z)
+  } else {
+    if (is.null(inverse_V_mean)) {
+      stop("inverse_V_mean must be supplied when latent_mode='inverse_moment'.",
+           call. = FALSE)
+    }
+    inverse_V_mean <- as.numeric(inverse_V_mean)
+    if (length(inverse_V_mean) != nrow(X) ||
+        any(!is.finite(inverse_V_mean)) || any(inverse_V_mean <= 0)) {
+      stop(
+        paste(
+          "inverse_V_mean must be positive, finite, and match the",
+          "fixed-design row count."
+        ),
+        call. = FALSE
+      )
+    }
+    W <- inverse_V_mean / (constants$phi * constants$sigma)
+    rhs <- crossprod(
+      A,
+      (inverse_V_mean * c_component - constants$xi) /
+        (constants$phi * constants$sigma)
+    )
+  }
   Prec <- crossprod(A * sqrt(W)) + diag(as.numeric(prior_prec), ncol(X))
-  rhs <- crossprod(A, W * z)
+  tilt_shift <- rep(0, ncol(X))
   if (!is.null(mean_tilt_observed)) {
     delta <- as.numeric(mean_tilt_observed)
     if (length(delta) != nrow(X) || any(!is.finite(delta))) {
       stop("mean_tilt_observed must be finite and match the fixed-design row count.", call. = FALSE)
     }
     if (any(abs(delta) > 0)) {
-      rhs <- rhs + constants$omega * constants$alpha * crossprod(X, delta)
+      tilt_shift <- as.numeric(constants$omega * constants$alpha * crossprod(X, delta))
+      rhs <- rhs + tilt_shift
     }
   }
-  .exal_mcmc_sample_mvnorm_prec(
+  list(
+    A = A,
+    pseudo_response_component = c_component,
+    weights = W,
+    precision = Prec,
     rhs = as.numeric(rhs),
-    Prec = Prec,
+    tilt_shift = tilt_shift,
+    eta_other = eta_other,
+    latent_mode = latent_mode
+  )
+}
+
+.rqr_beta_update <- function(y, X, beta_other, V, constants, prior_prec,
+                             precision_beta_cfg = list(), context = list(),
+                             mean_tilt_observed = NULL) {
+  system <- .rqr_root_gaussian_system(
+    y = y,
+    X = X,
+    beta_other = beta_other,
+    constants = constants,
+    prior_prec = prior_prec,
+    mean_tilt_observed = mean_tilt_observed,
+    latent_mode = "draw",
+    V = V
+  )
+  .exal_mcmc_sample_mvnorm_prec(
+    rhs = system$rhs,
+    Prec = system$precision,
     precision_beta_cfg = precision_beta_cfg,
     context = context
   )

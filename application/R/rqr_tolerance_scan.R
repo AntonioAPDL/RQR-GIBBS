@@ -460,21 +460,43 @@ rqr_tcsp_tilt_from_window <- function(window) {
   invisible(TRUE)
 }
 
+.rqr_tcsp_validate_ecm_request <- function(fit_ecm, ecm_args) {
+  if (!isTRUE(fit_ecm)) return(invisible(TRUE))
+  if (!is.list(ecm_args)) stop("ecm_args must be a list.", call. = FALSE)
+  reserved <- c(
+    "y", "X", "coverage_level", "mean_tilt",
+    "learning_rate", "beta_prior_obj", "response_likelihood"
+  )
+  supplied_reserved <- intersect(names(ecm_args), reserved)
+  if (length(supplied_reserved)) {
+    stop(
+      paste(
+        "TCSP fixed-target ECM reserves these ecm_args fields:",
+        paste(supplied_reserved, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
 #' Fit the univariate TCSP-MT-RQR target
 #'
 #' Calibrates the retained count, selects the formal shortest closed-window
-#' tolerance action, freezes `q` and `delta`, and optionally fits the
-#' intercept-only fixed-rate ridge generalized posterior.  The scan action is
-#' the tolerance object; posterior summaries are separate loss-based endpoint
-#' uncertainty summaries.
+#' tolerance action, freezes `q` and `delta`, and optionally fits deterministic
+#' ECM and/or intercept-only fixed-rate ridge generalized posterior summaries.
+#' The scan action is the tolerance object; ECM and posterior summaries are
+#' separate loss-based fixed-target summaries.
 #'
 #' @param y Response sample.
 #' @param guaranteed_content Minimum population content `c`.
 #' @param tolerance_confidence Repeated-sample tolerance confidence `1-alpha`.
 #' @param scan_method Critical-value method.
 #' @param fit_mcmc Fit the intercept-only generalized posterior.
+#' @param fit_ecm Fit the deterministic intercept-only fixed-target ECM mode.
 #' @param learning_rate Fixed generalized-Bayes learning rate `omega`.
 #' @param mcmc_args Optional arguments passed to [rqr_mcmc_fit()].
+#' @param ecm_args Optional arguments passed to [rqr_ecm_fit()].
 #' @inheritParams rqr_tcsp_scan_probability
 #' @return An `rqr_tcsp_fit` object.
 #' @export
@@ -482,10 +504,15 @@ rqr_tcsp_fit_univariate <- function(
     y, guaranteed_content, tolerance_confidence,
     scan_method = c("monte_carlo_conservative", "dkw_conservative"),
     n_sim = 20000L, numerical_confidence = 0.999, seed = NULL,
-    fit_mcmc = FALSE, learning_rate = 1, mcmc_args = list(),
+    fit_mcmc = FALSE, fit_ecm = FALSE, learning_rate = 1,
+    mcmc_args = list(), ecm_args = list(),
     na_rm = FALSE) {
   clean <- .rqr_mt_clean_sample(y, na_rm = na_rm)
   y <- clean$y
+  learning_rate <- as.numeric(learning_rate)[1L]
+  if (!is.finite(learning_rate) || learning_rate <= 0) {
+    stop("learning_rate must be a finite positive scalar.", call. = FALSE)
+  }
   calibration <- rqr_tcsp_calibrate_count(
     n = length(y),
     guaranteed_content = guaranteed_content,
@@ -504,6 +531,7 @@ rqr_tcsp_fit_univariate <- function(
   )
   tilt <- rqr_tcsp_tilt_from_window(window)
   .rqr_tcsp_validate_mcmc_request(fit_mcmc, mcmc_args)
+  .rqr_tcsp_validate_ecm_request(fit_ecm, ecm_args)
 
   contract <- list(
     schema_version = .rqr_tcsp_schema(),
@@ -536,6 +564,12 @@ rqr_tcsp_fit_univariate <- function(
     prior_type = NA_character_,
     posterior_model_spec_digest = NA_character_,
     posterior_summary_action = "not_formal_tolerance_action",
+    ecm_model_spec_digest = NA_character_,
+    ecm_map_action = "not_formal_tolerance_action",
+    ecm_conditional_on_selected_tcsp_target = isTRUE(fit_ecm),
+    ecm_fit_available = FALSE,
+    posterior_fit_available = FALSE,
+    engine_unavailable_reasons = list(),
     global_shortest_verified = TRUE,
     assumptions_passed = c("iid_continuous_required_by_theory_not_tested_by_code"),
     assumptions_failed = character(0),
@@ -549,33 +583,90 @@ rqr_tcsp_fit_univariate <- function(
       posterior_model_spec = NULL
     ))
   )
-  make_out <- function(posterior_fit = NULL) {
+  make_out <- function(posterior_fit = NULL, ecm_fit = NULL) {
     out <- list(
       contract = contract,
       calibration = calibration,
       window = window,
-      posterior_fit = posterior_fit
+      posterior_fit = posterior_fit,
+      ecm_fit = ecm_fit
     )
     class(out) <- c("rqr_tcsp_fit", "list")
     out
   }
 
   posterior_fit <- NULL
-  if (isTRUE(fit_mcmc)) {
-    if (calibration$target_content >= 1) {
-      out <- make_out(NULL)
-      msg <- paste(
+  ecm_fit <- NULL
+  if (calibration$target_content >= 1) {
+    if (isTRUE(fit_ecm)) {
+      contract$engine_unavailable_reasons$ecm <- paste(
         "TCSP empirical range action has target_content >= 1;",
-        "rqr_mcmc_fit() requires coverage_level in (0, 1).",
-        "The formal tolerance action is preserved in the error condition."
-      )
-      stop(
-        structure(
-          list(message = msg, call = NULL, tcsp_fit = out),
-          class = c("rqr_tcsp_mcmc_unavailable_error", "error", "condition")
-        )
+        "rqr_ecm_fit() requires coverage_level in (0, 1)."
       )
     }
+    if (isTRUE(fit_mcmc)) {
+      contract$engine_unavailable_reasons$posterior <- paste(
+        "TCSP empirical range action has target_content >= 1;",
+        "rqr_mcmc_fit() requires coverage_level in (0, 1)."
+      )
+    }
+    contract$provenance_digest <- .rqr_tcsp_digest(list(
+      calibration = calibration,
+      window = window,
+      posterior_model_spec = NULL,
+      ecm_model_spec = NULL,
+      engine_unavailable_reasons = contract$engine_unavailable_reasons
+    ))
+    return(make_out(NULL, NULL))
+  }
+
+  if (isTRUE(fit_ecm)) {
+    args <- utils::modifyList(
+      list(
+        y = y,
+        X = matrix(1, length(y), 1L, dimnames = list(NULL, "(Intercept)")),
+        coverage_level = calibration$target_content,
+        learning_rate = learning_rate,
+        mean_tilt = tilt$delta_raw,
+        beta_prior_obj = beta_prior("ridge", ridge = list(tau2 = 1e4))
+      ),
+      ecm_args
+    )
+    ecm_fit <- do.call(rqr_ecm_fit, args)
+    if (!isTRUE(all.equal(ecm_fit$model_spec$coverage_level,
+                          calibration$target_content, tolerance = 0))) {
+      stop("TCSP ECM target audit failed: coverage_level drifted.",
+           call. = FALSE)
+    }
+    if (!isTRUE(all.equal(ecm_fit$model_spec$fixed_learning_rate,
+                          learning_rate, tolerance = 0))) {
+      stop("TCSP ECM target audit failed: fixed learning_rate drifted.",
+           call. = FALSE)
+    }
+    if (isTRUE(ecm_fit$model_spec$response_likelihood)) {
+      stop("TCSP ECM target audit failed: response_likelihood is TRUE.",
+           call. = FALSE)
+    }
+    if (!identical(ecm_fit$model_spec$beta_prior_type, "ridge")) {
+      stop("TCSP ECM target audit failed: beta prior is not ridge.",
+           call. = FALSE)
+    }
+    if (!isTRUE(all.equal(unique(ecm_fit$model_spec$mean_tilt),
+                          tilt$delta_raw, tolerance = 1e-12))) {
+      stop("TCSP ECM target audit failed: mean_tilt drifted.",
+           call. = FALSE)
+    }
+    if (!is.matrix(ecm_fit$X) || ncol(ecm_fit$X) != 1L ||
+        !identical(colnames(ecm_fit$X), "(Intercept)")) {
+      stop("TCSP ECM target audit failed: design is not intercept-only.",
+           call. = FALSE)
+    }
+    contract$ecm_fit_available <- TRUE
+    contract$ecm_model_spec_digest <- .rqr_tcsp_digest(ecm_fit$model_spec)
+    contract$prior_type <- ecm_fit$model_spec$beta_prior_type
+  }
+
+  if (isTRUE(fit_mcmc)) {
     args <- utils::modifyList(
       list(
         y = y,
@@ -627,13 +718,16 @@ rqr_tcsp_fit_univariate <- function(
     contract$posterior_model_spec_digest <- .rqr_tcsp_digest(
       posterior_fit$model_spec
     )
-    contract$provenance_digest <- .rqr_tcsp_digest(list(
-      calibration = calibration,
-      window = window,
-      posterior_model_spec = posterior_fit$model_spec
-    ))
+    contract$posterior_fit_available <- TRUE
   }
-  make_out(posterior_fit)
+  contract$provenance_digest <- .rqr_tcsp_digest(list(
+    calibration = calibration,
+    window = window,
+    posterior_model_spec = if (is.null(posterior_fit)) NULL else
+      posterior_fit$model_spec,
+    ecm_model_spec = if (is.null(ecm_fit)) NULL else ecm_fit$model_spec
+  ))
+  make_out(posterior_fit, ecm_fit)
 }
 
 #' Predict a TCSP path start by nested expansion

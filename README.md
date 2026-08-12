@@ -9,8 +9,11 @@ directly under a coverage-targeted loss rather than obtained by inverting a
 response likelihood. A proposed scan-calibrated tolerance layer first
 calibrates a retained count, selects the shortest closed order-statistic window
 containing that count, freezes the induced MT-RQR target content and
-retained-mean tilt, and then fits the fixed-target generalized posterior. The
-manuscript also develops the
+retained-mean tilt, and then optionally fits deterministic ECM modes or
+fixed-target generalized-posterior summaries. A separate split exact-spacing
+TCSP path uses an independent pilot for placement and an independent main
+sample for a fixed Beta-calibrated order-statistic spacing. The manuscript
+also develops the
 population loss geometry, pseudo-asymmetric-Laplace augmentation,
 fixed-design Gibbs samplers, regularized regression extensions, frozen-feature
 DESN readouts, and dynamic linear root models.
@@ -71,13 +74,22 @@ not yet implemented for learned inverse-loss scales, RHS-NS priors,
 component-scale/adaptive dynamic evolution, VB/CAVI, or data-driven tilt
 selection.
 
+The deterministic fixed-target ECM layer exposes `rqr_ecm_fit()` and
+`rqr_ecm_path()`. ECM uses exact inverse latent-scale moments and conditional
+Gaussian root solves to compute a mode of the fixed loss-defined target. It is
+not an EM algorithm for a response likelihood, does not return posterior
+draws, and does not create tolerance validity.
+
 The TCSP scan layer currently exposes `rqr_tcsp_*` helpers for conservative
 scan calibration, canonical closed-window selection, shortest-path tilt
-metadata, fixed-target univariate fitting, path continuation diagnostics, and
-action-contract validation. Exact scan recursion, Tier-1 finite-sample proof
-promotion, posterior-action equivalence, and regression-family tolerance
-theorems remain pending; see
-`docs/theory/tcsp_mt_rqr_proof_ledger_20260811.md`.
+metadata, fixed-target univariate fitting, path continuation diagnostics, ECM
+and MCMC fixed-target attachment, and action-contract validation. The split
+exact-spacing layer adds `rqr_tcsp_exact_spacing_gap()` and
+`rqr_tcsp_split_exact_fit()` for continuous iid univariate pilot/main-split
+actions. Exact scan recursion, Tier-1 finite-sample proof promotion,
+posterior-action equivalence, and regression-family tolerance theorems remain
+pending; see `docs/theory/tcsp_mt_rqr_proof_ledger_20260811.md` and
+`docs/theory/mt_rqr_ecm_monotonicity_and_scope_20260812.md`.
 
 ## External reference implementation
 
@@ -107,6 +119,10 @@ make package-install
 make test-native
 make test-native-mean-tilt
 make test-standalone-contracts
+make test-ecm
+make test-tcsp
+make rqr-ecm-validation-smoke
+make tcsp-split-exact-validation-smoke
 make prepare-exdqlm-runtime
 make test-exdqlm-rqr
 make literature-manifest

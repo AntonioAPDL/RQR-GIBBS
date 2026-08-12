@@ -50,6 +50,12 @@ TCSP_VALIDATION_RUN_DIR ?=
 TCSP_VALIDATION_AUDIT_RUN_DIR ?= application/outputs/tcsp_validation_v1/pilot_codex_20260811
 TCSP_VALIDATION_AUDIT_DIR ?= docs/audits/tcsp_validation_pilot_20260811
 TCSP_VALIDATION_AUDIT_REPLACE ?= true
+RQR_ECM_VALIDATION_CONFIG ?= application/config/rqr_ecm_validation_v1.json
+RQR_ECM_VALIDATION_DIR ?= application/outputs/rqr_ecm_validation_v1
+RQR_ECM_VALIDATION_SMOKE_DIR ?= $(RQR_ECM_VALIDATION_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
+TCSP_SPLIT_EXACT_VALIDATION_CONFIG ?= application/config/tcsp_split_exact_validation_v1.json
+TCSP_SPLIT_EXACT_VALIDATION_DIR ?= application/outputs/tcsp_split_exact_validation_v1
+TCSP_SPLIT_EXACT_VALIDATION_SMOKE_DIR ?= $(TCSP_SPLIT_EXACT_VALIDATION_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
 RQR_DLM_AFFECTED_PRIMARY_ATTESTATION ?=
 RQR_DLM_AFFECTED_EXDQLM_ATTESTATION ?=
 RQR_DLM_AFFECTED_QUANTREG_ATTESTATION ?=
@@ -67,7 +73,7 @@ RQR_DLM_M02_CANARY_OUTPUT_ROOT ?=
 .PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables test-manuscript-language arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication test-oracle-tilt-publication-v2 test-oracle-tilt-publication-v3 test-oracle-tilt-publication-v4 test-oracle-tilt-dlm-sh-adjudication test-oracle-tilt-campaign-closeout test-oracle-tilt-v2-workflow oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence oracle-tilt-v2-preflight oracle-tilt-v2-reference oracle-tilt-v2-benchmark oracle-tilt-v2-execute oracle-tilt-v2-package-evidence oracle-tilt-v3-preflight oracle-tilt-v3-reference oracle-tilt-v3-benchmark oracle-tilt-v3-resource-rehearsal oracle-tilt-v3-acceptance oracle-tilt-v3-execute oracle-tilt-v3-package-evidence oracle-tilt-v3-package-nonpromotion-evidence oracle-tilt-v3-promote-revised-evidence oracle-tilt-v4-preflight oracle-tilt-v4-reference oracle-tilt-v4-benchmark oracle-tilt-v4-resource-rehearsal oracle-tilt-v4-launch oracle-tilt-v4-select oracle-tilt-v4-package-evidence oracle-tilt-dlm-sh-adjudication-preflight oracle-tilt-dlm-sh-adjudication-execute oracle-tilt-dlm-sh-reconcile-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor launch-dlm-affected-wave-validation health-dlm-affected-wave-validation launch-dlm-multicomponent-recovery health-dlm-multicomponent-recovery launch-dlm-diagnostic-aware health-dlm-diagnostic-aware literature-manifest clean-tex
 .PHONY: test-oracle-tilt-publication-v5 oracle-tilt-v5-preflight oracle-tilt-v5-reference oracle-tilt-v5-benchmark oracle-tilt-v5-execute oracle-tilt-v5-package-evidence
 .PHONY: test-oracle-mean-tilt-validation oracle-mean-tilt-validation-preflight oracle-mean-tilt-validation-reference oracle-mean-tilt-validation-benchmark oracle-mean-tilt-validation-sentinel oracle-mean-tilt-validation-execute-wave oracle-mean-tilt-validation-collect oracle-mean-tilt-validation-precision oracle-mean-tilt-validation-package
-.PHONY: test-tcsp test-tcsp-validation test-tcsp-validation-audit tcsp-validation-preflight tcsp-validation-tiny tcsp-validation-pilot tcsp-validation-full-pilot tcsp-validation-health tcsp-validation-audit
+.PHONY: test-ecm test-tcsp test-tcsp-validation test-tcsp-validation-audit rqr-ecm-validation-smoke tcsp-split-exact-validation-smoke tcsp-validation-preflight tcsp-validation-tiny tcsp-validation-pilot tcsp-validation-full-pilot tcsp-validation-health tcsp-validation-audit
 .PHONY: validate-dlm-m02-diagnostic-canary
 
 theory-figures:
@@ -88,10 +94,20 @@ test-theory-tables:
 test-manuscript-language:
 	$(R) application/scripts/63_validate_manuscript_bayesian_language.R
 
+test-ecm: package-install
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-ecm-latent-moments.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-ecm-root-system.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-ecm-objective.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-ecm-monotonicity.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-ecm-contract.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-split-exact.R
+
 test-tcsp: package-install
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-action-contract.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-feasibility.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-fixed-target-mcmc.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-ecm-contract.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-split-exact.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-path-continuation.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-scan-calibration.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-shortest-window.R
@@ -107,6 +123,12 @@ test-tcsp-validation: package-install
 
 test-tcsp-validation-audit: package-install
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-validation-pilot-audit.R
+
+rqr-ecm-validation-smoke: package-install
+	$(R) application/scripts/67_validate_rqr_ecm_fixed_target.R --mode=smoke --config=$(RQR_ECM_VALIDATION_CONFIG) --output-dir=$(RQR_ECM_VALIDATION_SMOKE_DIR)
+
+tcsp-split-exact-validation-smoke: package-install
+	$(R) application/scripts/68_validate_tcsp_split_exact.R --mode=smoke --config=$(TCSP_SPLIT_EXACT_VALIDATION_CONFIG) --output-dir=$(TCSP_SPLIT_EXACT_VALIDATION_SMOKE_DIR)
 
 tcsp-validation-preflight: package-install
 	$(R) application/scripts/64_run_tcsp_validation_study.R --mode=preflight --config=$(TCSP_VALIDATION_CONFIG) --output-dir=$(TCSP_VALIDATION_DIR)/preflight
