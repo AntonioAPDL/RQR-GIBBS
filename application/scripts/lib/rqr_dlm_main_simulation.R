@@ -647,8 +647,31 @@ rqr_main_validate_quantreg_adapter <- function(attestation) {
   )
 }
 
+rqr_main_allow_detached_launch_source <- function() {
+  identical(Sys.getenv("RQR_ALLOW_DETACHED_LAUNCH_SOURCE", unset = ""),
+            "TRUE")
+}
+
+rqr_main_source_branch_allowed <- function(branch, allow_detached = NULL) {
+  allow_detached <- allow_detached %||%
+    rqr_main_allow_detached_launch_source()
+  identical(branch, "main") ||
+    (isTRUE(allow_detached) && identical(branch, "HEAD"))
+}
+
+rqr_main_source_branch_contract <- function(branch, allow_detached = NULL) {
+  allow_detached <- allow_detached %||%
+    rqr_main_allow_detached_launch_source()
+  if (identical(branch, "main")) return("clean_main")
+  if (isTRUE(allow_detached) && identical(branch, "HEAD")) {
+    return("clean_detached_exact_launch_source")
+  }
+  "invalid"
+}
+
 rqr_main_primary_runtime_binding <- function(
-    repo_root, expected_commit, attestation_path) {
+    repo_root, expected_commit, attestation_path,
+    allow_detached_launch_source = rqr_main_allow_detached_launch_source()) {
   expected_commit <- tolower(as.character(expected_commit)[1L])
   if (!grepl("^[0-9a-f]{40}$", expected_commit)) {
     stop("A promotion-grade primary commit must be a full SHA.",
@@ -674,9 +697,18 @@ rqr_main_primary_runtime_binding <- function(
     "status", "--porcelain=v2", "--untracked-files=all"
   ))
   if (!identical(current_commit, expected_commit) ||
-      !identical(branch, "main") || nzchar(status)) {
-    stop("Promotion-grade references require clean main at the expected SHA.",
-         call. = FALSE)
+      !rqr_main_source_branch_allowed(
+        branch, allow_detached_launch_source
+      ) ||
+      nzchar(status)) {
+    stop(
+      paste(
+        "Promotion-grade references require clean main at the",
+        "expected SHA, or an explicitly authorized clean detached",
+        "launch-source worktree at that SHA."
+      ),
+      call. = FALSE
+    )
   }
   if (!file.exists(attestation_path)) {
     stop("The primary runtime attestation is missing.", call. = FALSE)
@@ -731,6 +763,10 @@ rqr_main_primary_runtime_binding <- function(
     package_version = as.character(utils::packageVersion("rqrgibbs")),
     R_version = R.version.string,
     platform = R.version$platform,
+    source_branch = branch,
+    source_branch_contract = rqr_main_source_branch_contract(
+      branch, allow_detached_launch_source
+    ),
     match = TRUE
   )
 }

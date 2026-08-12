@@ -55,10 +55,17 @@ branch="$(git -c core.fsmonitor=false rev-parse --abbrev-ref HEAD)"
 tracked_status="$(
   git -c core.fsmonitor=false status --porcelain=v2 --untracked-files=all
 )"
+allow_detached_launch_source="${RQR_ALLOW_DETACHED_LAUNCH_SOURCE:-FALSE}"
+branch_allowed="FALSE"
+if [[ "$branch" == "main" ]]; then
+  branch_allowed="TRUE"
+elif [[ "$allow_detached_launch_source" == "TRUE" && "$branch" == "HEAD" ]]; then
+  branch_allowed="TRUE"
+fi
 if [[ "$head_commit" != "$expected_commit" ||
-      "$branch" != "main" ||
+      "$branch_allowed" != "TRUE" ||
       -n "$tracked_status" ]]; then
-  echo "Promotion checks require clean main at the expected commit." >&2
+  echo "Promotion checks require clean main at the expected commit, or an explicitly authorized clean detached launch-source worktree at that commit." >&2
   exit 65
 fi
 

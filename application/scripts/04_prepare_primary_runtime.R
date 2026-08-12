@@ -39,7 +39,11 @@ if (!grepl("^[0-9a-f]{40}$", expected_commit)) {
   )
 }
 
-git_snapshot <- function() {
+allow_detached_launch_source <- identical(
+  Sys.getenv("RQR_ALLOW_DETACHED_LAUNCH_SOURCE", unset = ""), "TRUE"
+)
+
+git_snapshot <- function(include_global_refs = TRUE) {
   fields <- c(
     branch = rqr_readonly_git(
       repo_root, c("rev-parse", "--abbrev-ref", "HEAD")
@@ -50,13 +54,24 @@ git_snapshot <- function() {
     status = rqr_readonly_git(
       repo_root, c("status", "--porcelain=v2", "--untracked-files=all")
     ),
-    refs = rqr_readonly_git(
-      repo_root, c("show-ref", "--head", "--dereference")
-    ),
-    local_config = rqr_readonly_git(
-      repo_root, c("config", "--local", "--list", "--show-origin")
+    application_tree = tolower(rqr_readonly_git(
+      repo_root, c("rev-parse", paste0(expected_commit, ":application"))
+    )),
+    application_worktree_digest = rqr_source_tree_digest(
+      file.path(repo_root, "application")
     )
   )
+  if (isTRUE(include_global_refs)) {
+    fields <- c(
+      fields,
+      refs = rqr_readonly_git(
+        repo_root, c("show-ref", "--head", "--dereference")
+      ),
+      local_config = rqr_readonly_git(
+        repo_root, c("config", "--local", "--list", "--show-origin")
+      )
+    )
+  }
   list(
     fields = fields,
     digest = digest::digest(
@@ -66,12 +81,31 @@ git_snapshot <- function() {
   )
 }
 
-source_before <- git_snapshot()
-if (!identical(source_before$fields[["branch"]], "main") ||
+initial_source <- git_snapshot(include_global_refs = FALSE)
+source_branch <- initial_source$fields[["branch"]]
+source_branch_allowed <- identical(source_branch, "main") ||
+  (isTRUE(allow_detached_launch_source) && identical(source_branch, "HEAD"))
+source_snapshot_mode <- if (
+    isTRUE(allow_detached_launch_source) &&
+      identical(source_branch, "HEAD")) {
+  "detached_launch_source_content"
+} else {
+  "strict_main_refs_and_content"
+}
+source_before <- git_snapshot(
+  include_global_refs = identical(
+    source_snapshot_mode, "strict_main_refs_and_content"
+  )
+)
+if (!source_branch_allowed ||
     !identical(source_before$fields[["commit"]], expected_commit) ||
     nzchar(source_before$fields[["status"]])) {
   stop(
-    "The primary source must be clean, on main, and at the expected commit.",
+    paste(
+      "The primary source must be clean, on main at the expected",
+      "commit, or explicitly authorized as a clean detached",
+      "launch-source worktree at the expected commit."
+    ),
     call. = FALSE
   )
 }
@@ -286,7 +320,11 @@ saveRDS(
   runtime_lineage_marker_path,
   version = 3
 )
-source_after <- git_snapshot()
+source_after <- git_snapshot(
+  include_global_refs = identical(
+    source_snapshot_mode, "strict_main_refs_and_content"
+  )
+)
 if (!identical(source_before$digest, source_after$digest)) {
   stop(
     "The primary Git state changed while preparing its isolated runtime.",
@@ -317,6 +355,7 @@ attestation <- list(
   source_archive_prefix = "rqrgibbs",
   source_checkout_snapshot_before = source_before$digest,
   source_checkout_snapshot_after = source_after$digest,
+  source_checkout_snapshot_mode = source_snapshot_mode,
   source_checkout_unchanged =
     identical(source_before$digest, source_after$digest),
   source_archive_path = normalizePath(
@@ -427,4 +466,4 @@ cat("  package version:", source_version, "\n")
 cat("  library:", library_root, "\n")
 cat("  runtime path:", runtime_path, "\n")
 cat("  attestation:", attestation_path, "\n")
-cat("Set R_LIBS_USER to the library path before a promotion run.\n")
+cat("Prepend the library path to R_LIBS before a promotion run.\n")
