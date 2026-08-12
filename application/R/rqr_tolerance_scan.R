@@ -39,17 +39,155 @@
   as.integer(best)
 }
 
-.rqr_tcsp_binom_lower <- function(successes, trials, confidence_level) {
-  if (trials <= 0L) return(NA_real_)
-  stats::binom.test(successes, trials, conf.level = confidence_level)$conf.int[[1L]]
-}
-
 .rqr_tcsp_digest <- function(x) {
   if (requireNamespace("digest", quietly = TRUE)) {
     digest::digest(x, algo = "sha256")
   } else {
     NA_character_
   }
+}
+
+.rqr_tcsp_count_histogram <- function(max_counts, n) {
+  counts <- tabulate(as.integer(max_counts) + 1L, nbins = n + 1L)
+  names(counts) <- as.character(0:n)
+  counts
+}
+
+.rqr_tcsp_probability_from_band <- function(band, retained_count) {
+  k <- .rqr_mt_assert_count(retained_count, "retained_count", 1L)
+  threshold <- min(max(k - 1L, 0L), band$n)
+  row <- band$cdf[band$cdf$max_count <= threshold, , drop = FALSE]
+  row <- row[nrow(row), , drop = FALSE]
+  list(
+    method = "monte_carlo_conservative",
+    scan_cdf_band_method = band$band_method,
+    n = band$n,
+    guaranteed_content = band$guaranteed_content,
+    retained_count = k,
+    scan_threshold_max_count = as.integer(threshold),
+    probability_estimate = row$empirical_cdf[[1L]],
+    certified_lower_probability = row$certified_lower_cdf[[1L]],
+    numerical_confidence = band$numerical_confidence,
+    numerical_error_control = band$numerical_error_control,
+    simultaneous_numerical_calibration = TRUE,
+    n_sim = band$n_sim,
+    successes = row$cumulative_count[[1L]],
+    failures = band$n_sim - row$cumulative_count[[1L]],
+    cdf_band_radius = band$cdf_band_radius,
+    scan_distribution_digest = band$scan_distribution_digest,
+    cdf_band_digest = band$cdf_band_digest
+  )
+}
+
+.rqr_tcsp_posterior_beta_prior_type <- function(posterior_fit) {
+  posterior_fit$model_spec$beta_prior_type %||%
+    posterior_fit$beta_prior$type %||%
+    NA_character_
+}
+
+#' Simulate the Uniform TCSP scan-statistic distribution
+#'
+#' Simulates \eqn{M_n(c)}, the maximum number of iid Uniform(0,1) points
+#' falling in any interval of length at most `guaranteed_content`.  The returned
+#' histogram is the common Monte Carlo object used for all candidate retained
+#' counts in simultaneous scan calibration.
+#'
+#' @inheritParams rqr_tcsp_scan_probability
+#' @return An `rqr_tcsp_scan_distribution` object.
+#' @export
+rqr_tcsp_scan_distribution <- function(
+    n, guaranteed_content, n_sim = 20000L, seed = NULL) {
+  n <- .rqr_mt_assert_count(n, "n", 1L)
+  c_target <- .rqr_tcsp_assert_probability(
+    guaranteed_content, "guaranteed_content"
+  )
+  n_sim <- .rqr_mt_assert_count(n_sim, "n_sim", 1L)
+  rng_kind <- RNGkind()
+  restore_rng <- .rqr_mt_seed_scope(seed)
+  on.exit(restore_rng(), add = TRUE)
+  max_counts <- integer(n_sim)
+  for (ii in seq_len(n_sim)) {
+    max_counts[[ii]] <- .rqr_tcsp_scan_max_count(stats::runif(n), c_target)
+  }
+  histogram <- .rqr_tcsp_count_histogram(max_counts, n)
+  out <- list(
+    schema_version = .rqr_tcsp_schema(),
+    method = "uniform_scan_max_count_distribution",
+    scan_algorithm_version = "two_pointer_sorted_uniform/1.0.0",
+    n = n,
+    guaranteed_content = c_target,
+    n_sim = n_sim,
+    seed = if (is.null(seed)) NA_integer_ else as.integer(seed),
+    rng_kind = rng_kind,
+    max_count_histogram = histogram,
+    max_count_summary = stats::quantile(
+      max_counts, c(0, 0.5, 0.9, 0.99, 1), names = TRUE, type = 1
+    ),
+    max_count_digest = .rqr_tcsp_digest(max_counts)
+  )
+  out$scan_distribution_digest <- .rqr_tcsp_digest(out)
+  class(out) <- c("rqr_tcsp_scan_distribution", "list")
+  out
+}
+
+#' Build a simultaneous CDF lower band for Uniform scan calibration
+#'
+#' Applies a Massart-DKW empirical-CDF band to the simulated distribution of
+#' \eqn{M_n(c)}.  The band is simultaneous over all retained-count candidates;
+#' it controls numerical calibration error, not sampling uncertainty in the
+#' observed response data.
+#'
+#' @param distribution A scan distribution from
+#'   [rqr_tcsp_scan_distribution()].
+#' @param numerical_confidence Confidence level for the simultaneous Monte
+#'   Carlo CDF band.
+#' @return An `rqr_tcsp_scan_cdf_band` object.
+#' @export
+rqr_tcsp_scan_cdf_band <- function(distribution, numerical_confidence = 0.999) {
+  if (!is.list(distribution) ||
+      !identical(distribution$method, "uniform_scan_max_count_distribution")) {
+    stop("distribution must come from rqr_tcsp_scan_distribution().",
+         call. = FALSE)
+  }
+  numerical_confidence <- .rqr_tcsp_assert_probability(
+    numerical_confidence, "numerical_confidence"
+  )
+  n <- .rqr_mt_assert_count(distribution$n, "distribution$n", 1L)
+  n_sim <- .rqr_mt_assert_count(distribution$n_sim, "distribution$n_sim", 1L)
+  counts <- as.integer(distribution$max_count_histogram)
+  if (length(counts) != n + 1L || sum(counts) != n_sim) {
+    stop("distribution histogram is inconsistent with n and n_sim.",
+         call. = FALSE)
+  }
+  cumulative <- cumsum(counts)
+  empirical <- cumulative / n_sim
+  radius <- sqrt(log(2 / (1 - numerical_confidence)) / (2 * n_sim))
+  lower <- pmax(0, empirical - radius)
+  lower[[n + 1L]] <- 1
+  cdf <- data.frame(
+    max_count = 0:n,
+    cumulative_count = cumulative,
+    empirical_cdf = empirical,
+    certified_lower_cdf = lower
+  )
+  out <- list(
+    schema_version = .rqr_tcsp_schema(),
+    method = "uniform_scan_empirical_cdf_band",
+    band_method = "massart_dkw_empirical_cdf_lower_band",
+    n = n,
+    guaranteed_content = distribution$guaranteed_content,
+    n_sim = n_sim,
+    numerical_confidence = numerical_confidence,
+    cdf_band_radius = radius,
+    cdf = cdf,
+    max_count_histogram = distribution$max_count_histogram,
+    scan_distribution_digest = distribution$scan_distribution_digest,
+    numerical_error_control =
+      "Simultaneous Massart-DKW lower band for the Monte Carlo distribution of the Uniform scan statistic."
+  )
+  out$cdf_band_digest <- .rqr_tcsp_digest(out)
+  class(out) <- c("rqr_tcsp_scan_cdf_band", "list")
+  out
 }
 
 #' Uniform scan-statistic calibration probability
@@ -65,8 +203,8 @@
 #' @param method Critical-value method.
 #' @param n_sim Number of uniform Monte Carlo replicates for
 #'   `"monte_carlo_conservative"`.
-#' @param numerical_confidence Confidence level for the one-sided Monte Carlo
-#'   lower confidence bound.
+#' @param numerical_confidence Confidence level for the simultaneous Monte
+#'   Carlo CDF lower band.
 #' @param seed Optional simulation seed.
 #' @return A list with point and certified lower probabilities.
 #' @export
@@ -105,33 +243,13 @@ rqr_tcsp_scan_probability <- function(
     ))
   }
 
-  n_sim <- .rqr_mt_assert_count(n_sim, "n_sim", 1L)
-  restore_rng <- .rqr_mt_seed_scope(seed)
-  on.exit(restore_rng(), add = TRUE)
-  success <- 0L
-  max_counts <- integer(n_sim)
-  for (ii in seq_len(n_sim)) {
-    max_counts[[ii]] <- .rqr_tcsp_scan_max_count(stats::runif(n), c_target)
-    if (max_counts[[ii]] < k) success <- success + 1L
-  }
-  lower <- .rqr_tcsp_binom_lower(success, n_sim, numerical_confidence)
-  list(
-    method = method,
-    n = n,
-    guaranteed_content = c_target,
-    retained_count = k,
-    probability_estimate = success / n_sim,
-    certified_lower_probability = lower,
-    numerical_confidence = numerical_confidence,
-    numerical_error_control =
-      "One-sided Clopper-Pearson lower bound for Monte Carlo scan probability.",
-    n_sim = n_sim,
-    successes = success,
-    failures = n_sim - success,
-    scan_max_count_summary = stats::quantile(
-      max_counts, c(0, 0.5, 0.9, 0.99, 1), names = TRUE, type = 1
-    )
+  distribution <- rqr_tcsp_scan_distribution(
+    n, c_target, n_sim = n_sim, seed = seed
   )
+  band <- rqr_tcsp_scan_cdf_band(
+    distribution, numerical_confidence = numerical_confidence
+  )
+  .rqr_tcsp_probability_from_band(band, k)
 }
 
 #' Calibrate a retained count for the TCSP action
@@ -189,12 +307,14 @@ rqr_tcsp_calibrate_count <- function(
     ))
   }
 
+  distribution <- rqr_tcsp_scan_distribution(
+    n, c_target, n_sim = n_sim, seed = seed
+  )
+  band <- rqr_tcsp_scan_cdf_band(
+    distribution, numerical_confidence = numerical_confidence
+  )
   for (k in seq_len(n + 1L)) {
-    prob <- rqr_tcsp_scan_probability(
-      n, c_target, k, method = method, n_sim = n_sim,
-      numerical_confidence = numerical_confidence,
-      seed = if (is.null(seed)) NULL else as.integer(seed) + k
-    )
+    prob <- .rqr_tcsp_probability_from_band(band, k)
     if (is.finite(prob$certified_lower_probability) &&
         prob$certified_lower_probability >= tolerance_confidence) {
       return(list(
@@ -208,6 +328,10 @@ rqr_tcsp_calibrate_count <- function(
         target_content = k / n,
         content_buffer = k / n - c_target,
         scan_probability = prob,
+        scan_cdf_band = band,
+        scan_distribution_digest = distribution$scan_distribution_digest,
+        cdf_band_digest = band$cdf_band_digest,
+        simultaneous_numerical_calibration = TRUE,
         finite_sample_claim_available = FALSE,
         asymptotic_claim_available = FALSE,
         infeasible = k > n
@@ -307,6 +431,21 @@ rqr_tcsp_tilt_from_window <- function(window) {
 .rqr_tcsp_validate_mcmc_request <- function(fit_mcmc, mcmc_args) {
   if (!isTRUE(fit_mcmc)) return(invisible(TRUE))
   if (!is.list(mcmc_args)) stop("mcmc_args must be a list.", call. = FALSE)
+  reserved <- c(
+    "y", "X", "coverage_level", "mean_tilt",
+    "learning_rate", "learning_rate_mode", "beta_prior_obj",
+    "response_likelihood"
+  )
+  supplied_reserved <- intersect(names(mcmc_args), reserved)
+  if (length(supplied_reserved)) {
+    stop(
+      paste(
+        "TCSP fixed-target MCMC reserves these mcmc_args fields:",
+        paste(supplied_reserved, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
   mode <- mcmc_args$learning_rate_mode %||% "fixed_rate"
   if (!identical(mode, "fixed_rate")) {
     stop("TCSP nonzero tilt MCMC requires learning_rate_mode='fixed_rate'.",
@@ -367,6 +506,16 @@ rqr_tcsp_fit_univariate <- function(
   .rqr_tcsp_validate_mcmc_request(fit_mcmc, mcmc_args)
   posterior_fit <- NULL
   if (isTRUE(fit_mcmc)) {
+    if (calibration$target_content >= 1) {
+      stop(
+        paste(
+          "TCSP empirical range action has target_content >= 1;",
+          "rqr_mcmc_fit() requires coverage_level in (0, 1).",
+          "The formal tolerance action is still the empirical window."
+        ),
+        call. = FALSE
+      )
+    }
     args <- utils::modifyList(
       list(
         y = y,
@@ -380,6 +529,30 @@ rqr_tcsp_fit_univariate <- function(
       mcmc_args
     )
     posterior_fit <- do.call(rqr_mcmc_fit, args)
+    if (!isTRUE(all.equal(posterior_fit$model_spec$coverage_level,
+                          calibration$target_content, tolerance = 0))) {
+      stop("TCSP MCMC target audit failed: coverage_level drifted.",
+           call. = FALSE)
+    }
+    if (!identical(posterior_fit$model_spec$learning_rate_mode,
+                   "fixed_rate")) {
+      stop("TCSP MCMC target audit failed: learning_rate_mode drifted.",
+           call. = FALSE)
+    }
+    if (isTRUE(posterior_fit$model_spec$response_likelihood)) {
+      stop("TCSP MCMC target audit failed: response_likelihood is TRUE.",
+           call. = FALSE)
+    }
+    if (!identical(.rqr_tcsp_posterior_beta_prior_type(posterior_fit),
+                   "ridge")) {
+      stop("TCSP MCMC target audit failed: beta prior is not ridge.",
+           call. = FALSE)
+    }
+    if (!isTRUE(all.equal(unique(posterior_fit$model_spec$mean_tilt),
+                          tilt$delta_raw, tolerance = 1e-12))) {
+      stop("TCSP MCMC target audit failed: mean_tilt drifted.",
+           call. = FALSE)
+    }
   }
   contract <- list(
     schema_version = .rqr_tcsp_schema(),
@@ -409,7 +582,11 @@ rqr_tcsp_fit_univariate <- function(
     delta_standardized = tilt$delta_standardized,
     learning_rate = learning_rate,
     learning_rate_mode = "fixed_rate",
-    prior_type = if (isTRUE(fit_mcmc)) posterior_fit$model_spec$beta_prior_type else NA_character_,
+    prior_type = if (isTRUE(fit_mcmc)) {
+      .rqr_tcsp_posterior_beta_prior_type(posterior_fit)
+    } else {
+      NA_character_
+    },
     posterior_summary_action = "not_formal_tolerance_action",
     global_shortest_verified = TRUE,
     assumptions_passed = c("iid_continuous_required_by_theory_not_tested_by_code"),

@@ -65,7 +65,8 @@ test_that("TCSP pilot audit publishes compact reproducible evidence", {
 
   expected <- c(
     "README.md", "audit_summary.json", "audit_gates.csv",
-    "method_summary.csv", "cell_summary_compact.csv",
+    "method_summary.csv", "width_ratio_summary.csv",
+    "cell_summary_compact.csv",
     "critical_count_summary.csv", "dkw_feasibility.csv",
     "mc_calibration_health.csv", "normal_howe_sensitivity.csv",
     "next_stage_plan.csv", "source_run_manifest.csv", "artifact_hashes.csv"

@@ -718,10 +718,11 @@ The formal tolerance action remains the empirical order-statistic window
 
 Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
 reported interval. The present implementation provides Monte Carlo
-calibration of the uniform scan distribution with a one-sided
-Clopper--Pearson lower confidence bound for \(\Pr\{M_n(c)<k\}\), together with
-a conservative Massart--DKW fallback \citep{Massart1990DKW}. The fallback is
-not an exact scan recursion. Accordingly, we treat exact critical-count
+calibration of the uniform scan distribution with a simultaneous
+Massart--DKW empirical-CDF lower band for \(\Pr\{M_n(c)<k\}\) across all
+candidate retained counts, together with a conservative Massart--DKW fallback
+\citep{Massart1990DKW}. The fallback is not an exact scan recursion.
+Accordingly, we treat exact critical-count
 calculation and the finite-sample theorem for this closed-window action as
 open proof and numerical-certification tasks rather than as established
 results.

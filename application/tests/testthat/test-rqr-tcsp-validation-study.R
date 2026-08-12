@@ -21,6 +21,10 @@ test_that("TCSP validation config is fail-closed and complete", {
   expect_invisible(env$tcspv_validate_config(config))
   expect_true(config$execution$full_pilot_authorized)
   expect_false(config$execution$confirmatory_authorized)
+  expect_identical(
+    config$scan_calibration$monte_carlo_lower_bound,
+    "simultaneous_massart_dkw_empirical_cdf_band"
+  )
   expect_true("full_pilot" %in% names(config$modes))
   expect_true(1200L %in% as.integer(unlist(config$modes$full_pilot$sample_sizes)))
   methods <- env$tcspv_methods(config)
@@ -39,7 +43,30 @@ test_that("TCSP full-pilot mode uses its own scan-calibration budget", {
   mc <- env$tcspv_mc_count(config, 20L, 0.50, 0.80, "full_pilot")
   expect_equal(mc$n_sim, 80L)
   expect_true(isTRUE(mc$certified_lower_probability >= 0.80))
+  expect_identical(mc$band_method,
+                   "massart_dkw_empirical_cdf_lower_band")
+  expect_true(is.finite(mc$cdf_band_radius))
+  expect_true(nzchar(mc$cdf_band_digest))
   expect_true(is.finite(mc$seed))
+})
+
+test_that("TCSP validation MC critical counts expose simultaneous-band metadata", {
+  env <- tcsp_validation_environment()
+  config <- tcsp_validation_config(env)
+  config$scan_calibration$tiny_n_sim <- 80L
+  config$modes$tiny$sample_sizes <- list(40L)
+  config$modes$tiny$guaranteed_contents <- list(0.50)
+  config$modes$tiny$tolerance_confidences <- list(0.80)
+  config$modes$tiny$method_ids <- as.list(c("tcsp_mc"))
+  criticals <- env$tcspv_critical_counts(config, "tiny")
+  mc <- criticals[criticals$method_id == "tcsp_mc", , drop = FALSE]
+
+  expect_equal(nrow(mc), 1L)
+  expect_identical(mc$band_method[[1L]],
+                   "massart_dkw_empirical_cdf_lower_band")
+  expect_true(is.finite(mc$probability_estimate[[1L]]))
+  expect_true(is.finite(mc$cdf_band_radius[[1L]]))
+  expect_true(nzchar(mc$scan_distribution_digest[[1L]]))
 })
 
 test_that("TCSP validation DGP CDFs and quantiles are coherent", {
@@ -115,8 +142,15 @@ test_that("TCSP tiny repeated-sample runner returns summaries", {
   config$scan_calibration$tiny_n_sim <- 80L
   results <- env$tcspv_run_repeated_sample(config, "tiny")
   summary <- env$tcspv_summary(results, config$design$summary_confidence)
+  ratios <- env$tcspv_width_ratio_summary(results)
   expect_equal(nrow(results), 2L * 5L)
   expect_equal(nrow(summary), 5L)
+  expect_true(nrow(ratios) > 0L)
+  expect_true(all(c(
+    "mean_width_ratio_to_reference", "mean_width_diff_to_reference",
+    "reference_method"
+  ) %in% names(ratios)))
+  expect_true(all(ratios$paired_rows <= 2L))
   expect_true(all(c("tolerance_success_rate", "mean_width") %in%
                     names(summary)))
 })

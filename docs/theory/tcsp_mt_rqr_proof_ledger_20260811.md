@@ -18,7 +18,7 @@ Allowed statuses:
 | ID | Claim | Status | Current repository position |
 |---|---|---|---|
 | T-SCAN-1 | Finite-sample scan theorem for \(k_{n,c,\alpha}\) under the canonical closed window \([Y_{(j)},Y_{(j+k-1)}]\). | `BLOCKING` | Definition is in the manuscript and software; proof/audit is not promoted. |
-| T-SCAN-2 | Critical-count numerical certification. | `IMPLEMENTED-AUDIT-PENDING` | Monte Carlo uses a one-sided Clopper-Pearson lower bound; DKW fallback is conservative but not exact scan recursion. |
+| T-SCAN-2 | Critical-count numerical certification. | `IMPLEMENTED-AUDIT-PENDING` | Monte Carlo uses a simultaneous Massart-DKW empirical-CDF lower band over the simulated Uniform scan-statistic distribution; the separate DKW fallback is conservative but not exact scan recursion. |
 | T-ACTION | Software action matches the theorem action. | `IMPLEMENTED-AUDIT-PENDING` | `rqr_tcsp_shortest_window()` scans integer closed windows directly and tests brute-force agreement. |
 | T-SH-1 | Shortest-path existence, uniqueness, and nesting. | `DERIVED-PENDING` | Population geometry is described with proof gates; nonunique windows remain serialized as ties. |
 | T-SH-2 | Endpoint, width, and tilt derivatives. | `DERIVED-PENDING` | Used only as continuation guidance and diagnostics. |

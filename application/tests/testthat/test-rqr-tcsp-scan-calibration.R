@@ -35,7 +35,33 @@ test_that("TCSP DKW calibration returns a conservative retained count", {
   expect_false(cal$finite_sample_claim_available)
 })
 
-test_that("TCSP Monte Carlo calibration is labeled as numerical, not exact", {
+test_that("TCSP scan distribution and CDF band are deterministic and simultaneous", {
+  dist1 <- rqr_tcsp_scan_distribution(
+    n = 12,
+    guaranteed_content = 0.30,
+    n_sim = 120,
+    seed = 9102
+  )
+  dist2 <- rqr_tcsp_scan_distribution(
+    n = 12,
+    guaranteed_content = 0.30,
+    n_sim = 120,
+    seed = 9102
+  )
+  band <- rqr_tcsp_scan_cdf_band(dist1, numerical_confidence = 0.90)
+
+  expect_s3_class(dist1, "rqr_tcsp_scan_distribution")
+  expect_s3_class(band, "rqr_tcsp_scan_cdf_band")
+  expect_identical(dist1$max_count_histogram, dist2$max_count_histogram)
+  expect_equal(sum(dist1$max_count_histogram), 120)
+  expect_identical(band$band_method,
+                   "massart_dkw_empirical_cdf_lower_band")
+  expect_true(all(band$cdf$certified_lower_cdf <= band$cdf$empirical_cdf))
+  expect_equal(band$cdf$certified_lower_cdf[[nrow(band$cdf)]], 1)
+  expect_true(is.character(band$cdf_band_digest))
+})
+
+test_that("TCSP Monte Carlo calibration is simultaneous numerical, not exact", {
   prob <- rqr_tcsp_scan_probability(
     n = 8,
     guaranteed_content = 0.30,
@@ -47,8 +73,34 @@ test_that("TCSP Monte Carlo calibration is labeled as numerical, not exact", {
   )
 
   expect_identical(prob$method, "monte_carlo_conservative")
-  expect_match(prob$numerical_error_control, "Clopper-Pearson")
+  expect_match(prob$numerical_error_control, "Simultaneous Massart-DKW")
+  expect_true(prob$simultaneous_numerical_calibration)
+  expect_identical(prob$scan_cdf_band_method,
+                   "massart_dkw_empirical_cdf_lower_band")
   expect_true(is.finite(prob$probability_estimate))
   expect_true(is.finite(prob$certified_lower_probability))
   expect_lte(prob$certified_lower_probability, prob$probability_estimate)
+})
+
+test_that("TCSP Monte Carlo calibration uses one simultaneous band for selection", {
+  cal <- rqr_tcsp_calibrate_count(
+    n = 10,
+    guaranteed_content = 0.35,
+    tolerance_confidence = 0.75,
+    method = "monte_carlo_conservative",
+    n_sim = 250,
+    numerical_confidence = 0.80,
+    seed = 9104
+  )
+
+  expect_true(cal$simultaneous_numerical_calibration)
+  expect_identical(cal$scan_probability$cdf_band_digest,
+                   cal$cdf_band_digest)
+  expect_true(cal$scan_probability$certified_lower_probability >= 0.75)
+  if (cal$retained_count > 1L) {
+    prev <- rqrgibbs:::.rqr_tcsp_probability_from_band(
+      cal$scan_cdf_band, cal$retained_count - 1L
+    )
+    expect_lt(prev$certified_lower_probability, 0.75)
+  }
 })

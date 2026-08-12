@@ -187,7 +187,7 @@
     "full_pilot_n_sim": 5000,
     "numerical_confidence": 0.99,
     "precompute_by_n_content_confidence": true,
-    "monte_carlo_lower_bound": "one_sided_clopper_pearson"
+    "monte_carlo_lower_bound": "simultaneous_massart_dkw_empirical_cdf_band"
   },
   "seed_contract": {
     "schema_version": "rqrgibbs_tcsp_validation_seed/1.0.0",

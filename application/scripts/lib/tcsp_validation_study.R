@@ -357,6 +357,13 @@ tcspv_binom_lower <- function(successes, trials, confidence_level) {
   stats::binom.test(successes, trials, conf.level = confidence_level)$conf.int[[1L]]
 }
 
+tcspv_digest_object <- function(x) {
+  if (!requireNamespace("digest", quietly = TRUE)) {
+    tcspv_stop("digest is required for TCSP validation digests.")
+  }
+  digest::digest(x, algo = "sha256")
+}
+
 tcspv_dkw_count <- function(n, content, confidence) {
   eps <- sqrt(log(2 / (1 - confidence)) / (2 * n))
   k <- as.integer(floor(n * (content + 2 * eps)) + 1L)
@@ -365,6 +372,42 @@ tcspv_dkw_count <- function(n, content, confidence) {
     infeasible = k > n,
     certified_lower_probability = as.numeric(k <= n),
     dkw_epsilon = eps
+  )
+}
+
+tcspv_mc_cdf_band <- function(max_counts, n, numerical_confidence) {
+  n <- tcspv_scalar_count(n, "n", lower = 1L)
+  numerical_confidence <- tcspv_scalar_probability(
+    numerical_confidence, "numerical_confidence"
+  )
+  max_counts <- as.integer(max_counts)
+  n_sim <- length(max_counts)
+  if (n_sim < 1L) tcspv_stop("max_counts must contain at least one draw.")
+  histogram <- tabulate(max_counts + 1L, nbins = n + 1L)
+  cumulative <- cumsum(histogram)
+  empirical <- cumulative / n_sim
+  radius <- sqrt(log(2 / (1 - numerical_confidence)) / (2 * n_sim))
+  lower <- pmax(0, empirical - radius)
+  lower[[n + 1L]] <- 1
+  cdf <- data.frame(
+    max_count = 0:n,
+    cumulative_count = cumulative,
+    empirical_cdf = empirical,
+    certified_lower_cdf = lower,
+    stringsAsFactors = FALSE
+  )
+  list(
+    band_method = "massart_dkw_empirical_cdf_lower_band",
+    numerical_error_control =
+      "Simultaneous Massart-DKW lower band for the Monte Carlo distribution of the Uniform scan statistic.",
+    n = n,
+    n_sim = n_sim,
+    numerical_confidence = numerical_confidence,
+    cdf_band_radius = radius,
+    max_count_histogram = histogram,
+    cdf = cdf,
+    scan_distribution_digest = tcspv_digest_object(histogram),
+    cdf_band_digest = tcspv_digest_object(cdf)
   )
 }
 
@@ -385,17 +428,25 @@ tcspv_mc_count <- function(config, n, content, confidence, mode) {
   max_counts <- replicate(
     n_sim, tcspv_scan_max_count(stats::runif(n), content)
   )
+  band <- tcspv_mc_cdf_band(max_counts, n, numerical_confidence)
   for (k in seq_len(n + 1L)) {
-    successes <- sum(max_counts < k)
-    lower <- tcspv_binom_lower(successes, n_sim, numerical_confidence)
+    threshold <- k - 1L
+    row <- band$cdf[band$cdf$max_count <= threshold, , drop = FALSE]
+    row <- row[nrow(row), , drop = FALSE]
+    lower <- row$certified_lower_cdf[[1L]]
     if (is.finite(lower) && lower >= confidence) {
       return(list(
         retained_count = as.integer(k),
         infeasible = k > n,
         certified_lower_probability = lower,
+        probability_estimate = row$empirical_cdf[[1L]],
         n_sim = n_sim,
-        successes = successes,
+        successes = row$cumulative_count[[1L]],
         numerical_confidence = numerical_confidence,
+        cdf_band_radius = band$cdf_band_radius,
+        band_method = band$band_method,
+        scan_distribution_digest = band$scan_distribution_digest,
+        cdf_band_digest = band$cdf_band_digest,
         seed = seed
       ))
     }
@@ -447,6 +498,12 @@ tcspv_critical_counts <- function(config, mode) {
           infeasible = dkw$infeasible,
           calibration = "dkw_conservative",
           n_sim = 0L, seed = NA_integer_,
+          probability_estimate = dkw$certified_lower_probability,
+          numerical_confidence = NA_real_,
+          cdf_band_radius = NA_real_,
+          band_method = NA_character_,
+          scan_distribution_digest = NA_character_,
+          cdf_band_digest = NA_character_,
           stringsAsFactors = FALSE
         )
         if ("tcsp_mc" %in% unlist(mode_cfg$method_ids) && !identical(mode, "preflight")) {
@@ -461,6 +518,12 @@ tcspv_critical_counts <- function(config, mode) {
             infeasible = mc$infeasible,
             calibration = "monte_carlo_conservative",
             n_sim = mc$n_sim, seed = mc$seed,
+            probability_estimate = mc$probability_estimate,
+            numerical_confidence = mc$numerical_confidence,
+            cdf_band_radius = mc$cdf_band_radius,
+            band_method = mc$band_method,
+            scan_distribution_digest = mc$scan_distribution_digest,
+            cdf_band_digest = mc$cdf_band_digest,
             stringsAsFactors = FALSE
           )
         }
@@ -476,6 +539,12 @@ tcspv_critical_counts <- function(config, mode) {
           infeasible = wilks$infeasible,
           calibration = "exact_beta_spacing",
           n_sim = 0L, seed = NA_integer_,
+          probability_estimate = wilks$certificate,
+          numerical_confidence = NA_real_,
+          cdf_band_radius = NA_real_,
+          band_method = NA_character_,
+          scan_distribution_digest = NA_character_,
+          cdf_band_digest = NA_character_,
           stringsAsFactors = FALSE
         )
         minmax_cert <- tcspv_order_gap_confidence(n, n - 1L, content)
@@ -490,6 +559,12 @@ tcspv_critical_counts <- function(config, mode) {
           infeasible = minmax_cert < confidence,
           calibration = "exact_beta_range",
           n_sim = 0L, seed = NA_integer_,
+          probability_estimate = minmax_cert,
+          numerical_confidence = NA_real_,
+          cdf_band_radius = NA_real_,
+          band_method = NA_character_,
+          scan_distribution_digest = NA_character_,
+          cdf_band_digest = NA_character_,
           stringsAsFactors = FALSE
         )
         k <- dkw$retained_count
@@ -506,6 +581,12 @@ tcspv_critical_counts <- function(config, mode) {
           infeasible = k > n,
           calibration = "none_uses_tcsp_dkw_retained_count",
           n_sim = 0L, seed = NA_integer_,
+          probability_estimate = NA_real_,
+          numerical_confidence = NA_real_,
+          cdf_band_radius = NA_real_,
+          band_method = NA_character_,
+          scan_distribution_digest = NA_character_,
+          cdf_band_digest = NA_character_,
           stringsAsFactors = FALSE
         )
       }
@@ -975,6 +1056,62 @@ tcspv_method_summary <- function(results) {
   out[order(out$method_id), , drop = FALSE]
 }
 
+tcspv_width_ratio_summary <- function(results,
+                                      reference_method = "oracle_shortest") {
+  if (!reference_method %in% results$method_id) return(data.frame())
+  keys <- c(
+    "mode", "replication", "dgp_id", "n", "guaranteed_content",
+    "tolerance_confidence"
+  )
+  refs <- results[results$method_id == reference_method, , drop = FALSE]
+  refs <- refs[!as.logical(refs$failed) & is.finite(refs$width) &
+                 refs$width > 0, c(keys, "width"), drop = FALSE]
+  names(refs)[names(refs) == "width"] <- "reference_width"
+  candidates <- results[results$method_id != reference_method, , drop = FALSE]
+  paired <- merge(
+    candidates, refs, by = keys, all = FALSE, sort = FALSE
+  )
+  paired <- paired[!as.logical(paired$failed) & is.finite(paired$width) &
+                     is.finite(paired$reference_width) &
+                     paired$reference_width > 0, , drop = FALSE]
+  if (!nrow(paired)) return(data.frame())
+  paired$width_ratio_to_reference <- paired$width / paired$reference_width
+  paired$width_diff_to_reference <- paired$width - paired$reference_width
+  cell_keys <- c(
+    "mode", "dgp_id", "n", "guaranteed_content", "tolerance_confidence",
+    "method_id"
+  )
+  split_rows <- split(paired, paired[cell_keys], drop = TRUE)
+  rows <- lapply(split_rows, function(z) {
+    data.frame(
+      mode = z$mode[[1L]],
+      dgp_id = z$dgp_id[[1L]],
+      n = z$n[[1L]],
+      guaranteed_content = z$guaranteed_content[[1L]],
+      tolerance_confidence = z$tolerance_confidence[[1L]],
+      method_id = z$method_id[[1L]],
+      reference_method = reference_method,
+      paired_rows = nrow(z),
+      mean_width_ratio_to_reference =
+        tcspv_mean_or_na(z$width_ratio_to_reference),
+      median_width_ratio_to_reference =
+        tcspv_median_or_na(z$width_ratio_to_reference),
+      q90_width_ratio_to_reference =
+        tcspv_quantile_or_na(z$width_ratio_to_reference, 0.90),
+      mean_width_diff_to_reference =
+        tcspv_mean_or_na(z$width_diff_to_reference),
+      median_width_diff_to_reference =
+        tcspv_median_or_na(z$width_diff_to_reference),
+      mean_reference_width = tcspv_mean_or_na(z$reference_width),
+      mean_method_width = tcspv_mean_or_na(z$width),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, rows)
+  out[order(out$dgp_id, out$n, out$guaranteed_content,
+            out$tolerance_confidence, out$method_id), , drop = FALSE]
+}
+
 tcspv_critical_count_summary <- function(criticals) {
   split_rows <- split(criticals, criticals$method_id, drop = TRUE)
   rows <- lapply(split_rows, function(z) {
@@ -1031,7 +1168,9 @@ tcspv_mc_calibration_health <- function(criticals) {
      c(
        "n", "guaranteed_content", "tolerance_confidence", "retained_count",
        "certificate", "certificate_margin", "certificate_gate_pass",
-       "n_sim", "seed", "infeasible"
+       "probability_estimate", "n_sim", "numerical_confidence",
+       "cdf_band_radius", "band_method", "seed", "infeasible",
+       "scan_distribution_digest", "cdf_band_digest"
      ), drop = FALSE]
 }
 
@@ -1222,7 +1361,7 @@ tcspv_audit_gates <- function(bundle) {
         all(mc$certificate + 1e-12 >= mc$tolerance_confidence) &&
         all(!as.logical(mc$infeasible)),
       severity = "required",
-      finding = "Monte Carlo scan retained counts meet the one-sided lower-bound certificate in this run.",
+      finding = "Monte Carlo scan retained counts meet the simultaneous scan-CDF lower-band certificate in this run.",
       next_action = if (is_full_pilot) {
         "Retain calibration metadata for full-pilot review."
       } else {
@@ -1307,6 +1446,7 @@ tcspv_audit_readme <- function(summary, gates) {
     "- `audit_summary.json`: machine-readable verdict and source-run accounting.",
     "- `audit_gates.csv`: pass/fail gates and promotion blockers.",
     "- `method_summary.csv`: method-level results from replication-level data.",
+    "- `width_ratio_summary.csv`: within-cell paired width ratios against the oracle reference.",
     "- `cell_summary_compact.csv`: cell-level pilot summaries with failure cells retained.",
     "- `critical_count_summary.csv`: calibration feasibility summary by method.",
     "- `dkw_feasibility.csv`: DKW retained-count feasibility by sample size/content/confidence.",
@@ -1325,6 +1465,7 @@ tcspv_write_pilot_audit <- function(run_dir, output_dir, replace = FALSE) {
     tcspv_stop("TCSP pilot audit output already exists: ", output_dir)
   }
   method_summary <- tcspv_method_summary(bundle$replication_results)
+  width_ratio_summary <- tcspv_width_ratio_summary(bundle$replication_results)
   critical_summary <- tcspv_critical_count_summary(bundle$critical_counts)
   dkw_feasibility <- tcspv_dkw_feasibility(bundle$critical_counts)
   mc_health <- tcspv_mc_calibration_health(bundle$critical_counts)
@@ -1376,6 +1517,8 @@ tcspv_write_pilot_audit <- function(run_dir, output_dir, replace = FALSE) {
   tcspv_atomic_json(summary, file.path(stage, "audit_summary.json"))
   tcspv_atomic_csv(gates, file.path(stage, "audit_gates.csv"))
   tcspv_atomic_csv(method_summary, file.path(stage, "method_summary.csv"))
+  tcspv_atomic_csv(width_ratio_summary,
+                   file.path(stage, "width_ratio_summary.csv"))
   compact_cols <- c(
     "mode", "dgp_id", "n", "guaranteed_content", "tolerance_confidence",
     "method_id", "replications", "failures", "failure_rate",

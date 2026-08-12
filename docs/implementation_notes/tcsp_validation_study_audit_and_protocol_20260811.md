@@ -28,9 +28,10 @@ additional theory or externally validated protocols.
 1. The validation target can be confused with ordinary predictive coverage.
    The implemented protocol evaluates true population content
    \(F(U)-F(L)\), not posterior-predictive response coverage.
-2. A Monte Carlo scan critical count can be mislabeled as exact. The protocol
-   records the numerical confidence level and one-sided Clopper-Pearson lower
-   bound.
+2. A Monte Carlo scan critical count can be mislabeled as exact or certified
+   only pointwise after selection. The protocol records the numerical
+   confidence level and uses a simultaneous Massart-DKW empirical-CDF lower
+   band over the simulated Uniform scan-statistic distribution.
 3. Competitor formulas can be under-specified. The current implementation
    includes exact beta-spacing Wilks competitors, a declared normal-theory
    approximation, and an oracle width reference. Young-Mathew and calibrated
