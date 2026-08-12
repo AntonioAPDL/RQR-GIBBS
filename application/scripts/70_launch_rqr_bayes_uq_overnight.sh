@@ -24,13 +24,27 @@ if [[ -n "${git_status}" ]]; then
   exit 65
 fi
 
-nohup Rscript application/scripts/69_validate_rqr_bayes_uq.R \
-  --mode="${mode}" \
-  --config="${config}" \
-  --output-dir="${output_dir}" \
-  >"${log_file}" 2>&1 &
+launch_cmd=(
+  Rscript application/scripts/69_validate_rqr_bayes_uq.R
+  "--mode=${mode}"
+  "--config=${config}"
+  "--output-dir=${output_dir}"
+)
+
+if command -v setsid >/dev/null 2>&1; then
+  nohup setsid "${launch_cmd[@]}" >"${log_file}" 2>&1 &
+else
+  nohup "${launch_cmd[@]}" >"${log_file}" 2>&1 &
+fi
 pid="$!"
 echo "${pid}" > "${pid_file}"
+sleep 2
+if ! kill -0 "${pid}" >/dev/null 2>&1; then
+  printf 'Bayesian UQ validation pilot failed to remain active.\n' >&2
+  printf '  pid: %s\n' "${pid}" >&2
+  printf '  log_file: %s\n' "${log_file}" >&2
+  exit 66
+fi
 
 printf 'Launched Bayesian UQ validation pilot\n'
 printf '  mode: %s\n' "${mode}"
