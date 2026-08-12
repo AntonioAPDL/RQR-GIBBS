@@ -6,6 +6,11 @@ under `scratch_work/`, which is ignored.
 
 Current oracle-tilt implementation records:
 
+- `audits/full_manuscript_editorial_audit_20260811.md` records the complete
+  page- and section-level editorial audit, the claim-proportional title and
+  abstract decision, the corrected shortest-path derivative signs, the
+  tolerance-versus-generalized-posterior boundary, and the final validation
+  protocol.
 - `audits/rqr_loss_exposition_audit_20260811.md` records the compact abstract
   contract, the loss-first presentation, the exact piecewise/check-loss
   equivalence, and the separation among target content, endpoint

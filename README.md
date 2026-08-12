@@ -1,16 +1,16 @@
 # RQR-GIBBS
 
-Standalone manuscript and reproducibility workspace for calibrated
-minimum-width tolerance intervals with relaxed quantile regression (RQR) and
+Standalone manuscript and reproducibility workspace for mean-tilted relaxed
+quantile regression (MT-RQR), fixed-content interval functionals, and
 generalized-Bayes Gibbs computation.
 
 The project studies interval-root functionals: two regression roots are learned
 directly under a coverage-targeted loss rather than obtained by inverting a
-response likelihood. The current branch adds a proof-gated
-scan-calibrated tolerance layer: calibrate a retained count, select the
-shortest closed order-statistic window containing that count, freeze the
-induced MT-RQR target content and retained-mean tilt, and then fit the
-fixed-target generalized posterior. The manuscript also develops the
+response likelihood. A proposed scan-calibrated tolerance layer first
+calibrates a retained count, selects the shortest closed order-statistic window
+containing that count, freezes the induced MT-RQR target content and
+retained-mean tilt, and then fits the fixed-target generalized posterior. The
+manuscript also develops the
 population loss geometry, pseudo-asymmetric-Laplace augmentation,
 fixed-design Gibbs samplers, regularized regression extensions, frozen-feature
 DESN readouts, and dynamic linear root models.

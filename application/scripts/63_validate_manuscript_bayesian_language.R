@@ -31,7 +31,9 @@ forbidden <- c(
   "exponentiated loss kernel" = "exponentiated loss kernel",
   "response-likelihood posterior" = "response[- ]likelihood posterior",
   "declared generalized target" = "declared generalized target",
-  "Gaussian root blocks" = "Gaussian root blocks"
+  "Gaussian root blocks" = "Gaussian root blocks",
+  "duplicated generalized" = "generalized[[:space:]-]+generalized",
+  "duplicated full" = "full[[:space:]-]+full"
 )
 
 failures <- character()
@@ -53,6 +55,34 @@ for (file in source_files) {
   }
 }
 
+main_only_forbidden <- c(
+  "branch-level development language" = "branch[- ]level",
+  "proof-gated development language" = "proof[- ]gated",
+  "theorem-ledger development language" = "current theorem ledger",
+  "source TODO marker" = "TODO[-:]",
+  "ambiguous static scan" = "static scan",
+  "ambiguous Gibbs scan order" = "transition and scan order"
+)
+for (label in names(main_only_forbidden)) {
+  hit <- grep(
+    main_only_forbidden[[label]],
+    lines[["main.tex"]],
+    ignore.case = TRUE,
+    perl = TRUE
+  )
+  if (length(hit)) {
+    failures <- c(
+      failures,
+      sprintf(
+        "main.tex:%d: forbidden article phrase '%s': %s",
+        hit,
+        label,
+        trimws(lines[["main.tex"]][hit])
+      )
+    )
+  }
+}
+
 required <- list(
   "main.tex" = c(
     "Its nonnegative loss is constructed from",
@@ -64,7 +94,10 @@ required <- list(
     "augmented generalized posterior",
     "Gaussian full conditional",
     "not a sampling model for \\(y_i\\)",
-    "posterior predictive distributions for future responses"
+    "posterior predictive distributions for future responses",
+    "A Proposed Scan-Calibrated Tolerance Construction",
+    "L_q'=\\frac{b_q}{\\lambda_q(a_q-b_q)}<0",
+    "U_q'=\\frac{a_q}{\\lambda_q(a_q-b_q)}>0"
   ),
   "rqr-gibbs-supplement.tex" = c(
     "Ordinary-RQR Loss, Score Derivations, and Consequences",

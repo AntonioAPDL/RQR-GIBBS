@@ -25,7 +25,7 @@
   linkcolor=black,
   citecolor=black,
   urlcolor=black,
-  pdftitle={Calibrated Minimum-Width Tolerance Intervals with Generalized-Bayesian Relaxed Quantile Regression},
+  pdftitle={Mean-Tilted Relaxed Quantile Regression: Fixed-Content Interval Functionals and Generalized-Bayes Computation},
   pdfauthor={Antonio De Leon, Raquel Prado, and Bruno Sanso}
 }
 
@@ -53,7 +53,8 @@
   \end{enumerate}\par\medskip
 }
 
-\title{\vspace{-0.6cm}Calibrated Minimum-Width Tolerance Intervals with Generalized-Bayesian Relaxed Quantile Regression}
+\title{\vspace{-0.6cm}Mean-Tilted Relaxed Quantile Regression:\\
+Fixed-Content Interval Functionals and Generalized-Bayes Computation}
 \author{Antonio De Leon$^{1}$ \and Raquel Prado$^{1}$ \and Bruno Sans\'o$^{1}$}
 \date{\small $^{1}$ Department of Statistics, University of California, Santa Cruz\\
 \vspace{0.25em}July 2026}
@@ -64,43 +65,47 @@
 
 \begin{abstract}
 \noindent
-We develop a proof-gated extension of mean-tilted relaxed quantile regression
-(MT-RQR) for calibrated minimum-width tolerance intervals. For iid continuous
-univariate data, the proposed finite-sample action calibrates a retained count
-by a Uniform scan statistic, selects the shortest closed \(k\)-observation
-order-statistic window, computes its shortest-path retained-mean tilt, and
-only then fits a fixed-target generalized posterior. This separates the
-repeated-sample content-confidence certificate from loss-based endpoint
-uncertainty. The population MT-RQR theory remains the geometric foundation:
-ordinary RQR selects the mean-preserving member of the fixed-content class,
-while a fixed tilt indexes other contiguous content windows, including
-distribution-specific shortest-contiguous members. A pseudo-asymmetric-Laplace
-normal--exponential augmentation gives generalized-inverse-Gaussian
-latent-scale and Gaussian root full conditionals, providing a common Gibbs
-framework for regularized static regression, frozen-feature deep echo state
-network readouts, and dynamic linear root states. Current scan calibration has
-software contracts and conservative numerical fallbacks, but exact scan
-recursion, Tier-1 proof audit, and posterior-action transfer are not yet
-promoted. These are loss-based generalized posteriors for interval
-functionals, not posteriors derived from response likelihoods, and hence do
-not by themselves define posterior predictive distributions for future
-responses.
+Probability content does not uniquely determine the placement of an interval.
+Relaxed quantile regression (RQR) estimates two interval roots directly by
+applying check loss to their residual product. We show that, under regularity
+conditions, ordinary RQR selects the unique fixed-content interval whose
+retained mean equals the population mean. Mean-tilted RQR (MT-RQR) replaces
+this balance condition by a fixed retained-mean offset, thereby indexing the
+family of contiguous intervals with the prescribed content. Equal-tailed and
+shortest-contiguous intervals arise at distribution-specific tilts. We update
+proper priors by the MT-RQR loss and derive a pseudo-asymmetric-Laplace
+normal--exponential augmentation with generalized-inverse-Gaussian latent
+scales and conditionally Gaussian root updates. The resulting Gibbs
+construction covers ridge-regularized static regression and frozen-feature
+deep echo state network readouts, and extends to dynamic linear root states
+through alternating forward-filtering backward-sampling updates. Population
+calculations, deterministic Cornish--Fisher diagnostics, and single-data
+illustrations clarify target placement and computation. We also formulate a
+scan-calibrated shortest-window tolerance construction for continuous iid
+data. Its empirical order-statistic window, rather than a
+generalized-posterior summary, is the proposed tolerance action; exact scan
+certification and transfer of validity to posterior actions remain open. These
+are loss-based generalized posteriors for interval functionals, not posteriors
+derived from response likelihoods, and hence do not by themselves define
+posterior predictive distributions for future responses.
 \end{abstract}
 
 \section{Introduction}
 \label{sec:introduction}
 
-Interval forecasts matter when decisions depend on an uncertainty range rather
-than on one location functional. Tolerance intervals add a distinct
-requirement: with repeated-sample confidence \(1-\alpha\), the reported random
-set should contain at least content \(c\) of the population distribution
+Many decisions require an interval rather than a single location summary.
+Specifying its probability content, however, does not determine where that
+interval should lie. Equal-tailed, shortest-contiguous, and other intervals
+can contain the same population fraction while having different endpoints and
+widths. Tolerance intervals impose an additional repeated-sampling
+requirement: with confidence \(1-\alpha\), the reported random set should
+contain at least content \(c\) of the population distribution
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction,Robbins1944DistributionFreeTolerance}.
-A familiar predictive construction fits the two quantiles at \((1-c)/2\) and
-\((1+c)/2\) \citep{KoenkerBassett1978}. That construction is appropriate for
-an equal-tailed target, but content \(c\) alone leaves the interval
-unidentified: equal-tailed, shortest-contiguous, and other intervals select
-different members of the fixed-content class. Their evaluation should respect
-the functional being targeted
+A familiar regression construction fits the two conditional quantiles at
+\((1-c)/2\) and \((1+c)/2\) \citep{KoenkerBassett1978}. It is appropriate for
+an equal-tailed target, but it resolves an ambiguity that content alone does
+not. Evaluation must therefore respect the particular interval functional
+being estimated
 \citep{BrehmerGneiting2021Intervals,FisslerEtAl2021SetValued}.
 
 Relaxed quantile regression (RQR) instead estimates two interval roots directly
@@ -108,10 +113,11 @@ Relaxed quantile regression (RQR) instead estimates two interval roots directly
 \((y-\eta_1)(y-\eta_2)\), whose sign records whether \(y\) lies between the
 roots. Equivalently, it is a check loss applied to this product residual, not
 to either response residual separately. The original article develops the
-loss as an optimization criterion. Here we first identify its population
-interval functional, then use that characterization to build a mean-tilted
-family, scan-calibrated tolerance actions, generalized posteriors, and Gibbs
-samplers for static, frozen-feature, and dynamic root models. Related
+loss as an optimization criterion. We identify its population interval
+functional and use that characterization to construct a mean-tilted family,
+generalized posteriors, and Gibbs samplers for static, frozen-feature, and
+dynamic root models. We also formulate a separate scan-calibrated tolerance
+construction. Related
 coverage-constrained empirical optimization directly trades width against an
 empirical coverage constraint \citep{ChenEtAl2021PredictionIntervals}; that
 target and training criterion are distinct from the expected RQR loss studied
@@ -127,13 +133,14 @@ therefore indexes interval functionals. It is fixed externally, or selected in
 an external validation layer, rather than learned as an ordinary response
 parameter.
 
-For tolerance use, validity and shortestness must be ordered carefully. The
-branch-level construction proposed here calibrates the retained count by a
-distribution-free scan statistic, selects the shortest empirical window
-containing that count, records the induced MT-RQR tilt, and freezes both the
-target content and tilt before fitting. The formal tolerance action is the
-empirical scan-calibrated window. Generalized-posterior summaries describe the
-fixed interval-root target and do not supply the tolerance certificate.
+For tolerance use, calibration must precede posterior fitting. Our proposed
+construction calibrates a retained count with a distribution-free scan
+statistic, selects the shortest empirical window containing that count, and
+records its MT-RQR tilt. The target content and tilt are then held fixed during
+generalized-Bayes computation. The empirical scan-calibrated window is the
+tolerance action; generalized-posterior summaries quantify uncertainty about
+the associated fixed interval-root target and do not supply the tolerance
+certificate.
 
 Following generalized Bayes, we combine a prior with
 \(\exp\{-\omega_{\mathrm R}\sum_i\ell_i\}\) to define a generalized posterior
@@ -143,11 +150,10 @@ Bayesian quantile-regression computation
 \citep{yu2001bayesian,KozumiKobayashi2011Gibbs}, yields generalized
 inverse-Gaussian latent-scale full conditionals and Gaussian root full
 conditionals. This latent-variable representation augments the generalized
-posterior through a pseudo-residual; it does not specify a sampling distribution
-for the response. A fixed tilt changes only the Gaussian information vectors.
-This gives a
-common computational template for static interval-root regression, frozen
-DESN feature readouts
+posterior through a pseudo-residual; it does not specify a sampling
+distribution for the response. A fixed tilt changes only the Gaussian
+information vectors. The same conditional structure supports static
+interval-root regression, frozen deep echo state network (DESN) feature readouts
 \citep{Jaeger2001EchoState,GallicchioMicheliPedrelli2018DeepESNDesign},
 and dynamic linear root states.
 
@@ -162,21 +168,20 @@ backward-sampling (FFBS) applies
 exact root-blocked Gibbs updates for the specified fixed-joint generalized
 posterior.
 
-The paper contributes five linked pieces. First, it states a content-confidence
-tolerance contract and a proof-gated scan-calibrated shortest-window action.
-Second, it identifies ordinary RQR as the mean-preserving member of the
-fixed-content interval class and introduces a fixed mean-tilt extension that
-indexes other content-\(c\) windows. Third, it records the exact fractional
-empirical balance equations and separates static frequentist covariance from
-generalized-posterior curvature. Fourth, it derives the pseudo-AL Gibbs
-construction for fixed-rate static targets. Fifth, it organizes structured
-extensions as regularized static regression, frozen-feature DESN readouts, and
-root-blocked dynamic linear states. The validated ordinary-RQR implementation
-is broader than the current nonzero-tilt implementation: nonzero tilt is
-restricted to proper-Gaussian fixed-rate readouts and fixed-\(W_t\) or
-frozen-template DLM modes, while nonzero-tilt RHS-NS, learned-rate tilt,
-adaptive or component-scale dynamic tilt, data-driven tilt selection, and
-variational approximations remain separate developments.
+Our main contribution is a population and computational theory for RQR and
+MT-RQR. We identify ordinary RQR as the mean-preserving member of the
+fixed-content interval class, show how a fixed mean tilt indexes other
+content-\(c\) windows, and derive exact fractional empirical balance
+relations. We then construct a pseudo-AL Gibbs sampler for fixed-rate static
+targets and extend it to regularized static regression, frozen-feature DESN
+readouts, and root-blocked dynamic linear states. Finally, we state a proposed
+scan-calibrated shortest-window tolerance action while keeping its
+repeated-sampling guarantee separate from generalized-posterior uncertainty.
+The available nonzero-tilt computation uses proper Gaussian priors with a
+fixed learning rate and fixed or frozen dynamic evolution covariances. Random
+shrinkage scales, learned-rate tilt, adaptive or component-scale dynamic tilt,
+data-driven tilt selection, and variational approximations require additional
+theory and validation.
 
 The interpretation is deliberately narrow. The generalized posterior concerns
 interval-root functionals defined by a loss and prior. It is not derived from
@@ -195,8 +200,8 @@ Shaby2014OpenFacedSandwich}.
 Section~\ref{sec:interval-functionals} defines the fixed-content class.
 Sections~\ref{sec:rqr-loss} and~\ref{sec:mean-tilt} identify ordinary and
 mean-tilted RQR. Section~\ref{sec:tcsp} states the proposed scan-calibrated
-tolerance action and its current proof gates.
-Section~\ref{sec:static-theory-scope} records finite-sample balance and the
+tolerance action and its unresolved theoretical requirements.
+Section~\ref{sec:static-theory-scope} gives finite-sample balance and the
 fixed-dimensional iid static uncertainty scope.
 Section~\ref{sec:posterior} develops the static generalized posterior, ordinary
 RHS-NS regularization, and the frozen-DESN specialization.
@@ -208,9 +213,9 @@ Section~\ref{sec:discussion} concludes.
 \label{sec:interval-functionals}
 
 Let \(Y\) have a nondegenerate continuous distribution with finite mean
-\(\mu\) and strictly increasing quantile function \(Q\) on \((0,1)\). Modulo
-probability-zero portions outside the support, every canonical contiguous
-interval having content \(c\) can be represented by the probability window
+\(\mu\) and strictly increasing quantile function \(Q\) on \((0,1)\). Apart
+from probability-zero subsets outside the support, every contiguous interval
+of content \(c\) can be represented by the probability window
 \[
 I_c(u)=[Q(u),Q(u+c)],\qquad 0\le u\le1-c.
 \]
@@ -252,7 +257,7 @@ be disconnected, whereas the targets above remain contiguous
 compares the three principal balance conditions for one strongly asymmetric
 distribution.
 
-\begin{figure}[t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig01_three_balance_principles.png}
 \caption{\textbf{Three interval-selection principles under left skewness.}
@@ -264,8 +269,6 @@ These deterministic population calculations compare functionals; they are not
 finite-sample or comparative-performance evidence.}
 \label{fig:three-interval-principles}
 \end{figure}
-
-\clearpage
 
 \section{Ordinary RQR: Product Loss and Population Target}
 \label{sec:rqr-loss}
@@ -417,16 +420,16 @@ reduce the loss to \(c(Y-a)^2\) and target the conditional mean rather than a
 nontrivial interval. Exact retained-mean equality is not asserted at endpoint
 atoms without a separate joint subgradient and mass-allocation analysis.
 
-This motivates RQR as a direct interval target that can adapt to asymmetric
-conditional error structure without assigning endpoint quantile levels in
-advance. These equations characterize an unrestricted population target only
-under the stated conditions. With linear or otherwise restricted root classes,
-optimization instead enforces design-weighted score equations; it need not
-give conditional coverage or mean preservation at every covariate value. We do
-not use the original article's finite-sample unbiasedness argument: fitted
-endpoints are data dependent, and the empirical objective is nonsmooth when an
-observation coincides with a root. A valid finite-sample or asymptotic
-generalization result requires a separate empirical-process analysis.
+RQR therefore targets an interval directly and can accommodate asymmetric
+conditional distributions without assigning endpoint quantile levels in
+advance. The characterization is pointwise and unrestricted; it holds only
+under the stated conditions. Linear and other restricted root classes instead
+satisfy design-weighted score equations and need not attain conditional
+coverage or mean preservation at every covariate value. Nor does the
+finite-sample unbiasedness argument for fixed endpoints apply automatically to
+fitted endpoints: the endpoints depend on the data, and the empirical
+objective is nonsmooth when an observation coincides with a root. Finite-sample
+or asymptotic guarantees require a separate empirical-process argument.
 
 \section{Mean-Tilted RQR}
 \label{sec:mean-tilt}
@@ -503,20 +506,19 @@ special case \(\delta=0\). Exchanging the two raw root labels leaves the target
 unchanged.
 \end{theorem}
 
-The supplement proves the radius existence and uniqueness, the envelope
-derivative, and the one-sided behavior when an interval root crosses a finite
-support endpoint. Finite second moments make both endpoint tilt values finite,
-even when a support endpoint is infinite. At an endpoint tilt, the canonical interval is
-defined by the corresponding one-sided probability-window limit. If the
-support endpoint is infinite, this member is semi-infinite and is not attained
-by finite root coefficients, although the limiting population-risk infimum is
-finite. If the support endpoint is finite, roots beyond that endpoint are
-inactive and the population loss does not identify a unique root
-representation without an additional support constraint. Tilts outside the
-closed admissible range make the unrestricted population risk unbounded below
-in the corresponding escaping-root direction, although a proper Gaussian
-prior can still yield a
-proper finite-sample generalized posterior.
+The supplement proves existence and uniqueness of the radius, the envelope
+derivative, and the one-sided behavior when a root crosses a finite support
+endpoint. Finite second moments make both endpoint tilt values finite, even
+when a support endpoint is infinite. At an endpoint tilt, the canonical
+interval is the corresponding one-sided probability-window limit. An infinite
+support endpoint gives a semi-infinite interval that finite root coefficients
+cannot attain, although the limiting population-risk infimum is finite. At a
+finite support endpoint, roots beyond the support are inactive, so the loss
+does not identify a unique root representation without an additional support
+constraint. Outside the closed admissible tilt range, the unrestricted risk is
+unbounded below along the corresponding escaping-root direction. A proper
+Gaussian prior can nevertheless yield a proper finite-sample generalized
+posterior.
 
 \begin{corollary}[Recovery tilts for familiar interval functionals]
 \label{cor:recovery-tilts}
@@ -636,36 +638,36 @@ Data-driven tilt selection requires a separate external protocol before
 empirical claims are made.
 
 The population score equations do not by themselves establish propriety of a
-finite-sample generalized posterior under an arbitrary root prior. For a fixed
-learning rate, a finite design or finite state horizon, and proper Gaussian
-root priors, the tilt is linear in the root parameters and Gaussian prior tails
-make the resulting generalized posterior proper. This argument covers the initial ridge and
-Gaussian-state implementations; heavier-tailed shrinkage priors require a
-separate propriety analysis before nonzero tilt is enabled.
+finite-sample generalized posterior under an arbitrary root prior. With a
+fixed learning rate, a finite design or state horizon, and proper Gaussian
+root priors, the tilt is linear in the root parameters and the Gaussian tails
+make the generalized posterior proper. This argument covers ridge regression
+and Gaussian state models. Heavier-tailed shrinkage priors require a separate
+propriety analysis before nonzero tilt is enabled.
 
-\section{Scan-Calibrated Minimum-Width Tolerance Intervals}
+\section{A Proposed Scan-Calibrated Tolerance Construction}
 \label{sec:tcsp}
 
-This section records the branch-level tolerance extension. It is the
-authoritative construction being implemented, but several load-bearing
-theorems are still proof-gated and are marked explicitly below. The target
-tolerance statement is
+The preceding theory fixes population content and interval placement. A
+tolerance interval adds a repeated-sampling requirement. For iid continuous
+univariate observations, the target statement is
 \[
 \Pr_F^n\{C_F(\widehat T_n)\ge c\}\ge 1-\alpha,\qquad
 C_F([L,U])=F(U)-F(L),
 \]
-for iid continuous univariate samples. The quantities have separate roles:
+where \(\widehat T_n\) is a data-dependent interval. Five quantities must be
+kept distinct:
 \[
-c \text{ is guaranteed content},\quad
-1-\alpha \text{ is tolerance confidence},\quad
-q=k/n \text{ is fitted content},
+c \text{ is the required content},\quad
+1-\alpha \text{ is the tolerance confidence},\quad
+q=k/n \text{ is the fitted content},
 \]
 \[
 \delta \text{ is the fixed MT-RQR placement tilt},\qquad
-\omega \text{ is the generalized-Bayes learning rate}.
+\omega_{\mathrm R} \text{ is the generalized-Bayes learning rate}.
 \]
-The learning rate and posterior credible level do not calibrate the tolerance
-confidence.
+Neither \(\omega_{\mathrm R}\) nor a posterior credible level determines the
+tolerance confidence.
 
 Let \(Y_{(1)}\le\cdots\le Y_{(n)}\). For content \(c\), define the uniform scan
 statistic
@@ -687,11 +689,11 @@ The formal action is the canonical closed order-statistic window
 \{Y_{(j+k-1)}-Y_{(j)}\},
 \]
 with \(k=k_{n,c,\alpha}\). This convention is closed and contains exactly
-\(k\) sample observations under continuity. It is not the earlier half-open
+\(k\) sample observations under continuity. It differs from the half-open
 \((Y_{(j)},Y_{(j+k)}]\) convention sometimes used for order-statistic
-tolerance limits; any theorem using that convention must be translated before
-being cited as an action-matching result. The fitted MT-RQR content and buffer
-are
+tolerance limits, so a result proved for one convention cannot be transferred
+without reconciling the indices and endpoint rule. The fitted MT-RQR content
+and its content buffer are
 \[
 q_{n,c,\alpha}=k_{n,c,\alpha}/n,\qquad
 t_{n,c,\alpha}=q_{n,c,\alpha}-c.
@@ -703,83 +705,96 @@ The empirical shortest-path tilt is
 \frac1k\sum_{\ell=\widehat j}^{\widehat j+k-1}Y_{(\ell)}
 -\frac1n\sum_{i=1}^nY_i.
 \]
-After \(q\) and \(\widehat\delta_{\mathrm{SH}}\) are frozen, MT-RQR-GIBBS fits
-the generalized posterior for the fixed interval-root functional,
+After fixing \(q\) and \(\widehat\delta_{\mathrm{SH}}\), the MT-RQR update is
 \[
-\Pi_{q,\delta,\omega}(d\theta\mid D_n)
+\Pi_{q,\delta,\omega_{\mathrm R}}(d\theta\mid D_n)
 \propto
-\exp\{-\omega L_{q,\delta,n}(\theta)\}\Pi_0(d\theta).
+\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(\theta)\}\Pi_0(d\theta).
 \]
-This update supplies loss-based endpoint uncertainty for a declared target. It
-is not the tolerance certificate, not a response likelihood, and not a source
-of posterior-predictive response draws.
+This generalized posterior quantifies uncertainty about a fixed interval-root
+functional. It is neither the tolerance certificate nor a response model.
+The formal tolerance action remains the empirical order-statistic window
+\(\widehat T_n\).
 
-The implemented first layer uses the same integer closed-window action as the
-empirical shortest-window tilt pilot. It adds a scan-calibration wrapper, a
-formal metadata contract, fail-closed infeasibility checks, and a
-globally-verified path routine across ordered contents. Exact scan recursion
-is not yet implemented. The current conservative numerical options are:
-Monte Carlo uniform scan calibration with a one-sided Clopper--Pearson lower
-bound for \(\Pr\{M_n(c)<k\}\), and a Massart-DKW fallback
-\citep{Massart1990DKW} that is conservative but is not a scan recursion.
-% TODO-TCSP-PROOF-GATE: Promote finite-sample scan certification only after an
-% audited exact recursion or independently verified conservative bound is in
-% place for the closed-window convention used here.
+Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
+reported interval. The present implementation provides Monte Carlo
+calibration of the uniform scan distribution with a one-sided
+Clopper--Pearson lower confidence bound for \(\Pr\{M_n(c)<k\}\), together with
+a conservative Massart--DKW fallback \citep{Massart1990DKW}. The fallback is
+not an exact scan recursion. Accordingly, we treat exact critical-count
+calculation and the finite-sample theorem for this closed-window action as
+open proof and numerical-certification tasks rather than as established
+results.
 
-For a regular population shortest path, standard differentiable heuristics
-give the relationships used to guide continuation. At an interior shortest
-window \(I_q(u)=[Q(u),Q(u+q)]\), equal endpoint densities satisfy
+The population shortest-window path gives a useful geometry for moving across
+contents. Suppose that the density is differentiable and strictly unimodal,
+and that the shortest window
+\(I_q=[L_q,U_q]=[Q(u_q),Q(u_q+q)]\) is unique and interior over a range of
+\(q\). Equal endpoint densities then satisfy
 \[
-f\{Q(u)\}=f\{Q(u+q)\}=\lambda_q.
+f(L_q)=f(U_q)=\lambda_q.
 \]
-If the shortest window is unique over a range of \(q\), the endpoints obey
+Writing \(a_q=f'(L_q)>0\) and \(b_q=f'(U_q)<0\), formal differentiation of
+the content and equal-density equations gives
 \[
-\frac{d}{dq}Q(u_q)=\frac{1/2}{\lambda_q},\qquad
-\frac{d}{dq}Q(u_q+q)=\frac{1/2}{\lambda_q},
+L_q'=\frac{b_q}{\lambda_q(a_q-b_q)}<0,
+\qquad
+U_q'=\frac{a_q}{\lambda_q(a_q-b_q)}>0.
 \]
-under symmetric first-order splitting; more generally the left and right
-probability shares can be asymmetric when the active boundary changes. The
-width derivative along a regular shortest path is
+Thus the first-order shares of added probability assigned to the left and
+right boundaries are
 \[
-W_{\mathrm{SH}}'(q)=1/\lambda_q,
+p_L(q)=\frac{-b_q}{a_q-b_q},\qquad
+p_R(q)=\frac{a_q}{a_q-b_q},\qquad
+p_L(q)+p_R(q)=1.
 \]
-and local convexity follows when this derivative is nondecreasing. The tilt
-derivative is obtained by differentiating the retained mean along the same
-path. These identities are useful for initialization, trust-region expansion,
-and diagnostics, but they are not promoted here as completed theorems.
-% TODO-TCSP-PROOF-GATE: Audit endpoint, width, nesting, asymmetric-share, and
-% tilt-derivative conditions before presenting them as theorem-backed claims.
+Only under local symmetry are the two shares equal to one half. The width
+satisfies
+\[
+W_{\mathrm{SH}}'(q)=\frac{1}{\lambda_q},
+\qquad
+W_{\mathrm{SH}}''(q)
+=-\frac{a_qb_q}{\lambda_q^3(a_q-b_q)}>0.
+\]
+Hence additional content becomes increasingly expensive as the endpoints move
+into lower-density regions. If
+\(m_q=q^{-1}\int_{u_q}^{u_q+q}Q(s)\,ds
+=\mu+\delta_{\mathrm{SH}}(q)\), then
+\[
+\delta_{\mathrm{SH}}'(q)
+=\frac{p_L(q)L_q+p_R(q)U_q-m_q}{q}.
+\]
+These derivative calculations motivate numerical continuation and diagnose
+its behavior. Full regularity, boundary, and nonuniqueness arguments are
+reserved for a formal shortest-path theorem.
 
 The path algorithm starts from a globally solved content, predicts each next
 window by nested expansion of the previous window, applies local correction in
 a trust region, expands the region when the local optimum lands on its
-boundary, and then verifies the formal action by a global scan. Local regret
-and mode switches are serialized. The global check, not the local predictor,
-defines the tolerance action. Failure modes include infeasible calibration
+boundary, and finally verifies the formal action by a global scan. The global
+check, not the local predictor, defines the selected window. Failure modes
+include infeasible calibration
 \((k>n)\), ties or atoms that violate the continuous-sample convention,
 nonunique shortest windows, response-scale dependence of geometric width, and
 unsupported attempts to attach the scan certificate to posterior summaries.
-% TODO-TCSP-PROOF-GATE: Posterior mean, median, or other Bayes actions must not
-% be reported as inheriting exact scan validity without a posterior-action
-% equivalence theorem.
 
-The current theorem ledger is therefore deliberately conservative. The scan
-definition, closed-window software action, and fixed-target generalized
-posterior are implemented. The finite-sample scan theorem for this exact
-action, certified critical-count computation, posterior-action equivalence,
-and regression-family marginal tolerance extensions remain pending. The
-article should not use the phrases ``posterior credibility equals tolerance
-confidence,'' ``omega as tolerance factor,'' or ``posterior mean inherits exact
-scan validity'' except as explicit warnings against those interpretations.
+The construction is deliberately separated into an empirical tolerance action
+and a fixed-target generalized posterior. A finite-sample scan theorem for the
+closed-window convention, certified critical-count computation,
+posterior-action equivalence, and regression-family marginal tolerance
+extensions remain to be established. In particular, posterior credibility is
+not tolerance confidence, \(\omega_{\mathrm R}\) is not a tolerance factor,
+and posterior mean or median endpoints do not inherit the scan property
+without an additional action-equivalence result.
 
 \section{Empirical Balance and Static Uncertainty Scope}
 \label{sec:static-theory-scope}
 
-The preceding results are population identifications. They should not be
-replaced by a smooth-gradient finite-sample argument, because fitted endpoints
-are data dependent and the empirical ordinary-RQR loss is nonsmooth at
-observations that fall exactly on a root. The correct finite-sample statement
-is fractional. For intercept-only MT-RQR with fixed \(\delta\), let
+The population identities do not imply smooth finite-sample score equations:
+fitted endpoints depend on the observations, and the empirical ordinary-RQR
+loss is nonsmooth when an observation lies on a root. The corresponding
+finite-sample result is fractional. For intercept-only MT-RQR with fixed
+\(\delta\), let
 \((\widehat a,\widehat b)\), \(\widehat a<\widehat b\), be an interior
 subgradient-stationary empirical solution. Then there exist allocations
 \(\widehat q_i\in[0,1]\), equal to one for observations strictly inside the
@@ -853,7 +868,7 @@ forecast calibration.
 \section{Static Interval-Root Regression and Generalized Posteriors}
 \label{sec:posterior}
 
-\subsection{Static target and model-family status}
+\subsection{Static target and model-family scope}
 
 Let \(\mathcal O\) index the observed rows of
 \(\mat X\in\R^{n\times p}\), with \(n_{\mathrm{obs}}=|\mathcal O|\), and
@@ -867,9 +882,9 @@ L_i=\min(\eta_{1i},\eta_{2i}),\quad
 U_i=\max(\eta_{1i},\eta_{2i}),\quad
 M_i=(L_i+U_i)/2,\quad W_i=U_i-L_i.
 \]
-These ordered summaries are computational functionals. They should not be
-confused with the ordered-chart static asymptotic theory above, which assumes
-one globally labelable and uniformly separated endpoint ordering.
+These ordered summaries are posterior functionals. The static asymptotic
+result above is narrower: it assumes one globally labelable, uniformly
+separated endpoint ordering.
 When the two root priors are exchangeable, the raw labels \(k=1,2\) are not
 identified. The sampler may therefore apply a complete-root label swap as an
 acceptance-one symmetry move; this exchanges all root-specific coefficient and
@@ -915,9 +930,9 @@ in the present derivation.
 
 \begin{table}[t!]
 \centering
-\caption{\textbf{Model-family architecture and current methodological
-status.} Panel A separates predictor restrictions from the interval loss;
-Panel B records target and implementation status. FD denotes fixed design.
+\caption{\textbf{Model-family architecture and computational scope.}
+Panel A separates predictor restrictions from the interval loss; Panel B
+records the available posterior computation. FD denotes fixed design.
 ``Exact'' means exact full-conditional simulation for the specified generalized
 posterior, not the existence of a response likelihood or calibrated endpoint
 uncertainty.
@@ -955,7 +970,7 @@ Dynamic linear roots
   >{\raggedright\arraybackslash}X
   >{\raggedright\arraybackslash}X@{}}
 \toprule
-Target & Rate & Posterior computation & Implementation and evidence\\
+Target & Rate & Posterior computation & Current scope\\
 \midrule
 RQR-FD
 & Fixed or ordinary learned \(\kappa\)
@@ -1059,17 +1074,17 @@ conditioning on the newly drawn first root. The tilt changes only the two
 Gaussian information vectors: the latent-scale conditionals and Gaussian
 precision matrices are unchanged.
 
-\subsection{Regularized coefficient blocks and the static scan}
+\subsection{Regularized coefficient blocks and the static Gibbs sweep}
 
-The fixed-design calculation is also the foundation for regularized ordinary
-RQR. Let \(\vect\psi_k\) denote a root-specific prior state and suppose that,
-conditional on that state, root \(k\) has Gaussian canonical parameters
+The fixed-design calculation also supports regularized ordinary RQR. Let
+\(\vect\psi_k\) denote a root-specific prior state and suppose that,
+conditional on this state, root \(k\) has Gaussian canonical parameters
 \(\{\mat Q_{0k}(\vect\psi_k),\vect h_{0k}(\vect\psi_k)\}\). The implemented
 ordinary-RQR MCMC adapter supports RHS-NS
 \citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS,
 NishimuraSuchard2023SSS}. As an input requirement for this branch, the first
 design column must be the declared intercept and is excluded from shrinkage.
-For every remaining coefficient \(j\), the current conditional prior precision is
+For every remaining coefficient \(j\), the conditional prior precision is
 \[
 d_{kj}
 =\frac{1}{\tau_k^2\lambda_{kj}^2}+\frac{1}{\zeta_k^2},
@@ -1080,11 +1095,10 @@ The local, global, auxiliary, and shoulder-scale quantities in
 roots carry distinct, identically specified prior states, and a root-label
 swap moves \((\vect\beta_k,\vect\psi_k)\) as one complete block.
 
-This is an external conditionally Gaussian prior adapter, not a native
-rederivation of
-the marginal RHS-NS hierarchy. The RQR API accepts this \(\text{RHS-NS}\)
-branch, rather than a generic \(\mathrm{RHS}\) mode. It is implemented only for
-ordinary RQR, \(\vect\delta=\vect 0\). The Gaussian
+This conditionally Gaussian adapter reuses the external RHS-NS hierarchy
+rather than rederiving its marginal prior. The RQR interface names this option
+\(\text{RHS-NS}\), rather than a generic \(\mathrm{RHS}\) mode. It is
+available only for ordinary RQR, \(\vect\delta=\vect 0\). The Gaussian
 moment-generating-function argument that establishes fixed-rate nonzero-tilt
 propriety does not establish the same result after random-scale mixing.
 
@@ -1119,17 +1133,15 @@ canonical coefficient summaries are post-processing outputs and require a
 passed global labelability audit on the declared design. The sampler leaves the
 specified fixed-rate proper-Gaussian generalized posterior invariant; at
 \(\vect\delta=\vect 0\) it
-reduces to ordinary RQR. The ordinary learned-\(\kappa\) scan and RHS-NS
+reduces to ordinary RQR. The ordinary learned-\(\kappa\) sweep and RHS-NS
 applicability details are given in the supplement.
 \end{algorithmblock}
 
-At \(\vect\delta=\vect 0\), Algorithm~\ref{alg:fixed-design-gibbs} reduces
-exactly to the fixed-rate ordinary-RQR scan. At zero tilt, the implemented
-RHS-NS adapter updates the separate root-specific states displayed above.
-That external adapter remains ordinary-only. It may also be used within the
-ordinary learned-\(\kappa\) generalized posterior and partial-collapse order
-below; this does
-not establish either fixed- or learned-rate nonzero-tilt propriety.
+At \(\vect\delta=\vect 0\), Algorithm~\ref{alg:fixed-design-gibbs} is the
+fixed-rate ordinary-RQR Gibbs sampler. The RHS-NS adapter then updates the two
+root-specific prior states separately. It can also be used with the ordinary
+learned-\(\kappa\) generalized posterior and the partial-collapse order below.
+Neither use establishes fixed- or learned-rate propriety at nonzero tilt.
 
 \subsection{Frozen-feature DESN specialization}
 \label{sec:desn}
@@ -1152,7 +1164,7 @@ Future root functionals use a frozen future design
 contract, without using held-out responses to refit its features. Ordered
 endpoints, midpoints, and widths are functions of the readout draws. No
 response-simulation distribution is implied, and reservoir or feature
-selection occurs outside the generalized-posterior scan. This computational
+selection occurs outside the generalized-posterior update. This computational
 equivalence to a fixed static design does not, by itself, establish the iid
 random-design asymptotic theory for serially dependent DESN rows or for
 data-selected reservoir features.
@@ -1307,10 +1319,10 @@ component scales are separate extensions described in the supplement.
 \end{algorithmblock}
 
 At \(\delta_{1:T}=0\), Algorithm~\ref{alg:dynamic-gibbs} reduces exactly to
-the implemented fixed-rate ordinary-RQR-DLM scan for fixed \(\mat W_t\) or a
+the fixed-rate ordinary-RQR-DLM sampler for fixed \(\mat W_t\) or a
 frozen template. A learned-rate tilted generalized posterior has not been
-normalized and is not obtained by inserting the ordinary Gamma full
-full conditional. Future-root propagation
+normalized and cannot be obtained by inserting the ordinary Gamma full
+conditional. Future-root propagation
 uses a separate frozen forecast contract with recorded future
 \(\vect f_t,\mat G_t,\mat W_t\); it neither changes the training Gibbs sweep
 nor defines response simulation.
@@ -1328,7 +1340,7 @@ where the \(\mat Q_{jt}\) are fixed positive-definite templates and the
 multipliers are shared across the two roots to preserve exchangeability. The
 implemented ordinary component-scale sampler uses rootwise partial collapse
 and centered/noncentered interweaving; the supplement gives the invariant
-transition and scan order
+transition and update order
 \citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. This extension is
 not silently generalized to nonzero tilt. In the noncentered parameterization
 the tilt depends on \(\sqrt{q_j}\) through the reconstructed state path, so a
@@ -1347,7 +1359,7 @@ the fixed-content and mean-tilt characterizations without Monte Carlo error.
 Small reference problems compare generalized-posterior draws with quadrature,
 dense Gaussian full conditionals, analytic scale updates, and exact checkpoint
 continuation. These checks establish agreement with the specified generalized
-generalized posterior for the stated fixtures;
+posterior for the stated fixtures;
 they do not establish empirical coverage calibration or forecasting
 superiority.
 
@@ -1359,26 +1371,25 @@ innovations follow an affinely standardized asymmetric-Laplace law with source
 index \(0.80\), producing pronounced left skewness while retaining adequate
 information in both endpoint tails. The three recovery tilts are computed
 directly as the conditional retained mean of each population window minus the
-population mean. The resulting innovation-scale values are \(0\), \(0.0561\),
+population mean. The resulting innovation-scale tilts are \(0\), \(0.0561\),
 and \(0.1147\) for RQR, ET, and SH, respectively; no Cornish--Fisher
-approximation is used. The fitted
-intervals are generalized-posterior summaries of ordered root draws; the
+approximation is used. The fitted intervals are generalized-posterior
+summaries of ordered root draws; the
 shaded regions are pointwise 95\% generalized-posterior credible bands for the
 endpoint functionals. They are not posterior predictive intervals for future
 responses. These examples show how
 ordinary RQR, equal-tailed recovery, and shortest-window recovery enter the
-implemented fixed-rate scan at content \(c=0.95\). They are not a simulation
-study. All 27 chains and six family--target cells passed the hard numerical,
+fixed-rate Gibbs sampler at content \(c=0.95\). They are not a simulation
+study. All 27 chains and six family--target cells passed the numerical,
 provenance, conditional-reference, finite-output, and broad-recovery
-requirements with zero numerical repairs. Five cells passed the complete
-strict contract. Dynamic SH retained five prespecified bulk-ESS warnings
-(\(801\)--\(996\), against \(1{,}000\)) and a width-contrast relative error of
-\(0.208\), against the narrow \(0.20\) diagnostic threshold. Its largest
-\(\widehat R\) was \(1.0065\), tail ESS exceeded \(1{,}166\), and MCSE/SD was
-below \(0.037\). We therefore report it as a diagnostic-aware completion,
-without changing a threshold, replacing a seed, or selectively extending a
-chain. The compact recovery table and endpoint-error summaries appear in the
-supplement.
+requirements with zero numerical repairs. Five cells also passed every strict
+diagnostic. Dynamic SH retained five prespecified bulk-ESS warnings
+(\(801\)--\(996\), relative to a threshold of \(1{,}000\)) and narrowly missed
+one width-contrast diagnostic. Its largest \(\widehat R\) was \(1.0065\), its
+tail ESS exceeded \(1{,}166\), and its MCSE-to-standard-deviation ratio was
+below \(0.037\). We retained this fit without changing a threshold, replacing
+a seed, or selectively extending a chain. The supplement reports the compact
+recovery table and endpoint-error summaries.
 
 \begin{figure}[H]
 \centering
@@ -1398,7 +1409,7 @@ generalized-posterior mean fitted endpoints; pale orange ribbons are pointwise
 draws each. The figure
 illustrates target placement and finite-sample endpoint uncertainty, not
 response simulation. A
-frozen-feature DESN readout uses the same static scan after replacing
+frozen-feature DESN readout uses the same static Gibbs sampler after replacing
 \(\mat X\) by the recorded reservoir-feature design.}
 \label{fig:oracle-tilt-fixed-design-fit}
 \end{figure}
@@ -1445,7 +1456,7 @@ future ordered roots, widths, midpoints, losses, learning scales, and
 component scales rather than only time averages.
 
 Current comparative computational evidence concerns ordinary RQR. Fixed-rate
-nonzero mean tilt has implementation-level algebra, zero-tilt equivalence
+nonzero mean tilt has verified full-conditional algebra, zero-tilt equivalence
 checks, dense conditional references, and the single-data oracle-tilt
 illustrations above for ridge static readouts and fixed-\(W\) dynamic roots.
 These bounded checks do not validate empirical coverage or a data-driven tilt
@@ -1454,9 +1465,9 @@ Variational inference likewise requires its own objective,
 generalized-posterior approximation, and uncertainty assessment. The frozen
 RQR-DESN readout is evaluated as a static-design specialization: its reservoir
 is recorded before the generalized posterior updates the root coefficients.
-Matched nonlinear-readout evidence remains deferred. Detailed software status,
-runtime attestation, and validation ledgers belong to the reproducibility
-documentation rather than to the statistical argument.
+Matched nonlinear-readout evidence remains deferred. Detailed software
+status, runtime attestation, and validation records are provided in the
+reproducibility documentation.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -1469,14 +1480,14 @@ content-\(c\) window. Equal-tailed and shortest-contiguous intervals are
 distribution-specific members of this family rather than universally named
 tilt values.
 
-This interpretation also clarifies the role of Bayesian computation. The
+The Bayesian computation follows directly from this target. The
 normal--exponential representation augments the generalized posterior with one
 latent scale per observed pseudo-residual. It yields Gaussian root full
 conditionals, but it neither supplies a response likelihood nor licenses
-simulated responses. The ordinary RHS-NS adapter regularizes those coefficient
-blocks;
-a frozen DESN feature design invokes the same static scan rather than defining
-a separate interval model. The learned inverse-loss scale \(\kappa\) is a
+simulated responses. The ordinary RHS-NS adapter regularizes the coefficient
+blocks, while a frozen DESN feature design invokes the same static sampler rather
+than defining a separate interval model. The learned inverse-loss scale
+\(\kappa\) is a
 convention within a specified hierarchical generalized posterior, not a
 response variance or an automatic endpoint-calibration parameter.
 
@@ -1485,10 +1496,20 @@ static coefficients by evolving root states. A Gaussian stacked prior does
 not overcome the quartic joint observation term; exact computation instead
 alternates the two Gaussian root-path conditionals. Fixed evolution
 covariances, frozen discount templates, and ordinary-RQR shared component
-scales define fixed-joint generalized posteriors. The nonzero-tilt component-scale
-interweaving extension remains disabled. Recomputing discount covariances from
-each changing conditional filter remains a working recursion, not an exact
-Gibbs sampler for a demonstrated joint density.
+scales define fixed-joint generalized posteriors. Nonzero-tilt component-scale
+interweaving is not yet available. Recomputing discount covariances from each
+changing conditional filter remains a working recursion, not an exact Gibbs
+sampler for a demonstrated joint density.
+
+The proposed tolerance construction adds a distinct frequentist layer. It
+uses the scan statistic to choose an empirical retained count and then selects
+the shortest closed order-statistic window at that count. Generalized-Bayes
+computation begins only after the target content and tilt have been fixed.
+This ordering prevents posterior credibility from being mistaken for
+tolerance confidence. A publication-level tolerance guarantee still requires
+the action-matched finite-sample scan theorem, certified critical-count
+calculation, and any theorem used to transfer validity from the empirical
+window to a posterior action.
 
 Important limitations remain. The population results are unrestricted and
 pointwise, whereas fitted regression and state-space classes impose
