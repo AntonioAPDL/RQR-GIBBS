@@ -8,6 +8,7 @@
 \alias{rqr_tcsp_shortest_window}
 \alias{rqr_tcsp_tilt_from_window}
 \alias{rqr_tcsp_fit_univariate}
+\alias{rqr_tcsp_plugin_fit_univariate}
 \alias{rqr_tcsp_path}
 \alias{rqr_tcsp_predict_next_start}
 \alias{rqr_tcsp_local_correct}
@@ -73,6 +74,8 @@ rqr_tcsp_fit_univariate(
   na_rm = FALSE
 )
 
+rqr_tcsp_plugin_fit_univariate(...)
+
 rqr_tcsp_path(
   y,
   guaranteed_contents,
@@ -117,6 +120,7 @@ arguments are reserved by the TCSP wrapper.}
 \item{predicted_start}{Predicted local start index.}
 \item{global_window}{Optional globally verified shortest-window object.}
 \item{fit}{A TCSP fit or action contract.}
+\item{...}{Arguments passed to \code{rqr_tcsp_fit_univariate()}.}
 }
 \description{
 Utilities for the scan-calibrated tolerance-calibrated shortest-path
@@ -138,6 +142,13 @@ Clopper-Pearson certificate.
 The DKW path uses the strict retained-count rule
 \eqn{k/n > c + 2\epsilon_n} implied by the uniform band. Unsupported or
 infeasible requests fail closed.
+
+\code{rqr_tcsp_fit_univariate()} and its explicit alias
+\code{rqr_tcsp_plugin_fit_univariate()} may attach fixed-target MT-RQR MCMC or
+ECM summaries after the empirical scan window has selected \(q=k/n\) and the
+mean tilt.  These summaries are marked with
+\code{uq_scope = "fixed_target_plugin"} and are superseded for unconditional
+shortest-interval Bayesian UQ by \code{rqr_tcsp_hybrid_bayes_fit()}.
 }
 \value{
 Lists with schema-versioned calibration, action, path, or validation metadata.
@@ -146,4 +157,6 @@ When \code{rqr_tcsp_fit_univariate(fit_ecm = TRUE)} or
 also contains deterministic ECM or generalized-posterior fits for the fixed
 calibrated target. These summaries are not the formal tolerance action.
 }
-\seealso{\code{\link{rqr_mt_tilt_empirical_shortest}}, \code{\link{rqr_ecm_fit}}, \code{\link{rqr_mcmc_fit}}}
+\seealso{\code{\link{rqr_tcsp_hybrid_bayes_fit}},
+\code{\link{rqr_mt_tilt_empirical_shortest}}, \code{\link{rqr_ecm_fit}},
+\code{\link{rqr_mcmc_fit}}}

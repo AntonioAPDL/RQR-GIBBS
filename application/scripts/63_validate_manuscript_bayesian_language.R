@@ -91,7 +91,8 @@ for (label in names(main_only_forbidden)) {
 required <- list(
   "main.tex" = c(
     "Its nonnegative loss is constructed from",
-    "These are loss-based generalized posteriors for interval",
+    "These distinctions keep the RQR generalized posterior loss-based",
+    "conjugate direct Dirichlet-process posterior gives exact fixed-interval Beta",
     "The pointwise ordinary-RQR loss is",
     "The familiar check-loss notation gives an equivalent compact representation",
     "The check loss therefore acts on the scalar product residual",
@@ -99,7 +100,7 @@ required <- list(
     "augmented generalized posterior",
     "Gaussian full conditional",
     "not a sampling model for \\(y_i\\)",
-    "posterior predictive distributions for future responses",
+    "posterior predictive responses",
     "Scan Calibration and a Proposed Tolerance Action",
     "Theoretical scope of the proposed scan-calibrated construction",
     "L_q'=\\frac{b_q}{\\lambda_q(a_q-b_q)}<0",

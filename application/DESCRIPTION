@@ -22,7 +22,9 @@ Description: Research implementation of loss-based interval regression with
     remaining separate from posterior sampling. Conservative scan-calibrated
     and split exact-spacing TCSP helpers serialize empirical tolerance actions
     and fixed-target metadata without treating posterior or ECM summaries as
-    tolerance confidence.
+    tolerance confidence. Direct Dirichlet-process and truncated Gaussian DPM
+    response-distribution engines provide the authoritative Bayesian UQ layer
+    for shortest-interval content and hybrid Bayesian-scan tolerance actions.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1.0)

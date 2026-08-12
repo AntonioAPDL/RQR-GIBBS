@@ -1,0 +1,79 @@
+{
+  "schema_version": "rqrgibbs_bayes_uq_validation/1.0.0",
+  "study_id": "rqr_bayes_uq_validation_v1_20260812",
+  "status": "smoke_and_moderate_pilot_enabled_confirmatory_fail_closed",
+  "interpretation": "Pilot validation for full-distribution Bayesian shortest-interval UQ and hybrid Bayesian-scan tolerance actions. Repeated-sample content is empirical validation evidence, not a proof of endpoint posterior coverage.",
+  "generalized_bayes": false,
+  "response_likelihood": true,
+  "posterior_predictive_response_draws": false,
+  "claim_scope": {
+    "iid_univariate_continuous_only": true,
+    "regression_tolerance": false,
+    "dynamic_tolerance": false,
+    "posterior_endpoint_coverage_claim_available": false,
+    "scan_count_fixed_not_resampled": true,
+    "confirmatory_authorized": false
+  },
+  "execution": {
+    "smoke_authorized": true,
+    "moderate_authorized": true,
+    "confirmatory_authorized": false,
+    "overnight_mode": "moderate"
+  },
+  "modes": {
+    "smoke": {
+      "replications": 2,
+      "sample_sizes": [40],
+      "guaranteed_contents": [0.35, 0.50],
+      "tolerance_confidences": [0.55],
+      "posterior_confidences": [0.50],
+      "dgp_ids": ["normal", "lognormal"],
+      "method_ids": ["hdp_s", "dp_bayes", "dpm_bayes", "bb_shortest_diag", "tcsp_dkw", "split_empirical_shortest", "wilks_minmax"]
+    },
+    "moderate": {
+      "replications": 20,
+      "sample_sizes": [60, 100],
+      "guaranteed_contents": [0.50, 0.70],
+      "tolerance_confidences": [0.60, 0.70],
+      "posterior_confidences": [0.50, 0.70],
+      "dgp_ids": ["normal", "lognormal", "mixture"],
+      "method_ids": ["hdp_s", "dp_bayes", "dpm_bayes", "bb_shortest_diag", "tcsp_dkw", "split_empirical_shortest", "wilks_minmax"]
+    }
+  },
+  "dgps": [
+    {"dgp_id": "normal", "family": "normal", "label": "standard normal"},
+    {"dgp_id": "lognormal", "family": "standardized_lognormal", "label": "centered standardized lognormal", "logsd": 0.75},
+    {"dgp_id": "mixture", "family": "standardized_normal_mixture", "label": "standardized separated normal mixture", "weights": [0.80, 0.20], "means": [-1.00, 2.00], "sds": [0.60, 0.40]}
+  ],
+  "methods": [
+    {"method_id": "hdp_s", "label": "Hybrid direct-DP Bayesian-scan shortest interval", "formal_tolerance_action": true, "response_likelihood": true, "generalized_bayes": false},
+    {"method_id": "dp_bayes", "label": "Direct-DP Bayesian shortest order-statistic action", "formal_tolerance_action": false, "response_likelihood": true, "generalized_bayes": false},
+    {"method_id": "dpm_bayes", "label": "Gaussian DPM Bayesian shortest order-statistic action", "formal_tolerance_action": false, "response_likelihood": true, "generalized_bayes": false},
+    {"method_id": "bb_shortest_diag", "label": "Bayesian bootstrap posterior shortest diagnostic", "formal_tolerance_action": false, "response_likelihood": false, "generalized_bayes": false},
+    {"method_id": "tcsp_dkw", "label": "TCSP shortest window with DKW scan calibration", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true},
+    {"method_id": "split_empirical_shortest", "label": "Split exact-spacing empirical-shortest action", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true},
+    {"method_id": "wilks_minmax", "label": "Full-sample min-max order-statistic comparator", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": false}
+  ],
+  "engine_defaults": {
+    "direct_dp": {
+      "concentration": 1,
+      "base": {"family": "normal", "mean": 0, "sd": 3},
+      "shortest_draws": 20,
+      "residual_mass_tol": 0.05
+    },
+    "gaussian_dpm": {
+      "truncation_level": 4,
+      "smoke_mcmc_control": {"n_iter": 24, "burn_in": 12, "thin": 6},
+      "moderate_mcmc_control": {"n_iter": 60, "burn_in": 30, "thin": 10},
+      "shortest_grid_size": 9
+    },
+    "bayesian_bootstrap": {
+      "draws": 40
+    },
+    "split": {
+      "pilot_fraction": 0.30
+    }
+  },
+  "base_seed": 862100,
+  "summary_confidence": 0.95
+}

@@ -83,14 +83,17 @@ ridge-regularized static regression and frozen-feature deep echo state network
 readouts, and extends to dynamic linear root states through alternating
 forward-filtering backward-sampling updates. Population calculations,
 Cornish--Fisher diagnostics, and reproducible single-data illustrations clarify
-target placement and computation. We also formulate scan-calibrated and
-pilot-selected exact-spacing tolerance constructions for continuous iid data.
-The proposed tolerance actions are empirical order-statistic intervals, not
-generalized-posterior summaries; action-matched scan certification and transfer
-of validity to posterior summaries remain open. These are loss-based
-generalized posteriors for interval functionals, not posteriors derived from
-response likelihoods, and hence do not by themselves define posterior
-predictive distributions for future responses.
+target placement and computation. For tolerance use, we separate fixed-target
+MT-RQR plug-in summaries from a full-distribution Bayesian UQ layer. A
+conjugate direct Dirichlet-process posterior gives exact fixed-interval Beta
+content probabilities, a truncated Gaussian Dirichlet-process mixture supplies
+a smooth response-model alternative, and a hybrid Bayesian--scan action selects
+the shortest order-statistic interval satisfying both the scan count and a
+posterior content-probability constraint. The scan and split exact-spacing
+tolerance actions remain empirical order-statistic intervals; posterior
+credibility is not tolerance confidence. These distinctions keep the RQR
+generalized posterior loss-based and prevent its endpoint draws from being
+interpreted as posterior predictive responses.
 \end{abstract}
 
 \section{Introduction}
@@ -132,13 +135,17 @@ equation while leaving the content equation unchanged. The tilt therefore
 indexes interval functionals and is fixed externally, or selected in a
 separate validation layer, rather than learned as a response parameter.
 
-For tolerance use, the proposed procedure first calibrates a retained count
-with a distribution-free scan statistic, selects the shortest empirical
-window containing that count, and records its MT-RQR tilt. The content and
-tilt are then held fixed during generalized-Bayes computation. The empirical
-window remains the tolerance action; generalized-posterior summaries describe
-the associated fixed interval-root target and do not supply the tolerance
-certificate.
+For tolerance use, the original TCSP-MT-RQR plug-in procedure first calibrates
+a retained count with a distribution-free scan statistic, selects the shortest
+empirical window containing that count, and records its MT-RQR tilt. The content
+and tilt are then held fixed during generalized-Bayes computation. This remains
+useful as a local correction and fixed-target uncertainty summary, but it does
+not quantify posterior uncertainty in the population shortest interval selected
+by the data. We therefore introduce a separate full-distribution Bayesian layer
+for \(F\), with the direct Dirichlet-process posterior as the first
+authoritative engine. The hybrid Bayesian--scan action keeps the
+repeated-sampling scan count fixed and adds a posterior probability constraint
+on population content.
 
 Following generalized Bayes, a prior is updated by
 \(\exp\{-\omega_{\mathrm R}\sum_i\ell_i\}\) to define a generalized posterior
@@ -172,7 +179,7 @@ forward-filtering backward-sampling (FFBS) applies
 exact root-blocked Gibbs updates for the specified fixed-joint generalized
 posterior.
 
-The statistical and computational contributions are fourfold. First, ordinary
+The statistical and computational contributions are fivefold. First, ordinary
 RQR is identified
 as the mean-preserving member of the fixed-content interval class, and a fixed
 mean tilt indexes the remaining admissible windows; the resulting theory also
@@ -181,10 +188,14 @@ sampler is derived for fixed-rate static targets and extended to regularized
 static regression, frozen-feature DESN readouts, and root-blocked dynamic
 linear states. Third, a fixed-target MT-RQR-ECM optimizer is derived as a fast
 deterministic mode computation using exact inverse latent-scale moments and
-safeguarded objective descent. Fourth, scan-calibrated shortest-window and
-pilot-selected exact-spacing tolerance actions are formulated while their
-repeated-sampling guarantees are kept separate from generalized-posterior and
-ECM summaries. The available nonzero-tilt computation uses proper Gaussian
+safeguarded objective descent. Fourth, direct-DP and Gaussian-DPM
+response-distribution engines are added for Bayesian uncertainty in
+shortest-interval content, with exact fixed-interval content probabilities in
+the direct-DP case. Fifth, scan-calibrated shortest-window,
+hybrid Bayesian--scan, and pilot-selected exact-spacing tolerance actions are
+formulated while their repeated-sampling guarantees are kept separate from
+generalized-posterior and ECM summaries. The available nonzero-tilt computation
+uses proper Gaussian
 priors, a fixed learning rate, and fixed or frozen dynamic evolution
 covariances. Random shrinkage scales, learned-rate tilt, adaptive or
 component-scale dynamic tilt, data-driven tilt selection, variational
@@ -206,9 +217,9 @@ Shaby2014OpenFacedSandwich}.
 
 Section~\ref{sec:interval-functionals} defines the fixed-content class.
 Sections~\ref{sec:rqr-loss} and~\ref{sec:mean-tilt} identify ordinary and
-mean-tilted RQR. Section~\ref{sec:tcsp} states the proposed scan-calibrated and
-split exact-spacing tolerance actions and their unresolved theoretical
-requirements.
+mean-tilted RQR. Section~\ref{sec:tcsp} states the proposed scan-calibrated,
+hybrid Bayesian--scan, and split exact-spacing tolerance actions and their
+unresolved theoretical requirements.
 Section~\ref{sec:static-theory-scope} gives finite-sample balance and the
 fixed-dimensional iid static uncertainty scope.
 Section~\ref{sec:posterior} develops the static generalized posterior,
@@ -663,7 +674,7 @@ univariate observations, the target statement is
 \Pr_F^n\{C_F(\widehat T_n)\ge c\}\ge 1-\alpha,\qquad
 C_F([L,U])=F(U)-F(L),
 \]
-where \(\widehat T_n\) is a data-dependent interval. Five quantities must be
+where \(\widehat T_n\) is a data-dependent interval. Six quantities must be
 kept distinct:
 \[
 c \text{ is the required content},\quad
@@ -674,8 +685,12 @@ q=k/n \text{ is the fitted content},
 \delta \text{ is the fixed MT-RQR placement tilt},\qquad
 \omega_{\mathrm R} \text{ is the generalized-Bayes learning rate}.
 \]
-Neither \(\omega_{\mathrm R}\) nor a posterior credible level determines the
-tolerance confidence.
+\[
+1-\gamma \text{ is a posterior content-probability threshold under a response
+model for } F.
+\]
+Neither \(\omega_{\mathrm R}\) nor \(1-\gamma\) determines the tolerance
+confidence.
 
 Let \(Y_{(1)}\le\cdots\le Y_{(n)}\). For content \(c\), define the uniform scan
 statistic
@@ -727,6 +742,50 @@ the same sample, these posterior summaries are conditional on the selected
 target and do not propagate shortest-window selection uncertainty. An
 unconditional interpretation requires a plug-in stability theorem or a
 separate target-selection sample.
+
+The full-distribution Bayesian layer instead models \(F\) directly. With
+\[
+F\sim \mathrm{DP}(a,H),\qquad Y_i\mid F\stackrel{\mathrm{iid}}{\sim} F,
+\]
+the posterior is \(\mathrm{DP}(a+n,H_n)\), where
+\(H_n=(aH+\sum_i\delta_{Y_i})/(a+n)\)
+\citep{Ferguson1973DP}. For a fixed closed interval \(I=[l,u]\),
+\[
+F(I)\mid D_n \sim
+\mathrm{Beta}\{aH(I)+N_n(I),a(1-H(I))+n-N_n(I)\}.
+\]
+This gives the exact posterior content probability
+\[
+p_n(I;c)=\Pr\{F(I)\ge c\mid D_n\}
+\]
+for every candidate interval. The direct-DP result is a fixed-interval
+posterior statement, not a repeated-sampling tolerance theorem and not an RQR
+generalized posterior. Posterior draws of the shortest \(c\)-content interval
+can be computed from a stick-breaking representation
+\citep{Sethuraman1994ConstructiveDP}; they quantify uncertainty in the
+population shortest-interval functional under the response-distribution model.
+
+The hybrid Bayesian--scan tolerance action is the first minimum-width closed
+order-statistic interval satisfying both constraints:
+\[
+\widehat T^{\mathrm{HBS}}_n
+=
+\min_{\mathrm{width},\,\mathrm{first\ tie}}
+\left\{
+[Y_{(j)},Y_{(\ell)}]:
+\ell-j+1\ge k_{n,c,\alpha},\
+p_n([Y_{(j)},Y_{(\ell)}];c)\ge 1-\gamma
+\right\}.
+\]
+The scan count is fixed before posterior computation and is not resampled. The
+posterior threshold can bind, be redundant given the scan action, or make the
+candidate class infeasible; infeasibility is reported rather than repaired by
+weakening a constraint. A truncated Gaussian Dirichlet-process mixture
+\citep{IshwaranJames2001GibbsDPM,IshwaranJames2002ApproximateDP} provides a
+smooth response-likelihood alternative whose content probabilities are Monte
+Carlo posterior summaries. The Bayesian bootstrap
+\citep{Rubin1981BayesianBootstrap} is retained only as a diagnostic
+weighted-empirical comparator.
 
 A sample-split alternative removes this same-sample placement issue for the
 univariate tolerance action. Randomly divide the observations into an
@@ -805,6 +864,17 @@ Numerical scan calibration
   confidence separately.
 & The calculation is not an exact scan recursion, and numerical confidence is
   distinct from tolerance confidence.\\
+Direct-DP content law
+& For any fixed closed interval, conjugacy gives the exact
+  \(\mathrm{Beta}\) posterior law for \(F(I)\) and hence
+  \(\Pr\{F(I)\ge c\mid D_n\}\).
+& This is posterior UQ under a response-distribution model for \(F\), not an
+  RQR generalized posterior and not a tolerance-confidence theorem.\\
+Hybrid Bayesian--scan action
+& The selected interval must satisfy both \(N_n(I)\ge k_{n,c,\alpha}\) and the
+  posterior content-probability constraint under the chosen distribution engine.
+& The scan count is fixed, posterior credibility remains distinct from
+  tolerance confidence, and no posterior endpoint-coverage theorem is claimed.\\
 Tolerance guarantee
 & The scan event motivates a distribution-free finite-sample guarantee for
   the empirical action under continuity.
@@ -878,14 +948,16 @@ include infeasible calibration
 nonunique shortest windows, response-scale dependence of geometric width, and
 unsupported attempts to attach the scan certificate to posterior summaries.
 
-The construction therefore retains two distinct outputs: an empirical
-tolerance action and a fixed-target generalized posterior. Finite-sample scan
+The construction therefore retains three distinct outputs: an empirical scan
+tolerance action, a full-distribution Bayesian shortest-interval UQ action, and
+fixed-target MT-RQR generalized-posterior summaries. Finite-sample scan
 validity requires an action-matched proof and certified critical count;
 first-order tolerance or oracle-width statements additionally require
-same-sample shortest-window asymptotics. Any transfer to posterior mean or
-median endpoints requires a separate action-equivalence or direct-calibration
-result. Posterior credibility is not tolerance confidence, and
-\(\omega_{\mathrm R}\) is not a tolerance factor.
+same-sample shortest-window asymptotics. Any transfer from posterior content
+probabilities to endpoint coverage, or from fixed-target MT-RQR summaries to
+the selected shortest action, requires a separate action-equivalence or
+direct-calibration result. Posterior credibility is not tolerance confidence,
+and \(\omega_{\mathrm R}\) is not a tolerance factor.
 
 \section{Finite-Sample Balance and Static Uncertainty}
 \label{sec:static-theory-scope}

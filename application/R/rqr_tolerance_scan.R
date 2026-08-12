@@ -486,7 +486,9 @@ rqr_tcsp_tilt_from_window <- function(window) {
 #' tolerance action, freezes `q` and `delta`, and optionally fits deterministic
 #' ECM and/or intercept-only fixed-rate ridge generalized posterior summaries.
 #' The scan action is the tolerance object; ECM and posterior summaries are
-#' separate loss-based fixed-target summaries.
+#' separate loss-based fixed-target plug-in summaries.  Use
+#' [rqr_tcsp_hybrid_bayes_fit()] for the authoritative full-distribution
+#' Bayesian UQ action.
 #'
 #' @param y Response sample.
 #' @param guaranteed_content Minimum population content `c`.
@@ -532,10 +534,27 @@ rqr_tcsp_fit_univariate <- function(
   tilt <- rqr_tcsp_tilt_from_window(window)
   .rqr_tcsp_validate_mcmc_request(fit_mcmc, mcmc_args)
   .rqr_tcsp_validate_ecm_request(fit_ecm, ecm_args)
+  if (isTRUE(getOption("rqrgibbs.warn_tcsp_plugin", FALSE)) &&
+      (isTRUE(fit_mcmc) || isTRUE(fit_ecm))) {
+    warning(
+      paste(
+        "TCSP MT-RQR MCMC/ECM summaries are fixed-target plug-in UQ.",
+        "They are not unconditional Bayesian UQ for the population shortest interval;",
+        "use rqr_tcsp_hybrid_bayes_fit() for that role."
+      ),
+      call. = FALSE
+    )
+  }
 
   contract <- list(
     schema_version = .rqr_tcsp_schema(),
     method = "scan_calibrated_tolerance_calibrated_shortest_path_mt_rqr",
+    uq_scope = "fixed_target_plugin",
+    lifecycle_status = "superseded_for_unconditional_shortest_interval_uq",
+    authoritative_full_distribution_uq_function = "rqr_tcsp_hybrid_bayes_fit",
+    posterior_endpoint_coverage_claim_available = FALSE,
+    response_likelihood = FALSE,
+    generalized_bayes = TRUE,
     sample_size = length(y),
     guaranteed_content = calibration$guaranteed_content,
     tolerance_confidence = calibration$tolerance_confidence,
@@ -728,6 +747,12 @@ rqr_tcsp_fit_univariate <- function(
     ecm_model_spec = if (is.null(ecm_fit)) NULL else ecm_fit$model_spec
   ))
   make_out(posterior_fit, ecm_fit)
+}
+
+#' @rdname rqr_tcsp_fit_univariate
+#' @export
+rqr_tcsp_plugin_fit_univariate <- function(...) {
+  rqr_tcsp_fit_univariate(...)
 }
 
 #' Predict a TCSP path start by nested expansion

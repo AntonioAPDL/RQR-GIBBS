@@ -6,14 +6,16 @@ generalized-Bayes Gibbs computation.
 
 The project studies interval-root functionals: two regression roots are learned
 directly under a coverage-targeted loss rather than obtained by inverting a
-response likelihood. A proposed scan-calibrated tolerance layer first
-calibrates a retained count, selects the shortest closed order-statistic window
-containing that count, freezes the induced MT-RQR target content and
-retained-mean tilt, and then optionally fits deterministic ECM modes or
-fixed-target generalized-posterior summaries. A separate split exact-spacing
-TCSP path uses an independent pilot for placement and an independent main
-sample for a fixed Beta-calibrated order-statistic spacing. The manuscript
-also develops the
+response likelihood. For tolerance UQ, the authoritative Bayesian layer now
+models the full response distribution with a direct Dirichlet-process posterior
+or a smooth truncated Gaussian DPM. The hybrid Bayesian-scan action keeps the
+scan-calibrated retained count fixed and selects the shortest order-statistic
+interval that also satisfies a posterior content-probability constraint. The
+older TCSP-MT-RQR MCMC/ECM attachment remains available as fixed-target
+plug-in UQ after the empirical shortest window has selected content and tilt.
+A separate split exact-spacing TCSP path uses an independent pilot for
+placement and an independent main sample for a fixed Beta-calibrated
+order-statistic spacing. The manuscript also develops the
 population loss geometry, pseudo-asymmetric-Laplace augmentation,
 fixed-design Gibbs samplers, regularized regression extensions, frozen-feature
 DESN readouts, and dynamic linear root models.
@@ -40,7 +42,10 @@ RQR is treated as a loss-based generalized-Bayes update. Interval-root draws
 are summaries of a generalized posterior over interval functionals; they are
 not posterior-predictive response draws. In the TCSP extension, tolerance
 confidence comes from the external scan-calibrated retained-count action, not
-from posterior credibility, the learning rate, or a response likelihood.
+from posterior credibility, the learning rate, or an RQR response likelihood.
+The direct-DP and Gaussian-DPM engines are ordinary response-distribution
+models for \(F\); their posterior content probabilities are separate from the
+RQR generalized posterior.
 
 The two root blocks are exchangeable under the symmetric ordinary and
 mean-tilted targets. Raw fields such as `samp.beta_root1` and
@@ -82,13 +87,17 @@ draws, and does not create tolerance validity.
 
 The TCSP scan layer currently exposes `rqr_tcsp_*` helpers for conservative
 scan calibration, canonical closed-window selection, shortest-path tilt
-metadata, fixed-target univariate fitting, path continuation diagnostics, ECM
-and MCMC fixed-target attachment, and action-contract validation. The split
-exact-spacing layer adds `rqr_tcsp_exact_spacing_gap()` and
+metadata, path continuation diagnostics, and action-contract validation.
+`rqr_tcsp_plugin_fit_univariate()` names the fixed-target MT-RQR plug-in path.
+`rqr_tcsp_hybrid_bayes_fit()` is the authoritative full-distribution Bayesian
+UQ interface. The direct-DP helpers are `rqr_dp_*`; the smooth DPM helpers are
+`rqr_dpm_*`; and `rqr_bayesian_bootstrap_draws()` is a diagnostic comparator.
+The split exact-spacing layer adds `rqr_tcsp_exact_spacing_gap()` and
 `rqr_tcsp_split_exact_fit()` for continuous iid univariate pilot/main-split
 actions. Exact scan recursion, Tier-1 finite-sample proof promotion,
-posterior-action equivalence, and regression-family tolerance theorems remain
-pending; see `docs/theory/tcsp_mt_rqr_proof_ledger_20260811.md` and
+posterior endpoint-coverage transfer, and regression-family tolerance theorems
+remain pending; see `docs/theory/tcsp_mt_rqr_proof_ledger_20260811.md`,
+`docs/theory/full_bayes_shortest_uq_theory_ledger_20260812.md`, and
 `docs/theory/mt_rqr_ecm_monotonicity_and_scope_20260812.md`.
 
 ## External reference implementation
@@ -121,8 +130,10 @@ make test-native-mean-tilt
 make test-standalone-contracts
 make test-ecm
 make test-tcsp
+make test-bayes-uq
 make rqr-ecm-validation-smoke
 make tcsp-split-exact-validation-smoke
+make rqr-bayes-uq-validation-smoke
 make prepare-exdqlm-runtime
 make test-exdqlm-rqr
 make literature-manifest
