@@ -171,7 +171,36 @@
       "label": "Young-Mathew interpolated/extrapolated order-statistic interval",
       "family": "nonparametric_interpolated_order_statistic",
       "enabled": false,
-      "disabled_reason": "Exact implementation is not available in the tracked source and the tolerance package is not a declared dependency."
+      "source_package": "tolerance",
+      "certificate_status": "interpolated_extrapolated_order_statistic_not_independently_audited",
+      "disabled_reason": "Wrapper is implemented but remains disabled in default pilot/full-pilot modes until competitor smoke validation is reviewed."
+    },
+    {
+      "method_id": "wald_order",
+      "label": "Wald nonparametric order-statistic tolerance interval",
+      "family": "nonparametric_order_statistic",
+      "enabled": false,
+      "source_package": "tolerance",
+      "certificate_status": "wald_order_statistic_package_nominal_not_independently_audited",
+      "disabled_reason": "Optional tolerance-package wrapper is implemented but not enabled in default pilot/full-pilot modes."
+    },
+    {
+      "method_id": "hahn_meeker",
+      "label": "Hahn-Meeker nonparametric order-statistic tolerance interval",
+      "family": "nonparametric_order_statistic",
+      "enabled": false,
+      "source_package": "tolerance",
+      "certificate_status": "hahn_meeker_package_nominal_not_independently_audited",
+      "disabled_reason": "Optional tolerance-package wrapper is implemented but not enabled in default pilot/full-pilot modes."
+    },
+    {
+      "method_id": "normal_exact_tolerance",
+      "label": "Normal-family exact k-factor tolerance interval",
+      "family": "parametric_normal",
+      "enabled": false,
+      "source_package": "tolerance",
+      "certificate_status": "normal_family_exact_k_factor_package_nominal",
+      "disabled_reason": "Optional tolerance-package wrapper is implemented but not enabled in default pilot/full-pilot modes."
     },
     {
       "method_id": "calibrated_bnp_gibbs",

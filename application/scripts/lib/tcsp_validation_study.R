@@ -99,6 +99,8 @@ tcspv_methods <- function(config) {
       enabled = isTRUE(x$enabled),
       formal_tolerance_action = isTRUE(x$formal_tolerance_action),
       benchmark_only = isTRUE(x$benchmark_only),
+      source_package = as.character(x$source_package %||% "internal"),
+      certificate_status = as.character(x$certificate_status %||% ""),
       disabled_reason = as.character(x$disabled_reason %||% ""),
       stringsAsFactors = FALSE
     )
@@ -152,13 +154,21 @@ tcspv_validate_config <- function(config) {
     "tcsp_dkw", "tcsp_mc", "wilks_symmetric", "wilks_minmax",
     "equal_tailed_tcsp_content", "normal_howe", "oracle_shortest"
   )
+  supported_methods <- c(
+    required, "young_mathew", "wald_order", "hahn_meeker",
+    "normal_exact_tolerance", "calibrated_bnp_gibbs"
+  )
+  if (!all(methods$method_id %in% supported_methods)) {
+    tcspv_stop("Unsupported method ID in TCSP config.")
+  }
   if (!all(required %in% active_methods$method_id)) {
     tcspv_stop("The active TCSP method contract is incomplete.")
   }
+  if ("calibrated_bnp_gibbs" %in% active_methods$method_id) {
+    tcspv_stop("calibrated_bnp_gibbs is not implemented in this repository.")
+  }
   disabled <- methods[!methods$enabled, , drop = FALSE]
-  if (!all(c("young_mathew", "calibrated_bnp_gibbs") %in%
-           disabled$method_id) ||
-      any(!nzchar(disabled$disabled_reason))) {
+  if (any(!nzchar(disabled$disabled_reason))) {
     tcspv_stop("Disabled TCSP competitors must be explicit and justified.")
   }
   for (value in config$design$guaranteed_contents) {
@@ -608,6 +618,120 @@ tcspv_design_grid <- function(config, mode) {
   )
 }
 
+tcspv_extract_tolerance_interval <- function(value) {
+  z <- as.data.frame(value, stringsAsFactors = FALSE)
+  lower_col <- grep("lower", names(z), ignore.case = TRUE, value = TRUE)
+  upper_col <- grep("upper", names(z), ignore.case = TRUE, value = TRUE)
+  if (!length(lower_col) || !length(upper_col)) {
+    tcspv_stop("Could not identify lower/upper columns in tolerance output.")
+  }
+  lower <- as.numeric(z[[lower_col[[1L]]]])
+  upper <- as.numeric(z[[upper_col[[1L]]]])
+  width <- upper - lower
+  ok <- is.finite(lower) & is.finite(upper) & width >= 0
+  if (!any(ok)) tcspv_stop("tolerance output did not contain a valid interval.")
+  candidates <- which(ok)
+  best_width <- min(width[candidates])
+  best <- candidates[which(width[candidates] == best_width)[[1L]]]
+  list(
+    lower = lower[[best]],
+    upper = upper[[best]],
+    selected_row = as.integer(best),
+    output_rows = nrow(z),
+    row_selection = "minimum_width_first_tie"
+  )
+}
+
+tcspv_tolerance_package_interval <- function(method_id, y, content,
+                                             confidence) {
+  if (!requireNamespace("tolerance", quietly = TRUE)) {
+    return(list(
+      lower = NA_real_, upper = NA_real_, failed = TRUE,
+      failure_reason = "tolerance_package_unavailable",
+      method_detail = method_id,
+      source_package = "tolerance",
+      source_version = NA_character_,
+      certificate_status = "not_evaluated_package_unavailable"
+    ))
+  }
+  alpha <- 1 - confidence
+  version <- as.character(utils::packageVersion("tolerance"))
+  mapping <- list(
+    young_mathew = list(
+      function_name = "nptol.int",
+      method = "YM",
+      certificate_status =
+        "interpolated_extrapolated_order_statistic_not_independently_audited"
+    ),
+    wald_order = list(
+      function_name = "nptol.int",
+      method = "WALD",
+      certificate_status =
+        "wald_order_statistic_package_nominal_not_independently_audited"
+    ),
+    hahn_meeker = list(
+      function_name = "nptol.int",
+      method = "HM",
+      certificate_status =
+        "hahn_meeker_package_nominal_not_independently_audited"
+    ),
+    normal_exact_tolerance = list(
+      function_name = "normtol.int",
+      method = "EXACT",
+      certificate_status =
+        "normal_family_exact_k_factor_package_nominal"
+    )
+  )
+  spec <- mapping[[method_id]]
+  if (is.null(spec)) {
+    tcspv_stop("Unsupported tolerance package method: ", method_id)
+  }
+  result <- tryCatch({
+    raw <- if (identical(spec$function_name, "nptol.int")) {
+      tolerance::nptol.int(
+        x = y, alpha = alpha, P = content, side = 2,
+        method = spec$method
+      )
+    } else {
+      tolerance::normtol.int(
+        x = y, alpha = alpha, P = content, side = 2,
+        method = spec$method
+      )
+    }
+    interval <- tcspv_extract_tolerance_interval(raw)
+    list(
+      lower = interval$lower,
+      upper = interval$upper,
+      failed = FALSE,
+      failure_reason = "",
+      method_detail = paste0(
+        "tolerance::", spec$function_name, "(method=", spec$method, ")"
+      ),
+      source_package = "tolerance",
+      source_version = version,
+      certificate_status = spec$certificate_status,
+      selected_output_row = interval$selected_row,
+      output_rows = interval$output_rows,
+      row_selection = interval$row_selection
+    )
+  }, error = function(e) {
+    list(
+      lower = NA_real_, upper = NA_real_, failed = TRUE,
+      failure_reason = paste0("tolerance_package_error:", conditionMessage(e)),
+      method_detail = paste0(
+        "tolerance::", spec$function_name, "(method=", spec$method, ")"
+      ),
+      source_package = "tolerance",
+      source_version = version,
+      certificate_status = "package_call_failed",
+      selected_output_row = NA_integer_,
+      output_rows = NA_integer_,
+      row_selection = "not_available"
+    )
+  })
+  result
+}
+
 tcspv_interval_for_method <- function(config, method_id, y, dgp_id, content,
                                       confidence, criticals,
                                       oracle_cache = NULL) {
@@ -624,6 +748,13 @@ tcspv_interval_for_method <- function(config, method_id, y, dgp_id, content,
   lower <- upper <- NA_real_
   retained_count <- NA_integer_
   certificate <- NA_real_
+  method_detail <- method_id
+  source_package <- "internal"
+  source_version <- NA_character_
+  certificate_status <- "not_recorded"
+  selected_output_row <- NA_integer_
+  output_rows <- NA_integer_
+  row_selection <- "not_applicable"
   if (method_id %in% c("tcsp_dkw", "tcsp_mc")) {
     if (nrow(row) != 1L || isTRUE(row$infeasible[[1L]])) {
       failed <- TRUE; reason <- "critical_count_infeasible"
@@ -634,6 +765,7 @@ tcspv_interval_for_method <- function(config, method_id, y, dgp_id, content,
       upper <- win$upper_endpoint
       certificate <- row$certificate[[1L]]
     }
+    certificate_status <- "distribution_free_scan_calibration"
   } else if (method_id %in% c("wilks_symmetric", "wilks_minmax",
                               "equal_tailed_tcsp_content")) {
     if (nrow(row) != 1L || isTRUE(row$infeasible[[1L]]) ||
@@ -644,6 +776,13 @@ tcspv_interval_for_method <- function(config, method_id, y, dgp_id, content,
       upper <- ys[[as.integer(row$order_right[[1L]])]]
       retained_count <- as.integer(row$retained_count[[1L]])
       certificate <- row$certificate[[1L]]
+    }
+    certificate_status <- if (identical(method_id, "equal_tailed_tcsp_content")) {
+      "diagnostic_no_certificate"
+    } else if (nrow(row) != 1L) {
+      "order_statistic_critical_metadata_missing"
+    } else {
+      as.character(row$calibration[[1L]] %||% "order_statistic_certificate")
     }
   } else if (identical(method_id, "normal_howe")) {
     s <- stats::sd(y)
@@ -657,6 +796,24 @@ tcspv_interval_for_method <- function(config, method_id, y, dgp_id, content,
       upper <- mean(y) + factor * s
       certificate <- NA_real_
     }
+    certificate_status <- "normal_theory_howe_approximation"
+  } else if (method_id %in% c(
+    "young_mathew", "wald_order", "hahn_meeker", "normal_exact_tolerance"
+  )) {
+    wrapped <- tcspv_tolerance_package_interval(
+      method_id, y = y, content = content, confidence = confidence
+    )
+    lower <- wrapped$lower
+    upper <- wrapped$upper
+    failed <- isTRUE(wrapped$failed)
+    reason <- wrapped$failure_reason
+    method_detail <- wrapped$method_detail
+    source_package <- wrapped$source_package
+    source_version <- wrapped$source_version
+    certificate_status <- wrapped$certificate_status
+    selected_output_row <- wrapped$selected_output_row %||% NA_integer_
+    output_rows <- wrapped$output_rows %||% NA_integer_
+    row_selection <- wrapped$row_selection %||% "not_available"
   } else if (identical(method_id, "oracle_shortest")) {
     key <- paste(dgp_id, format(content, digits = 16), sep = "/")
     if (!is.null(oracle_cache) &&
@@ -671,12 +828,21 @@ tcspv_interval_for_method <- function(config, method_id, y, dgp_id, content,
     lower <- oracle$lower
     upper <- oracle$upper
     certificate <- 1
+    certificate_status <- "oracle_reference_known_dgp"
   } else {
     failed <- TRUE; reason <- paste0("unsupported_method:", method_id)
+    certificate_status <- "unsupported_method"
   }
   list(
     lower = lower, upper = upper, failed = failed, failure_reason = reason,
-    retained_count = retained_count, certificate = certificate
+    retained_count = retained_count, certificate = certificate,
+    method_detail = method_detail,
+    source_package = source_package,
+    source_version = source_version,
+    certificate_status = certificate_status,
+    selected_output_row = selected_output_row,
+    output_rows = output_rows,
+    row_selection = row_selection
   )
 }
 
@@ -762,6 +928,13 @@ tcspv_run_repeated_sample <- function(config, mode, criticals = NULL) {
         content_deficit = eval$content_deficit,
         retained_count = interval$retained_count,
         certificate = interval$certificate,
+        method_detail = interval$method_detail,
+        source_package = interval$source_package,
+        source_version = interval$source_version,
+        certificate_status = interval$certificate_status,
+        selected_output_row = interval$selected_output_row,
+        output_rows = interval$output_rows,
+        row_selection = interval$row_selection,
         failed = interval$failed,
         failure_reason = interval$failure_reason,
         runtime_sec = unname(timed[["elapsed"]]),

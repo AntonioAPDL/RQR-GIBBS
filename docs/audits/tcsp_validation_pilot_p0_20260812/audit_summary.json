@@ -1,0 +1,22 @@
+{
+  "schema_version": "rqrgibbs_tcsp_validation_pilot_audit/1.0.0",
+  "status": "audited_rehearsal_not_promoted",
+  "source_run_dir": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/oracle_tilt_v3_process_isolation_20260801/application/outputs/tcsp_validation_v1/pilot_main_8d7b959_p0_20260812",
+  "source_run_commit": "8d7b959aa664a491448e814f6939cd246ad6a3d3",
+  "source_run_branch": "main",
+  "source_state_clean": true,
+  "mode": "pilot",
+  "replications": 8,
+  "rows": 576,
+  "summary_rows": 72,
+  "failures": 72,
+  "required_gate_failures": 0,
+  "promotion_blockers": 1,
+  "full_pilot_recommended": true,
+  "full_pilot_review_ready": false,
+  "confirmatory_ready": false,
+  "source_run_reusable_as_confirmatory_evidence": false,
+  "response_likelihood": false,
+  "posterior_predictive_response_draws": false,
+  "audited_at_utc": "2026-08-12 01:19:28 UTC"
+}

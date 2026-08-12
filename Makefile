@@ -89,11 +89,12 @@ test-manuscript-language:
 	$(R) application/scripts/63_validate_manuscript_bayesian_language.R
 
 test-tcsp-validation: package-install
-	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-tcsp-validation-study.R", reporter = "summary")'
-	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-tcsp-validation-pilot-audit.R", reporter = "summary")'
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-validation-study.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-competitor-wrappers.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-validation-pilot-audit.R
 
 test-tcsp-validation-audit: package-install
-	$(R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-tcsp-validation-pilot-audit.R", reporter = "summary")'
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-tcsp-validation-pilot-audit.R
 
 tcsp-validation-preflight: package-install
 	$(R) application/scripts/64_run_tcsp_validation_study.R --mode=preflight --config=$(TCSP_VALIDATION_CONFIG) --output-dir=$(TCSP_VALIDATION_DIR)/preflight

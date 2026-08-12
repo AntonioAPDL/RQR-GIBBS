@@ -1,0 +1,8 @@
+"stage","decision","minimum_next_action"
+"source-control gate","Relaunch any promotion-eligible run from a committed source state with a recorded branch and commit.","Commit the audit plumbing, then launch the next run from that commit."
+"full pilot design","Run a full iid univariate pilot before confirmatory promotion.","Use all five tracked DGPs, both contents, both tolerance confidences, and active non-oracle comparators."
+"calibration budget","Increase Uniform scan calibration beyond the compact pilot budget.","Use at least 5000 Uniform calibration simulations per n/content/confidence cell for the full pilot; exact recursion remains a later theory task."
+"sample-size grid","Keep n=80 and n=250 as stress and transition points; add n=1200 before assessing DKW efficiency at high content/confidence.","Evaluate n in {80,250,600,1200}; n=600 is near range-wide for c=0.90 at high confidence under DKW."
+"competitor scope","Keep Young-Mathew and calibrated BNP Gibbs disabled until tracked, tested implementations are added.","Add competitors only through source-controlled code, tests, and dependency declarations."
+"confirmatory gate","Leave confirmatory execution fail-closed and require a new frozen config after the full pilot audit.","Require passing manifest, source-state, failure-accounting, and precision gates before a confirmatory config can be authorized."
+"manuscript integration","Use only audited full-pilot or confirmatory summaries in article prose; never reuse local pilot output as theorem evidence.","Promote only claim-scoped empirical content/width statements, not response-likelihood or posterior-predictive claims."

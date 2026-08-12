@@ -1,0 +1,47 @@
+{
+  "schema_version": "rqrgibbs_tcsp_external_methods_manifest/1.0.0",
+  "created": "2026-08-12",
+  "status": "optional_wrappers_disabled_by_default",
+  "methods": [
+    {
+      "method_id": "young_mathew",
+      "source_package": "tolerance",
+      "minimum_tested_version": "3.0.0",
+      "function": "nptol.int",
+      "function_method": "YM",
+      "target": "two-sided nonparametric tolerance interval",
+      "certificate_status": "interpolated_extrapolated_order_statistic_not_independently_audited",
+      "enabled_by_default": false
+    },
+    {
+      "method_id": "wald_order",
+      "source_package": "tolerance",
+      "minimum_tested_version": "3.0.0",
+      "function": "nptol.int",
+      "function_method": "WALD",
+      "target": "two-sided nonparametric tolerance interval",
+      "certificate_status": "wald_order_statistic_package_nominal_not_independently_audited",
+      "enabled_by_default": false
+    },
+    {
+      "method_id": "hahn_meeker",
+      "source_package": "tolerance",
+      "minimum_tested_version": "3.0.0",
+      "function": "nptol.int",
+      "function_method": "HM",
+      "target": "two-sided nonparametric tolerance interval",
+      "certificate_status": "hahn_meeker_package_nominal_not_independently_audited",
+      "enabled_by_default": false
+    },
+    {
+      "method_id": "normal_exact_tolerance",
+      "source_package": "tolerance",
+      "minimum_tested_version": "3.0.0",
+      "function": "normtol.int",
+      "function_method": "EXACT",
+      "target": "two-sided normal-family tolerance interval",
+      "certificate_status": "normal_family_exact_k_factor_package_nominal",
+      "enabled_by_default": false
+    }
+  ]
+}
