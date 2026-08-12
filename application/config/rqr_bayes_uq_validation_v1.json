@@ -27,7 +27,7 @@
       "guaranteed_contents": [0.35, 0.50],
       "tolerance_confidences": [0.55],
       "posterior_confidences": [0.50],
-      "dgp_ids": ["normal", "lognormal"],
+      "dgp_ids": ["normal", "lognormal", "mixture"],
       "method_ids": ["hdp_s", "dp_bayes", "dpm_bayes", "bb_shortest_diag", "tcsp_dkw", "split_empirical_shortest", "wilks_minmax"]
     },
     "moderate": {

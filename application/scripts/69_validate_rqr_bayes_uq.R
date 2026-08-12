@@ -125,9 +125,11 @@ dgp_meta <- function(dgp) {
       },
       p = function(x) {
         raw <- x * sd_mix + mean_mix
-        rowSums(vapply(seq_along(weights), function(j) {
-          weights[[j]] * stats::pnorm(raw, means[[j]], sds[[j]])
-        }, numeric(length(raw))))
+        out <- numeric(length(raw))
+        for (j in seq_along(weights)) {
+          out <- out + weights[[j]] * stats::pnorm(raw, means[[j]], sds[[j]])
+        }
+        out
       }
     ))
   }
@@ -295,6 +297,36 @@ fit_method <- function(method_id, y, c_target, tol_conf, post_conf, seed) {
 rows <- list()
 counter <- 0L
 base_seed <- as.integer(config$base_seed %||% 862100)
+total_datasets <- length(mode_cfg$dgp_ids) *
+  length(mode_cfg$sample_sizes) *
+  length(mode_cfg$guaranteed_contents) *
+  length(mode_cfg$tolerance_confidences) *
+  length(mode_cfg$posterior_confidences) *
+  as.integer(mode_cfg$replications)
+total_rows <- total_datasets * length(mode_cfg$method_ids)
+progress_path <- file.path(staging, "progress.json")
+write_progress <- function(status, current = list()) {
+  jsonlite::write_json(
+    list(
+      schema_version = paste0(config$schema_version, "/progress"),
+      study_id = config$study_id,
+      mode = mode,
+      status = status,
+      git_commit = git_commit,
+      datasets_completed = as.integer(counter),
+      total_datasets = as.integer(total_datasets),
+      rows_completed = as.integer(length(rows)),
+      total_rows = as.integer(total_rows),
+      rows_remaining = as.integer(total_rows - length(rows)),
+      updated_at_utc = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+      current = current
+    ),
+    progress_path,
+    pretty = TRUE,
+    auto_unbox = TRUE
+  )
+}
+write_progress("running")
 for (dgp_id in as.character(mode_cfg$dgp_ids)) {
   dgp <- dgp_by_id[[dgp_id]]
   meta <- dgp_meta(dgp)
@@ -373,6 +405,14 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                 )
               }
             }
+            write_progress("running", current = list(
+              dgp_id = dgp_id,
+              n = n,
+              guaranteed_content = c_target,
+              tolerance_confidence = tol_conf,
+              posterior_confidence = post_conf,
+              replication = rep
+            ))
           }
         }
       }
@@ -424,10 +464,12 @@ readme <- c(
   "These artifacts are validation evidence only; they do not prove posterior endpoint coverage."
 )
 writeLines(readme, file.path(staging, "README.md"))
+write_progress("complete")
 
 artifact_paths <- file.path(staging, c(
   "bayes_uq_validation_results.csv",
   "bayes_uq_validation_summary.csv",
+  "progress.json",
   "README.md"
 ))
 artifact_hashes <- data.frame(
