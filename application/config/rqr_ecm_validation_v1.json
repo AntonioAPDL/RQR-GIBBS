@@ -1,0 +1,60 @@
+{
+  "schema_version": "rqrgibbs_rqr_ecm_validation/1.0.0",
+  "study_id": "rqr_ecm_validation_v1_20260812",
+  "status": "smoke_and_moderate_only",
+  "interpretation": "Fixed-target optimizer validation for MT-RQR-ECM. This validates deterministic computation against direct small-problem optimization and existing approximations; it is not a tolerance-confidence study.",
+  "generalized_bayes": true,
+  "response_likelihood": false,
+  "posterior_predictive_response_draws": false,
+  "execution": {
+    "smoke_authorized": true,
+    "moderate_authorized": true,
+    "heavy_authorized": false
+  },
+  "modes": {
+    "smoke": {
+      "replications": 3,
+      "sample_sizes": [40],
+      "target_contents": [0.70, 0.85],
+      "dgp_ids": ["normal", "lognormal"],
+      "include_vb": true,
+      "include_mcmc_reference": true
+    },
+    "moderate": {
+      "replications": 20,
+      "sample_sizes": [60, 120],
+      "target_contents": [0.70, 0.85, 0.95],
+      "dgp_ids": ["normal", "lognormal", "mixture"],
+      "include_vb": true,
+      "include_mcmc_reference": false
+    }
+  },
+  "dgps": [
+    {"dgp_id": "normal", "family": "normal"},
+    {"dgp_id": "lognormal", "family": "standardized_lognormal", "logsd": 0.75},
+    {"dgp_id": "mixture", "family": "standardized_normal_mixture", "weights": [0.80, 0.20], "means": [-1.00, 2.00], "sds": [0.60, 0.40]}
+  ],
+  "ecm_control": {
+    "max_iter": 160,
+    "stable_iterations": 1,
+    "tol_objective": 1e-8,
+    "tol_parameters": 1e-7,
+    "tol_stationarity": 1000000,
+    "residual_product_floor": 1e-8,
+    "jitter_starts": 1,
+    "seed": 8125
+  },
+  "direct_optim": {
+    "enabled": true,
+    "method": "Nelder-Mead",
+    "maxit": 1000,
+    "reltol": 1e-10
+  },
+  "mcmc_control": {
+    "n_burn": 5,
+    "n_mcmc": 8,
+    "thin": 1,
+    "seed": 8126
+  },
+  "base_seed": 812500
+}

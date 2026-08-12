@@ -157,6 +157,10 @@ Scan-calibrated shortest-window tolerance construction
 Pseudo-AL Gibbs sampler
 & Sections~\ref{sec:supp-pseudo-al}--\ref{sec:supp-static-regression}
 & Augmented generalized posterior, GIG latent-scale full conditionals, Gaussian root full conditionals, and prior adapters\\
+Fixed-target MT-RQR-ECM
+& Section~\ref{sec:supp-static-regression}
+& Exact inverse latent-scale moment, two conditional Gaussian root solves,
+  safeguard scope, and distinction from VB/posterior sampling\\
 Dynamic linear root-state computation
 & Sections~\ref{sec:supp-dynamic}--\ref{sec:supp-discounts}
 & Quartic joint augmented generalized-posterior contribution, root-specific FFBS, frozen discounts, component scales, and adaptive-discount caveat\\
@@ -1173,6 +1177,97 @@ factor is the exponential of a finite linear functional of
 has a finite moment-generating function in every finite direction. This
 argument covers ridge priors. It does not establish the corresponding result
 for the external horseshoe-family adapter.
+
+\subsection{Fixed-target ECM mode computation}
+
+The same pseudo-AL augmentation gives a deterministic
+expectation/conditional-maximization algorithm for a fixed generalized-posterior
+mode \citep{DempsterLairdRubin1977EM,MengRubin1993ECM}. It is a computational
+method for \(\exp\{-\omega_{\mathrm R}\mathcal L_{n,c,\vect\delta}\}\Pi_0\),
+not an ordinary likelihood EM algorithm for responses. Related
+asymmetric-Laplace quantile-regression computations use the same
+normal--exponential idea in a response working-likelihood setting
+\citep{ZhaoLian2016EMBayesianQR}; here the augmented residual is the RQR
+pseudo-residual product.
+
+For a GIG variable under the convention above,
+\[
+E(V^r)=\left(\frac ba\right)^{r/2}
+\frac{K_{\nu+r}(\sqrt{ab})}{K_\nu(\sqrt{ab})}.
+\]
+With \(\nu=1/2\) and \(r=-1\), \(K_{-1/2}=K_{1/2}\). Therefore, for
+\(e_i\ne0\),
+\[
+\tau_i
+=E(v_i^{-1}\mid\cdot)
+=\sqrt{\frac{a}{b_i}}
+=\frac{1}{c(1-c)|e_i|}.
+\]
+The first latent moment,
+\[
+E(v_i\mid\cdot)
+=c(1-c)(|e_i|+2\sigma_{\mathrm R}),
+\]
+is useful diagnostically but is not the ECM weight. This distinguishes ECM
+from the current coordinate-Gaussian VB approximation, which plugs in
+\(E(v_i)\) and recomputes that mean between root updates.
+
+Holding \(\vect\beta_2\) fixed, write
+\[
+\mat A_2=\diag(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
+\mat X_{\mathcal O},\qquad
+\vect c_2=\vect y_{\mathcal O}^{\,2}
+-\vect y_{\mathcal O}\circ\vect\eta_{2,\mathcal O}.
+\]
+With ridge prior precision \(\mat P_1\), the first conditional maximization
+solves
+\[
+\mat\Lambda_1
+=\mat P_1+
+\frac{1}{\phi_c\sigma_{\mathrm R}}
+\mat A_2^\top\diag(\vect\tau)\mat A_2,
+\]
+\[
+\vect h_1
+=
+\frac{1}{\phi_c\sigma_{\mathrm R}}
+\mat A_2^\top\{\diag(\vect\tau)\vect c_2-\xi_c\vect 1\}
++\omega_{\mathrm R}c\mat X_{\mathcal O}^\top\vect\delta_{\mathcal O},
+\qquad
+\vect\beta_1^{+}=\mat\Lambda_1^{-1}\vect h_1.
+\]
+Then, using \(\vect\beta_1^{+}\) and the same outer E-step weights
+\(\vect\tau\),
+\[
+\mat A_1^{+}=\diag(\vect y_{\mathcal O}-\vect\eta_{1,\mathcal O}^{+})
+\mat X_{\mathcal O},\qquad
+\vect c_1^{+}=\vect y_{\mathcal O}^{\,2}
+-\vect y_{\mathcal O}\circ\vect\eta_{1,\mathcal O}^{+},
+\]
+\[
+\mat\Lambda_2
+=\mat P_2+
+\frac{1}{\phi_c\sigma_{\mathrm R}}
+(\mat A_1^{+})^\top\diag(\vect\tau)\mat A_1^{+},
+\]
+\[
+\vect h_2
+=
+\frac{1}{\phi_c\sigma_{\mathrm R}}
+(\mat A_1^{+})^\top\{\diag(\vect\tau)\vect c_1^{+}-\xi_c\vect 1\}
++\omega_{\mathrm R}c\mat X_{\mathcal O}^\top\vect\delta_{\mathcal O},
+\qquad
+\vect\beta_2^{+}=\mat\Lambda_2^{-1}\vect h_2.
+\]
+The update is ECM because the augmented criterion is quadratic in one complete
+root block when the other is fixed, but quartic in both root blocks jointly.
+
+At \(e_i=0\), \(\tau_i\) is infinite. The implementation therefore uses a
+declared safeguarded generalized ECM/MM variant with a response-product-scale
+floor, exact observed-objective backtracking after each accepted full cycle,
+and deterministic multi-start selection by the exact penalized objective. The
+stored endpoint mode is a fixed-target generalized-posterior summary. It is
+not a posterior draw and not a tolerance action.
 
 \subsection{Ordinary-only RHS-NS prior adapter}
 \label{sec:supp-rhs-ns}

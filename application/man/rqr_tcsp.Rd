@@ -66,8 +66,10 @@ rqr_tcsp_fit_univariate(
   numerical_confidence = 0.999,
   seed = NULL,
   fit_mcmc = FALSE,
+  fit_ecm = FALSE,
   learning_rate = 1,
   mcmc_args = list(),
+  ecm_args = list(),
   na_rm = FALSE
 )
 
@@ -103,8 +105,11 @@ rqr_tcsp_validate_action(fit)
 \item{na_rm}{Remove nonfinite observations before scanning.}
 \item{window}{A TCSP shortest-window object.}
 \item{fit_mcmc}{Fit the intercept-only fixed-target generalized posterior.}
+\item{fit_ecm}{Fit the deterministic intercept-only fixed-target ECM mode.}
 \item{learning_rate}{Fixed generalized-Bayes learning rate \eqn{\omega}.}
 \item{mcmc_args}{Optional arguments passed to \code{rqr_mcmc_fit()}.}
+\item{ecm_args}{Optional arguments passed to \code{rqr_ecm_fit()}. Target
+arguments are reserved by the TCSP wrapper.}
 \item{guaranteed_contents}{Ordered or unordered vector of target contents.}
 \item{previous_window}{Previous TCSP window object.}
 \item{next_retained_count}{Next retained count for path prediction.}
@@ -122,7 +127,8 @@ retained-mean tilt are frozen.
 }
 \details{
 The tolerance certificate comes from scan calibration, not from posterior
-credibility, the learning rate, or a response likelihood. The current
+credibility, ECM endpoint summaries, the learning rate, or a response
+likelihood. The current
 implementation provides conservative Monte Carlo and DKW calibration paths.
 Monte Carlo calibration simulates the Uniform scan-statistic distribution once
 per \code{n}/content cell and applies a simultaneous Massart-DKW empirical-CDF
@@ -135,7 +141,9 @@ infeasible requests fail closed.
 }
 \value{
 Lists with schema-versioned calibration, action, path, or validation metadata.
-When \code{rqr_tcsp_fit_univariate(fit_mcmc = TRUE)} is used, the returned
-object also contains an \code{rqr_mcmc} fit for the fixed calibrated target.
+When \code{rqr_tcsp_fit_univariate(fit_ecm = TRUE)} or
+\code{rqr_tcsp_fit_univariate(fit_mcmc = TRUE)} is used, the returned object
+also contains deterministic ECM or generalized-posterior fits for the fixed
+calibrated target. These summaries are not the formal tolerance action.
 }
-\seealso{\code{\link{rqr_mt_tilt_empirical_shortest}}, \code{\link{rqr_mcmc_fit}}}
+\seealso{\code{\link{rqr_mt_tilt_empirical_shortest}}, \code{\link{rqr_ecm_fit}}, \code{\link{rqr_mcmc_fit}}}

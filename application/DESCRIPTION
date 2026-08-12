@@ -17,9 +17,11 @@ Description: Research implementation of loss-based interval regression with
     embeddings. The normal-exponential construction augments an exponentiated
     interval loss and is not a response likelihood. Deterministic
     Cornish-Fisher and empirical pilots provide fixed mean-tilt initialization
-    anchors without sampling the tilt. Conservative scan-calibrated TCSP
-    helpers serialize shortest closed-window tolerance actions and fixed-target
-    generalized-posterior metadata without treating posterior credibility as
+    anchors without sampling the tilt. Fixed-target ECM computes deterministic
+    generalized-posterior modes from exact inverse latent-scale moments while
+    remaining separate from posterior sampling. Conservative scan-calibrated
+    and split exact-spacing TCSP helpers serialize empirical tolerance actions
+    and fixed-target metadata without treating posterior or ECM summaries as
     tolerance confidence.
 License: MIT + file LICENSE
 Encoding: UTF-8

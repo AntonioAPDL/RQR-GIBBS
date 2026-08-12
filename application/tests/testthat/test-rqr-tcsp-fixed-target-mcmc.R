@@ -71,23 +71,21 @@ test_that("TCSP fixed-target MCMC rejects reserved target overrides", {
   }
 })
 
-test_that("TCSP full-range empirical action fails closed for MCMC", {
+test_that("TCSP full-range empirical action returns MCMC unavailable", {
   y <- seq(-2, 2, length.out = 100)
 
-  err <- expect_error(
-    rqr_tcsp_fit_univariate(
-      y, 0.80, 0.68,
-      scan_method = "dkw_conservative",
-      fit_mcmc = TRUE,
-      mcmc_args = list(mcmc_control = list(n_burn = 1, n_mcmc = 1))
-    ),
-    "target_content >= 1"
+  fit <- rqr_tcsp_fit_univariate(
+    y, 0.80, 0.68,
+    scan_method = "dkw_conservative",
+    fit_mcmc = TRUE,
+    mcmc_args = list(mcmc_control = list(n_burn = 1, n_mcmc = 1))
   )
-  expect_s3_class(err, "rqr_tcsp_mcmc_unavailable_error")
-  expect_s3_class(err$tcsp_fit, "rqr_tcsp_fit")
-  expect_equal(err$tcsp_fit$contract$target_content, 1)
-  expect_equal(err$tcsp_fit$contract$retained_count, length(y))
-  expect_equal(err$tcsp_fit$contract$lower_endpoint, min(y))
-  expect_equal(err$tcsp_fit$contract$upper_endpoint, max(y))
-  expect_null(err$tcsp_fit$posterior_fit)
+  expect_s3_class(fit, "rqr_tcsp_fit")
+  expect_equal(fit$contract$target_content, 1)
+  expect_equal(fit$contract$retained_count, length(y))
+  expect_equal(fit$contract$lower_endpoint, min(y))
+  expect_equal(fit$contract$upper_endpoint, max(y))
+  expect_null(fit$posterior_fit)
+  expect_match(fit$contract$engine_unavailable_reasons$posterior,
+               "target_content >= 1")
 })
