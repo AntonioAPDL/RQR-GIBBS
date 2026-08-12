@@ -727,6 +727,80 @@ calculation and the finite-sample theorem for this closed-window action as
 open proof and numerical-certification tasks rather than as established
 results.
 
+Table~\ref{tab:tcsp-theorem-gates} records the role of the load-bearing
+TCSP results. The table is a claim-control device: each entry states the
+specific guarantee that would be unlocked by the theorem and the limitation
+that remains without it. Thus the software implementation, simulation
+protocol, and generalized posterior can be evaluated without confusing an
+implemented action with a completed mathematical guarantee.
+
+\begin{table}[t]
+\centering
+\caption{\textbf{Role of the TCSP theorem gates.} The current manuscript uses
+these results to organize scope, not to promote unproved claims. The formal
+tolerance action is the empirical closed order-statistic window; generalized-
+posterior summaries are separate endpoint-uncertainty summaries unless an
+action-transfer theorem is proved.}
+\label{tab:tcsp-theorem-gates}
+\TableStyle
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.18\textwidth}
+  >{\raggedright\arraybackslash}p{0.34\textwidth}
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+Result group & Guarantee or purpose & Current role in the article\\
+\midrule
+\texttt{T-ACTION}, \texttt{T-FEAS}
+& Fixes the measurable closed-window action, tie rule, retained-count
+  boundary cases, and the separation between an empirical range action
+  \(q=1\) and an MT-RQR posterior fit, which requires \(q\in(0,1)\).
+& Implemented and audit-pending. These results freeze the object being
+  validated but do not by themselves give tolerance confidence.\\
+\texttt{T-SCAN-1}, \texttt{T-SCAN-2}
+& Gives the distribution-free scan event and certifies the numerical retained
+  count used for \(1-\alpha\) tolerance confidence, with numerical
+  calibration error separated from sampling confidence.
+& Blocking for publication-level finite-sample tolerance wording. The
+  Monte Carlo implementation is conservative and simultaneous, but not an
+  exact scan recursion.\\
+\texttt{T-OPT-1}, \texttt{T-CT-1}, \texttt{T-CT-2}
+& Establishes sample-wise minimum width within the scan-certified contiguous
+  empirical class and makes \((q,\delta)\) a content-tilt coordinate system.
+& Supports class-restricted width language and the MT-RQR geometric
+  interpretation; it does not imply global optimality over all tolerance
+  procedures.\\
+\texttt{T-SH-1}, \texttt{T-SH-2}, \texttt{T-FAIL}
+& Characterizes the regular shortest path, endpoint-density equations,
+  derivative formulas, and counterexamples for boundaries, atoms, nonlinear
+  transformations, and multimodality.
+& Used as population geometry and continuation guidance. Nonunique or
+  disconnected shortest sets remain scope limitations.\\
+\texttt{T-MIXED}, \texttt{T-CONTENT-IF}, \texttt{T-ORTH}, \texttt{T-QASY}
+& Transfers fixed-content regularity to the same-sample selected shortest
+  action and derives analytic first-order tolerance buffers.
+& Required before claiming first-order asymptotic tolerance confidence for
+  the selected shortest action.\\
+\texttt{T-ORACLE-CAL}, \texttt{T-WIDTH}, \texttt{T-OPT-2},
+\texttt{T-REGRET}, \texttt{T-SCAN-ASY}
+& Defines the selected-action tolerance oracle, width price, class-restricted
+  first-order optimality, oracle regret, and the scan uniformity premium.
+& Required before claiming first-order minimum-width or oracle-efficiency
+  properties. Current oracle quantities are validation references only.\\
+\texttt{T-GB-PROP}, \texttt{T-GB-PLUGIN}, \texttt{T-GB-ACTION},
+\texttt{T-SANDWICH}
+& Establishes propriety, same-sample shortest-tilt plug-in stability,
+  posterior-action equivalence, and sandwich endpoint uncertainty.
+& Required for unconditional posterior uncertainty or for replacing the
+  empirical action by a posterior summary. Current posterior summaries are
+  fixed-target or conditional descriptors.\\
+\texttt{T-REG}, \texttt{T-COND-SCOPE}
+& Gives finite-family marginal regression tolerance and states the limits of
+  pointwise conditional tolerance claims.
+& Deferred. The univariate TCSP article does not promote regression-family
+  tolerance guarantees.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 The population shortest-window path gives a useful geometry for moving across
 contents. Suppose that the density is differentiable and strictly unimodal,
 and that the shortest window
@@ -780,13 +854,17 @@ nonunique shortest windows, response-scale dependence of geometric width, and
 unsupported attempts to attach the scan certificate to posterior summaries.
 
 The construction is deliberately separated into an empirical tolerance action
-and a fixed-target generalized posterior. A finite-sample scan theorem for the
-closed-window convention, certified critical-count computation,
-posterior-action equivalence, and regression-family marginal tolerance
-extensions remain to be established. In particular, posterior credibility is
-not tolerance confidence, \(\omega_{\mathrm R}\) is not a tolerance factor,
-and posterior mean or median endpoints do not inherit the scan property
-without an additional action-equivalence result.
+and a fixed-target generalized posterior. The current proof gates are:
+\texttt{T-SCAN-1}--\texttt{T-SCAN-2} for finite-sample scan validity and
+critical-count certification; \texttt{T-FEAS} for retained-count and \(q=1\)
+boundary handling; \texttt{T-MIXED}--\texttt{T-QASY} for selected-shortest
+asymptotic tolerance calibration; \texttt{T-ORACLE-CAL},
+\texttt{T-REGRET}, and \texttt{T-SCAN-ASY} for oracle-width claims; and
+\texttt{T-GB-PLUGIN}--\texttt{T-GB-ACTION} for any transfer from the empirical
+window to posterior summaries. In particular, posterior credibility is not
+tolerance confidence, \(\omega_{\mathrm R}\) is not a tolerance factor, and
+posterior mean or median endpoints do not inherit the scan property without an
+additional action-equivalence or direct calibration result.
 
 \section{Empirical Balance and Static Uncertainty Scope}
 \label{sec:static-theory-scope}

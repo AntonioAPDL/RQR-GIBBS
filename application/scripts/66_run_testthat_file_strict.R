@@ -8,6 +8,8 @@ if (length(args) != 1L) {
 path <- args[[1L]]
 if (!file.exists(path)) stop("Test file does not exist: ", path, call. = FALSE)
 
+suppressPackageStartupMessages(library(rqrgibbs))
+
 results <- testthat::test_file(path, reporter = "summary")
 failed <- unlist(lapply(results, function(test) {
   vapply(test$results, function(expectation) {

@@ -504,56 +504,7 @@ rqr_tcsp_fit_univariate <- function(
   )
   tilt <- rqr_tcsp_tilt_from_window(window)
   .rqr_tcsp_validate_mcmc_request(fit_mcmc, mcmc_args)
-  posterior_fit <- NULL
-  if (isTRUE(fit_mcmc)) {
-    if (calibration$target_content >= 1) {
-      stop(
-        paste(
-          "TCSP empirical range action has target_content >= 1;",
-          "rqr_mcmc_fit() requires coverage_level in (0, 1).",
-          "The formal tolerance action is still the empirical window."
-        ),
-        call. = FALSE
-      )
-    }
-    args <- utils::modifyList(
-      list(
-        y = y,
-        X = matrix(1, length(y), 1L, dimnames = list(NULL, "(Intercept)")),
-        coverage_level = calibration$target_content,
-        learning_rate = learning_rate,
-        mean_tilt = tilt$delta_raw,
-        learning_rate_mode = "fixed_rate",
-        beta_prior_obj = beta_prior("ridge", ridge = list(tau2 = 1e4))
-      ),
-      mcmc_args
-    )
-    posterior_fit <- do.call(rqr_mcmc_fit, args)
-    if (!isTRUE(all.equal(posterior_fit$model_spec$coverage_level,
-                          calibration$target_content, tolerance = 0))) {
-      stop("TCSP MCMC target audit failed: coverage_level drifted.",
-           call. = FALSE)
-    }
-    if (!identical(posterior_fit$model_spec$learning_rate_mode,
-                   "fixed_rate")) {
-      stop("TCSP MCMC target audit failed: learning_rate_mode drifted.",
-           call. = FALSE)
-    }
-    if (isTRUE(posterior_fit$model_spec$response_likelihood)) {
-      stop("TCSP MCMC target audit failed: response_likelihood is TRUE.",
-           call. = FALSE)
-    }
-    if (!identical(.rqr_tcsp_posterior_beta_prior_type(posterior_fit),
-                   "ridge")) {
-      stop("TCSP MCMC target audit failed: beta prior is not ridge.",
-           call. = FALSE)
-    }
-    if (!isTRUE(all.equal(unique(posterior_fit$model_spec$mean_tilt),
-                          tilt$delta_raw, tolerance = 1e-12))) {
-      stop("TCSP MCMC target audit failed: mean_tilt drifted.",
-           call. = FALSE)
-    }
-  }
+
   contract <- list(
     schema_version = .rqr_tcsp_schema(),
     method = "scan_calibrated_tolerance_calibrated_shortest_path_mt_rqr",
@@ -582,11 +533,8 @@ rqr_tcsp_fit_univariate <- function(
     delta_standardized = tilt$delta_standardized,
     learning_rate = learning_rate,
     learning_rate_mode = "fixed_rate",
-    prior_type = if (isTRUE(fit_mcmc)) {
-      .rqr_tcsp_posterior_beta_prior_type(posterior_fit)
-    } else {
-      NA_character_
-    },
+    prior_type = NA_character_,
+    posterior_model_spec_digest = NA_character_,
     posterior_summary_action = "not_formal_tolerance_action",
     global_shortest_verified = TRUE,
     assumptions_passed = c("iid_continuous_required_by_theory_not_tested_by_code"),
@@ -595,16 +543,97 @@ rqr_tcsp_fit_univariate <- function(
     asymptotic_claim_available = FALSE,
     response_scale_description = "original response scale",
     root_label_contract = "complete roots are exchangeable; endpoints by sorting",
-    provenance_digest = .rqr_tcsp_digest(list(calibration, window))
+    provenance_digest = .rqr_tcsp_digest(list(
+      calibration = calibration,
+      window = window,
+      posterior_model_spec = NULL
+    ))
   )
-  out <- list(
-    contract = contract,
-    calibration = calibration,
-    window = window,
-    posterior_fit = posterior_fit
-  )
-  class(out) <- c("rqr_tcsp_fit", "list")
-  out
+  make_out <- function(posterior_fit = NULL) {
+    out <- list(
+      contract = contract,
+      calibration = calibration,
+      window = window,
+      posterior_fit = posterior_fit
+    )
+    class(out) <- c("rqr_tcsp_fit", "list")
+    out
+  }
+
+  posterior_fit <- NULL
+  if (isTRUE(fit_mcmc)) {
+    if (calibration$target_content >= 1) {
+      out <- make_out(NULL)
+      msg <- paste(
+        "TCSP empirical range action has target_content >= 1;",
+        "rqr_mcmc_fit() requires coverage_level in (0, 1).",
+        "The formal tolerance action is preserved in the error condition."
+      )
+      stop(
+        structure(
+          list(message = msg, call = NULL, tcsp_fit = out),
+          class = c("rqr_tcsp_mcmc_unavailable_error", "error", "condition")
+        )
+      )
+    }
+    args <- utils::modifyList(
+      list(
+        y = y,
+        X = matrix(1, length(y), 1L, dimnames = list(NULL, "(Intercept)")),
+        coverage_level = calibration$target_content,
+        learning_rate = learning_rate,
+        mean_tilt = tilt$delta_raw,
+        learning_rate_mode = "fixed_rate",
+        beta_prior_obj = beta_prior("ridge", ridge = list(tau2 = 1e4))
+      ),
+      mcmc_args
+    )
+    posterior_fit <- do.call(rqr_mcmc_fit, args)
+    if (!isTRUE(all.equal(posterior_fit$model_spec$coverage_level,
+                          calibration$target_content, tolerance = 0))) {
+      stop("TCSP MCMC target audit failed: coverage_level drifted.",
+           call. = FALSE)
+    }
+    if (!isTRUE(all.equal(posterior_fit$model_spec$fixed_learning_rate,
+                          learning_rate, tolerance = 0))) {
+      stop("TCSP MCMC target audit failed: fixed learning_rate drifted.",
+           call. = FALSE)
+    }
+    if (!identical(posterior_fit$model_spec$learning_rate_mode,
+                   "fixed_rate")) {
+      stop("TCSP MCMC target audit failed: learning_rate_mode drifted.",
+           call. = FALSE)
+    }
+    if (isTRUE(posterior_fit$model_spec$response_likelihood)) {
+      stop("TCSP MCMC target audit failed: response_likelihood is TRUE.",
+           call. = FALSE)
+    }
+    if (!identical(.rqr_tcsp_posterior_beta_prior_type(posterior_fit),
+                   "ridge")) {
+      stop("TCSP MCMC target audit failed: beta prior is not ridge.",
+           call. = FALSE)
+    }
+    if (!isTRUE(all.equal(unique(posterior_fit$model_spec$mean_tilt),
+                          tilt$delta_raw, tolerance = 1e-12))) {
+      stop("TCSP MCMC target audit failed: mean_tilt drifted.",
+           call. = FALSE)
+    }
+    if (!is.matrix(posterior_fit$X) || ncol(posterior_fit$X) != 1L ||
+        !identical(colnames(posterior_fit$X), "(Intercept)")) {
+      stop("TCSP MCMC target audit failed: design is not intercept-only.",
+           call. = FALSE)
+    }
+    contract$prior_type <- .rqr_tcsp_posterior_beta_prior_type(posterior_fit)
+    contract$posterior_model_spec_digest <- .rqr_tcsp_digest(
+      posterior_fit$model_spec
+    )
+    contract$provenance_digest <- .rqr_tcsp_digest(list(
+      calibration = calibration,
+      window = window,
+      posterior_model_spec = posterior_fit$model_spec
+    ))
+  }
+  make_out(posterior_fit)
 }
 
 #' Predict a TCSP path start by nested expansion

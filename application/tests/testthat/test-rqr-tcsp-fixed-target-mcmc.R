@@ -17,6 +17,11 @@ test_that("TCSP fixed-target MCMC uses calibrated q and frozen shortest-path til
                    "fixed_response_scale")
   expect_equal(unique(fit$posterior_fit$model_spec$mean_tilt),
                fit$contract$delta_raw)
+  expect_equal(fit$posterior_fit$model_spec$fixed_learning_rate,
+               fit$contract$learning_rate)
+  expect_true(is.character(fit$contract$posterior_model_spec_digest))
+  expect_false(is.na(fit$contract$posterior_model_spec_digest))
+  expect_identical(colnames(fit$posterior_fit$X), "(Intercept)")
 })
 
 test_that("TCSP fixed-target MCMC gates unsupported nonzero-tilt modes", {
@@ -69,7 +74,7 @@ test_that("TCSP fixed-target MCMC rejects reserved target overrides", {
 test_that("TCSP full-range empirical action fails closed for MCMC", {
   y <- seq(-2, 2, length.out = 100)
 
-  expect_error(
+  err <- expect_error(
     rqr_tcsp_fit_univariate(
       y, 0.80, 0.68,
       scan_method = "dkw_conservative",
@@ -78,4 +83,11 @@ test_that("TCSP full-range empirical action fails closed for MCMC", {
     ),
     "target_content >= 1"
   )
+  expect_s3_class(err, "rqr_tcsp_mcmc_unavailable_error")
+  expect_s3_class(err$tcsp_fit, "rqr_tcsp_fit")
+  expect_equal(err$tcsp_fit$contract$target_content, 1)
+  expect_equal(err$tcsp_fit$contract$retained_count, length(y))
+  expect_equal(err$tcsp_fit$contract$lower_endpoint, min(y))
+  expect_equal(err$tcsp_fit$contract$upper_endpoint, max(y))
+  expect_null(err$tcsp_fit$posterior_fit)
 })

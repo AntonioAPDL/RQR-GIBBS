@@ -42,7 +42,20 @@ minimum-width interval with a first-tie rule and records `selected_output_row`,
 
 | Method ID | Reason |
 |---|---|
+| `smallest_nonparametric_tolerance_regions` | Must first be audited against Di Bucchianico, Einmahl, and Mushkudiani for identity or difference relative to the TCSP closed-window action and retained-count calibration. Do not present an identical action as an independent competitor. |
+| `cal_gibbs_tolerance_gibbsTI` | Requires a pinned `gibbsTI` release, source SHA-256, isolated library, deterministic tiny run, runtime budget, and replication subset before any comparative pilot. |
 | `calibrated_bnp_gibbs` | No tracked local implementation, validated runtime, or learning-rate calibration exists in this repository. |
+| `dp_tolerance_intervals` | Promising Bayesian/model-based future comparator only if verified public code, license, action definition, and published-result replication become available. |
+
+## Identity Audits Required Before Full Launch
+
+The smallest-nonparametric-tolerance-region literature is a theoretical
+ancestor of the TCSP action. Before a full launch, record an identity/difference
+audit covering retained-count calibration, endpoint convention, strict/weak
+inequalities, minimum-width comparison class, finite-sample guarantee,
+asymptotic result, and multivariate extension. If the univariate action is
+mathematically identical to TCSP after convention reconciliation, cite it as
+source theory rather than treating it as a separate competitor.
 
 ## Launch Boundary
 
