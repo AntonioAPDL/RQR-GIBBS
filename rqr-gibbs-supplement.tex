@@ -68,34 +68,33 @@ Computation}}
 \noindent
 Ordinary relaxed quantile regression induces a mean-preserving fixed-content
 interval under the population conditions stated in the main article. The
-derivations below establish its score equations, quantile-window and
-profiled-risk identification, and consequences for the retained and omitted
-distributions. They also distinguish equal-tailed, shortest-contiguous, and
-mean-tilted targets; record exact fractional empirical balance and the
-fixed-dimensional static uncertainty geometry; derive the latent-variable
-pseudo-asymmetric-Laplace representation and its Gaussian/GIG full
-conditionals; state the fixed-rate mean-tilted information shifts for fixed
-design and dynamic states; and give the ordinary-only learned-scale and
-component-scale contracts. The main article also formulates a proposed
-scan-calibrated tolerance action. The supporting finite-sample scan theorem,
-selected-action/oracle asymptotics, and posterior-action transfer theorem
-remain open. The fixed-rate nonzero-tilt information shifts
-are implemented for ridge fixed-design and DESN readouts and for fixed-\(W_t\)
-or frozen-template dynamic modes; broader validation, nonzero-tilt RHS-NS,
-learned-rate tilt, and component-scale dynamic tilt remain deferred.
+derivations establish its score equations, quantile-window and profiled-risk
+identification, and implications for the retained and omitted distributions.
+They distinguish equal-tailed, shortest-contiguous, and mean-tilted targets;
+derive exact fractional empirical balance and fixed-dimensional static
+uncertainty geometry; develop the pseudo-asymmetric-Laplace augmentation and
+its Gaussian and generalized-inverse-Gaussian full conditionals; and state the
+fixed-rate mean-tilt shifts for static and dynamic roots. Separate sections
+give the ordinary-only learned-rate and component-scale contracts. The main
+article also formulates a scan-calibrated tolerance action. Its finite-sample
+scan theorem, selected-action asymptotics, and posterior-action transfer remain
+open. Fixed nonzero tilt is available for ridge fixed-design and DESN readouts
+and for fixed-\(W_t\) or frozen-template dynamic modes; nonzero-tilt RHS-NS,
+learned-rate tilt, and component-scale evolution require separate theory and
+validation.
 \end{abstract}
 
 \section{Interpretive Scope}
 
 The main article presents the statistical target, generalized posterior, and
-core Gibbs sampler. This supplement provides the supporting derivations and
-implementation details. The RQR generalized posterior combines a prior with a
+core Gibbs sampler. The derivations and computational details below establish
+the supporting results. The RQR generalized posterior combines a prior with a
 loss-based update \citep{BissiriHolmesWalker2016GeneralBayes}; it is not derived
 from an ordinary response likelihood. Root-trajectory draws therefore induce
 generalized-posterior distributions for endpoint functions, but not a
 posterior predictive distribution for future responses.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{\textbf{Notation used across the theory and computation.}}
 \label{tab:supp-notation}
@@ -122,7 +121,7 @@ as a second narrative paper. Table~\ref{tab:supp-support-map} records the
 principal claim types and where the reader can recover the corresponding
 derivation or computational contract.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{\textbf{Support map for the main article.} The table separates
 population identification, finite-sample score identities, static uncertainty
@@ -151,11 +150,10 @@ Static generalized-posterior uncertainty geometry
 & Section~\ref{sec:supp-static-theory}
 & Fixed-dimensional iid random-design scope, \(H/J\) covariance contrast, and sandwich transform\\
 Scan-calibrated shortest-window tolerance construction
-& Main article TCSP section; proof ledger in \texttt{docs/theory/}
-& Theorem-gate map for closed-window action, certified retained count,
-  feasibility, scan-class width optimality, selected-action asymptotics,
-  oracle-regret claims, generalized-posterior plug-in scope, and regression
-  tolerance limitations\\
+& Main article, scan-calibration section
+& Definition of the empirical action and claim boundary; the finite-sample
+  scan proof, selected-action asymptotics, and posterior-action transfer are
+  not supplied in this supplement\\
 Pseudo-AL Gibbs sampler
 & Sections~\ref{sec:supp-pseudo-al}--\ref{sec:supp-static-regression}
 & Augmented generalized posterior, GIG latent-scale full conditionals, Gaussian root full conditionals, and prior adapters\\
@@ -168,6 +166,14 @@ Evidence and reproducibility scope
 \bottomrule
 \end{tabularx}
 \end{table}
+
+In the proposed scan-calibrated construction, the retained content and
+shortest-window tilt are computed before the generalized posterior is fitted.
+When the same observations determine the tilt and update the prior, endpoint
+summaries are conditional on that selected target. They do not propagate
+shortest-window selection uncertainty. An unconditional interpretation would
+require a same-sample plug-in stability result or a separate target-selection
+sample.
 
 \section{Fixed-Content Interval Functionals}
 \label{sec:supp-interval-functionals}
@@ -460,12 +466,12 @@ where \(I_{\eta_1,\eta_2}(Y)\) indicates that \(Y\) lies between the
 unordered roots. These design-weighted projection equations need not imply
 conditional coverage for every \(x\).
 
-We do not use the finite-sample unbiasedness argument in
-\citet{PouplinEtAl2024RQR}. Its Monte Carlo step treats fitted,
-data-dependent endpoints as fixed, and its zero-gradient argument does not
-cover nonsmooth optima at sample points coinciding with a root. A valid
-finite-sample or asymptotic result requires a separate empirical-process
-analysis.
+The finite-sample unbiasedness calculation in
+\citet{PouplinEtAl2024RQR} treats fitted, data-dependent endpoints as fixed,
+and its zero-gradient argument does not cover nonsmooth optima when an
+observation coincides with a fitted root. We therefore do not use that
+calculation as a finite-sample guarantee; such a result requires a separate
+empirical-process analysis.
 
 \section{Mean-Tilted RQR}
 \label{sec:supp-mean-tilt}
@@ -502,15 +508,15 @@ sufficiently rich and the unrestricted conditions apply.
 The losses \eqref{eq:mean-tilted-loss-roots} and the ordinary
 \(\delta=0\) loss are invariant to exchanging the two raw roots. With
 exchangeable root priors, the unordered pair is identified but the labels
-``root 1'' and ``root 2'' are not. The implemented static sampler therefore
+``root 1'' and ``root 2'' are not. The static sampler therefore
 permits a complete-root swap that exchanges the coefficient vector and any
 root-specific prior state as one block. This swap is not a device for naming a
 lower root. Lower and upper endpoint functionals are obtained by pointwise
 sorting. Coefficient-level lower/upper summaries require a separate
 post-processing chart: one binary keep/swap assignment is made for each
-retained complete root block using distances on a declared audit design, and
+retained complete root block using distances on a declared reference design, and
 canonical coefficient summaries are suppressed if the two fitted linear roots
-cross or the assignment is ambiguous on that design. The dynamic implementation
+cross or the assignment is ambiguous on that design. The dynamic sampler
 uses the same rule for ordinate paths: a retained draw may be kept or swapped
 as one complete path, but roots are not relabelled separately at different
 times.
@@ -789,7 +795,7 @@ external validation screening. They are not posterior draws, do not sample a
 tilt in the Gibbs chain, and do not justify reusing the ordinary learned-scale
 update at nonzero tilt. Strong skewness, finite-support boundary solutions,
 and heavy-tailed cases can move the first-order shortest approximation outside
-the admissible finite-root tilt range. The implementation records adjusted
+the admissible finite-root tilt range. The diagnostic code records adjusted
 skewness, excess kurtosis, standardized sixth moment, probability-window
 clipping, boundary proximity, and bootstrap sidecars for this reason. The
 main article's deterministic Cornish--Fisher figure and population comparison
@@ -1124,7 +1130,7 @@ The Gaussian full conditional is
 \Normal(\mat Q_1^{-1}\vect h_1,\mat Q_1^{-1}).
 \]
 The second root uses the same update after exchanging labels. A proper ridge
-prior enters through the same Gaussian canonical form. The current ordinary
+prior enters through the same Gaussian canonical form. The ordinary
 conditionally Gaussian shrinkage specification is an external
 regularized-horseshoe adapter using the Nishimura--Suchard augmentation
 (RHS-NS), with separate
@@ -1171,7 +1177,7 @@ for the external horseshoe-family adapter.
 \subsection{Ordinary-only RHS-NS prior adapter}
 \label{sec:supp-rhs-ns}
 
-The ordinary fixed-design MCMC implementation also exposes a
+The ordinary fixed-design sampler also supports a
 conditionally Gaussian RHS-NS prior adapter
 \citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS,
 NishimuraSuchard2023SSS}. For root \(k\), let
@@ -1179,8 +1185,8 @@ NishimuraSuchard2023SSS}. For root \(k\), let
 \vect\psi_k
 =\{\vect\lambda_k^2,\vect\nu_k,\tau_k^2,\xi_k,\zeta_k^2\}
 \]
-denote its current local, auxiliary, global, and shoulder-scale state. The
-current adapter requires the first design column to be a declared intercept
+denote its local, auxiliary, global, and shoulder-scale state. The adapter
+requires the first design column to be a declared intercept
 and excludes its coefficient from shrinkage. For each remaining coefficient,
 \(j=2,\ldots,p\), the adapter supplies the diagonal conditional prior precision
 \begin{equation}
@@ -1199,9 +1205,9 @@ identically specified states. Any exchangeable label swap must therefore move
 Equation~\eqref{eq:supp-rhs-ns-precision} specifies the verified conditional
 prior adapter; it is not a new standalone derivation of the marginal RHS-NS
 prior. The
-implementation delegates prior-state construction and updating to the pinned,
-archive-attested reference runtime and accepts the \texttt{rhs\_ns} mode, not
-its distinct generic \texttt{rhs} mode. It is MCMC-only and restricted here to
+Prior-state construction and updating are delegated to the pinned,
+archive-attested reference runtime; the adapter accepts the \texttt{rhs\_ns}
+mode, not its distinct generic \texttt{rhs} mode. It is MCMC-only and restricted here to
 ordinary RQR, \(\vect\delta=\vect 0\). The proper-Gaussian argument for the
 nonzero-tilt generalized posterior does not extend automatically through its
 random-scale
@@ -1281,7 +1287,7 @@ from the training responses, the calculation convention is recorded and the
 value is frozen before MCMC; this is a data-dependent empirical-Bayes
 specification.
 
-For backward compatibility, the current software stores this quantity in
+For backward compatibility, the software stores this quantity in
 fields named \texttt{lambda}. Those fields represent the manuscript's
 \(\kappa\); they are unrelated to the RQR-W penalty \(\lambda_W\).
 
@@ -1291,7 +1297,7 @@ at fixed
 \(\omega_{\mathrm R}\) become consequential when the learning rate is random.
 The Gamma full conditionals below must not be reused for mean-tilted RQR without
 a separately normalized, proper joint generalized posterior. The initial
-mean-tilted implementation is therefore restricted to fixed learning rates.
+mean-tilted sampler is therefore restricted to fixed learning rates.
 
 If one conditions additionally on \(\vect v\), the full conditional under the
 augmented generalized posterior is
@@ -1321,7 +1327,7 @@ whose root and prior-state updates are otherwise valid.
 \(c,s_L,a_\kappa,b_\kappa,\mathcal O\), the root priors, all design or
 evolution quantities, iteration controls, and the label-swap rule.
 \item \textbf{Initialization.} Choose finite raw roots, \(\kappa>0\), positive
-placeholder latent scales at observed sites, and valid ordinary-only prior or
+initial latent scales at observed sites, and valid ordinary-only prior or
 evolution states.
 \item \textbf{One complete sweep.} Repeat the following mandatory
 partial-collapse order for every warm-up and sampling iteration:
@@ -1342,10 +1348,9 @@ root-specific blocks are exchangeable.
 \item \textbf{Rate status.} This is the ordinary-only learned inverse-loss
 scale convention. Its \(\kappa\) is neither a response variance nor an
 automatic coverage-calibration parameter.
-\item \textbf{Exact, implementation, and validation status.} The displayed
-order is an exact partially collapsed sampler for the specified generalized
-posterior in its validated fixed-joint modes. It is implemented for ordinary
-RQR and must not
+\item \textbf{Target and applicability.} The displayed order is an exact
+partially collapsed sampler for the specified generalized posterior in its
+validated fixed-joint modes. It applies to ordinary RQR and must not
 be generalized to nonzero tilt by copying the Gamma update.
 \end{algorithmblock}
 Store draws only according to the declared retention policy. The collapsed
@@ -1482,7 +1487,7 @@ Cholesky factorization and does not silently turn an indefinite covariance into
 a positive one by taking absolute singular values. Under the default fail-fast
 policy, a failed factorization or negative-eigenvalue projection stops the fit;
 an exact positive-semidefinite draw with zero eigenvalues remains admissible.
-The audit policy uses a declared jitter ladder and records every covariance
+The numerical policy uses a declared jitter ladder and records every covariance
 alteration. When a backward prior
 covariance is repaired, the repaired matrix is used consistently in the gain,
 smoothing covariance, and path-draw covariance. Fixed-generalized-posterior
@@ -1525,7 +1530,7 @@ empirical Bayes and must be recorded as such.
 \item \texttt{adaptive\_discount}: \(W_t\) is recomputed inside each conditional
 filter. In RQR, \(H_t\) and \(V_t\) depend on the other root, \(v_t\), and
 \(\kappa\), so the implied evolution covariance also depends on those blocks.
-The current alternating updates omit terms that would generally arise from
+The alternating updates omit terms that would generally arise from
 such dependence in a fixed joint density. This mode is therefore experimental
 and is not described as an exact Gibbs update for a common generalized
 posterior.
@@ -1806,8 +1811,8 @@ warnings described above.}
 \section{Reproducibility and Evidence Scope}
 \label{sec:supp-reproducibility}
 
-The repository separates mathematical target status, numerical execution, and
-reproducibility eligibility. Reference checks cover the Gaussian filtering and
+The computational record separates mathematical target status, numerical
+execution, and reproducibility eligibility. Reference checks cover the Gaussian filtering and
 smoothing algebra, latent- and component-scale conditionals, missing
 observations, root labels, and exact checkpoint continuation. A versioned run
 manifest records the data-generating mechanism, forecast design, seeds,
@@ -1825,7 +1830,7 @@ secondary, target-specific comparison. Simulation estimands, data-generating
 factors, Monte Carlo precision, failure handling, and reporting rules are
 prespecified \citep{MorrisWhiteCrowther2019Simulation}.
 
-The implemented validation program is deepest for ordinary RQR
+The available validation evidence is deepest for ordinary RQR
 (\(\delta=0\)). Fixed-rate nonzero mean tilt has implementation checks for the
 Gaussian information shift, zero-tilt equivalence, dense conditional
 references, and the prespecified population-tilt illustrations in
@@ -1833,9 +1838,9 @@ Section~\ref{sec:supp-oracle-tilt-diagnostics}. These checks do not replace an
 externally evaluated tilt-selection protocol or a repeated-sample calibration
 study, both of which remain necessary before comparative scientific evidence
 is claimed.
-Detailed implementation status, runtime attestations, gate results, and
-withheld-evidence decisions are maintained in the repository audit notes
-rather than in the statistical supplement.
+Detailed software status, runtime attestations, gate results, and
+withheld-evidence decisions are maintained in the companion repository rather
+than in the statistical supplement.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}

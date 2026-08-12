@@ -23,7 +23,7 @@ test_that("TCSP proof ledger exposes report3 theorem gates", {
   expect_match(text, "the Monte Carlo scan calibration is exact", fixed = TRUE)
 })
 
-test_that("TCSP manuscript and registry retain theorem-gate boundaries", {
+test_that("TCSP manuscript exposes publication-facing claim boundaries", {
   repo_root <- normalizePath(testthat::test_path("..", "..", ".."),
                              winslash = "/", mustWork = TRUE)
   main <- paste(readLines(file.path(repo_root, "main.tex"), warn = FALSE),
@@ -36,9 +36,13 @@ test_that("TCSP manuscript and registry retain theorem-gate boundaries", {
     "tcsp_benchmark_registry_20260812.md"
   ), warn = FALSE), collapse = "\n")
 
-  expect_match(main, "tab:tcsp-theorem-gates", fixed = TRUE)
-  expect_match(main, "T-GB-PLUGIN", fixed = TRUE)
-  expect_match(main, "posterior credibility is not", fixed = TRUE)
+  expect_match(main, "tab:tcsp-theory-scope", fixed = TRUE)
+  expect_match(main,
+               "Theoretical scope of the proposed scan-calibrated",
+               fixed = TRUE)
+  expect_false(grepl("\\\\texttt\\{T[-]", main, perl = TRUE))
+  expect_match(main, "Same-sample plug-in tilt", fixed = TRUE)
+  expect_match(main, "Posterior credibility is not", fixed = TRUE)
   expect_match(supplement, "Scan-calibrated shortest-window tolerance",
                fixed = TRUE)
   expect_match(registry, "smallest_nonparametric_tolerance_regions",

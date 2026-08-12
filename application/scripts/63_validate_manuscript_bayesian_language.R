@@ -58,8 +58,13 @@ for (file in source_files) {
 main_only_forbidden <- c(
   "branch-level development language" = "branch[- ]level",
   "proof-gated development language" = "proof[- ]gated",
+  "internal theorem-gate identifier" = "\\\\texttt\\{T[-]",
+  "internal proof-gate prose" = "proof gates",
+  "internal audit status" = "audit[- ]pending",
   "theorem-ledger development language" = "current theorem ledger",
   "source TODO marker" = "TODO[-:]",
+  "placeholder latent scales" = "placeholder latent scales",
+  "repository-facing audit design" = "audit design|audit domain",
   "ambiguous static scan" = "static scan",
   "ambiguous Gibbs scan order" = "transition and scan order"
 )
@@ -95,7 +100,8 @@ required <- list(
     "Gaussian full conditional",
     "not a sampling model for \\(y_i\\)",
     "posterior predictive distributions for future responses",
-    "A Proposed Scan-Calibrated Tolerance Construction",
+    "Scan Calibration and a Proposed Tolerance Action",
+    "Theoretical scope of the proposed scan-calibrated construction",
     "L_q'=\\frac{b_q}{\\lambda_q(a_q-b_q)}<0",
     "U_q'=\\frac{a_q}{\\lambda_q(a_q-b_q)}>0"
   ),
