@@ -32,10 +32,10 @@ nohup Rscript application/scripts/69_validate_rqr_bayes_uq.R \
 pid="$!"
 echo "${pid}" > "${pid_file}"
 
-cat "Launched Bayesian UQ validation pilot\n"
-cat "  mode: ${mode}\n"
-cat "  git_commit: ${git_commit}\n"
-cat "  pid: ${pid}\n"
-cat "  output_dir: ${output_dir}\n"
-cat "  log_file: ${log_file}\n"
-cat "  pid_file: ${pid_file}\n"
+printf 'Launched Bayesian UQ validation pilot\n'
+printf '  mode: %s\n' "${mode}"
+printf '  git_commit: %s\n' "${git_commit}"
+printf '  pid: %s\n' "${pid}"
+printf '  output_dir: %s\n' "${output_dir}"
+printf '  log_file: %s\n' "${log_file}"
+printf '  pid_file: %s\n' "${pid_file}"
