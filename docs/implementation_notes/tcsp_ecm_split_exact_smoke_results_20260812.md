@@ -1,8 +1,8 @@
 # TCSP/ECM Split-Exact Smoke Results
 
 Date: 2026-08-12
-Working-tree HEAD recorded in smoke manifests:
-`4ca59085630ead755f5f09f8013dc287a993f71e`
+Source commit recorded in smoke manifests:
+`beb9da6eba4fada0c392fefdaf9934fcc7addcdd`
 
 ## MT-RQR-ECM Smoke
 
@@ -15,7 +15,7 @@ make rqr-ecm-validation-smoke
 Output:
 
 ```text
-application/outputs/rqr_ecm_validation_v1/smoke_20260812T061214Z
+application/outputs/rqr_ecm_validation_v1/smoke_20260812T061638Z
 ```
 
 Summary:
@@ -38,7 +38,7 @@ make tcsp-split-exact-validation-smoke
 Output:
 
 ```text
-application/outputs/tcsp_split_exact_validation_v1/smoke_20260812T061359Z
+application/outputs/tcsp_split_exact_validation_v1/smoke_20260812T061823Z
 ```
 
 Summary:
