@@ -42,13 +42,23 @@ mkdir -p "${run_dir}/logs" "${run_dir}/pids"
 scheduler_log="${run_dir}/logs/scheduler.log"
 scheduler_pid_file="${run_dir}/pids/scheduler.pid"
 
-nohup Rscript application/scripts/71_manage_rqr_bayes_uq_main_waves.R \
-  --action=launch \
-  "--mode=${mode}" \
-  "--run-dir=${run_dir}" \
-  "--max-concurrent=${max_concurrent}" \
-  "--poll-seconds=${poll_seconds}" \
-  >"${scheduler_log}" 2>&1 &
+if command -v setsid >/dev/null 2>&1; then
+  nohup setsid Rscript application/scripts/71_manage_rqr_bayes_uq_main_waves.R \
+    --action=launch \
+    "--mode=${mode}" \
+    "--run-dir=${run_dir}" \
+    "--max-concurrent=${max_concurrent}" \
+    "--poll-seconds=${poll_seconds}" \
+    >"${scheduler_log}" 2>&1 &
+else
+  nohup Rscript application/scripts/71_manage_rqr_bayes_uq_main_waves.R \
+    --action=launch \
+    "--mode=${mode}" \
+    "--run-dir=${run_dir}" \
+    "--max-concurrent=${max_concurrent}" \
+    "--poll-seconds=${poll_seconds}" \
+    >"${scheduler_log}" 2>&1 &
+fi
 scheduler_pid="$!"
 echo "${scheduler_pid}" > "${scheduler_pid_file}"
 sleep 2
