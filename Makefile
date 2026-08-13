@@ -152,7 +152,7 @@ rqr-bayes-uq-validation-moderate: package-install
 	$(R) application/scripts/69_validate_rqr_bayes_uq.R --mode=moderate --config=$(RQR_BAYES_UQ_VALIDATION_CONFIG) --output-dir=$(RQR_BAYES_UQ_VALIDATION_MODERATE_DIR)
 
 launch-rqr-bayes-uq-overnight: package-install
-	application/scripts/70_launch_rqr_bayes_uq_overnight.sh
+	bash application/scripts/70_launch_rqr_bayes_uq_overnight.sh
 
 health-rqr-bayes-uq-validation:
 	@test -n "$(strip $(RQR_BAYES_UQ_VALIDATION_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_VALIDATION_RUN_DIR to one completed Bayesian UQ validation run." >&2; exit 64; }
@@ -166,14 +166,14 @@ launch-rqr-bayes-uq-main: package-install
 	RQR_BAYES_UQ_VALIDATION_CONFIG=$(RQR_BAYES_UQ_MAIN_CONFIG) \
 	RQR_BAYES_UQ_VALIDATION_RUN_ROOT=application/runs/rqr_bayes_uq_validation_main_20260813 \
 	RQR_BAYES_UQ_VALIDATION_LOG_ROOT=application/logs/rqr_bayes_uq_validation_main_20260813 \
-	application/scripts/70_launch_rqr_bayes_uq_overnight.sh
+	bash application/scripts/70_launch_rqr_bayes_uq_overnight.sh
 
 launch-rqr-bayes-uq-main-dpm-companion: package-install
 	RQR_BAYES_UQ_OVERNIGHT_MODE=dpm_companion \
 	RQR_BAYES_UQ_VALIDATION_CONFIG=$(RQR_BAYES_UQ_MAIN_CONFIG) \
 	RQR_BAYES_UQ_VALIDATION_RUN_ROOT=application/runs/rqr_bayes_uq_validation_main_20260813 \
 	RQR_BAYES_UQ_VALIDATION_LOG_ROOT=application/logs/rqr_bayes_uq_validation_main_20260813 \
-	application/scripts/70_launch_rqr_bayes_uq_overnight.sh
+	bash application/scripts/70_launch_rqr_bayes_uq_overnight.sh
 
 health-rqr-bayes-uq-main:
 	@test -n "$(strip $(RQR_BAYES_UQ_MAIN_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MAIN_RUN_DIR to one completed Bayesian UQ main run." >&2; exit 64; }
