@@ -553,9 +553,18 @@ start_wave <- function(run_dir, wave) {
            file.path(run_dir, "scan_calibration_cache.rds")),
     paste0("--oracle-cache=", file.path(run_dir, "oracle_cache.rds"))
   )
+  writeLines(c(
+    paste0("wave_id: ", wave$wave_id),
+    paste0("started_at_utc: ",
+           format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")),
+    paste("command: Rscript", paste(shQuote(worker_args), collapse = " ")),
+    ""
+  ), log_file)
+  launcher <- if (nzchar(Sys.which("setsid"))) "nohup setsid" else "nohup"
+  inner <- paste("exec Rscript", paste(shQuote(worker_args), collapse = " "))
   command <- paste(
-    "nohup Rscript", paste(shQuote(worker_args), collapse = " "),
-    ">", shQuote(log_file), "2>&1 & echo $!"
+    launcher, "bash -c", shQuote(inner),
+    ">>", shQuote(log_file), "2>&1 & echo $!"
   )
   pid <- system(command, intern = TRUE)
   if (!length(pid) || !nzchar(pid[[1L]])) {
