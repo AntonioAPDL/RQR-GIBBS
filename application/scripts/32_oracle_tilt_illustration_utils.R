@@ -1,4 +1,4 @@
-# Utilities for single-data-set ordinary and mean-tilted RQR illustrations.
+# Utilities for single-data-set MPI and MTI illustrations.
 #
 # These helpers intentionally live outside the package namespace. They generate
 # reproducible, lightweight examples for the manuscript workflow and do not
@@ -69,6 +69,11 @@ oti_file_sha256 <- function(path) {
     return(NA_character_)
   }
   digest::digest(file = path, algo = "sha256", serialize = FALSE)
+}
+
+oti_display_target <- function(target) {
+  target <- as.character(target)
+  ifelse(target == "RQR", "MPI", target)
 }
 
 oti_git_state <- function(repo_root = ".") {
@@ -1231,7 +1236,7 @@ oti_plot_curve_panels <- function(curves, file, title,
       cex.lab = 0.96, cex.axis = 0.88, cex.main = 1.02
     )
     graphics::title(
-      main = paste0(target, " target"), line = 0.75,
+      main = paste0(oti_display_target(target), " target"), line = 0.75,
       cex.main = 1.02
     )
     graphics::grid(col = "#e9e9e9", lwd = 0.8)
@@ -1352,7 +1357,7 @@ oti_plot_endpoint_error_panels <- function(error_density, file, title,
       cex.lab = 0.96, cex.axis = 0.88, cex.main = 1.02
     )
     graphics::title(
-      main = paste0(target, " target"), line = 0.75,
+      main = paste0(oti_display_target(target), " target"), line = 0.75,
       cex.main = 1.02
     )
     graphics::grid(col = "#e9e9e9", lwd = 0.8)

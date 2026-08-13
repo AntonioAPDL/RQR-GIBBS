@@ -7,7 +7,7 @@ Date: 2026-08-12
 | ID | Object | Status | Guarantee | Limitation |
 |---|---|---|---|---|
 | `T-DP-1` | Direct-DP posterior conjugacy | `PROVED-AND-AUDITED` | `F | D_n ~ DP(a+n,H_n)` for fixed prior `DP(a,H)` and iid sampling from `F`. | Requires fixed, non-data-dependent base measure for strict Bayesian interpretation. |
-| `T-DP-2` | Fixed-interval DP content law | `PROVED-AND-AUDITED` | For fixed closed `I`, `F(I) | D_n` has the exact Beta law used by `rqr_dp_content_probability()`. | The interval must be fixed when the probability is evaluated; selected-action coverage needs separate analysis. |
+| `T-DP-2` | Fixed-interval DP content law | `PROVED-AND-AUDITED` | For fixed closed `I`, `F(I) | D_n` has the exact Beta law used by `dp_content_probability()`. | The interval must be fixed when the probability is evaluated; selected-action coverage needs separate analysis. |
 | `T-DP-3` | Direct-DP Bayesian action search | `IMPLEMENTED-AUDIT-PENDING` | Exhaustive search over closed order-statistic intervals with deterministic first-width tie rule. | Bayesian content action only; not a distribution-free tolerance theorem. |
 | `T-HBS-1` | Hybrid Bayesian-scan action | `IMPLEMENTED-AUDIT-PENDING` | Selects the first shortest candidate satisfying both scan count and posterior content constraints. | No posterior endpoint-coverage theorem; scan critical-value proof remains separate. |
 | `T-DPM-1` | Truncated Gaussian DPM Gibbs engine | `IMPLEMENTED-AUDIT-PENDING` | Response-likelihood posterior draws for a smooth mixture approximation to `F`. | Monte Carlo and truncation approximation; not exact DP conjugacy. |
@@ -25,6 +25,6 @@ The authoritative Bayesian UQ path for shortest-interval content is:
 2. exact fixed-interval Beta content probabilities;
 3. hybrid Bayesian-scan action when repeated-sampling scan guarding is required.
 
-MT-RQR MCMC/ECM remains a generalized-Bayes fixed-target plug-in summary. It is
+MTI MCMC/ECM remains a generalized-Bayes fixed-target plug-in summary. It is
 not an unconditional posterior over the population shortest interval and is not
 the source of tolerance confidence.

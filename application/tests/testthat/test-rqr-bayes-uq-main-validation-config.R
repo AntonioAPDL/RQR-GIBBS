@@ -23,8 +23,8 @@ test_that("Bayesian UQ main config freezes high-coverage iid launch scope", {
   expect_equal(as.numeric(main$posterior_confidences), c(0.90, 0.95, 0.99))
   expect_true(isTRUE(main$paired_thresholds))
   expect_true("oracle_sh" %in% as.character(main$method_ids))
-  expect_true("tcsp_mtrqr_gibbs_median_mc" %in% as.character(main$method_ids))
-  expect_true("tcsp_mtrqr_ecm_map_mc" %in% as.character(main$method_ids))
+  expect_true("tcsp_mti_gibbs_median_mc" %in% as.character(main$method_ids))
+  expect_true("tcsp_mti_ecm_map_mc" %in% as.character(main$method_ids))
   expect_true("split_ecm_fixed_tilt" %in% as.character(main$method_ids))
   expect_false("dpm_bayes" %in% as.character(main$method_ids))
   expect_false("dp_bayes" %in% as.character(main$method_ids))
@@ -36,14 +36,14 @@ test_that("Bayesian UQ main config freezes high-coverage iid launch scope", {
 
   methods <- vapply(config$methods, `[[`, character(1), "method_id")
   expect_true(all(c("oracle_sh", "hdp_s_mc", "tcsp_mc", "tcsp_dkw",
-                    "tcsp_mtrqr_gibbs_median_mc",
-                    "tcsp_mtrqr_ecm_map_mc",
+                    "tcsp_mti_gibbs_median_mc",
+                    "tcsp_mti_ecm_map_mc",
                     "split_ecm_fixed_tilt", "dpm_bayes") %in% methods))
 
-  mtrqr <- config$methods[methods %in% c(
-    "tcsp_mtrqr_gibbs_median_mc", "tcsp_mtrqr_ecm_map_mc"
+  mti <- config$methods[methods %in% c(
+    "tcsp_mti_gibbs_median_mc", "tcsp_mti_ecm_map_mc"
   )]
-  expect_true(all(vapply(mtrqr, function(x) {
+  expect_true(all(vapply(mti, function(x) {
     isFALSE(x$formal_tolerance_action) &&
       isTRUE(x$generalized_bayes) &&
       isFALSE(x$response_likelihood) &&
@@ -124,8 +124,8 @@ test_that("Bayesian UQ main smoke runner emits launch diagnostics", {
   expect_true(any(results$method_id == "hdp_s_mc"))
   expect_true(any(results$method_id == "tcsp_mc"))
   expect_true(any(results$method_id == "oracle_sh"))
-  expect_true(any(results$method_id == "tcsp_mtrqr_gibbs_median_mc"))
-  expect_true(any(results$method_id == "tcsp_mtrqr_ecm_map_mc"))
+  expect_true(any(results$method_id == "tcsp_mti_gibbs_median_mc"))
+  expect_true(any(results$method_id == "tcsp_mti_ecm_map_mc"))
   expect_true(any(results$method_id == "split_ecm_fixed_tilt"))
   split_rows <- results[
     results$method_id %in% c("split_empirical_shortest", "split_ecm_fixed_tilt"),
@@ -137,14 +137,14 @@ test_that("Bayesian UQ main smoke runner emits launch diagnostics", {
     split_rows$fit_class == "rqr_tcsp_split_exact_calibration_infeasible"
   ))
   gibbs_rows <- results[
-    results$method_id == "tcsp_mtrqr_gibbs_median_mc" &
+    results$method_id == "tcsp_mti_gibbs_median_mc" &
       results$guaranteed_content == 0.90 &
       !results$infeasible,
     ,
     drop = FALSE
   ]
   ecm_rows <- results[
-    results$method_id == "tcsp_mtrqr_ecm_map_mc" &
+    results$method_id == "tcsp_mti_ecm_map_mc" &
       results$guaranteed_content == 0.90 &
       !results$infeasible,
     ,
@@ -152,7 +152,9 @@ test_that("Bayesian UQ main smoke runner emits launch diagnostics", {
   ]
   expect_gt(nrow(gibbs_rows), 0L)
   expect_gt(nrow(ecm_rows), 0L)
+  expect_true(any(grepl("mti_mcmc", gibbs_rows$fit_class, fixed = TRUE)))
   expect_true(any(grepl("rqr_mcmc", gibbs_rows$fit_class, fixed = TRUE)))
+  expect_true(any(grepl("mti_ecm", ecm_rows$fit_class, fixed = TRUE)))
   expect_true(any(grepl("rqr_ecm", ecm_rows$fit_class, fixed = TRUE)))
   expect_true(all(is.finite(gibbs_rows$formal_action_width)))
   expect_true(all(is.finite(gibbs_rows$fitted_summary_width)))
@@ -203,12 +205,12 @@ test_that("Bayesian UQ worker can execute a deterministic one-cell wave", {
   expect_equal(unique(results$n), 120L)
   expect_equal(unique(results$guaranteed_content), 0.90)
   expect_identical(manifest$wave_id, "test_wave")
-  expect_true(any(results$method_id == "tcsp_mtrqr_gibbs_median_mc"))
-  expect_true(any(results$method_id == "tcsp_mtrqr_ecm_map_mc"))
+  expect_true(any(results$method_id == "tcsp_mti_gibbs_median_mc"))
+  expect_true(any(results$method_id == "tcsp_mti_ecm_map_mc"))
   expect_true(any(results$method_id == "split_ecm_fixed_tilt"))
 })
 
-test_that("Bayesian UQ worker reuses fixed-target MT-RQR fits across paired thresholds", {
+test_that("Bayesian UQ worker reuses fixed-target MTI fits across paired thresholds", {
   output_dir <- tempfile("rqr-bayes-uq-cache-smoke-")
   config_path <- tempfile("rqr-bayes-uq-cache-config-", fileext = ".json")
   on.exit(unlink(c(output_dir, config_path), recursive = TRUE, force = TRUE),
@@ -227,7 +229,7 @@ test_that("Bayesian UQ worker reuses fixed-target MT-RQR fits across paired thre
   config$modes$smoke$posterior_confidences <- list(0.90, 0.95, 0.99)
   config$modes$smoke$dgp_ids <- list("normal")
   config$modes$smoke$method_ids <- list(
-    "tcsp_mtrqr_gibbs_median_mc", "tcsp_mtrqr_ecm_map_mc"
+    "tcsp_mti_gibbs_median_mc", "tcsp_mti_ecm_map_mc"
   )
   config$scan_calibration$smoke_n_sim <- 200L
   jsonlite::write_json(config, config_path, pretty = TRUE, auto_unbox = TRUE)
@@ -255,7 +257,9 @@ test_that("Bayesian UQ worker reuses fixed-target MT-RQR fits across paired thre
     sum(results$fit_reused_across_posterior_thresholds, na.rm = TRUE),
     4L
   )
+  expect_equal(sum(grepl("mti_mcmc", results$fit_class, fixed = TRUE)), 3L)
   expect_equal(sum(grepl("rqr_mcmc", results$fit_class, fixed = TRUE)), 3L)
+  expect_equal(sum(grepl("mti_ecm", results$fit_class, fixed = TRUE)), 3L)
   expect_equal(sum(grepl("rqr_ecm", results$fit_class, fixed = TRUE)), 3L)
 })
 

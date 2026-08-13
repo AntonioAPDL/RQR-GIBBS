@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-# Deterministic population figures for the RQR article.
+# Deterministic population figures for the MPI/MTI article.
 # This script does not fit a model, run MCMC, or simulate responses.
 
 SCRIPT_VERSION <- "2026-07-29-main-figure02-cross-distribution-sh-labels-2"
@@ -818,7 +818,7 @@ TARGET_ORDER <- c("equal_tailed", "ordinary_rqr", "shortest")
 INTERVAL_SEGMENT_LTY <- 1L
 TARGET_LABEL <- c(
   equal_tailed = "ET",
-  ordinary_rqr = "RQR",
+  ordinary_rqr = "MPI",
   shortest = "SH"
 )
 CF_TARGET_ORDER <- c("cornish_fisher_equal_tailed", "cornish_fisher_shortest")
@@ -983,7 +983,7 @@ figure_01_three_principles <- function(out_dir, dist, content) {
       oma = c(0, 0, 1.15, 0), mgp = c(2.2, 0.65, 0), tcl = -0.3
     )
     targets <- TARGET_ORDER
-    titles <- c("Equal-tailed", "Ordinary RQR", "Shortest contiguous")
+    titles <- c("Equal-tailed", "MPI", "Shortest contiguous")
     subtitles <- c(
       "Balances omitted probabilities",
       "Balances omitted first moments",
@@ -1370,7 +1370,7 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
   draw_target_legend <- function(cex = 0.64) {
     graphics::legend(
       "topright", bty = "n", cex = cex,
-      legend = c("ET", "RQR", "SH"),
+      legend = c("ET", "MPI", "SH"),
       col = COL[TARGET_ORDER], pch = PCH[TARGET_ORDER],
       lty = 1, lwd = 2.8, pt.cex = 0.88,
       y.intersp = 0.78
@@ -1461,7 +1461,7 @@ figure_s01_cross_distribution <- function(out_dir, dists, content) {
         }
         graphics::text(
           point$standardized_delta, point$standardized_width,
-          labels = "ET = RQR = SH", pos = 4, offset = 0.42,
+          labels = "ET = MPI = SH", pos = 4, offset = 0.42,
           cex = 0.64, col = "#38434D"
         )
       } else {

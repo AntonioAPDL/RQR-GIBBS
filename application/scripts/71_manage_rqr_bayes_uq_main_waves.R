@@ -19,6 +19,58 @@ arg_value <- function(prefix, default = NULL) {
 stopf <- function(...) stop(paste0(...), call. = FALSE)
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
+legacy_method_id_map <- c(
+  tcsp_mtrqr_gibbs_median_mc = "tcsp_mti_gibbs_median_mc",
+  tcsp_mtrqr_gibbs_mean_mc = "tcsp_mti_gibbs_mean_mc",
+  tcsp_mtrqr_ecm_map_mc = "tcsp_mti_ecm_map_mc",
+  tcsp_mtrqr_gibbs_median_oracle_tilt_mc =
+    "tcsp_mti_gibbs_median_oracle_tilt_mc",
+  tcsp_mtrqr_ecm_map_oracle_tilt_mc = "tcsp_mti_ecm_map_oracle_tilt_mc"
+)
+canonical_method_id <- function(x) {
+  x <- as.character(x)
+  mapped <- unname(legacy_method_id_map[x])
+  ifelse(is.na(mapped), x, mapped)
+}
+canonical_engine_id <- function(x) {
+  if (is.null(x)) return(x)
+  sub("^mtrqr_", "mti_", as.character(x))
+}
+canonicalize_text_id <- function(x) {
+  if (is.null(x)) return(x)
+  gsub("mtrqr", "mti", as.character(x), fixed = TRUE)
+}
+canonicalize_bayes_uq_config <- function(config) {
+  for (ii in seq_along(config$methods)) {
+    config$methods[[ii]]$method_id <- canonical_method_id(
+      config$methods[[ii]]$method_id
+    )
+    config$methods[[ii]]$action_lane <- canonicalize_text_id(
+      config$methods[[ii]]$action_lane
+    )
+    config$methods[[ii]]$selected_interval_source <- canonicalize_text_id(
+      config$methods[[ii]]$selected_interval_source
+    )
+    config$methods[[ii]]$uq_engine <- canonical_engine_id(
+      config$methods[[ii]]$uq_engine
+    )
+  }
+  for (mode_name in names(config$modes)) {
+    config$modes[[mode_name]]$method_ids <- as.list(canonical_method_id(
+      unlist(config$modes[[mode_name]]$method_ids, use.names = FALSE)
+    ))
+  }
+  engines <- config$engine_defaults %||% list()
+  if (!is.null(engines$mtrqr_gibbs) && is.null(engines$mti_gibbs)) {
+    engines$mti_gibbs <- engines$mtrqr_gibbs
+  }
+  if (!is.null(engines$mtrqr_ecm) && is.null(engines$mti_ecm)) {
+    engines$mti_ecm <- engines$mtrqr_ecm
+  }
+  config$engine_defaults <- engines
+  config
+}
+
 for (package in c("rqrgibbs", "jsonlite", "digest")) {
   if (!requireNamespace(package, quietly = TRUE)) {
     stopf("Required package is not installed: ", package)
@@ -58,6 +110,7 @@ if (!is.finite(poll_seconds) || poll_seconds < 5L) {
 }
 
 config <- jsonlite::read_json(config_path, simplifyVector = FALSE)
+config <- canonicalize_bayes_uq_config(config)
 if (!mode %in% names(config$modes)) stopf("Mode not found in config: ", mode)
 mode_cfg <- config$modes[[mode]]
 dgp_by_id <- setNames(config$dgps, vapply(config$dgps, `[[`,
@@ -98,10 +151,10 @@ scan_method_for <- function(method_id) {
   configured <- method_meta$scan_method %||% NULL
   if (!is.null(configured)) return(as.character(configured)[1L])
   if (method_id %in% c(
-    "hdp_s_mc", "tcsp_mc", "tcsp_mtrqr_gibbs_median_mc",
-    "tcsp_mtrqr_gibbs_mean_mc", "tcsp_mtrqr_ecm_map_mc",
-    "tcsp_mtrqr_gibbs_median_oracle_tilt_mc",
-    "tcsp_mtrqr_ecm_map_oracle_tilt_mc"
+    "hdp_s_mc", "tcsp_mc", "tcsp_mti_gibbs_median_mc",
+    "tcsp_mti_gibbs_mean_mc", "tcsp_mti_ecm_map_mc",
+    "tcsp_mti_gibbs_median_oracle_tilt_mc",
+    "tcsp_mti_ecm_map_oracle_tilt_mc"
   )) {
     return("monte_carlo_conservative")
   }
@@ -145,7 +198,7 @@ calibrate_safely <- function(method_id, n, c_target, tol_conf) {
   method <- scan_method_for(method_id)
   args <- scan_args_for(method_id, n, c_target, tol_conf)
   tryCatch(
-    rqr_tcsp_calibrate_count(
+    tcsp_calibrate_count(
       n = n,
       guaranteed_content = c_target,
       tolerance_confidence = tol_conf,
@@ -157,7 +210,7 @@ calibrate_safely <- function(method_id, n, c_target, tol_conf) {
     error = function(e) {
       list(
         schema_version = paste0(config$schema_version, "/scan_calibration"),
-        method = "scan_calibrated_tcsp_mt_rqr",
+        method = "scan_calibrated_tcsp_mti",
         scan_critical_method = method,
         n = as.integer(n),
         guaranteed_content = as.numeric(c_target),
@@ -485,7 +538,7 @@ prepare_run <- function() {
     spec <- oracle_spec_from_dgp(dgp)
     for (c_target in unique(as.numeric(mode_cfg$guaranteed_contents))) {
       key <- oracle_key(dgp_id, c_target)
-      certificate <- rqr_interval_oracle(
+      certificate <- mti_interval_oracle(
         family = spec$family,
         coverage_level = c_target,
         target = "SH",
@@ -638,7 +691,7 @@ collect_run <- function(run_dir) {
     "",
     "This is the collected wave run for the iid univariate Bayesian UQ main validation.",
     "The `oracle_sh` method is a non-deployable synthetic-DGP benchmark for the true population shortest interval and exact mean tilt.",
-    "The `tcsp_mtrqr_gibbs_*` and `tcsp_mtrqr_ecm_*` rows are fixed-target MT-RQR fitted summaries after scan calibration.",
+    "The `tcsp_mti_gibbs_*` and `tcsp_mti_ecm_*` rows are fixed-target MTI fitted summaries after scan calibration.",
     "For those rows, `formal_action_*` records the associated scan action and `fitted_summary_*` records the Gibbs or ECM endpoint summary.",
     "The operational reference remains `tcsp_mc`; oracle-relative gaps are efficiency diagnostics only."
   )
@@ -718,8 +771,8 @@ stop_run <- function(run_dir) {
     status = if (length(alive)) "stop_incomplete_processes_still_alive" else
       "superseded_stopped",
     reason = paste(
-      "Superseded by corrected method grid with explicit MT-RQR Gibbs and",
-      "MT-RQR ECM competitor rows."
+      "Superseded by corrected method grid with explicit MTI Gibbs and",
+      "MTI ECM competitor rows."
     ),
     stopped_at_utc = stopped_at,
     pids_seen = pids,
@@ -734,7 +787,7 @@ stop_run <- function(run_dir) {
     "",
     paste0("Stopped at UTC: `", stopped_at, "`"),
     "",
-    "Reason: this run was superseded by the corrected method grid with explicit MT-RQR Gibbs and MT-RQR ECM competitor rows.",
+    "Reason: this run was superseded by the corrected method grid with explicit MTI Gibbs and MTI ECM competitor rows.",
     "",
     "Do not collect or promote these partial artifacts as final confirmatory evidence."
   ), file.path(run_dir, "SUPERSEDED.md"))

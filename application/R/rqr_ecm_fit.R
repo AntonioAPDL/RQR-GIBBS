@@ -452,7 +452,7 @@ rqr_ecm_fit <- function(y, X, coverage_level, learning_rate = 1,
       beta_prior_obj, control, best$objective_trace
     )
   )
-  class(out) <- c("rqr_ecm", "rqr_fit")
+  class(out) <- c("mti_ecm", "rqr_ecm", "mti_fit", "rqr_fit")
   out
 }
 
@@ -548,7 +548,8 @@ rqr_ecm_path <- function(y, X, target_contents, mean_tilts = 0,
   }
   out <- list(
     schema_version = .rqr_ecm_path_schema(),
-    method = "fixed_target_mt_rqr_ecm_path",
+    method = "fixed_target_mti_ecm_path",
+    legacy_method = "fixed_target_mt_rqr_ecm_path",
     target_contents = contents,
     learning_rate = learning_rate,
     warm_start = isTRUE(warm_start),
@@ -558,7 +559,7 @@ rqr_ecm_path <- function(y, X, target_contents, mean_tilts = 0,
     target_contract =
       "fixed q/delta path only; no TCSP scan calibration is performed"
   )
-  class(out) <- c("rqr_ecm_path", "list")
+  class(out) <- c("mti_ecm_path", "rqr_ecm_path", "list")
   out
 }
 

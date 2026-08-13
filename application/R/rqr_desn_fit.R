@@ -202,6 +202,7 @@ rqr_desn_fit <- function(y, coverage_level, ...,
         rqr_learning_rate_mode = fit$model_spec$learning_rate_mode %||% learning_rate_mode,
         rqr_mean_tilt_mode = fit$model_spec$mean_tilt_mode %||% "zero",
         rqr_mean_tilt_digest = fit$model_spec$mean_tilt_digest %||% NA_character_,
+        mti_mean_tilt_summary = fit$model_spec$mean_tilt_summary %||% list(),
         rqr_mean_tilt_summary = fit$model_spec$mean_tilt_summary %||% list(),
         inherited_design_p0 = design_fit$meta$p0 %||% NA_real_,
         response_likelihood = FALSE,
@@ -210,9 +211,10 @@ rqr_desn_fit <- function(y, coverage_level, ...,
     ),
     model_spec = fit$model_spec,
     summary = fit$summary,
-    note = "RQR-DESN is a generalized-Bayes interval readout; it does not define response predictive samples."
+    note = "MTI-DESN is a generalized-Bayes interval readout; it does not define response predictive samples.",
+    legacy_name = "RQR-DESN"
   )
-  class(out) <- c("rqr_desn_fit", "rqr_fit")
+  class(out) <- c("mti_desn_fit", "rqr_desn_fit", "mti_fit", "rqr_fit")
   out
 }
 

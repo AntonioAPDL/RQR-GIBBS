@@ -88,7 +88,8 @@ rqr_weighted_shortest_interval <- function(
     support_size = as.integer(m),
     target_content = q
   ))
-  class(out) <- c("rqr_weighted_shortest_interval", "list")
+  class(out) <- c("weighted_shortest_interval",
+                  "rqr_weighted_shortest_interval", "list")
   out
 }
 
@@ -119,4 +120,3 @@ rqr_weighted_shortest_interval <- function(
   }
   list(best = best, tie_count = tie_count)
 }
-

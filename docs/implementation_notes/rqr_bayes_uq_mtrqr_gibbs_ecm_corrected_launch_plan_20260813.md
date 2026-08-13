@@ -1,10 +1,10 @@
-# Corrected MT-RQR Gibbs/ECM Bayesian-UQ Launch Plan
+# Corrected MTI Gibbs/ECM Bayesian-UQ Launch Plan
 
 Date: 2026-08-13
 
 Branch audited: `feature/bayesian-uq-authoritative-report6-20260812`
 
-Current HEAD audited: pre-commit working tree after correcting the MT-RQR
+Current HEAD audited: pre-commit working tree after correcting the MTI
 Gibbs/ECM launcher and MC terminal-range calibration.
 
 Active run audited:
@@ -13,11 +13,11 @@ Active run audited:
 ## Executive Decision
 
 The active main run should be treated as a superseded scan/DP baseline run, not
-as the final MT-RQR comparison.  It launched the scan-calibrated TCSP action but
-did not launch explicit MT-RQR Gibbs or MT-RQR ECM/EM competitors.
+as the final MTI comparison.  It launched the scan-calibrated TCSP action but
+did not launch explicit MTI Gibbs or MTI ECM/EM competitors.
 
 The corrected launch should add explicit method IDs for the fixed-target
-MT-RQR Gibbs and ECM layers after scan calibration, while preserving the
+MTI Gibbs and ECM layers after scan calibration, while preserving the
 distinction between:
 
 1. scan-certified tolerance actions;
@@ -34,7 +34,7 @@ promotes them to formal tolerance actions.
 
 | Area | Current State | Diagnosis | Required Correction |
 |---|---|---|---|
-| Active launch methods | `oracle_sh`, `hdp_s_mc`, `tcsp_mc`, `tcsp_dkw`, `split_empirical_shortest`, `wilks_minmax`, `bb_shortest_diag` | No explicit fixed-target MT-RQR Gibbs or ECM rows are in the confirmatory grid. | Add explicit Gibbs/ECM method IDs to config and runner. |
+| Active launch methods | `oracle_sh`, `hdp_s_mc`, `tcsp_mc`, `tcsp_dkw`, `split_empirical_shortest`, `wilks_minmax`, `bb_shortest_diag` | No explicit fixed-target MTI Gibbs or ECM rows are in the confirmatory grid. | Add explicit Gibbs/ECM method IDs to config and runner. |
 | TCSP Gibbs implementation | `rqr_tcsp_fit_univariate(..., fit_mcmc = TRUE)` calls `rqr_mcmc_fit()` at calibrated `q=k/n` and frozen tilt. | Implemented and contract-tested, but not used by `69_validate_rqr_bayes_uq.R`. | Wire launcher methods to this path or an equivalent audited helper. |
 | TCSP ECM implementation | `rqr_tcsp_fit_univariate(..., fit_ecm = TRUE)` calls `rqr_ecm_fit()` at calibrated `q=k/n` and frozen tilt. | Implemented and contract-tested, but not used by the main launch. | Add ECM method rows and runner extraction of MAP interval summaries. |
 | Split exact-spacing ECM | `rqr_tcsp_split_exact_fit(..., pilot_method = "ecm_fixed_tilt")` exists and smoke tests passed. | The active main run only uses `split_empirical_shortest`. | Add `split_ecm_fixed_tilt` after a smoke runtime gate. |
@@ -43,7 +43,7 @@ promotes them to formal tolerance actions.
 | Oracle tilt | `oracle_sh` stores the population shortest interval and exact mean tilt. Fitted TCSP currently uses sample shortest-window tilt. | For simulation, oracle tilt is useful as a non-deployable diagnostic; for application, sample/fitted tilt is deployable. | Include oracle-tilt Gibbs/ECM as optional diagnostic variants or columns, not as deployable methods. |
 | MC high-content calibration | MC scan calibration at `n=500`, `c=0.99`, confidence `0.95` can fail to certify the terminal full-range event under a finite simulation CDF band. | The terminal event has an exact Uniform range formula, so treating it as MC-infeasible is unnecessarily conservative. | Implement exact terminal-range rescue for MC at `k=n`; keep DKW as the stress comparator. |
 | DGP coverage | Current grid covers symmetric, skewed, hard skewed, mixture, sharp mixture, contamination, and Student-t. | It lacks bounded/support-boundary and near-nonunique shortest cases from the PRO report. | Add only after extending CDF/oracle support and tests. |
-| DPM/DP scope | Direct DP hybrid is in main; standalone DP/DPM are in companion mode. | This is reasonable for runtime. It does not address the MT-RQR Gibbs/ECM omission. | Keep DPM/DP companion separate; do not block corrected MT-RQR relaunch on DPM expansion. |
+| DPM/DP scope | Direct DP hybrid is in main; standalone DP/DPM are in companion mode. | This is reasonable for runtime. It does not address the MTI Gibbs/ECM omission. | Keep DPM/DP companion separate; do not block corrected MTI relaunch on DPM expansion. |
 
 ## Corrected Method Taxonomy
 
@@ -60,22 +60,22 @@ These rows are formal tolerance actions or non-deployable references:
 - `tcsp_dkw`: DKW stress comparator, expected to be infeasible often at high
   content.
 
-### Fixed-target MT-RQR diagnostic competitor lane
+### Fixed-target MTI diagnostic competitor lane
 
 These rows use the two-stage target construction:
 
 1. scan calibration determines `k` and `q=k/n`;
 2. the shortest empirical window determines the fixed target and tilt;
-3. Gibbs or ECM fits the fixed MT-RQR generalized-Bayes target.
+3. Gibbs or ECM fits the fixed MTI generalized-Bayes target.
 
 Recommended explicit method IDs:
 
-- `tcsp_mtrqr_gibbs_median_mc`: fixed-target MT-RQR Gibbs; evaluated interval is
+- `tcsp_mti_gibbs_median_mc`: fixed-target MTI Gibbs; evaluated interval is
   the posterior median endpoint summary.
-- `tcsp_mtrqr_gibbs_mean_mc`: fixed-target MT-RQR Gibbs; evaluated interval is
+- `tcsp_mti_gibbs_mean_mc`: fixed-target MTI Gibbs; evaluated interval is
   the posterior mean endpoint summary. Keep this in smoke/moderate unless it is
   materially different from the median summary.
-- `tcsp_mtrqr_ecm_map_mc`: fixed-target MT-RQR ECM/MAP; evaluated interval is
+- `tcsp_mti_ecm_map_mc`: fixed-target MTI ECM/MAP; evaluated interval is
   `predict_interval.rqr_ecm()` on the intercept-only design.
 
 All three must carry:
@@ -93,8 +93,8 @@ All three must carry:
 
 For simulation only, add optional variants:
 
-- `tcsp_mtrqr_gibbs_median_oracle_tilt_mc`;
-- `tcsp_mtrqr_ecm_map_oracle_tilt_mc`.
+- `tcsp_mti_gibbs_median_oracle_tilt_mc`;
+- `tcsp_mti_ecm_map_oracle_tilt_mc`.
 
 These use the population `oracle_sh` mean tilt after the same scan calibration.
 They are non-deployable and should be used to isolate algorithmic behavior from
@@ -113,9 +113,9 @@ diagnostics, not as deployable competitors.
    - `tilt_source`;
    - `deployable`;
    - `formal_tolerance_action`.
-3. Extend `scan_method_for()` so all `*_mc` scan-calibrated MT-RQR methods share
+3. Extend `scan_method_for()` so all `*_mc` scan-calibrated MTI methods share
    the same MC scan calibration cache as `tcsp_mc`.
-4. Add a helper in the worker, for example `fit_tcsp_mtrqr_plugin_method()`, that:
+4. Add a helper in the worker, for example `fit_tcsp_mti_plugin_method()`, that:
    - retrieves the cached scan calibration;
    - returns fail-closed infeasible rows if `k > n` or `q >= 1`;
    - computes the empirical shortest window;
@@ -157,8 +157,8 @@ The corrected confirmatory method grid should be:
 oracle_sh
 hdp_s_mc
 tcsp_mc
-tcsp_mtrqr_gibbs_median_mc
-tcsp_mtrqr_ecm_map_mc
+tcsp_mti_gibbs_median_mc
+tcsp_mti_ecm_map_mc
 split_empirical_shortest
 split_ecm_fixed_tilt
 wilks_minmax
@@ -169,19 +169,19 @@ tcsp_dkw
 Optional, after smoke:
 
 ```text
-tcsp_mtrqr_gibbs_median_oracle_tilt_mc
-tcsp_mtrqr_ecm_map_oracle_tilt_mc
+tcsp_mti_gibbs_median_oracle_tilt_mc
+tcsp_mti_ecm_map_oracle_tilt_mc
 ```
 
 Recommended fixed-target controls for the first corrected smoke:
 
 ```json
 {
-  "mtrqr_gibbs": {
+  "mti_gibbs": {
     "learning_rate": 1,
     "mcmc_control": {"n_burn": 20, "n_mcmc": 40, "thin": 2}
   },
-  "mtrqr_ecm": {
+  "mti_ecm": {
     "learning_rate": 1,
     "ecm_control": {
       "max_iter": 80,
@@ -223,8 +223,8 @@ needs an oracle audit before it enters confirmatory mode.
 
 Required unit tests before any corrected launch:
 
-1. Main config contains the MT-RQR Gibbs and ECM method IDs.
-2. `scan_method_for()` maps all `*_mc` MT-RQR methods to
+1. Main config contains the MTI Gibbs and ECM method IDs.
+2. `scan_method_for()` maps all `*_mc` MTI methods to
    `monte_carlo_conservative`.
 3. Worker smoke produces at least one row with `fit_class` containing
    `rqr_mcmc`.
@@ -238,7 +238,7 @@ Required unit tests before any corrected launch:
 8. Repeated posterior thresholds reuse fixed-target Gibbs/ECM fits or otherwise
    record why reuse was impossible.
 9. `split_ecm_fixed_tilt` is present in smoke output and has no target override.
-10. Updated README/launch docs state that MT-RQR Gibbs/ECM rows are diagnostic
+10. Updated README/launch docs state that MTI Gibbs/ECM rows are diagnostic
     fitted summaries, not scan-certified tolerance actions.
 
 Required run gates:
@@ -256,7 +256,7 @@ Then run a corrected mini-pilot:
 Rscript application/scripts/69_validate_rqr_bayes_uq.R \
   --mode=smoke \
   --config=application/config/rqr_bayes_uq_validation_main_20260813.json \
-  --output-dir=application/outputs/rqr_bayes_uq_validation_main_20260813/smoke_mtrqr_gibbs_ecm_<stamp>
+  --output-dir=application/outputs/rqr_bayes_uq_validation_main_20260813/smoke_mti_gibbs_ecm_<stamp>
 ```
 
 Only after the smoke passes should the old active run be stopped and the new
@@ -300,11 +300,11 @@ action is preferable and should be added if time permits.
 Implemented in the working tree:
 
 - corrected config schema `rqrgibbs_bayes_uq_validation/1.2.0`;
-- confirmatory method grid with `tcsp_mtrqr_gibbs_median_mc`,
-  `tcsp_mtrqr_ecm_map_mc`, and `split_ecm_fixed_tilt`;
+- confirmatory method grid with `tcsp_mti_gibbs_median_mc`,
+  `tcsp_mti_ecm_map_mc`, and `split_ecm_fixed_tilt`;
 - worker result columns for formal scan actions, fitted summaries, target
   audits, MCMC draw counts, ECM diagnostics, and fit reuse;
-- worker caching of fixed-target MT-RQR fits across paired posterior thresholds;
+- worker caching of fixed-target MTI fits across paired posterior thresholds;
 - explicit split exact-spacing fail-closed rows for exact-spacing infeasibility;
 - exact MC terminal-range rescue for `k=n`;
 - wave-manager stop action plus `make stop-rqr-bayes-uq-main`.
@@ -334,10 +334,10 @@ conservative stress comparator.
 Do not rewrite claims before the corrected evidence exists.  After the corrected
 run completes:
 
-- Methods section: explicitly separate scan-certified TCSP, MT-RQR Gibbs
-  plug-in summaries, MT-RQR ECM/MAP summaries, and response-likelihood DP/DPM
+- Methods section: explicitly separate scan-certified TCSP, MTI Gibbs
+  plug-in summaries, MTI ECM/MAP summaries, and response-likelihood DP/DPM
   models.
-- Simulation section: report validity before width; mark MT-RQR Gibbs/ECM rows
+- Simulation section: report validity before width; mark MTI Gibbs/ECM rows
   as diagnostic fitted summaries unless promoted by a separate theorem.
 - Supplement: add target-audit tables for `q`, tilt source, learning rate,
   fit class, and scan calibration digest.
@@ -349,6 +349,6 @@ run completes:
 Do not continue to spend cluster time on the active seven-method launch as the
 final main study.  The corrected launch should be implemented and smoked first,
 then the active run should be stopped and superseded.  The corrected main study
-must include explicit MT-RQR Gibbs and ECM method IDs, action-source metadata,
+must include explicit MTI Gibbs and ECM method IDs, action-source metadata,
 fit audits, and cached execution so the article can accurately say which of the
 author's methods were tested.

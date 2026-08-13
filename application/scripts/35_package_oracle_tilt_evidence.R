@@ -104,7 +104,7 @@ writeLines(
       "95% fixed-design and dynamic-linear interval-root illustrations."
     ),
     paste(
-      "The three columns of each figure target ordinary RQR, the",
+      "The three columns of each figure target MPI, the",
       "equal-tailed oracle tilt, and the shortest-interval oracle tilt."
     ),
     paste(

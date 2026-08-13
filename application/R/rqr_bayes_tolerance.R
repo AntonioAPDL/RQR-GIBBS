@@ -101,7 +101,8 @@ rqr_dp_bayes_tolerance_action <- function(
       if (nrow(feasible)) "satisfied" else "infeasible_within_candidate_class",
     candidates = candidates
   )
-  class(out) <- c("rqr_dp_bayes_tolerance_action", "list")
+  class(out) <- c("dp_bayes_tolerance_action",
+                  "rqr_dp_bayes_tolerance_action", "list")
   out
 }
 

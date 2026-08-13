@@ -1412,7 +1412,7 @@ rqr_dlm_fit <- function(
   out$continuation_history_digest <- .rqr_digest(
     out$continuation_history_contract
   )
-  class(out) <- c("rqr_dlm_mcmc", "rqr_fit")
+  class(out) <- c("mti_dlm_mcmc", "rqr_dlm_mcmc", "mti_fit", "rqr_fit")
   out
 }
 

@@ -1,4 +1,4 @@
-# RQR article figures
+# MPI/MTI article figures
 
 This directory contains tracked source for the article's deterministic
 population figures and algebraic schematics. It does not contain fitted
@@ -81,7 +81,7 @@ describe only the illustrative shape and content; the publication receipt
 records both numerical inputs separately. Interval targets are solved on the
 raw response scale and only then mapped to mean/standard-deviation standardized
 coordinates. This population benchmark is distinct from the
-pseudo-asymmetric-Laplace loss-kernel augmentation applied to the RQR
+pseudo-asymmetric-Laplace loss-kernel augmentation applied to the MTI
 pseudo-residual.
 
 The manifest records the source revision, generator hash, configuration,
@@ -91,21 +91,21 @@ generation timestamps, so PDF byte identity is not claimed.
 
 Every target interval segment is solid. Target identity remains redundant
 through direct labels, stable ordering, color, and filled endpoint glyphs:
-equal-tailed uses squares, ordinary RQR uses circles, and shortest contiguous
+equal-tailed uses squares, MPI uses circles, and shortest contiguous
 uses triangles. The symmetric Normal benchmark marks exact three-way
 coincidence without horizontal jitter. Distribution-panel axes are computed
 from deterministic quantiles, all target endpoints, the population mean,
 density knots, and label extents; generation fails rather than silently
 clipping required geometry.
 
-Figure 2 uses an explicit annotation contract: `RQR 0.00` is centered below
+Figure 2 uses an explicit annotation contract: `MPI 0.00` is centered below
 the blue zero-tilt marker in the window-to-tilt panel, and the orange `SH`
 label is centered above its marker in the width panel. The remaining labels
 retain fixed target-specific positions and colors, and the oracle test checks
 these mappings before rendering.
 
 The main-text Cornish--Fisher diagnostic is Figure 3. It keeps the exact
-population path and exact RQR, ET, and SH markers visually distinct from the
+population path and exact MPI, ET, and SH markers visually distinct from the
 open CF-ET and CF-SH approximation markers. Its population inputs use true
 skewness; no sample estimate, MCMC draw, or response-prediction object enters
 the figure. The accompanying generated table compares exact and first-order

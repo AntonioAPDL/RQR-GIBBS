@@ -188,6 +188,7 @@ for (family in names(figure_specs)) {
 family_label <- ifelse(
   summary$family == "fixed_design", "Fixed design", "Dynamic roots"
 )
+target_label <- oti_display_target(summary$target)
 if (identical(receipt$schema_version, v3_schema)) {
   allowed_dispositions <- c("strict_pass", "accepted_revised_tolerance")
   disposition <- summary$promotion_disposition
@@ -223,7 +224,7 @@ disposition_label <- ifelse(
 )
 rows <- sprintf(
   "%s & %s & %.3f & %.3f & %.3f & %.3f & %s \\\\",
-  family_label, summary$target,
+  family_label, target_label,
   summary$endpoint_rmse, summary$width_rmse,
   summary$realized_coverage, summary$mean_width,
   disposition_label

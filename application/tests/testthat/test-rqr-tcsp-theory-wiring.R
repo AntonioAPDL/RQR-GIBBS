@@ -1,9 +1,9 @@
-test_that("TCSP proof ledger exposes report3 theorem gates", {
+test_that("TCSP-MTI proof ledger exposes report3 theorem gates", {
   repo_root <- normalizePath(testthat::test_path("..", "..", ".."),
                              winslash = "/", mustWork = TRUE)
   ledger <- readLines(file.path(
     repo_root, "docs", "theory",
-    "tcsp_mt_rqr_proof_ledger_20260811.md"
+    "tcsp_mti_proof_ledger_20260811.md"
   ), warn = FALSE)
   text <- paste(ledger, collapse = "\n")
 

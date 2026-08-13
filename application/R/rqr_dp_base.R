@@ -57,7 +57,7 @@
     is_data_dependent = isTRUE(is_data_dependent),
     provenance_digest = .rqr_bayes_digest(contract)
   )
-  class(out) <- c("rqr_dp_base_measure", "list")
+  class(out) <- c("dp_base_measure", "rqr_dp_base_measure", "list")
   out
 }
 
@@ -148,4 +148,3 @@ rqr_dp_base_empirical_normal <- function(
   ))
   out
 }
-

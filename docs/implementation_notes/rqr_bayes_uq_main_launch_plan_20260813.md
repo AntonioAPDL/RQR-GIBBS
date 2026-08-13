@@ -13,8 +13,8 @@ Detached launcher: `application/scripts/72_launch_rqr_bayes_uq_main_waves.sh`
 ## Purpose
 
 Run the main iid univariate validation for the authoritative Bayesian-scan
-tolerance action after the completed moderate pilot, with explicit MT-RQR Gibbs
-and MT-RQR ECM/MAP fitted-summary competitors wired into the same two-stage
+tolerance action after the completed moderate pilot, with explicit MTI Gibbs
+and MTI ECM/MAP fitted-summary competitors wired into the same two-stage
 scan-calibration design.  In this launch, coverage levels are guaranteed
 population contents, not regression or dynamic coverage claims.
 
@@ -57,9 +57,9 @@ population contents, not regression or dynamic coverage claims.
 - `hdp_s_mc`: authoritative hybrid direct-DP Bayesian-scan shortest interval
   with MC scan calibration.
 - `tcsp_mc`: scan-only TCSP shortest interval with MC scan calibration.
-- `tcsp_mtrqr_gibbs_median_mc`: fixed-target MT-RQR Gibbs generalized-Bayes
+- `tcsp_mti_gibbs_median_mc`: fixed-target MTI Gibbs generalized-Bayes
   posterior-median endpoint summary after MC scan calibration.
-- `tcsp_mtrqr_ecm_map_mc`: fixed-target MT-RQR ECM/MAP generalized-Bayes
+- `tcsp_mti_ecm_map_mc`: fixed-target MTI ECM/MAP generalized-Bayes
   endpoint summary after MC scan calibration.
 - `split_empirical_shortest`: split exact-spacing empirical-shortest action.
 - `split_ecm_fixed_tilt`: split exact-spacing action using an ECM fixed-tilt
@@ -85,7 +85,7 @@ The runner records:
 - scan certified lower probability;
 - formal TCSP action endpoints, width, content, and success flag;
 - fitted Gibbs/ECM summary endpoints and width when applicable;
-- MT-RQR target content, tilt source, target mean tilt, and audit digest;
+- MTI target content, tilt source, target mean tilt, and audit digest;
 - Gibbs draw counts and ECM convergence diagnostics;
 - fit-reuse flags for paired posterior thresholds;
 - content gap `true_content - c`;
@@ -123,7 +123,7 @@ exact Uniform sample-range event when that is the first certifiable action. This
 is not an exact scan recursion for all candidates; it is a finite-sample rescue
 for the full-range action. In the prepared confirmatory grid, this prevents a
 false MC infeasibility at `n=500`, `c=0.99`: `tcsp_mc` and `hdp_s_mc` are
-feasible with `k=500`, while fixed-target MT-RQR Gibbs/ECM summaries remain
+feasible with `k=500`, while fixed-target MTI Gibbs/ECM summaries remain
 fail-closed because their fitted target would require `q=1`.
 
 ## Launch
@@ -189,7 +189,7 @@ make stop-rqr-bayes-uq-main \
 
 - If `hdp_s_mc` and `tcsp_mc` are identical across most cells, posterior UQ is
   diagnostic rather than binding under this launch and should be tuned next.
-- If `tcsp_mtrqr_gibbs_median_mc` or `tcsp_mtrqr_ecm_map_mc` undercovers as
+- If `tcsp_mti_gibbs_median_mc` or `tcsp_mti_ecm_map_mc` undercovers as
   selected fitted summaries while the associated `formal_action_*` columns pass,
   treat the fitted summaries as useful algorithm diagnostics but do not promote
   them as tolerance actions.
@@ -208,6 +208,6 @@ make stop-rqr-bayes-uq-main \
 
 The earlier serial confirmatory attempt was stopped after only a few datasets
 and was not collected or promoted as evidence.  The launch is superseded by the
-corrected method grid that adds explicit MT-RQR Gibbs, MT-RQR ECM/MAP, and
+corrected method grid that adds explicit MTI Gibbs, MTI ECM/MAP, and
 split-ECM competitors.  It should be treated as a runtime diagnosis showing
 that the main study needs shared calibration and wave-based execution.

@@ -252,10 +252,10 @@ if (length(all_curves)) {
     file <- file.path(figure_dir, fig_name)
     title <- switch(
       fam,
-      fixed_design = "Fixed-design mean-tilted RQR illustration",
-      dlm = "Dynamic linear root mean-tilted RQR illustration",
-      desn = "Reservoir readout mean-tilted RQR illustration",
-      paste("Mean-tilted RQR illustration:", fam)
+      fixed_design = "Fixed-design MTI illustration",
+      dlm = "Dynamic linear root MTI illustration",
+      desn = "Reservoir readout MTI illustration",
+      paste("MTI illustration:", fam)
     )
     xlab <- if (identical(fam, "fixed_design")) "Covariate x" else "Time"
     note <- switch(

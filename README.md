@@ -1,17 +1,24 @@
-# RQR-GIBBS
+# MTI-INTERVALS
 
-Standalone manuscript and reproducibility workspace for mean-tilted relaxed
-quantile regression (MT-RQR), fixed-content interval functionals, and
-generalized-Bayes Gibbs computation.
+Research implementation of mean-preserving interval (MPI) and mean-tilted
+interval (MTI) losses, generalized-Bayesian root regression, scan-calibrated
+tolerance actions, and Bayesian nonparametric shortest-interval uncertainty.
+
+Earlier versions used the Relaxed Quantile Regression (RQR) name and the
+`rqr_*` API. The canonical terminology is now MPI/MTI: MPI is the zero-tilt
+member of the MTI family. Legacy wrappers and historical filenames remain
+temporarily for reproducibility, and the package is still installed as
+`rqrgibbs` during this staged migration. RQR is retained for attribution to
+Pouplin et al., published variant names, legacy APIs, and frozen evidence.
 
 The project studies interval-root functionals: two regression roots are learned
-directly under a coverage-targeted loss rather than obtained by inverting a
+directly under a content-targeted loss rather than obtained by inverting a
 response likelihood. For tolerance UQ, the authoritative Bayesian layer now
 models the full response distribution with a direct Dirichlet-process posterior
 or a smooth truncated Gaussian DPM. The hybrid Bayesian-scan action keeps the
 scan-calibrated retained count fixed and selects the shortest order-statistic
 interval that also satisfies a posterior content-probability constraint. The
-older TCSP-MT-RQR MCMC/ECM attachment remains available as fixed-target
+older TCSP-MTI MCMC/ECM attachment remains available as fixed-target
 plug-in UQ after the empirical shortest window has selected content and tilt.
 A separate split exact-spacing TCSP path uses an independent pilot for
 placement and an independent main sample for a fixed Beta-calibrated
@@ -38,27 +45,28 @@ and local literature PDFs are intentionally excluded from version control.
 
 ## Statistical scope
 
-RQR is treated as a loss-based generalized-Bayes update. Interval-root draws
-are summaries of a generalized posterior over interval functionals; they are
-not posterior-predictive response draws. In the TCSP extension, tolerance
+MPI/MTI regression is treated as a loss-based generalized-Bayes update.
+Interval-root draws are summaries of a generalized posterior over interval
+functionals; they are not posterior-predictive response draws. In the TCSP
+extension, tolerance
 confidence comes from the external scan-calibrated retained-count action, not
-from posterior credibility, the learning rate, or an RQR response likelihood.
+from posterior credibility, the learning rate, or an MTI response likelihood.
 The direct-DP and Gaussian-DPM engines are ordinary response-distribution
-models for \(F\); their posterior content probabilities are separate from the
-RQR generalized posterior.
+models for \(F\); their posterior content probabilities are separate from MTI
+generalized posteriors.
 
-The two root blocks are exchangeable under the symmetric ordinary and
-mean-tilted targets. Raw fields such as `samp.beta_root1` and
+The two root blocks are exchangeable under the symmetric MPI and MTI targets.
+Raw fields such as `samp.beta_root1` and
 `samp.beta_root2` are therefore MCMC labels, not lower- and upper-endpoint
 coefficient estimates after label mixing. Interval endpoints are always
 available by pointwise sorting. Coefficient-level lower/upper summaries are
 reported only when a post-processing audit finds one globally separated
 lower/upper chart on a declared design; otherwise the package fails closed and
 keeps only raw-label coefficients plus ordered endpoint functionals. Dynamic
-RQR-DLM paths follow the same whole-root principle: swaps exchange complete
+MTI-DLM paths follow the same whole-root principle: swaps exchange complete
 root trajectories, not individual times.
 
-The implemented ordinary-RQR paths currently include:
+The implemented MPI paths currently include:
 
 1. fixed-design ridge regression;
 2. regularized-horseshoe regression through the Nishimura--Suchard
@@ -73,32 +81,34 @@ cross-law population table deliberately show both near-Normal accuracy and
 breakdown under stronger skewness or support-boundary geometry; they do not
 enter the exact-oracle fits. The package now exposes a bounded
 fixed-tilt MCMC path for fixed-rate ridge readouts: fixed-design regression,
-frozen-feature DESN readouts through the same fixed-design kernel, and RQR-DLM
+frozen-feature DESN readouts through the same fixed-design kernel, and MTI-DLM
 models with fixed or pre-frozen discount-template evolution. Nonzero tilt is
 not yet implemented for learned inverse-loss scales, RHS-NS priors,
 component-scale/adaptive dynamic evolution, VB/CAVI, or data-driven tilt
 selection.
 
-The deterministic fixed-target ECM layer exposes `rqr_ecm_fit()` and
-`rqr_ecm_path()`. ECM uses exact inverse latent-scale moments and conditional
+The deterministic fixed-target ECM layer exposes canonical `mti_ecm_fit()` and
+`mti_ecm_path()` wrappers, with legacy `rqr_ecm_fit()` and `rqr_ecm_path()`
+names retained. ECM uses exact inverse latent-scale moments and conditional
 Gaussian root solves to compute a mode of the fixed loss-defined target. It is
 not an EM algorithm for a response likelihood, does not return posterior
 draws, and does not create tolerance validity.
 
-The TCSP scan layer currently exposes `rqr_tcsp_*` helpers for conservative
-scan calibration, canonical closed-window selection, shortest-path tilt
-metadata, path continuation diagnostics, and action-contract validation.
-`rqr_tcsp_plugin_fit_univariate()` names the fixed-target MT-RQR plug-in path.
-`rqr_tcsp_hybrid_bayes_fit()` is the authoritative full-distribution Bayesian
-UQ interface. The direct-DP helpers are `rqr_dp_*`; the smooth DPM helpers are
-`rqr_dpm_*`; and `rqr_bayesian_bootstrap_draws()` is a diagnostic comparator.
-The split exact-spacing layer adds `rqr_tcsp_exact_spacing_gap()` and
-`rqr_tcsp_split_exact_fit()` for continuous iid univariate pilot/main-split
+The TCSP scan layer currently exposes canonical `tcsp_*` helpers for
+conservative scan calibration, canonical closed-window selection,
+shortest-path tilt metadata, path continuation diagnostics, and
+action-contract validation. `tcsp_plugin_mti_fit()` names the fixed-target MTI
+plug-in path. `tcsp_hybrid_bayes_fit()` is the authoritative
+full-distribution Bayesian UQ interface. The direct-DP helpers are `dp_*`; the
+smooth DPM helpers are `dpm_*`; and `bayesian_bootstrap_shortest_draws()` is a
+diagnostic comparator. Legacy `rqr_*` names remain available for this
+migration cycle. The split exact-spacing layer adds `tcsp_exact_spacing_gap()`
+and `tcsp_split_exact_fit()` for continuous iid univariate pilot/main-split
 actions. Exact scan recursion, Tier-1 finite-sample proof promotion,
 posterior endpoint-coverage transfer, and regression-family tolerance theorems
-remain pending; see `docs/theory/tcsp_mt_rqr_proof_ledger_20260811.md`,
+remain pending; see `docs/theory/tcsp_mti_proof_ledger_20260811.md`,
 `docs/theory/full_bayes_shortest_uq_theory_ledger_20260812.md`, and
-`docs/theory/mt_rqr_ecm_monotonicity_and_scope_20260812.md`.
+`docs/theory/mti_ecm_monotonicity_and_scope_20260812.md`.
 
 ## External reference implementation
 

@@ -224,6 +224,7 @@ rqr_tcsp_hybrid_bayes_fit <- function(
     posterior_fit_digest = out$provenance$posterior_fit_digest,
     hybrid_action = hybrid_action$selected
   ))
-  class(out) <- c("rqr_hybrid_bayes_tcsp", "rqr_tolerance_fit", "list")
+  class(out) <- c("tcsp_hybrid_bayes_fit", "rqr_hybrid_bayes_tcsp",
+                  "tcsp_tolerance_fit", "rqr_tolerance_fit", "list")
   out
 }

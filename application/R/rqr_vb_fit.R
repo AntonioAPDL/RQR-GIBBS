@@ -167,7 +167,7 @@ rqr_vb_fit <- function(y, X, coverage_level, learning_rate = 1,
       column_names = colnames(X)
     )
   )
-  class(out) <- c("rqr_vb", "rqr_fit")
+  class(out) <- c("mti_vb", "rqr_vb", "mti_fit", "rqr_fit")
   out
 }
 

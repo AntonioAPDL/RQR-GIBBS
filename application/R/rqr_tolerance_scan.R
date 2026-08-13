@@ -158,7 +158,8 @@ rqr_tcsp_scan_distribution <- function(
     max_count_digest = .rqr_tcsp_digest(max_counts)
   )
   out$scan_distribution_digest <- .rqr_tcsp_digest(out)
-  class(out) <- c("rqr_tcsp_scan_distribution", "list")
+  class(out) <- c("tcsp_scan_distribution", "rqr_tcsp_scan_distribution",
+                  "list")
   out
 }
 
@@ -178,7 +179,7 @@ rqr_tcsp_scan_distribution <- function(
 rqr_tcsp_scan_cdf_band <- function(distribution, numerical_confidence = 0.999) {
   if (!is.list(distribution) ||
       !identical(distribution$method, "uniform_scan_max_count_distribution")) {
-    stop("distribution must come from rqr_tcsp_scan_distribution().",
+    stop("distribution must come from tcsp_scan_distribution() or rqr_tcsp_scan_distribution().",
          call. = FALSE)
   }
   numerical_confidence <- .rqr_tcsp_assert_probability(
@@ -218,7 +219,7 @@ rqr_tcsp_scan_cdf_band <- function(distribution, numerical_confidence = 0.999) {
       "Simultaneous Massart-DKW lower band for the Monte Carlo distribution of the Uniform scan statistic."
   )
   out$cdf_band_digest <- .rqr_tcsp_digest(out)
-  class(out) <- c("rqr_tcsp_scan_cdf_band", "list")
+  class(out) <- c("tcsp_scan_cdf_band", "rqr_tcsp_scan_cdf_band", "list")
   out
 }
 
@@ -328,7 +329,8 @@ rqr_tcsp_calibrate_count <- function(
     )
     return(list(
       schema_version = .rqr_tcsp_schema(),
-      method = "scan_calibrated_tcsp_mt_rqr",
+      method = "scan_calibrated_tcsp_mti",
+      legacy_method = "scan_calibrated_tcsp_mt_rqr",
       scan_critical_method = method,
       n = n,
       guaranteed_content = c_target,
@@ -359,7 +361,8 @@ rqr_tcsp_calibrate_count <- function(
         prob$certified_lower_probability >= tolerance_confidence) {
       return(list(
         schema_version = .rqr_tcsp_schema(),
-        method = "scan_calibrated_tcsp_mt_rqr",
+        method = "scan_calibrated_tcsp_mti",
+        legacy_method = "scan_calibrated_tcsp_mt_rqr",
         scan_critical_method = method,
         n = n,
         guaranteed_content = c_target,
@@ -448,7 +451,7 @@ rqr_tcsp_shortest_window <- function(y, retained_count, na_rm = FALSE) {
     n_removed = clean$n_removed,
     global_shortest_verified = TRUE
   )
-  class(out) <- c("rqr_tcsp_window", "list")
+  class(out) <- c("tcsp_window", "rqr_tcsp_window", "list")
   out
 }
 
@@ -524,14 +527,14 @@ rqr_tcsp_tilt_from_window <- function(window) {
   invisible(TRUE)
 }
 
-#' Fit the univariate TCSP-MT-RQR target
+#' Fit the univariate TCSP-MTI target
 #'
 #' Calibrates the retained count, selects the formal shortest closed-window
 #' tolerance action, freezes `q` and `delta`, and optionally fits deterministic
 #' ECM and/or intercept-only fixed-rate ridge generalized posterior summaries.
 #' The scan action is the tolerance object; ECM and posterior summaries are
 #' separate loss-based fixed-target plug-in summaries.  Use
-#' [rqr_tcsp_hybrid_bayes_fit()] for the authoritative full-distribution
+#' [tcsp_hybrid_bayes_fit()] for the authoritative full-distribution
 #' Bayesian UQ action.
 #'
 #' @param y Response sample.
@@ -544,7 +547,7 @@ rqr_tcsp_tilt_from_window <- function(window) {
 #' @param mcmc_args Optional arguments passed to [rqr_mcmc_fit()].
 #' @param ecm_args Optional arguments passed to [rqr_ecm_fit()].
 #' @inheritParams rqr_tcsp_scan_probability
-#' @return An `rqr_tcsp_fit` object.
+#' @return A `tcsp_mti_fit` object, with legacy `rqr_tcsp_fit` class retained.
 #' @export
 rqr_tcsp_fit_univariate <- function(
     y, guaranteed_content, tolerance_confidence,
@@ -582,9 +585,9 @@ rqr_tcsp_fit_univariate <- function(
       (isTRUE(fit_mcmc) || isTRUE(fit_ecm))) {
     warning(
       paste(
-        "TCSP MT-RQR MCMC/ECM summaries are fixed-target plug-in UQ.",
+        "TCSP-MTI MCMC/ECM summaries are fixed-target plug-in UQ.",
         "They are not unconditional Bayesian UQ for the population shortest interval;",
-        "use rqr_tcsp_hybrid_bayes_fit() for that role."
+        "use tcsp_hybrid_bayes_fit() for that role."
       ),
       call. = FALSE
     )
@@ -592,10 +595,11 @@ rqr_tcsp_fit_univariate <- function(
 
   contract <- list(
     schema_version = .rqr_tcsp_schema(),
-    method = "scan_calibrated_tolerance_calibrated_shortest_path_mt_rqr",
+    method = "scan_calibrated_tolerance_calibrated_shortest_path_mti",
+    legacy_method = "scan_calibrated_tolerance_calibrated_shortest_path_mt_rqr",
     uq_scope = "fixed_target_plugin",
     lifecycle_status = "superseded_for_unconditional_shortest_interval_uq",
-    authoritative_full_distribution_uq_function = "rqr_tcsp_hybrid_bayes_fit",
+    authoritative_full_distribution_uq_function = "tcsp_hybrid_bayes_fit",
     posterior_endpoint_coverage_claim_available = FALSE,
     response_likelihood = FALSE,
     generalized_bayes = TRUE,
@@ -654,7 +658,7 @@ rqr_tcsp_fit_univariate <- function(
       posterior_fit = posterior_fit,
       ecm_fit = ecm_fit
     )
-    class(out) <- c("rqr_tcsp_fit", "list")
+    class(out) <- c("tcsp_mti_fit", "rqr_tcsp_fit", "list")
     out
   }
 
@@ -969,13 +973,14 @@ rqr_tcsp_path <- function(
   }
   out <- list(
     schema_version = .rqr_tcsp_path_schema(),
-    method = "globally_verified_tcsp_content_path",
+    method = "globally_verified_tcsp_mti_content_path",
+    legacy_method = "globally_verified_tcsp_content_path",
     tolerance_confidence = tolerance_confidence,
     scan_method = .rqr_tcsp_assert_method(scan_method),
     path = do.call(rbind, rows),
     diagnostics = diagnostics
   )
-  class(out) <- c("rqr_tcsp_path", "list")
+  class(out) <- c("tcsp_mti_path", "rqr_tcsp_path", "list")
   out
 }
 

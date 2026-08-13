@@ -341,6 +341,6 @@ rqr_tcsp_split_exact_fit <- function(
       contract_digest = .rqr_tcsp_digest(contract)
     )
   )
-  class(out) <- c("rqr_tcsp_split_exact_fit", "list")
+  class(out) <- c("tcsp_split_exact_fit", "rqr_tcsp_split_exact_fit", "list")
   out
 }

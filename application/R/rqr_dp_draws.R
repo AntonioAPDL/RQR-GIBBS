@@ -87,7 +87,8 @@ rqr_dp_draws <- function(fit, n_draws, residual_mass_tol = 1e-4,
     atom_count = atom_counts,
     first_draw = draws[[1L]]
   ))
-  class(out) <- c("rqr_dp_draws", "rqr_distribution_draws", "list")
+  class(out) <- c("dp_draws", "rqr_dp_draws", "distribution_draws",
+                  "rqr_distribution_draws", "list")
   out
 }
 
@@ -128,7 +129,9 @@ rqr_bayesian_bootstrap_draws <- function(y, n_draws, seed = NULL,
     diagnostic_engine = TRUE,
     provenance = .rqr_bayes_provenance(seed = seed)
   )
-  class(out) <- c("rqr_bayesian_bootstrap_draws", "rqr_distribution_draws", "list")
+  class(out) <- c("bayesian_bootstrap_shortest_draws",
+                  "rqr_bayesian_bootstrap_draws", "distribution_draws",
+                  "rqr_distribution_draws", "list")
   out
 }
 
@@ -173,4 +176,3 @@ rqr_dp_shortest_draws <- function(draws, target_content, tolerance = 1e-12) {
   attr(out, "target_content") <- q
   out
 }
-

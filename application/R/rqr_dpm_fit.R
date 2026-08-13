@@ -375,7 +375,8 @@ rqr_dpm_fit <- function(y, truncation_level = 10L, concentration = 1,
     mcmc_control = out$mcmc_control,
     parameter_digest = .rqr_dpm_state_digest(parameters)
   ))
-  class(out) <- c("rqr_dpm_mcmc", "rqr_distribution_fit", "list")
+  class(out) <- c("dpm_mcmc", "rqr_dpm_mcmc", "distribution_fit",
+                  "rqr_distribution_fit", "list")
   out
 }
 
@@ -765,7 +766,8 @@ rqr_dpm_bayes_tolerance_action <- function(
       if (nrow(feasible)) "satisfied" else "infeasible_within_candidate_class",
     candidates = candidates
   )
-  class(out) <- c("rqr_dpm_bayes_tolerance_action", "list")
+  class(out) <- c("dpm_bayes_tolerance_action",
+                  "rqr_dpm_bayes_tolerance_action", "list")
   out
 }
 
@@ -937,7 +939,8 @@ rqr_dpm_ecm_fit <- function(y, truncation_level = 10L, concentration = 1,
     hyper = hyper,
     trace_tail = utils::tail(trace, 1L)
   ))
-  class(out) <- c("rqr_dpm_ecm", "rqr_distribution_map", "list")
+  class(out) <- c("dpm_ecm", "rqr_dpm_ecm", "distribution_map",
+                  "rqr_distribution_map", "list")
   out
 }
 

@@ -19,7 +19,7 @@
   linkcolor=black,
   citecolor=black,
   urlcolor=black,
-  pdftitle={Supplementary Material: Mean-Tilted Relaxed Quantile Regression: Fixed-Content Interval Functionals and Generalized-Bayes Computation},
+  pdftitle={Supplementary Material: Mean-Tilted Interval Regression: Fixed-Content Interval Functionals and Bayesian Computation},
   pdfauthor={Antonio De Leon, Raquel Prado, and Bruno Sanso}
 }
 
@@ -55,9 +55,8 @@
 \renewcommand{\thesubsection}{S\arabic{section}.\arabic{subsection}}
 \renewcommand{\thepage}{S\arabic{page}}
 
-\title{Supplementary Material for \emph{Mean-Tilted Relaxed Quantile
-Regression: Fixed-Content Interval Functionals and Generalized-Bayes
-Computation}}
+\title{Supplementary Material for \emph{Mean-Tilted Interval Regression:
+Fixed-Content Interval Functionals and Bayesian Computation}}
 \author{Antonio De Leon \and Raquel Prado \and Bruno Sans\'o}
 \date{}
 
@@ -66,16 +65,16 @@ Computation}}
 
 \begin{abstract}
 \noindent
-Ordinary relaxed quantile regression induces a mean-preserving fixed-content
-interval under the population conditions stated in the main article. The
+The residual-product criterion introduced as Relaxed Quantile Regression (RQR)
+is treated in the main article as the mean-preserving interval (MPI) loss. The
 derivations establish its score equations, quantile-window and profiled-risk
 identification, and implications for the retained and omitted distributions.
-They distinguish equal-tailed, shortest-contiguous, and mean-tilted targets;
+They distinguish equal-tailed, shortest-contiguous, and MTI targets;
 derive exact fractional empirical balance and fixed-dimensional static
 uncertainty geometry; develop the pseudo-asymmetric-Laplace augmentation and
 its Gaussian and generalized-inverse-Gaussian full conditionals; and state the
 fixed-rate mean-tilt shifts for static and dynamic roots. Separate sections
-give the ordinary-only learned-rate and component-scale contracts. The main
+give the MPI-only learned-rate and component-scale contracts. The main
 article also formulates scan-calibrated, hybrid Bayesian--scan, and
 pilot-selected exact-spacing tolerance actions. The direct-DP posterior gives
 an exact fixed-interval content law, while Gaussian DPM summaries provide a
@@ -91,7 +90,7 @@ component-scale evolution require separate theory and validation.
 
 The main article presents the statistical target, generalized posterior, and
 core Gibbs sampler. The derivations and computational details below establish
-the supporting results. The RQR generalized posterior combines a prior with a
+the supporting results. The MTI generalized posterior combines a prior with a
 loss-based update \citep{BissiriHolmesWalker2016GeneralBayes}; it is not derived
 from an ordinary response likelihood. Root-trajectory draws therefore induce
 generalized-posterior distributions for endpoint functions, but not a
@@ -112,7 +111,7 @@ Symbol & Role & Scope\\
 \(F,H,a,\gamma\) & response distribution, DP base, concentration, and posterior content-error level & full-distribution Bayesian UQ\\
 \(\vect\delta,\delta_t\) & fixed row- or time-specific target tilts & computation\\
 \(\omega_{\mathrm R},\sigma_{\mathrm R}\) & fixed learning rate and its reciprocal loss scale & fixed-rate generalized posterior\\
-\(\kappa,s_L\) & ordinary-only learned inverse-loss scale and frozen reference scale & optional ordinary generalized posterior\\
+\(\kappa,s_L\) & MPI-only learned inverse-loss scale and frozen reference scale & optional MPI generalized posterior\\
 \(\lambda_W\) & RQR-W quadratic width-penalty coefficient & comparison only\\
 \(\gamma_j,q_j\) & component discount and shared component evolution scale & dynamic model\\
 \(\mathcal O,n_{\mathrm{obs}},T\) & observed sites, their count, and dynamic time horizon & computation\\
@@ -141,10 +140,10 @@ Main claim or object & Supplement location & Type of support\\
 Fixed-content interval class and shortest-window condition
 & Sections~\ref{sec:supp-interval-functionals}--\ref{sec:supp-population-target}
 & Population geometry and endpoint qualifications\\
-Ordinary RQR retained-mean target
+MPI retained-mean target
 & Section~\ref{sec:supp-population-target}
 & Score derivation, quantile-window identification, and restricted-regression warning\\
-Mean-tilted RQR and recovery tilts
+MTI and recovery tilts
 & Section~\ref{sec:supp-mean-tilt}
 & Profiled-risk proof, boundary cases, affine equivariance, and CF anchors\\
 Exact fractional empirical balance
@@ -166,7 +165,7 @@ Full-distribution Bayesian shortest-interval UQ
 Pseudo-AL Gibbs sampler
 & Sections~\ref{sec:supp-pseudo-al}--\ref{sec:supp-static-regression}
 & Augmented generalized posterior, GIG latent-scale full conditionals, Gaussian root full conditionals, and prior adapters\\
-Fixed-target MT-RQR-ECM
+Fixed-target MTI-ECM
 & Section~\ref{sec:supp-static-regression}
 & Exact inverse latent-scale moment, two conditional Gaussian root solves,
   safeguard scope, and distinction from VB/posterior sampling\\
@@ -180,19 +179,19 @@ Evidence and reproducibility scope
 \end{tabularx}
 \end{table}
 
-In the TCSP-MT-RQR plug-in construction, the retained content and
+In the TCSP-MTI plug-in construction, the retained content and
 shortest-window tilt are computed before the generalized posterior is fitted.
 When the same observations determine the tilt and update the prior, endpoint
 summaries are conditional on that selected target. They do not propagate
 shortest-window selection uncertainty. The full-distribution Bayesian layer
 below addresses uncertainty about \(F\) directly; it does not convert the
-loss-based MT-RQR posterior into a response likelihood.
+loss-based MTI posterior into a response likelihood.
 
 \section{Full-Distribution Bayesian Shortest-Interval UQ}
 \label{sec:supp-bayes-uq}
 
 This section records the Bayesian response-distribution calculations used by
-the hybrid Bayesian--scan action. They are intentionally separate from the RQR
+the hybrid Bayesian--scan action. They are intentionally separate from the MTI
 generalized posterior. The model is
 \[
 F\sim\mathrm{DP}(a,H),\qquad
@@ -305,8 +304,8 @@ I_c(u)=[Q(u),Q(u+c)],\qquad
 M_c(u)=\frac{1}{c}\int_u^{u+c}Q(v)\,dv,\qquad
 W_c(u)=Q(u+c)-Q(u).
 \]
-The equal-tailed interval fixes \(u_{\mathrm{ET}}=(1-c)/2\). Ordinary RQR
-solves \(M_c(u_{\mathrm{RQR}})=\mu\). Define the possibly set-valued collection
+The equal-tailed interval fixes \(u_{\mathrm{ET}}=(1-c)/2\). MPI
+solves \(M_c(u_{\mathrm{MPI}})=\mu\). Define the possibly set-valued collection
 of shortest contiguous windows by
 \[
 \mathcal U_{\mathrm{SH}}
@@ -334,7 +333,7 @@ for this comparison
 \citep{GneitingRaftery2007,BrehmerGneiting2021Intervals,
 FisslerEtAl2021SetValued}.
 
-\section{Ordinary-RQR Loss, Score Derivations, and Consequences}
+\section{MPI Loss, Score Derivations, and Consequences}
 \label{sec:supp-population-target}
 
 Fix a covariate value \(x\), a desired content \(c\in(0,1)\), and endpoints
@@ -346,14 +345,14 @@ Fix a covariate value \(x\), a desired content \(c\in(0,1)\), and endpoints
 (1-c)(y-a)(b-y), & a<y<b,\\
 c(y-a)(y-b), & y\le a\ \text{or}\ y\ge b.
 \end{cases}
-\label{eq:supp-rqr-loss-piecewise}
+\label{eq:supp-mpi-loss-piecewise}
 \end{equation}
 Equivalently, with
 \(e(a,b;y)=(y-a)(y-b)\) and
 \(\rho_c(r)=r\{c-\ind(r<0)\}\),
 \begin{equation}
 \ell_c(a,b;y)=\rho_c\{e(a,b;y)\}.
-\label{eq:supp-rqr-check-representation}
+\label{eq:supp-mpi-product-check}
 \end{equation}
 The check function is applied to the product residual. Its index \(c\) denotes
 the desired interval content rather than a prescribed response-quantile level
@@ -407,7 +406,7 @@ Let \(\mu_x=\E(Y\mid X=x)\). Since
 \int_b^\infty(y-\mu_x)\,dF_x(y).
 \label{eq:rqr-tail-moment-balance}
 \end{equation}
-Thus ordinary RQR balances omitted tail probability multiplied by average
+Thus MPI balances omitted tail probability multiplied by average
 tail displacement from the conditional mean; it does not generally balance
 the two omitted probabilities.
 
@@ -457,7 +456,7 @@ the endpoint midpoint need not equal \(\mu_x\) under asymmetry.
 \label{prop:supp-convex-order}
 Let \(Y_{\mathrm{in}}\) and \(Y_{\mathrm{out}}\) have the conditional
 distributions of \(Y\) given \(a<Y<b\) and \(Y\notin(a,b)\), respectively,
-at a regular ordinary-RQR target. For every convex function \(\varphi\) for
+at a regular MPI target. For every convex function \(\varphi\) for
 which the required expectations exist,
 \[
 \E\{\varphi(Y_{\mathrm{in}})\}
@@ -495,7 +494,7 @@ The full conditional distribution is their mixture with weights \(c\) and
 
 Retain the quantile-window characterization and assume, for this derivative
 calculation, connected support and positive continuous density at the relevant
-endpoint quantiles. Write \(u_c\) for the ordinary-RQR index, and set
+endpoint quantiles. Write \(u_c\) for the MPI index, and set
 \(L_c=Q(u_c)\) and \(U_c=Q(u_c+c)\). Differentiating
 \[
 \int_{u_c}^{u_c+c}\{Q(v)-\mu\}\,dv=0
@@ -508,7 +507,7 @@ with respect to \(c\), at regular interior values, gives
 \frac{d(u_c+c)}{dc}
 =\frac{\mu-L_c}{U_c-L_c}>0.
 \]
-The ordinary-RQR population intervals are therefore nested as content
+The MPI population intervals are therefore nested as content
 increases, with analogous one-sided statements at isolated nonsmooth support
 transitions. If \(p_\mu=F(\mu)\) satisfies \(Q(p_\mu)=\mu\) and \(Q\) is
 continuous at \(p_\mu\), then \(Q(u_c)\le\mu\le Q(u_c+c)\), so
@@ -519,7 +518,7 @@ L_c\longrightarrow\mu,\qquad U_c\longrightarrow\mu
 \]
 This zero-content anchor needs the local support condition above. It is false
 under the quantile-window assumptions alone: for the symmetric distribution
-with density \(1/2\) on \([-2,-1]\cup[1,2]\), \(\mu=0\) and the ordinary
+with density \(1/2\) on \([-2,-1]\cup[1,2]\), \(\mu=0\) and the MPI
 window has \(u_c=(1-c)/2\), hence \(L_c=-1-c\) and \(U_c=1+c\), so the
 zero-content limit straddles the support gap rather than contracting to
 \(\mu\). The corrected zero-content anchor is a property of the population
@@ -528,7 +527,7 @@ midpoint at a fixed positive \(c\) is not generally the mean, and independent
 fits at several content levels do not by themselves define joint
 generalized-posterior draws of that path.
 
-For \(Y^\star=r+sY\), \(s>0\), the ordinary endpoints transform as
+For \(Y^\star=r+sY\), \(s>0\), the MPI endpoints transform as
 \[
 L_c^\star=r+sL_c,\qquad U_c^\star=r+sU_c.
 \]
@@ -549,7 +548,7 @@ functional rather than merely re-expressing it.
 
 Finally, with fixed endpoints,
 \(\rho_c\{(y-a)(y-b)\}=O(y^2)\) as \(|y|\to\infty\), and the endpoint scores
-grow linearly in \(|y|\). RQR is distribution-free in the sense that it does
+grow linearly in \(|y|\). MPI is distribution-free in the sense that it does
 not posit a parametric response density, but it is not quantile-robust to
 arbitrarily heavy tails. This is why the finite-second-moment assumption and
 response-scale choice are scientifically consequential.
@@ -594,18 +593,18 @@ observation coincides with a fitted root. We therefore do not use that
 calculation as a finite-sample guarantee; such a result requires a separate
 empirical-process analysis.
 
-\section{Mean-Tilted RQR}
+\section{The Mean-Tilted Interval Loss}
 \label{sec:supp-mean-tilt}
 
 For a fixed mean tilt \(\delta\in\R\), define
 \begin{equation}
-\ell_{c,\delta}(m,h;y)
+\ell_{c,\delta}^{\mathrm{MTI}}(m,h;y)
 =\rho_c\{(y-m)^2-h^2\}-2c\delta(m-y),
 \label{eq:mean-tilted-loss-midpoint}
 \end{equation}
 or, equivalently,
 \begin{equation}
-\ell_{c,\delta}(a,b;y)
+\ell_{c,\delta}^{\mathrm{MTI}}(a,b;y)
 =\rho_c\{(y-a)(y-b)\}-c\delta(a+b-2y).
 \label{eq:mean-tilted-loss-roots}
 \end{equation}
@@ -626,7 +625,7 @@ conditional content or retained-mean identities unless the predictor class is
 sufficiently rich and the unrestricted conditions apply.
 
 \paragraph{Root-label contract.}
-The losses \eqref{eq:mean-tilted-loss-roots} and the ordinary
+The losses \eqref{eq:mean-tilted-loss-roots} and the MPI
 \(\delta=0\) loss are invariant to exchanging the two raw roots. With
 exchangeable root priors, the unordered pair is identified but the labels
 ``root 1'' and ``root 2'' are not. The static sampler therefore
@@ -760,7 +759,7 @@ index \(u_\delta\in(0,1-c)\) satisfies
 \[
 M_c(u_\delta)=\mu+\delta.
 \]
-Nondegeneracy gives \(\delta_-<0<\delta_+\), so ordinary RQR is an interior
+Nondegeneracy gives \(\delta_-<0<\delta_+\), so MPI is an interior
 member. The two raw root-label permutations represent the same ordered
 interval.
 \end{theorem}
@@ -816,9 +815,9 @@ qualification. For
 is unbounded below along the corresponding escaping-root direction and has no
 finite global target.
 
-Ordinary and equal-tailed recovery use
+MPI and equal-tailed recovery use
 \[
-\delta_{\mathrm{RQR}}=0,\qquad
+\delta_{\mathrm{MPI}}=0,\qquad
 \delta_{\mathrm{ET}}=M_c\{(1-c)/2\}-\mu,
 \]
 whereas shortest-contiguous recovery is generally set-valued. Define
@@ -913,7 +912,7 @@ Fisher--Pearson skewness \(\widehat\gamma_1\) and training standard deviation
 \]
 The plug-in quantities are fixed candidate tilts for initialization or
 external validation screening. They are not posterior draws, do not sample a
-tilt in the Gibbs chain, and do not justify reusing the ordinary learned-scale
+tilt in the Gibbs chain, and do not justify reusing the MPI learned-scale
 update at nonzero tilt. Strong skewness, finite-support boundary solutions,
 and heavy-tailed cases can move the first-order shortest approximation outside
 the admissible finite-root tilt range. The diagnostic code records adjusted
@@ -938,7 +937,7 @@ Section~\ref{sec:supp-population-target}.
 
 These population equations do not establish finite-sample propriety under
 arbitrary root priors. For a fixed learning rate and a finite-dimensional
-Gaussian root prior, the ordinary RQR loss is nonnegative and the tilt is
+Gaussian root prior, the MPI loss is nonnegative and the tilt is
 linear in the roots. The resulting generalized posterior is proper because a
 Gaussian density has finite exponential moments in every linear direction. This covers
 the initial ridge fixed-design model and finite-horizon Gaussian state model.
@@ -976,7 +975,7 @@ where \(s_i=c-1\) if \(\widehat e_i<0\), \(s_i=c\) if
 
 \begin{theorem}[Exact fractional empirical balance]
 \label{thm:supp-fractional-balance}
-At any interior subgradient-stationary intercept-only MT-RQR solution,
+At any interior subgradient-stationary intercept-only MTI solution,
 there are allocations \(\widehat q_i\in[0,1]\) with the membership convention
 above such that
 \[
@@ -1076,7 +1075,7 @@ H=
 \E\{XX^\top w_0(X)f_{Y\mid X}(b_{\theta_0}\mid X)\}
 \end{pmatrix}.
 \]
-Under the standard nonsmooth M-estimation conditions for the ordinary-RQR
+Under the standard nonsmooth M-estimation conditions for the MPI
 loss, the empirical minimizer satisfies
 \[
 \sqrt n(\widehat\theta-\theta_0)
@@ -1123,7 +1122,7 @@ theorem.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/figS02_loss_geometry.png}
-\caption{\textbf{RQR loss geometry and the fixed midpoint tilt.}
+\caption{\textbf{MPI loss geometry and the fixed midpoint tilt.}
 For \(c=0.80\), \(m=0\), and \(h=1\), the residual product is negative exactly
 inside the interval. The half-width score contracts \(h\) for covered
 observations and expands it for misses. A fixed \(\delta\) adds a constant
@@ -1143,6 +1142,8 @@ For comparison, \citet{PouplinEtAl2024RQR} use the RQR-W population objective
 +\frac{\lambda_W}{2}(b-a)^2,
 \qquad \lambda_W\ge0.
 \]
+In the present terminology, RQR-W is a width-regularized modification of the
+MPI loss, not the MPI loss itself.
 At a nondegenerate interior stationary point, subtracting the two endpoint
 score equations gives
 \[
@@ -1157,8 +1158,8 @@ Thus \(q=c+2\lambda_W\) restores content \(c\), subject to
 \]
 Except in special symmetric cases, RQR-W therefore changes the
 mean-preserving placement equation. It is a coverage-corrected compromise
-between ordinary-RQR risk and squared width, not a tie-breaker among
-unidentified ordinary-RQR minimizers.
+between MPI risk and squared width, not a tie-breaker among
+unidentified MPI minimizers.
 
 More generally, if a differentiable width penalty \(P(w)\), \(w=b-a\), is
 added to a check loss at level \(q\), the coverage equation is
@@ -1173,9 +1174,9 @@ not generally coincide with the shortest-contiguous path.
 \section{Pseudo-AL Augmentation of the Generalized Posterior}
 \label{sec:supp-pseudo-al}
 
-For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the ordinary-RQR contribution is
+For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the MPI contribution is
 \(\ell_c(\eta_{1i},\eta_{2i};y_i)=\rho_c(e_i)\), as in
-\eqref{eq:supp-rqr-check-representation}. The fixed-rate generalized posterior
+\eqref{eq:supp-mpi-product-check}. The fixed-rate generalized posterior
 therefore updates the prior by
 \(\exp\{-\omega_{\mathrm R}\sum_{i\in\mathcal O}
 \ell_c(\eta_{1i},\eta_{2i};y_i)\}\). The following normal--exponential
@@ -1251,7 +1252,7 @@ The Gaussian full conditional is
 \Normal(\mat Q_1^{-1}\vect h_1,\mat Q_1^{-1}).
 \]
 The second root uses the same update after exchanging labels. A proper ridge
-prior enters through the same Gaussian canonical form. The ordinary
+prior enters through the same Gaussian canonical form. The MPI
 conditionally Gaussian shrinkage specification is an external
 regularized-horseshoe adapter using the Nishimura--Suchard augmentation
 (RHS-NS), with separate
@@ -1276,7 +1277,7 @@ For a fixed learning rate \(\omega_{\mathrm R}\), the full-conditional precision
 \label{eq:mean-tilt-canonical-shift}
 \end{equation}
 Root 2 receives the same shift. The latent GIG update is unchanged because the
-tilt contains no \(v_i\). Setting \(\vect\delta=\vect 0\) recovers ordinary RQR
+tilt contains no \(v_i\). Setting \(\vect\delta=\vect 0\) recovers MPI
 exactly.
 
 Equation~\eqref{eq:mean-tilt-canonical-shift} is the algebraic identity used by
@@ -1288,7 +1289,7 @@ intercept-only agreement with direct numerical quadrature.
 
 For finite \(\mathcal O\), fixed \(\omega_{\mathrm R}\), and proper Gaussian
 root priors, the nonzero-tilt generalized posterior is proper. Indeed, the
-ordinary generalized-posterior factor is at most one and the remaining tilt
+MPI generalized-posterior factor is at most one and the remaining tilt
 factor is the exponential of a finite linear functional of
 \((\vect\beta_1,\vect\beta_2)\); a Gaussian prior
 has a finite moment-generating function in every finite direction. This
@@ -1304,7 +1305,7 @@ method for \(\exp\{-\omega_{\mathrm R}\mathcal L_{n,c,\vect\delta}\}\Pi_0\),
 not an ordinary likelihood EM algorithm for responses. Related
 asymmetric-Laplace quantile-regression computations use the same
 normal--exponential idea in a response working-likelihood setting
-\citep{ZhaoLian2016EMBayesianQR}; here the augmented residual is the RQR
+\citep{ZhaoLian2016EMBayesianQR}; here the augmented residual is the MTI
 pseudo-residual product.
 
 For a GIG variable under the convention above,
@@ -1386,10 +1387,10 @@ and deterministic multi-start selection by the exact penalized objective. The
 stored endpoint mode is a fixed-target generalized-posterior summary. It is
 not a posterior draw and not a tolerance action.
 
-\subsection{Ordinary-only RHS-NS prior adapter}
+\subsection{MPI-only RHS-NS prior adapter}
 \label{sec:supp-rhs-ns}
 
-The ordinary fixed-design sampler also supports a
+The MPI fixed-design sampler also supports a
 conditionally Gaussian RHS-NS prior adapter
 \citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS,
 NishimuraSuchard2023SSS}. For root \(k\), let
@@ -1420,10 +1421,10 @@ prior. The
 Prior-state construction and updating are delegated to the pinned,
 archive-attested reference runtime; the adapter accepts the \texttt{rhs\_ns}
 mode, not its distinct generic \texttt{rhs} mode. It is MCMC-only and restricted here to
-ordinary RQR, \(\vect\delta=\vect 0\). The proper-Gaussian argument for the
+MPI, \(\vect\delta=\vect 0\). The proper-Gaussian argument for the
 nonzero-tilt generalized posterior does not extend automatically through its
 random-scale
-mixture, so neither MT-RQR-RHS-NS propriety nor implementation is claimed.
+mixture, so neither MTI-RHS-NS propriety nor implementation is claimed.
 
 \subsection{Frozen-feature DESN specialization}
 \label{sec:supp-desn}
@@ -1434,12 +1435,12 @@ design, including any declared intercept column
 McDermottWikle2018DeepESNUQ}. The reservoir seed, depth, units, lag window,
 spectral radius, leak rate, input scaling, washout, preprocessing, tuning
 decisions, and feature reducers are design variables, not posterior unknowns.
-With \(\mat X=\mat X_{\mathrm{DESN}}\), the RQR-DESN readout uses exactly the
+With \(\mat X=\mat X_{\mathrm{DESN}}\), the MPI-DESN readout uses exactly the
 static generalized posterior and coefficient full conditionals above. It
 introduces neither a new loss nor a separate Gibbs sampler. A proper ridge
 prior supports the implemented fixed-rate nonzero-tilt full conditionals; the
 external RHS-NS adapter and matched
-evidence remain ordinary-RQR only.
+evidence remain MPI only.
 
 A future design \(\mat X_{\mathrm{DESN,fut}}\) must be generated by the same
 frozen reservoir contract, without using held-out responses to refit the
@@ -1475,12 +1476,12 @@ b_\kappa+\mathcal L_{n,c}(\vartheta)/s_L\right).
 \label{eq:kappa-collapsed}
 \end{equation}
 
-For any proper ordinary root and prior-state law \(\pi(\vartheta)\), the joint
+For any proper MPI root and prior-state law \(\pi(\vartheta)\), the joint
 generalized posterior in \eqref{eq:normalized-scale-target} is proper. Indeed,
 \(\mathcal L_{n,c}(\vartheta)\geq0\), so its exponential factor is at most one,
 and the remaining upper bound integrates to the finite
 \(n_{\mathrm{obs}}\)th moment of the Gamma prior. This argument includes the
-declared ordinary RHS-NS adapter when its complete prior-state law and update
+declared MPI RHS-NS adapter when its complete prior-state law and update
 are retained. It does not cover nonzero mean tilt, whose tilted loss need not
 be nonnegative.
 
@@ -1503,11 +1504,11 @@ For backward compatibility, the software stores this quantity in
 fields named \texttt{lambda}. Those fields represent the manuscript's
 \(\kappa\); they are unrelated to the RQR-W penalty \(\lambda_W\).
 
-This learned-scale generalized posterior applies to ordinary RQR only. The
+This learned-scale generalized posterior applies to MPI only. The
 mean-tilted loss can be negative, and parameter-independent additive constants
 at fixed
 \(\omega_{\mathrm R}\) become consequential when the learning rate is random.
-The Gamma full conditionals below must not be reused for mean-tilted RQR without
+The Gamma full conditionals below must not be reused for MTI without
 a separately normalized, proper joint generalized posterior. The initial
 mean-tilted sampler is therefore restricted to fixed learning rates.
 
@@ -1528,18 +1529,18 @@ The diagnostic pure-loss generalized posterior omits
 generalized posteriors; they are not two implementations of the same posterior
 distribution.
 
-\begin{algorithmblock}{Ordinary-RQR learned-\(\kappa\) partially collapsed scan}
+\begin{algorithmblock}{MPI learned-\(\kappa\) partially collapsed scan}
 \label{alg:supp-learned-kappa}
 \item \textbf{Generalized posterior and applicability.} Use
-\eqref{eq:normalized-scale-target}, restricted to ordinary RQR
+\eqref{eq:normalized-scale-target}, restricted to MPI
 \((\delta=0)\). It applies to a proper Gaussian/ridge fixed design, the
-ordinary RHS-NS adapter defined above, or a declared fixed-joint dynamic mode
+MPI RHS-NS adapter defined above, or a declared fixed-joint dynamic mode
 whose root and prior-state updates are otherwise valid.
 \item \textbf{Inputs and fixed quantities.} Freeze
 \(c,s_L,a_\kappa,b_\kappa,\mathcal O\), the root priors, all design or
 evolution quantities, iteration controls, and the label-swap rule.
 \item \textbf{Initialization.} Choose finite raw roots, \(\kappa>0\), positive
-initial latent scales at observed sites, and valid ordinary-only prior or
+initial latent scales at observed sites, and valid MPI-only prior or
 evolution states.
 \item \textbf{One complete sweep.} Repeat the following mandatory
 partial-collapse order for every warm-up and sampling iteration:
@@ -1549,7 +1550,7 @@ partial-collapse order for every warm-up and sampling iteration:
 conditional using the new \(\kappa\);
 \item update root 1 conditional on root 2 and the refreshed scales;
 \item update root 2 conditional on the new root 1 and refreshed scales;
-\item update every declared ordinary-only prior or evolution state; and
+\item update every declared MPI-only prior or evolution state; and
 \item if exchangeability permits, swap the two complete raw-root blocks and
 their associated states together.
 \end{enumerate}
@@ -1557,12 +1558,12 @@ their associated states together.
 endpoints, widths, midpoints, losses, \(\kappa\), and complete target,
 missingness, source, and swap metadata. Omit the swap unless the complete
 root-specific blocks are exchangeable.
-\item \textbf{Rate status.} This is the ordinary-only learned inverse-loss
+\item \textbf{Rate status.} This is the MPI-only learned inverse-loss
 scale convention. Its \(\kappa\) is neither a response variance nor an
 automatic coverage-calibration parameter.
 \item \textbf{Target and applicability.} The displayed order is an exact
 partially collapsed sampler for the specified generalized posterior in its
-validated fixed-joint modes. It applies to ordinary RQR and must not
+validated fixed-joint modes. It applies to MPI and must not
 be generalized to nonzero tilt by copying the Gamma update.
 \end{algorithmblock}
 Store draws only according to the declared retention policy. The collapsed
@@ -1614,7 +1615,7 @@ posterior, but would give up the closed-form Gaussian FFBS blocks.
 \begin{figure}[t]
 \centering
 \input{figures/rqr_dlm_blocked_state_schematic.tex}
-\caption{\textbf{Blocked state update for RQR-DLM.}
+\caption{\textbf{Blocked state update for MPI-DLM.}
 The two root paths have a stacked Gaussian prior, but their joint contribution
 to the augmented generalized posterior is quartic. Conditional on either complete root path
 and the latent scales, the other path has an exact Gaussian full conditional.
@@ -1636,7 +1637,7 @@ H_{1t}&=(y_t-\eta_{2t})f_t^\top,\\
 V_t=\phi_c\sigma_{\mathrm R}v_t.
 \end{align}
 Root 2 is obtained by exchanging labels. For fixed rate,
-\(\sigma_{\mathrm R}=\omega_{\mathrm R}^{-1}\); the ordinary-only learned-scale
+\(\sigma_{\mathrm R}=\omega_{\mathrm R}^{-1}\); the MPI-only learned-scale
 generalized posterior instead uses \(s_L/\kappa\).
 
 For either conditional Gaussian system, write \(m_{t-1},C_{t-1}\) for filtered
@@ -1647,7 +1648,7 @@ R_t&=P_t+W_t, & q_t&=H_tR_tH_t^\top+V_t,\\
 A_t&=R_tH_t^\top/q_t, & m_t&=a_t+A_t(z_t-H_ta_t),\\
 C_t&=R_t-A_tq_tA_t^\top.
 \end{align}
-For fixed-rate MT-RQR-DLM, define the observed-time canonical site
+For fixed-rate MTI-DLM, define the observed-time canonical site
 \[
 g_t=\omega_{\mathrm R}c\delta_tf_t.
 \]
@@ -1661,7 +1662,7 @@ m_t=m_t^{(0)}+C_tg_t
 \end{equation}
 before propagating to time \(t+1\); \(C_t\) is unchanged. At a missing
 response, the measurement update, latent scale, and tilt site are all omitted.
-Equivalently, if the ordinary conditional path has precision
+Equivalently, if the zero-tilt conditional path has precision
 \(\mathcal Q_k\) and mean \(m_k^{(0)}\), the tilted conditional mean is
 \begin{equation}
 m_k^{(0)}+\mathcal Q_k^{-1}g,
@@ -1740,7 +1741,7 @@ the reference quantities are estimated from the training responses, the
 resulting prior specification is
 empirical Bayes and must be recorded as such.
 \item \texttt{adaptive\_discount}: \(W_t\) is recomputed inside each conditional
-filter. In RQR, \(H_t\) and \(V_t\) depend on the other root, \(v_t\), and
+filter. In MTI, \(H_t\) and \(V_t\) depend on the other root, \(v_t\), and
 \(\kappa\), so the implied evolution covariance also depends on those blocks.
 The alternating updates omit terms that would generally arise from
 such dependence in a fixed joint density. This mode is therefore experimental
@@ -1785,7 +1786,7 @@ Except in degenerate cases such as \(d_\gamma=0\), the two conditional adaptive 
 kernels are therefore incompatible with a common smooth joint density while
 retaining their advertised Gaussian forms.
 
-\subsection{Exact ordinary-RQR shared component scales}
+\subsection{Exact MPI shared component scales}
 
 Partition the state into \(J\) blocks of dimensions \(d_j\), let \(S_j\)
 select block \(j\), and fix positive-definite templates \(Q_{jt}\). Define
@@ -1896,7 +1897,7 @@ Jacobian contribution is
 \[
 -\sum_{j=1}^J\{a_jx_j+b_j\exp(-x_j)\}.
 \]
-Holding \(\vect u_1,\vect u_2,\theta_{10},\theta_{20}\), and the RQR latent
+Holding \(\vect u_1,\vect u_2,\theta_{10},\theta_{20}\), and the MTI latent
 scales fixed, the noncentered log conditional is therefore, up to a constant,
 \[
 \log\pi(\vect x\mid\cdot)
@@ -1910,8 +1911,8 @@ where \(e_t(\vect x)\) is evaluated after reconstructing both root paths.
 This expression is the log density of the augmented generalized posterior in
 the noncentered parameterization; it is not a response likelihood.
 
-For the implemented ordinary learned-rate mode,
-\(\sigma_{\mathrm R}=s_L/\kappa\). For fixed-rate ordinary or mean-tilted RQR,
+For the implemented MPI learned-rate mode,
+\(\sigma_{\mathrm R}=s_L/\kappa\). For fixed-rate MPI or MTI,
 \(\sigma_{\mathrm R}=\omega_{\mathrm R}^{-1}\). In the latter nonzero-tilt
 case, the noncentered full conditional would additionally contain
 \begin{equation}
@@ -1921,11 +1922,11 @@ case, the noncentered full conditional would additionally contain
 \label{eq:supp-tilted-component-scale-asis}
 \end{equation}
 Although the centered inverse-Gamma full conditional given the reconstructed
-paths is unchanged, the ASIS slice density is therefore not the ordinary
+paths is unchanged, the ASIS slice density is therefore not the MPI
 expression:
 the tilt depends on \(\vect q\) through the reconstructed states. The current
 component-scale implementation is defined only for \(\delta=0\), targets the
-ordinary generalized posterior, and rejects nonzero tilt. Its tilted propriety
+MPI generalized posterior, and rejects nonzero tilt. Its tilted propriety
 and interweaving invariance, including
 \eqref{eq:supp-tilted-component-scale-asis}, require separate validation.
 
@@ -1941,7 +1942,7 @@ invariant. The time-zero states are held fixed during the noncentered step.
 Conditional shape and rate values saved for diagnostics are recomputed from
 the final retained paths.
 
-One ordinary-RQR sweep that leaves the specified augmented generalized
+One MPI sweep that leaves the specified augmented generalized
 posterior invariant
 updates collapsed \(\kappa\) when it is learned,
 refreshes \(\vect v\), applies the root-1 partially collapsed scale/path
@@ -1957,7 +1958,7 @@ separate degenerate models and are not part of the inverse-Gamma support.
 The article's fixed-design and dynamic illustrations use one frozen data set
 per model family at content \(c=0.95\). Innovations follow the known
 affinely standardized asymmetric-Laplace law with source index \(0.80\).
-Ordinary RQR uses zero tilt; the ET and SH tilts are the exact conditional
+MPI uses zero tilt; the ET and SH tilts are the exact conditional
 retained means of their population windows minus the population mean. On the
 standardized innovation scale, the three tilts are \(0\), \(0.0560608464\),
 and \(0.1147218631\), respectively. No Cornish--Fisher approximation enters
@@ -2015,7 +2016,7 @@ subtracting the time-specific population-oracle endpoint. Horizontal segments
 mark central 95\% generalized-posterior intervals and points mark medians. All
 three target cells pass the hard numerical, reference, provenance, and
 broad-recovery checks.
-RQR and ET are strict passes; SH retains the explicitly reported diagnostic
+MPI and ET are strict passes; SH retains the explicitly reported diagnostic
 warnings described above.}
 \label{fig:supp-dlm-endpoint-error-c095}
 \end{figure}
@@ -2035,14 +2036,14 @@ These computational checks establish agreement with the specified generalized
 posteriors on their particular fixtures. They do not establish frequentist
 calibration, comparative forecasting performance, or a response-predictive
 distribution. Empirical
-evaluation therefore reports held-out RQR loss, empirical coverage error,
+evaluation therefore reports held-out MPI loss, empirical coverage error,
 width at comparable coverage, and oracle endpoint recovery when the population
 roots are available. The equal-tailed interval score is retained as a
 secondary, target-specific comparison. Simulation estimands, data-generating
 factors, Monte Carlo precision, failure handling, and reporting rules are
 prespecified \citep{MorrisWhiteCrowther2019Simulation}.
 
-The available validation evidence is deepest for ordinary RQR
+The available validation evidence is deepest for MPI
 (\(\delta=0\)). Fixed-rate nonzero mean tilt has implementation checks for the
 Gaussian information shift, zero-tilt equivalence, dense conditional
 references, and the prespecified population-tilt illustrations in

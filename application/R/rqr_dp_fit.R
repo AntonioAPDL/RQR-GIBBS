@@ -47,7 +47,8 @@ rqr_dp_fit <- function(y, concentration, base_measure,
     base_measure_digest = base_measure$provenance_digest,
     strict_bayes = strict_bayes
   ))
-  class(out) <- c("rqr_dp_fit", "rqr_distribution_fit", "list")
+  class(out) <- c("dp_fit", "rqr_dp_fit", "distribution_fit",
+                  "rqr_distribution_fit", "list")
   out
 }
 
@@ -111,4 +112,3 @@ print.rqr_dp_fit <- function(x, ...) {
   )
   invisible(x)
 }
-

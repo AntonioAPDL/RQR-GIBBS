@@ -142,7 +142,7 @@ assert_true(
 )
 assert_true(
   identical(unname(PCH[TARGET_ORDER]), c(15, 16, 17)),
-  "ET, RQR, and SH use filled square, circle, and triangle symbols"
+  "ET, MPI, and SH use filled square, circle, and triangle symbols"
 )
 assert_true(
   identical(
@@ -153,7 +153,7 @@ assert_true(
 )
 assert_true(
   identical(TARGET_ORDER, c("equal_tailed", "ordinary_rqr", "shortest")),
-  "target stacking order is ET, RQR, SH"
+  "target stacking order is ET, MPI, SH"
 )
 assert_true(
   identical(INTERVAL_SEGMENT_LTY, 1L),
@@ -164,7 +164,7 @@ assert_true(
     unname(FIGURE_02_MAP_LABEL_POSITION[TARGET_ORDER]),
     c(4L, 1L, 2L)
   ),
-  "Figure 2 map labels place RQR below its marker"
+  "Figure 2 map labels place MPI below its marker"
 )
 assert_true(
   identical(
@@ -184,15 +184,15 @@ assert_true(
   )
 )
 assert_true(
-  identical(figure_02_map_label("ordinary_rqr", 9e-12), "RQR 0.00"),
-  "Figure 2 ordinary-RQR map label uses the requested literal"
+  identical(figure_02_map_label("ordinary_rqr", 9e-12), "MPI 0.00"),
+  "Figure 2 MPI map label uses the requested literal"
 )
 assert_true(
   identical(
     unname(COL[c("ordinary_rqr", "shortest")]),
     c("#2563EB", "#D97706")
   ),
-  "Figure 2 RQR and SH annotations retain blue and orange encodings"
+  "Figure 2 MPI and SH annotations retain blue and orange encodings"
 )
 assert_close(
   FIGURE_02_LABEL_OFFSET, 0.45, 1e-15,
@@ -408,7 +408,7 @@ for (limits in list(c(-30, -8), c(-8, 1), c(0.1, 8))) {
   )
 }
 
-# 2. Content and ordinary-RQR mean preservation.
+# 2. Content and MPI mean preservation.
 for (dist in dists) {
   summary <- oracle_interval_summary(dist, content)
   for (i in seq_len(nrow(summary))) {
@@ -424,7 +424,7 @@ for (dist in dists) {
   )
   assert_close(
     independent, dist$mean, tolerance,
-    paste(dist$id, "ordinary-RQR retained mean")
+    paste(dist$id, "MPI retained mean")
   )
 }
 
@@ -754,7 +754,7 @@ assert_true(
   al_geometry$zlim[1L] < min(
     (al_summary$lower - al_dist$mean) / al_dist$sd
   ),
-  "AL adaptive domain does not clip the RQR lower endpoint"
+  "AL adaptive domain does not clip the MPI lower endpoint"
 )
 generator_text <- paste(readLines(generator, warn = FALSE), collapse = "\n")
 assert_true(
@@ -891,4 +891,4 @@ assert_close(
   "strict-boundary half-width score uses indicator zero"
 )
 
-cat("PASS: deterministic RQR theory figures and oracle checks completed.\n")
+cat("PASS: deterministic MPI/MTI theory figures and oracle checks completed.\n")

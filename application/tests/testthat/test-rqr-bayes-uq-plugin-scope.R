@@ -1,4 +1,4 @@
-test_that("TCSP MT-RQR plug-in path declares fixed-target UQ scope", {
+test_that("TCSP-MTI plug-in path declares fixed-target UQ scope", {
   y <- seq(-2, 2, length.out = 50)
   fit <- rqr_tcsp_plugin_fit_univariate(
     y,
@@ -15,7 +15,7 @@ test_that("TCSP MT-RQR plug-in path declares fixed-target UQ scope", {
   )
   expect_identical(
     fit$contract$authoritative_full_distribution_uq_function,
-    "rqr_tcsp_hybrid_bayes_fit"
+    "tcsp_hybrid_bayes_fit"
   )
   expect_false(fit$contract$response_likelihood)
   expect_true(fit$contract$generalized_bayes)

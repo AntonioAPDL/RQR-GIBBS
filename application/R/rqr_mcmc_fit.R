@@ -898,10 +898,11 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       mean_tilt = mean_tilt_info,
       root_label_control = root_label_control$contract,
       column_names = colnames(X),
-      note = "RQR is a generalized-Bayes interval readout, not a response likelihood."
+      note = "MTI is a generalized-Bayes interval readout, not a response likelihood.",
+      legacy_name = "RQR"
     )
   )
-  class(out) <- c("rqr_mcmc", "rqr_fit")
+  class(out) <- c("mti_mcmc", "rqr_mcmc", "mti_fit", "rqr_fit")
   out
 }
 

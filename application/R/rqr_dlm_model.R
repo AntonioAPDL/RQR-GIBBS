@@ -82,7 +82,7 @@ rqr_as_dlm_model <- function(model) {
     component_dims = component_dims,
     component_names = component_names
   )
-  class(out) <- "rqr_dlm_model"
+  class(out) <- c("mti_dlm_model", "rqr_dlm_model")
   out
 }
 

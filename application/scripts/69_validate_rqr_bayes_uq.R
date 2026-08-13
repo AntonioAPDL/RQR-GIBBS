@@ -23,6 +23,58 @@ csv_values <- function(value) {
   trimws(strsplit(value, ",", fixed = TRUE)[[1L]])
 }
 
+legacy_method_id_map <- c(
+  tcsp_mtrqr_gibbs_median_mc = "tcsp_mti_gibbs_median_mc",
+  tcsp_mtrqr_gibbs_mean_mc = "tcsp_mti_gibbs_mean_mc",
+  tcsp_mtrqr_ecm_map_mc = "tcsp_mti_ecm_map_mc",
+  tcsp_mtrqr_gibbs_median_oracle_tilt_mc =
+    "tcsp_mti_gibbs_median_oracle_tilt_mc",
+  tcsp_mtrqr_ecm_map_oracle_tilt_mc = "tcsp_mti_ecm_map_oracle_tilt_mc"
+)
+canonical_method_id <- function(x) {
+  x <- as.character(x)
+  mapped <- unname(legacy_method_id_map[x])
+  ifelse(is.na(mapped), x, mapped)
+}
+canonical_engine_id <- function(x) {
+  if (is.null(x)) return(x)
+  sub("^mtrqr_", "mti_", as.character(x))
+}
+canonicalize_text_id <- function(x) {
+  if (is.null(x)) return(x)
+  gsub("mtrqr", "mti", as.character(x), fixed = TRUE)
+}
+canonicalize_bayes_uq_config <- function(config) {
+  for (ii in seq_along(config$methods)) {
+    config$methods[[ii]]$method_id <- canonical_method_id(
+      config$methods[[ii]]$method_id
+    )
+    config$methods[[ii]]$action_lane <- canonicalize_text_id(
+      config$methods[[ii]]$action_lane
+    )
+    config$methods[[ii]]$selected_interval_source <- canonicalize_text_id(
+      config$methods[[ii]]$selected_interval_source
+    )
+    config$methods[[ii]]$uq_engine <- canonical_engine_id(
+      config$methods[[ii]]$uq_engine
+    )
+  }
+  for (mode_name in names(config$modes)) {
+    config$modes[[mode_name]]$method_ids <- as.list(canonical_method_id(
+      unlist(config$modes[[mode_name]]$method_ids, use.names = FALSE)
+    ))
+  }
+  engines <- config$engine_defaults %||% list()
+  if (!is.null(engines$mtrqr_gibbs) && is.null(engines$mti_gibbs)) {
+    engines$mti_gibbs <- engines$mtrqr_gibbs
+  }
+  if (!is.null(engines$mtrqr_ecm) && is.null(engines$mti_ecm)) {
+    engines$mti_ecm <- engines$mtrqr_ecm
+  }
+  config$engine_defaults <- engines
+  config
+}
+
 for (package in c("rqrgibbs", "jsonlite", "digest")) {
   if (!requireNamespace(package, quietly = TRUE)) {
     stopf("Required package is not installed: ", package)
@@ -40,6 +92,7 @@ config_path <- normalizePath(arg_value(
                          "rqr_bayes_uq_validation_v1.json")
 ), winslash = "/", mustWork = TRUE)
 config <- jsonlite::read_json(config_path, simplifyVector = FALSE)
+config <- canonicalize_bayes_uq_config(config)
 wave_id <- arg_value("--wave-id=", NA_character_)
 wave_filters <- list(
   dgp_id = csv_values(arg_value("--wave-dgp=", NULL)),
@@ -281,7 +334,7 @@ oracle_for <- function(dgp_id, c_target) {
     dgp <- dgp_by_id[[dgp_id]]
     spec <- oracle_spec_from_dgp(dgp)
     oracle_cfg <- config$oracle %||% list()
-    certificate <- rqr_interval_oracle(
+    certificate <- mti_interval_oracle(
       family = spec$family,
       coverage_level = c_target,
       target = "SH",
@@ -303,7 +356,7 @@ dp_base_from_config <- function() {
   if (!identical(base$family, "normal")) {
     stopf("Unsupported direct-DP base family in config: ", base$family)
   }
-  rqr_dp_base_normal(mean = as.numeric(base$mean)[1L],
+  dp_base_normal(mean = as.numeric(base$mean)[1L],
                      sd = as.numeric(base$sd)[1L])
 }
 
@@ -335,10 +388,10 @@ scan_method_for <- function(method_id) {
   configured <- method_meta$scan_method %||% NULL
   if (!is.null(configured)) return(as.character(configured)[1L])
   if (method_id %in% c(
-    "hdp_s_mc", "tcsp_mc", "tcsp_mtrqr_gibbs_median_mc",
-    "tcsp_mtrqr_gibbs_mean_mc", "tcsp_mtrqr_ecm_map_mc",
-    "tcsp_mtrqr_gibbs_median_oracle_tilt_mc",
-    "tcsp_mtrqr_ecm_map_oracle_tilt_mc"
+    "hdp_s_mc", "tcsp_mc", "tcsp_mti_gibbs_median_mc",
+    "tcsp_mti_gibbs_mean_mc", "tcsp_mti_ecm_map_mc",
+    "tcsp_mti_gibbs_median_oracle_tilt_mc",
+    "tcsp_mti_ecm_map_oracle_tilt_mc"
   )) {
     return("monte_carlo_conservative")
   }
@@ -391,7 +444,7 @@ get_scan_calibration <- function(method_id, n, c_target, tol_conf) {
                args$numerical_confidence, args$seed, sep = "|")
   if (!exists(key, envir = scan_calibration_cache, inherits = FALSE)) {
     cal <- tryCatch(
-      rqr_tcsp_calibrate_count(
+      tcsp_calibrate_count(
         n = n,
         guaranteed_content = c_target,
         tolerance_confidence = tol_conf,
@@ -403,7 +456,7 @@ get_scan_calibration <- function(method_id, n, c_target, tol_conf) {
       error = function(e) {
         list(
           schema_version = paste0(config$schema_version, "/scan_calibration"),
-          method = "scan_calibrated_tcsp_mt_rqr",
+          method = "scan_calibrated_tcsp_mti",
           scan_critical_method = method,
           n = as.integer(n),
           guaranteed_content = as.numeric(c_target),
@@ -524,17 +577,17 @@ median_or_na <- function(x) {
   stats::median(x)
 }
 
-mtrqr_plugin_method_ids <- c(
-  "tcsp_mtrqr_gibbs_median_mc",
-  "tcsp_mtrqr_gibbs_mean_mc",
-  "tcsp_mtrqr_ecm_map_mc",
-  "tcsp_mtrqr_gibbs_median_oracle_tilt_mc",
-  "tcsp_mtrqr_ecm_map_oracle_tilt_mc"
+mti_plugin_method_ids <- c(
+  "tcsp_mti_gibbs_median_mc",
+  "tcsp_mti_gibbs_mean_mc",
+  "tcsp_mti_ecm_map_mc",
+  "tcsp_mti_gibbs_median_oracle_tilt_mc",
+  "tcsp_mti_ecm_map_oracle_tilt_mc"
 )
 
-mtrqr_plugin_cache <- new.env(parent = emptyenv())
+mti_plugin_cache <- new.env(parent = emptyenv())
 
-mtrqr_mode_control <- function(engine, control_name) {
+mti_mode_control <- function(engine, control_name) {
   cfg <- config$engine_defaults[[engine]] %||% list()
   cfg[[paste0(mode, "_", control_name)]] %||%
     cfg[[paste0("moderate_", control_name)]] %||%
@@ -542,12 +595,12 @@ mtrqr_mode_control <- function(engine, control_name) {
     list()
 }
 
-mtrqr_learning_rate <- function(engine) {
+mti_learning_rate <- function(engine) {
   cfg <- config$engine_defaults[[engine]] %||% list()
   as.numeric(cfg$learning_rate %||% 1)[1L]
 }
 
-mtrqr_beta_prior <- function(engine) {
+mti_beta_prior <- function(engine) {
   cfg <- config$engine_defaults[[engine]] %||% list()
   beta_prior(
     "ridge",
@@ -555,14 +608,14 @@ mtrqr_beta_prior <- function(engine) {
   )
 }
 
-fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
+fit_tcsp_mti_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
                                   seed) {
   method_meta <- method_by_id[[method_id]]
   engine <- as.character(method_meta$uq_engine %||%
                           if (grepl("gibbs", method_id, fixed = TRUE)) {
-                            "mtrqr_gibbs"
+                            "mti_gibbs"
                           } else {
-                            "mtrqr_ecm"
+                            "mti_ecm"
                           })[1L]
   tilt_source <- as.character(method_meta$tilt_source %||%
                                 "sample_shortest_window")[1L]
@@ -574,14 +627,14 @@ fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
       calibration$retained_count > length(y)) {
     return(empty_fit_result(
       infeasible = TRUE,
-      message = "TCSP calibration is infeasible for this fixed-target MT-RQR method.",
-      fit_class = "rqr_tcsp_mtrqr_calibration_infeasible",
+      message = "TCSP calibration is infeasible for this fixed-target MTI method.",
+      fit_class = "rqr_tcsp_mti_calibration_infeasible",
       scan_critical_method = calibration$scan_critical_method,
       content_buffer = calibration$content_buffer,
       retained_count = calibration$retained_count,
       scan_certified_lower_probability =
         calibration$scan_probability$certified_lower_probability %||% NA_real_,
-      action_lane = method_meta$action_lane %||% "fixed_target_mtrqr_plugin",
+      action_lane = method_meta$action_lane %||% "fixed_target_mti_plugin",
       selected_interval_source = selected_source,
       uq_engine = engine,
       tilt_source = tilt_source,
@@ -589,10 +642,10 @@ fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
     ))
   }
 
-  window <- rqr_tcsp_shortest_window(
+  window <- tcsp_shortest_window(
     y, retained_count = calibration$retained_count, na_rm = FALSE
   )
-  tilt <- rqr_tcsp_tilt_from_window(window)
+  tilt <- tcsp_tilt_from_window(window)
   target_mean_tilt <- tilt$delta_raw
   if (identical(tilt_source, "oracle_sh_population")) {
     target_mean_tilt <- oracle_for(dgp_id, c_target)$mean_tilt
@@ -618,9 +671,9 @@ fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
   if (!is.finite(target_content) || target_content >= 1) {
     return(do.call(empty_fit_result, c(formal_fields, list(
       infeasible = TRUE,
-      message = "MT-RQR fixed-target engine unavailable because calibrated target_content is not in (0, 1).",
-      fit_class = "rqr_tcsp_mtrqr_target_content_unavailable",
-      action_lane = method_meta$action_lane %||% "fixed_target_mtrqr_plugin",
+      message = "MTI fixed-target engine unavailable because calibrated target_content is not in (0, 1).",
+      fit_class = "rqr_tcsp_mti_target_content_unavailable",
+      action_lane = method_meta$action_lane %||% "fixed_target_mti_plugin",
       selected_interval_source = selected_source,
       uq_engine = engine,
       tilt_source = tilt_source,
@@ -634,19 +687,19 @@ fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
          target_mean_tilt = target_mean_tilt, engine = engine),
     algo = "sha256", serialize = TRUE
   )
-  if (exists(cache_key, envir = mtrqr_plugin_cache, inherits = FALSE)) {
-    cached <- get(cache_key, envir = mtrqr_plugin_cache, inherits = FALSE)
+  if (exists(cache_key, envir = mti_plugin_cache, inherits = FALSE)) {
+    cached <- get(cache_key, envir = mti_plugin_cache, inherits = FALSE)
     cached$fit_reused_across_posterior_thresholds <- TRUE
     return(cached)
   }
 
   X <- matrix(1, length(y), 1L, dimnames = list(NULL, "(Intercept)"))
-  learning_rate <- mtrqr_learning_rate(engine)
-  prior <- mtrqr_beta_prior(engine)
-  if (identical(engine, "mtrqr_gibbs")) {
-    control <- mtrqr_mode_control("mtrqr_gibbs", "mcmc_control")
+  learning_rate <- mti_learning_rate(engine)
+  prior <- mti_beta_prior(engine)
+  if (identical(engine, "mti_gibbs")) {
+    control <- mti_mode_control("mti_gibbs", "mcmc_control")
     control$seed <- seed
-    fit <- rqr_mcmc_fit(
+    fit <- mti_mcmc_fit(
       y = y,
       X = X,
       coverage_level = target_content,
@@ -658,23 +711,23 @@ fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
     )
     if (!isTRUE(all.equal(fit$model_spec$coverage_level, target_content,
                           tolerance = 0))) {
-      stopf("MT-RQR Gibbs target audit failed: coverage_level drifted.")
+      stopf("MTI Gibbs target audit failed: coverage_level drifted.")
     }
     if (!isTRUE(all.equal(fit$model_spec$fixed_learning_rate, learning_rate,
                           tolerance = 0))) {
-      stopf("MT-RQR Gibbs target audit failed: learning_rate drifted.")
+      stopf("MTI Gibbs target audit failed: learning_rate drifted.")
     }
     if (isTRUE(fit$model_spec$response_likelihood)) {
-      stopf("MT-RQR Gibbs target audit failed: response_likelihood is TRUE.")
+      stopf("MTI Gibbs target audit failed: response_likelihood is TRUE.")
     }
     if (!isTRUE(all.equal(unique(fit$model_spec$mean_tilt),
                           target_mean_tilt, tolerance = 1e-12))) {
-      stopf("MT-RQR Gibbs target audit failed: mean_tilt drifted.")
+      stopf("MTI Gibbs target audit failed: mean_tilt drifted.")
     }
     pred <- predict_interval(fit, X_new = X[1L, , drop = FALSE])
     lower_draws <- as.numeric(pred$lower_draws[1L, ])
     upper_draws <- as.numeric(pred$upper_draws[1L, ])
-    if (identical(selected_source, "mtrqr_gibbs_posterior_mean")) {
+    if (identical(selected_source, "mti_gibbs_posterior_mean")) {
       lower <- as.numeric(pred$lower_mean)[1L]
       upper <- as.numeric(pred$upper_mean)[1L]
     } else {
@@ -691,7 +744,7 @@ fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
       posterior_probability = NA_real_,
       infeasible = FALSE,
       fit_class = paste(class(fit), collapse = "|"),
-      action_lane = method_meta$action_lane %||% "fixed_target_mtrqr_plugin",
+      action_lane = method_meta$action_lane %||% "fixed_target_mti_plugin",
       selected_interval_source = selected_source,
       uq_engine = engine,
       tilt_source = tilt_source,
@@ -704,10 +757,10 @@ fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
       mcmc_n_mcmc = as.integer(fit$misc$n_mcmc %||% NA_integer_),
       mcmc_thin = as.integer(fit$misc$thin %||% NA_integer_)
     )))
-  } else if (identical(engine, "mtrqr_ecm")) {
-    control <- mtrqr_mode_control("mtrqr_ecm", "ecm_control")
+  } else if (identical(engine, "mti_ecm")) {
+    control <- mti_mode_control("mti_ecm", "ecm_control")
     control$seed <- seed
-    fit <- rqr_ecm_fit(
+    fit <- mti_ecm_fit(
       y = y,
       X = X,
       coverage_level = target_content,
@@ -718,14 +771,14 @@ fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
     )
     if (!isTRUE(all.equal(fit$model_spec$coverage_level, target_content,
                           tolerance = 0))) {
-      stopf("MT-RQR ECM target audit failed: coverage_level drifted.")
+      stopf("MTI ECM target audit failed: coverage_level drifted.")
     }
     if (isTRUE(fit$model_spec$response_likelihood)) {
-      stopf("MT-RQR ECM target audit failed: response_likelihood is TRUE.")
+      stopf("MTI ECM target audit failed: response_likelihood is TRUE.")
     }
     if (!isTRUE(all.equal(unique(fit$model_spec$mean_tilt),
                           target_mean_tilt, tolerance = 1e-12))) {
-      stopf("MT-RQR ECM target audit failed: mean_tilt drifted.")
+      stopf("MTI ECM target audit failed: mean_tilt drifted.")
     }
     pred <- predict_interval(fit, X_new = X[1L, , drop = FALSE])
     lower <- as.numeric(pred$lower)[1L]
@@ -740,7 +793,7 @@ fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
       posterior_probability = NA_real_,
       infeasible = FALSE,
       fit_class = paste(class(fit), collapse = "|"),
-      action_lane = method_meta$action_lane %||% "fixed_target_mtrqr_plugin",
+      action_lane = method_meta$action_lane %||% "fixed_target_mti_plugin",
       selected_interval_source = selected_source,
       uq_engine = engine,
       tilt_source = tilt_source,
@@ -753,9 +806,9 @@ fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
       ecm_objective = as.numeric(fit$objective %||% NA_real_)
     )))
   } else {
-    stopf("Unsupported MT-RQR plug-in engine: ", engine)
+    stopf("Unsupported MTI plug-in engine: ", engine)
   }
-  assign(cache_key, out, envir = mtrqr_plugin_cache)
+  assign(cache_key, out, envir = mti_plugin_cache)
   out
 }
 
@@ -772,7 +825,7 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       posterior_probability = NA_real_,
       retained_count = NA_integer_,
       infeasible = FALSE,
-      fit_class = "rqr_interval_oracle|shortest_population",
+      fit_class = "mti_interval_oracle|rqr_interval_oracle|shortest_population",
       oracle_target = certificate$target,
       oracle_mean_tilt = certificate$mean_tilt,
       oracle_certificate_digest = certificate$certificate_digest,
@@ -802,7 +855,7 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
         posterior_constraint_status = "infeasible_scan_count"
       ))
     }
-    fit <- rqr_tcsp_hybrid_bayes_fit(
+    fit <- tcsp_hybrid_bayes_fit(
       y,
       guaranteed_content = c_target,
       tolerance_confidence = tol_conf,
@@ -854,8 +907,8 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
         fit$hybrid_bayesian_scan_action$candidates_evaluated %||% NA_integer_
     ))
   }
-  if (method_id %in% mtrqr_plugin_method_ids) {
-    return(fit_tcsp_mtrqr_plugin(
+  if (method_id %in% mti_plugin_method_ids) {
+    return(fit_tcsp_mti_plugin(
       method_id = method_id,
       y = y,
       dgp_id = dgp_id,
@@ -865,12 +918,12 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
     ))
   }
   if (identical(method_id, "dp_bayes")) {
-    fit <- rqr_dp_fit(
+    fit <- dp_fit(
       y,
       concentration = as.numeric(direct$concentration)[1L],
       base_measure = base
     )
-    action <- rqr_dp_bayes_tolerance_action(
+    action <- dp_bayes_tolerance_action(
       fit, content = c_target, posterior_confidence = post_conf
     )
     out <- selected_interval(action$selected)
@@ -893,13 +946,13 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
     control <- dpm[[paste0(mode, "_mcmc_control")]] %||%
       dpm$moderate_mcmc_control
     control$seed <- seed
-    fit <- rqr_dpm_fit(
+    fit <- dpm_fit(
       y,
       truncation_level = as.integer(dpm$truncation_level)[1L],
       concentration = 1,
       mcmc_control = control
     )
-    action <- rqr_dpm_bayes_tolerance_action(
+    action <- dpm_bayes_tolerance_action(
       fit, content = c_target, posterior_confidence = post_conf
     )
     out <- selected_interval(action$selected)
@@ -919,10 +972,10 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
   }
   if (identical(method_id, "bb_shortest_diag")) {
     bb <- config$engine_defaults$bayesian_bootstrap
-    draws <- rqr_bayesian_bootstrap_draws(
+    draws <- bayesian_bootstrap_shortest_draws(
       y, n_draws = as.integer(bb$draws)[1L], seed = seed
     )
-    sh <- rqr_dp_shortest_draws(draws, target_content = c_target)
+    sh <- dp_shortest_draws(draws, target_content = c_target)
     lower <- stats::median(sh$lower)
     upper <- stats::median(sh$upper)
     return(list(
@@ -965,7 +1018,7 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
         target_content = calibration$target_content %||% NA_real_
       ))
     }
-    window <- rqr_tcsp_shortest_window(
+    window <- tcsp_shortest_window(
       y, retained_count = calibration$retained_count, na_rm = FALSE
     )
     return(empty_fit_result(
@@ -1001,12 +1054,12 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       "empirical_shortest"
     }
     ecm_args <- if (identical(pilot_method, "ecm_fixed_tilt")) {
-      list(ecm_control = mtrqr_mode_control("mtrqr_ecm", "ecm_control"))
+      list(ecm_control = mti_mode_control("mti_ecm", "ecm_control"))
     } else {
       list()
     }
     fit <- tryCatch(
-      rqr_tcsp_split_exact_fit(
+      tcsp_split_exact_fit(
         y,
         guaranteed_content = c_target,
         tolerance_confidence = tol_conf,
@@ -1029,7 +1082,7 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
           selected_interval_source %||% paste0("split_", pilot_method, "_action"),
         posterior_constraint_status = "exact_spacing_infeasible",
         uq_engine = method_by_id[[method_id]]$uq_engine %||%
-          if (identical(pilot_method, "ecm_fixed_tilt")) "mtrqr_ecm" else
+          if (identical(pilot_method, "ecm_fixed_tilt")) "mti_ecm" else
             NA_character_,
         tilt_source = method_by_id[[method_id]]$tilt_source %||%
           if (identical(pilot_method, "ecm_fixed_tilt")) {
@@ -1056,7 +1109,7 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       selected_interval_source = method_by_id[[method_id]]$
         selected_interval_source %||% paste0("split_", pilot_method, "_action"),
       uq_engine = method_by_id[[method_id]]$uq_engine %||%
-        if (identical(pilot_method, "ecm_fixed_tilt")) "mtrqr_ecm" else
+        if (identical(pilot_method, "ecm_fixed_tilt")) "mti_ecm" else
           NA_character_,
       tilt_source = method_by_id[[method_id]]$tilt_source %||%
         if (identical(pilot_method, "ecm_fixed_tilt")) {
@@ -1071,17 +1124,17 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
              pilot_diagnostics = fit$pilot_diagnostics),
         algo = "sha256", serialize = TRUE
       ),
-      ecm_converged = if (inherits(ecm_fit, "rqr_ecm")) {
+      ecm_converged = if (inherits(ecm_fit, "mti_ecm")) {
         isTRUE(ecm_fit$converged)
       } else {
         NA
       },
-      ecm_iterations = if (inherits(ecm_fit, "rqr_ecm")) {
+      ecm_iterations = if (inherits(ecm_fit, "mti_ecm")) {
         as.integer(ecm_fit$iterations %||% NA_integer_)
       } else {
         NA_integer_
       },
-      ecm_objective = if (inherits(ecm_fit, "rqr_ecm")) {
+      ecm_objective = if (inherits(ecm_fit, "mti_ecm")) {
         as.numeric(ecm_fit$objective %||% NA_real_)
       } else {
         NA_real_
@@ -1616,7 +1669,7 @@ readme <- c(
   "",
   "This pilot separates response-distribution Bayesian UQ from RQR generalized-Bayes plug-in summaries.",
   "The hybrid direct-DP scan method fixes the scan count before evaluating posterior content probability.",
-  "The `tcsp_mtrqr_gibbs_*` and `tcsp_mtrqr_ecm_*` rows are fixed-target MT-RQR fitted summaries after scan calibration.",
+  "The `tcsp_mti_gibbs_*` and `tcsp_mti_ecm_*` rows are fixed-target MTI fitted summaries after scan calibration.",
   "For those rows, `formal_action_*` records the associated scan action and `fitted_summary_*` records the Gibbs or ECM endpoint summary.",
   "These artifacts are validation evidence only; they do not prove posterior endpoint coverage.",
   "The `oracle_sh` rows are non-deployable synthetic-DGP benchmarks for the true population shortest interval and oracle mean tilt.",

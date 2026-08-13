@@ -303,7 +303,7 @@ writeLines(c(
     "asymmetric-Laplace law with source index 0.80."
   ),
   paste(
-    "Ordinary RQR, equal-tailed, and shortest-interval tilts are computed",
+    "MPI, equal-tailed, and shortest-interval tilts are computed",
     "as retained conditional means minus the population mean from the exact",
     "population law; no Cornish--Fisher approximation is used."
   ),
