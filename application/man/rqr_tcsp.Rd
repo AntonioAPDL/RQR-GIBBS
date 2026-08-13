@@ -138,7 +138,11 @@ Monte Carlo calibration simulates the Uniform scan-statistic distribution once
 per \code{n}/content cell and applies a simultaneous Massart-DKW empirical-CDF
 lower band over all retained-count candidates. It is numerical calibration,
 not an exact scan recursion and not a pointwise post-selection
-Clopper-Pearson certificate.
+Clopper-Pearson certificate. For the terminal retained-count candidate
+\eqn{k=n}, the Monte Carlo path uses the exact Uniform sample-range event
+\eqn{\Pr\{\max_i U_i-\min_i U_i > c\}} when needed; this can certify the
+full-range action without weakening the numerical scan-band interpretation for
+nonterminal candidates.
 The DKW path uses the strict retained-count rule
 \eqn{k/n > c + 2\epsilon_n} implied by the uniform band. Unsupported or
 infeasible requests fail closed.

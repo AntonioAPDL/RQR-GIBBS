@@ -79,6 +79,38 @@
   )
 }
 
+.rqr_tcsp_terminal_range_probability <- function(n, guaranteed_content,
+                                                 requested_method) {
+  n <- .rqr_mt_assert_count(n, "n", 1L)
+  c_target <- .rqr_tcsp_assert_probability(
+    guaranteed_content, "guaranteed_content"
+  )
+  log_c <- log(c_target)
+  range_cdf <- exp((n - 1L) * log_c) * (n - (n - 1L) * c_target)
+  range_cdf <- min(max(range_cdf, 0), 1)
+  probability <- min(max(1 - range_cdf, 0), 1)
+  list(
+    method = "exact_terminal_range",
+    requested_method = requested_method,
+    n = n,
+    guaranteed_content = c_target,
+    retained_count = as.integer(n),
+    scan_threshold_max_count = as.integer(n - 1L),
+    probability_estimate = probability,
+    certified_lower_probability = probability,
+    numerical_confidence = 1,
+    numerical_error_control =
+      "Exact Uniform sample-range law for the terminal retained_count=n scan event.",
+    simultaneous_numerical_calibration = FALSE,
+    exact_terminal_range_calibration = TRUE,
+    n_sim = 0L,
+    successes = NA_integer_,
+    failures = NA_integer_,
+    range_cdf_at_content = range_cdf,
+    finite_sample_claim_available = TRUE
+  )
+}
+
 .rqr_tcsp_posterior_beta_prior_type <- function(posterior_fit) {
   posterior_fit$model_spec$beta_prior_type %||%
     posterior_fit$beta_prior$type %||%
@@ -223,6 +255,10 @@ rqr_tcsp_scan_probability <- function(
     numerical_confidence, "numerical_confidence"
   )
 
+  if (identical(method, "monte_carlo_conservative") && k == n) {
+    return(.rqr_tcsp_terminal_range_probability(n, c_target, method))
+  }
+
   if (identical(method, "dkw_conservative")) {
     eps <- sqrt(log(2 / (1 - numerical_confidence)) / (2 * n))
     certified <- as.numeric(k / n - 2 * eps > c_target)
@@ -314,7 +350,11 @@ rqr_tcsp_calibrate_count <- function(
     distribution, numerical_confidence = numerical_confidence
   )
   for (k in seq_len(n + 1L)) {
-    prob <- .rqr_tcsp_probability_from_band(band, k)
+    prob <- if (k == n) {
+      .rqr_tcsp_terminal_range_probability(n, c_target, method)
+    } else {
+      .rqr_tcsp_probability_from_band(band, k)
+    }
     if (is.finite(prob$certified_lower_probability) &&
         prob$certified_lower_probability >= tolerance_confidence) {
       return(list(
@@ -331,8 +371,12 @@ rqr_tcsp_calibrate_count <- function(
         scan_cdf_band = band,
         scan_distribution_digest = distribution$scan_distribution_digest,
         cdf_band_digest = band$cdf_band_digest,
-        simultaneous_numerical_calibration = TRUE,
-        finite_sample_claim_available = FALSE,
+        simultaneous_numerical_calibration =
+          isTRUE(prob$simultaneous_numerical_calibration),
+        exact_terminal_range_calibration =
+          isTRUE(prob$exact_terminal_range_calibration),
+        finite_sample_claim_available =
+          isTRUE(prob$finite_sample_claim_available),
         asymptotic_claim_available = FALSE,
         infeasible = k > n
       ))

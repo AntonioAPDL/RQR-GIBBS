@@ -82,6 +82,41 @@ test_that("TCSP Monte Carlo calibration is simultaneous numerical, not exact", {
   expect_lte(prob$certified_lower_probability, prob$probability_estimate)
 })
 
+test_that("TCSP Monte Carlo calibration uses exact terminal range rescue", {
+  prob <- rqr_tcsp_scan_probability(
+    n = 500,
+    guaranteed_content = 0.99,
+    retained_count = 500,
+    method = "monte_carlo_conservative",
+    n_sim = 80,
+    numerical_confidence = 0.995,
+    seed = 9104
+  )
+  expected <- 1 - 0.99^499 * (500 - 499 * 0.99)
+
+  expect_identical(prob$method, "exact_terminal_range")
+  expect_true(prob$exact_terminal_range_calibration)
+  expect_equal(prob$certified_lower_probability, expected,
+               tolerance = 1e-12)
+  expect_true(prob$certified_lower_probability >= 0.95)
+
+  cal <- rqr_tcsp_calibrate_count(
+    n = 500,
+    guaranteed_content = 0.99,
+    tolerance_confidence = 0.95,
+    method = "monte_carlo_conservative",
+    n_sim = 5000,
+    numerical_confidence = 0.995,
+    seed = 9104
+  )
+
+  expect_equal(cal$retained_count, 500L)
+  expect_equal(cal$target_content, 1)
+  expect_true(cal$exact_terminal_range_calibration)
+  expect_true(cal$finite_sample_claim_available)
+  expect_identical(cal$scan_probability$method, "exact_terminal_range")
+})
+
 test_that("TCSP Monte Carlo calibration uses one simultaneous band for selection", {
   cal <- rqr_tcsp_calibrate_count(
     n = 10,

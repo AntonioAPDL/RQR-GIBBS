@@ -13,9 +13,10 @@ Detached launcher: `application/scripts/72_launch_rqr_bayes_uq_main_waves.sh`
 ## Purpose
 
 Run the main iid univariate validation for the authoritative Bayesian-scan
-tolerance action after the completed moderate pilot.  In this launch, coverage
-levels are guaranteed population contents, not regression or dynamic coverage
-claims.
+tolerance action after the completed moderate pilot, with explicit MT-RQR Gibbs
+and MT-RQR ECM/MAP fitted-summary competitors wired into the same two-stage
+scan-calibration design.  In this launch, coverage levels are guaranteed
+population contents, not regression or dynamic coverage claims.
 
 ## Scope
 
@@ -36,8 +37,8 @@ claims.
   same generated sample within each DGP, sample size, content, and replication.
 - Wave split: one wave per DGP, sample size, guaranteed content, and tolerance
   confidence.  With the current grid this is `42` waves.
-- Result rows: `88,200` in the main confirmatory launch
-  (`12,600` datasets times `7` methods, including the non-deployable oracle).
+- Result rows: `126,000` in the main confirmatory launch
+  (`12,600` datasets times `10` methods, including the non-deployable oracle).
 
 ## DGPs
 
@@ -56,10 +57,16 @@ claims.
 - `hdp_s_mc`: authoritative hybrid direct-DP Bayesian-scan shortest interval
   with MC scan calibration.
 - `tcsp_mc`: scan-only TCSP shortest interval with MC scan calibration.
-- `tcsp_dkw`: conservative DKW scan stress comparator.
+- `tcsp_mtrqr_gibbs_median_mc`: fixed-target MT-RQR Gibbs generalized-Bayes
+  posterior-median endpoint summary after MC scan calibration.
+- `tcsp_mtrqr_ecm_map_mc`: fixed-target MT-RQR ECM/MAP generalized-Bayes
+  endpoint summary after MC scan calibration.
 - `split_empirical_shortest`: split exact-spacing empirical-shortest action.
+- `split_ecm_fixed_tilt`: split exact-spacing action using an ECM fixed-tilt
+  pilot placement.
 - `wilks_minmax`: full-sample min-max comparator.
 - `bb_shortest_diag`: Bayesian bootstrap diagnostic.
+- `tcsp_dkw`: conservative DKW scan stress comparator.
 
 Standalone `dp_bayes` and `dpm_bayes` are not included inline in the main
 launch.  The authoritative hybrid action already evaluates direct-DP posterior
@@ -72,9 +79,15 @@ four DGPs, two sample sizes, and contents `0.90` and `0.95`.
 
 The runner records:
 
+- action lane and selected interval source;
 - retained fraction `k/n`;
 - scan content buffer `k/n - c`;
 - scan certified lower probability;
+- formal TCSP action endpoints, width, content, and success flag;
+- fitted Gibbs/ECM summary endpoints and width when applicable;
+- MT-RQR target content, tilt source, target mean tilt, and audit digest;
+- Gibbs draw counts and ECM convergence diagnostics;
+- fit-reuse flags for paired posterior thresholds;
 - content gap `true_content - c`;
 - posterior threshold excess;
 - posterior constraint status and binding rate;
@@ -104,6 +117,14 @@ and precomputes the oracle certificates.  The frozen run directory contains:
 The shared scan cache avoids repeating identical MC scan calibrations across
 waves.  High-content DKW infeasibility is recorded as an infeasible calibration
 object rather than stopping the launch.
+
+For MC scan calibration, the terminal retained-count candidate `k=n` uses the
+exact Uniform sample-range event when that is the first certifiable action. This
+is not an exact scan recursion for all candidates; it is a finite-sample rescue
+for the full-range action. In the prepared confirmatory grid, this prevents a
+false MC infeasibility at `n=500`, `c=0.99`: `tcsp_mc` and `hdp_s_mc` are
+feasible with `k=500`, while fixed-target MT-RQR Gibbs/ECM summaries remain
+fail-closed because their fitted target would require `q=1`.
 
 ## Launch
 
@@ -157,15 +178,27 @@ make collect-rqr-bayes-uq-main \
   RQR_BAYES_UQ_MAIN_RUN_DIR=application/runs/rqr_bayes_uq_validation_main_20260813/<run_id>
 ```
 
+Stop and mark a superseded or mistaken run:
+
+```sh
+make stop-rqr-bayes-uq-main \
+  RQR_BAYES_UQ_MAIN_RUN_DIR=application/runs/rqr_bayes_uq_validation_main_20260813/<run_id>
+```
+
 ## Post-Run Decision Rules
 
 - If `hdp_s_mc` and `tcsp_mc` are identical across most cells, posterior UQ is
   diagnostic rather than binding under this launch and should be tuned next.
+- If `tcsp_mtrqr_gibbs_median_mc` or `tcsp_mtrqr_ecm_map_mc` undercovers as
+  selected fitted summaries while the associated `formal_action_*` columns pass,
+  treat the fitted summaries as useful algorithm diagnostics but do not promote
+  them as tolerance actions.
 - If `hdp_s_mc` is wider than `tcsp_mc` only in hard DGP/high-content cells,
   promote that as the main Bayesian-UQ contribution.
 - If MC scan calibration has high infeasibility at `c = 0.99`, report the
-  infeasible cells explicitly and tune the admissible high-content design after
-  this launch.
+  infeasible cells explicitly. Under the current preflight, MC is feasible for
+  `n=500` and `n=1000` at `c=0.99`; DKW remains the intentionally conservative
+  stress comparator.
 - Treat `dpm_bayes`, `dp_bayes`, and `bb_shortest_diag` as diagnostic
   competitors unless they are wrapped by a formal scan/tolerance action.
 - Treat `oracle_sh` as a non-deployable population benchmark.  It can guide
@@ -174,6 +207,7 @@ make collect-rqr-bayes-uq-main \
 ## Superseded Serial Attempt
 
 The earlier serial confirmatory attempt was stopped after only a few datasets
-and was not collected or promoted as evidence.  It should be treated as a
-runtime diagnosis showing that the main study needs shared calibration and
-wave-based execution.
+and was not collected or promoted as evidence.  The launch is superseded by the
+corrected method grid that adds explicit MT-RQR Gibbs, MT-RQR ECM/MAP, and
+split-ECM competitors.  It should be treated as a runtime diagnosis showing
+that the main study needs shared calibration and wave-based execution.

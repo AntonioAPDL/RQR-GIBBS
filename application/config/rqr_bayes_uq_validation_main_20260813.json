@@ -1,11 +1,18 @@
 {
-  "schema_version": "rqrgibbs_bayes_uq_validation/1.1.0",
+  "schema_version": "rqrgibbs_bayes_uq_validation/1.2.0",
   "study_id": "rqr_bayes_uq_validation_main_20260813",
-  "status": "confirmatory_main_launch_authorized_high_coverage_iid_univariate",
-  "interpretation": "Main iid univariate validation for high-coverage Bayesian-scan tolerance actions. Coverage levels are guaranteed population contents. Repeated-sample content is empirical validation evidence, not a proof of posterior endpoint coverage.",
+  "status": "corrected_confirmatory_main_launch_authorized_with_explicit_mtrqr_gibbs_ecm",
+  "interpretation": "Main iid univariate validation for high-coverage Bayesian-scan tolerance actions and explicit fixed-target MT-RQR Gibbs/ECM diagnostic summaries. Coverage levels are guaranteed population contents. Repeated-sample content is empirical validation evidence, not a proof of posterior endpoint coverage.",
   "generalized_bayes": false,
   "response_likelihood": true,
   "posterior_predictive_response_draws": false,
+  "method_family_scope": {
+    "mixed_method_families": true,
+    "scan_certified_empirical_actions": true,
+    "fixed_target_mtrqr_generalized_bayes_summaries": true,
+    "response_likelihood_distribution_diagnostics": true,
+    "row_level_method_flags_are_authoritative": true
+  },
   "claim_scope": {
     "iid_univariate_continuous_only": true,
     "regression_tolerance": false,
@@ -49,12 +56,12 @@
   "modes": {
     "smoke": {
       "replications": 1,
-      "sample_sizes": [80],
+      "sample_sizes": [120],
       "guaranteed_contents": [0.90, 0.99],
       "tolerance_confidences": [0.90],
       "posterior_confidences": [0.90],
       "dgp_ids": ["normal", "student_t3", "sharp_mixture"],
-      "method_ids": ["oracle_sh", "hdp_s_mc", "tcsp_mc", "tcsp_dkw", "split_empirical_shortest", "wilks_minmax", "dpm_bayes", "dp_bayes", "bb_shortest_diag"],
+      "method_ids": ["oracle_sh", "hdp_s_mc", "tcsp_mc", "tcsp_mtrqr_gibbs_median_mc", "tcsp_mtrqr_ecm_map_mc", "tcsp_dkw", "split_empirical_shortest", "split_ecm_fixed_tilt", "wilks_minmax", "dpm_bayes", "dp_bayes", "bb_shortest_diag"],
       "reference_method_id": "tcsp_mc",
       "paired_thresholds": true,
       "checkpoint_every_datasets": 2
@@ -66,7 +73,7 @@
       "tolerance_confidences": [0.95],
       "posterior_confidences": [0.90, 0.95, 0.99],
       "dgp_ids": ["normal", "lognormal", "lognormal_hard", "mixture", "sharp_mixture", "contaminated_normal", "student_t3"],
-      "method_ids": ["oracle_sh", "hdp_s_mc", "tcsp_mc", "tcsp_dkw", "split_empirical_shortest", "wilks_minmax", "bb_shortest_diag"],
+      "method_ids": ["oracle_sh", "hdp_s_mc", "tcsp_mc", "tcsp_mtrqr_gibbs_median_mc", "tcsp_mtrqr_ecm_map_mc", "split_empirical_shortest", "split_ecm_fixed_tilt", "wilks_minmax", "bb_shortest_diag", "tcsp_dkw"],
       "reference_method_id": "tcsp_mc",
       "paired_thresholds": true,
       "checkpoint_every_datasets": 10
@@ -94,15 +101,18 @@
     {"dgp_id": "student_t3", "family": "standardized_student_t", "label": "standardized Student t with three degrees of freedom", "df": 3}
   ],
   "methods": [
-    {"method_id": "oracle_sh", "label": "True population shortest interval oracle with exact mean tilt", "formal_tolerance_action": false, "response_likelihood": false, "generalized_bayes": false, "oracle_method": true, "deployable": false},
-    {"method_id": "hdp_s_mc", "label": "Authoritative hybrid direct-DP Bayesian-scan shortest interval with MC scan calibration", "formal_tolerance_action": true, "response_likelihood": true, "generalized_bayes": false, "scan_method": "monte_carlo_conservative"},
-    {"method_id": "tcsp_mc", "label": "TCSP shortest window with MC scan calibration", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true, "scan_method": "monte_carlo_conservative"},
-    {"method_id": "tcsp_dkw", "label": "TCSP shortest window with conservative DKW scan calibration", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true, "scan_method": "dkw_conservative"},
-    {"method_id": "split_empirical_shortest", "label": "Split exact-spacing empirical-shortest action", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true},
-    {"method_id": "wilks_minmax", "label": "Full-sample min-max order-statistic comparator", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": false},
-    {"method_id": "dpm_bayes", "label": "Gaussian DPM Bayesian shortest order-statistic action", "formal_tolerance_action": false, "response_likelihood": true, "generalized_bayes": false},
-    {"method_id": "dp_bayes", "label": "Direct-DP Bayesian shortest order-statistic action", "formal_tolerance_action": false, "response_likelihood": true, "generalized_bayes": false},
-    {"method_id": "bb_shortest_diag", "label": "Bayesian bootstrap posterior shortest diagnostic", "formal_tolerance_action": false, "response_likelihood": false, "generalized_bayes": false}
+    {"method_id": "oracle_sh", "label": "True population shortest interval oracle with exact mean tilt", "action_lane": "oracle_reference", "selected_interval_source": "population_shortest_oracle", "formal_tolerance_action": false, "response_likelihood": false, "generalized_bayes": false, "oracle_method": true, "deployable": false},
+    {"method_id": "hdp_s_mc", "label": "Authoritative hybrid direct-DP Bayesian-scan shortest interval with MC scan calibration", "action_lane": "scan_certified_bayes_hybrid", "selected_interval_source": "hybrid_bayesian_scan_action", "formal_tolerance_action": true, "response_likelihood": true, "generalized_bayes": false, "scan_method": "monte_carlo_conservative", "deployable": true},
+    {"method_id": "tcsp_mc", "label": "TCSP shortest window with MC scan calibration", "action_lane": "scan_certified_empirical", "selected_interval_source": "formal_scan_action", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true, "scan_method": "monte_carlo_conservative", "deployable": true},
+    {"method_id": "tcsp_mtrqr_gibbs_median_mc", "label": "Fixed-target MT-RQR Gibbs posterior-median summary after MC scan calibration", "action_lane": "fixed_target_mtrqr_plugin", "selected_interval_source": "mtrqr_gibbs_posterior_median", "formal_tolerance_action": false, "response_likelihood": false, "generalized_bayes": true, "scan_method": "monte_carlo_conservative", "uq_engine": "mtrqr_gibbs", "tilt_source": "sample_shortest_window", "deployable": true},
+    {"method_id": "tcsp_mtrqr_ecm_map_mc", "label": "Fixed-target MT-RQR ECM/MAP summary after MC scan calibration", "action_lane": "fixed_target_mtrqr_plugin", "selected_interval_source": "mtrqr_ecm_map", "formal_tolerance_action": false, "response_likelihood": false, "generalized_bayes": true, "scan_method": "monte_carlo_conservative", "uq_engine": "mtrqr_ecm", "tilt_source": "sample_shortest_window", "deployable": true},
+    {"method_id": "tcsp_dkw", "label": "TCSP shortest window with conservative DKW scan calibration", "action_lane": "scan_certified_empirical_stress", "selected_interval_source": "formal_scan_action", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true, "scan_method": "dkw_conservative", "deployable": true},
+    {"method_id": "split_empirical_shortest", "label": "Split exact-spacing empirical-shortest action", "action_lane": "split_exact_spacing", "selected_interval_source": "split_empirical_shortest_action", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true, "deployable": true},
+    {"method_id": "split_ecm_fixed_tilt", "label": "Split exact-spacing action with fixed-tilt ECM pilot placement", "action_lane": "split_exact_spacing", "selected_interval_source": "split_ecm_fixed_tilt_action", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true, "uq_engine": "mtrqr_ecm", "tilt_source": "pilot_shortest_window", "deployable": true},
+    {"method_id": "wilks_minmax", "label": "Full-sample min-max order-statistic comparator", "action_lane": "order_statistic_baseline", "selected_interval_source": "full_sample_minmax", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": false, "deployable": true},
+    {"method_id": "dpm_bayes", "label": "Gaussian DPM Bayesian shortest order-statistic action", "action_lane": "response_likelihood_bayes_diagnostic", "selected_interval_source": "dpm_bayes_selected_action", "formal_tolerance_action": false, "response_likelihood": true, "generalized_bayes": false, "deployable": false},
+    {"method_id": "dp_bayes", "label": "Direct-DP Bayesian shortest order-statistic action", "action_lane": "response_likelihood_bayes_diagnostic", "selected_interval_source": "dp_bayes_selected_action", "formal_tolerance_action": false, "response_likelihood": true, "generalized_bayes": false, "deployable": false},
+    {"method_id": "bb_shortest_diag", "label": "Bayesian bootstrap posterior shortest diagnostic", "action_lane": "bootstrap_diagnostic", "selected_interval_source": "bayesian_bootstrap_posterior_median", "formal_tolerance_action": false, "response_likelihood": false, "generalized_bayes": false, "deployable": false}
   ],
   "engine_defaults": {
     "direct_dp": {
@@ -119,6 +129,18 @@
     },
     "bayesian_bootstrap": {
       "draws": 60
+    },
+    "mtrqr_gibbs": {
+      "learning_rate": 1,
+      "beta_ridge_tau2": 10000,
+      "smoke_mcmc_control": {"n_burn": 8, "n_mcmc": 12, "thin": 1},
+      "confirmatory_mcmc_control": {"n_burn": 25, "n_mcmc": 50, "thin": 1}
+    },
+    "mtrqr_ecm": {
+      "learning_rate": 1,
+      "beta_ridge_tau2": 10000,
+      "smoke_ecm_control": {"max_iter": 30, "stable_iterations": 1, "tol_stationarity": 1000000, "store_iteration_trace": false},
+      "confirmatory_ecm_control": {"max_iter": 80, "stable_iterations": 2, "tol_stationarity": 0.00001, "store_iteration_trace": false}
     },
     "split": {
       "pilot_fraction": 0.30

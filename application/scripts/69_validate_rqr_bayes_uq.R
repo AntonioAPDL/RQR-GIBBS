@@ -334,10 +334,16 @@ scan_method_for <- function(method_id) {
   method_meta <- method_by_id[[method_id]]
   configured <- method_meta$scan_method %||% NULL
   if (!is.null(configured)) return(as.character(configured)[1L])
-  if (method_id %in% c("hdp_s_mc", "tcsp_mc")) {
+  if (method_id %in% c(
+    "hdp_s_mc", "tcsp_mc", "tcsp_mtrqr_gibbs_median_mc",
+    "tcsp_mtrqr_gibbs_mean_mc", "tcsp_mtrqr_ecm_map_mc",
+    "tcsp_mtrqr_gibbs_median_oracle_tilt_mc",
+    "tcsp_mtrqr_ecm_map_oracle_tilt_mc"
+  )) {
     return("monte_carlo_conservative")
   }
-  "dkw_conservative"
+  if (method_id %in% c("hdp_s", "tcsp_dkw")) return("dkw_conservative")
+  NA_character_
 }
 
 scan_args_for <- function(method_id, n, c_target, tol_conf) {
@@ -384,14 +390,38 @@ get_scan_calibration <- function(method_id, n, c_target, tol_conf) {
   key <- paste(method, n, c_target, tol_conf, args$n_sim,
                args$numerical_confidence, args$seed, sep = "|")
   if (!exists(key, envir = scan_calibration_cache, inherits = FALSE)) {
-    cal <- rqr_tcsp_calibrate_count(
-      n = n,
-      guaranteed_content = c_target,
-      tolerance_confidence = tol_conf,
-      method = method,
-      n_sim = args$n_sim,
-      numerical_confidence = args$numerical_confidence,
-      seed = args$seed
+    cal <- tryCatch(
+      rqr_tcsp_calibrate_count(
+        n = n,
+        guaranteed_content = c_target,
+        tolerance_confidence = tol_conf,
+        method = method,
+        n_sim = args$n_sim,
+        numerical_confidence = args$numerical_confidence,
+        seed = args$seed
+      ),
+      error = function(e) {
+        list(
+          schema_version = paste0(config$schema_version, "/scan_calibration"),
+          method = "scan_calibrated_tcsp_mt_rqr",
+          scan_critical_method = method,
+          n = as.integer(n),
+          guaranteed_content = as.numeric(c_target),
+          tolerance_confidence = as.numeric(tol_conf),
+          retained_count = as.integer(n + 1L),
+          target_content = NA_real_,
+          content_buffer = NA_real_,
+          scan_probability = list(
+            certified_lower_probability = NA_real_,
+            numerical_confidence = args$numerical_confidence,
+            n_sim = args$n_sim
+          ),
+          finite_sample_claim_available = FALSE,
+          asymptotic_claim_available = FALSE,
+          infeasible = TRUE,
+          message = conditionMessage(e)
+        )
+      }
     )
     assign(key, cal, envir = scan_calibration_cache)
   }
@@ -419,7 +449,18 @@ empty_fit_result <- function(
     oracle_target = NA_character_, oracle_mean_tilt = NA_real_,
     oracle_certificate_digest = NA_character_,
     oracle_lower_probability = NA_real_,
-    oracle_upper_probability = NA_real_) {
+    oracle_upper_probability = NA_real_,
+    action_lane = NA_character_, selected_interval_source = NA_character_,
+    formal_action_lower = NA_real_, formal_action_upper = NA_real_,
+    formal_action_width = NA_real_, fitted_summary_lower = NA_real_,
+    fitted_summary_upper = NA_real_, fitted_summary_width = NA_real_,
+    uq_engine = NA_character_, tilt_source = NA_character_,
+    target_content = NA_real_, target_mean_tilt = NA_real_,
+    target_audit_digest = NA_character_, posterior_draws = NA_integer_,
+    mcmc_n_burn = NA_integer_, mcmc_n_mcmc = NA_integer_,
+    mcmc_thin = NA_integer_, ecm_converged = NA,
+    ecm_iterations = NA_integer_, ecm_objective = NA_real_,
+    fit_reused_across_posterior_thresholds = FALSE) {
   list(
     lower = lower,
     upper = upper,
@@ -439,8 +480,283 @@ empty_fit_result <- function(
     oracle_mean_tilt = oracle_mean_tilt,
     oracle_certificate_digest = oracle_certificate_digest,
     oracle_lower_probability = oracle_lower_probability,
-    oracle_upper_probability = oracle_upper_probability
+    oracle_upper_probability = oracle_upper_probability,
+    action_lane = action_lane,
+    selected_interval_source = selected_interval_source,
+    formal_action_lower = formal_action_lower,
+    formal_action_upper = formal_action_upper,
+    formal_action_width = formal_action_width,
+    fitted_summary_lower = fitted_summary_lower,
+    fitted_summary_upper = fitted_summary_upper,
+    fitted_summary_width = fitted_summary_width,
+    uq_engine = uq_engine,
+    tilt_source = tilt_source,
+    target_content = target_content,
+    target_mean_tilt = target_mean_tilt,
+    target_audit_digest = target_audit_digest,
+    posterior_draws = posterior_draws,
+    mcmc_n_burn = mcmc_n_burn,
+    mcmc_n_mcmc = mcmc_n_mcmc,
+    mcmc_thin = mcmc_thin,
+    ecm_converged = ecm_converged,
+    ecm_iterations = ecm_iterations,
+    ecm_objective = ecm_objective,
+    fit_reused_across_posterior_thresholds =
+      fit_reused_across_posterior_thresholds
   )
+}
+
+fit_scalar <- function(fit, name, default) {
+  value <- fit[[name]]
+  if (is.null(value) || !length(value)) return(default)
+  value[[1L]]
+}
+
+mean_or_na <- function(x) {
+  x <- x[!is.na(x)]
+  if (!length(x)) return(NA_real_)
+  mean(x)
+}
+
+median_or_na <- function(x) {
+  x <- x[!is.na(x)]
+  if (!length(x)) return(NA_real_)
+  stats::median(x)
+}
+
+mtrqr_plugin_method_ids <- c(
+  "tcsp_mtrqr_gibbs_median_mc",
+  "tcsp_mtrqr_gibbs_mean_mc",
+  "tcsp_mtrqr_ecm_map_mc",
+  "tcsp_mtrqr_gibbs_median_oracle_tilt_mc",
+  "tcsp_mtrqr_ecm_map_oracle_tilt_mc"
+)
+
+mtrqr_plugin_cache <- new.env(parent = emptyenv())
+
+mtrqr_mode_control <- function(engine, control_name) {
+  cfg <- config$engine_defaults[[engine]] %||% list()
+  cfg[[paste0(mode, "_", control_name)]] %||%
+    cfg[[paste0("moderate_", control_name)]] %||%
+    cfg[[control_name]] %||%
+    list()
+}
+
+mtrqr_learning_rate <- function(engine) {
+  cfg <- config$engine_defaults[[engine]] %||% list()
+  as.numeric(cfg$learning_rate %||% 1)[1L]
+}
+
+mtrqr_beta_prior <- function(engine) {
+  cfg <- config$engine_defaults[[engine]] %||% list()
+  beta_prior(
+    "ridge",
+    ridge = list(tau2 = as.numeric(cfg$beta_ridge_tau2 %||% 1e4)[1L])
+  )
+}
+
+fit_tcsp_mtrqr_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
+                                  seed) {
+  method_meta <- method_by_id[[method_id]]
+  engine <- as.character(method_meta$uq_engine %||%
+                          if (grepl("gibbs", method_id, fixed = TRUE)) {
+                            "mtrqr_gibbs"
+                          } else {
+                            "mtrqr_ecm"
+                          })[1L]
+  tilt_source <- as.character(method_meta$tilt_source %||%
+                                "sample_shortest_window")[1L]
+  selected_source <- as.character(
+    method_meta$selected_interval_source %||% method_id
+  )[1L]
+  calibration <- get_scan_calibration(method_id, length(y), c_target, tol_conf)
+  if (isTRUE(calibration$infeasible) ||
+      calibration$retained_count > length(y)) {
+    return(empty_fit_result(
+      infeasible = TRUE,
+      message = "TCSP calibration is infeasible for this fixed-target MT-RQR method.",
+      fit_class = "rqr_tcsp_mtrqr_calibration_infeasible",
+      scan_critical_method = calibration$scan_critical_method,
+      content_buffer = calibration$content_buffer,
+      retained_count = calibration$retained_count,
+      scan_certified_lower_probability =
+        calibration$scan_probability$certified_lower_probability %||% NA_real_,
+      action_lane = method_meta$action_lane %||% "fixed_target_mtrqr_plugin",
+      selected_interval_source = selected_source,
+      uq_engine = engine,
+      tilt_source = tilt_source,
+      target_content = calibration$target_content %||% NA_real_
+    ))
+  }
+
+  window <- rqr_tcsp_shortest_window(
+    y, retained_count = calibration$retained_count, na_rm = FALSE
+  )
+  tilt <- rqr_tcsp_tilt_from_window(window)
+  target_mean_tilt <- tilt$delta_raw
+  if (identical(tilt_source, "oracle_sh_population")) {
+    target_mean_tilt <- oracle_for(dgp_id, c_target)$mean_tilt
+  }
+  target_content <- calibration$target_content
+  formal_digest <- digest::digest(
+    list(calibration = calibration, window = window,
+         tilt_source = tilt_source, target_mean_tilt = target_mean_tilt),
+    algo = "sha256", serialize = TRUE
+  )
+  formal_fields <- list(
+    formal_action_lower = window$lower_endpoint,
+    formal_action_upper = window$upper_endpoint,
+    formal_action_width = window$width,
+    scan_critical_method = calibration$scan_critical_method,
+    content_buffer = calibration$content_buffer,
+    retained_count = calibration$retained_count,
+    scan_certified_lower_probability =
+      calibration$scan_probability$certified_lower_probability %||% NA_real_,
+    target_content = target_content,
+    target_mean_tilt = target_mean_tilt
+  )
+  if (!is.finite(target_content) || target_content >= 1) {
+    return(do.call(empty_fit_result, c(formal_fields, list(
+      infeasible = TRUE,
+      message = "MT-RQR fixed-target engine unavailable because calibrated target_content is not in (0, 1).",
+      fit_class = "rqr_tcsp_mtrqr_target_content_unavailable",
+      action_lane = method_meta$action_lane %||% "fixed_target_mtrqr_plugin",
+      selected_interval_source = selected_source,
+      uq_engine = engine,
+      tilt_source = tilt_source,
+      target_audit_digest = formal_digest
+    ))))
+  }
+
+  cache_key <- digest::digest(
+    list(method_id = method_id, y = y, c_target = c_target,
+         tol_conf = tol_conf, target_content = target_content,
+         target_mean_tilt = target_mean_tilt, engine = engine),
+    algo = "sha256", serialize = TRUE
+  )
+  if (exists(cache_key, envir = mtrqr_plugin_cache, inherits = FALSE)) {
+    cached <- get(cache_key, envir = mtrqr_plugin_cache, inherits = FALSE)
+    cached$fit_reused_across_posterior_thresholds <- TRUE
+    return(cached)
+  }
+
+  X <- matrix(1, length(y), 1L, dimnames = list(NULL, "(Intercept)"))
+  learning_rate <- mtrqr_learning_rate(engine)
+  prior <- mtrqr_beta_prior(engine)
+  if (identical(engine, "mtrqr_gibbs")) {
+    control <- mtrqr_mode_control("mtrqr_gibbs", "mcmc_control")
+    control$seed <- seed
+    fit <- rqr_mcmc_fit(
+      y = y,
+      X = X,
+      coverage_level = target_content,
+      learning_rate = learning_rate,
+      mean_tilt = target_mean_tilt,
+      learning_rate_mode = "fixed_rate",
+      beta_prior_obj = prior,
+      mcmc_control = control
+    )
+    if (!isTRUE(all.equal(fit$model_spec$coverage_level, target_content,
+                          tolerance = 0))) {
+      stopf("MT-RQR Gibbs target audit failed: coverage_level drifted.")
+    }
+    if (!isTRUE(all.equal(fit$model_spec$fixed_learning_rate, learning_rate,
+                          tolerance = 0))) {
+      stopf("MT-RQR Gibbs target audit failed: learning_rate drifted.")
+    }
+    if (isTRUE(fit$model_spec$response_likelihood)) {
+      stopf("MT-RQR Gibbs target audit failed: response_likelihood is TRUE.")
+    }
+    if (!isTRUE(all.equal(unique(fit$model_spec$mean_tilt),
+                          target_mean_tilt, tolerance = 1e-12))) {
+      stopf("MT-RQR Gibbs target audit failed: mean_tilt drifted.")
+    }
+    pred <- predict_interval(fit, X_new = X[1L, , drop = FALSE])
+    lower_draws <- as.numeric(pred$lower_draws[1L, ])
+    upper_draws <- as.numeric(pred$upper_draws[1L, ])
+    if (identical(selected_source, "mtrqr_gibbs_posterior_mean")) {
+      lower <- as.numeric(pred$lower_mean)[1L]
+      upper <- as.numeric(pred$upper_mean)[1L]
+    } else {
+      lower <- stats::median(lower_draws)
+      upper <- stats::median(upper_draws)
+    }
+    out <- do.call(empty_fit_result, c(formal_fields, list(
+      lower = lower,
+      upper = upper,
+      width = upper - lower,
+      fitted_summary_lower = lower,
+      fitted_summary_upper = upper,
+      fitted_summary_width = upper - lower,
+      posterior_probability = NA_real_,
+      infeasible = FALSE,
+      fit_class = paste(class(fit), collapse = "|"),
+      action_lane = method_meta$action_lane %||% "fixed_target_mtrqr_plugin",
+      selected_interval_source = selected_source,
+      uq_engine = engine,
+      tilt_source = tilt_source,
+      target_audit_digest = digest::digest(
+        list(formal_digest = formal_digest, model_spec = fit$model_spec),
+        algo = "sha256", serialize = TRUE
+      ),
+      posterior_draws = nrow(fit$samp.beta_root1),
+      mcmc_n_burn = as.integer(fit$misc$n_burn %||% NA_integer_),
+      mcmc_n_mcmc = as.integer(fit$misc$n_mcmc %||% NA_integer_),
+      mcmc_thin = as.integer(fit$misc$thin %||% NA_integer_)
+    )))
+  } else if (identical(engine, "mtrqr_ecm")) {
+    control <- mtrqr_mode_control("mtrqr_ecm", "ecm_control")
+    control$seed <- seed
+    fit <- rqr_ecm_fit(
+      y = y,
+      X = X,
+      coverage_level = target_content,
+      learning_rate = learning_rate,
+      mean_tilt = target_mean_tilt,
+      beta_prior_obj = prior,
+      ecm_control = control
+    )
+    if (!isTRUE(all.equal(fit$model_spec$coverage_level, target_content,
+                          tolerance = 0))) {
+      stopf("MT-RQR ECM target audit failed: coverage_level drifted.")
+    }
+    if (isTRUE(fit$model_spec$response_likelihood)) {
+      stopf("MT-RQR ECM target audit failed: response_likelihood is TRUE.")
+    }
+    if (!isTRUE(all.equal(unique(fit$model_spec$mean_tilt),
+                          target_mean_tilt, tolerance = 1e-12))) {
+      stopf("MT-RQR ECM target audit failed: mean_tilt drifted.")
+    }
+    pred <- predict_interval(fit, X_new = X[1L, , drop = FALSE])
+    lower <- as.numeric(pred$lower)[1L]
+    upper <- as.numeric(pred$upper)[1L]
+    out <- do.call(empty_fit_result, c(formal_fields, list(
+      lower = lower,
+      upper = upper,
+      width = upper - lower,
+      fitted_summary_lower = lower,
+      fitted_summary_upper = upper,
+      fitted_summary_width = upper - lower,
+      posterior_probability = NA_real_,
+      infeasible = FALSE,
+      fit_class = paste(class(fit), collapse = "|"),
+      action_lane = method_meta$action_lane %||% "fixed_target_mtrqr_plugin",
+      selected_interval_source = selected_source,
+      uq_engine = engine,
+      tilt_source = tilt_source,
+      target_audit_digest = digest::digest(
+        list(formal_digest = formal_digest, model_spec = fit$model_spec),
+        algo = "sha256", serialize = TRUE
+      ),
+      ecm_converged = isTRUE(fit$converged),
+      ecm_iterations = as.integer(fit$iterations %||% NA_integer_),
+      ecm_objective = as.numeric(fit$objective %||% NA_real_)
+    )))
+  } else {
+    stopf("Unsupported MT-RQR plug-in engine: ", engine)
+  }
+  assign(cache_key, out, envir = mtrqr_plugin_cache)
+  out
 }
 
 fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
@@ -461,7 +777,11 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       oracle_mean_tilt = certificate$mean_tilt,
       oracle_certificate_digest = certificate$certificate_digest,
       oracle_lower_probability = certificate$lower_probability,
-      oracle_upper_probability = certificate$upper_probability
+      oracle_upper_probability = certificate$upper_probability,
+      action_lane = method_by_id[[method_id]]$action_lane %||%
+        "oracle_reference",
+      selected_interval_source = method_by_id[[method_id]]$
+        selected_interval_source %||% "population_shortest_oracle"
     ))
   }
   if (method_id %in% c("hdp_s", "hdp_s_mc")) {
@@ -502,10 +822,25 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       lower = fit$formal_tolerance_action$lower_endpoint,
       upper = fit$formal_tolerance_action$upper_endpoint,
       width = fit$formal_tolerance_action$width,
+      formal_action_lower = fit$formal_tolerance_action$lower_endpoint,
+      formal_action_upper = fit$formal_tolerance_action$upper_endpoint,
+      formal_action_width = fit$formal_tolerance_action$width,
       posterior_probability = fit$posterior_content_probability,
       retained_count = fit$formal_tolerance_action$retained_count,
       infeasible = is.na(fit$formal_tolerance_action$lower_endpoint),
       fit_class = paste(class(fit), collapse = "|"),
+      action_lane = method_by_id[[method_id]]$action_lane %||%
+        "scan_certified_bayes_hybrid",
+      selected_interval_source = method_by_id[[method_id]]$
+        selected_interval_source %||% "hybrid_bayesian_scan_action",
+      uq_engine = "direct_dp",
+      target_content = fit$scan_contract$calibration$target_content %||%
+        NA_real_,
+      target_audit_digest = digest::digest(
+        list(scan_contract = fit$scan_contract,
+             formal_action = fit$formal_tolerance_action),
+        algo = "sha256", serialize = TRUE
+      ),
       scan_critical_method =
         fit$scan_contract$calibration$scan_critical_method,
       content_buffer = fit$scan_contract$calibration$content_buffer,
@@ -517,6 +852,16 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
         fit$hybrid_bayesian_scan_action$feasible_count %||% NA_integer_,
       candidates_evaluated =
         fit$hybrid_bayesian_scan_action$candidates_evaluated %||% NA_integer_
+    ))
+  }
+  if (method_id %in% mtrqr_plugin_method_ids) {
+    return(fit_tcsp_mtrqr_plugin(
+      method_id = method_id,
+      y = y,
+      dgp_id = dgp_id,
+      c_target = c_target,
+      tol_conf = tol_conf,
+      seed = seed
     ))
   }
   if (identical(method_id, "dp_bayes")) {
@@ -533,6 +878,14 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
     out$candidate_feasible_count <- action$feasible_count
     out$candidates_evaluated <- action$candidates_evaluated
     out$fit_class <- paste(class(action), collapse = "|")
+    out$action_lane <- method_by_id[[method_id]]$action_lane %||%
+      "response_likelihood_bayes_diagnostic"
+    out$selected_interval_source <- method_by_id[[method_id]]$
+      selected_interval_source %||% "dp_bayes_selected_action"
+    out$uq_engine <- "direct_dp"
+    out$fitted_summary_lower <- out$lower
+    out$fitted_summary_upper <- out$upper
+    out$fitted_summary_width <- out$width
     return(out)
   }
   if (identical(method_id, "dpm_bayes")) {
@@ -554,6 +907,14 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
     out$candidate_feasible_count <- action$feasible_count
     out$candidates_evaluated <- action$candidates_evaluated
     out$fit_class <- paste(class(action), collapse = "|")
+    out$action_lane <- method_by_id[[method_id]]$action_lane %||%
+      "response_likelihood_bayes_diagnostic"
+    out$selected_interval_source <- method_by_id[[method_id]]$
+      selected_interval_source %||% "dpm_bayes_selected_action"
+    out$uq_engine <- "gaussian_dpm"
+    out$fitted_summary_lower <- out$lower
+    out$fitted_summary_upper <- out$upper
+    out$fitted_summary_width <- out$width
     return(out)
   }
   if (identical(method_id, "bb_shortest_diag")) {
@@ -571,7 +932,15 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       posterior_probability = NA_real_,
       retained_count = NA_integer_,
       infeasible = FALSE,
-      fit_class = "rqr_bayesian_bootstrap_draws|diagnostic"
+      fit_class = "rqr_bayesian_bootstrap_draws|diagnostic",
+      action_lane = method_by_id[[method_id]]$action_lane %||%
+        "bootstrap_diagnostic",
+      selected_interval_source = method_by_id[[method_id]]$
+        selected_interval_source %||%
+        "bayesian_bootstrap_posterior_median",
+      fitted_summary_lower = lower,
+      fitted_summary_upper = upper,
+      fitted_summary_width = upper - lower
     ))
   }
   if (method_id %in% c("tcsp_dkw", "tcsp_mc")) {
@@ -588,7 +957,12 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
         retained_count = calibration$retained_count,
         scan_certified_lower_probability =
           calibration$scan_probability$certified_lower_probability %||%
-            NA_real_
+            NA_real_,
+        action_lane = method_by_id[[method_id]]$action_lane %||%
+          "scan_certified_empirical",
+        selected_interval_source = method_by_id[[method_id]]$
+          selected_interval_source %||% "formal_scan_action",
+        target_content = calibration$target_content %||% NA_real_
       ))
     }
     window <- rqr_tcsp_shortest_window(
@@ -598,33 +972,120 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       lower = window$lower_endpoint,
       upper = window$upper_endpoint,
       width = window$width,
+      formal_action_lower = window$lower_endpoint,
+      formal_action_upper = window$upper_endpoint,
+      formal_action_width = window$width,
       posterior_probability = NA_real_,
       retained_count = calibration$retained_count,
       infeasible = FALSE,
       fit_class = "rqr_tcsp_shortest_window|cached_calibration",
+      action_lane = method_by_id[[method_id]]$action_lane %||%
+        "scan_certified_empirical",
+      selected_interval_source = method_by_id[[method_id]]$
+        selected_interval_source %||% "formal_scan_action",
+      target_content = calibration$target_content %||% NA_real_,
+      target_audit_digest = digest::digest(
+        list(calibration = calibration, window = window),
+        algo = "sha256", serialize = TRUE
+      ),
       scan_critical_method = calibration$scan_critical_method,
       content_buffer = calibration$content_buffer,
       scan_certified_lower_probability =
         calibration$scan_probability$certified_lower_probability %||% NA_real_
     ))
   }
-  if (identical(method_id, "split_empirical_shortest")) {
-    fit <- rqr_tcsp_split_exact_fit(
-      y,
-      guaranteed_content = c_target,
-      tolerance_confidence = tol_conf,
-      pilot_fraction = as.numeric(config$engine_defaults$split$pilot_fraction)[1L],
-      pilot_method = "empirical_shortest",
-      split_seed = seed
+  if (method_id %in% c("split_empirical_shortest", "split_ecm_fixed_tilt")) {
+    pilot_method <- if (identical(method_id, "split_ecm_fixed_tilt")) {
+      "ecm_fixed_tilt"
+    } else {
+      "empirical_shortest"
+    }
+    ecm_args <- if (identical(pilot_method, "ecm_fixed_tilt")) {
+      list(ecm_control = mtrqr_mode_control("mtrqr_ecm", "ecm_control"))
+    } else {
+      list()
+    }
+    fit <- tryCatch(
+      rqr_tcsp_split_exact_fit(
+        y,
+        guaranteed_content = c_target,
+        tolerance_confidence = tol_conf,
+        pilot_fraction =
+          as.numeric(config$engine_defaults$split$pilot_fraction)[1L],
+        pilot_method = pilot_method,
+        split_seed = seed,
+        ecm_args = ecm_args
+      ),
+      error = function(e) e
     )
+    if (inherits(fit, "error")) {
+      return(empty_fit_result(
+        infeasible = TRUE,
+        message = conditionMessage(fit),
+        fit_class = "rqr_tcsp_split_exact_calibration_infeasible",
+        action_lane = method_by_id[[method_id]]$action_lane %||%
+          "split_exact_spacing",
+        selected_interval_source = method_by_id[[method_id]]$
+          selected_interval_source %||% paste0("split_", pilot_method, "_action"),
+        posterior_constraint_status = "exact_spacing_infeasible",
+        uq_engine = method_by_id[[method_id]]$uq_engine %||%
+          if (identical(pilot_method, "ecm_fixed_tilt")) "mtrqr_ecm" else
+            NA_character_,
+        tilt_source = method_by_id[[method_id]]$tilt_source %||%
+          if (identical(pilot_method, "ecm_fixed_tilt")) {
+            "pilot_shortest_window"
+          } else {
+            NA_character_
+          }
+      ))
+    }
+    ecm_fit <- fit$ecm_fit_optional
     return(list(
       lower = fit$contract$lower_endpoint,
       upper = fit$contract$upper_endpoint,
       width = fit$contract$width,
+      formal_action_lower = fit$contract$lower_endpoint,
+      formal_action_upper = fit$contract$upper_endpoint,
+      formal_action_width = fit$contract$width,
       posterior_probability = NA_real_,
       retained_count = fit$contract$retained_count %||% NA_integer_,
       infeasible = FALSE,
-      fit_class = paste(class(fit), collapse = "|")
+      fit_class = paste(c(class(fit), class(ecm_fit)), collapse = "|"),
+      action_lane = method_by_id[[method_id]]$action_lane %||%
+        "split_exact_spacing",
+      selected_interval_source = method_by_id[[method_id]]$
+        selected_interval_source %||% paste0("split_", pilot_method, "_action"),
+      uq_engine = method_by_id[[method_id]]$uq_engine %||%
+        if (identical(pilot_method, "ecm_fixed_tilt")) "mtrqr_ecm" else
+          NA_character_,
+      tilt_source = method_by_id[[method_id]]$tilt_source %||%
+        if (identical(pilot_method, "ecm_fixed_tilt")) {
+          "pilot_shortest_window"
+        } else {
+          NA_character_
+        },
+      target_content = fit$contract$effective_pilot_content %||% NA_real_,
+      target_mean_tilt = fit$pilot_diagnostics$selected_tilt %||% NA_real_,
+      target_audit_digest = digest::digest(
+        list(contract = fit$contract,
+             pilot_diagnostics = fit$pilot_diagnostics),
+        algo = "sha256", serialize = TRUE
+      ),
+      ecm_converged = if (inherits(ecm_fit, "rqr_ecm")) {
+        isTRUE(ecm_fit$converged)
+      } else {
+        NA
+      },
+      ecm_iterations = if (inherits(ecm_fit, "rqr_ecm")) {
+        as.integer(ecm_fit$iterations %||% NA_integer_)
+      } else {
+        NA_integer_
+      },
+      ecm_objective = if (inherits(ecm_fit, "rqr_ecm")) {
+        as.numeric(ecm_fit$objective %||% NA_real_)
+      } else {
+        NA_real_
+      }
     ))
   }
   if (identical(method_id, "wilks_minmax")) {
@@ -632,10 +1093,17 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       lower = min(y),
       upper = max(y),
       width = diff(range(y)),
+      formal_action_lower = min(y),
+      formal_action_upper = max(y),
+      formal_action_width = diff(range(y)),
       posterior_probability = NA_real_,
       retained_count = length(y),
       infeasible = FALSE,
-      fit_class = "wilks_minmax_comparator"
+      fit_class = "wilks_minmax_comparator",
+      action_lane = method_by_id[[method_id]]$action_lane %||%
+        "order_statistic_baseline",
+      selected_interval_source = method_by_id[[method_id]]$
+        selected_interval_source %||% "full_sample_minmax"
     ))
   }
   stopf("Unsupported method_id: ", method_id)
@@ -732,11 +1200,22 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                     isTRUE(method_meta$formal_tolerance_action),
                   response_likelihood = isTRUE(method_meta$response_likelihood),
                   generalized_bayes = isTRUE(method_meta$generalized_bayes),
+                  action_lane = method_meta$action_lane %||% NA_character_,
+                  selected_interval_source =
+                    method_meta$selected_interval_source %||% NA_character_,
                   success = NA,
                   content = NA_real_,
                   lower = NA_real_,
                   upper = NA_real_,
                   width = NA_real_,
+                  formal_action_lower = NA_real_,
+                  formal_action_upper = NA_real_,
+                  formal_action_width = NA_real_,
+                  formal_action_content = NA_real_,
+                  formal_action_success = NA,
+                  fitted_summary_lower = NA_real_,
+                  fitted_summary_upper = NA_real_,
+                  fitted_summary_width = NA_real_,
                   posterior_probability = NA_real_,
                   retained_count = NA_integer_,
                   retained_fraction = NA_real_,
@@ -763,6 +1242,19 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   oracle_sh_width = NA_real_,
                   width_ratio_to_oracle_sh = NA_real_,
                   width_excess_vs_oracle_sh = NA_real_,
+                  uq_engine = method_meta$uq_engine %||% NA_character_,
+                  tilt_source = method_meta$tilt_source %||% NA_character_,
+                  target_content = NA_real_,
+                  target_mean_tilt = NA_real_,
+                  target_audit_digest = NA_character_,
+                  posterior_draws = NA_integer_,
+                  mcmc_n_burn = NA_integer_,
+                  mcmc_n_mcmc = NA_integer_,
+                  mcmc_thin = NA_integer_,
+                  ecm_converged = NA,
+                  ecm_iterations = NA_integer_,
+                  ecm_objective = NA_real_,
+                  fit_reused_across_posterior_thresholds = NA,
                   infeasible = TRUE,
                   message = conditionMessage(fit),
                   fit_class = "error",
@@ -770,6 +1262,32 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                 )
               } else {
                 content <- true_content(fit$lower, fit$upper, meta$p)
+                formal_lower <- fit_scalar(
+                  fit, "formal_action_lower",
+                  if (isTRUE(method_meta$formal_tolerance_action)) {
+                    fit$lower
+                  } else {
+                    NA_real_
+                  }
+                )
+                formal_upper <- fit_scalar(
+                  fit, "formal_action_upper",
+                  if (isTRUE(method_meta$formal_tolerance_action)) {
+                    fit$upper
+                  } else {
+                    NA_real_
+                  }
+                )
+                formal_width <- fit_scalar(
+                  fit, "formal_action_width",
+                  if (isTRUE(method_meta$formal_tolerance_action)) {
+                    fit$width
+                  } else {
+                    NA_real_
+                  }
+                )
+                formal_content <- true_content(formal_lower, formal_upper,
+                                               meta$p)
                 rows[[length(rows) + 1L]] <- data.frame(
                   mode = mode,
                   dgp_id = dgp_id,
@@ -784,12 +1302,36 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                     isTRUE(method_meta$formal_tolerance_action),
                   response_likelihood = isTRUE(method_meta$response_likelihood),
                   generalized_bayes = isTRUE(method_meta$generalized_bayes),
+                  action_lane = fit_scalar(
+                    fit, "action_lane",
+                    method_meta$action_lane %||% NA_character_
+                  ),
+                  selected_interval_source = fit_scalar(
+                    fit, "selected_interval_source",
+                    method_meta$selected_interval_source %||% NA_character_
+                  ),
                   success = if (isTRUE(fit$infeasible)) NA else
                     content >= c_target - 1e-12,
                   content = content,
                   lower = fit$lower,
                   upper = fit$upper,
                   width = fit$width,
+                  formal_action_lower = formal_lower,
+                  formal_action_upper = formal_upper,
+                  formal_action_width = formal_width,
+                  formal_action_content = formal_content,
+                  formal_action_success =
+                    if (is.na(formal_content)) NA else
+                      formal_content >= c_target - 1e-12,
+                  fitted_summary_lower = fit_scalar(
+                    fit, "fitted_summary_lower", NA_real_
+                  ),
+                  fitted_summary_upper = fit_scalar(
+                    fit, "fitted_summary_upper", NA_real_
+                  ),
+                  fitted_summary_width = fit_scalar(
+                    fit, "fitted_summary_width", NA_real_
+                  ),
                   posterior_probability = fit$posterior_probability,
                   retained_count = as.integer(fit$retained_count),
                   retained_fraction =
@@ -797,7 +1339,7 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   content_gap = content - c_target,
                   posterior_threshold_excess =
                     as.numeric(fit$posterior_probability %||% NA_real_) -
-                      post_conf,
+                    post_conf,
                   scan_critical_method =
                     fit$scan_critical_method %||% NA_character_,
                   content_buffer = fit$content_buffer %||% NA_real_,
@@ -806,8 +1348,7 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   posterior_constraint_status =
                     fit$posterior_constraint_status %||% NA_character_,
                   candidate_feasible_count =
-                    as.integer(fit$candidate_feasible_count %||%
-                                 NA_integer_),
+                    as.integer(fit$candidate_feasible_count %||% NA_integer_),
                   candidates_evaluated =
                     as.integer(fit$candidates_evaluated %||% NA_integer_),
                   reference_method_id = NA_character_,
@@ -828,6 +1369,45 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   oracle_sh_width = NA_real_,
                   width_ratio_to_oracle_sh = NA_real_,
                   width_excess_vs_oracle_sh = NA_real_,
+                  uq_engine = fit_scalar(
+                    fit, "uq_engine",
+                    method_meta$uq_engine %||% NA_character_
+                  ),
+                  tilt_source = fit_scalar(
+                    fit, "tilt_source",
+                    method_meta$tilt_source %||% NA_character_
+                  ),
+                  target_content = fit_scalar(
+                    fit, "target_content", NA_real_
+                  ),
+                  target_mean_tilt = fit_scalar(
+                    fit, "target_mean_tilt", NA_real_
+                  ),
+                  target_audit_digest = fit_scalar(
+                    fit, "target_audit_digest", NA_character_
+                  ),
+                  posterior_draws = as.integer(fit_scalar(
+                    fit, "posterior_draws", NA_integer_
+                  )),
+                  mcmc_n_burn = as.integer(fit_scalar(
+                    fit, "mcmc_n_burn", NA_integer_
+                  )),
+                  mcmc_n_mcmc = as.integer(fit_scalar(
+                    fit, "mcmc_n_mcmc", NA_integer_
+                  )),
+                  mcmc_thin = as.integer(fit_scalar(
+                    fit, "mcmc_thin", NA_integer_
+                  )),
+                  ecm_converged = fit_scalar(fit, "ecm_converged", NA),
+                  ecm_iterations = as.integer(fit_scalar(
+                    fit, "ecm_iterations", NA_integer_
+                  )),
+                  ecm_objective = as.numeric(fit_scalar(
+                    fit, "ecm_objective", NA_real_
+                  )),
+                  fit_reused_across_posterior_thresholds = fit_scalar(
+                    fit, "fit_reused_across_posterior_thresholds", FALSE
+                  ),
                   infeasible = isTRUE(fit$infeasible),
                   message = fit$message %||% "",
                   fit_class = fit$fit_class,
@@ -972,39 +1552,50 @@ summary_rows <- lapply(split(results, split_key), function(df) {
     success_rate_minus_tolerance_confidence =
       if (any(ok)) mean(df$success[ok]) - df$tolerance_confidence[[1L]]
       else NA_real_,
-    mean_content = mean(df$content, na.rm = TRUE),
-    mean_content_gap = mean(df$content_gap, na.rm = TRUE),
-    median_width = stats::median(df$width, na.rm = TRUE),
-    mean_width = mean(df$width, na.rm = TRUE),
+    mean_content = mean_or_na(df$content),
+    mean_content_gap = mean_or_na(df$content_gap),
+    median_width = median_or_na(df$width),
+    mean_width = mean_or_na(df$width),
+    median_formal_action_width = median_or_na(df$formal_action_width),
+    mean_formal_action_content = mean_or_na(df$formal_action_content),
+    formal_action_success_rate = mean_or_na(df$formal_action_success),
+    median_fitted_summary_width = median_or_na(df$fitted_summary_width),
+    mean_target_content = mean_or_na(df$target_content),
+    mean_target_mean_tilt = mean_or_na(df$target_mean_tilt),
+    mean_posterior_draws = mean_or_na(df$posterior_draws),
+    mcmc_fit_reuse_rate =
+      mean_or_na(df$fit_reused_across_posterior_thresholds),
+    ecm_convergence_rate = mean_or_na(df$ecm_converged),
+    mean_ecm_iterations = mean_or_na(df$ecm_iterations),
     median_width_ratio_to_reference =
-      stats::median(df$width_ratio_to_reference, na.rm = TRUE),
+      median_or_na(df$width_ratio_to_reference),
     mean_width_ratio_to_reference =
-      mean(df$width_ratio_to_reference, na.rm = TRUE),
+      mean_or_na(df$width_ratio_to_reference),
     median_width_diff_to_reference =
-      stats::median(df$width_diff_to_reference, na.rm = TRUE),
+      median_or_na(df$width_diff_to_reference),
     median_width_ratio_to_oracle_sh =
-      stats::median(df$width_ratio_to_oracle_sh, na.rm = TRUE),
+      median_or_na(df$width_ratio_to_oracle_sh),
     mean_width_ratio_to_oracle_sh =
-      mean(df$width_ratio_to_oracle_sh, na.rm = TRUE),
+      mean_or_na(df$width_ratio_to_oracle_sh),
     median_width_excess_vs_oracle_sh =
-      stats::median(df$width_excess_vs_oracle_sh, na.rm = TRUE),
+      median_or_na(df$width_excess_vs_oracle_sh),
     mean_width_excess_vs_oracle_sh =
-      mean(df$width_excess_vs_oracle_sh, na.rm = TRUE),
-    mean_retained_fraction = mean(df$retained_fraction, na.rm = TRUE),
-    mean_content_buffer = mean(df$content_buffer, na.rm = TRUE),
+      mean_or_na(df$width_excess_vs_oracle_sh),
+    mean_retained_fraction = mean_or_na(df$retained_fraction),
+    mean_content_buffer = mean_or_na(df$content_buffer),
     mean_scan_certified_lower_probability =
-      mean(df$scan_certified_lower_probability, na.rm = TRUE),
+      mean_or_na(df$scan_certified_lower_probability),
     mean_posterior_probability =
-      mean(df$posterior_probability, na.rm = TRUE),
+      mean_or_na(df$posterior_probability),
     mean_posterior_threshold_excess =
-      mean(df$posterior_threshold_excess, na.rm = TRUE),
+      mean_or_na(df$posterior_threshold_excess),
     posterior_binding_rate =
-      mean(df$posterior_constraint_binding, na.rm = TRUE),
+      mean_or_na(df$posterior_constraint_binding),
     mean_candidate_feasible_count =
-      mean(df$candidate_feasible_count, na.rm = TRUE),
+      mean_or_na(df$candidate_feasible_count),
     mean_candidates_evaluated =
-      mean(df$candidates_evaluated, na.rm = TRUE),
-    mean_elapsed_sec = mean(df$elapsed_sec, na.rm = TRUE)
+      mean_or_na(df$candidates_evaluated),
+    mean_elapsed_sec = mean_or_na(df$elapsed_sec)
   )
 })
 summary <- do.call(rbind, summary_rows)
@@ -1025,6 +1616,8 @@ readme <- c(
   "",
   "This pilot separates response-distribution Bayesian UQ from RQR generalized-Bayes plug-in summaries.",
   "The hybrid direct-DP scan method fixes the scan count before evaluating posterior content probability.",
+  "The `tcsp_mtrqr_gibbs_*` and `tcsp_mtrqr_ecm_*` rows are fixed-target MT-RQR fitted summaries after scan calibration.",
+  "For those rows, `formal_action_*` records the associated scan action and `fitted_summary_*` records the Gibbs or ECM endpoint summary.",
   "These artifacts are validation evidence only; they do not prove posterior endpoint coverage.",
   "The `oracle_sh` rows are non-deployable synthetic-DGP benchmarks for the true population shortest interval and oracle mean tilt.",
   "Width-ratio, oracle-gap, and posterior-binding diagnostics are included for post-run method tuning."

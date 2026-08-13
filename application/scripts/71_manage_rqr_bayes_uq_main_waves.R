@@ -27,7 +27,7 @@ for (package in c("rqrgibbs", "jsonlite", "digest")) {
 library(rqrgibbs)
 
 action <- tolower(arg_value("--action=", "health"))
-allowed_actions <- c("prepare", "launch", "health", "collect")
+allowed_actions <- c("prepare", "launch", "health", "collect", "stop")
 if (!action %in% allowed_actions) {
   stopf("Unsupported Bayesian UQ wave action: ", action)
 }
@@ -97,10 +97,15 @@ scan_method_for <- function(method_id) {
   method_meta <- method_by_id[[method_id]]
   configured <- method_meta$scan_method %||% NULL
   if (!is.null(configured)) return(as.character(configured)[1L])
-  if (method_id %in% c("hdp_s_mc", "tcsp_mc")) {
+  if (method_id %in% c(
+    "hdp_s_mc", "tcsp_mc", "tcsp_mtrqr_gibbs_median_mc",
+    "tcsp_mtrqr_gibbs_mean_mc", "tcsp_mtrqr_ecm_map_mc",
+    "tcsp_mtrqr_gibbs_median_oracle_tilt_mc",
+    "tcsp_mtrqr_ecm_map_oracle_tilt_mc"
+  )) {
     return("monte_carlo_conservative")
   }
-  if (method_id %in% c("tcsp_dkw")) return("dkw_conservative")
+  if (method_id %in% c("hdp_s", "tcsp_dkw")) return("dkw_conservative")
   NA_character_
 }
 
@@ -633,6 +638,8 @@ collect_run <- function(run_dir) {
     "",
     "This is the collected wave run for the iid univariate Bayesian UQ main validation.",
     "The `oracle_sh` method is a non-deployable synthetic-DGP benchmark for the true population shortest interval and exact mean tilt.",
+    "The `tcsp_mtrqr_gibbs_*` and `tcsp_mtrqr_ecm_*` rows are fixed-target MT-RQR fitted summaries after scan calibration.",
+    "For those rows, `formal_action_*` records the associated scan action and `fitted_summary_*` records the Gibbs or ECM endpoint summary.",
     "The operational reference remains `tcsp_mc`; oracle-relative gaps are efficiency diagnostics only."
   )
   writeLines(readme, file.path(run_dir, "README.md"))
@@ -682,6 +689,61 @@ collect_run <- function(run_dir) {
   cat("Collected Bayesian UQ wave run:", run_dir, "\n")
 }
 
+stop_run <- function(run_dir) {
+  status <- wave_status(run_dir)
+  utils::write.csv(status, file.path(run_dir, "superseded_wave_status_before_stop.csv"),
+                   row.names = FALSE)
+  pid_files <- list.files(file.path(run_dir, "pids"), pattern = "[.]pid$",
+                          full.names = TRUE)
+  pids <- unique(suppressWarnings(as.integer(unlist(lapply(
+    pid_files, readLines, warn = FALSE
+  )))))
+  pids <- pids[is.finite(pids) & pids > 0]
+  alive <- pids[vapply(pids, pid_alive, logical(1L))]
+  if (length(alive)) {
+    system2("kill", c("-TERM", as.character(alive)))
+    Sys.sleep(5)
+  }
+  alive <- pids[vapply(pids, pid_alive, logical(1L))]
+  if (length(alive)) {
+    system2("kill", c("-KILL", as.character(alive)))
+    Sys.sleep(1)
+  }
+  alive <- pids[vapply(pids, pid_alive, logical(1L))]
+  stopped_at <- format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+  note <- list(
+    schema_version = paste0(config$schema_version, "/supersession"),
+    study_id = config$study_id,
+    mode = mode,
+    status = if (length(alive)) "stop_incomplete_processes_still_alive" else
+      "superseded_stopped",
+    reason = paste(
+      "Superseded by corrected method grid with explicit MT-RQR Gibbs and",
+      "MT-RQR ECM competitor rows."
+    ),
+    stopped_at_utc = stopped_at,
+    pids_seen = pids,
+    pids_alive_after_stop = alive,
+    final_artifacts_present = file.exists(file.path(run_dir, "manifest.json")),
+    promote_as_confirmatory_evidence = FALSE
+  )
+  jsonlite::write_json(note, file.path(run_dir, "superseded.json"),
+                       pretty = TRUE, auto_unbox = TRUE)
+  writeLines(c(
+    "# Superseded Bayesian UQ Wave Run",
+    "",
+    paste0("Stopped at UTC: `", stopped_at, "`"),
+    "",
+    "Reason: this run was superseded by the corrected method grid with explicit MT-RQR Gibbs and MT-RQR ECM competitor rows.",
+    "",
+    "Do not collect or promote these partial artifacts as final confirmatory evidence."
+  ), file.path(run_dir, "SUPERSEDED.md"))
+  write_health(run_dir)
+  cat(sprintf("Stopped Bayesian UQ wave run: %s; alive_after_stop=%d\n",
+              run_dir, length(alive)))
+  invisible(note)
+}
+
 launch_run <- function(run_dir) {
   if (require_clean) {
     git_status <- system2("git", c("status", "--short"),
@@ -726,4 +788,6 @@ if (identical(action, "prepare")) {
   write_health(run_dir)
 } else if (identical(action, "collect")) {
   collect_run(run_dir)
+} else if (identical(action, "stop")) {
+  stop_run(run_dir)
 }
