@@ -18,6 +18,10 @@ arg_value <- function(prefix, default = NULL) {
 }
 stopf <- function(...) stop(paste0(...), call. = FALSE)
 `%||%` <- function(a, b) if (is.null(a)) b else a
+csv_values <- function(value) {
+  if (is.null(value) || !nzchar(value)) return(NULL)
+  trimws(strsplit(value, ",", fixed = TRUE)[[1L]])
+}
 
 for (package in c("rqrgibbs", "jsonlite", "digest")) {
   if (!requireNamespace(package, quietly = TRUE)) {
@@ -36,6 +40,20 @@ config_path <- normalizePath(arg_value(
                          "rqr_bayes_uq_validation_v1.json")
 ), winslash = "/", mustWork = TRUE)
 config <- jsonlite::read_json(config_path, simplifyVector = FALSE)
+wave_id <- arg_value("--wave-id=", NA_character_)
+wave_filters <- list(
+  dgp_id = csv_values(arg_value("--wave-dgp=", NULL)),
+  n = csv_values(arg_value("--wave-n=", NULL)),
+  guaranteed_content = csv_values(arg_value("--wave-content=", NULL)),
+  tolerance_confidence = csv_values(
+    arg_value("--wave-tolerance-confidence=", NULL)
+  ),
+  posterior_confidence = csv_values(
+    arg_value("--wave-posterior-confidence=", NULL)
+  )
+)
+scan_calibration_cache_path <- arg_value("--scan-calibration-cache=", NULL)
+oracle_cache_path <- arg_value("--oracle-cache=", NULL)
 
 if (identical(mode, "health-check-read-only")) {
   run_dir <- normalizePath(arg_value("--run-dir=", ""),
@@ -95,6 +113,49 @@ dgp_by_id <- setNames(config$dgps, vapply(config$dgps, `[[`,
                                          character(1L), "dgp_id"))
 method_by_id <- setNames(config$methods, vapply(config$methods, `[[`,
                                                character(1L), "method_id"))
+
+filter_character <- function(values, requested, label) {
+  values <- as.character(values)
+  if (is.null(requested)) return(values)
+  keep <- values[values %in% requested]
+  if (!length(keep)) {
+    stopf("Wave filter for ", label, " selected no configured values.")
+  }
+  keep
+}
+filter_numeric <- function(values, requested, label) {
+  values <- as.numeric(values)
+  if (is.null(requested)) return(values)
+  requested <- as.numeric(requested)
+  if (any(!is.finite(requested))) {
+    stopf("Wave filter for ", label, " contains nonnumeric value.")
+  }
+  keep <- values[vapply(values, function(x) {
+    any(abs(x - requested) <= 100 * .Machine$double.eps * max(1, abs(x)))
+  }, logical(1L))]
+  if (!length(keep)) {
+    stopf("Wave filter for ", label, " selected no configured values.")
+  }
+  keep
+}
+mode_cfg$dgp_ids <- filter_character(
+  mode_cfg$dgp_ids, wave_filters$dgp_id, "dgp_id"
+)
+mode_cfg$sample_sizes <- filter_numeric(
+  mode_cfg$sample_sizes, wave_filters$n, "sample_sizes"
+)
+mode_cfg$guaranteed_contents <- filter_numeric(
+  mode_cfg$guaranteed_contents, wave_filters$guaranteed_content,
+  "guaranteed_contents"
+)
+mode_cfg$tolerance_confidences <- filter_numeric(
+  mode_cfg$tolerance_confidences, wave_filters$tolerance_confidence,
+  "tolerance_confidences"
+)
+mode_cfg$posterior_confidences <- filter_numeric(
+  mode_cfg$posterior_confidences, wave_filters$posterior_confidence,
+  "posterior_confidences"
+)
 
 hash_to_seed <- function(text, base = 862100L) {
   bytes <- as.integer(charToRaw(as.character(text)))
@@ -156,6 +217,81 @@ dgp_meta <- function(dgp) {
     ))
   }
   stopf("Unsupported DGP family: ", dgp$family)
+}
+
+oracle_spec_from_dgp <- function(dgp) {
+  if (identical(dgp$family, "normal")) {
+    return(list(family = "gaussian", params = list(mean = 0, sd = 1)))
+  }
+  if (identical(dgp$family, "standardized_lognormal")) {
+    return(list(
+      family = "centered_standardized_lognormal",
+      params = list(logmean = 0, logsd = as.numeric(dgp$logsd %||% 0.75)[1L])
+    ))
+  }
+  if (identical(dgp$family, "standardized_normal_mixture")) {
+    weights <- as.numeric(dgp$weights)
+    weights <- weights / sum(weights)
+    means <- as.numeric(dgp$means)
+    sds <- as.numeric(dgp$sds)
+    mean_mix <- sum(weights * means)
+    second <- sum(weights * (sds^2 + means^2))
+    sd_mix <- sqrt(second - mean_mix^2)
+    return(list(
+      family = "gaussian_mixture",
+      params = list(
+        weights = weights,
+        means = (means - mean_mix) / sd_mix,
+        sds = sds / sd_mix,
+        center = FALSE
+      )
+    ))
+  }
+  if (identical(dgp$family, "standardized_student_t")) {
+    df <- as.numeric(dgp$df %||% 3)[1L]
+    if (!is.finite(df) || df <= 2) {
+      stopf("standardized_student_t requires df > 2 for finite variance.")
+    }
+    return(list(
+      family = "student_t",
+      params = list(df = df, scale = sqrt((df - 2) / df))
+    ))
+  }
+  stopf("Unsupported oracle DGP family: ", dgp$family)
+}
+
+oracle_key <- function(dgp_id, c_target) {
+  paste(dgp_id, formatC(c_target, digits = 12, format = "fg"), sep = "|")
+}
+
+oracle_cache <- new.env(parent = emptyenv())
+if (!is.null(oracle_cache_path) && nzchar(oracle_cache_path)) {
+  oracle_cache_path <- normalizePath(oracle_cache_path, winslash = "/",
+                                     mustWork = TRUE)
+  loaded_oracles <- readRDS(oracle_cache_path)
+  loaded_oracles <- loaded_oracles$certificates %||% loaded_oracles
+  for (name in names(loaded_oracles)) {
+    assign(name, loaded_oracles[[name]], envir = oracle_cache)
+  }
+}
+
+oracle_for <- function(dgp_id, c_target) {
+  key <- oracle_key(dgp_id, c_target)
+  if (!exists(key, envir = oracle_cache, inherits = FALSE)) {
+    dgp <- dgp_by_id[[dgp_id]]
+    spec <- oracle_spec_from_dgp(dgp)
+    oracle_cfg <- config$oracle %||% list()
+    certificate <- rqr_interval_oracle(
+      family = spec$family,
+      coverage_level = c_target,
+      target = "SH",
+      params = spec$params,
+      tol = as.numeric(oracle_cfg$tol %||% 1e-10)[1L],
+      grid_size = as.integer(oracle_cfg$grid_size %||% 1601L)[1L]
+    )
+    assign(key, certificate, envir = oracle_cache)
+  }
+  get(key, envir = oracle_cache, inherits = FALSE)
 }
 
 true_content <- function(lower, upper, cdf) {
@@ -230,6 +366,18 @@ scan_args_for <- function(method_id, n, c_target, tol_conf) {
 }
 
 scan_calibration_cache <- new.env(parent = emptyenv())
+if (!is.null(scan_calibration_cache_path) &&
+    nzchar(scan_calibration_cache_path)) {
+  scan_calibration_cache_path <- normalizePath(
+    scan_calibration_cache_path, winslash = "/", mustWork = TRUE
+  )
+  loaded_calibrations <- readRDS(scan_calibration_cache_path)
+  loaded_calibrations <- loaded_calibrations$calibrations %||%
+    loaded_calibrations
+  for (name in names(loaded_calibrations)) {
+    assign(name, loaded_calibrations[[name]], envir = scan_calibration_cache)
+  }
+}
 get_scan_calibration <- function(method_id, n, c_target, tol_conf) {
   method <- scan_method_for(method_id)
   args <- scan_args_for(method_id, n, c_target, tol_conf)
@@ -267,7 +415,11 @@ empty_fit_result <- function(
     scan_certified_lower_probability = NA_real_,
     posterior_constraint_status = NA_character_,
     candidate_feasible_count = NA_integer_,
-    candidates_evaluated = NA_integer_) {
+    candidates_evaluated = NA_integer_,
+    oracle_target = NA_character_, oracle_mean_tilt = NA_real_,
+    oracle_certificate_digest = NA_character_,
+    oracle_lower_probability = NA_real_,
+    oracle_upper_probability = NA_real_) {
   list(
     lower = lower,
     upper = upper,
@@ -282,13 +434,36 @@ empty_fit_result <- function(
     scan_certified_lower_probability = scan_certified_lower_probability,
     posterior_constraint_status = posterior_constraint_status,
     candidate_feasible_count = candidate_feasible_count,
-    candidates_evaluated = candidates_evaluated
+    candidates_evaluated = candidates_evaluated,
+    oracle_target = oracle_target,
+    oracle_mean_tilt = oracle_mean_tilt,
+    oracle_certificate_digest = oracle_certificate_digest,
+    oracle_lower_probability = oracle_lower_probability,
+    oracle_upper_probability = oracle_upper_probability
   )
 }
 
-fit_method <- function(method_id, y, c_target, tol_conf, post_conf, seed) {
+fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
+                       seed) {
   direct <- config$engine_defaults$direct_dp
   base <- dp_base_from_config()
+  if (identical(method_id, "oracle_sh")) {
+    certificate <- oracle_for(dgp_id, c_target)
+    return(empty_fit_result(
+      lower = certificate$lower_root,
+      upper = certificate$upper_root,
+      width = certificate$width,
+      posterior_probability = NA_real_,
+      retained_count = NA_integer_,
+      infeasible = FALSE,
+      fit_class = "rqr_interval_oracle|shortest_population",
+      oracle_target = certificate$target,
+      oracle_mean_tilt = certificate$mean_tilt,
+      oracle_certificate_digest = certificate$certificate_digest,
+      oracle_lower_probability = certificate$lower_probability,
+      oracle_upper_probability = certificate$upper_probability
+    ))
+  }
   if (method_id %in% c("hdp_s", "hdp_s_mc")) {
     calibration <- get_scan_calibration(method_id, length(y), c_target,
                                         tol_conf)
@@ -494,6 +669,7 @@ write_progress <- function(status, current = list()) {
       schema_version = paste0(config$schema_version, "/progress"),
       study_id = config$study_id,
       mode = mode,
+      wave_id = wave_id,
       status = status,
       git_commit = git_commit,
       datasets_completed = as.integer(counter),
@@ -535,7 +711,8 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
               timing <- system.time({
                 fit <- tryCatch(
                   fit_method(
-                    method_id, y, c_target, tol_conf, post_conf, method_seed
+                    method_id, y, dgp_id, c_target, tol_conf, post_conf,
+                    method_seed
                   ),
                   error = function(e) e
                 )
@@ -557,6 +734,8 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   generalized_bayes = isTRUE(method_meta$generalized_bayes),
                   success = NA,
                   content = NA_real_,
+                  lower = NA_real_,
+                  upper = NA_real_,
                   width = NA_real_,
                   posterior_probability = NA_real_,
                   retained_count = NA_integer_,
@@ -574,6 +753,16 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   width_ratio_to_reference = NA_real_,
                   width_diff_to_reference = NA_real_,
                   posterior_constraint_binding = NA,
+                  oracle_target = NA_character_,
+                  oracle_mean_tilt = NA_real_,
+                  oracle_certificate_digest = NA_character_,
+                  oracle_lower_probability = NA_real_,
+                  oracle_upper_probability = NA_real_,
+                  oracle_sh_lower = NA_real_,
+                  oracle_sh_upper = NA_real_,
+                  oracle_sh_width = NA_real_,
+                  width_ratio_to_oracle_sh = NA_real_,
+                  width_excess_vs_oracle_sh = NA_real_,
                   infeasible = TRUE,
                   message = conditionMessage(fit),
                   fit_class = "error",
@@ -598,6 +787,8 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   success = if (isTRUE(fit$infeasible)) NA else
                     content >= c_target - 1e-12,
                   content = content,
+                  lower = fit$lower,
+                  upper = fit$upper,
                   width = fit$width,
                   posterior_probability = fit$posterior_probability,
                   retained_count = as.integer(fit$retained_count),
@@ -624,6 +815,19 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   width_ratio_to_reference = NA_real_,
                   width_diff_to_reference = NA_real_,
                   posterior_constraint_binding = NA,
+                  oracle_target = fit$oracle_target %||% NA_character_,
+                  oracle_mean_tilt = fit$oracle_mean_tilt %||% NA_real_,
+                  oracle_certificate_digest =
+                    fit$oracle_certificate_digest %||% NA_character_,
+                  oracle_lower_probability =
+                    fit$oracle_lower_probability %||% NA_real_,
+                  oracle_upper_probability =
+                    fit$oracle_upper_probability %||% NA_real_,
+                  oracle_sh_lower = NA_real_,
+                  oracle_sh_upper = NA_real_,
+                  oracle_sh_width = NA_real_,
+                  width_ratio_to_oracle_sh = NA_real_,
+                  width_excess_vs_oracle_sh = NA_real_,
                   infeasible = isTRUE(fit$infeasible),
                   message = fit$message %||% "",
                   fit_class = fit$fit_class,
@@ -693,6 +897,57 @@ if (nrow(reference_rows)) {
     NA
   )
 }
+oracle_reference_rows <- results[results$method_id == "oracle_sh",
+                                 c(reference_keys, "lower", "upper", "width",
+                                   "oracle_mean_tilt",
+                                   "oracle_certificate_digest"),
+                                 drop = FALSE]
+if (nrow(oracle_reference_rows)) {
+  names(oracle_reference_rows)[names(oracle_reference_rows) == "lower"] <-
+    "oracle_reference_lower"
+  names(oracle_reference_rows)[names(oracle_reference_rows) == "upper"] <-
+    "oracle_reference_upper"
+  names(oracle_reference_rows)[names(oracle_reference_rows) == "width"] <-
+    "oracle_reference_width"
+  names(oracle_reference_rows)[
+    names(oracle_reference_rows) == "oracle_mean_tilt"
+  ] <- "oracle_reference_mean_tilt"
+  names(oracle_reference_rows)[
+    names(oracle_reference_rows) == "oracle_certificate_digest"
+  ] <- "oracle_reference_certificate_digest"
+  results <- merge(
+    results,
+    oracle_reference_rows,
+    by = reference_keys,
+    all.x = TRUE,
+    sort = FALSE
+  )
+  results <- results[order(results$row_id), , drop = FALSE]
+  results$oracle_sh_lower <- results$oracle_reference_lower
+  results$oracle_sh_upper <- results$oracle_reference_upper
+  results$oracle_sh_width <- results$oracle_reference_width
+  results$oracle_mean_tilt <- ifelse(
+    is.na(results$oracle_mean_tilt),
+    results$oracle_reference_mean_tilt,
+    results$oracle_mean_tilt
+  )
+  results$oracle_certificate_digest <- ifelse(
+    is.na(results$oracle_certificate_digest),
+    results$oracle_reference_certificate_digest,
+    results$oracle_certificate_digest
+  )
+  results$width_ratio_to_oracle_sh <- ifelse(
+    is.finite(results$oracle_sh_width) & results$oracle_sh_width > 0,
+    results$width / results$oracle_sh_width,
+    NA_real_
+  )
+  results$width_excess_vs_oracle_sh <- results$width - results$oracle_sh_width
+  results$oracle_reference_lower <- NULL
+  results$oracle_reference_upper <- NULL
+  results$oracle_reference_width <- NULL
+  results$oracle_reference_mean_tilt <- NULL
+  results$oracle_reference_certificate_digest <- NULL
+}
 results$row_id <- NULL
 write.csv(results, file.path(staging, "bayes_uq_validation_results.csv"),
           row.names = FALSE)
@@ -727,6 +982,14 @@ summary_rows <- lapply(split(results, split_key), function(df) {
       mean(df$width_ratio_to_reference, na.rm = TRUE),
     median_width_diff_to_reference =
       stats::median(df$width_diff_to_reference, na.rm = TRUE),
+    median_width_ratio_to_oracle_sh =
+      stats::median(df$width_ratio_to_oracle_sh, na.rm = TRUE),
+    mean_width_ratio_to_oracle_sh =
+      mean(df$width_ratio_to_oracle_sh, na.rm = TRUE),
+    median_width_excess_vs_oracle_sh =
+      stats::median(df$width_excess_vs_oracle_sh, na.rm = TRUE),
+    mean_width_excess_vs_oracle_sh =
+      mean(df$width_excess_vs_oracle_sh, na.rm = TRUE),
     mean_retained_fraction = mean(df$retained_fraction, na.rm = TRUE),
     mean_content_buffer = mean(df$content_buffer, na.rm = TRUE),
     mean_scan_certified_lower_probability =
@@ -752,15 +1015,19 @@ readme <- c(
   paste0("# ", config$study_id),
   "",
   paste0("- Mode: `", mode, "`"),
+  paste0("- Wave ID: `", wave_id, "`"),
   paste0("- Git commit: `", git_commit, "`"),
   paste0("- Result rows: `", nrow(results), "`"),
   paste0("- Summary rows: `", nrow(summary), "`"),
   paste0("- Diagnostic reference method: `", reference_method_id, "`"),
+  paste0("- Oracle shortest reference present: `",
+         any(results$method_id == "oracle_sh"), "`"),
   "",
   "This pilot separates response-distribution Bayesian UQ from RQR generalized-Bayes plug-in summaries.",
   "The hybrid direct-DP scan method fixes the scan count before evaluating posterior content probability.",
   "These artifacts are validation evidence only; they do not prove posterior endpoint coverage.",
-  "Width-ratio and posterior-binding diagnostics are included for post-run method tuning."
+  "The `oracle_sh` rows are non-deployable synthetic-DGP benchmarks for the true population shortest interval and oracle mean tilt.",
+  "Width-ratio, oracle-gap, and posterior-binding diagnostics are included for post-run method tuning."
 )
 writeLines(readme, file.path(staging, "README.md"))
 write_progress("complete")
@@ -788,11 +1055,18 @@ manifest <- list(
   output_dir = output_dir,
   n_result_rows = nrow(results),
   n_summary_rows = nrow(summary),
+  wave_id = wave_id,
+  wave_filters = wave_filters,
   started_from_response_likelihood_engines = TRUE,
   generalized_bayes_plugin_comparators_present = TRUE,
   posterior_endpoint_coverage_claim_available = FALSE,
+  oracle_sh_reference_present = any(results$method_id == "oracle_sh"),
+  oracle_sh_is_deployable_method = FALSE,
   scan_count_fixed_not_resampled = TRUE,
   diagnostic_reference_method_id = reference_method_id,
+  scan_calibration_cache_path = scan_calibration_cache_path %||%
+    NA_character_,
+  oracle_cache_path = oracle_cache_path %||% NA_character_,
   checkpoint_every_datasets = checkpoint_every_datasets,
   created_at_utc = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
   artifact_hashes = artifact_hashes
