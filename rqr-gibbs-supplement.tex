@@ -19,7 +19,7 @@
   linkcolor=black,
   citecolor=black,
   urlcolor=black,
-  pdftitle={Supplementary Material: Mean-Tilted Interval Regression: Fixed-Content Interval Functionals and Bayesian Computation},
+  pdftitle={Supplementary Material: Mean-Tilted Intervals: Fixed-Content Targets, Generalized Bayes, and Tolerance Actions},
   pdfauthor={Antonio De Leon, Raquel Prado, and Bruno Sanso}
 }
 
@@ -55,8 +55,8 @@
 \renewcommand{\thesubsection}{S\arabic{section}.\arabic{subsection}}
 \renewcommand{\thepage}{S\arabic{page}}
 
-\title{Supplementary Material for \emph{Mean-Tilted Interval Regression:
-Fixed-Content Interval Functionals and Bayesian Computation}}
+\title{Supplementary Material for \emph{Mean-Tilted Intervals:
+Fixed-Content Targets, Generalized Bayes, and Tolerance Actions}}
 \author{Antonio De Leon \and Raquel Prado \and Bruno Sans\'o}
 \date{}
 
@@ -65,36 +65,35 @@ Fixed-Content Interval Functionals and Bayesian Computation}}
 
 \begin{abstract}
 \noindent
-The residual-product criterion introduced as Relaxed Quantile Regression (RQR)
-is treated in the main article as the mean-preserving interval (MPI) loss. The
-derivations establish its score equations, quantile-window and profiled-risk
-identification, and implications for the retained and omitted distributions.
-They distinguish equal-tailed, shortest-contiguous, and MTI targets;
-derive exact fractional empirical balance and fixed-dimensional static
-uncertainty geometry; develop the pseudo-asymmetric-Laplace augmentation and
-its Gaussian and generalized-inverse-Gaussian full conditionals; and state the
-fixed-rate mean-tilt shifts for static and dynamic roots. Separate sections
-give the MPI-only learned-rate and component-scale contracts. The main
-article also formulates scan-calibrated, hybrid Bayesian--scan, and
-pilot-selected exact-spacing tolerance actions. The direct-DP posterior gives
-an exact fixed-interval content law, while Gaussian DPM summaries provide a
-smooth response-distribution alternative. Finite-sample scan certification,
+The supplement gives the derivations and computational contracts behind the
+mean-preserving interval (MPI), mean-tilted interval (MTI), generalized-Bayes,
+and tolerance-action constructions in the main article. It establishes the MPI
+score equations, quantile-window identification, profiled-risk identification,
+retained-distribution consequences, exact fractional empirical balance, and
+fixed-dimensional static uncertainty geometry. It then derives the
+pseudo-asymmetric-Laplace augmentation, Gaussian and
+generalized-inverse-Gaussian full conditionals, fixed-target ECM updates, and
+root-blocked dynamic-state computation. Separate sections record the MPI-only
+learned inverse-loss scale, RHS-NS adapter, frozen-feature DESN readout,
+discount-template contracts, and shared component-scale restrictions. The
+Bayesian response-distribution layer is developed separately from the MTI
+generalized posterior: the direct Dirichlet-process posterior gives exact
+fixed-interval Beta content probabilities, while Gaussian DPM summaries provide
+a smooth posterior alternative. Finite-sample scan certification,
 selected-action asymptotics, posterior endpoint-coverage transfer, and
-regression-family tolerance theory remain open. Fixed nonzero tilt is available
-for ridge fixed-design and DESN readouts and for fixed-\(W_t\) or
-frozen-template dynamic modes; nonzero-tilt RHS-NS, learned-rate tilt, and
-component-scale evolution require separate theory and validation.
+regression-family tolerance theory remain open.
 \end{abstract}
 
-\section{Interpretive Scope}
+\section{Supplement Scope and Navigation}
+\label{sec:supp-scope}
 
-The main article presents the statistical target, generalized posterior, and
-core Gibbs sampler. The derivations and computational details below establish
-the supporting results. The MTI generalized posterior combines a prior with a
-loss-based update \citep{BissiriHolmesWalker2016GeneralBayes}; it is not derived
-from an ordinary response likelihood. Root-trajectory draws therefore induce
-generalized-posterior distributions for endpoint functions, but not a
-posterior predictive distribution for future responses.
+The main article carries the statistical narrative. The supplement is a recovery
+document for definitions, proofs, computational identities, and claim scope. The
+MTI generalized posterior combines a prior with a loss-based update
+\citep{BissiriHolmesWalker2016GeneralBayes}; it is not derived from an ordinary
+response likelihood. Root-trajectory draws therefore induce
+generalized-posterior distributions for endpoint functions, but not a posterior
+predictive distribution for future responses.
 
 \begin{table}[H]
 \centering
@@ -179,7 +178,7 @@ Evidence and reproducibility scope
 \end{tabularx}
 \end{table}
 
-In the TCSP-MTI plug-in construction, the retained content and
+In the scan-calibrated MTI plug-in construction, the retained content and
 shortest-window tilt are computed before the generalized posterior is fitted.
 When the same observations determine the tilt and update the prior, endpoint
 summaries are conditional on that selected target. They do not propagate
@@ -187,12 +186,13 @@ shortest-window selection uncertainty. The full-distribution Bayesian layer
 below addresses uncertainty about \(F\) directly; it does not convert the
 loss-based MTI posterior into a response likelihood.
 
-\section{Full-Distribution Bayesian Shortest-Interval UQ}
+\section{Full-Distribution Bayesian Shortest-Interval Uncertainty}
 \label{sec:supp-bayes-uq}
 
-This section records the Bayesian response-distribution calculations used by
-the hybrid Bayesian--scan action. They are intentionally separate from the MTI
-generalized posterior. The model is
+The hybrid Bayesian--scan action needs posterior statements about the
+population distribution \(F\), not about loss-defined root parameters. The
+response-distribution calculations below are therefore intentionally separate
+from the MTI generalized posterior. The direct model is
 \[
 F\sim\mathrm{DP}(a,H),\qquad
 Y_i\mid F\stackrel{\mathrm{iid}}{\sim}F,
@@ -298,6 +298,7 @@ not labeled as a proper direct-DP response model with a fixed prior.
 \section{Fixed-Content Interval Functionals}
 \label{sec:supp-interval-functionals}
 
+The population interval class is most transparent on the probability scale.
 Suppress \(x\) and write
 \[
 I_c(u)=[Q(u),Q(u+c)],\qquad
@@ -333,10 +334,12 @@ for this comparison
 \citep{GneitingRaftery2007,BrehmerGneiting2021Intervals,
 FisslerEtAl2021SetValued}.
 
-\section{MPI Loss, Score Derivations, and Consequences}
+\section{MPI Loss: Scores and Consequences}
 \label{sec:supp-population-target}
 
-Fix a covariate value \(x\), a desired content \(c\in(0,1)\), and endpoints
+The derivation starts from the endpoint scores because those scores determine
+both content and placement. Fix a covariate value \(x\), a desired content
+\(c\in(0,1)\), and endpoints
 \(a=L(x)<U(x)=b\). The pointwise loss is
 \begin{equation}
 \ell_c(a,b;y)
@@ -596,7 +599,8 @@ empirical-process analysis.
 \section{The Mean-Tilted Interval Loss}
 \label{sec:supp-mean-tilt}
 
-For a fixed mean tilt \(\delta\in\R\), define
+The MTI loss keeps the content score of MPI and shifts only the retained-mean
+equation. For a fixed mean tilt \(\delta\in\R\), define
 \begin{equation}
 \ell_{c,\delta}^{\mathrm{MTI}}(m,h;y)
 =\rho_c\{(y-m)^2-h^2\}-2c\delta(m-y),
@@ -949,7 +953,8 @@ coercivity or propriety result.
 
 \subsection{Fractional empirical balance}
 
-For intercept-only roots and fixed \(\delta\), define
+Finite-sample score balance is fractional because observations may lie exactly
+on fitted roots. For intercept-only roots and fixed \(\delta\), define
 \[
 R_n(a,b)
 =\sum_{i=1}^n
@@ -1136,7 +1141,9 @@ are deterministic pointwise score calculations, not fitted results.}
 \section{RQR-W and Width Regularization}
 \label{sec:supp-rqr-w}
 
-For comparison, \citet{PouplinEtAl2024RQR} use the RQR-W population objective
+The width-regularized variant in \citet{PouplinEtAl2024RQR} has a different
+population score system from the MPI loss. For comparison, they use the RQR-W
+population objective
 \[
 \E\left[\rho_q\{(Y-a)(Y-b)\}\right]
 +\frac{\lambda_W}{2}(b-a)^2,
@@ -1174,13 +1181,18 @@ not generally coincide with the shortest-contiguous path.
 \section{Pseudo-AL Augmentation of the Generalized Posterior}
 \label{sec:supp-pseudo-al}
 
-For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the MPI contribution is
+The Gibbs sampler is obtained by augmenting the product-residual loss factor,
+not by introducing a response likelihood. For
+\(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the MPI contribution is
 \(\ell_c(\eta_{1i},\eta_{2i};y_i)=\rho_c(e_i)\), as in
 \eqref{eq:supp-mpi-product-check}. The fixed-rate generalized posterior
 therefore updates the prior by
-\(\exp\{-\omega_{\mathrm R}\sum_{i\in\mathcal O}
-\ell_c(\eta_{1i},\eta_{2i};y_i)\}\). The following normal--exponential
-identity provides a latent-variable representation adapted from the standard
+\[
+\exp\left\{-\omega_{\mathrm R}\sum_{i\in\mathcal O}
+\ell_c(\eta_{1i},\eta_{2i};y_i)\right\}.
+\]
+The following normal--exponential identity provides a latent-variable
+representation adapted from the standard
 asymmetric-Laplace quantile-regression augmentation
 \citep{KozumiKobayashi2011Gibbs}. Setting
 \[
@@ -1226,12 +1238,13 @@ v_i^{-1}\sim\mathrm{IG}\left(\sqrt{a/b_i},a\right),
 \]
 where the inverse-Gaussian parameters are mean and shape.
 
-\section{Static Root Regression}
+\section{Static Root Regression and Fixed-Target ECM}
 \label{sec:supp-static-regression}
 
 \subsection{Gaussian coefficient full conditionals}
 
-Let
+Static regression is the base computation for ridge readouts and frozen DESN
+features. Let
 \(\mat W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_i)^{-1}:i\in\mathcal O\}\).
 Conditional on the second root, define
 \[
@@ -1448,13 +1461,14 @@ features. Generalized-posterior summaries are ordered endpoint functions,
 widths, and midpoints formed from readout draws. Neither the training nor future feature
 matrix defines a response-simulation distribution. Nonzero mean tilt for a
 proper Gaussian ridge readout is implemented through the static fixed-rate
-scan; reservoir tuning and any tilt selection belong to an external, recorded
+sampler; reservoir tuning and any tilt selection belong to an external, recorded
 validation layer. Nonzero-tilt RHS-NS and VB readouts remain disabled.
 
-\section{Learned Inverse-Loss Scale}
+\section{MPI-Only Learned Inverse-Loss Scale}
 \label{sec:supp-learned-scale}
 
-Let \(s_L>0\) be a declared reference loss scale and set
+Learning the inverse-loss scale is a separate MPI generalized-posterior
+convention. Let \(s_L>0\) be a declared reference loss scale and set
 \(\sigma_{\mathrm R}=s_L/\kappa\). With
 \(\mathcal L_{n,c}(\vartheta)=
 \sum_{i\in\mathcal O}\rho_c(e_i)\), the hierarchical generalized posterior is
@@ -1573,7 +1587,9 @@ skipping that refresh would define a different, invalid hybrid scan.
 \section{Dynamic Linear Root-State Computation}
 \label{sec:supp-dynamic}
 
-For root \(k=1,2\), consider the DLM representation
+The dynamic sampler keeps the interval target fixed while replacing static
+coefficients by root-specific state trajectories. For root \(k=1,2\), consider
+the DLM representation
 \citep{GoncalvesMigonBastos2020DQLM}
 \[
 \eta_{kt}=f_t^\top\theta_{kt},\qquad
@@ -1714,7 +1730,8 @@ declared ladder is recorded as an absolute fallback.
 \section{Component-Specific Discount Factors}
 \label{sec:supp-discounts}
 
-Let component discounts be \(\gamma_1,\ldots,\gamma_J\), with
+Discount factors affect the state prior and therefore the generalized posterior
+being sampled. Let component discounts be \(\gamma_1,\ldots,\gamma_J\), with
 \(0<\gamma_j\le1\), and let their state dimensions sum to \(p\). Define the
 \(p\times p\) matrix \(D\) to have value
 \((1-\gamma_j)/\gamma_j\) throughout the within-component block \(j\) and zero
@@ -1955,7 +1972,8 @@ separate degenerate models and are not part of the inverse-Gamma support.
 \section{Single-Data Oracle-Tilt Diagnostics}
 \label{sec:supp-oracle-tilt-diagnostics}
 
-The article's fixed-design and dynamic illustrations use one frozen data set
+The oracle-tilt illustrations diagnose fixed-target computation on frozen data
+sets. The article's fixed-design and dynamic illustrations use one frozen data set
 per model family at content \(c=0.95\). Innovations follow the known
 affinely standardized asymmetric-Laplace law with source index \(0.80\).
 MPI uses zero tilt; the ET and SH tilts are the exact conditional
@@ -2024,8 +2042,8 @@ warnings described above.}
 \section{Reproducibility and Evidence Scope}
 \label{sec:supp-reproducibility}
 
-The computational record separates mathematical target status, numerical
-execution, and reproducibility eligibility. Reference checks cover the Gaussian filtering and
+Reproducibility records separate mathematical target status, numerical
+execution, and evidence eligibility. Reference checks cover the Gaussian filtering and
 smoothing algebra, latent- and component-scale conditionals, missing
 observations, root labels, and exact checkpoint continuation. A versioned run
 manifest records the data-generating mechanism, forecast design, seeds,

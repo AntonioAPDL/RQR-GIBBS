@@ -90,11 +90,11 @@ for (label in names(main_only_forbidden)) {
 
 required <- list(
   "main.tex" = c(
-    "Its nonnegative loss is constructed from",
-    "mean-preserving interval (MPI) loss",
-    "mean-tilted interval (MTI) loss",
-    "These distinctions keep the MTI generalized posterior loss-based",
-    "conjugate direct Dirichlet-process posterior gives exact fixed-interval Beta",
+    "The loss is built from",
+    "mean-preserving interval (MPI)",
+    "mean-tilted interval (MTI) family",
+    "Posterior credibility is not tolerance confidence",
+    "direct Dirichlet-process response-distribution layer gives exact fixed-interval Beta",
     "The pointwise MPI loss is",
     "The familiar check-loss notation gives an equivalent compact representation",
     "The check loss therefore acts on the scalar product residual",
@@ -102,15 +102,15 @@ required <- list(
     "augmented generalized posterior",
     "Gaussian full conditional",
     "not a sampling model for \\(y_i\\)",
-    "posterior predictive responses",
-    "Scan Calibration and Shortest MTI Tolerance Actions",
+    "posterior predictive response draws",
+    "Scan-Calibrated Tolerance Actions",
     "Theoretical scope of the proposed scan-calibrated construction",
     "L_q'=\\frac{b_q}{\\lambda_q(a_q-b_q)}<0",
     "U_q'=\\frac{a_q}{\\lambda_q(a_q-b_q)}>0"
   ),
   "rqr-gibbs-supplement.tex" = c(
-    "Relaxed Quantile Regression (RQR)",
-    "MPI Loss, Score Derivations, and Consequences",
+    "mean-preserving interval (MPI)",
+    "MPI Loss: Scores and Consequences",
     "The check function is applied to the product residual",
     "Pseudo-AL Augmentation of the Generalized Posterior",
     "augmented generalized posterior",
