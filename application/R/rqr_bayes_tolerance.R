@@ -1,10 +1,26 @@
-.rqr_order_interval_candidates <- function(y) {
+.rqr_order_interval_candidates <- function(y, min_observed_count = 1L) {
   y <- sort(as.numeric(y))
   n <- length(y)
-  rows <- vector("list", n * (n + 1L) / 2L)
+  min_observed_count <- .rqr_mt_assert_count(
+    min_observed_count, "min_observed_count", 1L
+  )
+  if (min_observed_count > n) {
+    return(data.frame(
+      lower_index = integer(),
+      upper_index = integer(),
+      lower = numeric(),
+      upper = numeric(),
+      observed_count = integer(),
+      width = numeric()
+    ))
+  }
+  rows <- vector("list", (n - min_observed_count + 1L) *
+                   (n - min_observed_count + 2L) / 2L)
   pos <- 0L
   for (j in seq_len(n)) {
-    for (l in j:n) {
+    first_upper <- j + min_observed_count - 1L
+    if (first_upper > n) next
+    for (l in first_upper:n) {
       pos <- pos + 1L
       rows[[pos]] <- data.frame(
         lower_index = as.integer(j),
@@ -16,7 +32,7 @@
       )
     }
   }
-  do.call(rbind, rows)
+  do.call(rbind, rows[seq_len(pos)])
 }
 
 .rqr_bayes_constraint_status <- function(
@@ -96,7 +112,9 @@ rqr_dp_bayes_tolerance_action <- function(
   post_conf <- .rqr_bayes_assert_probability(
     posterior_confidence, "posterior_confidence"
   )
-  candidates <- .rqr_order_interval_candidates(y)
+  candidates <- .rqr_order_interval_candidates(
+    y, min_observed_count = scan_count
+  )
   candidates$posterior_content_probability <- posterior_probability(
     candidates$lower, candidates$upper, c_target
   )
@@ -127,4 +145,3 @@ rqr_dp_bayes_tolerance_action <- function(
     candidates = candidates
   )
 }
-

@@ -1,0 +1,121 @@
+{
+  "schema_version": "rqrgibbs_bayes_uq_validation/1.1.0",
+  "study_id": "rqr_bayes_uq_validation_main_20260813",
+  "status": "confirmatory_main_launch_authorized_high_coverage_iid_univariate",
+  "interpretation": "Main iid univariate validation for high-coverage Bayesian-scan tolerance actions. Coverage levels are guaranteed population contents. Repeated-sample content is empirical validation evidence, not a proof of posterior endpoint coverage.",
+  "generalized_bayes": false,
+  "response_likelihood": true,
+  "posterior_predictive_response_draws": false,
+  "claim_scope": {
+    "iid_univariate_continuous_only": true,
+    "regression_tolerance": false,
+    "dynamic_tolerance": false,
+    "posterior_endpoint_coverage_claim_available": false,
+    "scan_count_fixed_not_resampled": true,
+    "coverage_levels_are_guaranteed_contents": true,
+    "confirmatory_authorized": true
+  },
+  "execution": {
+    "smoke_authorized": true,
+    "moderate_authorized": false,
+    "confirmatory_authorized": true,
+    "dpm_companion_authorized": true,
+    "overnight_mode": "confirmatory",
+    "checkpoint_every_datasets": 10
+  },
+  "diagnostics": {
+    "reference_method_id": "tcsp_mc",
+    "record_width_ratio_to_reference": true,
+    "record_posterior_binding_status": true,
+    "record_retained_fraction": true,
+    "record_scan_content_buffer": true,
+    "paired_thresholds": true
+  },
+  "scan_calibration": {
+    "method": "monte_carlo_conservative",
+    "smoke_n_sim": 200,
+    "smoke_numerical_confidence": 0.95,
+    "confirmatory_n_sim": 5000,
+    "confirmatory_numerical_confidence": 0.995,
+    "seed": 1512600
+  },
+  "modes": {
+    "smoke": {
+      "replications": 1,
+      "sample_sizes": [80],
+      "guaranteed_contents": [0.90, 0.99],
+      "tolerance_confidences": [0.90],
+      "posterior_confidences": [0.90],
+      "dgp_ids": ["normal", "student_t3", "sharp_mixture"],
+      "method_ids": ["hdp_s_mc", "tcsp_mc", "tcsp_dkw", "split_empirical_shortest", "wilks_minmax", "dpm_bayes", "dp_bayes", "bb_shortest_diag"],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "checkpoint_every_datasets": 2
+    },
+    "confirmatory": {
+      "replications": 100,
+      "sample_sizes": [500, 1000],
+      "guaranteed_contents": [0.90, 0.95, 0.99],
+      "tolerance_confidences": [0.95],
+      "posterior_confidences": [0.90, 0.95, 0.99],
+      "dgp_ids": ["normal", "lognormal", "lognormal_hard", "mixture", "sharp_mixture", "contaminated_normal", "student_t3"],
+      "method_ids": ["hdp_s_mc", "tcsp_mc", "tcsp_dkw", "split_empirical_shortest", "wilks_minmax", "bb_shortest_diag"],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "checkpoint_every_datasets": 10
+    },
+    "dpm_companion": {
+      "replications": 10,
+      "sample_sizes": [500, 1000],
+      "guaranteed_contents": [0.90, 0.95],
+      "tolerance_confidences": [0.95],
+      "posterior_confidences": [0.95],
+      "dgp_ids": ["normal", "lognormal_hard", "contaminated_normal", "student_t3"],
+      "method_ids": ["dpm_bayes", "dp_bayes", "tcsp_mc", "wilks_minmax"],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "checkpoint_every_datasets": 10
+    }
+  },
+  "dgps": [
+    {"dgp_id": "normal", "family": "normal", "label": "standard normal"},
+    {"dgp_id": "lognormal", "family": "standardized_lognormal", "label": "centered standardized lognormal", "logsd": 0.75},
+    {"dgp_id": "lognormal_hard", "family": "standardized_lognormal", "label": "hard centered standardized lognormal", "logsd": 1.25},
+    {"dgp_id": "mixture", "family": "standardized_normal_mixture", "label": "standardized separated normal mixture", "weights": [0.80, 0.20], "means": [-1.00, 2.00], "sds": [0.60, 0.40]},
+    {"dgp_id": "sharp_mixture", "family": "standardized_normal_mixture", "label": "standardized sharp separated normal mixture", "weights": [0.50, 0.50], "means": [-2.00, 2.00], "sds": [0.20, 0.20]},
+    {"dgp_id": "contaminated_normal", "family": "standardized_normal_mixture", "label": "standardized five-percent scale-contaminated normal", "weights": [0.95, 0.05], "means": [0.00, 0.00], "sds": [1.00, 8.00]},
+    {"dgp_id": "student_t3", "family": "standardized_student_t", "label": "standardized Student t with three degrees of freedom", "df": 3}
+  ],
+  "methods": [
+    {"method_id": "hdp_s_mc", "label": "Authoritative hybrid direct-DP Bayesian-scan shortest interval with MC scan calibration", "formal_tolerance_action": true, "response_likelihood": true, "generalized_bayes": false, "scan_method": "monte_carlo_conservative"},
+    {"method_id": "tcsp_mc", "label": "TCSP shortest window with MC scan calibration", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true, "scan_method": "monte_carlo_conservative"},
+    {"method_id": "tcsp_dkw", "label": "TCSP shortest window with conservative DKW scan calibration", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true, "scan_method": "dkw_conservative"},
+    {"method_id": "split_empirical_shortest", "label": "Split exact-spacing empirical-shortest action", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": true},
+    {"method_id": "wilks_minmax", "label": "Full-sample min-max order-statistic comparator", "formal_tolerance_action": true, "response_likelihood": false, "generalized_bayes": false},
+    {"method_id": "dpm_bayes", "label": "Gaussian DPM Bayesian shortest order-statistic action", "formal_tolerance_action": false, "response_likelihood": true, "generalized_bayes": false},
+    {"method_id": "dp_bayes", "label": "Direct-DP Bayesian shortest order-statistic action", "formal_tolerance_action": false, "response_likelihood": true, "generalized_bayes": false},
+    {"method_id": "bb_shortest_diag", "label": "Bayesian bootstrap posterior shortest diagnostic", "formal_tolerance_action": false, "response_likelihood": false, "generalized_bayes": false}
+  ],
+  "engine_defaults": {
+    "direct_dp": {
+      "concentration": 1,
+      "base": {"family": "normal", "mean": 0, "sd": 4},
+      "shortest_draws": 20,
+      "residual_mass_tol": 0.05
+    },
+    "gaussian_dpm": {
+      "truncation_level": 4,
+      "smoke_mcmc_control": {"n_iter": 24, "burn_in": 12, "thin": 6},
+      "confirmatory_mcmc_control": {"n_iter": 80, "burn_in": 40, "thin": 10},
+      "shortest_grid_size": 9
+    },
+    "bayesian_bootstrap": {
+      "draws": 60
+    },
+    "split": {
+      "pilot_fraction": 0.30
+    }
+  },
+  "base_seed": 963100,
+  "summary_confidence": 0.95
+}

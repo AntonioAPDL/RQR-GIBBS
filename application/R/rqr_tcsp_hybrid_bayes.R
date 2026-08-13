@@ -46,15 +46,30 @@ rqr_tcsp_hybrid_bayes_fit <- function(
     stop("scan_args may not override n, guaranteed_content, tolerance_confidence, or method.",
          call. = FALSE)
   }
-  calibration <- do.call(rqr_tcsp_calibrate_count, utils::modifyList(
-    list(
-      n = length(y),
-      guaranteed_content = c_target,
-      tolerance_confidence = tol_conf,
-      method = scan_method
-    ),
-    scan_args
-  ))
+  precomputed_calibration <- scan_args$calibration %||% NULL
+  scan_args$calibration <- NULL
+  if (is.null(precomputed_calibration)) {
+    calibration <- do.call(rqr_tcsp_calibrate_count, utils::modifyList(
+      list(
+        n = length(y),
+        guaranteed_content = c_target,
+        tolerance_confidence = tol_conf,
+        method = scan_method
+      ),
+      scan_args
+    ))
+  } else {
+    calibration <- precomputed_calibration
+    if (!is.list(calibration) ||
+        !identical(as.integer(calibration$n), as.integer(length(y))) ||
+        !isTRUE(all.equal(calibration$guaranteed_content, c_target)) ||
+        !isTRUE(all.equal(calibration$tolerance_confidence, tol_conf)) ||
+        !identical(calibration$scan_critical_method, scan_method) ||
+        is.null(calibration$retained_count)) {
+      stop("scan_args$calibration is not compatible with the requested hybrid fit.",
+           call. = FALSE)
+    }
+  }
   if (isTRUE(calibration$infeasible) || calibration$retained_count > length(y)) {
     stop("Hybrid Bayesian-scan calibration is infeasible for this sample size.",
          call. = FALSE)
@@ -212,4 +227,3 @@ rqr_tcsp_hybrid_bayes_fit <- function(
   class(out) <- c("rqr_hybrid_bayes_tcsp", "rqr_tolerance_fit", "list")
   out
 }
-

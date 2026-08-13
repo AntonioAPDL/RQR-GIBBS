@@ -27,7 +27,8 @@ for (package in c("rqrgibbs", "jsonlite", "digest")) {
 library(rqrgibbs)
 
 mode <- tolower(arg_value("--mode=", "smoke"))
-allowed <- c("smoke", "moderate", "health-check-read-only")
+allowed <- c("smoke", "moderate", "confirmatory", "dpm_companion",
+             "health-check-read-only")
 if (!mode %in% allowed) stopf("Unsupported Bayesian UQ validation mode: ", mode)
 
 config_path <- normalizePath(arg_value(
@@ -95,6 +96,16 @@ dgp_by_id <- setNames(config$dgps, vapply(config$dgps, `[[`,
 method_by_id <- setNames(config$methods, vapply(config$methods, `[[`,
                                                character(1L), "method_id"))
 
+hash_to_seed <- function(text, base = 862100L) {
+  bytes <- as.integer(charToRaw(as.character(text)))
+  value <- as.integer(base)
+  for (byte in bytes) {
+    value <- as.integer((as.double(value) * 131 + byte) %% 2147483647)
+  }
+  if (value <= 0L) value <- value + 1L
+  value
+}
+
 dgp_meta <- function(dgp) {
   if (identical(dgp$family, "normal")) {
     return(list(
@@ -133,6 +144,17 @@ dgp_meta <- function(dgp) {
       }
     ))
   }
+  if (identical(dgp$family, "standardized_student_t")) {
+    df <- as.numeric(dgp$df %||% 3)[1L]
+    if (!is.finite(df) || df <= 2) {
+      stopf("standardized_student_t requires df > 2 for finite variance.")
+    }
+    sd_raw <- sqrt(df / (df - 2))
+    return(list(
+      r = function(n) stats::rt(n, df = df) / sd_raw,
+      p = function(x) stats::pt(x * sd_raw, df = df)
+    ))
+  }
   stopf("Unsupported DGP family: ", dgp$family)
 }
 
@@ -153,7 +175,10 @@ selected_interval <- function(selected) {
   if (is.null(selected) || !nrow(selected)) {
     return(list(lower = NA_real_, upper = NA_real_, width = NA_real_,
                 posterior_probability = NA_real_, retained_count = NA_integer_,
-                infeasible = TRUE))
+                infeasible = TRUE, posterior_constraint_status =
+                  "infeasible_within_candidate_class",
+                candidate_feasible_count = 0L,
+                candidates_evaluated = NA_integer_))
   }
   list(
     lower = selected$lower[[1L]],
@@ -162,37 +187,161 @@ selected_interval <- function(selected) {
     posterior_probability =
       selected$posterior_content_probability[[1L]] %||% NA_real_,
     retained_count = selected$observed_count[[1L]] %||% NA_integer_,
-    infeasible = FALSE
+    infeasible = FALSE,
+    posterior_constraint_status = NA_character_,
+    candidate_feasible_count = NA_integer_,
+    candidates_evaluated = NA_integer_
+  )
+}
+
+scan_method_for <- function(method_id) {
+  method_meta <- method_by_id[[method_id]]
+  configured <- method_meta$scan_method %||% NULL
+  if (!is.null(configured)) return(as.character(configured)[1L])
+  if (method_id %in% c("hdp_s_mc", "tcsp_mc")) {
+    return("monte_carlo_conservative")
+  }
+  "dkw_conservative"
+}
+
+scan_args_for <- function(method_id, n, c_target, tol_conf) {
+  method_meta <- method_by_id[[method_id]]
+  scan_cfg <- config$scan_calibration %||% list()
+  n_sim <- method_meta$scan_n_sim %||%
+    mode_cfg$scan_n_sim %||%
+    scan_cfg[[paste0(mode, "_n_sim")]] %||%
+    scan_cfg$n_sim %||%
+    20000L
+  numerical_confidence <- method_meta$scan_numerical_confidence %||%
+    mode_cfg$scan_numerical_confidence %||%
+    scan_cfg[[paste0(mode, "_numerical_confidence")]] %||%
+    scan_cfg$numerical_confidence %||%
+    0.999
+  seed_base <- as.integer(
+    scan_cfg$seed %||% (as.integer(config$base_seed %||% 862100L) + 500000L)
+  )
+  key <- paste(mode, scan_method_for(method_id), n, c_target, tol_conf, n_sim,
+               numerical_confidence, sep = "|")
+  list(
+    n_sim = as.integer(n_sim)[1L],
+    numerical_confidence = as.numeric(numerical_confidence)[1L],
+    seed = hash_to_seed(key, base = seed_base)
+  )
+}
+
+scan_calibration_cache <- new.env(parent = emptyenv())
+get_scan_calibration <- function(method_id, n, c_target, tol_conf) {
+  method <- scan_method_for(method_id)
+  args <- scan_args_for(method_id, n, c_target, tol_conf)
+  key <- paste(method, n, c_target, tol_conf, args$n_sim,
+               args$numerical_confidence, args$seed, sep = "|")
+  if (!exists(key, envir = scan_calibration_cache, inherits = FALSE)) {
+    cal <- rqr_tcsp_calibrate_count(
+      n = n,
+      guaranteed_content = c_target,
+      tolerance_confidence = tol_conf,
+      method = method,
+      n_sim = args$n_sim,
+      numerical_confidence = args$numerical_confidence,
+      seed = args$seed
+    )
+    assign(key, cal, envir = scan_calibration_cache)
+  }
+  get(key, envir = scan_calibration_cache, inherits = FALSE)
+}
+
+dataset_seed_for <- function(dgp_id, n, c_target, tol_conf, post_conf,
+                             rep, counter) {
+  if (isTRUE(mode_cfg$paired_thresholds)) {
+    key <- paste("data", dgp_id, n, c_target, rep, sep = "|")
+    return(hash_to_seed(key, base = base_seed))
+  }
+  base_seed + counter
+}
+
+empty_fit_result <- function(
+    lower = NA_real_, upper = NA_real_, width = NA_real_,
+    posterior_probability = NA_real_, retained_count = NA_integer_,
+    infeasible = FALSE, message = "", fit_class = NA_character_,
+    scan_critical_method = NA_character_, content_buffer = NA_real_,
+    scan_certified_lower_probability = NA_real_,
+    posterior_constraint_status = NA_character_,
+    candidate_feasible_count = NA_integer_,
+    candidates_evaluated = NA_integer_) {
+  list(
+    lower = lower,
+    upper = upper,
+    width = width,
+    posterior_probability = posterior_probability,
+    retained_count = retained_count,
+    infeasible = infeasible,
+    message = message,
+    fit_class = fit_class,
+    scan_critical_method = scan_critical_method,
+    content_buffer = content_buffer,
+    scan_certified_lower_probability = scan_certified_lower_probability,
+    posterior_constraint_status = posterior_constraint_status,
+    candidate_feasible_count = candidate_feasible_count,
+    candidates_evaluated = candidates_evaluated
   )
 }
 
 fit_method <- function(method_id, y, c_target, tol_conf, post_conf, seed) {
   direct <- config$engine_defaults$direct_dp
   base <- dp_base_from_config()
-  if (identical(method_id, "hdp_s")) {
+  if (method_id %in% c("hdp_s", "hdp_s_mc")) {
+    calibration <- get_scan_calibration(method_id, length(y), c_target,
+                                        tol_conf)
+    if (isTRUE(calibration$infeasible) ||
+        calibration$retained_count > length(y)) {
+      return(empty_fit_result(
+        infeasible = TRUE,
+        message = "Hybrid Bayesian-scan calibration is infeasible for this sample size.",
+        fit_class = "rqr_hybrid_bayes_tcsp_calibration_infeasible",
+        scan_critical_method = calibration$scan_critical_method,
+        content_buffer = calibration$content_buffer,
+        retained_count = calibration$retained_count,
+        scan_certified_lower_probability =
+          calibration$scan_probability$certified_lower_probability %||%
+            NA_real_,
+        posterior_constraint_status = "infeasible_scan_count"
+      ))
+    }
     fit <- rqr_tcsp_hybrid_bayes_fit(
       y,
       guaranteed_content = c_target,
       tolerance_confidence = tol_conf,
       posterior_confidence = post_conf,
       distribution_engine = "direct_dp",
-      scan_method = "dkw_conservative",
+      scan_method = scan_method_for(method_id),
       distribution_args = list(
         concentration = as.numeric(direct$concentration)[1L],
         base_measure = base
       ),
+      scan_args = list(calibration = calibration),
       action_control = list(
         n_shortest_draws = 0
       )
     )
-    return(list(
+    return(empty_fit_result(
       lower = fit$formal_tolerance_action$lower_endpoint,
       upper = fit$formal_tolerance_action$upper_endpoint,
       width = fit$formal_tolerance_action$width,
       posterior_probability = fit$posterior_content_probability,
       retained_count = fit$formal_tolerance_action$retained_count,
       infeasible = is.na(fit$formal_tolerance_action$lower_endpoint),
-      fit_class = paste(class(fit), collapse = "|")
+      fit_class = paste(class(fit), collapse = "|"),
+      scan_critical_method =
+        fit$scan_contract$calibration$scan_critical_method,
+      content_buffer = fit$scan_contract$calibration$content_buffer,
+      scan_certified_lower_probability =
+        fit$scan_contract$calibration$scan_probability$
+          certified_lower_probability %||% NA_real_,
+      posterior_constraint_status = fit$posterior_constraint_status,
+      candidate_feasible_count =
+        fit$hybrid_bayesian_scan_action$feasible_count %||% NA_integer_,
+      candidates_evaluated =
+        fit$hybrid_bayesian_scan_action$candidates_evaluated %||% NA_integer_
     ))
   }
   if (identical(method_id, "dp_bayes")) {
@@ -205,16 +354,16 @@ fit_method <- function(method_id, y, c_target, tol_conf, post_conf, seed) {
       fit, content = c_target, posterior_confidence = post_conf
     )
     out <- selected_interval(action$selected)
+    out$posterior_constraint_status <- action$posterior_constraint_status
+    out$candidate_feasible_count <- action$feasible_count
+    out$candidates_evaluated <- action$candidates_evaluated
     out$fit_class <- paste(class(action), collapse = "|")
     return(out)
   }
   if (identical(method_id, "dpm_bayes")) {
     dpm <- config$engine_defaults$gaussian_dpm
-    control <- if (identical(mode, "smoke")) {
-      dpm$smoke_mcmc_control
-    } else {
+    control <- dpm[[paste0(mode, "_mcmc_control")]] %||%
       dpm$moderate_mcmc_control
-    }
     control$seed <- seed
     fit <- rqr_dpm_fit(
       y,
@@ -226,6 +375,9 @@ fit_method <- function(method_id, y, c_target, tol_conf, post_conf, seed) {
       fit, content = c_target, posterior_confidence = post_conf
     )
     out <- selected_interval(action$selected)
+    out$posterior_constraint_status <- action$posterior_constraint_status
+    out$candidate_feasible_count <- action$feasible_count
+    out$candidates_evaluated <- action$candidates_evaluated
     out$fit_class <- paste(class(action), collapse = "|")
     return(out)
   }
@@ -247,18 +399,38 @@ fit_method <- function(method_id, y, c_target, tol_conf, post_conf, seed) {
       fit_class = "rqr_bayesian_bootstrap_draws|diagnostic"
     ))
   }
-  if (identical(method_id, "tcsp_dkw")) {
-    fit <- rqr_tcsp_plugin_fit_univariate(
-      y, c_target, tol_conf, scan_method = "dkw_conservative"
+  if (method_id %in% c("tcsp_dkw", "tcsp_mc")) {
+    calibration <- get_scan_calibration(method_id, length(y), c_target,
+                                        tol_conf)
+    if (isTRUE(calibration$infeasible) ||
+        calibration$retained_count > length(y)) {
+      return(empty_fit_result(
+        infeasible = TRUE,
+        message = "TCSP calibration is infeasible for this sample size and target.",
+        fit_class = "rqr_tcsp_calibration_infeasible",
+        scan_critical_method = calibration$scan_critical_method,
+        content_buffer = calibration$content_buffer,
+        retained_count = calibration$retained_count,
+        scan_certified_lower_probability =
+          calibration$scan_probability$certified_lower_probability %||%
+            NA_real_
+      ))
+    }
+    window <- rqr_tcsp_shortest_window(
+      y, retained_count = calibration$retained_count, na_rm = FALSE
     )
-    return(list(
-      lower = fit$contract$lower_endpoint,
-      upper = fit$contract$upper_endpoint,
-      width = fit$contract$width,
+    return(empty_fit_result(
+      lower = window$lower_endpoint,
+      upper = window$upper_endpoint,
+      width = window$width,
       posterior_probability = NA_real_,
-      retained_count = fit$contract$retained_count,
+      retained_count = calibration$retained_count,
       infeasible = FALSE,
-      fit_class = paste(class(fit), collapse = "|")
+      fit_class = "rqr_tcsp_shortest_window|cached_calibration",
+      scan_critical_method = calibration$scan_critical_method,
+      content_buffer = calibration$content_buffer,
+      scan_certified_lower_probability =
+        calibration$scan_probability$certified_lower_probability %||% NA_real_
     ))
   }
   if (identical(method_id, "split_empirical_shortest")) {
@@ -305,6 +477,17 @@ total_datasets <- length(mode_cfg$dgp_ids) *
   as.integer(mode_cfg$replications)
 total_rows <- total_datasets * length(mode_cfg$method_ids)
 progress_path <- file.path(staging, "progress.json")
+partial_results_path <- file.path(staging, "partial_results.csv")
+checkpoint_every_datasets <- as.integer(
+  mode_cfg$checkpoint_every_datasets %||%
+    config$execution$checkpoint_every_datasets %||%
+    0L
+)[1L]
+write_partial_results <- function() {
+  if (!length(rows)) return(invisible(FALSE))
+  write.csv(do.call(rbind, rows), partial_results_path, row.names = FALSE)
+  invisible(TRUE)
+}
 write_progress <- function(status, current = list()) {
   jsonlite::write_json(
     list(
@@ -318,6 +501,8 @@ write_progress <- function(status, current = list()) {
       rows_completed = as.integer(length(rows)),
       total_rows = as.integer(total_rows),
       rows_remaining = as.integer(total_rows - length(rows)),
+      checkpoint_path = if (file.exists(partial_results_path))
+        partial_results_path else NA_character_,
       updated_at_utc = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
       current = current
     ),
@@ -336,12 +521,16 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
         for (post_conf in as.numeric(mode_cfg$posterior_confidences)) {
           for (rep in seq_len(as.integer(mode_cfg$replications))) {
             counter <- counter + 1L
-            seed <- base_seed + counter
+            seed <- dataset_seed_for(dgp_id, n, c_target, tol_conf, post_conf,
+                                     rep, counter)
             set.seed(seed)
             y <- meta$r(n)
             method_ids <- as.character(mode_cfg$method_ids)
             for (method_id in method_ids) {
-              method_seed <- seed + match(method_id, method_ids) * 10000L
+              method_seed <- hash_to_seed(
+                paste("method", seed, method_id, tol_conf, post_conf, sep = "|"),
+                base = base_seed + 10000L
+              )
               method_meta <- method_by_id[[method_id]]
               timing <- system.time({
                 fit <- tryCatch(
@@ -371,6 +560,20 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   width = NA_real_,
                   posterior_probability = NA_real_,
                   retained_count = NA_integer_,
+                  retained_fraction = NA_real_,
+                  content_gap = NA_real_,
+                  posterior_threshold_excess = NA_real_,
+                  scan_critical_method = NA_character_,
+                  content_buffer = NA_real_,
+                  scan_certified_lower_probability = NA_real_,
+                  posterior_constraint_status = NA_character_,
+                  candidate_feasible_count = NA_integer_,
+                  candidates_evaluated = NA_integer_,
+                  reference_method_id = NA_character_,
+                  reference_width = NA_real_,
+                  width_ratio_to_reference = NA_real_,
+                  width_diff_to_reference = NA_real_,
+                  posterior_constraint_binding = NA,
                   infeasible = TRUE,
                   message = conditionMessage(fit),
                   fit_class = "error",
@@ -398,12 +601,39 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   width = fit$width,
                   posterior_probability = fit$posterior_probability,
                   retained_count = as.integer(fit$retained_count),
+                  retained_fraction =
+                    as.numeric(fit$retained_count %||% NA_real_) / n,
+                  content_gap = content - c_target,
+                  posterior_threshold_excess =
+                    as.numeric(fit$posterior_probability %||% NA_real_) -
+                      post_conf,
+                  scan_critical_method =
+                    fit$scan_critical_method %||% NA_character_,
+                  content_buffer = fit$content_buffer %||% NA_real_,
+                  scan_certified_lower_probability =
+                    fit$scan_certified_lower_probability %||% NA_real_,
+                  posterior_constraint_status =
+                    fit$posterior_constraint_status %||% NA_character_,
+                  candidate_feasible_count =
+                    as.integer(fit$candidate_feasible_count %||%
+                                 NA_integer_),
+                  candidates_evaluated =
+                    as.integer(fit$candidates_evaluated %||% NA_integer_),
+                  reference_method_id = NA_character_,
+                  reference_width = NA_real_,
+                  width_ratio_to_reference = NA_real_,
+                  width_diff_to_reference = NA_real_,
+                  posterior_constraint_binding = NA,
                   infeasible = isTRUE(fit$infeasible),
-                  message = "",
+                  message = fit$message %||% "",
                   fit_class = fit$fit_class,
                   elapsed_sec = unname(timing[["elapsed"]])
                 )
               }
+            }
+            if (checkpoint_every_datasets > 0L &&
+                counter %% checkpoint_every_datasets == 0L) {
+              write_partial_results()
             }
             write_progress("running", current = list(
               dgp_id = dgp_id,
@@ -417,11 +647,56 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
         }
       }
     }
-  }
+}
 }
 results <- do.call(rbind, rows)
+reference_method_id <- mode_cfg$reference_method_id %||%
+  config$diagnostics$reference_method_id %||%
+  if ("tcsp_mc" %in% as.character(mode_cfg$method_ids)) {
+    "tcsp_mc"
+  } else {
+    "tcsp_dkw"
+  }
+results$row_id <- seq_len(nrow(results))
+reference_keys <- c("mode", "dgp_id", "n", "guaranteed_content",
+                    "tolerance_confidence", "posterior_confidence",
+                    "replication", "seed")
+reference_rows <- results[results$method_id == reference_method_id,
+                          c(reference_keys, "width"), drop = FALSE]
+if (nrow(reference_rows)) {
+  names(reference_rows)[names(reference_rows) == "width"] <-
+    "reference_width"
+  results <- merge(
+    results,
+    reference_rows,
+    by = reference_keys,
+    all.x = TRUE,
+    sort = FALSE,
+    suffixes = c("", ".diagnostic_reference")
+  )
+  if ("reference_width.diagnostic_reference" %in% names(results)) {
+    results$reference_width <- results$reference_width.diagnostic_reference
+    results$reference_width.diagnostic_reference <- NULL
+  }
+  results <- results[order(results$row_id), , drop = FALSE]
+  results$reference_method_id <- reference_method_id
+  results$width_ratio_to_reference <- ifelse(
+    is.finite(results$reference_width) & results$reference_width > 0,
+    results$width / results$reference_width,
+    NA_real_
+  )
+  results$width_diff_to_reference <- results$width - results$reference_width
+  is_hybrid <- results$method_id %in% c("hdp_s", "hdp_s_mc")
+  results$posterior_constraint_binding <- ifelse(
+    is_hybrid,
+    results$posterior_constraint_status == "binding",
+    NA
+  )
+}
+results$row_id <- NULL
 write.csv(results, file.path(staging, "bayes_uq_validation_results.csv"),
           row.names = FALSE)
+if (file.exists(partial_results_path)) unlink(partial_results_path)
 
 keys <- c("mode", "dgp_id", "n", "guaranteed_content",
           "tolerance_confidence", "posterior_confidence", "method_id")
@@ -439,11 +714,33 @@ summary_rows <- lapply(split(results, split_key), function(df) {
     replications = nrow(df),
     infeasible_rate = mean(df$infeasible),
     success_rate = if (any(ok)) mean(df$success[ok]) else NA_real_,
+    success_rate_minus_tolerance_confidence =
+      if (any(ok)) mean(df$success[ok]) - df$tolerance_confidence[[1L]]
+      else NA_real_,
     mean_content = mean(df$content, na.rm = TRUE),
+    mean_content_gap = mean(df$content_gap, na.rm = TRUE),
     median_width = stats::median(df$width, na.rm = TRUE),
     mean_width = mean(df$width, na.rm = TRUE),
+    median_width_ratio_to_reference =
+      stats::median(df$width_ratio_to_reference, na.rm = TRUE),
+    mean_width_ratio_to_reference =
+      mean(df$width_ratio_to_reference, na.rm = TRUE),
+    median_width_diff_to_reference =
+      stats::median(df$width_diff_to_reference, na.rm = TRUE),
+    mean_retained_fraction = mean(df$retained_fraction, na.rm = TRUE),
+    mean_content_buffer = mean(df$content_buffer, na.rm = TRUE),
+    mean_scan_certified_lower_probability =
+      mean(df$scan_certified_lower_probability, na.rm = TRUE),
     mean_posterior_probability =
       mean(df$posterior_probability, na.rm = TRUE),
+    mean_posterior_threshold_excess =
+      mean(df$posterior_threshold_excess, na.rm = TRUE),
+    posterior_binding_rate =
+      mean(df$posterior_constraint_binding, na.rm = TRUE),
+    mean_candidate_feasible_count =
+      mean(df$candidate_feasible_count, na.rm = TRUE),
+    mean_candidates_evaluated =
+      mean(df$candidates_evaluated, na.rm = TRUE),
     mean_elapsed_sec = mean(df$elapsed_sec, na.rm = TRUE)
   )
 })
@@ -458,10 +755,12 @@ readme <- c(
   paste0("- Git commit: `", git_commit, "`"),
   paste0("- Result rows: `", nrow(results), "`"),
   paste0("- Summary rows: `", nrow(summary), "`"),
+  paste0("- Diagnostic reference method: `", reference_method_id, "`"),
   "",
   "This pilot separates response-distribution Bayesian UQ from RQR generalized-Bayes plug-in summaries.",
   "The hybrid direct-DP scan method fixes the scan count before evaluating posterior content probability.",
-  "These artifacts are validation evidence only; they do not prove posterior endpoint coverage."
+  "These artifacts are validation evidence only; they do not prove posterior endpoint coverage.",
+  "Width-ratio and posterior-binding diagnostics are included for post-run method tuning."
 )
 writeLines(readme, file.path(staging, "README.md"))
 write_progress("complete")
@@ -493,6 +792,8 @@ manifest <- list(
   generalized_bayes_plugin_comparators_present = TRUE,
   posterior_endpoint_coverage_claim_available = FALSE,
   scan_count_fixed_not_resampled = TRUE,
+  diagnostic_reference_method_id = reference_method_id,
+  checkpoint_every_datasets = checkpoint_every_datasets,
   created_at_utc = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
   artifact_hashes = artifact_hashes
 )

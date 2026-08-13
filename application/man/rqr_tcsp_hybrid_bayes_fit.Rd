@@ -31,7 +31,9 @@ order-statistic intervals are implemented.}
 \item{distribution_args}{Arguments passed to the selected distribution engine.
 The direct-DP engine requires \code{concentration} and \code{base_measure}.}
 \item{scan_args}{Arguments passed to \code{rqr_tcsp_calibrate_count()} other
-than sample size, content, confidence, and method.}
+than sample size, content, confidence, and method.  Long validation runs may
+also pass a compatible precomputed \code{calibration} object to avoid repeated
+scan-critical recalibration.}
 \item{action_control}{Action controls.  \code{n_shortest_draws} requests
 posterior shortest-functional draws; \code{dp_draw_args} are passed to
 \code{rqr_dp_draws()} for the direct-DP engine.}
