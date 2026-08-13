@@ -285,6 +285,18 @@ read_wave_plan <- function(run_dir) {
                   stringsAsFactors = FALSE, check.names = FALSE)
 }
 
+latest_wave_progress <- function(run_dir, wave_id) {
+  candidates <- Sys.glob(file.path(run_dir, "waves", paste0(".", wave_id, "-*"),
+                                   "progress.json"))
+  if (!length(candidates)) return(NULL)
+  info <- file.info(candidates)
+  path <- candidates[[which.max(info$mtime)]]
+  tryCatch(
+    jsonlite::read_json(path, simplifyVector = TRUE),
+    error = function(e) NULL
+  )
+}
+
 wave_status <- function(run_dir) {
   plan <- read_wave_plan(run_dir)
   rows <- lapply(seq_len(nrow(plan)), function(ii) {
@@ -309,9 +321,19 @@ wave_status <- function(run_dir) {
     } else {
       "pending"
     }
+    progress <- latest_wave_progress(run_dir, wave$wave_id)
+    datasets_completed <- if (!is.null(progress)) {
+      as.integer(progress$datasets_completed %||% 0L)
+    } else if (complete) {
+      as.integer(wave$expected_datasets)
+    } else {
+      0L
+    }
     rows_completed <- if (complete) {
       manifest <- jsonlite::read_json(manifest_path, simplifyVector = TRUE)
       as.integer(manifest$n_result_rows)
+    } else if (!is.null(progress)) {
+      as.integer(progress$rows_completed %||% 0L)
     } else {
       0L
     }
@@ -323,8 +345,13 @@ wave_status <- function(run_dir) {
       tolerance_confidence = wave$tolerance_confidence,
       status = status,
       pid = pid,
+      datasets_completed = datasets_completed,
+      expected_datasets = as.integer(wave$expected_datasets),
       rows_completed = rows_completed,
       expected_result_rows = as.integer(wave$expected_result_rows),
+      progress_updated_at_utc =
+        if (!is.null(progress)) progress$updated_at_utc %||% NA_character_
+        else NA_character_,
       output_dir = output_dir,
       log_file = wave_log_file(run_dir, wave$wave_id),
       stringsAsFactors = FALSE
@@ -351,6 +378,8 @@ write_health <- function(run_dir) {
     waves_running = unname(counts[["running"]]),
     waves_pending = unname(counts[["pending"]]),
     waves_failed = unname(counts[["failed"]]),
+    datasets_completed = sum(status$datasets_completed),
+    datasets_expected = sum(status$expected_datasets),
     rows_completed = rows_completed,
     rows_expected = total_rows,
     rows_remaining = total_rows - rows_completed,
