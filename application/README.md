@@ -160,8 +160,8 @@ the analogous complete-path post-processing diagnostic for DLM root ordinates.
 For exploratory single-data examples, use `make oracle-tilt-illustrations-dry-run`
 to inspect the fit plan or `make oracle-tilt-illustrations` to run the compact
 fixed-rate illustration workflow. Use `make model-illustration-figures` to
-regenerate the manuscript-ready fixed-design and RQR-DLM illustration figures
-under `figures/generated/`. The paper-figure path uses the declared
+regenerate the fixed-design and RQR-DLM diagnostic figures under
+`figures/generated/`. The diagnostic-figure path uses the declared
 four-chain illustration contract, writes deterministic seed, runtime,
 chain-summary, maintained-diagnostic, endpoint-error-by-index, and artifact
 hash ledgers, and keeps full fit objects under ignored local output roots.

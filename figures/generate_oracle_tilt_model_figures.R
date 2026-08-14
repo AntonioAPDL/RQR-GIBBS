@@ -137,43 +137,23 @@ if (!setequal(cell_key(unique(curves[c("family", "target")])),
 
 figure_specs <- list(
   fixed_design = list(
-    fit = "fig04_fixed_design_oracle_tilt_c095",
     error = "figS03_fixed_design_endpoint_error_c095",
-    title = "Nonlinear heteroscedastic interval-root fits at 95% content",
     error_title = "Fixed-design endpoint errors at 95% content",
-    xlab = "Covariate x",
-    note = paste(
-      "Blue curves are population-oracle endpoints; orange curves and",
-      "ribbons are generalized-posterior means and central 95% summaries."
-    )
+    xlab = "Covariate x"
   ),
   dlm = list(
-    fit = "fig05_dlm_oracle_tilt_c095",
     error = "figS04_dlm_endpoint_error_c095",
-    title = "Seasonal dynamic interval-root fits at 95% content",
     error_title = "Dynamic linear endpoint errors at 95% content",
-    xlab = "Time",
-    note = paste(
-      "Missing responses are omitted from the loss and tilt sites and are",
-      "marked by magenta bands and triangles."
-    )
+    xlab = "Time"
   )
 )
 written <- character(0)
 for (family in names(figure_specs)) {
   spec <- figure_specs[[family]]
-  family_curves <- curves[curves$family == family, , drop = FALSE]
   family_errors <- errors[errors$family == family, , drop = FALSE]
   for (extension in c("pdf", "png")) {
-    fit_file <- file.path(
-      output_dir, paste0(spec$fit, ".", extension)
-    )
     error_file <- file.path(
       output_dir, paste0(spec$error, ".", extension)
-    )
-    oti_plot_curve_panels(
-      family_curves, fit_file, spec$title,
-      xlab = spec$xlab, caption_note = spec$note
     )
     oti_plot_endpoint_error_panels(
       family_errors, error_file, spec$error_title,
@@ -181,7 +161,7 @@ for (family in names(figure_specs)) {
         generalized-posterior~endpoint~draw - population-oracle~endpoint
       )
     )
-    written <- c(written, fit_file, error_file)
+    written <- c(written, error_file)
   }
 }
 

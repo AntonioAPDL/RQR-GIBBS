@@ -160,7 +160,7 @@ version-5 compact evidence bundle under
 make model-illustration-figures
 ```
 
-then verifies that evidence and renders the article and supplement figures
+then verifies that evidence and renders the supplemental diagnostic figures
 without fitting a model. All 27 chains and six cells completed with exact
 source/runtime binding and zero repairs. Five cells are strict passes. DLM/SH
 is a diagnostic-aware pass: five of 137 rows retain bulk-ESS warnings, while

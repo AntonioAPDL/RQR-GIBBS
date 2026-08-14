@@ -239,9 +239,8 @@ frozen-DESN specialization. Section~\ref{sec:dynamic}
 gives the dynamic endpoint-state sampler. Section~\ref{sec:tcsp} defines the
 calibrated minimum-width, hybrid Bayesian--scan, and split exact-spacing
 tolerance interval actions and states the remaining proof requirements.
-Section~\ref{sec:model-illustrations} gives fixed-target model illustrations.
-Section~\ref{sec:evaluation} then states the confirmatory validation scope,
-and Section~\ref{sec:discussion} concludes.
+Section~\ref{sec:evaluation} states the confirmatory validation scope, and
+Section~\ref{sec:discussion} concludes.
 
 \section{Fixed-Content Interval Targets}
 \label{sec:interval-functionals}
@@ -1480,96 +1479,6 @@ the selected shortest action, requires a separate action-equivalence or
 direct-calibration result. Tolerance confidence comes from the scan calibration,
 and \(\omega_{\mathrm R}\) remains the generalized-Bayes learning rate.
 
-\section{Fixed-Target Model Illustrations}
-\label{sec:model-illustrations}
-
-Figures~\ref{fig:oracle-tilt-fixed-design-fit}
-and~\ref{fig:oracle-tilt-dlm-fit} are single-data illustrations of the
-fixed-target MTI computation for a static regression/readout and a dynamic
-root model. Their role is to show how MPI, equal-tailed recovery, and
-shortest-window recovery enter the same fixed-rate Gibbs sampler after the
-content and tilt have been fixed. They are not repeated-sample validation
-experiments and do not estimate tolerance confidence, empirical coverage, or
-comparative forecasting performance.
-
-The population law and recovery tilts are fixed before fitting. In both
-examples, innovations follow an affinely standardized asymmetric-Laplace law
-with source index \(0.80\), producing pronounced left skewness while retaining
-adequate information in both endpoint tails. The three recovery tilts are
-computed directly as the conditional retained mean of each population window
-minus the population mean. The resulting innovation-scale tilts are \(0\),
-\(0.0561\), and \(0.1147\) for MPI, ET, and SH, respectively; no
-Cornish--Fisher approximation is used. The fitted intervals are
-generalized-posterior summaries of ordered root draws, and the shaded regions
-are pointwise 95\% generalized-posterior credible bands for endpoint
-functionals. Future-response prediction would require a response-distribution
-layer.
-
-All 27 chains and six family--target cells passed all numerical, provenance,
-conditional-reference, finite-output, and broad-recovery requirements with zero
-numerical repairs. Five cells also passed every strict diagnostic. The MCMC
-diagnostics use bulk and tail effective sample size (ESS), the potential
-scale-reduction statistic \(\widehat R\), and the Monte Carlo standard error
-(MCSE) relative to posterior standard deviation. Dynamic SH retained five
-prespecified bulk-ESS warnings (\(801\)--\(996\), relative to a threshold of
-\(1{,}000\)) and narrowly missed one width-contrast diagnostic. Its largest
-\(\widehat R\) was \(1.0065\), its tail ESS exceeded \(1{,}166\), and its
-MCSE-to-standard-deviation ratio was below \(0.037\). We retained this fit
-without changing a threshold, replacing a seed, or selectively extending a
-chain. The supplement reports the compact recovery table and endpoint-error
-summaries.
-
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=\textwidth]{figures/generated/fig04_fixed_design_oracle_tilt_c095.pdf}
-\caption{\textbf{Fixed-design illustration with oracle recovery tilts.}
-A single nonlinear heteroscedastic fixed-design data set with \(n=2{,}400\) is
-generated from the left-skewed response law described in the text, with content
-\(c=0.95\). The population location and scale are smooth nonlinear functions,
-and the root regressions use an empirical orthogonal cubic B-spline design. A
-data-independent prior-predictive rule selects the common ridge variance. Each
-panel fits the same static root-regression model with a
-different exact population-oracle tilt: MPI, equal-tailed recovery
-(ET), or shortest-window recovery (SH). Blue curves are the population-oracle
-endpoints; orange curves are
-generalized-posterior mean fitted endpoints; pale orange ribbons are pointwise
-95\% generalized-posterior credible bands from four chains with 6,000 retained
-draws each. The figure
-illustrates target placement and finite-sample endpoint uncertainty. Response
-simulation requires a response-distribution layer. A frozen-feature DESN
-readout uses the same static Gibbs sampler after replacing
-\(\mat X\) by the recorded reservoir-feature design.}
-\label{fig:oracle-tilt-fixed-design-fit}
-\end{figure}
-
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=\textwidth]{figures/generated/fig05_dlm_oracle_tilt_c095.pdf}
-\caption{\textbf{Dynamic linear root-state illustration with oracle recovery
-tilts.}
-A single local-linear trajectory with a four-cycle seasonal location component
-and sinusoidally varying innovation scale is observed at 1,178 of 1,200 times
-under the same left-skewed response law. The two fixed missing windows contain
-11 consecutive times each. The MTI-DLM is fit with fixed \(W_t\), fixed
-learning rate, and the same three exact
-population-oracle tilt choices as in
-Figure~\ref{fig:oracle-tilt-fixed-design-fit}. Missing observations contribute
-no generalized-posterior factor, latent scale, or tilt term; translucent
-magenta bands and baseline
-triangles mark the two omitted-response windows and their centers. Blue curves
-are population-oracle dynamic endpoints, orange curves are generalized-posterior
-mean fitted endpoints, and pale orange ribbons are pointwise 95\%
-generalized-posterior credible bands for the endpoint functions. Each target
-uses five chains with 6,000 retained draws per chain.
-All targets use
-the same block-diagonal \(C_0\), the exact discretization of one frozen
-continuous-time local-linear evolution over the physical horizon \([0,1]\), a
-common seasonal state block, and target-independent initialization profiles.
-These are generalized-posterior summaries of interval-root functionals;
-response-predictive bands require a response-distribution layer.}
-\label{fig:oracle-tilt-dlm-fit}
-\end{figure}
-
 \section{Validation Scope}
 \label{sec:evaluation}
 
@@ -1596,12 +1505,11 @@ fail-closed rate, posterior-constraint binding, and runtime. Equal-tailed
 interval scores remain secondary because they target a different placement
 principle.
 
-The confirmatory protocol is the gate for scientific comparison. Fixed-rate nonzero
-tilt already has verified full-conditional algebra, zero-tilt equivalence
-checks, dense conditional references, and the single-data oracle-tilt
-illustrations in Section~\ref{sec:model-illustrations} for ridge static
-readouts and fixed-\(W\) dynamic roots. Those bounded checks validate
-implementation of the declared targets.
+The confirmatory protocol is the gate for scientific comparison. Fixed-rate
+nonzero tilt already has verified full-conditional algebra, zero-tilt
+equivalence checks, dense conditional references, and supplemental single-data
+oracle-tilt diagnostics for ridge static readouts and fixed-\(W\) dynamic
+roots. Those bounded checks validate implementation of the declared targets.
 Repeated-sample coverage and data-driven tilt selection remain tasks for the
 confirmatory protocol.
 Variational inference likewise requires its own objective,

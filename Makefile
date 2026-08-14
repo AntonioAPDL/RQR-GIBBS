@@ -228,7 +228,7 @@ tcsp-validation-audit:
 	@test -n "$(strip $(TCSP_VALIDATION_AUDIT_RUN_DIR))" || { echo "Set TCSP_VALIDATION_AUDIT_RUN_DIR to one completed TCSP validation run." >&2; exit 64; }
 	$(R) application/scripts/65_audit_tcsp_validation_pilot.R --run-dir=$(TCSP_VALIDATION_AUDIT_RUN_DIR) --output-dir=$(TCSP_VALIDATION_AUDIT_DIR) --replace=$(TCSP_VALIDATION_AUDIT_REPLACE)
 
-pdf: theory-figures theory-tables model-illustration-figures
+pdf: theory-figures theory-tables
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
 		$(LATEXMK) -pdf -interaction=nonstopmode main.tex; \
 	else \
