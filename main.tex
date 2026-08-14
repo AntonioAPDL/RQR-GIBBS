@@ -138,18 +138,6 @@ Consequently, \(\delta\) is part of the target specification. It is fixed
 externally, or selected by a separate validation rule, rather than sampled as an
 ordinary response parameter.
 
-Tolerance inference requires a distinct layer. The scan-calibrated empirical
-procedure first chooses a retained count by a distribution-free scan statistic,
-selects the shortest closed order-statistic window at that count, and then
-records the MTI tilt of that selected window. A fixed-target MTI generalized
-posterior can summarize local endpoint uncertainty after this choice has been
-made, but it does not propagate uncertainty in the same-sample shortest-window
-selection. We therefore also define a full-distribution Bayesian layer for the
-unknown response distribution \(F\). The direct Dirichlet-process posterior
-gives exact fixed-interval content probabilities, and the hybrid
-Bayesian--scan action keeps the scan count fixed while adding a posterior
-content-probability constraint.
-
 The computational construction follows generalized Bayes. A prior is updated by
 \(\exp\{-\omega_{\mathrm R}\sum_i\ell_i\}\) to define a generalized posterior
 \citep{BissiriHolmesWalker2016GeneralBayes}. A
@@ -182,20 +170,75 @@ forward-filtering backward-sampling (FFBS) applies
 \citep{GoncalvesMigonBastos2020DQLM}. Alternating the two root-path draws gives
 exact blocked-Gibbs updates for the specified fixed-joint generalized posterior.
 
-The contributions are fivefold. First, the residual-product loss is shown to
+Tolerance and full-distribution Bayesian interval summaries are downstream of
+this fixed-target construction. The scan-calibrated empirical procedure first
+chooses a retained count by a distribution-free scan statistic, selects the
+shortest closed order-statistic window at that count, and then records the MTI
+tilt of that selected window. A fixed-target MTI generalized posterior can
+summarize local endpoint uncertainty after this choice has been made, but it
+does not propagate uncertainty in the same-sample shortest-window selection.
+The ordinary full-distribution Bayesian alternatives instead model the unknown
+response distribution \(F\): the direct Dirichlet-process posterior gives
+exact fixed-interval content probabilities, and a Gaussian
+Dirichlet-process mixture provides a smooth posterior alternative. These
+response-distribution models can be compared with MPI and MTI only after the
+target, content, and evaluation criterion have been aligned.
+
+\begin{table}[h!]
+\centering
+\caption{\textbf{Inferential map.} The table fixes the meaning of target,
+posterior, action, calibration, and evidence used throughout the article.}
+\label{tab:inferential-map}
+\TableStyle
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.18\textwidth}
+  >{\raggedright\arraybackslash}p{0.22\textwidth}
+  >{\raggedright\arraybackslash}p{0.20\textwidth}
+  >{\raggedright\arraybackslash}p{0.18\textwidth}
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+Layer & Object & Source of uncertainty & Output & Guarantee or evidence\\
+\midrule
+Population target
+& MPI/MTI fixed-content interval functional
+& Population distribution
+& Target endpoints
+& Identification, balance, and regularity theory\\
+Generalized posterior
+& Loss-based root or parameter distribution
+& Data, prior, fixed rate, and fixed target
+& Root and endpoint uncertainty
+& Generalized-Bayes computation and diagnostics\\
+Reported summary
+& Ordered endpoint functional or mode
+& Posterior draws or optimizer output
+& One interval summary
+& Declared decision rule, not tolerance confidence\\
+Tolerance calibration
+& Empirical order-statistic action
+& Repeated samples under the scan or split rule
+& Certified interval action
+& External content--confidence criterion\\
+Full-distribution Bayes
+& Response-distribution posterior for \(F\)
+& Sampling model and prior
+& Distributional interval UQ
+& Ordinary posterior interpretation under that model\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The contributions are fourfold. First, the residual-product loss is shown to
 target the MPI member of the fixed-content interval class, and a fixed mean tilt
 is shown to index the remaining admissible contiguous windows; the same theory
 gives exact fractional empirical balance identities. Second, a pseudo-AL Gibbs
-sampler is derived for fixed-rate static targets and extended to regularized
-static regression, frozen-feature DESN readouts, and root-blocked dynamic
-linear states. Third, a fixed-target MTI-ECM optimizer is derived using exact
-inverse latent-scale moments and safeguarded objective descent. Fourth,
-direct-DP and Gaussian-DPM response-distribution engines are added for Bayesian
-uncertainty in shortest-interval content, with exact fixed-interval content
-probabilities in the direct-DP case. Fifth, scan-calibrated shortest-window,
-hybrid Bayesian--scan, and pilot-selected exact-spacing tolerance actions are
-formulated while their repeated-sampling guarantees are kept separate from
-generalized-posterior and ECM summaries.
+sampler is derived for fixed-rate static targets and extended to
+ridge-regularized static regression, frozen-feature DESN readouts, and
+root-blocked dynamic linear states under the stated fixed-target conditions.
+Third, a fixed-target MTI-ECM optimizer is derived using exact inverse
+latent-scale moments and safeguarded objective descent. Fourth, tolerance and
+ordinary full-distribution Bayesian interval actions are formulated as separate
+inferential layers, with their available guarantees, diagnostics, and open
+proof requirements stated explicitly.
 
 The scope is intentionally bounded. Available nonzero-tilt computation uses
 proper Gaussian priors, a fixed learning rate, and fixed or frozen dynamic
@@ -216,15 +259,15 @@ calibration and sandwich adjustment address distinct uncertainty questions
 The paper proceeds as follows. Section~\ref{sec:interval-functionals} defines
 the fixed-content interval class. Sections~\ref{sec:mpi-loss}
 and~\ref{sec:mti-loss} identify the MPI target and the MTI placement family.
-Section~\ref{sec:tcsp} defines the scan-calibrated, hybrid Bayesian--scan, and
-split exact-spacing tolerance actions and states the remaining proof
-requirements. Section~\ref{sec:static-theory-scope} gives finite-sample balance
+Section~\ref{sec:static-theory-scope} gives finite-sample balance
 and fixed-dimensional iid uncertainty scope. Section~\ref{sec:posterior}
 develops static generalized-posterior computation, fixed-target ECM, MPI
 RHS-NS regularization, and the frozen-DESN specialization.
 Section~\ref{sec:dynamic} gives the dynamic root-state sampler.
-Section~\ref{sec:evaluation} describes computational validation and evaluation
-scope, and Section~\ref{sec:discussion} concludes.
+Section~\ref{sec:tcsp} defines the scan-calibrated, hybrid Bayesian--scan, and
+split exact-spacing tolerance actions and states the remaining proof
+requirements. Section~\ref{sec:evaluation} describes computational validation
+and evaluation scope, and Section~\ref{sec:discussion} concludes.
 
 \section{Fixed-Content Interval Functionals}
 \label{sec:interval-functionals}
@@ -680,301 +723,6 @@ root priors, the tilt is linear in the root parameters and the Gaussian tails
 make the generalized posterior proper. This argument covers ridge regression
 and Gaussian state models. Heavier-tailed shrinkage priors require a separate
 propriety analysis before nonzero tilt is enabled.
-
-\section{Scan-Calibrated Tolerance Actions}
-\label{sec:tcsp}
-
-The preceding theory fixes population content and interval placement. A
-tolerance interval adds a repeated-sampling requirement. For iid continuous
-univariate observations, the target statement is
-\[
-\Pr_F^n\{C_F(\widehat T_n)\ge c\}\ge 1-\alpha,\qquad
-C_F([L,U])=F(U)-F(L),
-\]
-where \(\widehat T_n\) is a data-dependent interval. Six quantities must be
-kept distinct:
-\[
-c \text{ is the required content},\quad
-1-\alpha \text{ is the tolerance confidence},\quad
-q=k/n \text{ is the fitted content},
-\]
-\[
-\delta \text{ is the fixed MTI placement tilt},\qquad
-\omega_{\mathrm R} \text{ is the generalized-Bayes learning rate}.
-\]
-\[
-1-\gamma \text{ is a posterior content-probability threshold under a response
-model for } F.
-\]
-Neither \(\omega_{\mathrm R}\) nor \(1-\gamma\) determines the tolerance
-confidence.
-
-Let \(Y_{(1)}\le\cdots\le Y_{(n)}\). For content \(c\), define the uniform scan
-statistic
-\[
-M_n(c)=\max_{0\le s\le 1-c}\#\{i:U_i\in[s,s+c]\},
-\qquad U_i\stackrel{\mathrm{iid}}{\sim}\mathrm{Unif}(0,1).
-\]
-The calibrated retained count is
-\[
-k_{n,c,\alpha}
-=\min\{k:\Pr(M_n(c)<k)\ge 1-\alpha\}.
-\]
-The formal action is the canonical closed order-statistic window
-\[
-\widehat T_n=
-[Y_{(\widehat j)},Y_{(\widehat j+k-1)}],
-\qquad
-\widehat j=\min\argmin_{1\le j\le n-k+1}
-\{Y_{(j+k-1)}-Y_{(j)}\},
-\]
-with \(k=k_{n,c,\alpha}\). This convention is closed and contains exactly
-\(k\) sample observations under continuity. It differs from the half-open
-\((Y_{(j)},Y_{(j+k)}]\) convention sometimes used for order-statistic
-tolerance limits, so a result proved for one convention cannot be transferred
-without reconciling the indices and endpoint rule. The fitted MTI content
-and its content buffer are
-\[
-q_{n,c,\alpha}=k_{n,c,\alpha}/n,\qquad
-t_{n,c,\alpha}=q_{n,c,\alpha}-c.
-\]
-The empirical shortest-path tilt is
-\[
-\widehat\delta_{\mathrm{SH}}(q)
-=
-\frac1k\sum_{\ell=\widehat j}^{\widehat j+k-1}Y_{(\ell)}
--\frac1n\sum_{i=1}^nY_i.
-\]
-After fixing \(q\) and \(\widehat\delta_{\mathrm{SH}}\), the MTI update is
-\[
-\Pi_{q,\delta,\omega_{\mathrm R}}(d\theta\mid D_n)
-\propto
-\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(\theta)\}\Pi_0(d\theta).
-\]
-This generalized posterior quantifies uncertainty about a fixed interval-root
-functional. It is neither the tolerance certificate nor a response model.
-The formal tolerance action remains the empirical order-statistic window
-\(\widehat T_n\). Because \(\widehat\delta_{\mathrm{SH}}\) is computed from
-the same sample, these posterior summaries are conditional on the selected
-target and do not propagate shortest-window selection uncertainty. An
-unconditional interpretation requires a plug-in stability theorem or a
-separate target-selection sample.
-
-The full-distribution Bayesian layer instead models \(F\) directly. With
-\[
-F\sim \mathrm{DP}(a,H),\qquad Y_i\mid F\stackrel{\mathrm{iid}}{\sim} F,
-\]
-the posterior is \(\mathrm{DP}(a+n,H_n)\), where
-\(H_n=(aH+\sum_i\delta_{Y_i})/(a+n)\)
-\citep{Ferguson1973DP}. For a fixed closed interval \(I=[l,u]\),
-\[
-F(I)\mid D_n \sim
-\mathrm{Beta}\{aH(I)+N_n(I),a(1-H(I))+n-N_n(I)\}.
-\]
-This gives the exact posterior content probability
-\[
-p_n(I;c)=\Pr\{F(I)\ge c\mid D_n\}
-\]
-for every candidate interval. The direct-DP result is a fixed-interval
-posterior statement, not a repeated-sampling tolerance theorem and not an MTI
-generalized posterior. Posterior draws of the shortest \(c\)-content interval
-can be computed from a stick-breaking representation
-\citep{Sethuraman1994ConstructiveDP}; they quantify uncertainty in the
-population shortest-interval functional under the response-distribution model.
-
-The hybrid Bayesian--scan tolerance action is the first minimum-width closed
-order-statistic interval satisfying both constraints:
-\[
-\widehat T^{\mathrm{HBS}}_n
-=
-\min_{\mathrm{width},\,\mathrm{first\ tie}}
-\left\{
-[Y_{(j)},Y_{(\ell)}]:
-\ell-j+1\ge k_{n,c,\alpha},\
-p_n([Y_{(j)},Y_{(\ell)}];c)\ge 1-\gamma
-\right\}.
-\]
-The scan count is fixed before posterior computation and is not resampled. The
-posterior threshold can bind, be redundant given the scan action, or make the
-candidate class infeasible; infeasibility is reported rather than repaired by
-weakening a constraint. A truncated Gaussian Dirichlet-process mixture
-\citep{IshwaranJames2001GibbsDPM,IshwaranJames2002ApproximateDP} provides a
-smooth response-distribution alternative whose content probabilities are Monte
-Carlo posterior summaries. The Bayesian bootstrap
-\citep{Rubin1981BayesianBootstrap} is retained only as a diagnostic
-weighted-empirical comparator.
-
-A sample-split alternative removes this same-sample placement issue for the
-univariate tolerance action. Randomly divide the observations into an
-independent pilot sample and an independent main sample. The pilot chooses a
-lower-tail placement \(\widehat u\). In the main sample, with order statistics
-\(Z_{(1)}\le\cdots\le Z_{(N)}\), fix indices \(r<s\) after the pilot and write
-\(d=s-r\). The spacing law
-\[
-F(Z_{(s)})-F(Z_{(r)})\sim \mathrm{Beta}(d,N+1-d)
-\]
-then gives an exact conditional distribution-free calibration
-\citep{DavidNagaraja2003OrderStatistics}. The closed interval contains
-\(d+1\) observed main-sample positions, so the probability-spacing index and
-the closed-count index differ by one. The pilot may use empirical shortest
-windows, Cornish--Fisher placement, or fixed-target ECM as a diagnostic
-placement engine. It affects efficiency and width, not the conditional Beta
-validity of the fixed main-sample spacing. This first split construction is
-continuous-iid-univariate; regression-family tolerance calibration remains a
-separate theorem.
-
-Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
-reported interval. The numerical procedure uses Monte Carlo calibration of
-the uniform scan distribution with a simultaneous
-Massart--DKW empirical-CDF lower band for \(\Pr\{M_n(c)<k\}\) across all
-candidate retained counts, together with a conservative Massart--DKW fallback
-\citep{Massart1990DKW}. The fallback is not an exact scan recursion.
-Accordingly, we treat exact critical-count
-calculation and the finite-sample theorem for this closed-window action as
-open proof and numerical-certification tasks rather than as established
-results.
-
-Table~\ref{tab:tcsp-theory-scope} separates established MTI results from
-the claims that still require an action-matched proof. This separation allows
-the empirical action, numerical calibration, and conditional generalized
-posterior to be studied without treating implementation as a mathematical
-guarantee.
-
-\begin{table}[H]
-\centering
-\caption{\textbf{Theoretical scope of the proposed scan-calibrated
-construction.} The empirical closed order-statistic window is the formal
-tolerance action. Generalized-posterior summaries concern fixed endpoint
-functionals and are not substituted for that action.}
-\label{tab:tcsp-theory-scope}
-\footnotesize
-\setlength{\tabcolsep}{3.8pt}
-\renewcommand{\arraystretch}{1.08}
-\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.20\textwidth}
-  >{\raggedright\arraybackslash}p{0.35\textwidth}
-  >{\raggedright\arraybackslash}X@{}}
-\toprule
-Object & Available result & Limitation\\
-\midrule
-Population content and placement
-& Theorems~\ref{prop:quantile-window}--\ref{prop:profiled-mean-tilt}
-  identify the fixed-content MTI family and its admissible tilt coordinate.
-& Boundary roots, atoms, nonunique shortest windows, and disconnected
-  highest-density regions require separate treatment.\\
-Empirical shortest window
-& For fixed \(k\), the first minimum-width closed window is a deterministic
-  sample action and is shortest among contiguous closed windows containing
-  \(k\) observations.
-& This class-restricted property is not global optimality over all tolerance
-  procedures. The full-range action \(k=n\) has no MTI posterior fit because
-  \(q=1\).\\
-Split exact-spacing action
-& Conditional on an independent pilot-selected placement, a fixed main-sample
-  order-statistic spacing has a \(\mathrm{Beta}(d,N+1-d)\) content law and can
-  be calibrated exactly.
-& The guarantee is iid univariate and conditional on the pilot; the pilot
-  method, including ECM, affects placement efficiency but is not the source of
-  the certificate.\\
-Numerical scan calibration
-& A common Monte Carlo scan distribution and simultaneous Massart--DKW lower
-  band select a conservative retained count while recording numerical
-  confidence separately.
-& The calculation is not an exact scan recursion, and numerical confidence is
-  distinct from tolerance confidence.\\
-Direct-DP content law
-& For any fixed closed interval, conjugacy gives the exact
-  \(\mathrm{Beta}\) posterior law for \(F(I)\) and hence
-  \(\Pr\{F(I)\ge c\mid D_n\}\).
-& This is posterior UQ under a response-distribution model for \(F\), not an
-  MTI generalized posterior and not a tolerance-confidence theorem.\\
-Hybrid Bayesian--scan action
-& The selected interval must satisfy both \(N_n(I)\ge k_{n,c,\alpha}\) and the
-  posterior content-probability constraint under the chosen distribution engine.
-& The scan count is fixed, posterior credibility remains distinct from
-  tolerance confidence, and no posterior endpoint-coverage theorem is claimed.\\
-Tolerance guarantee
-& The scan event motivates a distribution-free finite-sample guarantee for
-  the empirical action under continuity.
-& Action-matched endpoint conventions and critical-count certification must
-  be completed before publication-level finite-sample tolerance wording is
-  used.\\
-Shortest-path asymptotics
-& The regular derivative calculations below describe content allocation and
-  the local width cost along a unique interior shortest path.
-& Same-sample shortest-window selection, tolerance buffers, and oracle-width
-  regret require separate nonregular asymptotic analysis.\\
-Generalized-posterior summaries
-& For fixed \((q,\delta)\), the proper-Gaussian generalized posterior
-  describes interval-root uncertainty; static sandwich adjustment has the
-  scope stated in Section~\ref{sec:static-theory-scope}.
-& Same-sample plug-in tilt, posterior-action transfer, and regression-family
-  tolerance guarantees are not established.\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-The population shortest-window path gives a useful geometry for moving across
-contents. Suppose that the density is differentiable and strictly unimodal,
-and that the shortest window
-\(I_q=[L_q,U_q]=[Q(u_q),Q(u_q+q)]\) is unique and interior over a range of
-\(q\). Equal endpoint densities then satisfy
-\[
-f(L_q)=f(U_q)=\lambda_q.
-\]
-Writing \(a_q=f'(L_q)>0\) and \(b_q=f'(U_q)<0\), formal differentiation of
-the content and equal-density equations gives
-\[
-L_q'=\frac{b_q}{\lambda_q(a_q-b_q)}<0,
-\qquad
-U_q'=\frac{a_q}{\lambda_q(a_q-b_q)}>0.
-\]
-Thus the first-order shares of added probability assigned to the left and
-right boundaries are
-\[
-p_L(q)=\frac{-b_q}{a_q-b_q},\qquad
-p_R(q)=\frac{a_q}{a_q-b_q},\qquad
-p_L(q)+p_R(q)=1.
-\]
-Only under local symmetry are the two shares equal to one half. The width
-satisfies
-\[
-W_{\mathrm{SH}}'(q)=\frac{1}{\lambda_q},
-\qquad
-W_{\mathrm{SH}}''(q)
-=-\frac{a_qb_q}{\lambda_q^3(a_q-b_q)}>0.
-\]
-Hence additional content becomes increasingly expensive as the endpoints move
-into lower-density regions. If
-\(m_q=q^{-1}\int_{u_q}^{u_q+q}Q(s)\,ds
-=\mu+\delta_{\mathrm{SH}}(q)\), then
-\[
-\delta_{\mathrm{SH}}'(q)
-=\frac{p_L(q)L_q+p_R(q)U_q-m_q}{q}.
-\]
-These derivative calculations motivate numerical continuation and diagnose
-its behavior. Full regularity, boundary, and nonuniqueness arguments are
-reserved for a formal shortest-path theorem.
-
-The path algorithm starts from a globally solved content, predicts each next
-window by nested expansion of the previous window, applies local correction in
-a trust region, expands the region when the local optimum lands on its
-boundary, and finally verifies the formal action by a global scan. The global
-check, not the local predictor, defines the selected window. Failure modes
-include infeasible calibration
-\((k>n)\), ties or atoms that violate the continuous-sample convention,
-nonunique shortest windows, response-scale dependence of geometric width, and
-unsupported attempts to attach the scan certificate to posterior summaries.
-
-The construction therefore retains three distinct outputs: an empirical scan
-tolerance action, a full-distribution Bayesian shortest-interval UQ action, and
-fixed-target MTI generalized-posterior summaries. Finite-sample scan
-validity requires an action-matched proof and certified critical count;
-first-order tolerance or oracle-width statements additionally require
-same-sample shortest-window asymptotics. Any transfer from posterior content
-probabilities to endpoint coverage, or from fixed-target MTI summaries to
-the selected shortest action, requires a separate action-equivalence or
-direct-calibration result. Posterior credibility is not tolerance confidence,
-and \(\omega_{\mathrm R}\) is not a tolerance factor.
 
 \section{Finite-Sample Balance and Static Uncertainty Scope}
 \label{sec:static-theory-scope}
@@ -1577,6 +1325,301 @@ propriety, and validation. Likewise, recomputing \(\mat W_t\) from each
 changing conditional filter covariance is retained only as an experimental
 working update, not as
 an exact Gibbs sampler for a common joint generalized posterior.
+
+\section{Scan-Calibrated Tolerance Actions}
+\label{sec:tcsp}
+
+The preceding theory fixes population content and interval placement. A
+tolerance interval adds a repeated-sampling requirement. For iid continuous
+univariate observations, the target statement is
+\[
+\Pr_F^n\{C_F(\widehat T_n)\ge c\}\ge 1-\alpha,\qquad
+C_F([L,U])=F(U)-F(L),
+\]
+where \(\widehat T_n\) is a data-dependent interval. Six quantities must be
+kept distinct:
+\[
+c \text{ is the required content},\quad
+1-\alpha \text{ is the tolerance confidence},\quad
+q=k/n \text{ is the fitted content},
+\]
+\[
+\delta \text{ is the fixed MTI placement tilt},\qquad
+\omega_{\mathrm R} \text{ is the generalized-Bayes learning rate}.
+\]
+\[
+1-\gamma \text{ is a posterior content-probability threshold under a response
+model for } F.
+\]
+Neither \(\omega_{\mathrm R}\) nor \(1-\gamma\) determines the tolerance
+confidence.
+
+Let \(Y_{(1)}\le\cdots\le Y_{(n)}\). For content \(c\), define the uniform scan
+statistic
+\[
+M_n(c)=\max_{0\le s\le 1-c}\#\{i:U_i\in[s,s+c]\},
+\qquad U_i\stackrel{\mathrm{iid}}{\sim}\mathrm{Unif}(0,1).
+\]
+The calibrated retained count is
+\[
+k_{n,c,\alpha}
+=\min\{k:\Pr(M_n(c)<k)\ge 1-\alpha\}.
+\]
+The formal action is the canonical closed order-statistic window
+\[
+\widehat T_n=
+[Y_{(\widehat j)},Y_{(\widehat j+k-1)}],
+\qquad
+\widehat j=\min\argmin_{1\le j\le n-k+1}
+\{Y_{(j+k-1)}-Y_{(j)}\},
+\]
+with \(k=k_{n,c,\alpha}\). This convention is closed and contains exactly
+\(k\) sample observations under continuity. It differs from the half-open
+\((Y_{(j)},Y_{(j+k)}]\) convention sometimes used for order-statistic
+tolerance limits, so a result proved for one convention cannot be transferred
+without reconciling the indices and endpoint rule. The fitted MTI content
+and its content buffer are
+\[
+q_{n,c,\alpha}=k_{n,c,\alpha}/n,\qquad
+t_{n,c,\alpha}=q_{n,c,\alpha}-c.
+\]
+The empirical shortest-path tilt is
+\[
+\widehat\delta_{\mathrm{SH}}(q)
+=
+\frac1k\sum_{\ell=\widehat j}^{\widehat j+k-1}Y_{(\ell)}
+-\frac1n\sum_{i=1}^nY_i.
+\]
+After fixing \(q\) and \(\widehat\delta_{\mathrm{SH}}\), the MTI update is
+\[
+\Pi_{q,\delta,\omega_{\mathrm R}}(d\theta\mid D_n)
+\propto
+\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(\theta)\}\Pi_0(d\theta).
+\]
+This generalized posterior quantifies uncertainty about a fixed interval-root
+functional. It is neither the tolerance certificate nor a response model.
+The formal tolerance action remains the empirical order-statistic window
+\(\widehat T_n\). Because \(\widehat\delta_{\mathrm{SH}}\) is computed from
+the same sample, these posterior summaries are conditional on the selected
+target and do not propagate shortest-window selection uncertainty. An
+unconditional interpretation requires a plug-in stability theorem or a
+separate target-selection sample.
+
+The full-distribution Bayesian layer instead models \(F\) directly. With
+\[
+F\sim \mathrm{DP}(a,H),\qquad Y_i\mid F\stackrel{\mathrm{iid}}{\sim} F,
+\]
+the posterior is \(\mathrm{DP}(a+n,H_n)\), where
+\(H_n=(aH+\sum_i\delta_{Y_i})/(a+n)\)
+\citep{Ferguson1973DP}. For a fixed closed interval \(I=[l,u]\),
+\[
+F(I)\mid D_n \sim
+\mathrm{Beta}\{aH(I)+N_n(I),a(1-H(I))+n-N_n(I)\}.
+\]
+This gives the exact posterior content probability
+\[
+p_n(I;c)=\Pr\{F(I)\ge c\mid D_n\}
+\]
+for every candidate interval. The direct-DP result is a fixed-interval
+posterior statement, not a repeated-sampling tolerance theorem and not an MTI
+generalized posterior. Posterior draws of the shortest \(c\)-content interval
+can be computed from a stick-breaking representation
+\citep{Sethuraman1994ConstructiveDP}; they quantify uncertainty in the
+population shortest-interval functional under the response-distribution model.
+
+The hybrid Bayesian--scan tolerance action is the first minimum-width closed
+order-statistic interval satisfying both constraints:
+\[
+\widehat T^{\mathrm{HBS}}_n
+=
+\min_{\mathrm{width},\,\mathrm{first\ tie}}
+\left\{
+[Y_{(j)},Y_{(\ell)}]:
+\ell-j+1\ge k_{n,c,\alpha},\
+p_n([Y_{(j)},Y_{(\ell)}];c)\ge 1-\gamma
+\right\}.
+\]
+The scan count is fixed before posterior computation and is not resampled. The
+posterior threshold can bind, be redundant given the scan action, or make the
+candidate class infeasible; infeasibility is reported rather than repaired by
+weakening a constraint. A truncated Gaussian Dirichlet-process mixture
+\citep{IshwaranJames2001GibbsDPM,IshwaranJames2002ApproximateDP} provides a
+smooth response-distribution alternative whose content probabilities are Monte
+Carlo posterior summaries. The Bayesian bootstrap
+\citep{Rubin1981BayesianBootstrap} is retained only as a diagnostic
+weighted-empirical comparator.
+
+A sample-split alternative removes this same-sample placement issue for the
+univariate tolerance action. Randomly divide the observations into an
+independent pilot sample and an independent main sample. The pilot chooses a
+lower-tail placement \(\widehat u\). In the main sample, with order statistics
+\(Z_{(1)}\le\cdots\le Z_{(N)}\), fix indices \(r<s\) after the pilot and write
+\(d=s-r\). The spacing law
+\[
+F(Z_{(s)})-F(Z_{(r)})\sim \mathrm{Beta}(d,N+1-d)
+\]
+then gives an exact conditional distribution-free calibration
+\citep{DavidNagaraja2003OrderStatistics}. The closed interval contains
+\(d+1\) observed main-sample positions, so the probability-spacing index and
+the closed-count index differ by one. The pilot may use empirical shortest
+windows, Cornish--Fisher placement, or fixed-target ECM as a diagnostic
+placement engine. It affects efficiency and width, not the conditional Beta
+validity of the fixed main-sample spacing. This first split construction is
+continuous-iid-univariate; regression-family tolerance calibration remains a
+separate theorem.
+
+Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
+reported interval. The numerical procedure uses Monte Carlo calibration of
+the uniform scan distribution with a simultaneous
+Massart--DKW empirical-CDF lower band for \(\Pr\{M_n(c)<k\}\) across all
+candidate retained counts, together with a conservative Massart--DKW fallback
+\citep{Massart1990DKW}. The fallback is not an exact scan recursion.
+Accordingly, we treat exact critical-count
+calculation and the finite-sample theorem for this closed-window action as
+open proof and numerical-certification tasks rather than as established
+results.
+
+Table~\ref{tab:tcsp-theory-scope} separates established MTI results from
+the claims that still require an action-matched proof. This separation allows
+the empirical action, numerical calibration, and conditional generalized
+posterior to be studied without treating implementation as a mathematical
+guarantee.
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Theoretical scope of the proposed scan-calibrated
+construction.} The empirical closed order-statistic window is the formal
+tolerance action. Generalized-posterior summaries concern fixed endpoint
+functionals and are not substituted for that action.}
+\label{tab:tcsp-theory-scope}
+\footnotesize
+\setlength{\tabcolsep}{3.8pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.20\textwidth}
+  >{\raggedright\arraybackslash}p{0.35\textwidth}
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+Object & Available result & Limitation\\
+\midrule
+Population content and placement
+& Theorems~\ref{prop:quantile-window}--\ref{prop:profiled-mean-tilt}
+  identify the fixed-content MTI family and its admissible tilt coordinate.
+& Boundary roots, atoms, nonunique shortest windows, and disconnected
+  highest-density regions require separate treatment.\\
+Empirical shortest window
+& For fixed \(k\), the first minimum-width closed window is a deterministic
+  sample action and is shortest among contiguous closed windows containing
+  \(k\) observations.
+& This class-restricted property is not global optimality over all tolerance
+  procedures. The full-range action \(k=n\) has no MTI posterior fit because
+  \(q=1\).\\
+Split exact-spacing action
+& Conditional on an independent pilot-selected placement, a fixed main-sample
+  order-statistic spacing has a \(\mathrm{Beta}(d,N+1-d)\) content law and can
+  be calibrated exactly.
+& The guarantee is iid univariate and conditional on the pilot; the pilot
+  method, including ECM, affects placement efficiency but is not the source of
+  the certificate.\\
+Numerical scan calibration
+& A common Monte Carlo scan distribution and simultaneous Massart--DKW lower
+  band select a conservative retained count while recording numerical
+  confidence separately.
+& The calculation is not an exact scan recursion, and numerical confidence is
+  distinct from tolerance confidence.\\
+Direct-DP content law
+& For any fixed closed interval, conjugacy gives the exact
+  \(\mathrm{Beta}\) posterior law for \(F(I)\) and hence
+  \(\Pr\{F(I)\ge c\mid D_n\}\).
+& This is posterior UQ under a response-distribution model for \(F\), not an
+  MTI generalized posterior and not a tolerance-confidence theorem.\\
+Hybrid Bayesian--scan action
+& The selected interval must satisfy both \(N_n(I)\ge k_{n,c,\alpha}\) and the
+  posterior content-probability constraint under the chosen distribution engine.
+& The scan count is fixed, posterior credibility remains distinct from
+  tolerance confidence, and no posterior endpoint-coverage theorem is claimed.\\
+Tolerance guarantee
+& The scan event motivates a distribution-free finite-sample guarantee for
+  the empirical action under continuity.
+& Action-matched endpoint conventions and critical-count certification must
+  be completed before publication-level finite-sample tolerance wording is
+  used.\\
+Shortest-path asymptotics
+& The regular derivative calculations below describe content allocation and
+  the local width cost along a unique interior shortest path.
+& Same-sample shortest-window selection, tolerance buffers, and oracle-width
+  regret require separate nonregular asymptotic analysis.\\
+Generalized-posterior summaries
+& For fixed \((q,\delta)\), the proper-Gaussian generalized posterior
+  describes interval-root uncertainty; static sandwich adjustment has the
+  scope stated in Section~\ref{sec:static-theory-scope}.
+& Same-sample plug-in tilt, posterior-action transfer, and regression-family
+  tolerance guarantees are not established.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The population shortest-window path gives a useful geometry for moving across
+contents. Suppose that the density is differentiable and strictly unimodal,
+and that the shortest window
+\(I_q=[L_q,U_q]=[Q(u_q),Q(u_q+q)]\) is unique and interior over a range of
+\(q\). Equal endpoint densities then satisfy
+\[
+f(L_q)=f(U_q)=\lambda_q.
+\]
+Writing \(a_q=f'(L_q)>0\) and \(b_q=f'(U_q)<0\), formal differentiation of
+the content and equal-density equations gives
+\[
+L_q'=\frac{b_q}{\lambda_q(a_q-b_q)}<0,
+\qquad
+U_q'=\frac{a_q}{\lambda_q(a_q-b_q)}>0.
+\]
+Thus the first-order shares of added probability assigned to the left and
+right boundaries are
+\[
+p_L(q)=\frac{-b_q}{a_q-b_q},\qquad
+p_R(q)=\frac{a_q}{a_q-b_q},\qquad
+p_L(q)+p_R(q)=1.
+\]
+Only under local symmetry are the two shares equal to one half. The width
+satisfies
+\[
+W_{\mathrm{SH}}'(q)=\frac{1}{\lambda_q},
+\qquad
+W_{\mathrm{SH}}''(q)
+=-\frac{a_qb_q}{\lambda_q^3(a_q-b_q)}>0.
+\]
+Hence additional content becomes increasingly expensive as the endpoints move
+into lower-density regions. If
+\(m_q=q^{-1}\int_{u_q}^{u_q+q}Q(s)\,ds
+=\mu+\delta_{\mathrm{SH}}(q)\), then
+\[
+\delta_{\mathrm{SH}}'(q)
+=\frac{p_L(q)L_q+p_R(q)U_q-m_q}{q}.
+\]
+These derivative calculations motivate numerical continuation and diagnose
+its behavior. Full regularity, boundary, and nonuniqueness arguments are
+reserved for a formal shortest-path theorem.
+
+The path algorithm starts from a globally solved content, predicts each next
+window by nested expansion of the previous window, applies local correction in
+a trust region, expands the region when the local optimum lands on its
+boundary, and finally verifies the formal action by a global scan. The global
+check, not the local predictor, defines the selected window. Failure modes
+include infeasible calibration
+\((k>n)\), ties or atoms that violate the continuous-sample convention,
+nonunique shortest windows, response-scale dependence of geometric width, and
+unsupported attempts to attach the scan certificate to posterior summaries.
+
+The construction therefore retains three distinct outputs: an empirical scan
+tolerance action, a full-distribution Bayesian shortest-interval UQ action, and
+fixed-target MTI generalized-posterior summaries. Finite-sample scan
+validity requires an action-matched proof and certified critical count;
+first-order tolerance or oracle-width statements additionally require
+same-sample shortest-window asymptotics. Any transfer from posterior content
+probabilities to endpoint coverage, or from fixed-target MTI summaries to
+the selected shortest action, requires a separate action-equivalence or
+direct-calibration result. Posterior credibility is not tolerance confidence,
+and \(\omega_{\mathrm R}\) is not a tolerance factor.
 
 \section{Computational Validation and Evaluation Scope}
 \label{sec:evaluation}

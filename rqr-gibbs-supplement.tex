@@ -84,6 +84,8 @@ selected-action asymptotics, posterior endpoint-coverage transfer, and
 regression-family tolerance theory remain open.
 \end{abstract}
 
+\section*{Part I. Notation, Inferential Objects, and Support Map}
+
 \section{Supplement Scope and Navigation}
 \label{sec:supp-scope}
 
@@ -178,6 +180,48 @@ Evidence and reproducibility scope
 \end{tabularx}
 \end{table}
 
+Table~\ref{tab:supp-status-ledger} records the status vocabulary used in this
+supplement. The labels separate what is mathematically established, what is an
+implemented computational contract, what is an empirical fixture, and what
+remains a research task.
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Central status ledger.} Status labels are attached to
+the strongest current support, not to intended future scope.}
+\label{tab:supp-status-ledger}
+\TableStyle
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.23\textwidth}
+  >{\raggedright\arraybackslash}p{0.31\textwidth}
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+Status & Objects currently carrying the label & Reader consequence\\
+\midrule
+Established theorem
+& MPI population identification, MTI profiled-risk characterization, fractional empirical balance under stated conditions
+& May be used as mathematical support only within the displayed assumptions\\
+Proved computational identity
+& Pseudo-AL factorization, GIG latent-scale conditionals, Gaussian root conditionals, fixed-target ECM moment equations
+& Supports exact update formulas for the stated augmented generalized posterior or objective\\
+Exact implemented algorithm
+& Static fixed-rate Gibbs, fixed-target MTI-ECM, root-blocked fixed-\(W\) DLM FFBS, direct-DP fixed-interval content probabilities
+& Computation preserves the declared target when its configuration restrictions hold\\
+Validated fixture
+& Dense conditional references, zero-tilt equivalence checks, checkpoint continuation, oracle-tilt single-data illustrations
+& Confirms implementation behavior on bounded reference problems, not broad statistical performance\\
+Experimental implementation
+& Adaptive discount recursion, some component-scale dynamics, diagnostic weighted-empirical Bayesian bootstrap comparisons
+& May be reported as exploratory software behavior, not as an exact sampler or theorem-backed method\\
+Planned extension
+& Variational approximations, learned-rate nonzero tilt, regression-family tolerance calibration, data-driven tilt selection
+& Requires new objective statements, algorithms, proofs, or validation before manuscript-level claims\\
+Open conjecture or proof task
+& Exact scan recursion, action-matched closed-window finite-sample proof, posterior-to-action transfer, selected-action width regret
+& Must remain as limitation or future work until an audited proof is available\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 In the scan-calibrated MTI plug-in construction, the retained content and
 shortest-window tilt are computed before the generalized posterior is fitted.
 When the same observations determine the tilt and update the prior, endpoint
@@ -186,114 +230,12 @@ shortest-window selection uncertainty. The full-distribution Bayesian layer
 below addresses uncertainty about \(F\) directly; it does not convert the
 loss-based MTI posterior into a response likelihood.
 
-\section{Full-Distribution Bayesian Shortest-Interval Uncertainty}
-\label{sec:supp-bayes-uq}
+\section*{Part II. Population Theory and Proofs}
 
-The hybrid Bayesian--scan action needs posterior statements about the
-population distribution \(F\), not about loss-defined root parameters. The
-response-distribution calculations below are therefore intentionally separate
-from the MTI generalized posterior. The direct model is
-\[
-F\sim\mathrm{DP}(a,H),\qquad
-Y_i\mid F\stackrel{\mathrm{iid}}{\sim}F,
-\]
-with fixed concentration \(a>0\) and fixed base probability measure \(H\)
-\citep{Ferguson1973DP}. Data-dependent choices of \(H\) are empirical Bayes
-and are not used for strict Bayesian claims.
-Related Bayesian nonparametric interval work includes Dirichlet-process
-quantile inference and tolerance-interval calibrations
-\citep{HjortPetrone2007NonparametricQuantile,
-ChoiPourmohamadSanso2025DPTolerance,
-PourmohamadRichardsonSanso2026CalibratedBNP}.
-
-\begin{proposition}[Direct-DP fixed-interval content law]
-\label{prop:supp-dp-content-law}
-For a fixed closed interval \(I=[l,u]\), let
-\(N_n(I)=\sum_{i=1}^n\ind(Y_i\in I)\). Under the direct-DP model,
-\[
-F(I)\mid D_n\sim
-\mathrm{Beta}\{aH(I)+N_n(I),a(1-H(I))+n-N_n(I)\}.
-\]
-Consequently \(p_n(I;c)=\Pr\{F(I)\ge c\mid D_n\}\) is available exactly from a
-Beta survival probability.
-\end{proposition}
-
-\begin{proof}
-Dirichlet-process conjugacy gives
-\[
-F\mid D_n\sim \mathrm{DP}(a+n,H_n),\qquad
-H_n=\frac{aH+\sum_{i=1}^n\delta_{Y_i}}{a+n}.
-\]
-For any measurable partition \((I,I^c)\), the defining finite-dimensional
-distribution of a Dirichlet process gives
-\[
-\{F(I),F(I^c)\}\mid D_n\sim
-\mathrm{Dirichlet}\{(a+n)H_n(I),(a+n)H_n(I^c)\}.
-\]
-The first coordinate of this two-cell Dirichlet vector is Beta with parameters
-\((a+n)H_n(I)=aH(I)+N_n(I)\) and
-\((a+n)H_n(I^c)=a(1-H(I))+n-N_n(I)\).
-\end{proof}
-
-The Bayesian-only order-statistic action searches
-\[
-\mathcal I_n=\{[Y_{(j)},Y_{(\ell)}]:1\le j\le \ell\le n\}
-\]
-and returns the first minimum-width member of
-\[
-\{I\in\mathcal I_n:p_n(I;c)\ge 1-\gamma\}.
-\]
-This action quantifies posterior uncertainty about interval content under the
-response-distribution model. It is not by itself a distribution-free tolerance
-certificate.
-
-The hybrid Bayesian--scan action adds the scan count:
-\[
-\widehat T_n^{\mathrm{HBS}}
-=\min_{\mathrm{width},\,\mathrm{first\ tie}}
-\{I\in\mathcal I_n:N_n(I)\ge k_{n,c,\alpha},\
-p_n(I;c)\ge 1-\gamma\}.
-\]
-The count \(k_{n,c,\alpha}\) is calibrated outside the Bayesian posterior and is
-held fixed. The posterior threshold can be redundant, binding, or infeasible
-within \(\mathcal I_n\). The implementation records that status rather than
-relaxing either constraint.
-
-Posterior shortest-target functionals are obtained by drawing a distribution
-from the posterior DP using a truncated stick-breaking representation
-\citep{Sethuraman1994ConstructiveDP}. For each weighted discrete draw
-\(\{(A_m,W_m)\}\), the retained interval is the first minimum-width closed
-support interval satisfying \(\sum_{m:A_m\in I}W_m\ge c\). This computes
-posterior functionals of the population shortest interval under the drawn
-distribution. It does not resample the scan count and does not create an
-endpoint coverage theorem.
-
-The smooth response-distribution alternative is a truncated Gaussian
-Dirichlet-process mixture
-\citep{EscobarWest1995DPM,IshwaranJames2001GibbsDPM,
-IshwaranJames2002ApproximateDP}. With
-sticks \(V_k\), weights \(\pi_k=V_k\prod_{\ell<k}(1-V_\ell)\),
-\(V_K=1\), component indicators \(z_i\), and Gaussian kernels,
-\[
-Y_i\mid z_i=k,\mu_k,\lambda_k\sim
-\Normal(\mu_k,\lambda_k^{-1}),\qquad
-\Pr(z_i=k)=\pi_k.
-\]
-The implementation uses Normal--Gamma component priors and Gibbs updates for
-\((z_i)\), \((\mu_k,\lambda_k)\), and the sticks. For any fixed interval, the
-content \(F(I)\) is evaluated analytically for each retained mixture draw and
-posterior content probabilities are Monte Carlo averages over retained draws.
-Shortest-interval functionals minimize mixture quantile width over lower-tail
-probability on a deterministic grid with optional local refinement.
-
-The deterministic DPM-ECM path is a MAP-style diagnostic and initializer. It
-uses fractional responsibilities, Gaussian-kernel component updates, and
-monotone backtracking for the recorded objective. It is not posterior UQ and is
-not promoted as a tolerance action.
-
-The Bayesian bootstrap \citep{Rubin1981BayesianBootstrap} is retained as a
-weighted-empirical diagnostic. It is useful for sensitivity comparisons but is
-not labeled as a proper direct-DP response model with a fixed prior.
+The population-theory part supports the main article's fixed-content, MPI, MTI,
+finite-sample balance, and static uncertainty claims. It works before any
+algorithmic approximation is introduced and records the assumptions under which
+the interval target, score equations, and covariance statements are valid.
 
 \section{Fixed-Content Interval Functionals}
 \label{sec:supp-interval-functionals}
@@ -1178,11 +1120,19 @@ only when \(P'(w)/w\) is constant, which yields a quadratic penalty up to an
 additive constant. This explains both the form of RQR-W and why its path does
 not generally coincide with the shortest-contiguous path.
 
+\section*{Part III. Generalized-Posterior Computation}
+
+The computation part supports the main article's fixed-target generalized
+posterior, Gibbs, ECM, static, DESN, and dynamic claims. The inherited
+objects are fixed content, fixed tilt unless explicitly stated otherwise, and
+exchangeable roots whose reported endpoints are ordered after fitting.
+
 \section{Pseudo-AL Augmentation of the Generalized Posterior}
 \label{sec:supp-pseudo-al}
 
 The Gibbs sampler is obtained by augmenting the product-residual loss factor,
-not by introducing a response likelihood. For
+not by introducing a response likelihood. The resulting factor is not a
+sampling density for \(y_i\). For
 \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the MPI contribution is
 \(\ell_c(\eta_{1i},\eta_{2i};y_i)=\rho_c(e_i)\), as in
 \eqref{eq:supp-mpi-product-check}. The fixed-rate generalized posterior
@@ -1968,6 +1918,129 @@ root-2 counterpart conditional on the refreshed root 1, applies the centered
 component-scale and noncentered updates in the interweaving transition, and
 optionally swaps the two complete root labels. Static \(q_j=0\) components are
 separate degenerate models and are not part of the inverse-Gamma support.
+
+\section*{Part IV. Tolerance and Full-Distribution Inference}
+
+This part separates external tolerance actions from ordinary Bayesian
+response-distribution models. The main article defines the scan-calibrated
+empirical action; the supplement records the status ledger and gives the
+direct-DP and DPM calculations used when uncertainty is placed on \(F\) itself.
+
+\section{Full-Distribution Bayesian Shortest-Interval Uncertainty}
+\label{sec:supp-bayes-uq}
+
+The hybrid Bayesian--scan action needs posterior statements about the
+population distribution \(F\), not about loss-defined root parameters. The
+response-distribution calculations below are therefore intentionally separate
+from the MTI generalized posterior. The direct model is
+\[
+F\sim\mathrm{DP}(a,H),\qquad
+Y_i\mid F\stackrel{\mathrm{iid}}{\sim}F,
+\]
+with fixed concentration \(a>0\) and fixed base probability measure \(H\)
+\citep{Ferguson1973DP}. Data-dependent choices of \(H\) are empirical Bayes
+and are not used for strict Bayesian claims.
+Related Bayesian nonparametric interval work includes Dirichlet-process
+quantile inference and tolerance-interval calibrations
+\citep{HjortPetrone2007NonparametricQuantile,
+ChoiPourmohamadSanso2025DPTolerance,
+PourmohamadRichardsonSanso2026CalibratedBNP}.
+
+\begin{proposition}[Direct-DP fixed-interval content law]
+\label{prop:supp-dp-content-law}
+For a fixed closed interval \(I=[l,u]\), let
+\(N_n(I)=\sum_{i=1}^n\ind(Y_i\in I)\). Under the direct-DP model,
+\[
+F(I)\mid D_n\sim
+\mathrm{Beta}\{aH(I)+N_n(I),a(1-H(I))+n-N_n(I)\}.
+\]
+Consequently \(p_n(I;c)=\Pr\{F(I)\ge c\mid D_n\}\) is available exactly from a
+Beta survival probability.
+\end{proposition}
+
+\begin{proof}
+Dirichlet-process conjugacy gives
+\[
+F\mid D_n\sim \mathrm{DP}(a+n,H_n),\qquad
+H_n=\frac{aH+\sum_{i=1}^n\delta_{Y_i}}{a+n}.
+\]
+For any measurable partition \((I,I^c)\), the defining finite-dimensional
+distribution of a Dirichlet process gives
+\[
+\{F(I),F(I^c)\}\mid D_n\sim
+\mathrm{Dirichlet}\{(a+n)H_n(I),(a+n)H_n(I^c)\}.
+\]
+The first coordinate of this two-cell Dirichlet vector is Beta with parameters
+\((a+n)H_n(I)=aH(I)+N_n(I)\) and
+\((a+n)H_n(I^c)=a(1-H(I))+n-N_n(I)\).
+\end{proof}
+
+The Bayesian-only order-statistic action searches
+\[
+\mathcal I_n=\{[Y_{(j)},Y_{(\ell)}]:1\le j\le \ell\le n\}
+\]
+and returns the first minimum-width member of
+\[
+\{I\in\mathcal I_n:p_n(I;c)\ge 1-\gamma\}.
+\]
+This action quantifies posterior uncertainty about interval content under the
+response-distribution model. It is not by itself a distribution-free tolerance
+certificate.
+
+The hybrid Bayesian--scan action adds the scan count:
+\[
+\widehat T_n^{\mathrm{HBS}}
+=\min_{\mathrm{width},\,\mathrm{first\ tie}}
+\{I\in\mathcal I_n:N_n(I)\ge k_{n,c,\alpha},\
+p_n(I;c)\ge 1-\gamma\}.
+\]
+The count \(k_{n,c,\alpha}\) is calibrated outside the Bayesian posterior and is
+held fixed. The posterior threshold can be redundant, binding, or infeasible
+within \(\mathcal I_n\). The implementation records that status rather than
+relaxing either constraint.
+
+Posterior shortest-target functionals are obtained by drawing a distribution
+from the posterior DP using a truncated stick-breaking representation
+\citep{Sethuraman1994ConstructiveDP}. For each weighted discrete draw
+\(\{(A_m,W_m)\}\), the retained interval is the first minimum-width closed
+support interval satisfying \(\sum_{m:A_m\in I}W_m\ge c\). This computes
+posterior functionals of the population shortest interval under the drawn
+distribution. It does not resample the scan count and does not create an
+endpoint coverage theorem.
+
+The smooth response-distribution alternative is a truncated Gaussian
+Dirichlet-process mixture
+\citep{EscobarWest1995DPM,IshwaranJames2001GibbsDPM,
+IshwaranJames2002ApproximateDP}. With
+sticks \(V_k\), weights \(\pi_k=V_k\prod_{\ell<k}(1-V_\ell)\),
+\(V_K=1\), component indicators \(z_i\), and Gaussian kernels,
+\[
+Y_i\mid z_i=k,\mu_k,\lambda_k\sim
+\Normal(\mu_k,\lambda_k^{-1}),\qquad
+\Pr(z_i=k)=\pi_k.
+\]
+The implementation uses Normal--Gamma component priors and Gibbs updates for
+\((z_i)\), \((\mu_k,\lambda_k)\), and the sticks. For any fixed interval, the
+content \(F(I)\) is evaluated analytically for each retained mixture draw and
+posterior content probabilities are Monte Carlo averages over retained draws.
+Shortest-interval functionals minimize mixture quantile width over lower-tail
+probability on a deterministic grid with optional local refinement.
+
+The deterministic DPM-ECM path is a MAP-style diagnostic and initializer. It
+uses fractional responsibilities, Gaussian-kernel component updates, and
+monotone backtracking for the recorded objective. It is not posterior UQ and is
+not promoted as a tolerance action.
+
+The Bayesian bootstrap \citep{Rubin1981BayesianBootstrap} is retained as a
+weighted-empirical diagnostic. It is useful for sensitivity comparisons but is
+not labeled as a proper direct-DP response model with a fixed prior.
+
+\section*{Part V. Extended Numerical Evidence and Reproducibility}
+
+The numerical part documents bounded evidence for target recovery and
+implementation behavior. It reports deterministic or single-data diagnostics
+with provenance and does not convert them into repeated-sample performance
+claims.
 
 \section{Single-Data Oracle-Tilt Diagnostics}
 \label{sec:supp-oracle-tilt-diagnostics}

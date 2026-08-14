@@ -98,9 +98,9 @@ for (path in launch_files) {
 
 required_patterns <- list(
   "main.tex" = c(
-    "mean-preserving interval \\(MPI\\) loss",
-    "mean-tilted interval \\(MTI\\) loss",
-    "Scan Calibration and Shortest MTI Tolerance Actions"
+    "Mean-Preserving Interval Loss",
+    "Mean-Tilted Interval Family",
+    "Scan-Calibrated Tolerance Actions"
   ),
   "rqr-gibbs-supplement.tex" = c(
     "MPI Loss",
