@@ -93,10 +93,10 @@ regression-family tolerance theory remain open.
 The main article carries the statistical narrative. The supplement is a recovery
 document for definitions, proofs, computational identities, and claim scope. The
 MTI generalized posterior combines a prior with a loss-based update
-\citep{BissiriHolmesWalker2016GeneralBayes}; it is not derived from an ordinary
-response likelihood. Root-trajectory draws therefore induce
-generalized-posterior distributions for endpoint functions, but not a posterior
-predictive distribution for future responses.
+\citep{BissiriHolmesWalker2016GeneralBayes}. Root-trajectory draws therefore
+induce generalized-posterior distributions for endpoint functions. Future
+response prediction belongs to a separately specified response-distribution
+model.
 
 \begin{table}[H]
 \centering
@@ -339,10 +339,11 @@ The second equation is equivalently
 \E(Y\mid a<Y<b,X=x)=\E(Y\mid X=x)
 \]
 and
-\(\operatorname{Cov}\{Y,I_{a,b}(Y)\mid X=x\}=0\). It does not imply
-independence, symmetry, or equal-tailed endpoints. The coverage implication is
-established by \citet{PouplinEtAl2024RQR}; the conditional first-moment
-implication is a further consequence of their first-order system.
+\(\operatorname{Cov}\{Y,I_{a,b}(Y)\mid X=x\}=0\). This covariance statement is
+compatible with dependence, asymmetry, and unequal-tailed endpoints. The
+coverage implication is established by \citet{PouplinEtAl2024RQR}; the
+conditional first-moment implication is a further consequence of their
+first-order system.
 
 Let \(\mu_x=\E(Y\mid X=x)\). Since
 \(\E(Y-\mu_x\mid X=x)=0\), the first-moment equation is also equivalent to
@@ -353,8 +354,8 @@ Let \(\mu_x=\E(Y\mid X=x)\). Since
 \label{eq:rqr-tail-moment-balance}
 \end{equation}
 Thus MPI balances omitted tail probability multiplied by average
-tail displacement from the conditional mean; it does not generally balance
-the two omitted probabilities.
+tail displacement from the conditional mean. The two omitted tail probabilities
+may differ.
 
 \begin{theorem}[Quantile-window identification]
 \label{prop:supp-quantile-window}
@@ -754,11 +755,10 @@ and both endpoint values are finite under the assumed second moment. Interior
 tilts correspond one-to-one with finite-root quantile windows. At
 \(\delta_- = M_c(0)-\mu\), the canonical lower boundary member is
 \([Q(0),Q(c)]\). If \(Q(0)=-\infty\), it is a semi-infinite limiting interval
-and is not attained by finite roots, although the corresponding
-population-risk infimum is finite. If \(Q(0)\) is finite, every pair
+with a finite population-risk infimum. If \(Q(0)\) is finite, every pair
 \((a,Q(c))\) with
-\(a\le Q(0)\) has the same population loss, so the inactive lower root is not
-identified without a support constraint. The upper boundary has the symmetric
+\(a\le Q(0)\) has the same population loss, so a support constraint is needed
+to choose a unique inactive lower root. The upper boundary has the symmetric
 qualification. For
 \(\delta<\delta_-\) or \(\delta>\delta_+\), the unrestricted population risk
 is unbounded below along the corresponding escaping-root direction and has no
@@ -777,8 +777,8 @@ whereas shortest-contiguous recovery is generally set-valued. Define
 \]
 If \(\mathcal U_{\mathrm{SH}}\) is a singleton, its element and tilt are denoted
 by \(u_{\mathrm{SH}}\) and \(\delta_{\mathrm{SH}}\). These identities establish
-population representation, not automatic finite-sample estimation of a
-recovery tilt.
+population representation. Finite-sample recovery-tilt estimation requires an
+external selection protocol.
 
 Implicit differentiation yields
 \[
@@ -967,9 +967,8 @@ For iid intercept-only data, Massart's sharp DKW inequality
 \frac{B_n}{n}+
 \sqrt{\frac{2\log(2/\alpha)}{n}}.
 \]
-The bound is conservative and high probability. It is not exact nominal
-future coverage and it does not extend to restricted regression without a
-separate argument.
+The bound is conservative and high probability. Exact nominal future coverage
+and restricted-regression extensions require separate arguments.
 
 For linear roots in a globally ordered chart, the same subgradient selection
 gives
@@ -982,9 +981,9 @@ Subtracting yields the width-weighted calibration equation
 \sum_i X_i\widehat w_i(c-\widehat q_i)=0,
 \qquad \widehat w_i=\widehat b_i-\widehat a_i.
 \]
-This is the finite-sample analogue of the restricted population score. It is
-not pointwise conditional coverage unless the predictor class is correctly
-specified and sufficiently rich.
+This is the finite-sample analogue of the restricted population score. Pointwise
+conditional coverage requires correct specification and a sufficiently rich
+predictor class.
 
 \subsection{Fixed-Dimensional iid Uncertainty}
 
@@ -1133,9 +1132,9 @@ exchangeable roots whose reported endpoints are ordered after fitting.
 \section{Pseudo-AL Augmentation and Full Conditionals}
 \label{sec:supp-pseudo-al}
 
-The Gibbs sampler is obtained by augmenting the product-residual loss factor,
-not by introducing a response likelihood. The resulting factor is not a
-sampling density for \(y_i\). For
+The Gibbs sampler is obtained by augmenting the product-residual loss factor in
+the generalized posterior. Response likelihoods belong to separately specified
+response-distribution models. For
 \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the MPI contribution is
 \(\ell_c(\eta_{1i},\eta_{2i};y_i)=\rho_c(e_i)\), as in
 \eqref{eq:supp-mpi-product-check}. The fixed-rate generalized posterior
@@ -1169,9 +1168,9 @@ the normalized asymmetric-Laplace kernel in the pseudo-residual is
 \end{align}
 Equation~\eqref{eq:pseudo-al-mixture} augments the single-observation factor of
 the generalized posterior with a positive latent scale. Its left-hand side is
-evaluated at a residual product containing \(y_i\); it is not a sampling
-density for \(y_i\). Missing sites are excluded from \(\mathcal O\) and have no
-latent scale.
+evaluated at a residual product containing \(y_i\), so it is a density in the
+abstract pseudo-residual. Missing sites are excluded from \(\mathcal O\) and
+have no latent scale.
 
 The latent-scale full conditional uses the \(\GIG(\nu,a,b)\) convention
 proportional to \(v^{\nu-1}\exp\{-(av+b/v)/2\}\):
@@ -1350,8 +1349,9 @@ At \(e_i=0\), \(\tau_i\) is infinite. The implementation therefore uses a
 declared safeguarded generalized ECM/MM variant with a response-product-scale
 floor, exact observed-objective backtracking after each accepted full cycle,
 and deterministic multi-start selection by the exact penalized objective. The
-stored endpoint mode is a fixed-target generalized-posterior summary. It is
-not a posterior draw and not a tolerance action.
+stored endpoint mode is a deterministic fixed-target generalized-posterior
+summary. Posterior draws require the Gibbs sampler, and tolerance actions
+require the scan-calibrated decision rule.
 
 \subsection{MPI-Only RHS-NS Prior Adapter}
 \label{sec:supp-rhs-ns}
@@ -1386,11 +1386,11 @@ prior adapter; it is not a new standalone derivation of the marginal RHS-NS
 prior. The
 Prior-state construction and updating are delegated to the pinned,
 archive-attested reference runtime; the adapter accepts the \texttt{rhs\_ns}
-mode, not its distinct generic \texttt{rhs} mode. It is MCMC-only and restricted here to
-MPI, \(\vect\delta=\vect 0\). The proper-Gaussian argument for the
-nonzero-tilt generalized posterior does not extend automatically through its
-random-scale
-mixture, so neither MTI-RHS-NS propriety nor implementation is claimed.
+mode, separate from the generic \texttt{rhs} mode. It is MCMC-only and
+restricted here to MPI, \(\vect\delta=\vect 0\). The proper-Gaussian argument
+for the nonzero-tilt generalized posterior has not been extended through its
+random-scale mixture, so neither MTI-RHS-NS propriety nor implementation is
+claimed.
 
 \subsection{Frozen-DESN Endpoint Readout}
 \label{sec:supp-desn}
@@ -1455,12 +1455,10 @@ be nonnegative.
 We call \eqref{eq:normalized-scale-target} the
 \emph{pseudo-residual-normalized learned-scale generalized posterior}. The
 factor \(\kappa^{n_{\mathrm{obs}}}\) normalizes an asymmetric-Laplace kernel in
-the abstract pseudo-residual \(e_i\), not a density in \(y_i\). It is an
-analyst-declared
-hierarchical generalized-posterior specification; it does not imply that
-\(\kappa\) is an ordinary response parameter. Coherence of a fixed-rate
-generalized posterior does not by itself establish same-data learning or
-calibration of this scale
+the abstract pseudo-residual \(e_i\). It is an analyst-declared
+hierarchical generalized-posterior specification; \(\kappa\) is not an
+ordinary response parameter. Same-data learning or calibration of this scale
+requires assumptions beyond fixed-rate generalized-posterior coherence
 \citep{LeeLiuNicholls2025LearningRate,WuMartin2023LearningRateComparison}.
 Fixed-rate sensitivity grids are therefore primary. If \(s_L\) is estimated
 from the training responses, the calculation convention is recorded and the
@@ -1879,7 +1877,8 @@ V_t=\phi_c\sigma_{\mathrm R}v_t,
 \]
 where \(e_t(\vect x)\) is evaluated after reconstructing both root paths.
 This expression is the log density of the augmented generalized posterior in
-the noncentered parameterization; it is not a response likelihood.
+the noncentered parameterization. Response likelihoods belong to a separately
+specified response-distribution model.
 
 For the implemented MPI learned-rate mode,
 \(\sigma_{\mathrm R}=s_L/\kappa\). For fixed-rate MPI or MTI,
@@ -1987,8 +1986,8 @@ and returns the first minimum-width member of
 \{I\in\mathcal I_n:p_n(I;c)\ge 1-\gamma\}.
 \]
 This action quantifies posterior uncertainty about interval content under the
-response-distribution model. It is not by itself a distribution-free tolerance
-certificate.
+response-distribution model. Distribution-free tolerance certification requires
+the scan-calibrated action.
 
 The hybrid Bayesian--scan action adds the scan count:
 \[
@@ -2031,8 +2030,9 @@ probability on a deterministic grid with optional local refinement.
 
 The deterministic DPM-ECM path is a MAP-style diagnostic and initializer. It
 uses fractional responsibilities, Gaussian-kernel component updates, and
-monotone backtracking for the recorded objective. It is not posterior UQ and is
-not promoted as a tolerance action.
+monotone backtracking for the recorded objective. Posterior UQ and tolerance
+actions are supplied by the DPM posterior sampler and scan-calibrated decision
+rules, respectively.
 
 The Bayesian bootstrap \citep{Rubin1981BayesianBootstrap} is retained as a
 weighted-empirical diagnostic. It is useful for sensitivity comparisons but is

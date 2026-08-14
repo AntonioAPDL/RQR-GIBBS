@@ -61,6 +61,13 @@ newsuggestions.md
 Chatgpt_output*
 /report
 /report*.md
+
+# Local AI planning and audit handoffs. Keep source-facing plans and audits out
+# of the authoritative manuscript repository unless explicitly promoted.
+docs/audits/*audit*.md
+docs/audits/*plan*.md
+docs/plans/
+
 docs/implementation_notes/*project_prompt.md
 docs/implementation_notes/*output*_followup_prompt.md
 docs/implementation_notes/fixed_delta_mt_rqr_gibbs_extension_plan_*.md

@@ -43,7 +43,8 @@ test_that("TCSP manuscript exposes publication-facing claim boundaries", {
                fixed = TRUE)
   expect_false(grepl("\\\\texttt\\{T[-]", main, perl = TRUE))
   expect_match(main, "posterior-to-action transfer", fixed = TRUE)
-  expect_match(main, "Posterior credibility is not", fixed = TRUE)
+  expect_match(main, "Tolerance confidence comes from the scan calibration",
+               fixed = TRUE)
   expect_match(supplement, "Scan-calibrated shortest-window tolerance",
                fixed = TRUE)
   expect_match(registry, "smallest_nonparametric_tolerance_regions",
