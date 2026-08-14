@@ -72,14 +72,16 @@ intervals answer different statistical questions. Pouplin et al. introduced a
 residual-product criterion under the name Relaxed Quantile Regression. We show
 that, under regularity conditions, its unrestricted regular minimizer is the
 unique fixed-content interval whose retained mean equals the population mean;
-we therefore call this target the mean-preserving interval (MPI). A fixed
-retained-mean offset gives the mean-tilted interval (MTI) family, whose tilt
-indexes the contiguous fixed-content windows. Equal-tailed and
+we therefore call this target the mean-preserving interval (MPI). The
+mean-tilted interval (MTI) family generalizes MPI by replacing zero
+retained-mean balance with a fixed retained-mean offset: \(\delta=0\)
+recovers MPI, and nonzero tilts index other contiguous fixed-content windows.
+Equal-tailed and
 shortest-contiguous intervals are distribution-specific members of this family,
 not universal endpoint-quantile assignments.
 
-We develop loss-based generalized-Bayes computation for fixed MPI and MTI
-targets. A pseudo-asymmetric-Laplace normal--exponential augmentation yields
+We develop loss-based generalized-Bayes computation for MPI and its fixed-tilt
+MTI generalization. A pseudo-asymmetric-Laplace normal--exponential augmentation yields
 generalized-inverse-Gaussian latent scales and conditionally Gaussian root
 updates. For fixed content, tilt, and learning rate, the same augmentation gives
 a deterministic expectation/conditional-maximization mode computation using
@@ -129,10 +131,11 @@ the minimizer is the interval whose retained mean equals the population mean.
 We call this target the mean-preserving interval (MPI). The terminology is
 descriptive and does not rename the original contribution.
 
-The same score structure gives a placement coordinate. Replacing the
-mean-preserving equation by a fixed retained-mean offset \(\delta\) defines the
-mean-tilted interval (MTI) family. Content remains fixed at \(c\); the tilt
-selects where the interval sits within the content-\(c\) class. Equal-tailed and
+The same score structure gives a direct generalization. The mean-tilted
+interval (MTI) family keeps the MPI content score and replaces retained-mean
+equality by a fixed retained-mean offset \(\delta\). Thus MPI is the
+\(\delta=0\) member of the family, while nonzero tilts select where the
+interval sits within the content-\(c\) class. Equal-tailed and
 shortest-contiguous intervals correspond to distribution-specific tilts.
 Consequently, \(\delta\) is part of the target specification. It is fixed
 externally, or selected by a separate validation rule, rather than sampled as an
@@ -228,9 +231,10 @@ Full-distribution Bayes
 \end{table}
 
 The contributions are fourfold. First, the residual-product loss is shown to
-target the MPI member of the fixed-content interval class, and a fixed mean tilt
-is shown to index the remaining admissible contiguous windows; the same theory
-gives exact fractional empirical balance identities. Second, a pseudo-AL Gibbs
+target the MPI member of the fixed-content interval class, and MTI is shown to
+generalize MPI by adding a fixed retained-mean tilt that indexes the remaining
+admissible contiguous windows; the same theory gives exact fractional empirical
+balance identities. Second, a pseudo-AL Gibbs
 sampler is derived for fixed-rate static targets and extended to
 ridge-regularized static regression, frozen-feature DESN readouts, and
 root-blocked dynamic linear states under the stated fixed-target conditions.
@@ -506,10 +510,10 @@ or asymptotic guarantees require a separate empirical-process argument.
 \section{Mean-Tilted Interval Family}
 \label{sec:mti-loss}
 
-The MPI target is one member of the fixed-content class. To move through the
-content-\(c\) family without changing the coverage score,
-consider a fixed retained-mean tilt \(\delta\), measured in response units, and
-define
+The MTI family is the fixed-tilt generalization of MPI. It preserves the MPI
+content score and replaces the zero retained-mean-balance equation by a fixed
+retained-mean tilt \(\delta\), measured in response units. To move through the
+content-\(c\) family without changing the coverage score, define
 \[
 \ell_{c,\delta}^{\mathrm{MTI}}(m,h;y)
 =
@@ -524,8 +528,8 @@ Equivalently,
 The second form shows that the loss remains invariant to exchanging the two
 roots. MPI is exactly the \(\delta=0\) member of the MTI family.
 
-The fixed tilt changes placement but not content. The proposition records this
-separation explicitly.
+This generalization changes placement but not content. The proposition records
+that separation explicitly.
 
 \begin{proposition}[Fixed-content mean tilt]
 \label{prop:mean-tilt}
@@ -1746,11 +1750,11 @@ reproducibility documentation.
 
 Probability content alone determines a class, not an interval placement.
 MPI selects its mean-preserving member under the stated population
-conditions. The mean tilt exposes the larger geometry: each admissible
-interior value specifies a retained mean and hence one contiguous
-content-\(c\) window. Equal-tailed and shortest-contiguous intervals are
-distribution-specific members of this family rather than universally named
-tilt values.
+conditions. MTI generalizes MPI by making retained-mean balance a fixed
+coordinate: \(\delta=0\) returns MPI, and each admissible interior value
+specifies one contiguous content-\(c\) window. Equal-tailed and
+shortest-contiguous intervals are distribution-specific members of this family
+rather than universally named tilt values.
 
 The generalized-Bayes computation follows directly from this target. The
 normal--exponential representation augments the generalized posterior with one

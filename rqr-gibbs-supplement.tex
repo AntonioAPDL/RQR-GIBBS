@@ -66,11 +66,12 @@ Fixed-Content Targets, Generalized Bayes, and Tolerance Actions}}
 \begin{abstract}
 \noindent
 The supplement gives the derivations and computational contracts behind the
-mean-preserving interval (MPI), mean-tilted interval (MTI), generalized-Bayes,
-and tolerance-action constructions in the main article. It establishes the MPI
-score equations, quantile-window identification, profiled-risk identification,
-retained-distribution consequences, exact fractional empirical balance, and
-fixed-dimensional static uncertainty geometry. It then derives the
+mean-preserving interval (MPI), its mean-tilted interval (MTI) generalization,
+generalized-Bayes, and tolerance-action constructions in the main article. It
+establishes the MPI score equations, quantile-window identification, MTI
+profiled-risk identification, retained-distribution consequences, exact
+fractional empirical balance, and fixed-dimensional static uncertainty
+geometry. It then derives the
 pseudo-asymmetric-Laplace augmentation, Gaussian and
 generalized-inverse-Gaussian full conditionals, fixed-target ECM updates, and
 root-blocked dynamic-state computation. Separate sections record the MPI-only
@@ -541,8 +542,9 @@ empirical-process analysis.
 \section{The Mean-Tilted Interval Loss}
 \label{sec:supp-mean-tilt}
 
-The MTI loss keeps the content score of MPI and shifts only the retained-mean
-equation. For a fixed mean tilt \(\delta\in\R\), define
+The MTI loss is the fixed-tilt generalization of MPI. It keeps the MPI content
+score and shifts only the retained-mean equation; setting \(\delta=0\) recovers
+the MPI loss. For a fixed mean tilt \(\delta\in\R\), define
 \begin{equation}
 \ell_{c,\delta}^{\mathrm{MTI}}(m,h;y)
 =\rho_c\{(y-m)^2-h^2\}-2c\delta(m-y),
@@ -555,7 +557,8 @@ or, equivalently,
 \label{eq:mean-tilted-loss-roots}
 \end{equation}
 The second form is invariant to exchanging the raw root labels. The tilt has
-response units so that both terms in the loss have squared-response units.
+response units so that both terms in the loss have squared-response units, and
+nonzero \(\delta\) changes the target placement rather than the content score.
 For restricted linear roots \(\eta_k(X)=X^\top\beta_k\) and an externally
 fixed \(\delta(X)\), the population score equations are
 \begin{align}
@@ -571,8 +574,8 @@ conditional content or retained-mean identities unless the predictor class is
 sufficiently rich and the unrestricted conditions apply.
 
 \paragraph{Root-label contract.}
-The losses \eqref{eq:mean-tilted-loss-roots} and the MPI
-\(\delta=0\) loss are invariant to exchanging the two raw roots. With
+The MTI losses \eqref{eq:mean-tilted-loss-roots}, including their MPI
+\(\delta=0\) special case, are invariant to exchanging the two raw roots. With
 exchangeable root priors, the unordered pair is identified but the labels
 ``root 1'' and ``root 2'' are not. The static sampler therefore
 permits a complete-root swap that exchanges the coefficient vector and any
@@ -2134,8 +2137,8 @@ secondary, target-specific comparison. Simulation estimands, data-generating
 factors, Monte Carlo precision, failure handling, and reporting rules are
 prespecified \citep{MorrisWhiteCrowther2019Simulation}.
 
-The available validation evidence is deepest for MPI
-(\(\delta=0\)). Fixed-rate nonzero mean tilt has implementation checks for the
+The available validation evidence is deepest for the MPI special case
+\((\delta=0)\). Fixed-rate nonzero MTI has implementation checks for the
 Gaussian information shift, zero-tilt equivalence, dense conditional
 references, and the prespecified population-tilt illustrations in
 Section~\ref{sec:supp-oracle-tilt-diagnostics}. These checks do not replace an
