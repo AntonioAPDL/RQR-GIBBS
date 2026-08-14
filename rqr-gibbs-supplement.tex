@@ -103,6 +103,13 @@ induce generalized-posterior distributions for endpoint functions. Future
 response prediction belongs to a separately specified response-distribution
 model.
 
+Notation follows the main article. Finite-dimensional generalized posteriors
+are written as densities or kernels, such as \(\pi(\theta\mid D)\), rather than
+with measure-style posterior arguments. Differentials are reserved for actual
+integrals, for example over a latent scale. The observed-index set is
+\(I_{\mathrm{obs}}\); subvectors and submatrices restricted to that set use the
+shorter ``obs'' subscript.
+
 \begin{table}[H]
 \centering
 \caption{\textbf{Notation used across the theory and computation.}}
@@ -126,7 +133,7 @@ Symbol & Role & Scope\\
 \(p_n(I;c)\) & posterior probability that fixed interval \(I\) has content at least \(c\) & response-distribution Bayesian layer\\
 \(H,J,\Sigma_F,\Sigma_G\) & Hessian, score variance, frequentist sandwich covariance, and generalized-posterior curvature covariance & static iid uncertainty\\
 \(\gamma_j,q_j\) & component discount and shared component evolution scale & dynamic model\\
-\(\mathcal O,n_{\mathrm{obs}},T\) & observed sites, their count, and dynamic time horizon & computation\\
+\(I_{\mathrm{obs}},n_{\mathrm{obs}},T\) & observed sites, their count, and dynamic time horizon & computation\\
 ET, MPI, MTI, SH & equal-tailed, mean-preserving interval, mean-tilted interval, and shortest-contiguous & fixed-content targets\\
 DP, DPM, HBS & Dirichlet process, Dirichlet-process mixture, and hybrid Bayesian--scan & response-distribution and tolerance actions\\
 DESN, DLM, FFBS & deep echo state network, dynamic linear model, and forward-filtering backward-sampling & fixed-design and dynamic computation\\
@@ -267,11 +274,11 @@ The equal-tailed interval fixes \(u_{\mathrm{ET}}=(1-c)/2\). MPI
 solves \(M_c(u_{\mathrm{MPI}})=\mu\). Define the possibly set-valued collection
 of shortest contiguous windows by
 \[
-\mathcal U_{\mathrm{SH}}
+S_{\mathrm{SH}}
 =\argmin_{0\le u\le1-c}W_c(u).
 \]
 If a positive density exists at an interior \(u_{\mathrm{SH}}\in
-\mathcal U_{\mathrm{SH}}\), then
+S_{\mathrm{SH}}\), then
 \[
 W_c'(u_{\mathrm{SH}})
 =\frac{1}{f\{Q(u_{\mathrm{SH}}+c)\}}
@@ -363,9 +370,9 @@ first-order system.
 Let \(\mu_x=\E(Y\mid X=x)\). Since
 \(\E(Y-\mu_x\mid X=x)=0\), the first-moment equation is also equivalent to
 \begin{equation}
-\int_{-\infty}^{a}(\mu_x-y)\,dF_x(y)
+\E[\{\mu_x-Y\}\ind(Y<a)\mid X=x]
 =
-\int_b^\infty(y-\mu_x)\,dF_x(y).
+\E[\{Y-\mu_x\}\ind(Y>b)\mid X=x].
 \label{eq:rqr-tail-moment-balance}
 \end{equation}
 Thus MPI balances omitted tail probability multiplied by average
@@ -795,9 +802,9 @@ whereas shortest-contiguous recovery is generally set-valued. Define
 \[
 \Delta_{\mathrm{SH}}
 =
-\{M_c(u)-\mu:u\in\mathcal U_{\mathrm{SH}}\}.
+\{M_c(u)-\mu:u\in S_{\mathrm{SH}}\}.
 \]
-If \(\mathcal U_{\mathrm{SH}}\) is a singleton, its element and tilt are denoted
+If \(S_{\mathrm{SH}}\) is a singleton, its element and tilt are denoted
 by \(u_{\mathrm{SH}}\) and \(\delta_{\mathrm{SH}}\). These identities establish
 population representation. Finite-sample recovery-tilt estimation requires an
 external selection protocol.
@@ -1162,7 +1169,7 @@ response-distribution models. For
 \eqref{eq:supp-mpi-product-check}. The fixed-rate generalized posterior
 therefore updates the prior by
 \[
-\exp\left\{-\omega_{\mathrm R}\sum_{i\in\mathcal O}
+\exp\left\{-\omega_{\mathrm R}\sum_{i\in I_{\mathrm{obs}}}
 \ell_c(\eta_{1i},\eta_{2i};y_i)\right\}.
 \]
 The following normal--exponential identity provides a latent-variable
@@ -1191,7 +1198,7 @@ the normalized asymmetric-Laplace kernel in the pseudo-residual is
 Equation~\eqref{eq:pseudo-al-mixture} augments the single-observation factor of
 the generalized posterior with a positive latent scale. Its left-hand side is
 evaluated at a residual product containing \(y_i\), so it is a density in the
-abstract pseudo-residual. Missing sites are excluded from \(\mathcal O\) and
+abstract pseudo-residual. Missing sites are excluded from \(I_{\mathrm{obs}}\) and
 have no latent scale.
 
 The latent-scale full conditional uses the \(\GIG(\nu,a,b)\) convention
@@ -1219,14 +1226,14 @@ where the inverse-Gaussian parameters are mean and shape.
 
 Static regression is the base computation for ridge readouts and frozen DESN
 features. Let
-\(\mat W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_i)^{-1}:i\in\mathcal O\}\).
+\(\mat W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_i)^{-1}:i\in I_{\mathrm{obs}}\}\).
 Conditional on the second root, define
 \[
-\mat A_1=\diag(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
-\mat X_{\mathcal O},\qquad
-\vect z_1=\vect y_{\mathcal O}\circ
-(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
--\xi_c\vect v_{\mathcal O}.
+\mat A_1=\diag(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}})
+\mat X_{\mathrm{obs}},\qquad
+\vect z_1=\vect y_{\mathrm{obs}}\circ
+(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}})
+-\xi_c\vect v_{\mathrm{obs}}.
 \]
 For Gaussian prior canonical parameters \((\mat Q_{01},\vect h_{01})\),
 \[
@@ -1248,10 +1255,10 @@ RHS-NS hierarchy or nonzero-tilt propriety for that random-scale adapter.
 
 \subsection{Fixed-Rate Mean-Tilt Shift}
 
-Let \(\vect\delta_{\mathcal O}\) be fixed and define
+Let \(\vect\delta_{\mathrm{obs}}\) be fixed and define
 \[
-\mathcal L_{n,c,\vect\delta}
-=\sum_{i\in\mathcal O}\left[
+L_{n,c,\vect\delta}
+=\sum_{i\in I_{\mathrm{obs}}}\left[
 \rho_c(e_i)-c\delta_i(\eta_{1i}+\eta_{2i}-2y_i)
 \right].
 \]
@@ -1260,7 +1267,7 @@ For a fixed learning rate \(\omega_{\mathrm R}\), the full-conditional precision
 \begin{equation}
 \vect h_1^{\mathrm{MT}}
 =\vect h_1+
-\omega_{\mathrm R}c\mat X_{\mathcal O}^\top\vect\delta_{\mathcal O}.
+\omega_{\mathrm R}c\mat X_{\mathrm{obs}}^\top\vect\delta_{\mathrm{obs}}.
 \label{eq:mean-tilt-canonical-shift}
 \end{equation}
 Root 2 receives the same shift. The latent GIG update is unchanged because the
@@ -1274,7 +1281,7 @@ precisions and latent-scale conditionals, root-exchange invariance, affine
 equivariance with a correspondingly transformed learning rate, and
 intercept-only agreement with direct numerical quadrature.
 
-For finite \(\mathcal O\), fixed \(\omega_{\mathrm R}\), and proper Gaussian
+For finite \(I_{\mathrm{obs}}\), fixed \(\omega_{\mathrm R}\), and proper Gaussian
 root priors, the nonzero-tilt generalized posterior is proper. Indeed, the
 MPI generalized-posterior factor is at most one and the remaining tilt
 factor is the exponential of a finite linear functional of
@@ -1288,7 +1295,8 @@ for the external horseshoe-family adapter.
 The same pseudo-asymmetric-Laplace augmentation gives a deterministic
 expectation/conditional-maximization algorithm for a fixed generalized-posterior
 mode \citep{DempsterLairdRubin1977EM,MengRubin1993ECM}. It is a computational
-method for \(\exp\{-\omega_{\mathrm R}\mathcal L_{n,c,\vect\delta}\}\Pi_0\),
+method for the generalized-posterior kernel
+\(\exp\{-\omega_{\mathrm R}L_{n,c,\vect\delta}\}\pi_0(\vartheta)\),
 not an ordinary likelihood EM algorithm for responses. Related
 asymmetric-Laplace quantile-regression computations use the same
 normal--exponential idea in a response working-likelihood setting
@@ -1319,10 +1327,10 @@ the latter plugs in \(E(v_i)\) and recomputes that mean between root updates.
 
 Holding \(\vect\beta_2\) fixed, write
 \[
-\mat A_2=\diag(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
-\mat X_{\mathcal O},\qquad
-\vect c_2=\vect y_{\mathcal O}^{\,2}
--\vect y_{\mathcal O}\circ\vect\eta_{2,\mathcal O}.
+\mat A_2=\diag(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}})
+\mat X_{\mathrm{obs}},\qquad
+\vect c_2=\vect y_{\mathrm{obs}}^{\,2}
+-\vect y_{\mathrm{obs}}\circ\vect\eta_{2,\mathrm{obs}}.
 \]
 With ridge prior precision \(\mat P_1\), the first conditional maximization
 solves
@@ -1337,17 +1345,17 @@ solves
 =
 \frac{1}{\phi_c\sigma_{\mathrm R}}
 \mat A_2^\top\{\diag(\vect\tau)\vect c_2-\xi_c\vect 1\}
-+\omega_{\mathrm R}c\mat X_{\mathcal O}^\top\vect\delta_{\mathcal O},
++\omega_{\mathrm R}c\mat X_{\mathrm{obs}}^\top\vect\delta_{\mathrm{obs}},
 \qquad
 \vect\beta_1^{+}=\mat\Lambda_1^{-1}\vect h_1.
 \]
 Then, using \(\vect\beta_1^{+}\) and the same outer E-step weights
 \(\vect\tau\),
 \[
-\mat A_1^{+}=\diag(\vect y_{\mathcal O}-\vect\eta_{1,\mathcal O}^{+})
-\mat X_{\mathcal O},\qquad
-\vect c_1^{+}=\vect y_{\mathcal O}^{\,2}
--\vect y_{\mathcal O}\circ\vect\eta_{1,\mathcal O}^{+},
+\mat A_1^{+}=\diag(\vect y_{\mathrm{obs}}-\vect\eta_{1,\mathrm{obs}}^{+})
+\mat X_{\mathrm{obs}},\qquad
+\vect c_1^{+}=\vect y_{\mathrm{obs}}^{\,2}
+-\vect y_{\mathrm{obs}}\circ\vect\eta_{1,\mathrm{obs}}^{+},
 \]
 \[
 \mat\Lambda_2
@@ -1360,7 +1368,7 @@ Then, using \(\vect\beta_1^{+}\) and the same outer E-step weights
 =
 \frac{1}{\phi_c\sigma_{\mathrm R}}
 (\mat A_1^{+})^\top\{\diag(\vect\tau)\vect c_1^{+}-\xi_c\vect 1\}
-+\omega_{\mathrm R}c\mat X_{\mathcal O}^\top\vect\delta_{\mathcal O},
++\omega_{\mathrm R}c\mat X_{\mathrm{obs}}^\top\vect\delta_{\mathrm{obs}},
 \qquad
 \vect\beta_2^{+}=\mat\Lambda_2^{-1}\vect h_2.
 \]
@@ -1446,14 +1454,14 @@ validation layer. Nonzero-tilt RHS-NS and VB readouts remain disabled.
 Learning the inverse-loss scale is a separate MPI generalized-posterior
 convention. Let \(s_L>0\) be a declared reference loss scale and set
 \(\sigma_{\mathrm R}=s_L/\kappa\). With
-\(\mathcal L_{n,c}(\vartheta)=
-\sum_{i\in\mathcal O}\rho_c(e_i)\), the hierarchical generalized posterior is
+\(L_{n,c}(\vartheta)=
+\sum_{i\in I_{\mathrm{obs}}}\rho_c(e_i)\), the hierarchical generalized posterior is
 \begin{equation}
 \pi(\vartheta,\kappa\mid\vect y)
 \propto
 \pi(\vartheta)\pi_\kappa(\kappa)
 \kappa^{n_{\mathrm{obs}}}
-\exp\{-\kappa\mathcal L_{n,c}(\vartheta)/s_L\},
+\exp\{-\kappa L_{n,c}(\vartheta)/s_L\},
 \label{eq:normalized-scale-target}
 \end{equation}
 where \(\vartheta\) denotes both roots and, when present, their proper
@@ -1462,13 +1470,13 @@ root-specific prior or evolution states. For
 \begin{equation}
 \kappa\mid\vartheta,\vect y
 \sim\mathrm{Gamma}\left(a_\kappa+n_{\mathrm{obs}},
-b_\kappa+\mathcal L_{n,c}(\vartheta)/s_L\right).
+b_\kappa+L_{n,c}(\vartheta)/s_L\right).
 \label{eq:kappa-collapsed}
 \end{equation}
 
 For any proper MPI root and prior-state law \(\pi(\vartheta)\), the joint
 generalized posterior in \eqref{eq:normalized-scale-target} is proper. Indeed,
-\(\mathcal L_{n,c}(\vartheta)\geq0\), so its exponential factor is at most one,
+\(L_{n,c}(\vartheta)\geq0\), so its exponential factor is at most one,
 and the remaining upper bound integrates to the finite
 \(n_{\mathrm{obs}}\)th moment of the Gamma prior. This argument includes the
 declared MPI RHS-NS adapter when its complete prior-state law and update
@@ -1505,7 +1513,7 @@ augmented generalized posterior is
 \begin{align}
 \kappa\mid\vartheta,\vect v,\vect y
 \sim\mathrm{Gamma}\Bigg(&a_\kappa+\frac{3n_{\mathrm{obs}}}{2},\notag\\
-&b_\kappa+\frac{1}{s_L}\sum_{i\in\mathcal O}
+&b_\kappa+\frac{1}{s_L}\sum_{i\in I_{\mathrm{obs}}}
 \left[v_i+\frac{(e_i-\xi_cv_i)^2}{2\phi_cv_i}\right]\Bigg).
 \label{eq:kappa-augmented}
 \end{align}
@@ -1525,7 +1533,7 @@ distribution.
 MPI RHS-NS adapter defined above, or a declared fixed-joint dynamic mode
 whose root and prior-state updates are otherwise valid.
 \item \textbf{Inputs and fixed quantities.} Freeze
-\(c,s_L,a_\kappa,b_\kappa,\mathcal O\), the root priors, all design or
+\(c,s_L,a_\kappa,b_\kappa,I_{\mathrm{obs}}\), the root priors, all design or
 evolution quantities, iteration controls, and the label-swap rule.
 \item \textbf{Initialization.} Choose finite raw roots, \(\kappa>0\), positive
 initial latent scales at observed sites, and valid MPI-only prior or
@@ -1534,7 +1542,7 @@ evolution states.
 partial-collapse order for every warm-up and sampling iteration:
 \begin{enumerate}[label=(\alph*),leftmargin=1.8em,itemsep=0.15em,topsep=0.15em]
 \item draw \(\kappa\) from \eqref{eq:kappa-collapsed} using the current roots;
-\item immediately refresh every \(v_i\), \(i\in\mathcal O\), from its GIG
+\item immediately refresh every \(v_i\), \(i\in I_{\mathrm{obs}}\), from its GIG
 conditional using the new \(\kappa\);
 \item update root 1 conditional on root 2 and the refreshed scales;
 \item update root 2 conditional on the new root 1 and refreshed scales;
@@ -1576,13 +1584,13 @@ Equivalently, define
 \alpha_t=
 \begin{pmatrix}\theta_{1t}\\\theta_{2t}\end{pmatrix},
 \qquad
-\mathcal G_t=
+G_t^{\mathrm{stk}}=
 \begin{pmatrix}G_t&0\\0&G_t\end{pmatrix},
 \qquad
-\mathcal W_t=
+W_t^{\mathrm{stk}}=
 \begin{pmatrix}W_{1t}&0\\0&W_{2t}\end{pmatrix}.
 \]
-Then \(\alpha_t=\mathcal G_t\alpha_{t-1}+\varepsilon_t\) is one stacked
+Then \(\alpha_t=G_t^{\mathrm{stk}}\alpha_{t-1}+\varepsilon_t\) is one stacked
 Gaussian state prior. It does not yield one jointly Gaussian state-path full
 conditional. Writing
 \(\eta_{1t}=f_t^\top\theta_{1t}\) and
@@ -1653,9 +1661,9 @@ m_t=m_t^{(0)}+C_tg_t
 before propagating to time \(t+1\); \(C_t\) is unchanged. At a missing
 response, the measurement update, latent scale, and tilt site are all omitted.
 Equivalently, if the zero-tilt conditional path has precision
-\(\mathcal Q_k\) and mean \(m_k^{(0)}\), the tilted conditional mean is
+\(Q_k^{\mathrm{path}}\) and mean \(m_k^{(0)}\), the tilted conditional mean is
 \begin{equation}
-m_k^{(0)}+\mathcal Q_k^{-1}g,
+m_k^{(0)}+\{Q_k^{\mathrm{path}}\}^{-1}g,
 \label{eq:supp-dlm-tilt-path-shift}
 \end{equation}
 with \(g\) formed by stacking the observed \(g_t\) values and zeros elsewhere.
@@ -1909,7 +1917,7 @@ For the implemented MPI learned-rate mode,
 case, the noncentered full conditional would additionally contain
 \begin{equation}
 \omega_{\mathrm R}c
-\sum_{t\in\mathcal O}\delta_t
+\sum_{t\in I_{\mathrm{obs}}}\delta_t
 \{\eta_{1t}(\vect x)+\eta_{2t}(\vect x)-2y_t\}.
 \label{eq:supp-tilted-component-scale-asis}
 \end{equation}
@@ -2004,11 +2012,11 @@ The first coordinate of this two-cell Dirichlet vector is Beta with parameters
 
 The Bayesian-only order-statistic action searches
 \[
-\mathcal I_n=\{[Y_{(j)},Y_{(\ell)}]:1\le j\le \ell\le n\}
+A_n=\{[Y_{(j)},Y_{(\ell)}]:1\le j\le \ell\le n\}
 \]
 and returns the first minimum-width member of
 \[
-\{I\in\mathcal I_n:p_n(I;c)\ge 1-\gamma\}.
+\{I\in A_n:p_n(I;c)\ge 1-\gamma\}.
 \]
 This action quantifies posterior uncertainty about interval content under the
 response-distribution model. Distribution-free tolerance certification requires
@@ -2018,12 +2026,12 @@ The hybrid Bayesian--scan action adds the scan count:
 \[
 \widehat T_n^{\mathrm{HBS}}
 =\min_{\mathrm{width},\,\mathrm{first\ tie}}
-\{I\in\mathcal I_n:N_n(I)\ge k_{n,c,\alpha},\
+\{I\in A_n:N_n(I)\ge k_{n,c,\alpha},\
 p_n(I;c)\ge 1-\gamma\}.
 \]
 The count \(k_{n,c,\alpha}\) is calibrated outside the Bayesian posterior and is
 held fixed. The posterior threshold can be redundant, binding, or infeasible
-within \(\mathcal I_n\). The implementation records that status rather than
+within \(A_n\). The implementation records that status rather than
 relaxing either constraint.
 
 Posterior shortest-target functionals are obtained by drawing a distribution

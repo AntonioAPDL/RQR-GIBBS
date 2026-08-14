@@ -280,7 +280,7 @@ MPI
 & \(M_c(u)=\mu\)
 & Mean-preserving truncation\\
 Shortest contiguous
-& \(u\in\mathcal U_{\mathrm{SH}}=\argmin_v W_c(v)\)
+& \(u\in S_{\mathrm{SH}}=\argmin_v W_c(v)\)
 & Minimum geometric width\\
 \bottomrule
 \end{tabularx}
@@ -407,9 +407,9 @@ consequence of the same first-order system: conditional on \(X=x\), interval
 membership has zero covariance with \(Y\). In omitted-tail form, the same
 identity balances first-moment mass around the conditional mean:
 \[
-\int_{-\infty}^{a}\{\mu_x-y\}\,dF_x(y)
+\E[\{\mu_x-Y\}\ind(Y<a)\mid X=x]
 =
-\int_b^\infty\{y-\mu_x\}\,dF_x(y),
+\E[\{Y-\mu_x\}\ind(Y>b)\mid X=x],
 \qquad \mu_x=\E(Y\mid X=x).
 \]
 Tail probabilities may differ; MPI balances their first moments around
@@ -566,18 +566,18 @@ separate target-selection protocol.
 \label{cor:recovery-tilts}
 MPI is recovered by \(\delta_{\mathrm{MPI}}=0\). Define
 \[
-\mathcal U_{\mathrm{SH}}
+S_{\mathrm{SH}}
 =
 \argmin_{0\le u\le1-c}W_c(u),\qquad
 \Delta_{\mathrm{SH}}
 =
-\{M_c(u)-\mu:u\in\mathcal U_{\mathrm{SH}}\}.
+\{M_c(u)-\mu:u\in S_{\mathrm{SH}}\}.
 \]
 The population recovery tilt for the equal-tailed interval is
 \[
 \delta_{\mathrm{ET}}=M_c\{(1-c)/2\}-\mu.
 \]
-Each \(u\in\mathcal U_{\mathrm{SH}}\) has recovery tilt
+Each \(u\in S_{\mathrm{SH}}\) has recovery tilt
 \(\delta_{\mathrm{SH}}(u)=M_c(u)-\mu\). Singular notation is used only when the
 shortest-contiguous window is unique or one minimizer has been selected.
 \end{corollary}
@@ -784,8 +784,8 @@ reporting. The root labels \(1\) and \(2\) index coefficient blocks; lower
 and upper endpoints are formed only after the roots are evaluated at a design
 row.
 
-Let \(\mathcal O\) index the observed rows of
-\(\mat X\in\R^{n\times p}\), with \(n_{\mathrm{obs}}=|\mathcal O|\), and
+Let \(I_{\mathrm{obs}}\) index the observed rows of
+\(\mat X\in\R^{n\times p}\), with \(n_{\mathrm{obs}}=|I_{\mathrm{obs}}|\), and
 define two raw-root readouts
 \[
 \vect\eta_k=\mat X\vect\beta_k,\qquad k=1,2.
@@ -817,18 +817,18 @@ e_i=(y_i-\eta_{1i})(y_i-\eta_{2i}),\qquad
 =\rho_c(e_i)-c\delta_i(\eta_{1i}+\eta_{2i}-2y_i).
 \]
 Write \(\theta=(\vect\beta_1^\top,\vect\beta_2^\top)^\top\) for the two-root
-coefficient block. For priors \(\pi_1,\pi_2\), a fixed externally declared
-\(\vect\delta\), and a fixed learning rate \(\omega_{\mathrm R}>0\), the
-generalized posterior is
+coefficient block. For prior densities \(\pi_1,\pi_2\), a fixed externally
+declared \(\vect\delta\), and a fixed learning rate \(\omega_{\mathrm R}>0\),
+the generalized posterior kernel is
 \begin{equation}
 \begin{split}
-\Pi_{\vect\delta}
-(d\vect\beta_1,d\vect\beta_2\mid\vect y,\mat X)
+\pi_{\vect\delta}
+(\vect\beta_1,\vect\beta_2\mid\vect y,\mat X)
 \propto{}&
-\pi_1(d\vect\beta_1)\pi_2(d\vect\beta_2)\\
+\pi_1(\vect\beta_1)\pi_2(\vect\beta_2)\\
 &\times\exp\left\{-\omega_{\mathrm R}
-\sum_{i\in\mathcal O}
-\ell_{c,\delta_i}^{\mathrm{MTI}}(\eta_{1i},\eta_{2i};y_i)\right\},
+\sum_{i\in I_{\mathrm{obs}}}
+\ell_{c,\delta_i}^{\mathrm{MTI}}(\eta_{1i},\eta_{2i};y_i)\right\}.
 \end{split}
 \label{eq:fixed-mt-target}
 \end{equation}
@@ -855,10 +855,19 @@ RHS-NS prior adapter described below. Nonzero MTI is kept to fixed-rate
 Gaussian or ridge settings, frozen-DESN readouts, and fixed or frozen dynamic
 evolution specifications.
 
-\subsection{Pseudo-AL Augmentation and Gibbs Updates}
+\subsection{Pseudo-AL Computation: Gibbs and ECM}
 \label{sec:gibbs}
 
-Let
+This subsection gives the computational bridge from the loss-defined target to
+Gibbs and deterministic mode calculations. The bridge has three parts: a
+normal--exponential identity for the product-residual loss factor, a
+generalized-inverse-Gaussian update for the latent scales, and Gaussian updates
+for one root conditional on the other. The same identity also gives the ECM
+mode update after replacing inverse latent scales by their exact conditional
+moments.
+
+\paragraph{Latent-scale identity.}
+For each observed row, let
 \[
 r_i=y_i^2,\qquad
 m_i^{\mathrm R}=y_i(\eta_{1i}+\eta_{2i})-\eta_{1i}\eta_{2i}.
@@ -879,11 +888,14 @@ r_i\mid m_i^{\mathrm R}+\xi_c v_i,\,
 \right)
 \Exp(v_i\mid \text{rate}=1/\sigma_{\mathrm R})\,dv_i .
 \]
-This identity defines a latent-variable augmentation of that generalized
-posterior factor. The response value enters through the product-residual loss;
-any sampling model for \(Y\) belongs to a separate response-distribution layer.
-Under the
-three-parameter convention
+The integral is over the positive latent scale \(v_i\). It augments the
+single-observation factor of the generalized posterior; it is not a sampling
+density for the response. The response value enters through the
+product-residual loss, while any sampling model for \(Y\) belongs to a
+separate response-distribution layer.
+
+\paragraph{Latent-scale update.}
+Under the three-parameter convention
 \[
 \GIG(p,a,b):\quad
 p(v)\propto v^{p-1}\exp\{-(av+b/v)/2\},
@@ -897,29 +909,30 @@ v_i\mid\cdot\sim
 \frac{\omega_{\mathrm R}}{2c(1-c)},\,
 \frac{\omega_{\mathrm R}c(1-c)e_i^2}{2}
 \right),
-\qquad i\in\mathcal O.
+\qquad i\in I_{\mathrm{obs}}.
 \]
 The MPI learned-scale convention instead sets
-\(\sigma_{\mathrm R}=s_L/\kappa\) and follows the separate partially collapsed
-order stated in the following subsection and in the supplement.
+\(\sigma_{\mathrm R}=s_L/\kappa\) and follows the separate partially
+collapsed order stated later in this section and in the supplement.
 
+\paragraph{Gaussian root update.}
 Conditional on \(\vect\beta_2\), the pseudo-observation equation is linear in
 \(\vect\beta_1\):
 \[
-\mat A_1=\diag(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
-\mat X_{\mathcal O},\qquad
-\vect z_1=\vect y_{\mathcal O}\circ
-(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
--\xi_c\vect v_{\mathcal O}.
+\mat A_1=\diag(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}})
+\mat X_{\mathrm{obs}},\qquad
+\vect z_1=\vect y_{\mathrm{obs}}\circ
+(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}})
+-\xi_c\vect v_{\mathrm{obs}}.
 \]
 With
-\(\mat W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_i)^{-1}:i\in\mathcal O\}\)
+\(\mat W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_i)^{-1}:i\in I_{\mathrm{obs}}\}\)
 and Gaussian prior
 canonical parameters \((\mat Q_{01},\vect h_{01})\),
 \[
 \mat Q_1=\mat Q_{01}+\mat A_1^\top\mat W_v\mat A_1,\qquad
 \vect h_1=\vect h_{01}+\mat A_1^\top\mat W_v\vect z_1
-+\omega_{\mathrm R}c\mat X_{\mathcal O}^{\top}\vect\delta_{\mathcal O},
++\omega_{\mathrm R}c\mat X_{\mathrm{obs}}^{\top}\vect\delta_{\mathrm{obs}},
 \]
 so the Gaussian full conditional is
 \[
@@ -931,6 +944,7 @@ conditioning on the newly drawn first root. The tilt changes only the two
 Gaussian information vectors: the latent-scale conditionals and Gaussian
 precision matrices are unchanged.
 
+\paragraph{ECM mode.}
 For a deterministic fixed-target mode, the same augmentation gives an ECM
 algorithm. At the current roots, for nonzero residual product \(e_i\),
 \[
@@ -938,10 +952,10 @@ algorithm. At the current roots, for nonzero residual product \(e_i\),
 \]
 Holding the second root fixed, let
 \[
-\mat A_1=\diag(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
-\mat X_{\mathcal O},\qquad
-\vect c_1=\vect y_{\mathcal O}\circ
-(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O}).
+\mat A_1=\diag(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}})
+\mat X_{\mathrm{obs}},\qquad
+\vect c_1=\vect y_{\mathrm{obs}}\circ
+(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}}).
 \]
 Replacing \(v_i^{-1}\) by \(\tau_i\) in the expected complete-data criterion
 gives a Gaussian conditional maximization with precision
@@ -957,7 +971,7 @@ and canonical vector
 =\vect h_{01}
 +\frac{1}{\phi_c\sigma_{\mathrm R}}
 \mat A_1^\top\{\diag(\vect\tau)\vect c_1-\xi_c\vect 1\}
-+\omega_{\mathrm R}c\mat X_{\mathcal O}^\top\vect\delta_{\mathcal O}.
++\omega_{\mathrm R}c\mat X_{\mathrm{obs}}^\top\vect\delta_{\mathrm{obs}}.
 \]
 The first conditional maximization sets
 \(\vect\beta_1=(\mat Q_1^{\mathrm{ECM}})^{-1}\vect h_1^{\mathrm{ECM}}\);
@@ -1001,12 +1015,12 @@ propriety does not establish the same result after random-scale mixing.
 \begin{algorithmblock}{Static fixed-rate MPI/MTI root-blocked Gibbs sampler}
 \label{alg:fixed-design-gibbs}
 \item \textbf{Specify the generalized posterior.} Fix
-\(\vect y,\mat X,\mathcal O,c,\omega_{\mathrm R}\), the target tilt
-\(\vect\delta_{\mathcal O}\), proper root priors, and the label-swap rule.
+\(\vect y,\mat X,I_{\mathrm{obs}},c,\omega_{\mathrm R}\), the target tilt
+\(\vect\delta_{\mathrm{obs}}\), proper root priors, and the label-swap rule.
 Missing rows contribute no generalized-posterior factor, latent scale, or tilt
 term.
 \item \textbf{Initialize.} Choose finite
-\(\vect\beta_1,\vect\beta_2\), positive \(v_i\) for \(i\in\mathcal O\), and
+\(\vect\beta_1,\vect\beta_2\), positive \(v_i\) for \(i\in I_{\mathrm{obs}}\), and
 valid root-specific prior states when the MPI RHS-NS adapter is used.
 \item \textbf{Sweep.} For each iteration:
 \begin{enumerate}[label=(\alph*),leftmargin=1.8em,itemsep=0.15em,topsep=0.15em]
@@ -1014,8 +1028,8 @@ valid root-specific prior states when the MPI RHS-NS adapter is used.
 conditional;
 \item draw \(\vect\beta_1\) from its Gaussian full conditional given
 \(\vect\beta_2\), with tilt shift
-\(\omega_{\mathrm R}c\mat X_{\mathcal O}^{\top}
-\vect\delta_{\mathcal O}\);
+\(\omega_{\mathrm R}c\mat X_{\mathrm{obs}}^{\top}
+\vect\delta_{\mathrm{obs}}\);
 \item update root 1's MPI RHS-NS prior state when that adapter is active;
 \item rebuild the system and draw \(\vect\beta_2\) conditionally on the new
 \(\vect\beta_1\), using the same tilt shift;
@@ -1069,13 +1083,13 @@ data-selected reservoir features.
 
 A separate MPI-only convention uses a positive reference loss scale
 \(s_L\), sets \(\sigma_{\mathrm R}=s_L/\kappa\), writes
-\(\mathcal L_{n,c}(\vartheta)=
-\sum_{i\in\mathcal O}\rho_c(e_i)\), and declares
+\(L_{n,c}(\vartheta)=
+\sum_{i\in I_{\mathrm{obs}}}\rho_c(e_i)\), and declares
 \[
-\Pi_{\mathrm R}(d\vartheta,d\kappa\mid\vect y)
+\pi_{\mathrm R}(\vartheta,\kappa\mid\vect y)
 \propto
-\pi(d\vartheta)\kappa^{n_{\mathrm{obs}}}\pi_\kappa(d\kappa)
-\exp\{-\kappa\mathcal L_{n,c}(\vartheta)/s_L\},
+\pi(\vartheta)\kappa^{n_{\mathrm{obs}}}\pi_\kappa(\kappa)
+\exp\{-\kappa L_{n,c}(\vartheta)/s_L\},
 \]
 the \emph{pseudo-residual-normalized learned-scale generalized posterior}.
 The factor
@@ -1088,7 +1102,7 @@ collapsed full conditional is
 \[
 \kappa\mid\vartheta,\vect y
 \sim\mathrm{Gamma}\left(a_\kappa+n_{\mathrm{obs}},
-b_\kappa+\mathcal L_{n,c}(\vartheta)/s_L\right).
+b_\kappa+L_{n,c}(\vartheta)/s_L\right).
 \]
 The factor \(\kappa^{n_{\mathrm{obs}}}\) is part of this generalized posterior
 rather than an irrelevant constant when \(\kappa\) is learned. A pure-loss
@@ -1112,7 +1126,7 @@ immediately refreshes every observed latent scale at the new value, and only
 then updates roots 1 and 2; Supplement Algorithm~S1 gives the complete order.
 For any proper MPI root/prior-state law \(\pi(\vartheta)\), joint
 integrability follows because the loss is nonnegative,
-\(\exp\{-\kappa\mathcal L_{n,c}(\vartheta)/s_L\}\leq1\), and the Gamma prior
+\(\exp\{-\kappa L_{n,c}(\vartheta)/s_L\}\leq1\), and the Gamma prior
 has a finite \(n_{\mathrm{obs}}\)th moment. This covers the declared MPI
 RHS-NS adapter while preserving its complete prior-state updates.
 The mean-tilted loss may be negative, and a proper normalized joint generalized
@@ -1146,7 +1160,7 @@ full-conditional updates for the specified fixed-joint generalized posterior.
 The resulting computational concern is Markov-chain mixing, not approximation
 of either full conditional.
 
-For \(t\in\mathcal O\), conditional on the second root path and the MTI latent
+For \(t\in I_{\mathrm{obs}}\), conditional on the second root path and the MTI latent
 scales, the first path has the pseudo-observation system
 \[
 z_{1t}=y_t(y_t-\eta_{2t})-\xi_c v_t,\qquad
@@ -1187,7 +1201,7 @@ empirical-Bayes specification.
 \begin{algorithmblock}{Fixed-rate MTI-DLM root-blocked Gibbs sampler}
 \label{alg:dynamic-gibbs}
 \item \textbf{Specify the joint generalized posterior.} Fix
-\((\vect y,\mathcal O)\), \(c,\omega_{\mathrm R}\), \(\delta_{1:T}\),
+\((\vect y,I_{\mathrm{obs}})\), \(c,\omega_{\mathrm R}\), \(\delta_{1:T}\),
 \(\vect f_{1:T}\), \(\mat G_{1:T}\), proper Gaussian initial laws, and either
 fixed \(\mat W_{1:T}\) or one precomputed frozen discount template.
 \item \textbf{Initialize.} Choose finite root paths
@@ -1197,7 +1211,7 @@ factor, latent scale, or tilt term.
 \item \textbf{Sweep.} For each iteration:
 \begin{enumerate}[label=(\alph*),leftmargin=1.8em,itemsep=0.15em,topsep=0.15em]
 \item compute the current product residual and draw \(v_t\) at every
-\(t\in\mathcal O\) from the GIG conditional;
+\(t\in I_{\mathrm{obs}}\) from the GIG conditional;
 \item conditional on \(\vect\theta_{2,1:T}\), build root 1's scalar Gaussian
 pseudo-observation system, add
 \(\vect g_t=\omega_{\mathrm R}c\delta_t\vect f_t\) at observed times, and draw
@@ -1269,6 +1283,7 @@ response-distribution model for \(F\) is used, \(1-\gamma\) denotes a posterior
 content-probability screening threshold. Neither \(\omega_{\mathrm R}\) nor
 \(1-\gamma\) determines the tolerance confidence.
 
+\paragraph{Scan-calibrated empirical action.}
 Let \(Y_{(1)}\le\cdots\le Y_{(n)}\). For content \(c\), define the uniform scan
 statistic
 \[
@@ -1295,6 +1310,7 @@ with \(k=k_{n,c,\alpha}\). This convention is closed and contains exactly
 tolerance limits, so a result proved for one convention cannot be transferred
 without reconciling the indices and endpoint rule.
 
+\paragraph{MTI summaries after selection.}
 The selected window also defines a fixed-target MTI approximation for endpoint
 uncertainty. Its fitted content and content buffer are
 \[
@@ -1311,9 +1327,9 @@ The empirical shortest-path tilt is
 After \(q\) and \(\widehat\delta_{\mathrm{SH}}\) are fixed, an MTI endpoint
 model with parameter block \(\theta\) uses the loss-based update
 \[
-\Pi_{q,\delta,\omega_{\mathrm R}}(d\theta\mid D_n)
+\pi_{q,\delta,\omega_{\mathrm R}}(\theta\mid D_n)
 \propto
-\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(\theta)\}\Pi_0(d\theta).
+\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(\theta)\}\pi_0(\theta).
 \]
 This generalized posterior quantifies uncertainty about a fixed interval-root
 functional after the target has been declared. The formal tolerance action
@@ -1323,6 +1339,7 @@ posterior summaries are conditional on the selected target and do not propagate
 shortest-window selection uncertainty. An unconditional interpretation requires
 a plug-in stability theorem or a separate target-selection sample.
 
+\paragraph{Bayesian response-distribution actions.}
 The full-distribution Bayesian layer instead models \(F\) directly. Under a
 Dirichlet-process (DP) response-distribution model,
 \[
@@ -1369,6 +1386,7 @@ Carlo posterior summaries. The Bayesian bootstrap
 \citep{Rubin1981BayesianBootstrap} is retained only as a diagnostic
 weighted-empirical comparator.
 
+\paragraph{Split exact-spacing action.}
 A sample-split alternative removes this same-sample placement issue for the
 univariate tolerance action. Randomly divide the observations into an
 independent pilot sample and an independent main sample. The pilot chooses a
@@ -1388,6 +1406,7 @@ validity of the fixed main-sample spacing. This first split construction is
 continuous-iid-univariate; regression-family tolerance calibration remains a
 separate theorem.
 
+\paragraph{Numerical certification and proof scope.}
 Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
 reported interval. The numerical procedure uses Monte Carlo calibration of
 the uniform scan distribution with a simultaneous
@@ -1413,6 +1432,7 @@ window convention, selected-action asymptotics, posterior-to-action transfer,
 and regression-family tolerance calibration remain separate certification
 tasks.
 
+\paragraph{Shortest-path continuation.}
 The population shortest-window path gives useful continuation geometry for
 moving across contents. This geometry helps initialize and check numerical
 paths; it is not the scan certificate. Suppose that the density is
