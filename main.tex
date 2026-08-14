@@ -796,19 +796,45 @@ L_i=\min(\eta_{1i},\eta_{2i}),\quad
 U_i=\max(\eta_{1i},\eta_{2i}),\quad
 M_i=(L_i+U_i)/2,\quad W_i=U_i-L_i.
 \]
-These ordered summaries are generalized-posterior functionals. The static asymptotic
-result above is narrower: it assumes one globally labelable, uniformly
-separated endpoint ordering.
-When the two root priors are exchangeable, the raw labels \(k=1,2\) are not
-identified. The sampler may therefore apply a complete-root label swap as an
-acceptance-one symmetry move; this exchanges all root-specific coefficient and
-prior-state variables but does not assign lower- or upper-endpoint meaning to
-the raw labels. Coefficient-level lower/upper summaries are reported only as a
-post-processing chart on a declared reference design, and only when one complete
-root block is separated below the other across that design. If the fitted
-linear roots cross on the reference domain or the keep/swap assignment is
-ambiguous, the canonical coefficient chart is not reported; pointwise ordered
-endpoints remain well defined.
+These ordered summaries are generalized-posterior functionals of the unordered
+root pair. For interpretation, it is useful to define the midpoint and signed
+half-gap coefficients
+\[
+\vect\beta_m=\frac{\vect\beta_1+\vect\beta_2}{2},\qquad
+\vect\beta_s=\frac{\vect\beta_2-\vect\beta_1}{2}.
+\]
+At a design row \(\vect x\), write
+\[
+m(\vect x)=\vect x^\top\vect\beta_m,\qquad
+s(\vect x)=\vect x^\top\vect\beta_s.
+\]
+Then
+\[
+L(\vect x)=m(\vect x)-|s(\vect x)|,\qquad
+U(\vect x)=m(\vect x)+|s(\vect x)|,\qquad
+W(\vect x)=2|s(\vect x)|.
+\]
+A complete exchange of the two raw root blocks leaves
+\(\vect\beta_m\), \(L\), \(U\), and \(W\) unchanged and reverses the sign of
+\(\vect\beta_s\). Thus \(\vect\beta_m\) describes the geometric midpoint of the
+reported interval, while \(\vect\beta_s\) is a signed gap coordinate. The
+midpoint should be interpreted as endpoint geometry:
+Proposition~\ref{prop:population-characterization} concerns the retained
+conditional mean, and MTI uses \(\delta\) to set a retained-mean offset.
+
+When the two root priors are exchangeable, the raw labels \(k=1,2\) are
+therefore computational labels. The sampler may apply a complete-root label swap
+as an acceptance-one symmetry move; this exchanges all root-specific coefficient
+and prior-state variables while preserving the ordered interval functionals.
+Coefficient-level lower/upper summaries are reported only as a post-processing
+chart on a declared reference design, and only when one complete root block is
+separated below the other across that design. If the fitted linear roots cross
+on the reference domain or the keep/swap assignment is ambiguous, the canonical
+coefficient chart is suppressed. In that case, pointwise ordered endpoints,
+widths, midpoints, and covariate-profile contrasts are the appropriate
+summaries. The static asymptotic result above has the narrower ordered-chart
+scope: it assumes one globally labelable, uniformly separated endpoint
+ordering.
 
 For each observed row, define
 \[
@@ -1561,6 +1587,15 @@ as a recorded-design endpoint regression. The learned inverse-loss scale
 \(\kappa\) is a convention within a specified hierarchical generalized
 posterior. Response variance and endpoint calibration are separate modeling and
 validation quantities.
+
+The exchangeable-root construction also determines how regression effects should
+be read. Raw root coefficients are useful computational coordinates, while the
+scientific summaries are the ordered endpoints, the geometric midpoint, the
+width, and contrasts of these quantities across named covariate profiles.
+Conventional lower- and upper-endpoint coefficient summaries require a passed
+global-separation audit on a declared domain. Under crossing or ambiguous
+labeling, the interval remains meaningful through its ordered pointwise
+functionals; a permanent endpoint role for one root block is then unavailable.
 
 The dynamic extension preserves the interval target while replacing static
 coefficients by evolving root states. The product residual leaves a quartic
