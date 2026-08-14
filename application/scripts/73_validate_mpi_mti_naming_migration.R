@@ -98,14 +98,14 @@ for (path in launch_files) {
 
 required_patterns <- list(
   "main.tex" = c(
-    "Mean-Preserving Interval Loss",
-    "Mean-Tilted Interval Family",
-    "Scan-Calibrated Tolerance Actions"
+    "The Mean-Preserving Interval Target",
+    "Mean-Tilted Intervals",
+    "Calibrated Minimum-Width Tolerance Intervals"
   ),
   "rqr-gibbs-supplement.tex" = c(
-    "MPI Loss",
+    "Mean-Preserving Interval Scores",
     "Mean-Tilted Interval",
-    "RQR-W and Width Regularization"
+    "Width-Regularized Interval Loss"
   ),
   "application/config/rqr_bayes_uq_validation_main_20260813.json" = c(
     "tcsp_mti_gibbs_median_mc",

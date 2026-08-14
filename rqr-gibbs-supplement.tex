@@ -86,7 +86,7 @@ regression-family tolerance theory remain open.
 
 \section*{Part I. Notation, Inferential Objects, and Support Map}
 
-\section{Supplement Scope and Navigation}
+\section{Guide to the Supplement}
 \label{sec:supp-scope}
 
 The main article carries the statistical narrative. The supplement is a recovery
@@ -237,7 +237,7 @@ finite-sample balance, and static uncertainty claims. It works before any
 algorithmic approximation is introduced and records the assumptions under which
 the interval target, score equations, and covariance statements are valid.
 
-\section{Fixed-Content Interval Functionals}
+\section{Fixed-Content Interval Targets}
 \label{sec:supp-interval-functionals}
 
 The population interval class is most transparent on the probability scale.
@@ -276,7 +276,7 @@ for this comparison
 \citep{GneitingRaftery2007,BrehmerGneiting2021Intervals,
 FisslerEtAl2021SetValued}.
 
-\section{MPI Loss: Scores and Consequences}
+\section{Mean-Preserving Interval Scores}
 \label{sec:supp-population-target}
 
 The derivation starts from the endpoint scores because those scores determine
@@ -435,7 +435,7 @@ The full conditional distribution is their mixture with weights \(c\) and
 \(\varphi(y)=(y-\mu_x)^2\) gives the variance statement.
 \end{proof}
 
-\subsection{Interval path, response scale, and tail sensitivity}
+\subsection{Interval Paths and Tail Sensitivity}
 
 Retain the quantile-window characterization and assume, for this derivative
 calculation, connected support and positive continuous density at the relevant
@@ -538,7 +538,7 @@ observation coincides with a fitted root. We therefore do not use that
 calculation as a finite-sample guarantee; such a result requires a separate
 empirical-process analysis.
 
-\section{The Mean-Tilted Interval Loss}
+\section{Mean-Tilted Interval Loss and Target}
 \label{sec:supp-mean-tilt}
 
 The MTI loss keeps the content score of MPI and shifts only the retained-mean
@@ -570,7 +570,7 @@ They are design-weighted projection equations; they do not imply pointwise
 conditional content or retained-mean identities unless the predictor class is
 sufficiently rich and the unrestricted conditions apply.
 
-\paragraph{Root-label contract.}
+\paragraph{Root-Labeling Convention.}
 The losses \eqref{eq:mean-tilted-loss-roots} and the MPI
 \(\delta=0\) loss are invariant to exchanging the two raw roots. With
 exchangeable root priors, the unordered pair is identified but the labels
@@ -792,7 +792,7 @@ identifies any interior shortest-contiguous member. Boundary members use the
 canonical one-sided closure described above, and the statement does not extend
 the target to disconnected highest-density regions.
 
-\subsection{First-order Cornish--Fisher tilt anchors}
+\subsection{Cornish--Fisher Tilt Anchors}
 \label{sec:supp-cf-tilt}
 
 The recovery identities also give a low-cost initialization diagnostic. Let
@@ -890,10 +890,10 @@ the initial ridge fixed-design model and finite-horizon Gaussian state model.
 Nonzero tilt under heavier-tailed shrinkage priors requires a separate
 coercivity or propriety result.
 
-\section{Static Finite-Sample Balance and Uncertainty Geometry}
+\section{Empirical Balance and Static Uncertainty}
 \label{sec:supp-static-theory}
 
-\subsection{Fractional empirical balance}
+\subsection{Fractional Empirical Balance}
 
 Finite-sample score balance is fractional because observations may lie exactly
 on fitted roots. For intercept-only roots and fixed \(\delta\), define
@@ -983,7 +983,7 @@ This is the finite-sample analogue of the restricted population score. It is
 not pointwise conditional coverage unless the predictor class is correctly
 specified and sufficiently rich.
 
-\subsection{Fixed-dimensional iid uncertainty geometry}
+\subsection{Fixed-Dimensional iid Uncertainty}
 
 The static asymptotic statements used for uncertainty calibration are
 fixed-dimensional iid random-design statements. Let \(Z=(X,Y)\) be iid with
@@ -1080,7 +1080,7 @@ are deterministic pointwise score calculations, not fitted results.}
 \label{fig:supp-loss-geometry}
 \end{figure}
 
-\section{RQR-W and Width Regularization}
+\section{Width-Regularized Interval Loss}
 \label{sec:supp-rqr-w}
 
 The width-regularized variant in \citet{PouplinEtAl2024RQR} has a different
@@ -1127,7 +1127,7 @@ posterior, Gibbs, ECM, static, DESN, and dynamic claims. The inherited
 objects are fixed content, fixed tilt unless explicitly stated otherwise, and
 exchangeable roots whose reported endpoints are ordered after fitting.
 
-\section{Pseudo-AL Augmentation of the Generalized Posterior}
+\section{Pseudo-AL Augmentation and Full Conditionals}
 \label{sec:supp-pseudo-al}
 
 The Gibbs sampler is obtained by augmenting the product-residual loss factor,
@@ -1188,10 +1188,10 @@ v_i^{-1}\sim\mathrm{IG}\left(\sqrt{a/b_i},a\right),
 \]
 where the inverse-Gaussian parameters are mean and shape.
 
-\section{Static Root Regression and Fixed-Target ECM}
+\section{Static Endpoint Regression and ECM}
 \label{sec:supp-static-regression}
 
-\subsection{Gaussian coefficient full conditionals}
+\subsection{Gaussian Root-Coefficient Updates}
 
 Static regression is the base computation for ridge readouts and frozen DESN
 features. Let
@@ -1222,7 +1222,7 @@ regularized-horseshoe adapter using the Nishimura--Suchard augmentation
 states for the two roots; this supplement does not assert a standalone native
 RHS-NS hierarchy or nonzero-tilt propriety for that random-scale adapter.
 
-\subsection{Fixed-rate mean-tilt consequence}
+\subsection{Fixed-Rate Mean-Tilt Shift}
 
 Let \(\vect\delta_{\mathcal O}\) be fixed and define
 \[
@@ -1259,7 +1259,7 @@ has a finite moment-generating function in every finite direction. This
 argument covers ridge priors. It does not establish the corresponding result
 for the external horseshoe-family adapter.
 
-\subsection{Fixed-target ECM mode computation}
+\subsection{Fixed-Target ECM Mode Algorithm}
 
 The same pseudo-AL augmentation gives a deterministic
 expectation/conditional-maximization algorithm for a fixed generalized-posterior
@@ -1350,7 +1350,7 @@ and deterministic multi-start selection by the exact penalized objective. The
 stored endpoint mode is a fixed-target generalized-posterior summary. It is
 not a posterior draw and not a tolerance action.
 
-\subsection{MPI-only RHS-NS prior adapter}
+\subsection{MPI-Only RHS-NS Prior Adapter}
 \label{sec:supp-rhs-ns}
 
 The MPI fixed-design sampler also supports a
@@ -1389,7 +1389,7 @@ nonzero-tilt generalized posterior does not extend automatically through its
 random-scale
 mixture, so neither MTI-RHS-NS propriety nor implementation is claimed.
 
-\subsection{Frozen-feature DESN specialization}
+\subsection{Frozen-DESN Endpoint Readout}
 \label{sec:supp-desn}
 
 Let \(\mat X_{\mathrm{DESN}}\) denote the complete deterministic DESN feature
@@ -1414,7 +1414,7 @@ proper Gaussian ridge readout is implemented through the static fixed-rate
 sampler; reservoir tuning and any tilt selection belong to an external, recorded
 validation layer. Nonzero-tilt RHS-NS and VB readouts remain disabled.
 
-\section{MPI-Only Learned Inverse-Loss Scale}
+\section{MPI-Only Learned Loss Scale}
 \label{sec:supp-learned-scale}
 
 Learning the inverse-loss scale is a separate MPI generalized-posterior
@@ -1534,7 +1534,7 @@ Store draws only according to the declared retention policy. The collapsed
 \(\kappa\) draw must be followed immediately by the latent-scale refresh;
 skipping that refresh would define a different, invalid hybrid scan.
 
-\section{Dynamic Linear Root-State Computation}
+\section{Dynamic Endpoint-State Computation}
 \label{sec:supp-dynamic}
 
 The dynamic sampler keeps the interval target fixed while replacing static
@@ -1677,7 +1677,7 @@ matrix scale, including for matrices with entries below one. Jitter is likewise
 matrix-relative except for an exactly zero matrix, for which use of the
 declared ladder is recorded as an absolute fallback.
 
-\section{Component-Specific Discount Factors}
+\section{Dynamic Discount Factors and Component Scales}
 \label{sec:supp-discounts}
 
 Discount factors affect the state prior and therefore the generalized posterior
@@ -1718,7 +1718,7 @@ posterior.
 The same discounts are used for both roots unless a future model deliberately
 breaks their prior exchangeability.
 
-\subsection{Incompatibility of adaptive conditional discounts}
+\subsection{Why Adaptive Conditional Discounts Are Not Exact}
 
 The experimental designation can be made precise. Consider \(T=2\), \(p=1\),
 \(f_t=G_t=1\), and a nonzero discount inflation
@@ -1753,7 +1753,7 @@ Except in degenerate cases such as \(d_\gamma=0\), the two conditional adaptive 
 kernels are therefore incompatible with a common smooth joint density while
 retaining their advertised Gaussian forms.
 
-\subsection{Exact MPI shared component scales}
+\subsection{Exact Shared Component Scales for MPI}
 
 Partition the state into \(J\) blocks of dimensions \(d_j\), let \(S_j\)
 select block \(j\), and fix positive-definite templates \(Q_{jt}\). Define
@@ -1926,7 +1926,7 @@ response-distribution models. The main article defines the scan-calibrated
 empirical action; the supplement records the status ledger and gives the
 direct-DP and DPM calculations used when uncertainty is placed on \(F\) itself.
 
-\section{Full-Distribution Bayesian Shortest-Interval Uncertainty}
+\section{Response-Distribution Bayesian Shortest Intervals}
 \label{sec:supp-bayes-uq}
 
 The hybrid Bayesian--scan action needs posterior statements about the
@@ -2042,7 +2042,7 @@ implementation behavior. It reports deterministic or single-data diagnostics
 with provenance and does not convert them into repeated-sample performance
 claims.
 
-\section{Single-Data Oracle-Tilt Diagnostics}
+\section{Oracle-Tilt Single-Data Diagnostics}
 \label{sec:supp-oracle-tilt-diagnostics}
 
 The oracle-tilt illustrations diagnose fixed-target computation on frozen data
@@ -2112,7 +2112,7 @@ warnings described above.}
 \label{fig:supp-dlm-endpoint-error-c095}
 \end{figure}
 
-\section{Reproducibility and Evidence Scope}
+\section{Reproducibility and Evidence Boundaries}
 \label{sec:supp-reproducibility}
 
 Reproducibility records separate mathematical target status, numerical
