@@ -61,6 +61,8 @@ newsuggestions.md
 Chatgpt_output*
 /report
 /report*.md
+/interpretation_coeffients.md
+/interpretation_coefficients*.md
 
 # Local AI planning and audit handoffs. Keep source-facing plans and audits out
 # of the authoritative manuscript repository unless explicitly promoted.
