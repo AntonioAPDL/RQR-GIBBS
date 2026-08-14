@@ -36,8 +36,11 @@
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.08}}
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
-\newtheorem{lemma}[proposition]{Lemma}
-\newtheorem{theorem}[proposition]{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\renewcommand{\theproposition}{S\arabic{proposition}}
+\renewcommand{\thelemma}{S\arabic{lemma}}
+\renewcommand{\thetheorem}{S\arabic{theorem}}
 \newcounter{algorithm}
 \renewcommand{\thealgorithm}{S\arabic{algorithm}}
 \newenvironment{algorithmblock}[1]{%
@@ -370,7 +373,7 @@ tail displacement from the conditional mean. The two omitted tail probabilities
 may differ.
 
 \begin{theorem}[Quantile-window identification]
-\label{prop:supp-quantile-window}
+\label{thm:supp-quantile-window}
 Suppose, in addition, that \(F_x\) is continuous and strictly increasing on
 its support, and let \(Q_x=F_x^{-1}\). Define
 \[
@@ -642,7 +645,7 @@ Let \(I_{m,h}(Y)=\ind(|Y-m|<h)\). Away from endpoint atoms,
 \end{align}
 The first equation gives content \(c\). Substitution into the second gives
 \(\E\{YI_{m,h}(Y)\}=c(\mu+\delta)\), which is the retained-mean equation.
-Proposition~\ref{prop:supp-quantile-window} and strict monotonicity of \(M_c\)
+Theorem~\ref{thm:supp-quantile-window} and strict monotonicity of \(M_c\)
 give the quantile-window statement.
 \end{proof}
 
@@ -716,7 +719,7 @@ transition.
 \end{proof}
 
 \begin{theorem}[Global profiled-risk identification]
-\label{prop:supp-profiled-risk}
+\label{thm:supp-profiled-risk}
 Under the conditions of Lemma~\ref{lem:supp-profile-radius}, set
 \(u_c(m)=F\{m-h_c(m)\}\), so \(u_c(m)\in[0,1-c]\). For
 \[

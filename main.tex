@@ -42,8 +42,8 @@
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4.5pt}\renewcommand{\arraystretch}{1.12}}
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
-\newtheorem{theorem}[proposition]{Theorem}
-\newtheorem{corollary}[proposition]{Corollary}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
 \newcounter{algorithm}
 \newenvironment{algorithmblock}[1]{%
   \refstepcounter{algorithm}\par\medskip
@@ -239,8 +239,9 @@ frozen-DESN specialization. Section~\ref{sec:dynamic}
 gives the dynamic endpoint-state sampler. Section~\ref{sec:tcsp} defines the
 calibrated minimum-width, hybrid Bayesian--scan, and split exact-spacing
 tolerance interval actions and states the remaining proof requirements.
-Section~\ref{sec:evaluation} describes validation scope and numerical
-evidence, and Section~\ref{sec:discussion} concludes.
+Section~\ref{sec:model-illustrations} gives fixed-target model illustrations.
+Section~\ref{sec:evaluation} then states the confirmatory validation scope,
+and Section~\ref{sec:discussion} concludes.
 
 \section{Fixed-Content Interval Targets}
 \label{sec:interval-functionals}
@@ -426,7 +427,7 @@ The next theorem converts the score identities into a quantile-window
 functional. This is the object that the unrestricted population loss estimates.
 
 \begin{theorem}[Quantile-window identification]
-\label{prop:quantile-window}
+\label{thm:quantile-window}
 In addition to the conditions of
 Proposition~\ref{prop:population-characterization}, suppose that \(F_x\) is
 continuous and strictly increasing on its support, and let \(Q_x=F_x^{-1}\).
@@ -447,11 +448,11 @@ If \(F_x\) is symmetric about \(\mu_x\), then
 \end{theorem}
 
 This theorem identifies the unique regular stationary window.
-Proposition~\ref{prop:profiled-mean-tilt} below strengthens that statement to
+Theorem~\ref{thm:profiled-mean-tilt} below strengthens that statement to
 the unique global expected-loss minimizer by profiling over the half-width.
 The supplement proves these results and records the restricted score
 equations. Under the connected-support and local positive-density conditions
-used in Theorem~\ref{prop:profiled-mean-tilt}, the regular unrestricted
+used in Theorem~\ref{thm:profiled-mean-tilt}, the regular unrestricted
 population intervals form a nested path. If the conditional quantile function
 is continuous at \(p_{\mu,x}=F_x(\mu_x)\) and
 \(Q_x(p_{\mu,x})=\mu_x\), the two endpoints converge to \(\mu_x\) as
@@ -527,7 +528,7 @@ differentiating the profiled risk; the supplement gives the radius and
 envelope-derivative argument.
 
 \begin{theorem}[Global identification of the MTI target]
-\label{prop:profiled-mean-tilt}
+\label{thm:profiled-mean-tilt}
 Suppose that the support closure is an interval (possibly with infinite
 endpoints), \(F\) is absolutely continuous and strictly increasing between its
 support endpoints, its density is positive and continuous on the support
@@ -1398,7 +1399,7 @@ Accordingly, exact critical-count calculation and the finite-sample theorem for
 this closed-window action are treated as open proof and certification tasks.
 
 The theoretical scope is deliberately narrower than the implementation menu.
-Theorems~\ref{prop:quantile-window}--\ref{prop:profiled-mean-tilt} identify
+Theorems~\ref{thm:quantile-window}--\ref{thm:profiled-mean-tilt} identify
 the fixed-content MTI family and its admissible tilt coordinate. For tolerance
 inference, the empirical closed order-statistic window is the formal action;
 generalized-posterior summaries for fixed \((q,\delta)\) describe endpoint-root
@@ -1479,49 +1480,44 @@ the selected shortest action, requires a separate action-equivalence or
 direct-calibration result. Tolerance confidence comes from the scan calibration,
 and \(\omega_{\mathrm R}\) remains the generalized-Bayes learning rate.
 
-\section{Validation Scope and Numerical Evidence}
-\label{sec:evaluation}
-
-The evidence is organized in three tiers because the claims have different
-targets. Population calculations verify the fixed-content and mean-tilt
-characterizations without Monte Carlo error. Computational fixtures compare
-generalized-posterior draws with quadrature, dense Gaussian full conditionals,
-analytic scale updates, and exact checkpoint continuation. These checks validate
-the stated computational target on reference problems. Repeated-sample coverage
-and comparative forecasting performance are left to the confirmatory tolerance
-study, which targets empirical coverage, width, oracle efficiency,
-infeasibility, and runtime.
+\section{Fixed-Target Model Illustrations}
+\label{sec:model-illustrations}
 
 Figures~\ref{fig:oracle-tilt-fixed-design-fit}
-and~\ref{fig:oracle-tilt-dlm-fit} provide the second tier: fixed-target
-single-data illustrations for a static readout and a dynamic root model. The
-population law and recovery tilts are fixed before fitting. In both examples,
-innovations follow an affinely standardized asymmetric-Laplace law with source
-index \(0.80\), producing pronounced left skewness while retaining adequate
-information in both endpoint tails. The three recovery tilts are computed
-directly as the conditional retained mean of each population window minus the
-population mean. The resulting innovation-scale tilts are \(0\), \(0.0561\),
-and \(0.1147\) for MPI, ET, and SH, respectively; no Cornish--Fisher
-approximation is used. The fitted intervals are generalized-posterior
-summaries of ordered root draws, and the shaded regions are pointwise 95\%
-generalized-posterior credible bands for endpoint functionals. Future-response
-prediction would require a response-distribution layer. The examples show how
-MPI, equal-tailed recovery, and shortest-window recovery enter the fixed-rate
-Gibbs sampler at content \(c=0.95\). These examples are computational
-illustrations; simulation evidence is reserved for the confirmatory protocol.
+and~\ref{fig:oracle-tilt-dlm-fit} are single-data illustrations of the
+fixed-target MTI computation for a static regression/readout and a dynamic
+root model. Their role is to show how MPI, equal-tailed recovery, and
+shortest-window recovery enter the same fixed-rate Gibbs sampler after the
+content and tilt have been fixed. They are not repeated-sample validation
+experiments and do not estimate tolerance confidence, empirical coverage, or
+comparative forecasting performance.
+
+The population law and recovery tilts are fixed before fitting. In both
+examples, innovations follow an affinely standardized asymmetric-Laplace law
+with source index \(0.80\), producing pronounced left skewness while retaining
+adequate information in both endpoint tails. The three recovery tilts are
+computed directly as the conditional retained mean of each population window
+minus the population mean. The resulting innovation-scale tilts are \(0\),
+\(0.0561\), and \(0.1147\) for MPI, ET, and SH, respectively; no
+Cornish--Fisher approximation is used. The fitted intervals are
+generalized-posterior summaries of ordered root draws, and the shaded regions
+are pointwise 95\% generalized-posterior credible bands for endpoint
+functionals. Future-response prediction would require a response-distribution
+layer.
+
 All 27 chains and six family--target cells passed all numerical, provenance,
 conditional-reference, finite-output, and broad-recovery requirements with zero
-numerical repairs. Five cells also passed every strict
-diagnostic. The MCMC diagnostics use bulk and tail effective sample size
-(ESS), the potential scale-reduction statistic \(\widehat R\), and the
-Monte Carlo standard error (MCSE) relative to posterior standard deviation.
-Dynamic SH retained five prespecified bulk-ESS warnings
-(\(801\)--\(996\), relative to a threshold of \(1{,}000\)) and narrowly missed
-one width-contrast diagnostic. Its largest \(\widehat R\) was \(1.0065\), its
-tail ESS exceeded \(1{,}166\), and its MCSE-to-standard-deviation ratio was
-below \(0.037\). We retained this fit without changing a threshold, replacing
-a seed, or selectively extending a chain. The supplement reports the compact
-recovery table and endpoint-error summaries.
+numerical repairs. Five cells also passed every strict diagnostic. The MCMC
+diagnostics use bulk and tail effective sample size (ESS), the potential
+scale-reduction statistic \(\widehat R\), and the Monte Carlo standard error
+(MCSE) relative to posterior standard deviation. Dynamic SH retained five
+prespecified bulk-ESS warnings (\(801\)--\(996\), relative to a threshold of
+\(1{,}000\)) and narrowly missed one width-contrast diagnostic. Its largest
+\(\widehat R\) was \(1.0065\), its tail ESS exceeded \(1{,}166\), and its
+MCSE-to-standard-deviation ratio was below \(0.037\). We retained this fit
+without changing a threshold, replacing a seed, or selectively extending a
+chain. The supplement reports the compact recovery table and endpoint-error
+summaries.
 
 \begin{figure}[!htbp]
 \centering
@@ -1574,6 +1570,18 @@ response-predictive bands require a response-distribution layer.}
 \label{fig:oracle-tilt-dlm-fit}
 \end{figure}
 
+\section{Validation Scope}
+\label{sec:evaluation}
+
+Validation is reserved for questions that require repeated sampling or
+held-out comparison. Population calculations verify the fixed-content and
+mean-tilt characterizations without Monte Carlo error. Computational fixtures
+compare generalized-posterior draws with quadrature, dense Gaussian full
+conditionals, analytic scale updates, and exact checkpoint continuation. These
+checks are implementation evidence for the stated computational target on
+reference problems; they do not estimate empirical coverage, width efficiency,
+or comparative forecasting performance.
+
 The confirmatory tolerance-validation protocol is designed before inspecting
 comparative results, following simulation-study reporting principles
 \citep{MorrisWhiteCrowther2019Simulation}. It varies sample size, target
@@ -1588,11 +1596,12 @@ fail-closed rate, posterior-constraint binding, and runtime. Equal-tailed
 interval scores remain secondary because they target a different placement
 principle.
 
-This protocol is also the gate for scientific comparison. Fixed-rate nonzero
+The confirmatory protocol is the gate for scientific comparison. Fixed-rate nonzero
 tilt already has verified full-conditional algebra, zero-tilt equivalence
 checks, dense conditional references, and the single-data oracle-tilt
-illustrations above for ridge static readouts and fixed-\(W\) dynamic roots.
-Those bounded checks validate implementation of the declared targets.
+illustrations in Section~\ref{sec:model-illustrations} for ridge static
+readouts and fixed-\(W\) dynamic roots. Those bounded checks validate
+implementation of the declared targets.
 Repeated-sample coverage and data-driven tilt selection remain tasks for the
 confirmatory protocol.
 Variational inference likewise requires its own objective,
