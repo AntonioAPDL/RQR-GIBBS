@@ -33,7 +33,7 @@ Major restructuring:
 | `application/scripts/73_validate_mpi_mti_naming_migration.R` | Updated stale required section-title patterns to match the current MPI/MTI manuscript titles. |
 
 The title was audited and retained:
-`Mean-Tilted Intervals: Fixed-Content Targets, Generalized Bayes, and Tolerance Actions`.
+`Mean-Tilted Intervals: A Generalized-Bayes Approach to Fixed-Content and Tolerance Intervals`.
 It names the main object, the inferential paradigm, and the downstream action
 layer without conflating generalized Bayes with ordinary response-distribution
 Bayes.

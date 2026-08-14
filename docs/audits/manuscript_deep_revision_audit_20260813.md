@@ -114,7 +114,7 @@ into a complete comparative study, but this task keeps one coherent article.
 
 | Candidate | Assessment |
 |---|---|
-| `Mean-Tilted Intervals: Fixed-Content Targets, Generalized Bayes, and Tolerance Actions` | Selected. It names the principal object, the inferential paradigm, and the downstream action layer without saying ordinary Bayesian computation. |
+| `Mean-Tilted Intervals: A Generalized-Bayes Approach to Fixed-Content and Tolerance Intervals` | Selected. It names the principal object, the inferential paradigm, and both the fixed-content target layer and tolerance interval layer without saying ordinary Bayesian computation. |
 | `Mean-Preserving and Mean-Tilted Intervals for Loss-Based Generalized Bayes` | Accurate but less informative about tolerance actions and too focused on the update rather than the interval target. |
 | `Fixed-Content Interval Targets with Generalized-Bayesian Root Regression` | Clean computational emphasis but hides the MTI placement idea. |
 | `Mean-Tilted Interval Functionals and Generalized-Bayesian Computation` | Attractive but risks under-reporting the tolerance-action material retained in the article. |
