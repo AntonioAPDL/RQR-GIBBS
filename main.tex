@@ -797,28 +797,29 @@ U_i=\max(\eta_{1i},\eta_{2i}),\quad
 M_i=(L_i+U_i)/2,\quad W_i=U_i-L_i.
 \]
 These ordered summaries are generalized-posterior functionals of the unordered
-root pair. For interpretation, it is useful to define the midpoint and signed
-half-gap coefficients
+root pair. The implemented generalized posterior remains the raw-root
+specification in \((\vect\beta_1,\vect\beta_2)\). For interpretation, the same
+draws can be summarized by the midpoint and signed half-gap coefficients
 \[
 \vect\beta_m=\frac{\vect\beta_1+\vect\beta_2}{2},\qquad
 \vect\beta_s=\frac{\vect\beta_2-\vect\beta_1}{2}.
 \]
 At a design row \(\vect x\), write
 \[
-m(\vect x)=\vect x^\top\vect\beta_m,\qquad
-s(\vect x)=\vect x^\top\vect\beta_s.
+M(\vect x)=\vect x^\top\vect\beta_m,\qquad
+S(\vect x)=\vect x^\top\vect\beta_s.
 \]
 Then
 \[
-L(\vect x)=m(\vect x)-|s(\vect x)|,\qquad
-U(\vect x)=m(\vect x)+|s(\vect x)|,\qquad
-W(\vect x)=2|s(\vect x)|.
+L(\vect x)=M(\vect x)-|S(\vect x)|,\qquad
+U(\vect x)=M(\vect x)+|S(\vect x)|,\qquad
+W(\vect x)=2|S(\vect x)|.
 \]
 A complete exchange of the two raw root blocks leaves
 \(\vect\beta_m\), \(L\), \(U\), and \(W\) unchanged and reverses the sign of
 \(\vect\beta_s\). Thus \(\vect\beta_m\) describes the geometric midpoint of the
-reported interval, while \(\vect\beta_s\) is a signed gap coordinate. The
-midpoint should be interpreted as endpoint geometry:
+reported interval, while \(\vect\beta_s\) is a signed gap coordinate. This
+midpoint is geometric:
 Proposition~\ref{prop:population-characterization} concerns the retained
 conditional mean, and MTI uses \(\delta\) to set a retained-mean offset.
 

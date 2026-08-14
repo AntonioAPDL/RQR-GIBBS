@@ -607,43 +607,44 @@ The MTI losses \eqref{eq:mean-tilted-loss-roots}, including their MPI
 exchangeable root priors, the unordered pair is identified but the labels
 ``root 1'' and ``root 2'' are not. The static sampler therefore
 permits a complete-root swap that exchanges the coefficient vector and any
-root-specific prior state as one block. This swap is not a device for naming a
-lower root. Lower and upper endpoint functionals are obtained by pointwise
-sorting. Coefficient-level lower/upper summaries require a separate
+root-specific prior state as one block. Lower and upper endpoint functionals are
+obtained by pointwise sorting after the raw roots are evaluated.
+Coefficient-level lower/upper summaries require a separate
 post-processing chart: one binary keep/swap assignment is made for each
 retained complete root block using distances on a declared reference design, and
 canonical coefficient summaries are suppressed if the two fitted linear roots
 cross or the assignment is ambiguous on that design. The dynamic sampler
 uses the same rule for ordinate paths: a retained draw may be kept or swapped
-as one complete path, but roots are not relabelled separately at different
+as one complete path, rather than by relabeling roots separately at different
 times.
 
 \subsection{Interval-Functional Coefficient Interpretation}
 \label{sec:supp-coefficient-interpretation}
 
-The preceding convention changes the level at which regression effects should
-be interpreted. For static roots, define
+The implemented static sampler continues to target the raw-root draws
+\((\vect\beta_1,\vect\beta_2)\). This subsection records deterministic
+reporting coordinates derived from those same draws. For static roots, define
 \[
 \vect\beta_m=\frac{\vect\beta_1+\vect\beta_2}{2},\qquad
 \vect\beta_s=\frac{\vect\beta_2-\vect\beta_1}{2}.
 \]
 At a design row \(\vect x\),
 \[
-m(\vect x)=\vect x^\top\vect\beta_m,\qquad
-s(\vect x)=\vect x^\top\vect\beta_s,
+M(\vect x)=\vect x^\top\vect\beta_m,\qquad
+S(\vect x)=\vect x^\top\vect\beta_s,
 \]
 and the ordered interval functionals are
 \[
-L(\vect x)=m(\vect x)-|s(\vect x)|,\qquad
-U(\vect x)=m(\vect x)+|s(\vect x)|,\qquad
-W(\vect x)=2|s(\vect x)|.
+L(\vect x)=M(\vect x)-|S(\vect x)|,\qquad
+U(\vect x)=M(\vect x)+|S(\vect x)|,\qquad
+W(\vect x)=2|S(\vect x)|.
 \]
 A complete root swap leaves \(\vect\beta_m\), \(L\), \(U\), and \(W\) invariant
 and changes the sign of \(\vect\beta_s\). Thus \(\vect\beta_m\) is the
 coefficient vector for the geometric midpoint. The signed vector
 \(\vect\beta_s\) is best read as an orientation coordinate for the gap between
-the two raw roots. It becomes a conventional half-width direction only on a
-domain where the sign of \(s(\vect x)\) is fixed.
+the two raw roots. A conventional half-width coefficient interpretation requires
+a domain where the sign of \(S(\vect x)\) is fixed.
 
 If one complete root is separated below the other on a declared domain
 \(\mathcal X_A\), the oriented coefficients may be written
@@ -657,24 +658,24 @@ gap that is positive on an observed or scientific reference design need not
 remain positive under arbitrary extrapolation.
 
 When the raw roots cross, endpoint effects are local or profile specific. Away
-from \(s(\vect x)=0\), a continuous predictor \(x_j\) has local effects
+from \(S(\vect x)=0\), a continuous predictor \(x_j\) has local effects
 \[
 \frac{\partial L(\vect x)}{\partial x_j}
-=\beta_{m,j}-\operatorname{sgn}\{s(\vect x)\}\beta_{s,j},\qquad
+=\beta_{m,j}-\operatorname{sgn}\{S(\vect x)\}\beta_{s,j},\qquad
 \frac{\partial U(\vect x)}{\partial x_j}
-=\beta_{m,j}+\operatorname{sgn}\{s(\vect x)\}\beta_{s,j},
+=\beta_{m,j}+\operatorname{sgn}\{S(\vect x)\}\beta_{s,j},
 \]
 and
 \[
 \frac{\partial W(\vect x)}{\partial x_j}
-=2\operatorname{sgn}\{s(\vect x)\}\beta_{s,j}.
+=2\operatorname{sgn}\{S(\vect x)\}\beta_{s,j}.
 \]
-At \(s(\vect x)=0\), the ordered endpoint and width functions generally have a
+At \(S(\vect x)=0\), the ordered endpoint and width functions generally have a
 kink, so finite contrasts are usually clearer than derivatives. For two
 scientifically meaningful rows \(\vect x_0\) and \(\vect x_1\), compute within
 each retained draw
 \[
-\Delta m=(\vect x_1-\vect x_0)^\top\vect\beta_m,
+\Delta M=(\vect x_1-\vect x_0)^\top\vect\beta_m,
 \]
 \[
 \Delta W
@@ -685,25 +686,25 @@ each retained draw
 and
 \[
 \Delta L
-=\Delta m-\left\{
+=\Delta M-\left\{
 |\vect x_1^\top\vect\beta_s|-|\vect x_0^\top\vect\beta_s|
 \right\},\qquad
 \Delta U
-=\Delta m+\left\{
+=\Delta M+\left\{
 |\vect x_1^\top\vect\beta_s|-|\vect x_0^\top\vect\beta_s|
 \right\}.
 \]
 These contrasts are invariant to the raw root labels and remain valid when the
 two profiles lie on different sides of a crossing. They also match the software
-contract: posterior summaries of \(L\), \(U\), \(m\), and \(W\) are formed after
+contract: posterior summaries of \(L\), \(U\), \(M\), and \(W\) are formed after
 draw-wise endpoint ordering, while canonical lower/upper coefficient summaries
 are released only after the audit-domain chart succeeds.
 
-The midpoint should still be read as geometric. The unrestricted MPI score
+The midpoint in these formulas is geometric. The unrestricted MPI score
 conditions make the retained conditional mean equal to the full conditional
 mean, and MTI changes that retained-mean balance by the declared tilt
 \(\delta\). These are statements about the mean of the observations inside the
-selected interval, whereas \(m(\vect x)=\{L(\vect x)+U(\vect x)\}/2\) is the
+selected interval, whereas \(M(\vect x)=\{L(\vect x)+U(\vect x)\}/2\) is the
 center of the two endpoints. Under asymmetry, tail imbalance, or a restricted
 feature class, the two quantities can differ.
 
@@ -712,7 +713,7 @@ the recorded reservoir feature row. Individual readout weights are therefore
 computational feature coefficients; forecast-scale endpoint paths, widths, and
 input-scenario contrasts are the more direct scientific summaries. For dynamic
 roots, the same midpoint--gap representation applies to the state ordinates,
-for example \(m_t=(\eta_{1t}+\eta_{2t})/2\) and
+for example \(M_t=(\eta_{1t}+\eta_{2t})/2\) and
 \(W_t=|\eta_{2t}-\eta_{1t}|\). A dynamic lower/upper chart, if requested, must
 use one complete-path assignment per retained draw, preserving the state
 trajectory rather than relabeling each time point separately.
