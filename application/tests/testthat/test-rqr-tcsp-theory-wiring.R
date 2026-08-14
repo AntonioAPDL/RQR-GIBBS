@@ -36,12 +36,13 @@ test_that("TCSP manuscript exposes publication-facing claim boundaries", {
     "tcsp_benchmark_registry_20260812.md"
   ), warn = FALSE), collapse = "\n")
 
-  expect_match(main, "tab:tcsp-theory-scope", fixed = TRUE)
+  expect_match(main, "Calibrated Minimum-Width Tolerance Intervals",
+               fixed = TRUE)
   expect_match(main,
-               "Theoretical scope of the proposed scan-calibrated",
+               "The theoretical scope is deliberately narrower",
                fixed = TRUE)
   expect_false(grepl("\\\\texttt\\{T[-]", main, perl = TRUE))
-  expect_match(main, "Same-sample plug-in tilt", fixed = TRUE)
+  expect_match(main, "posterior-to-action transfer", fixed = TRUE)
   expect_match(main, "Posterior credibility is not", fixed = TRUE)
   expect_match(supplement, "Scan-calibrated shortest-window tolerance",
                fixed = TRUE)

@@ -1,8 +1,8 @@
 # Main--Supplement Support Map, 2026-08-13
 
-This map records where each main-text object is supported after the reader-first
-manuscript revision. Evidence status follows the central status ledger added to
-`rqr-gibbs-supplement.tex`.
+This map records where each main-text object is supported after the
+reader-first manuscript revision and the table/heading polish. Evidence status
+follows the central status ledger added to `rqr-gibbs-supplement.tex`.
 
 | Main-text item | Main label or location | Supplemental support | Implementation or artifact | Evidence status | Mismatch or missing support |
 |---|---|---|---|---|---|
@@ -19,14 +19,14 @@ manuscript revision. Evidence status follows the central status ledger added to
 | MPI RHS-NS adapter | `sec:posterior`, RHS-NS subsection | `sec:supp-static-regression`, RHS-NS subsection | API compatibility and package tests | Exact MPI-only prior adapter | Nonzero-tilt RHS-NS remains disabled. |
 | Frozen-feature DESN readout | `sec:posterior`, DESN subsection | `sec:supp-static-regression`, DESN subsection | Frozen feature provenance in oracle-tilt evidence | Static-design specialization and bounded validation | No claim for adaptive reservoir fitting or nonlinear posterior root states. |
 | MPI learned inverse-loss scale | `sec:posterior`, learned-scale subsection | `sec:supp-learned-scale` | Learned-scale tests and validation notes | MPI-only hierarchical generalized posterior | Not a response variance or MTI calibration parameter. |
-| Dynamic root-state sampler | `sec:dynamic` | `sec:supp-dynamic` | DLM native and oracle-tilt validation fixtures | Exact root-blocked FFBS conditionals for fixed joint settings | Adaptive discount recursion is experimental. |
+| Dynamic endpoint-state sampler | `sec:dynamic` | `sec:supp-dynamic` | DLM native and oracle-tilt validation fixtures | Exact root-blocked FFBS conditionals for fixed joint settings | Adaptive discount recursion is experimental. |
 | Component-specific dynamic scales | `sec:dynamic`, MPI-only evolution variants | `sec:supp-discounts` | Component-scale tests and scope notes | Exact MPI shared component scales; nonzero-tilt proof open | Nonzero-tilt ASIS/propriety/invariance not promoted. |
-| Scan-calibrated empirical tolerance action | `sec:tcsp`, `tab:tcsp-theory-scope` | Supplement support map and status ledger | `application/R/rqr_tolerance_scan.R`; TCSP tests; theory ledger | Implemented action with open exact scan proof tasks | Exact recursion and action-matched finite-sample theorem remain open. |
+| Scan-calibrated empirical tolerance action | `sec:tcsp` | Supplement support map and status ledger | `application/R/rqr_tolerance_scan.R`; TCSP tests; theory ledger | Implemented action with open exact scan proof tasks | Exact recursion and action-matched finite-sample theorem remain open. |
 | Split exact-spacing action | `sec:tcsp`, split paragraph | Supplement status ledger | Split exact-spacing tests | Exact conditional iid-univariate spacing law | Regression tolerance extension remains open. |
 | Direct-DP fixed-interval content law | `sec:tcsp` | `sec:supp-bayes-uq`, direct-DP proposition | Bayesian UQ tests | Exact ordinary Bayesian posterior law for fixed interval | Does not validate MTI generalized posterior. |
 | Gaussian DPM content summaries | `sec:tcsp` | `sec:supp-bayes-uq`, DPM paragraphs | Bayesian UQ tests and validation scripts | Monte Carlo posterior summary under response model | Not exact conjugacy and not a tolerance guarantee. |
 | Hybrid Bayesian--scan action | `sec:tcsp`, HBS definition | `sec:supp-bayes-uq` | Bayesian UQ validation configs and tests | Defined action combining external scan count and posterior content threshold | Posterior threshold may bind or be infeasible; no endpoint-transfer theorem. |
-| TCSP theory-scope table | `tab:tcsp-theory-scope` | Supplement support map and status ledger | TCSP proof ledger | Central limitation table | Publication-level finite-sample wording depends on future audit. |
+| TCSP claim-boundary prose | `sec:tcsp` | Supplement support map and status ledger | TCSP proof ledger | Central limitation statement | Publication-level finite-sample wording depends on future audit. |
 | Oracle-tilt fixed-design figure | `fig:oracle-tilt-fixed-design-fit` | `sec:supp-oracle-tilt-diagnostics` | `figures/generated/fig04_fixed_design_oracle_tilt_c095.pdf`; manifests | Single-data computational illustration | Not repeated-sample evidence. |
 | Oracle-tilt DLM figure | `fig:oracle-tilt-dlm-fit` | `sec:supp-oracle-tilt-diagnostics` | `figures/generated/fig05_dlm_oracle_tilt_c095.pdf`; manifests | Single-data computational illustration | Dynamic SH retains documented diagnostics. |
 | Confirmatory tolerance validation protocol | `sec:evaluation` | `sec:supp-reproducibility`; validation planning docs | `application/config/rqr_bayes_uq_validation_main_20260813.json` and launch scripts | Prespecified future/recent validation protocol, not promoted as article evidence unless completed | Do not report planned runs as completed results. |
