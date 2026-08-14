@@ -63,7 +63,6 @@ Fixed-Content Targets, Generalized Bayes, and Tolerance Actions}
 \maketitle
 \vspace{-1.25em}
 
-
 \begin{abstract}
 \noindent
 Intervals with the same probability content can have different endpoint
@@ -78,31 +77,26 @@ mean-tilted interval (MTI) family generalizes MPI by replacing zero
 retained-mean balance with a fixed retained-mean offset: \(\delta=0\)
 recovers MPI, and nonzero tilts index other contiguous fixed-content windows.
 Equal-tailed and
-shortest-contiguous intervals are distribution-specific members of this family,
-not universal endpoint-quantile assignments. COMMENT: remove "not universal endpoint-quantile assignments. ", no need to add that. 
+shortest-contiguous intervals are distribution-specific members of this family.
 
-We develop loss-based generalized-Bayes computation for MPI and its fixed-tilt
-MTI generalization.COMMENT:Maybe we mentioned that the loss-based gen-bayes computation is to learn the intevral endpiints that result in a closed form GIBBS algorith, no?. A pseudo-asymmetric-Laplace normal--exponential augmentation yields
-generalized-inverse-Gaussian latent scales and conditionally Gaussian root
-updates. COMMENT: This last sentence seems to be too convoluted, no?No need to add it. For fixed content, tilt, and learning rate, the same augmentation gives
-a deterministic expectation/conditional-maximization mode computation using
-exact inverse latent-scale moments. COMMENT: Also, no sure we need to comment this. The resulting Gibbs and ECM constructions
-cover ridge-regularized static regression, frozen-feature deep echo state
-network readouts, and dynamic linear root states through alternating
-forward-filtering backward-sampling updates. Population calculations,
-Cornish--Fisher diagnostics, and reproducible single-data illustrations clarify
-target placement and computation. COMMENT: Do we need to add this "Population calculations,
-Cornish--Fisher diagnostics, and reproducible single-data illustrations clarify
-target placement and computation." Looks like too much and confusing. 
+To estimate these targets, we develop a loss-based generalized-Bayes update for
+the two interval endpoints. A pseudo-asymmetric-Laplace normal--exponential
+augmentation gives closed-form Gibbs computation: latent scales have
+generalized-inverse-Gaussian full conditionals, and the interval-root updates
+are conditionally Gaussian. Exact inverse-scale moments give a deterministic
+expectation/conditional-maximization mode algorithm. These constructions cover
+ridge-regularized static regression, frozen-feature deep echo state network
+readouts, and dynamic linear root states.
 
-For tolerance inference, the repeated-sampling action is kept separate from
-generalized-posterior endpoint summaries. COMMENT: We can mention that, given the ability of the loss to learn minimum-width intervals, we decided to produce an algorithm to produce tolerance intervals of minimum width or something, no? The start "for tolerance inference", sounds not super smooth and out of nothing. A scan-calibrated empirical action
-selects the shortest closed order-statistic interval at a calibrated retained
-count. A direct Dirichlet-process response-distribution layer gives exact
-fixed-interval Beta content probabilities, and a hybrid Bayesian--scan action
-adds a posterior content-probability constraint to the scan count. COMMENT: Maybe there is a better word that hybrid no? Something more smooth. Posterior
-credibility is not tolerance confidence, and MTI endpoint draws are not
-posterior predictive response draws. This whole last sentence feels like not necesarily. 
+Because the shortest-contiguous member is the minimum-width interval in the
+fixed-content class, the same target geometry also motivates calibrated
+minimum-width tolerance actions. The formal empirical action selects the
+shortest closed order-statistic interval at a calibrated retained count. A
+direct Dirichlet-process response-distribution layer gives exact
+fixed-interval Beta content probabilities, and a Bayesian-constrained scan
+action uses those probabilities to screen scan candidates. Posterior
+credibility is not tolerance confidence; MTI endpoint summaries can diagnose
+endpoint uncertainty but are not posterior predictive response draws.
 \end{abstract}
 
 \section{Introduction}
