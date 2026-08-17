@@ -73,3 +73,8 @@ docs/implementation_notes/fixed_delta_mt_rqr_gibbs_extension_plan_*.md
 /output*_independent_quadrature_check.csv
 /output*_corrected_cdf_gate_check*
 /output*_corrected_independent_cdf_references.csv
+
+# Local style notes and manuscript-analysis scratch files.
+/academic_style_wickle.md
+/academic_style_wickle.txt
+/interpretation_coeffients.md

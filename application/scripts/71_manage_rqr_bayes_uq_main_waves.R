@@ -122,6 +122,64 @@ git_commit <- tryCatch(
   error = function(e) NA_character_
 )
 
+character_values <- function(x) {
+  as.character(unlist(x, use.names = FALSE))
+}
+numeric_values <- function(x) {
+  as.numeric(unlist(x, use.names = FALSE))
+}
+integer_values <- function(x) {
+  as.integer(numeric_values(x))
+}
+
+mode_design_cells <- function(mode_cfg) {
+  if (!is.null(mode_cfg$design_cells)) {
+    cells <- mode_cfg$design_cells
+    rows <- lapply(seq_along(cells), function(ii) {
+      cell <- cells[[ii]]
+      content <- cell$guaranteed_content %||% cell$content
+      confidence <- cell$tolerance_confidence %||% cell$confidence
+      data.frame(
+        cell_id = as.character(cell$cell_id %||% sprintf("cell%03d", ii)),
+        n = as.integer(cell$n)[1L],
+        guaranteed_content = as.numeric(content)[1L],
+        tolerance_confidence = as.numeric(confidence)[1L],
+        stringsAsFactors = FALSE
+      )
+    })
+    out <- do.call(rbind, rows)
+  } else {
+    out <- expand.grid(
+      cell_id = NA_character_,
+      n = integer_values(mode_cfg$sample_sizes),
+      guaranteed_content = numeric_values(mode_cfg$guaranteed_contents),
+      tolerance_confidence = numeric_values(mode_cfg$tolerance_confidences),
+      stringsAsFactors = FALSE
+    )
+    out$cell_id <- sprintf(
+      "n%04d_c%s_t%s",
+      out$n,
+      gsub("\\.", "", sprintf("%.3f", out$guaranteed_content)),
+      gsub("\\.", "", sprintf("%.3f", out$tolerance_confidence))
+    )
+  }
+  if (!nrow(out) ||
+      any(!is.finite(out$n)) ||
+      any(out$n < 2L) ||
+      any(!is.finite(out$guaranteed_content)) ||
+      any(out$guaranteed_content <= 0 | out$guaranteed_content >= 1) ||
+      any(!is.finite(out$tolerance_confidence)) ||
+      any(out$tolerance_confidence <= 0 | out$tolerance_confidence >= 1)) {
+    stopf("Mode design cells must have finite n >= 2 and probabilities in (0, 1).")
+  }
+  out <- out[order(out$n, out$guaranteed_content,
+                   out$tolerance_confidence, out$cell_id), , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+design_cells <- mode_design_cells(mode_cfg)
+
 sha256_file <- function(path) {
   digest::digest(path, algo = "sha256", file = TRUE)
 }
@@ -267,6 +325,15 @@ oracle_spec_from_dgp <- function(dgp) {
       params = list(df = df, scale = sqrt((df - 2) / df))
     ))
   }
+  if (identical(dgp$family, "standardized_beta")) {
+    return(list(
+      family = "standardized_beta",
+      params = list(
+        shape1 = as.numeric(dgp$shape1 %||% dgp$a %||% 2)[1L],
+        shape2 = as.numeric(dgp$shape2 %||% dgp$b %||% 5)[1L]
+      )
+    ))
+  }
   stopf("Unsupported oracle DGP family: ", dgp$family)
 }
 
@@ -277,37 +344,37 @@ oracle_key <- function(dgp_id, c_target) {
 build_wave_plan <- function() {
   out <- list()
   index <- 0L
-  for (dgp_id in as.character(mode_cfg$dgp_ids)) {
-    for (n in as.integer(mode_cfg$sample_sizes)) {
-      for (c_target in as.numeric(mode_cfg$guaranteed_contents)) {
-        for (tol_conf in as.numeric(mode_cfg$tolerance_confidences)) {
-          index <- index + 1L
-          wave_id <- sprintf(
-            "w%03d_%s_n%04d_c%s_t%s",
-            index, safe_slug(dgp_id), n, format_probability(c_target),
-            format_probability(tol_conf)
-          )
-          expected_datasets <- length(mode_cfg$posterior_confidences) *
-            as.integer(mode_cfg$replications)
-          out[[index]] <- data.frame(
-            wave_id = wave_id,
-            mode = mode,
-            dgp_id = dgp_id,
-            n = n,
-            guaranteed_content = c_target,
-            tolerance_confidence = tol_conf,
-            posterior_confidences = paste(
-              as.numeric(mode_cfg$posterior_confidences), collapse = ";"
-            ),
-            replications = as.integer(mode_cfg$replications),
-            method_count = length(mode_cfg$method_ids),
-            expected_datasets = expected_datasets,
-            expected_result_rows =
-              expected_datasets * length(mode_cfg$method_ids),
-            stringsAsFactors = FALSE
-          )
-        }
-      }
+  for (dgp_id in character_values(mode_cfg$dgp_ids)) {
+    for (cell_index in seq_len(nrow(design_cells))) {
+      n <- as.integer(design_cells$n[[cell_index]])
+      c_target <- as.numeric(design_cells$guaranteed_content[[cell_index]])
+      tol_conf <- as.numeric(design_cells$tolerance_confidence[[cell_index]])
+      index <- index + 1L
+      wave_id <- sprintf(
+        "w%03d_%s_n%04d_c%s_t%s",
+        index, safe_slug(dgp_id), n, format_probability(c_target),
+        format_probability(tol_conf)
+      )
+      expected_datasets <- length(numeric_values(mode_cfg$posterior_confidences)) *
+        as.integer(mode_cfg$replications)
+      out[[index]] <- data.frame(
+        wave_id = wave_id,
+        mode = mode,
+        dgp_id = dgp_id,
+        n = n,
+        guaranteed_content = c_target,
+        tolerance_confidence = tol_conf,
+        cell_id = design_cells$cell_id[[cell_index]],
+        posterior_confidences = paste(
+          numeric_values(mode_cfg$posterior_confidences), collapse = ";"
+        ),
+        replications = as.integer(mode_cfg$replications),
+        method_count = length(character_values(mode_cfg$method_ids)),
+        expected_datasets = expected_datasets,
+        expected_result_rows =
+          expected_datasets * length(character_values(mode_cfg$method_ids)),
+        stringsAsFactors = FALSE
+      )
     }
   }
   do.call(rbind, out)
@@ -478,44 +545,63 @@ prepare_run <- function() {
   utils::write.csv(wave_plan, file.path(run_dir, "wave_plan.csv"),
                    row.names = FALSE)
 
-  scan_method_ids <- as.character(mode_cfg$method_ids)
+  scan_method_ids <- character_values(mode_cfg$method_ids)
   scan_method_ids <- scan_method_ids[
     !is.na(vapply(scan_method_ids, scan_method_for, character(1L)))
   ]
   calibrations <- list()
   calibration_rows <- list()
   calibration_index <- 0L
+  calibration_cells <- unique(design_cells[
+    c("n", "guaranteed_content", "tolerance_confidence")
+  ])
   for (method_id in scan_method_ids) {
-    for (n in unique(as.integer(mode_cfg$sample_sizes))) {
-      for (c_target in unique(as.numeric(mode_cfg$guaranteed_contents))) {
-        for (tol_conf in unique(as.numeric(mode_cfg$tolerance_confidences))) {
-          key <- scan_cache_key(method_id, n, c_target, tol_conf)
-          if (key %in% names(calibrations)) next
-          calibration <- calibrate_safely(method_id, n, c_target, tol_conf)
-          calibrations[[key]] <- calibration
-          calibration_index <- calibration_index + 1L
-          calibration_rows[[calibration_index]] <- data.frame(
-            cache_key = key,
-            method = calibration$scan_critical_method,
-            n = n,
-            guaranteed_content = c_target,
-            tolerance_confidence = tol_conf,
-            retained_count = as.integer(calibration$retained_count),
-            content_buffer = calibration$content_buffer %||% NA_real_,
-            certified_lower_probability =
-              calibration$scan_probability$certified_lower_probability %||%
-              NA_real_,
-            infeasible = isTRUE(calibration$infeasible),
-            message = calibration$message %||% "",
-            calibration_digest = digest::digest(calibration, algo = "sha256",
-                                                serialize = TRUE),
-            stringsAsFactors = FALSE
-          )
-        }
-      }
+    for (cell_index in seq_len(nrow(calibration_cells))) {
+      n <- as.integer(calibration_cells$n[[cell_index]])
+      c_target <- as.numeric(calibration_cells$guaranteed_content[[cell_index]])
+      tol_conf <- as.numeric(calibration_cells$tolerance_confidence[[cell_index]])
+      key <- scan_cache_key(method_id, n, c_target, tol_conf)
+      if (key %in% names(calibrations)) next
+      calibration <- calibrate_safely(method_id, n, c_target, tol_conf)
+      calibrations[[key]] <- calibration
+      calibration_index <- calibration_index + 1L
+      calibration_rows[[calibration_index]] <- data.frame(
+        cache_key = key,
+        method = calibration$scan_critical_method,
+        n = n,
+        guaranteed_content = c_target,
+        tolerance_confidence = tol_conf,
+        retained_count = as.integer(calibration$retained_count),
+        content_buffer = calibration$content_buffer %||% NA_real_,
+        certified_lower_probability =
+          calibration$scan_probability$certified_lower_probability %||%
+          NA_real_,
+        infeasible = isTRUE(calibration$infeasible),
+        message = calibration$message %||% "",
+        calibration_digest = digest::digest(calibration, algo = "sha256",
+                                            serialize = TRUE),
+        stringsAsFactors = FALSE
+      )
     }
   }
-  calibration_table <- do.call(rbind, calibration_rows)
+  calibration_table <- if (length(calibration_rows)) {
+    do.call(rbind, calibration_rows)
+  } else {
+    data.frame(
+      cache_key = character(),
+      method = character(),
+      n = integer(),
+      guaranteed_content = numeric(),
+      tolerance_confidence = numeric(),
+      retained_count = integer(),
+      content_buffer = numeric(),
+      certified_lower_probability = numeric(),
+      infeasible = logical(),
+      message = character(),
+      calibration_digest = character(),
+      stringsAsFactors = FALSE
+    )
+  }
   utils::write.csv(calibration_table,
                    file.path(run_dir, "scan_calibration_summary.csv"),
                    row.names = FALSE)
@@ -533,10 +619,10 @@ prepare_run <- function() {
   certificates <- list()
   oracle_rows <- list()
   oracle_index <- 0L
-  for (dgp_id in unique(as.character(mode_cfg$dgp_ids))) {
+  for (dgp_id in unique(character_values(mode_cfg$dgp_ids))) {
     dgp <- dgp_by_id[[dgp_id]]
     spec <- oracle_spec_from_dgp(dgp)
-    for (c_target in unique(as.numeric(mode_cfg$guaranteed_contents))) {
+    for (c_target in unique(design_cells$guaranteed_content)) {
       key <- oracle_key(dgp_id, c_target)
       certificate <- mti_interval_oracle(
         family = spec$family,

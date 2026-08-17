@@ -11,8 +11,8 @@
 #'   `"gaussian"`, `"laplace"`, `"student_t"`, `"centered_gamma"`,
 #'   `"centered_exponential"`, `"asymmetric_laplace"`,
 #'   `"gaussian_mixture"`, `"centered_lognormal"`,
-#'   `"centered_standardized_lognormal"`, `"normal_t_mixture"`, and
-#'   `"standardized_skewed_normal_t_mixture"`.
+#'   `"centered_standardized_lognormal"`, `"standardized_beta"`,
+#'   `"normal_t_mixture"`, and `"standardized_skewed_normal_t_mixture"`.
 #' @param coverage_level Target interval coverage in `(0, 1)`.
 #' @param params Optional family parameters.
 #' @param tol Numerical tolerance for the scalar root search.
@@ -851,6 +851,51 @@ rqr_oracle_certificate <- function(
       mean = 0, second_moment = shape * scale^2,
       support = c(-center, Inf),
       params = list(shape = shape, scale = scale, center = center)
+    ))
+  }
+  if (family %in% c("beta", "standardized_beta", "centered_standardized_beta")) {
+    shape1 <- as.numeric(params$shape1 %||% params$a %||% 2)[1L]
+    shape2 <- as.numeric(params$shape2 %||% params$b %||% 5)[1L]
+    if (!is.finite(shape1) || shape1 <= 0 ||
+        !is.finite(shape2) || shape2 <= 0) {
+      stop("beta shape parameters must be positive.", call. = FALSE)
+    }
+    raw_mean <- shape1 / (shape1 + shape2)
+    raw_var <- shape1 * shape2 /
+      ((shape1 + shape2)^2 * (shape1 + shape2 + 1))
+    standardize <- family %in% c(
+      "standardized_beta", "centered_standardized_beta"
+    ) || isTRUE(params$variance_standardized %||% FALSE)
+    center <- if (isTRUE(params$center %||% standardize)) raw_mean else 0
+    scale <- if (standardize) sqrt(raw_var) else 1
+    if (!is.finite(scale) || scale <= 0) {
+      stop("standardized beta scale must be positive.", call. = FALSE)
+    }
+    support <- c((0 - center) / scale, (1 - center) / scale)
+    d <- function(x) {
+      raw <- scale * as.numeric(x) + center
+      scale * stats::dbeta(raw, shape1 = shape1, shape2 = shape2)
+    }
+    F <- function(x) {
+      raw <- scale * as.numeric(x) + center
+      stats::pbeta(raw, shape1 = shape1, shape2 = shape2)
+    }
+    q <- function(p) {
+      (stats::qbeta(p, shape1 = shape1, shape2 = shape2) - center) /
+        scale
+    }
+    return(list(
+      family = if (standardize) "standardized_beta" else "beta",
+      d = d, F = F, q = q,
+      M = numeric_moment(d, support[[1L]], support[[2L]], 1),
+      M2 = numeric_moment(d, support[[1L]], support[[2L]], 2),
+      mean = (raw_mean - center) / scale,
+      second_moment = (raw_var + (raw_mean - center)^2) / scale^2,
+      support = support,
+      params = list(
+        shape1 = shape1, shape2 = shape2, center = center, scale = scale,
+        variance_standardized = standardize
+      )
     ))
   }
   if (family == "asymmetric_laplace") {

@@ -1,0 +1,477 @@
+{
+  "schema_version": "rqrgibbs_bayes_uq_validation/1.2.0",
+  "study_id": "rqr_bayes_uq_followup_20260816",
+  "description": "Follow-up iid univariate tolerance validation lanes: 200-iteration MTI-ECM audit, 90%-confidence paper-matched feasibility cells, and 95%-confidence small-sample feasibility cells.",
+  "base_seed": 863216,
+  "claim_scope": {
+    "iid_univariate_continuous_only": true,
+    "regression_tolerance": false,
+    "dynamic_tolerance": false,
+    "coverage_levels_are_guaranteed_contents": true,
+    "paired_design_cells_preserve_feasibility_thresholds": true,
+    "response_likelihood_required_for_posterior_content_probabilities": true
+  },
+  "execution": {
+    "smoke_authorized": true,
+    "ecm200_audit_authorized": true,
+    "paper_matched_90_authorized": true,
+    "small_sample_95_authorized": true,
+    "overnight_mode": "small_sample_95",
+    "checkpoint_every_datasets": 10
+  },
+  "diagnostics": {
+    "reference_method_id": "tcsp_mc",
+    "oracle_width_reference_method_id": "oracle_sh",
+    "primary_tolerance_confidence": 0.95,
+    "paper_matched_tolerance_confidence": 0.90,
+    "full_range_feasibility_formula": "1 - n * (1 - c) * c^(n - 1) - c^n"
+  },
+  "oracle": {
+    "target": "SH",
+    "tol": 1e-10,
+    "grid_size": 1601
+  },
+  "scan_calibration": {
+    "method": "monte_carlo_conservative",
+    "smoke_n_sim": 5000,
+    "smoke_numerical_confidence": 0.995,
+    "ecm200_audit_n_sim": 5000,
+    "ecm200_audit_numerical_confidence": 0.995,
+    "paper_matched_90_n_sim": 5000,
+    "paper_matched_90_numerical_confidence": 0.995,
+    "small_sample_95_n_sim": 5000,
+    "small_sample_95_numerical_confidence": 0.995,
+    "seed": 1512616
+  },
+  "engine_defaults": {
+    "direct_dp": {
+      "concentration": 1,
+      "base": {
+        "family": "normal",
+        "mean": 0,
+        "sd": 4
+      },
+      "shortest_draws": 20,
+      "residual_mass_tol": 0.05
+    },
+    "bayesian_bootstrap": {
+      "draws": 60
+    },
+    "mti_gibbs": {
+      "learning_rate": 1,
+      "beta_ridge_tau2": 10000,
+      "smoke_mcmc_control": {
+        "n_burn": 8,
+        "n_mcmc": 12,
+        "thin": 1
+      },
+      "paper_matched_90_mcmc_control": {
+        "n_burn": 25,
+        "n_mcmc": 50,
+        "thin": 1
+      },
+      "small_sample_95_mcmc_control": {
+        "n_burn": 25,
+        "n_mcmc": 50,
+        "thin": 1
+      }
+    },
+    "mti_ecm": {
+      "learning_rate": 1,
+      "beta_ridge_tau2": 10000,
+      "smoke_ecm_control": {
+        "max_iter": 40,
+        "stable_iterations": 1,
+        "tol_stationarity": 1000000,
+        "store_iteration_trace": true
+      },
+      "ecm200_audit_ecm_control": {
+        "max_iter": 200,
+        "stable_iterations": 2,
+        "tol_stationarity": 0.00001,
+        "store_iteration_trace": true
+      },
+      "paper_matched_90_ecm_control": {
+        "max_iter": 200,
+        "stable_iterations": 2,
+        "tol_stationarity": 0.00001,
+        "store_iteration_trace": true
+      },
+      "small_sample_95_ecm_control": {
+        "max_iter": 200,
+        "stable_iterations": 2,
+        "tol_stationarity": 0.00001,
+        "store_iteration_trace": true
+      }
+    },
+    "split": {
+      "pilot_fraction": 0.30
+    }
+  },
+  "dgps": [
+    {
+      "dgp_id": "normal",
+      "family": "normal",
+      "label": "standard normal"
+    },
+    {
+      "dgp_id": "lognormal",
+      "family": "standardized_lognormal",
+      "label": "centered standardized lognormal",
+      "logsd": 0.75
+    },
+    {
+      "dgp_id": "lognormal_hard",
+      "family": "standardized_lognormal",
+      "label": "hard centered standardized lognormal",
+      "logsd": 1.25
+    },
+    {
+      "dgp_id": "mixture",
+      "family": "standardized_normal_mixture",
+      "label": "standardized separated normal mixture",
+      "weights": [0.80, 0.20],
+      "means": [-1.00, 2.00],
+      "sds": [0.60, 0.40]
+    },
+    {
+      "dgp_id": "sharp_mixture",
+      "family": "standardized_normal_mixture",
+      "label": "standardized sharp separated normal mixture",
+      "weights": [0.50, 0.50],
+      "means": [-2.00, 2.00],
+      "sds": [0.20, 0.20]
+    },
+    {
+      "dgp_id": "contaminated_normal",
+      "family": "standardized_normal_mixture",
+      "label": "standardized five-percent scale-contaminated normal",
+      "weights": [0.95, 0.05],
+      "means": [0.00, 0.00],
+      "sds": [1.00, 8.00]
+    },
+    {
+      "dgp_id": "student_t3",
+      "family": "standardized_student_t",
+      "label": "standardized Student t with three degrees of freedom",
+      "df": 3
+    },
+    {
+      "dgp_id": "beta_left",
+      "family": "standardized_beta",
+      "label": "standardized left-skewed beta",
+      "shape1": 5,
+      "shape2": 2
+    }
+  ],
+  "methods": [
+    {
+      "method_id": "oracle_sh",
+      "label": "True population shortest interval oracle with exact mean tilt",
+      "formal_tolerance_action": false,
+      "response_likelihood": false,
+      "generalized_bayes": false,
+      "deployable": false,
+      "action_lane": "oracle_reference",
+      "selected_interval_source": "population_shortest_oracle"
+    },
+    {
+      "method_id": "hdp_s_mc",
+      "label": "Hybrid direct-DP Bayesian-scan shortest interval with MC scan calibration",
+      "formal_tolerance_action": true,
+      "response_likelihood": true,
+      "generalized_bayes": false,
+      "deployable": true,
+      "action_lane": "scan_certified_bayes_hybrid",
+      "selected_interval_source": "hybrid_bayesian_scan_action",
+      "uq_engine": "direct_dp",
+      "scan_method": "monte_carlo_conservative"
+    },
+    {
+      "method_id": "tcsp_mc",
+      "label": "TCSP shortest window with MC scan calibration",
+      "formal_tolerance_action": true,
+      "response_likelihood": false,
+      "generalized_bayes": true,
+      "deployable": true,
+      "action_lane": "scan_certified_empirical",
+      "selected_interval_source": "formal_scan_action",
+      "scan_method": "monte_carlo_conservative"
+    },
+    {
+      "method_id": "tcsp_mti_gibbs_median_mc",
+      "label": "Fixed-target MTI Gibbs posterior-median summary after MC scan calibration",
+      "formal_tolerance_action": false,
+      "response_likelihood": false,
+      "generalized_bayes": true,
+      "deployable": true,
+      "action_lane": "fixed_target_mti_plugin",
+      "selected_interval_source": "mti_gibbs_posterior_median",
+      "uq_engine": "mti_gibbs",
+      "tilt_source": "sample_shortest_window",
+      "scan_method": "monte_carlo_conservative"
+    },
+    {
+      "method_id": "tcsp_mti_ecm_map_mc",
+      "label": "Fixed-target MTI ECM/MAP summary after MC scan calibration",
+      "formal_tolerance_action": false,
+      "response_likelihood": false,
+      "generalized_bayes": true,
+      "deployable": true,
+      "action_lane": "fixed_target_mti_plugin",
+      "selected_interval_source": "mti_ecm_map",
+      "uq_engine": "mti_ecm",
+      "tilt_source": "sample_shortest_window",
+      "scan_method": "monte_carlo_conservative"
+    },
+    {
+      "method_id": "tcsp_dkw",
+      "label": "TCSP shortest window with conservative DKW scan calibration",
+      "formal_tolerance_action": true,
+      "response_likelihood": false,
+      "generalized_bayes": true,
+      "deployable": true,
+      "action_lane": "scan_certified_empirical_stress",
+      "selected_interval_source": "formal_scan_action",
+      "scan_method": "dkw_conservative"
+    },
+    {
+      "method_id": "young_mathew",
+      "label": "Young-Mathew nonparametric tolerance comparator",
+      "formal_tolerance_action": true,
+      "response_likelihood": false,
+      "generalized_bayes": false,
+      "deployable": true,
+      "action_lane": "external_nonparametric_tolerance",
+      "selected_interval_source": "tolerance_nptol_int_YM"
+    },
+    {
+      "method_id": "wilks_minmax",
+      "label": "Full-sample min-max order-statistic comparator",
+      "formal_tolerance_action": true,
+      "response_likelihood": false,
+      "generalized_bayes": false,
+      "deployable": true,
+      "action_lane": "order_statistic_baseline",
+      "selected_interval_source": "full_sample_minmax"
+    }
+  ],
+  "modes": {
+    "smoke": {
+      "dgp_ids": ["normal", "beta_left"],
+      "design_cells": [
+        {
+          "cell_id": "paper90_c090_n0038",
+          "n": 38,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.90
+        },
+        {
+          "cell_id": "conf95_c090_n0050",
+          "n": 50,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "interior95_c090_n0500",
+          "n": 500,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        }
+      ],
+      "posterior_confidences": [0.95],
+      "replications": 1,
+      "paired_thresholds": true,
+      "method_ids": [
+        "oracle_sh",
+        "tcsp_mc",
+        "tcsp_mti_gibbs_median_mc",
+        "tcsp_mti_ecm_map_mc",
+        "young_mathew",
+        "wilks_minmax",
+        "tcsp_dkw"
+      ]
+    },
+    "ecm200_audit": {
+      "dgp_ids": [
+        "normal",
+        "lognormal",
+        "lognormal_hard",
+        "mixture",
+        "sharp_mixture",
+        "contaminated_normal",
+        "student_t3"
+      ],
+      "design_cells": [
+        {
+          "cell_id": "primary95_c090_n0500",
+          "n": 500,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "primary95_c095_n0500",
+          "n": 500,
+          "guaranteed_content": 0.95,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "primary95_c099_n0500",
+          "n": 500,
+          "guaranteed_content": 0.99,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "primary95_c090_n1000",
+          "n": 1000,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "primary95_c095_n1000",
+          "n": 1000,
+          "guaranteed_content": 0.95,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "primary95_c099_n1000",
+          "n": 1000,
+          "guaranteed_content": 0.99,
+          "tolerance_confidence": 0.95
+        }
+      ],
+      "posterior_confidences": [0.95],
+      "replications": 100,
+      "paired_thresholds": true,
+      "method_ids": [
+        "oracle_sh",
+        "tcsp_mc",
+        "tcsp_mti_ecm_map_mc",
+        "young_mathew",
+        "wilks_minmax"
+      ]
+    },
+    "paper_matched_90": {
+      "dgp_ids": [
+        "normal",
+        "lognormal_hard",
+        "sharp_mixture",
+        "student_t3",
+        "beta_left"
+      ],
+      "design_cells": [
+        {
+          "cell_id": "paper90_c090_n0038",
+          "n": 38,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.90
+        },
+        {
+          "cell_id": "paper90_c095_n0077",
+          "n": 77,
+          "guaranteed_content": 0.95,
+          "tolerance_confidence": 0.90
+        },
+        {
+          "cell_id": "paper90_c099_n0388",
+          "n": 388,
+          "guaranteed_content": 0.99,
+          "tolerance_confidence": 0.90
+        }
+      ],
+      "posterior_confidences": [0.95],
+      "replications": 1000,
+      "paired_thresholds": true,
+      "method_ids": [
+        "oracle_sh",
+        "hdp_s_mc",
+        "tcsp_mc",
+        "tcsp_mti_gibbs_median_mc",
+        "tcsp_mti_ecm_map_mc",
+        "young_mathew",
+        "wilks_minmax",
+        "tcsp_dkw"
+      ]
+    },
+    "small_sample_95": {
+      "dgp_ids": [
+        "normal",
+        "lognormal",
+        "lognormal_hard",
+        "mixture",
+        "sharp_mixture",
+        "contaminated_normal",
+        "student_t3",
+        "beta_left"
+      ],
+      "design_cells": [
+        {
+          "cell_id": "threshold95_c090_n0046",
+          "n": 46,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "practical95_c090_n0050",
+          "n": 50,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "stress95_c095_n0050",
+          "n": 50,
+          "guaranteed_content": 0.95,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "threshold95_c095_n0093",
+          "n": 93,
+          "guaranteed_content": 0.95,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "practical95_c090_n0100",
+          "n": 100,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "practical95_c095_n0100",
+          "n": 100,
+          "guaranteed_content": 0.95,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "stress95_c099_n0100",
+          "n": 100,
+          "guaranteed_content": 0.99,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "threshold95_c099_n0473",
+          "n": 473,
+          "guaranteed_content": 0.99,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "primary95_c099_n0500",
+          "n": 500,
+          "guaranteed_content": 0.99,
+          "tolerance_confidence": 0.95
+        }
+      ],
+      "posterior_confidences": [0.95],
+      "replications": 300,
+      "paired_thresholds": true,
+      "method_ids": [
+        "oracle_sh",
+        "tcsp_mc",
+        "tcsp_mti_gibbs_median_mc",
+        "tcsp_mti_ecm_map_mc",
+        "young_mathew",
+        "wilks_minmax",
+        "tcsp_dkw"
+      ]
+    }
+  }
+}

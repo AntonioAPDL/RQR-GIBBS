@@ -25,7 +25,7 @@
   linkcolor=black,
   citecolor=black,
   urlcolor=black,
-  pdftitle={Mean-Tilted Intervals: Fixed-Content Targets, Generalized Bayes, and Tolerance Actions},
+  pdftitle={Mean-Tilted Intervals: A Generalized-Bayes Approach to Fixed-Content and Tolerance Intervals},
   pdfauthor={Antonio De Leon, Raquel Prado, and Bruno Sanso}
 }
 
@@ -54,7 +54,7 @@
 }
 
 \title{\vspace{-0.6cm}Mean-Tilted Intervals:\\
-Fixed-Content Targets, Generalized Bayes, and Tolerance Actions}
+A Generalized-Bayes Approach to Fixed-Content and Tolerance Intervals}
 \author{Antonio De Leon$^{1}$ \and Raquel Prado$^{1}$ \and Bruno Sans\'o$^{1}$}
 \date{\small $^{1}$ Department of Statistics, University of California, Santa Cruz\\
 \vspace{0.25em}July 2026}
@@ -97,7 +97,11 @@ count. A direct Dirichlet-process response-distribution layer gives exact
 fixed-interval Beta content probabilities, and a hybrid Bayesian--scan action
 adds a posterior content-probability constraint to the scan count. Posterior
 credibility is not tolerance confidence, and MTI endpoint draws are not
-posterior predictive response draws.
+posterior predictive response draws. A prespecified iid validation study at
+tolerance confidence \(0.95\) compares scan-calibrated actions, fixed-target MTI
+summaries, Young--Mathew and Wilks order-statistic competitors, and a
+conservative DKW fallback across three contents and seven distributional
+families.
 \end{abstract}
 
 \section{Introduction}
@@ -1467,122 +1471,83 @@ and \(\omega_{\mathrm R}\) is not a tolerance factor.
 \section{Validation Scope and Numerical Evidence}
 \label{sec:evaluation}
 
-The evidence is organized in three tiers because the claims have different
-targets. Population calculations verify the fixed-content and mean-tilt
-characterizations without Monte Carlo error. Computational fixtures compare
-generalized-posterior draws with quadrature, dense Gaussian full conditionals,
-analytic scale updates, and exact checkpoint continuation. These checks validate
-the stated computational target on reference problems; they do not establish
-repeated-sample coverage or comparative forecasting performance. A separate
-confirmatory tolerance study is required for empirical coverage, width, oracle
-efficiency, infeasibility, and runtime comparisons.
+The evidence is organized by inferential target. Population calculations verify
+the fixed-content and mean-tilt characterizations without Monte Carlo error.
+Computational fixtures compare generalized-posterior updates with quadrature,
+dense Gaussian full conditionals, analytic scale updates, and exact checkpoint
+continuation. The supplement reports the fixed-design and dynamic single-data
+oracle-tilt diagnostics, including endpoint-error summaries and MCMC checks.
+Those diagnostics establish agreement with the declared generalized-posterior
+targets on controlled fixtures. Repeated-sampling tolerance performance is
+evaluated separately.
 
-Figures~\ref{fig:oracle-tilt-fixed-design-fit}
-and~\ref{fig:oracle-tilt-dlm-fit} provide the second tier: fixed-target
-single-data illustrations for a static readout and a dynamic root model. The
-population law and recovery tilts are fixed before fitting. In both examples,
-innovations follow an affinely standardized asymmetric-Laplace law with source
-index \(0.80\), producing pronounced left skewness while retaining adequate
-information in both endpoint tails. The three recovery tilts are computed
-directly as the conditional retained mean of each population window minus the
-population mean. The resulting innovation-scale tilts are \(0\), \(0.0561\),
-and \(0.1147\) for MPI, ET, and SH, respectively; no Cornish--Fisher
-approximation is used. The fitted intervals are generalized-posterior
-summaries of ordered root draws, and the shaded regions are pointwise 95\%
-generalized-posterior credible bands for the
-endpoint functionals. They are not posterior predictive intervals for future
-responses. The examples show how MPI, equal-tailed recovery, and
-shortest-window recovery enter the
-fixed-rate Gibbs sampler at content \(c=0.95\). They are not a simulation
-study. All 27 chains and six family--target cells passed the numerical,
-provenance, conditional-reference, finite-output, and broad-recovery
-requirements with zero numerical repairs. Five cells also passed every strict
-diagnostic. Dynamic SH retained five prespecified bulk-ESS warnings
-(\(801\)--\(996\), relative to a threshold of \(1{,}000\)) and narrowly missed
-one width-contrast diagnostic. Its largest \(\widehat R\) was \(1.0065\), its
-tail ESS exceeded \(1{,}166\), and its MCSE-to-standard-deviation ratio was
-below \(0.037\). We retained this fit without changing a threshold, replacing
-a seed, or selectively extending a chain. The supplement reports the compact
-recovery table and endpoint-error summaries.
+The main tolerance study is prespecified before inspecting comparative results,
+following simulation-study reporting principles
+\citep{MorrisWhiteCrowther2019Simulation}. It uses iid continuous samples from
+seven standardized data-generating laws: Gaussian, two log-normal skewness
+levels, two separated mixtures, a five-percent scale-contaminated normal, and a
+Student \(t_3\) law. The primary grid fixes tolerance confidence at \(0.95\),
+uses sample sizes \(n=500\) and \(n=1000\), and evaluates target contents
+\(c\in\{0.90,0.95,0.99\}\). The choice \(n=500\) is deliberately close to the
+two-sided full-range feasibility threshold for \(c=0.99\) at confidence
+\(0.95\), which is \(473\); \(n=1000\) gives a less boundary-dominated
+comparison. Hybrid Bayesian--scan actions are evaluated at posterior content
+thresholds \(0.90\), \(0.95\), and \(0.99\), using the same random samples as
+the empirical scan action.
 
-\begin{figure}[!htbp]
+The method set separates the object being compared. The population shortest
+interval is an oracle width reference. TCSP is the formal scan-calibrated
+shortest empirical action. The hybrid DP--scan action adds a direct
+Dirichlet-process content screen to the same calibrated count. The MTI Gibbs and
+MTI ECM rows are fixed-target generalized-Bayes endpoint summaries constructed
+after the scan selects the retained count and sample tilt; their formal scan
+window remains recorded separately. Young--Mathew interpolation
+\citep{YoungMathew2014NonparametricTolerance}, Wilks min--max intervals
+\citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction}, and the DKW
+fallback provide classical and conservative order-statistic comparators. Primary
+metrics are grid delivery success, conditional success among feasible fits,
+median width relative to TCSP, infeasibility, and runtime.
+
+\begin{table}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/fig04_fixed_design_oracle_tilt_c095.pdf}
-\caption{\textbf{Fixed-design illustration with oracle recovery tilts.}
-A single nonlinear heteroscedastic fixed-design data set with \(n=2{,}400\) is
-generated from the left-skewed response law described in the text, with content
-\(c=0.95\). The population location and scale are smooth nonlinear functions,
-and the root regressions use an empirical orthogonal cubic B-spline design. A
-data-independent prior-predictive rule selects the common ridge variance. Each
-panel fits the same static root-regression model with a
-different exact population-oracle tilt: MPI, equal-tailed recovery
-(ET), or shortest-window recovery (SH). Blue curves are the population-oracle
-endpoints; orange curves are
-generalized-posterior mean fitted endpoints; pale orange ribbons are pointwise
-95\% generalized-posterior credible bands from four chains with 6,000 retained
-draws each. The figure
-illustrates target placement and finite-sample endpoint uncertainty, not
-response simulation. A
-frozen-feature DESN readout uses the same static Gibbs sampler after replacing
-\(\mat X\) by the recorded reservoir-feature design.}
-\label{fig:oracle-tilt-fixed-design-fit}
-\end{figure}
+\caption{\textbf{Primary iid tolerance-validation summary.} Results aggregate
+the completed primary grid with seven data-generating laws, \(n\in\{500,1000\}\),
+\(c\in\{0.90,0.95,0.99\}\), tolerance confidence \(0.95\), three posterior
+content thresholds for Bayesian-screened methods, and 100 replications per
+cell. Delivery counts infeasible cells as failures; feasible success conditions
+on methods returning an interval. Width is reported relative to the TCSP scan
+action on the same data set and target.}
+\label{tab:tolerance-validation-main}
+\TableStyle
+\input{tables/tolerance_validation_main_summary.tex}
+\end{table}
 
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=\textwidth]{figures/generated/fig05_dlm_oracle_tilt_c095.pdf}
-\caption{\textbf{Dynamic linear root-state illustration with oracle recovery
-tilts.}
-A single local-linear trajectory with a four-cycle seasonal location component
-and sinusoidally varying innovation scale is observed at 1,178 of 1,200 times
-under the same left-skewed response law. The two fixed missing windows contain
-11 consecutive times each. The MTI-DLM is fit with fixed \(W_t\), fixed
-learning rate, and the same three exact
-population-oracle tilt choices as in
-Figure~\ref{fig:oracle-tilt-fixed-design-fit}. Missing observations contribute
-no generalized-posterior factor, latent scale, or tilt term; translucent
-magenta bands and baseline
-triangles mark the two omitted-response windows and their centers. Blue curves
-are population-oracle dynamic endpoints, orange curves are generalized-posterior
-mean fitted endpoints, and pale orange ribbons are pointwise 95\%
-generalized-posterior credible bands for the endpoint functions. Each target
-uses five chains with 6,000 retained draws per chain.
-All targets use
-the same block-diagonal \(C_0\), the exact discretization of one frozen
-continuous-time local-linear evolution over the physical horizon \([0,1]\), a
-common seasonal state block, and target-independent initialization profiles.
-These are generalized-posterior summaries of interval-root functionals, not
-posterior predictive response bands.}
-\label{fig:oracle-tilt-dlm-fit}
-\end{figure}
+Table~\ref{tab:tolerance-validation-main} gives a compact view of the primary
+run. TCSP and the hybrid DP--scan action have identical delivered intervals on
+this grid, with \(98.7\%\) delivery and median relative width one; the hybrid
+screen adds a Bayesian content check at a large runtime cost. Wilks min--max is
+slightly more conservative in delivery, \(99.3\%\), but its median width is
+about \(42\%\) larger than TCSP. Young--Mathew is slightly narrower than TCSP on
+median and delivers \(96.4\%\), above the nominal \(95\%\)-confidence target but
+below the scan and Wilks comparators on this hard multi-family grid. The
+fixed-target MTI Gibbs and ECM summaries have high
+conditional success among feasible cells, while their delivery rates reflect the
+intended fail-closed behavior at the difficult \(n=500,c=0.99\) cells. The DKW
+fallback is included as a conservative diagnostic: when feasible it succeeds,
+but it is often infeasible and substantially wider.
 
-The confirmatory tolerance-validation protocol is designed before inspecting
-comparative results, following simulation-study reporting principles
-\citep{MorrisWhiteCrowther2019Simulation}. It varies sample size, target
-content, and distributional shape, including symmetric, skewed, heavy-tailed,
-contaminated, and mixture data-generating mechanisms. The method set separates
-oracle shortest intervals, empirical scan actions, hybrid Bayesian--scan
-actions, fixed-target MTI Gibbs and ECM summaries, split exact-spacing
-procedures, Wilks intervals, DKW fallback intervals, and Bayesian-bootstrap
-diagnostics. Primary summaries are empirical content success, width, ratio to
-the oracle shortest width, ratio to the scan action, infeasibility or
-fail-closed rate, posterior-constraint binding, and runtime. Equal-tailed
-interval scores remain secondary because they target a different placement
-principle.
-
-This protocol is also the gate for scientific comparison. Fixed-rate nonzero
-tilt already has verified full-conditional algebra, zero-tilt equivalence
-checks, dense conditional references, and the single-data oracle-tilt
-illustrations above for ridge static readouts and fixed-\(W\) dynamic roots.
-Those bounded checks validate implementation of the declared targets, but they
-do not validate repeated-sample coverage or a data-driven tilt-selection rule.
-Variational inference likewise requires its own objective,
-generalized-posterior approximation, and uncertainty assessment. The frozen
-MPI-DESN readout remains a static-design specialization: its reservoir is
-recorded before the generalized posterior updates the root coefficients.
-Matched nonlinear-readout evidence is a separate empirical task. Software
-status, runtime attestation, and validation records are provided in the
-reproducibility documentation.
+Two follow-up lanes are now part of the validation protocol. First, the primary
+grid is rerun for the MTI ECM row with 200 iterations and compact objective
+trace diagnostics, so the mode computation can be judged by objective descent
+and final stationarity rather than by a strict convergence flag alone. Second,
+small-sample cells are added with paired \((n,c,1-\alpha)\) triples. For the
+paper-matched \(90\%\)-confidence lane, the full-range thresholds are
+\((38,0.90)\), \((77,0.95)\), and \((388,0.99)\)
+\citep{PourmohamadRichardsonSanso2026CalibratedBNP}. For the \(95\%\)-confidence
+lane, the corresponding thresholds are \((46,0.90)\), \((93,0.95)\), and
+\((473,0.99)\), augmented by practical \(n=50\) and \(n=100\) stress cells. The
+design cells are stored explicitly in the validation config, which prevents a
+Cartesian product from mixing thresholds across confidence levels.
 
 \section{Discussion}
 \label{sec:discussion}

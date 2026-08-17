@@ -18,8 +18,8 @@ rqr_interval_oracle(
 `"gaussian"`, `"laplace"`, `"student_t"`, `"centered_gamma"`,
 `"centered_exponential"`, `"asymmetric_laplace"`,
 `"gaussian_mixture"`, `"centered_lognormal"`,
-`"centered_standardized_lognormal"`, `"normal_t_mixture"`, and
-`"standardized_skewed_normal_t_mixture"`.}
+`"centered_standardized_lognormal"`, `"standardized_beta"`,
+`"normal_t_mixture"`, and `"standardized_skewed_normal_t_mixture"`.}
 
 \item{coverage_level}{Target interval coverage in `(0, 1)`.}
 
