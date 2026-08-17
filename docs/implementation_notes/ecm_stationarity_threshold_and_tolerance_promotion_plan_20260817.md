@@ -40,12 +40,16 @@ Completed:
 - Make the manuscript table build robust to clean worktrees: the Makefile now
   regenerates the tolerance table when the ignored run summary is available and
   otherwise reuses the committed table with an explicit message.
+- Add generated supplemental follow-up tables for lane-level performance,
+  \(10^{-3}\)-stationarity ECM diagnostics, and small-sample content-level
+  behavior.
 
 ## Promotion Plan
 
-1. Regenerate the article-facing tolerance summary table from the completed
-   primary and follow-up results, using the stored stationarity diagnostics and
-   the `1e-3` convention for ECM reporting. Do not edit run outputs by hand.
+1. Regenerate article-facing tolerance tables from completed primary and
+   follow-up results, using the stored stationarity diagnostics and the `1e-3`
+   convention for ECM reporting. Do not edit run outputs by hand. The current
+   table generators now implement this path.
 2. Keep the main article table focused on the comparison that changes the
    scientific message: TCSP, hybrid DP, Young--Mathew, Wilks, and the MTI
    fixed-target summaries where feasible. Put feasibility and stationarity

@@ -27,13 +27,32 @@ default_summary_path <- Sys.getenv(
   unset = file.path(default_run_dir,
                     "final_combined_grid_complete_method_summary_with_young_mathew.csv")
 )
-summary_path <- normalizePath(arg_value(
-  "--summary-csv=",
-  default_summary_path
-), winslash = "/", mustWork = TRUE)
+summary_path_arg <- arg_value("--summary-csv=", default_summary_path)
 output_dir <- normalizePath(arg_value("--output-dir=", "tables"),
                             winslash = "/", mustWork = FALSE)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+csv_path <- file.path(output_dir, "tolerance_validation_main_summary.csv")
+tex_path <- file.path(output_dir, "tolerance_validation_main_summary.tex")
+committed_csv <- file.path(repo_root, "tables", "tolerance_validation_main_summary.csv")
+committed_tex <- file.path(repo_root, "tables", "tolerance_validation_main_summary.tex")
+
+if (!file.exists(summary_path_arg)) {
+  if (file.exists(committed_csv) && file.exists(committed_tex)) {
+    if (!identical(normalizePath(dirname(csv_path), winslash = "/", mustWork = FALSE),
+                   normalizePath(dirname(committed_csv), winslash = "/", mustWork = TRUE))) {
+      file.copy(committed_csv, csv_path, overwrite = TRUE)
+      file.copy(committed_tex, tex_path, overwrite = TRUE)
+    }
+    cat("Using committed tolerance validation table; set --summary-csv to regenerate from run output.\n")
+    cat("  csv: ", csv_path, "\n", sep = "")
+    cat("  tex: ", tex_path, "\n", sep = "")
+    quit(status = 0)
+  }
+  stopf("Missing summary CSV: ", summary_path_arg)
+}
+
+summary_path <- normalizePath(summary_path_arg, winslash = "/", mustWork = TRUE)
 
 summary <- utils::read.csv(summary_path, stringsAsFactors = FALSE,
                            check.names = FALSE)
@@ -115,8 +134,6 @@ out <- data.frame(
   stringsAsFactors = FALSE
 )
 
-csv_path <- file.path(output_dir, "tolerance_validation_main_summary.csv")
-tex_path <- file.path(output_dir, "tolerance_validation_main_summary.tex")
 utils::write.csv(out, csv_path, row.names = FALSE)
 
 body <- vapply(seq_len(nrow(out)), function(ii) {

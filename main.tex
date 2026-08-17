@@ -1597,19 +1597,21 @@ intended fail-closed behavior at the difficult \(n=500,c=0.99\) cells. The DKW
 fallback is included as a conservative diagnostic: when feasible it succeeds,
 but it is often infeasible and substantially wider.
 
-Two follow-up lanes are now part of the validation protocol. First, the primary
+Three follow-up checks complete the validation protocol. First, the primary
 grid is rerun for the MTI ECM row with 200 iterations and compact objective
 trace diagnostics, so the mode computation can be judged by objective descent
 and final stationarity, with the ECM flag interpreted at a fixed-target
-stationarity tolerance of \(10^{-3}\). Second,
-small-sample cells are added with paired \((n,c,1-\alpha)\) triples. For the
-paper-matched \(90\%\)-confidence lane, the full-range thresholds are
+stationarity tolerance of \(10^{-3}\). Second, a paper-matched
+\(90\%\)-confidence lane uses the full-range thresholds
 \((38,0.90)\), \((77,0.95)\), and \((388,0.99)\)
-\citep{PourmohamadRichardsonSanso2026CalibratedBNP}. For the \(95\%\)-confidence
-lane, the corresponding thresholds are \((46,0.90)\), \((93,0.95)\), and
-\((473,0.99)\), augmented by practical \(n=50\) and \(n=100\) stress cells. The
-design cells are stored explicitly in the validation config, which prevents a
-Cartesian product from mixing thresholds across confidence levels.
+\citep{PourmohamadRichardsonSanso2026CalibratedBNP}. Third, a
+\(95\%\)-confidence small-sample lane uses the corresponding thresholds
+\((46,0.90)\), \((93,0.95)\), and \((473,0.99)\), augmented by practical
+\(n=50\) and \(n=100\) stress cells. The design cells are stored explicitly in
+the validation config, which prevents a Cartesian product from mixing
+thresholds across confidence levels. The supplement reports the follow-up
+summaries, ECM stationarity diagnostics, and small-sample content-level
+behavior.
 
 \section{Discussion}
 \label{sec:discussion}

@@ -110,6 +110,7 @@ theory-tables:
 		echo "Missing tolerance summary $(RQR_BAYES_UQ_PRIMARY_SUMMARY) and no committed tolerance table found." >&2; \
 		exit 66; \
 	fi
+	$(R) tables/generate_tolerance_validation_followup_tables.R --output-dir=$(THEORY_TABLE_DIR)
 
 model-illustration-figures:
 	$(R) figures/generate_oracle_tilt_model_figures.R --evidence-dir=$(ORACLE_TILT_EVIDENCE_DIR) --output-dir=$(THEORY_FIGURE_DIR) --table-dir=$(THEORY_TABLE_DIR)
@@ -120,6 +121,7 @@ test-theory-figures:
 test-theory-tables:
 	$(R) tables/test_mean_tilt_cf_mini_study_table.R
 	$(R) tables/test_tolerance_validation_summary_table.R
+	$(R) tables/test_tolerance_validation_followup_tables.R
 
 test-manuscript-language:
 	$(R) application/scripts/63_validate_manuscript_bayesian_language.R
