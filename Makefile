@@ -102,7 +102,14 @@ theory-figures:
 
 theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
-	$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --output-dir=$(THEORY_TABLE_DIR)
+	@if [ -f "$(RQR_BAYES_UQ_PRIMARY_SUMMARY)" ]; then \
+		$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --output-dir=$(THEORY_TABLE_DIR); \
+	elif [ -f "$(THEORY_TABLE_DIR)/tolerance_validation_main_summary.tex" ]; then \
+		echo "Using committed tolerance validation table; set RQR_BAYES_UQ_PRIMARY_SUMMARY to regenerate from run output."; \
+	else \
+		echo "Missing tolerance summary $(RQR_BAYES_UQ_PRIMARY_SUMMARY) and no committed tolerance table found." >&2; \
+		exit 66; \
+	fi
 
 model-illustration-figures:
 	$(R) figures/generate_oracle_tilt_model_figures.R --evidence-dir=$(ORACLE_TILT_EVIDENCE_DIR) --output-dir=$(THEORY_FIGURE_DIR) --table-dir=$(THEORY_TABLE_DIR)

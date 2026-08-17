@@ -2313,9 +2313,12 @@ all combinations of sample size, content, and confidence.
 The follow-up validation has three lanes. The ECM-200 lane reruns the primary
 \(0.95\)-confidence grid for the fixed-target MTI ECM row with 200 iterations
 and compact trace summaries: initial objective, final objective, relative
-objective drop, final stationarity, and trace length. This preserves the
-completed primary comparison for unchanged methods while directly auditing the
-only setting that changed. The paper-matched lane uses confidence \(0.90\) and
+objective drop, final stationarity, and trace length. We interpret the ECM
+flag using a fixed-target stationarity tolerance of \(10^{-3}\); this is a
+numerical optimizer diagnostic and does not replace the scan-calibrated
+order-statistic action. This preserves the completed primary comparison for
+unchanged methods while directly auditing the only setting that changed. The
+paper-matched lane uses confidence \(0.90\) and
 the threshold cells \((38,0.90)\), \((77,0.95)\), and \((388,0.99)\), with an
 added standardized Beta law to stress bounded skewness. The small-sample
 \(0.95\)-confidence lane uses the thresholds \((46,0.90)\), \((93,0.95)\), and

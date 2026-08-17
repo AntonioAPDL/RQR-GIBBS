@@ -173,7 +173,10 @@ tcsp_mti_gibbs_median_oracle_tilt_mc
 tcsp_mti_ecm_map_oracle_tilt_mc
 ```
 
-Recommended fixed-target controls for the first corrected smoke:
+Recommended fixed-target controls for the first corrected smoke. The original
+draft used a stricter stationarity placeholder; the post-follow-up audit in
+`docs/implementation_notes/ecm_stationarity_threshold_and_tolerance_promotion_plan_20260817.md`
+sets the operational default to `tol_stationarity = 1e-3`.
 
 ```json
 {
@@ -186,7 +189,7 @@ Recommended fixed-target controls for the first corrected smoke:
     "ecm_control": {
       "max_iter": 80,
       "stable_iterations": 2,
-      "tol_stationarity": 1e-6
+      "tol_stationarity": 1e-3
     }
   }
 }

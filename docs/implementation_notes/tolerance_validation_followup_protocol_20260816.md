@@ -21,7 +21,10 @@ The follow-up config is
 
 - `ecm200_audit`: reruns the primary grid only for methods needed to audit the
   fixed-target MTI ECM row at 200 iterations. It records initial/final objective,
-  relative objective drop, final stationarity, and trace length.
+  relative objective drop, final stationarity, and trace length. The operational
+  ECM convergence flag uses the fixed-target stationarity diagnostic with
+  `tol_stationarity = 1e-3`; this is a numerical optimizer diagnostic, not a
+  tolerance-validity guarantee.
 - `paper_matched_90`: uses the full-range threshold cells `(38, 0.90)`,
   `(77, 0.95)`, and `(388, 0.99)` at tolerance confidence `0.90`, matching the
   feasibility convention used in the calibrated Bayesian nonparametric tolerance

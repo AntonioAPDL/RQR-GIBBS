@@ -88,19 +88,19 @@
       "ecm200_audit_ecm_control": {
         "max_iter": 200,
         "stable_iterations": 2,
-        "tol_stationarity": 0.00001,
+        "tol_stationarity": 0.001,
         "store_iteration_trace": true
       },
       "paper_matched_90_ecm_control": {
         "max_iter": 200,
         "stable_iterations": 2,
-        "tol_stationarity": 0.00001,
+        "tol_stationarity": 0.001,
         "store_iteration_trace": true
       },
       "small_sample_95_ecm_control": {
         "max_iter": 200,
         "stable_iterations": 2,
-        "tol_stationarity": 0.00001,
+        "tol_stationarity": 0.001,
         "store_iteration_trace": true
       }
     },

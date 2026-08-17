@@ -55,6 +55,10 @@ test_that("Bayesian UQ main config freezes high-coverage iid launch scope", {
                     "contaminated_normal", "student_t3") %in% dgps))
 
   expect_identical(config$oracle$target, "SH")
+  expect_equal(
+    config$engine_defaults$mti_ecm$confirmatory_ecm_control$tol_stationarity,
+    1e-3
+  )
   expect_false(isTRUE(config$methods[[which(methods == "oracle_sh")]]$deployable))
 })
 

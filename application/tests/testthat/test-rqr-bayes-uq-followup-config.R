@@ -73,6 +73,18 @@ test_that("follow-up config separates 90% and 95% feasibility thresholds", {
     config$engine_defaults$mti_ecm$ecm200_audit_ecm_control$max_iter,
     200
   )
+  expect_equal(
+    config$engine_defaults$mti_ecm$ecm200_audit_ecm_control$tol_stationarity,
+    1e-3
+  )
+  expect_equal(
+    config$engine_defaults$mti_ecm$paper_matched_90_ecm_control$tol_stationarity,
+    1e-3
+  )
+  expect_equal(
+    config$engine_defaults$mti_ecm$small_sample_95_ecm_control$tol_stationarity,
+    1e-3
+  )
   expect_true(config$engine_defaults$mti_ecm$ecm200_audit_ecm_control$
                 store_iteration_trace)
 })

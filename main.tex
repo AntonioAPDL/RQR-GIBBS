@@ -1600,7 +1600,8 @@ but it is often infeasible and substantially wider.
 Two follow-up lanes are now part of the validation protocol. First, the primary
 grid is rerun for the MTI ECM row with 200 iterations and compact objective
 trace diagnostics, so the mode computation can be judged by objective descent
-and final stationarity rather than by a strict convergence flag alone. Second,
+and final stationarity, with the ECM flag interpreted at a fixed-target
+stationarity tolerance of \(10^{-3}\). Second,
 small-sample cells are added with paired \((n,c,1-\alpha)\) triples. For the
 paper-matched \(90\%\)-confidence lane, the full-range thresholds are
 \((38,0.90)\), \((77,0.95)\), and \((388,0.99)\)

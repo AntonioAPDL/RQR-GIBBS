@@ -140,7 +140,7 @@
       "learning_rate": 1,
       "beta_ridge_tau2": 10000,
       "smoke_ecm_control": {"max_iter": 30, "stable_iterations": 1, "tol_stationarity": 1000000, "store_iteration_trace": false},
-      "confirmatory_ecm_control": {"max_iter": 80, "stable_iterations": 2, "tol_stationarity": 0.00001, "store_iteration_trace": false}
+      "confirmatory_ecm_control": {"max_iter": 80, "stable_iterations": 2, "tol_stationarity": 0.001, "store_iteration_trace": false}
     },
     "split": {
       "pilot_fraction": 0.30
