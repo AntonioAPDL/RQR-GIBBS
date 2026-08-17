@@ -107,6 +107,8 @@ test_that("Bayesian UQ main smoke runner emits launch diagnostics", {
     "target_content", "target_mean_tilt", "target_audit_digest",
     "posterior_draws", "mcmc_n_burn", "mcmc_n_mcmc", "mcmc_thin",
     "ecm_converged", "ecm_iterations", "ecm_objective",
+    "ecm_trace_length", "ecm_initial_objective", "ecm_final_objective",
+    "ecm_relative_objective_drop", "ecm_final_stationarity",
     "fit_reused_across_posterior_thresholds"
   ) %in% names(results)))
   expect_true(all(c(
@@ -117,7 +119,9 @@ test_that("Bayesian UQ main smoke runner emits launch diagnostics", {
     "formal_action_success_rate", "median_fitted_summary_width",
     "mean_target_content", "mean_target_mean_tilt",
     "mean_posterior_draws", "mcmc_fit_reuse_rate",
-    "ecm_convergence_rate", "mean_ecm_iterations"
+    "ecm_convergence_rate", "mean_ecm_iterations",
+    "mean_ecm_trace_length", "median_ecm_relative_objective_drop",
+    "median_ecm_final_stationarity"
   ) %in% names(summary)))
   expect_identical(manifest$diagnostic_reference_method_id, "tcsp_mc")
   expect_true(manifest$oracle_sh_reference_present)

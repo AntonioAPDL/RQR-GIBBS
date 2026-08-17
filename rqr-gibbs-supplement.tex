@@ -201,8 +201,8 @@ Dynamic linear root-state computation
 & Sections~\ref{sec:supp-dynamic}--\ref{sec:supp-discounts}
 & Quartic joint augmented generalized-posterior contribution, root-specific FFBS, frozen discounts, component scales, and adaptive-discount caveat\\
 Evidence and reproducibility scope
-& Section~\ref{sec:supp-reproducibility}
-& Interpretation of validation fixtures and limits of empirical claims\\
+& Sections~\ref{sec:supp-tolerance-validation-protocol}--\ref{sec:supp-reproducibility}
+& Tolerance-study design cells, feasibility thresholds, validation fixtures, and limits of empirical claims\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -522,9 +522,9 @@ functional rather than merely re-expressing it.
 Finally, with fixed endpoints,
 \(\rho_c\{(y-a)(y-b)\}=O(y^2)\) as \(|y|\to\infty\), and the endpoint scores
 grow linearly in \(|y|\). MPI is distribution-free in the sense that it does
-not posit a parametric response density, but it is not quantile-robust to
-arbitrarily heavy tails. This is why the finite-second-moment assumption and
-response-scale choice are scientifically consequential.
+not posit a parametric response density. Its retained-mean target still depends
+on second moments, so the finite-second-moment assumption and response-scale
+choice are scientifically consequential.
 
 Endpoint atoms require directional conditions. Write
 \(m=(a+b)/2\), \(h=(b-a)/2>0\), so
@@ -2253,6 +2253,86 @@ MPI and ET are strict passes; SH retains the explicitly reported diagnostic
 warnings described above.}
 \label{fig:supp-dlm-endpoint-error-c095}
 \end{figure}
+
+\section{Tolerance-Validation Protocol and Feasibility}
+\label{sec:supp-tolerance-validation-protocol}
+
+The primary tolerance validation is restricted to iid continuous univariate
+samples. This is the setting in which the scan-calibrated empirical action,
+Wilks-style full-range intervals, Young--Mathew interpolation, and the direct
+Dirichlet-process content screen can be compared on the same target. Regression
+and dynamic tolerance calibration require additional results because the fitted
+intervals vary with covariates or time.
+
+The primary grid used in the article fixes tolerance confidence \(1-\alpha=0.95\),
+uses \(n\in\{500,1000\}\), and studies contents
+\(c\in\{0.90,0.95,0.99\}\). The distributional shapes are Gaussian, moderate
+log-normal skewness, stronger log-normal skewness, separated mixtures,
+scale contamination, and Student \(t_3\) tails. Each cell uses paired random
+samples across methods and records the repository commit, frozen JSON
+configuration, scan-calibration cache, oracle certificates, wave plan, and
+artifact hashes. The primary validation table in the main article is generated
+from the collected primary run summary rather than edited by hand.
+
+Small-sample feasibility is governed by the full-range two-sided order-statistic
+coverage probability
+\[
+  \Pr\{Y_{(1)}\le Y_{\mathrm{new}}\le Y_{(n)}
+       \text{ for at least content } c\}
+  =
+  1-n(1-c)c^{n-1}-c^n .
+\]
+The smallest \(n\) satisfying this inequality depends on both content and
+tolerance confidence. Table~\ref{tab:supp-full-range-thresholds} lists the
+thresholds used to design the follow-up lanes.
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Full-range feasibility thresholds.} Entries are the smallest
+sample sizes for which the full-sample interval \([Y_{(1)},Y_{(n)}]\) reaches
+the stated two-sided distribution-free content/confidence pair.}
+\label{tab:supp-full-range-thresholds}
+\TableStyle
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Tolerance confidence & \(c=0.90\) & \(c=0.95\) & \(c=0.99\)\\
+\midrule
+\(0.90\) & 38 & 77 & 388\\
+\(0.95\) & 46 & 93 & 473\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This distinction matters for interpreting the small sample sizes in
+\citet{PourmohamadRichardsonSanso2026CalibratedBNP}. The values
+\((38,77,388)\) are appropriate for a \(90\%\)-confidence lane. A
+\(95\%\)-confidence lane needs the larger thresholds \((46,93,473)\). The
+follow-up configuration therefore stores paired design cells instead of forming
+all combinations of sample size, content, and confidence.
+
+The follow-up validation has three lanes. The ECM-200 lane reruns the primary
+\(0.95\)-confidence grid for the fixed-target MTI ECM row with 200 iterations
+and compact trace summaries: initial objective, final objective, relative
+objective drop, final stationarity, and trace length. This preserves the
+completed primary comparison for unchanged methods while directly auditing the
+only setting that changed. The paper-matched lane uses confidence \(0.90\) and
+the threshold cells \((38,0.90)\), \((77,0.95)\), and \((388,0.99)\), with an
+added standardized Beta law to stress bounded skewness. The small-sample
+\(0.95\)-confidence lane uses the thresholds \((46,0.90)\), \((93,0.95)\), and
+\((473,0.99)\), plus practical \(n=50\) and \(n=100\) stress cells that are
+explicitly allowed to fail closed when the target is infeasible.
+
+The reported metrics are aligned across lanes: delivery success, conditional
+content success among returned intervals, true content, width, width relative to
+the TCSP scan action, width relative to the population shortest oracle,
+infeasibility, posterior-constraint status for Bayesian-screened actions, ECM
+trace diagnostics, and runtime. The Young--Mathew comparator is evaluated
+through the \texttt{tolerance} package's \texttt{nptol.int(..., method = "YM")}
+implementation, and its package version is hashed into the method audit digest.
+The hybrid direct-DP method is retained where runtime is scientifically useful;
+the largest small-sample \(0.95\)-confidence lane omits that expensive screen
+because the primary study already shows that it returns the same formal scan
+window at much higher runtime.
 
 \section{Reproducibility and Evidence Boundaries}
 \label{sec:supp-reproducibility}

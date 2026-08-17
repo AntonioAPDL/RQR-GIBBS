@@ -83,9 +83,6 @@ for (package in c("rqrgibbs", "jsonlite", "digest")) {
 library(rqrgibbs)
 
 mode <- tolower(arg_value("--mode=", "smoke"))
-allowed <- c("smoke", "moderate", "confirmatory", "dpm_companion",
-             "health-check-read-only")
-if (!mode %in% allowed) stopf("Unsupported Bayesian UQ validation mode: ", mode)
 
 config_path <- normalizePath(arg_value(
   "--config=", file.path("application", "config",
@@ -107,6 +104,10 @@ wave_filters <- list(
 )
 scan_calibration_cache_path <- arg_value("--scan-calibration-cache=", NULL)
 oracle_cache_path <- arg_value("--oracle-cache=", NULL)
+
+if (!mode %in% c(names(config$modes), "health-check-read-only")) {
+  stopf("Unsupported Bayesian UQ validation mode: ", mode)
+}
 
 if (identical(mode, "health-check-read-only")) {
   run_dir <- normalizePath(arg_value("--run-dir=", ""),
@@ -167,8 +168,18 @@ dgp_by_id <- setNames(config$dgps, vapply(config$dgps, `[[`,
 method_by_id <- setNames(config$methods, vapply(config$methods, `[[`,
                                                character(1L), "method_id"))
 
+character_values <- function(x) {
+  as.character(unlist(x, use.names = FALSE))
+}
+numeric_values <- function(x) {
+  as.numeric(unlist(x, use.names = FALSE))
+}
+integer_values <- function(x) {
+  as.integer(numeric_values(x))
+}
+
 filter_character <- function(values, requested, label) {
-  values <- as.character(values)
+  values <- character_values(values)
   if (is.null(requested)) return(values)
   keep <- values[values %in% requested]
   if (!length(keep)) {
@@ -177,7 +188,7 @@ filter_character <- function(values, requested, label) {
   keep
 }
 filter_numeric <- function(values, requested, label) {
-  values <- as.numeric(values)
+  values <- numeric_values(values)
   if (is.null(requested)) return(values)
   requested <- as.numeric(requested)
   if (any(!is.finite(requested))) {
@@ -191,24 +202,92 @@ filter_numeric <- function(values, requested, label) {
   }
   keep
 }
+
+mode_design_cells <- function(mode_cfg) {
+  if (!is.null(mode_cfg$design_cells)) {
+    cells <- mode_cfg$design_cells
+    rows <- lapply(seq_along(cells), function(ii) {
+      cell <- cells[[ii]]
+      content <- cell$guaranteed_content %||% cell$content
+      confidence <- cell$tolerance_confidence %||% cell$confidence
+      data.frame(
+        cell_id = as.character(cell$cell_id %||% sprintf("cell%03d", ii)),
+        n = as.integer(cell$n)[1L],
+        guaranteed_content = as.numeric(content)[1L],
+        tolerance_confidence = as.numeric(confidence)[1L],
+        stringsAsFactors = FALSE
+      )
+    })
+    out <- do.call(rbind, rows)
+  } else {
+    out <- expand.grid(
+      cell_id = NA_character_,
+      n = integer_values(mode_cfg$sample_sizes),
+      guaranteed_content = numeric_values(mode_cfg$guaranteed_contents),
+      tolerance_confidence = numeric_values(mode_cfg$tolerance_confidences),
+      stringsAsFactors = FALSE
+    )
+    out$cell_id <- sprintf(
+      "n%04d_c%s_t%s",
+      out$n,
+      gsub("\\.", "", sprintf("%.3f", out$guaranteed_content)),
+      gsub("\\.", "", sprintf("%.3f", out$tolerance_confidence))
+    )
+  }
+  if (!nrow(out) ||
+      any(!is.finite(out$n)) ||
+      any(out$n < 2L) ||
+      any(!is.finite(out$guaranteed_content)) ||
+      any(out$guaranteed_content <= 0 | out$guaranteed_content >= 1) ||
+      any(!is.finite(out$tolerance_confidence)) ||
+      any(out$tolerance_confidence <= 0 | out$tolerance_confidence >= 1)) {
+    stopf("Mode design cells must have finite n >= 2 and probabilities in (0, 1).")
+  }
+  out <- out[order(out$n, out$guaranteed_content,
+                   out$tolerance_confidence, out$cell_id), , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+filter_design_cells <- function(cells) {
+  keep <- rep(TRUE, nrow(cells))
+  if (!is.null(wave_filters$n)) {
+    requested <- as.numeric(wave_filters$n)
+    keep <- keep & vapply(cells$n, function(x) {
+      any(abs(x - requested) <= 100 * .Machine$double.eps * max(1, abs(x)))
+    }, logical(1L))
+  }
+  if (!is.null(wave_filters$guaranteed_content)) {
+    requested <- as.numeric(wave_filters$guaranteed_content)
+    keep <- keep & vapply(cells$guaranteed_content, function(x) {
+      any(abs(x - requested) <= 100 * .Machine$double.eps * max(1, abs(x)))
+    }, logical(1L))
+  }
+  if (!is.null(wave_filters$tolerance_confidence)) {
+    requested <- as.numeric(wave_filters$tolerance_confidence)
+    keep <- keep & vapply(cells$tolerance_confidence, function(x) {
+      any(abs(x - requested) <= 100 * .Machine$double.eps * max(1, abs(x)))
+    }, logical(1L))
+  }
+  cells <- cells[keep, , drop = FALSE]
+  if (!nrow(cells)) {
+    stopf("Wave filters selected no configured design cells.")
+  }
+  rownames(cells) <- NULL
+  cells
+}
+
 mode_cfg$dgp_ids <- filter_character(
   mode_cfg$dgp_ids, wave_filters$dgp_id, "dgp_id"
-)
-mode_cfg$sample_sizes <- filter_numeric(
-  mode_cfg$sample_sizes, wave_filters$n, "sample_sizes"
-)
-mode_cfg$guaranteed_contents <- filter_numeric(
-  mode_cfg$guaranteed_contents, wave_filters$guaranteed_content,
-  "guaranteed_contents"
-)
-mode_cfg$tolerance_confidences <- filter_numeric(
-  mode_cfg$tolerance_confidences, wave_filters$tolerance_confidence,
-  "tolerance_confidences"
 )
 mode_cfg$posterior_confidences <- filter_numeric(
   mode_cfg$posterior_confidences, wave_filters$posterior_confidence,
   "posterior_confidences"
 )
+design_cells <- filter_design_cells(mode_design_cells(mode_cfg))
+mode_cfg$sample_sizes <- sort(unique(design_cells$n))
+mode_cfg$guaranteed_contents <- sort(unique(design_cells$guaranteed_content))
+mode_cfg$tolerance_confidences <- sort(unique(design_cells$tolerance_confidence))
 
 hash_to_seed <- function(text, base = 862100L) {
   bytes <- as.integer(charToRaw(as.character(text)))
@@ -269,6 +348,30 @@ dgp_meta <- function(dgp) {
       p = function(x) stats::pt(x * sd_raw, df = df)
     ))
   }
+  if (identical(dgp$family, "standardized_beta")) {
+    shape1 <- as.numeric(dgp$shape1 %||% dgp$a %||% 2)[1L]
+    shape2 <- as.numeric(dgp$shape2 %||% dgp$b %||% 5)[1L]
+    if (!is.finite(shape1) || shape1 <= 0 ||
+        !is.finite(shape2) || shape2 <= 0) {
+      stopf("standardized_beta requires positive shape parameters.")
+    }
+    mean_raw <- shape1 / (shape1 + shape2)
+    sd_raw <- sqrt(
+      shape1 * shape2 /
+        ((shape1 + shape2)^2 * (shape1 + shape2 + 1))
+    )
+    return(list(
+      r = function(n) {
+        (stats::rbeta(n, shape1 = shape1, shape2 = shape2) - mean_raw) /
+          sd_raw
+      },
+      p = function(x) {
+        stats::pbeta(
+          x * sd_raw + mean_raw, shape1 = shape1, shape2 = shape2
+        )
+      }
+    ))
+  }
   stopf("Unsupported DGP family: ", dgp$family)
 }
 
@@ -308,6 +411,15 @@ oracle_spec_from_dgp <- function(dgp) {
     return(list(
       family = "student_t",
       params = list(df = df, scale = sqrt((df - 2) / df))
+    ))
+  }
+  if (identical(dgp$family, "standardized_beta")) {
+    return(list(
+      family = "standardized_beta",
+      params = list(
+        shape1 = as.numeric(dgp$shape1 %||% dgp$a %||% 2)[1L],
+        shape2 = as.numeric(dgp$shape2 %||% dgp$b %||% 5)[1L]
+      )
     ))
   }
   stopf("Unsupported oracle DGP family: ", dgp$family)
@@ -513,6 +625,11 @@ empty_fit_result <- function(
     mcmc_n_burn = NA_integer_, mcmc_n_mcmc = NA_integer_,
     mcmc_thin = NA_integer_, ecm_converged = NA,
     ecm_iterations = NA_integer_, ecm_objective = NA_real_,
+    ecm_trace_length = NA_integer_,
+    ecm_initial_objective = NA_real_,
+    ecm_final_objective = NA_real_,
+    ecm_relative_objective_drop = NA_real_,
+    ecm_final_stationarity = NA_real_,
     fit_reused_across_posterior_thresholds = FALSE) {
   list(
     lower = lower,
@@ -554,6 +671,11 @@ empty_fit_result <- function(
     ecm_converged = ecm_converged,
     ecm_iterations = ecm_iterations,
     ecm_objective = ecm_objective,
+    ecm_trace_length = ecm_trace_length,
+    ecm_initial_objective = ecm_initial_objective,
+    ecm_final_objective = ecm_final_objective,
+    ecm_relative_objective_drop = ecm_relative_objective_drop,
+    ecm_final_stationarity = ecm_final_stationarity,
     fit_reused_across_posterior_thresholds =
       fit_reused_across_posterior_thresholds
   )
@@ -563,6 +685,121 @@ fit_scalar <- function(fit, name, default) {
   value <- fit[[name]]
   if (is.null(value) || !length(value)) return(default)
   value[[1L]]
+}
+
+ecm_trace_diagnostics <- function(fit) {
+  trace <- fit$objective_trace
+  objective <- if (!is.null(trace) && "objective" %in% names(trace)) {
+    as.numeric(trace$objective)
+  } else {
+    numeric()
+  }
+  initial <- if (length(objective)) objective[[1L]] else NA_real_
+  final <- if (length(objective)) {
+    utils::tail(objective, 1L)
+  } else {
+    as.numeric(fit$objective %||% NA_real_)[1L]
+  }
+  relative_drop <- if (is.finite(initial) && is.finite(final)) {
+    (initial - final) / (1 + abs(initial))
+  } else {
+    NA_real_
+  }
+  stationarity <- fit$stationarity_diagnostic$max_abs_midpoint_gradient %||%
+    if (!is.null(trace) && "stationarity" %in% names(trace)) {
+      utils::tail(as.numeric(trace$stationarity), 1L)
+    } else {
+      NA_real_
+    }
+  list(
+    ecm_trace_length = as.integer(length(objective)),
+    ecm_initial_objective = as.numeric(initial),
+    ecm_final_objective = as.numeric(final),
+    ecm_relative_objective_drop = as.numeric(relative_drop),
+    ecm_final_stationarity = as.numeric(stationarity)[1L]
+  )
+}
+
+extract_young_mathew <- function(raw) {
+  raw_df <- as.data.frame(raw, check.names = FALSE)
+  lower_cols <- grep("lower", names(raw_df), ignore.case = TRUE, value = TRUE)
+  upper_cols <- grep("upper", names(raw_df), ignore.case = TRUE, value = TRUE)
+  if (!length(lower_cols) || !length(upper_cols) || !nrow(raw_df)) {
+    stopf("Could not identify two-sided Young-Mathew interval columns.")
+  }
+  list(
+    lower = as.numeric(raw_df[[lower_cols[[1L]]]][[1L]]),
+    upper = as.numeric(raw_df[[upper_cols[[1L]]]][[1L]]),
+    raw = raw_df,
+    selected_row = 1L,
+    output_rows = nrow(raw_df)
+  )
+}
+
+fit_young_mathew <- function(y, c_target, tol_conf, method_meta) {
+  if (!requireNamespace("tolerance", quietly = TRUE)) {
+    return(empty_fit_result(
+      infeasible = TRUE,
+      message = "The tolerance package is required for the Young-Mathew comparator.",
+      fit_class = "tolerance_nptol_int|young_mathew|package_unavailable",
+      action_lane = method_meta$action_lane %||%
+        "external_nonparametric_tolerance",
+      selected_interval_source = method_meta$selected_interval_source %||%
+        "tolerance_nptol_int_YM",
+      scan_critical_method = "young_mathew_package_nominal"
+    ))
+  }
+  alpha <- 1 - tol_conf
+  fit <- tryCatch({
+    raw <- tolerance::nptol.int(
+      x = y, alpha = alpha, P = c_target, side = 2, method = "YM"
+    )
+    interval <- extract_young_mathew(raw)
+    lower <- interval$lower
+    upper <- interval$upper
+    if (!is.finite(lower) || !is.finite(upper) || upper < lower) {
+      stopf("Young-Mathew interval is invalid.")
+    }
+    empty_fit_result(
+      lower = lower,
+      upper = upper,
+      width = upper - lower,
+      formal_action_lower = lower,
+      formal_action_upper = upper,
+      formal_action_width = upper - lower,
+      posterior_probability = NA_real_,
+      infeasible = FALSE,
+      fit_class = "tolerance_nptol_int|young_mathew",
+      action_lane = method_meta$action_lane %||%
+        "external_nonparametric_tolerance",
+      selected_interval_source = method_meta$selected_interval_source %||%
+        "tolerance_nptol_int_YM",
+      target_audit_digest = digest::digest(
+        list(
+          package = "tolerance",
+          package_version = as.character(utils::packageVersion("tolerance")),
+          call = list(alpha = alpha, P = c_target, side = 2, method = "YM"),
+          selected_row = interval$selected_row,
+          output_rows = interval$output_rows,
+          raw = interval$raw
+        ),
+        algo = "sha256", serialize = TRUE
+      ),
+      scan_critical_method = "young_mathew_package_nominal"
+    )
+  }, error = function(e) {
+    empty_fit_result(
+      infeasible = TRUE,
+      message = conditionMessage(e),
+      fit_class = "tolerance_nptol_int|young_mathew|error",
+      action_lane = method_meta$action_lane %||%
+        "external_nonparametric_tolerance",
+      selected_interval_source = method_meta$selected_interval_source %||%
+        "tolerance_nptol_int_YM",
+      scan_critical_method = "young_mathew_package_nominal"
+    )
+  })
+  fit
 }
 
 mean_or_na <- function(x) {
@@ -783,7 +1020,8 @@ fit_tcsp_mti_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
     pred <- predict_interval(fit, X_new = X[1L, , drop = FALSE])
     lower <- as.numeric(pred$lower)[1L]
     upper <- as.numeric(pred$upper)[1L]
-    out <- do.call(empty_fit_result, c(formal_fields, list(
+    ecm_diag <- ecm_trace_diagnostics(fit)
+    out <- do.call(empty_fit_result, c(formal_fields, ecm_diag, list(
       lower = lower,
       upper = upper,
       width = upper - lower,
@@ -1093,6 +1331,17 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       ))
     }
     ecm_fit <- fit$ecm_fit_optional
+    ecm_diag <- if (inherits(ecm_fit, "mti_ecm")) {
+      ecm_trace_diagnostics(ecm_fit)
+    } else {
+      list(
+        ecm_trace_length = NA_integer_,
+        ecm_initial_objective = NA_real_,
+        ecm_final_objective = NA_real_,
+        ecm_relative_objective_drop = NA_real_,
+        ecm_final_stationarity = NA_real_
+      )
+    }
     return(list(
       lower = fit$contract$lower_endpoint,
       upper = fit$contract$upper_endpoint,
@@ -1138,7 +1387,12 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
         as.numeric(ecm_fit$objective %||% NA_real_)
       } else {
         NA_real_
-      }
+      },
+      ecm_trace_length = ecm_diag$ecm_trace_length,
+      ecm_initial_objective = ecm_diag$ecm_initial_objective,
+      ecm_final_objective = ecm_diag$ecm_final_objective,
+      ecm_relative_objective_drop = ecm_diag$ecm_relative_objective_drop,
+      ecm_final_stationarity = ecm_diag$ecm_final_stationarity
     ))
   }
   if (identical(method_id, "wilks_minmax")) {
@@ -1159,6 +1413,14 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
         selected_interval_source %||% "full_sample_minmax"
     ))
   }
+  if (identical(method_id, "young_mathew")) {
+    return(fit_young_mathew(
+      y = y,
+      c_target = c_target,
+      tol_conf = tol_conf,
+      method_meta = method_by_id[[method_id]]
+    ))
+  }
   stopf("Unsupported method_id: ", method_id)
 }
 
@@ -1166,9 +1428,7 @@ rows <- list()
 counter <- 0L
 base_seed <- as.integer(config$base_seed %||% 862100)
 total_datasets <- length(mode_cfg$dgp_ids) *
-  length(mode_cfg$sample_sizes) *
-  length(mode_cfg$guaranteed_contents) *
-  length(mode_cfg$tolerance_confidences) *
+  nrow(design_cells) *
   length(mode_cfg$posterior_confidences) *
   as.integer(mode_cfg$replications)
 total_rows <- total_datasets * length(mode_cfg$method_ids)
@@ -1212,11 +1472,12 @@ write_progress("running")
 for (dgp_id in as.character(mode_cfg$dgp_ids)) {
   dgp <- dgp_by_id[[dgp_id]]
   meta <- dgp_meta(dgp)
-  for (n in as.integer(mode_cfg$sample_sizes)) {
-    for (c_target in as.numeric(mode_cfg$guaranteed_contents)) {
-      for (tol_conf in as.numeric(mode_cfg$tolerance_confidences)) {
-        for (post_conf in as.numeric(mode_cfg$posterior_confidences)) {
-          for (rep in seq_len(as.integer(mode_cfg$replications))) {
+  for (cell_index in seq_len(nrow(design_cells))) {
+    n <- as.integer(design_cells$n[[cell_index]])
+    c_target <- as.numeric(design_cells$guaranteed_content[[cell_index]])
+    tol_conf <- as.numeric(design_cells$tolerance_confidence[[cell_index]])
+    for (post_conf in as.numeric(mode_cfg$posterior_confidences)) {
+      for (rep in seq_len(as.integer(mode_cfg$replications))) {
             counter <- counter + 1L
             seed <- dataset_seed_for(dgp_id, n, c_target, tol_conf, post_conf,
                                      rep, counter)
@@ -1307,6 +1568,11 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   ecm_converged = NA,
                   ecm_iterations = NA_integer_,
                   ecm_objective = NA_real_,
+                  ecm_trace_length = NA_integer_,
+                  ecm_initial_objective = NA_real_,
+                  ecm_final_objective = NA_real_,
+                  ecm_relative_objective_drop = NA_real_,
+                  ecm_final_stationarity = NA_real_,
                   fit_reused_across_posterior_thresholds = NA,
                   infeasible = TRUE,
                   message = conditionMessage(fit),
@@ -1458,6 +1724,21 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   ecm_objective = as.numeric(fit_scalar(
                     fit, "ecm_objective", NA_real_
                   )),
+                  ecm_trace_length = as.integer(fit_scalar(
+                    fit, "ecm_trace_length", NA_integer_
+                  )),
+                  ecm_initial_objective = as.numeric(fit_scalar(
+                    fit, "ecm_initial_objective", NA_real_
+                  )),
+                  ecm_final_objective = as.numeric(fit_scalar(
+                    fit, "ecm_final_objective", NA_real_
+                  )),
+                  ecm_relative_objective_drop = as.numeric(fit_scalar(
+                    fit, "ecm_relative_objective_drop", NA_real_
+                  )),
+                  ecm_final_stationarity = as.numeric(fit_scalar(
+                    fit, "ecm_final_stationarity", NA_real_
+                  )),
                   fit_reused_across_posterior_thresholds = fit_scalar(
                     fit, "fit_reused_across_posterior_thresholds", FALSE
                   ),
@@ -1480,11 +1761,9 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
               posterior_confidence = post_conf,
               replication = rep
             ))
-          }
-        }
       }
     }
-}
+  }
 }
 results <- do.call(rbind, rows)
 reference_method_id <- mode_cfg$reference_method_id %||%
@@ -1620,6 +1899,10 @@ summary_rows <- lapply(split(results, split_key), function(df) {
       mean_or_na(df$fit_reused_across_posterior_thresholds),
     ecm_convergence_rate = mean_or_na(df$ecm_converged),
     mean_ecm_iterations = mean_or_na(df$ecm_iterations),
+    mean_ecm_trace_length = mean_or_na(df$ecm_trace_length),
+    median_ecm_relative_objective_drop =
+      median_or_na(df$ecm_relative_objective_drop),
+    median_ecm_final_stationarity = median_or_na(df$ecm_final_stationarity),
     median_width_ratio_to_reference =
       median_or_na(df$width_ratio_to_reference),
     mean_width_ratio_to_reference =

@@ -226,6 +226,27 @@ test_that("location-scale target transformation is exact", {
   )
 })
 
+test_that("standardized beta oracle supports follow-up validation DGPs", {
+  spec <- rqrgibbs:::.rqr_oracle_family_spec(
+    "standardized_beta", list(shape1 = 5, shape2 = 2)
+  )
+  expect_equal(spec$mean, 0, tolerance = 1e-10)
+  expect_equal(spec$second_moment, 1, tolerance = 1e-9)
+  expect_true(all(is.finite(spec$support)))
+  expect_equal(spec$F(spec$support[[1L]]), 0, tolerance = 1e-12)
+  expect_equal(spec$F(spec$support[[2L]]), 1, tolerance = 1e-12)
+
+  oracle <- rqr_interval_oracle(
+    "standardized_beta", 0.95, "SH",
+    params = list(shape1 = 5, shape2 = 2), grid_size = 201L
+  )
+  expect_s3_class(oracle, "rqr_interval_oracle")
+  expect_lt(abs(oracle$content_residual), 1e-8)
+  expect_lt(abs(oracle$density_residual), 1e-6)
+  expect_true(is.finite(oracle$mean_tilt))
+  expect_gt(oracle$width, 0)
+})
+
 test_that("exact tilted risk agrees with split numerical integration", {
   params <- list(tau = 0.80, scale = 1, variance_standardized = TRUE)
   oracle <- rqr_interval_oracle(

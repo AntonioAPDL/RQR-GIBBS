@@ -21,6 +21,7 @@ required_files=(
   "figures/generated/figS01_cross_distribution_recovery.png"
   "figures/generated/fig03_mean_tilt_cf_anchors.png"
   "tables/mean_tilt_cf_mini_study.tex"
+  "tables/tolerance_validation_main_summary.tex"
 )
 
 rm -rf "${out_root}"
@@ -42,7 +43,7 @@ done
   printf 'Top-level file: main.tex\n'
   printf 'Processor: PDFLaTeX\n'
   printf 'Notes: main.bbl is included because this project uses BibTeX/natbib.\n'
-  printf 'The main-text population figures and generated population table are included.\n'
+  printf 'The main-text figures and generated population and validation tables are included.\n'
   printf 'The supplement is built separately from rqr-gibbs-supplement.tex and is not included in this main-source upload.\n'
 } > "${pkg_dir}/README.txt"
 
