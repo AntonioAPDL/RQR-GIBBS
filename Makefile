@@ -224,15 +224,15 @@ launch-rqr-bayes-uq-followup: package-install
 
 health-rqr-bayes-uq-followup:
 	@test -n "$(strip $(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_FOLLOWUP_RUN_DIR to one Bayesian UQ follow-up wave run." >&2; exit 64; }
-	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=health --run-dir=$(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR)
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=health --mode=$(RQR_BAYES_UQ_FOLLOWUP_WAVE_MODE) --config=$(RQR_BAYES_UQ_FOLLOWUP_CONFIG) --run-dir=$(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR)
 
 collect-rqr-bayes-uq-followup:
 	@test -n "$(strip $(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_FOLLOWUP_RUN_DIR to one Bayesian UQ follow-up wave run." >&2; exit 64; }
-	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=collect --run-dir=$(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR)
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=collect --mode=$(RQR_BAYES_UQ_FOLLOWUP_WAVE_MODE) --config=$(RQR_BAYES_UQ_FOLLOWUP_CONFIG) --run-dir=$(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR)
 
 stop-rqr-bayes-uq-followup:
 	@test -n "$(strip $(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_FOLLOWUP_RUN_DIR to one Bayesian UQ follow-up wave run." >&2; exit 64; }
-	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=stop --run-dir=$(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR)
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=stop --mode=$(RQR_BAYES_UQ_FOLLOWUP_WAVE_MODE) --config=$(RQR_BAYES_UQ_FOLLOWUP_CONFIG) --run-dir=$(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR)
 
 mti-bayes-uq-main-smoke: rqr-bayes-uq-main-smoke
 
