@@ -88,8 +88,8 @@ if (!identical(attr(status, "status"), NULL)) {
 }
 
 required <- file.path(out_dir, c(
-  "tolerance_validation_followup_lane_summary.csv",
-  "tolerance_validation_followup_lane_summary.tex",
+  "tolerance_validation_followup_design_summary.csv",
+  "tolerance_validation_followup_design_summary.tex",
   "tolerance_validation_ecm_diagnostics.csv",
   "tolerance_validation_ecm_diagnostics.tex",
   "tolerance_validation_small_sample_content_summary.csv",
@@ -99,7 +99,11 @@ stopifnot(all(file.exists(required)))
 
 diag <- read.csv(file.path(out_dir, "tolerance_validation_ecm_diagnostics.csv"),
                  stringsAsFactors = FALSE)
-ecm200_diag <- diag[diag$mode == "ecm200_audit", , drop = FALSE]
+ecm200_diag <- diag[
+  diag$design_id == "ecm_200_iteration_diagnostic",
+  ,
+  drop = FALSE
+]
 stopifnot(nrow(ecm200_diag) == 1L)
 stopifnot(abs(ecm200_diag$stationarity_pass_rate - 0.5) < 1e-12)
 
@@ -116,5 +120,24 @@ tex <- paste(readLines(
 ), collapse = "\n")
 stopifnot(grepl("Median rel. obj.", tex, fixed = TRUE))
 stopifnot(!grepl("posterior predictive", tex, fixed = TRUE))
+
+design_tex <- paste(readLines(
+  file.path(out_dir, "tolerance_validation_followup_design_summary.tex"),
+  warn = FALSE
+), collapse = "\n")
+stopifnot(grepl("Method & Infeasible", design_tex, fixed = TRUE))
+stopifnot(grepl("Minimal 90\\% confidence design", design_tex, fixed = TRUE))
+stopifnot(grepl("Returned success", design_tex, fixed = TRUE))
+stopifnot(!grepl("Lane", design_tex, fixed = TRUE))
+stopifnot(!grepl("Paper-matched", design_tex, fixed = TRUE))
+stopifnot(!grepl("Feasible success", design_tex, fixed = TRUE))
+
+small_tex <- paste(readLines(
+  file.path(out_dir, "tolerance_validation_small_sample_content_summary.tex"),
+  warn = FALSE
+), collapse = "\n")
+stopifnot(grepl("Target content", small_tex, fixed = TRUE))
+stopifnot(grepl("Returned success", small_tex, fixed = TRUE))
+stopifnot(!grepl("Feasible success", small_tex, fixed = TRUE))
 
 cat("Tolerance follow-up table test passed.\n")

@@ -1,24 +1,30 @@
-\begin{tabular}{@{}llrrrrr@{}}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xrrrrr@{}}
 \toprule
-Content & Method & Infeasible (\%) & Delivery (\%) & Feasible success (\%) & Width/TCSP & Median sec\\
+Method & Infeasible (\%) & Delivery (\%) & Returned success (\%) & Width/TCSP & Median sec\\
 \midrule
-0.90 & TCSP scan & 0.0 & 96.8 & 96.8 & 1 & 0.002 \\
-0.90 & MTI Gibbs & 66.7 & 33.3 & 99.9 & 1.23 & 0.002 \\
-0.90 & MTI ECM & 66.7 & 32.9 & 98.8 & 1 & 0.002 \\
-0.90 & Young--Mathew & 0.0 & 95.8 & 95.8 & 0.994 & 0.011 \\
-0.90 & Wilks min--max & 0.0 & 97.2 & 97.2 & 1 & 0.001 \\
-0.90 & DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
-0.95 & TCSP scan & 33.3 & 63.6 & 95.3 & 1 & 0.001 \\
-0.95 & MTI Gibbs & 100.0 & 0.0 & -- & -- & 0.001 \\
-0.95 & MTI ECM & 100.0 & 0.0 & -- & -- & 0.001 \\
-0.95 & Young--Mathew & 0.0 & 92.0 & 92.0 & 1 & 0.009 \\
-0.95 & Wilks min--max & 0.0 & 87.6 & 87.6 & 1 & 0.001 \\
-0.95 & DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
-0.99 & TCSP scan & 33.3 & 63.9 & 95.9 & 1 & 0.002 \\
-0.99 & MTI Gibbs & 100.0 & 0.0 & -- & -- & 0.002 \\
-0.99 & MTI ECM & 100.0 & 0.0 & -- & -- & 0.002 \\
-0.99 & Young--Mathew & 0.0 & 89.1 & 89.1 & 0.999 & 0.009 \\
-0.99 & Wilks min--max & 0.0 & 72.8 & 72.8 & 1 & 0.001 \\
-0.99 & DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
+\addlinespace[0.35em]
+\multicolumn{6}{@{}l}{\textit{Target content $c=0.90$}}\\
+TCSP scan & 0.0 & 96.8 & 96.8 & 1 & 0.002 \\
+MTI Gibbs & 66.7 & 33.3 & 99.9 & 1.23 & 0.002 \\
+MTI ECM & 66.7 & 32.9 & 98.8 & 1 & 0.002 \\
+Young--Mathew & 0.0 & 95.8 & 95.8 & 0.994 & 0.011 \\
+Wilks min--max & 0.0 & 97.2 & 97.2 & 1 & 0.001 \\
+DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
+\addlinespace[0.35em]
+\multicolumn{6}{@{}l}{\textit{Target content $c=0.95$}}\\
+TCSP scan & 33.3 & 63.6 & 95.3 & 1 & 0.001 \\
+MTI Gibbs & 100.0 & 0.0 & -- & -- & 0.001 \\
+MTI ECM & 100.0 & 0.0 & -- & -- & 0.001 \\
+Young--Mathew & 0.0 & 92.0 & 92.0 & 1 & 0.009 \\
+Wilks min--max & 0.0 & 87.6 & 87.6 & 1 & 0.001 \\
+DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
+\addlinespace[0.35em]
+\multicolumn{6}{@{}l}{\textit{Target content $c=0.99$}}\\
+TCSP scan & 33.3 & 63.9 & 95.9 & 1 & 0.002 \\
+MTI Gibbs & 100.0 & 0.0 & -- & -- & 0.002 \\
+MTI ECM & 100.0 & 0.0 & -- & -- & 0.002 \\
+Young--Mathew & 0.0 & 89.1 & 89.1 & 0.999 & 0.009 \\
+Wilks min--max & 0.0 & 72.8 & 72.8 & 1 & 0.001 \\
+DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}

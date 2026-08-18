@@ -22,12 +22,14 @@ stopifnot(all(c("tcsp_mc", "hdp_s_mc", "tcsp_mti_gibbs_median_mc",
                 "tcsp_mti_ecm_map_mc", "young_mathew", "wilks_minmax") %in%
                 tab$method_id))
 stopifnot(all(is.finite(tab$grid_delivery_success)))
-stopifnot(all(is.finite(tab$conditional_success)))
+stopifnot(all(is.finite(tab$returned_success)))
 stopifnot(all(is.finite(tab$median_width_ratio_to_tcsp)))
 
 tex <- paste(readLines(tex_path, warn = FALSE), collapse = "\n")
 stopifnot(grepl("\\\\begin\\{tabularx\\}", tex))
 stopifnot(grepl("Young--Mathew", tex, fixed = TRUE))
+stopifnot(grepl("Returned success", tex, fixed = TRUE))
+stopifnot(!grepl("Feasible success", tex, fixed = TRUE))
 stopifnot(!grepl("posterior predictive", tex, fixed = TRUE))
 
 cat("Tolerance validation table test passed.\n")

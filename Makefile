@@ -77,6 +77,7 @@ RQR_BAYES_UQ_FOLLOWUP_WAVE_MODE ?= small_sample_95
 RQR_BAYES_UQ_FOLLOWUP_WAVE_MAX_CONCURRENT ?= 40
 RQR_BAYES_UQ_FOLLOWUP_WAVE_POLL_SECONDS ?= 60
 RQR_BAYES_UQ_PRIMARY_SUMMARY ?= application/runs/rqr_bayes_uq_validation_main_20260813/wave_main_20260813T103232Z/final_combined_grid_complete_method_summary_with_young_mathew.csv
+RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT ?= application/runs/rqr_bayes_uq_validation_main_20260813/wave_main_20260813T103232Z/final_combined_method_by_n_content_with_young_mathew.csv
 RQR_DLM_AFFECTED_PRIMARY_ATTESTATION ?=
 RQR_DLM_AFFECTED_EXDQLM_ATTESTATION ?=
 RQR_DLM_AFFECTED_QUANTREG_ATTESTATION ?=
@@ -99,17 +100,12 @@ RQR_DLM_M02_CANARY_OUTPUT_ROOT ?=
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_validation_primary_figure.R --source-summary-csv=$(RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT) --stratified-csv=$(THEORY_TABLE_DIR)/tolerance_validation_by_n_content.csv --output-dir=$(THEORY_FIGURE_DIR)
 
 theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
-	@if [ -f "$(RQR_BAYES_UQ_PRIMARY_SUMMARY)" ]; then \
-		$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --output-dir=$(THEORY_TABLE_DIR); \
-	elif [ -f "$(THEORY_TABLE_DIR)/tolerance_validation_main_summary.tex" ]; then \
-		echo "Using committed tolerance validation table; set RQR_BAYES_UQ_PRIMARY_SUMMARY to regenerate from run output."; \
-	else \
-		echo "Missing tolerance summary $(RQR_BAYES_UQ_PRIMARY_SUMMARY) and no committed tolerance table found." >&2; \
-		exit 66; \
-	fi
+	$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --output-dir=$(THEORY_TABLE_DIR)
+	$(R) tables/generate_tolerance_validation_stratified_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_followup_tables.R --output-dir=$(THEORY_TABLE_DIR)
 
 model-illustration-figures:
@@ -117,10 +113,12 @@ model-illustration-figures:
 
 test-theory-figures:
 	$(R) figures/test_rqr_theory_figure_oracles.R
+	$(R) figures/test_tolerance_validation_primary_figure.R
 
 test-theory-tables:
 	$(R) tables/test_mean_tilt_cf_mini_study_table.R
 	$(R) tables/test_tolerance_validation_summary_table.R
+	$(R) tables/test_tolerance_validation_stratified_table.R
 	$(R) tables/test_tolerance_validation_followup_tables.R
 
 test-manuscript-language:

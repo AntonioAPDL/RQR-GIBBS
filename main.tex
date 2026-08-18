@@ -1566,8 +1566,8 @@ window remains recorded separately. Young--Mathew interpolation
 \citep{YoungMathew2014NonparametricTolerance}, Wilks min--max intervals
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction}, and the DKW
 fallback provide classical and conservative order-statistic comparators. Primary
-metrics are grid delivery success, conditional success among feasible fits,
-median width relative to TCSP, infeasibility, and runtime.
+metrics are grid delivery success, success among returned intervals, median
+width relative to TCSP, infeasibility, and runtime.
 
 \begin{table}[!htbp]
 \centering
@@ -1575,40 +1575,55 @@ median width relative to TCSP, infeasibility, and runtime.
 the completed primary grid with seven data-generating laws, \(n\in\{500,1000\}\),
 \(c\in\{0.90,0.95,0.99\}\), tolerance confidence \(0.95\), three posterior
 content thresholds for Bayesian-screened methods, and 100 replications per
-cell. Delivery counts infeasible cells as failures; feasible success conditions
-on methods returning an interval. Width is reported relative to the TCSP scan
+cell. Delivery counts infeasible cells as failures; returned success conditions
+on methods that return an interval. Width is reported relative to the TCSP scan
 action on the same data set and target.}
 \label{tab:tolerance-validation-main}
 \TableStyle
 \input{tables/tolerance_validation_main_summary.tex}
 \end{table}
 
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/fig04_tolerance_validation_primary.png}
+\caption{\textbf{Primary iid tolerance-validation patterns by sample size and
+target content.} Delivery counts infeasible cells as failures. Returned success
+conditions on methods that return an interval. Dashed reference lines
+mark nominal \(0.95\) delivery and TCSP-relative width one. The hybrid
+DP--scan action is omitted because it returned the same delivered intervals as
+TCSP on the primary grid; its aggregate runtime and delivery are reported in
+Table~\ref{tab:tolerance-validation-main}.}
+\label{fig:tolerance-validation-primary}
+\end{figure}
+
 Table~\ref{tab:tolerance-validation-main} gives a compact view of the primary
-run. TCSP and the hybrid DP--scan action have identical delivered intervals on
-this grid, with \(98.7\%\) delivery and median relative width one; the hybrid
-screen adds a Bayesian content check at a large runtime cost. Wilks min--max is
-slightly more conservative in delivery, \(99.3\%\), but its median width is
-about \(42\%\) larger than TCSP. Young--Mathew is slightly narrower than TCSP on
-median and delivers \(96.4\%\), above the nominal \(95\%\)-confidence target but
-below the scan and Wilks comparators on this hard multi-family grid. The
-fixed-target MTI Gibbs and ECM summaries have high
-conditional success among feasible cells, while their delivery rates reflect the
-intended fail-closed behavior at the difficult \(n=500,c=0.99\) cells. The DKW
-fallback is included as a conservative diagnostic: when feasible it succeeds,
-but it is often infeasible and substantially wider.
+run, and Figure~\ref{fig:tolerance-validation-primary} shows how the main
+patterns change with sample size and target content. TCSP and the hybrid
+DP--scan action have identical delivered intervals on this grid, with
+\(98.7\%\) delivery and median relative width one; the hybrid screen adds a
+Bayesian content check at a large runtime cost. Wilks min--max is slightly more
+conservative in delivery, \(99.3\%\), with median width about \(42\%\) larger
+than TCSP. Young--Mathew is slightly narrower than TCSP on median and delivers
+\(96.4\%\), above the nominal \(95\%\)-confidence target. The fixed-target MTI
+Gibbs and ECM summaries have high returned success in feasible cells. Their
+lower aggregate delivery is concentrated in the difficult \(n=500,c=0.99\)
+setting, where the implementation records infeasibility instead of reporting a
+fixed-target endpoint summary. The DKW fallback is a conservative diagnostic:
+when it returns an interval it succeeds, although many cells are infeasible and
+the returned intervals are substantially wider.
 
 Three follow-up checks complete the validation protocol. First, the primary
 grid is rerun for the MTI ECM row with 200 iterations and compact objective
 trace diagnostics, so the mode computation can be judged by objective descent
 and final stationarity, with the ECM flag interpreted at a fixed-target
-stationarity tolerance of \(10^{-3}\). Second, a paper-matched
-\(90\%\)-confidence lane uses the full-range thresholds
-\((38,0.90)\), \((77,0.95)\), and \((388,0.99)\)
-\citep{PourmohamadRichardsonSanso2026CalibratedBNP}. Third, a
-\(95\%\)-confidence small-sample lane uses the corresponding thresholds
+stationarity tolerance of \(10^{-3}\). Second, a minimal full-range
+\(90\%\)-confidence design uses the threshold cells
+\((38,0.90)\), \((77,0.95)\), and \((388,0.99)\), matching the confidence
+level used in \citet{PourmohamadRichardsonSanso2026CalibratedBNP}. Third, a
+small-sample \(95\%\)-confidence design uses the corresponding threshold cells
 \((46,0.90)\), \((93,0.95)\), and \((473,0.99)\), augmented by practical
-\(n=50\) and \(n=100\) stress cells. The design cells are stored explicitly in
-the validation config, which prevents a Cartesian product from mixing
+\(n=50\) and \(n=100\) stress cells. These paired cells are stored explicitly
+in the validation config, which prevents a Cartesian product from mixing
 thresholds across confidence levels. The supplement reports the follow-up
 summaries, ECM stationarity diagnostics, and small-sample content-level
 behavior.
@@ -1657,7 +1672,11 @@ joint density proof is supplied.
 The tolerance proposal adds a distinct frequentist layer. A scan statistic
 chooses an empirical retained count, after which the shortest closed
 order-statistic window at that count is reported. Generalized-Bayes
-computation begins only after the content and tilt are fixed. This ordering
+computation begins only after the content and tilt are fixed. The reported
+TCSP interval is the formal tolerance action. MTI Gibbs and ECM endpoint
+summaries are interpreted conditionally on the scan-selected count and tilt;
+their numerical and posterior diagnostics assess that fixed target, while
+tolerance confidence remains attached to the scan action. This ordering
 prevents posterior credibility from being mistaken for tolerance confidence.
 Publication-level finite-sample wording still requires an action-matched scan
 proof and certified critical-count calculation. Replacing the empirical

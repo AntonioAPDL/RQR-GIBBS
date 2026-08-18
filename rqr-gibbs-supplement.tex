@@ -2248,6 +2248,34 @@ configuration, scan-calibration cache, oracle certificates, wave plan, and
 artifact hashes. The primary validation table in the main article is generated
 from the collected primary run summary rather than edited by hand.
 
+\begin{table}[H]
+\centering
+\caption{\textbf{Primary iid tolerance validation for \(n=500\).} Delivery
+counts infeasible cells as failures. Returned success conditions on methods
+that return an interval. Width is measured relative to the TCSP scan action on
+the same data set and target.}
+\label{tab:supp-primary-by-content-n500}
+\TableStyle
+\input{tables/tolerance_validation_by_n_500_content.tex}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Primary iid tolerance validation for \(n=1000\).} Delivery
+counts infeasible cells as failures. Returned success conditions on methods
+that return an interval. Width is measured relative to the TCSP scan action on
+the same data set and target.}
+\label{tab:supp-primary-by-content-n1000}
+\TableStyle
+\input{tables/tolerance_validation_by_n_1000_content.tex}
+\end{table}
+
+Tables~\ref{tab:supp-primary-by-content-n500}
+and~\ref{tab:supp-primary-by-content-n1000} expand the aggregate article table
+by sample size and target content. Delivery makes infeasible cells visible in
+the same scale as empirical content success, while returned success separates
+content behavior from the decision to return an interval.
+
 Small-sample feasibility is governed by the full-range two-sided order-statistic
 coverage probability
 \[
@@ -2258,7 +2286,7 @@ coverage probability
 \]
 The smallest \(n\) satisfying this inequality depends on both content and
 tolerance confidence. Table~\ref{tab:supp-full-range-thresholds} lists the
-thresholds used to design the follow-up lanes.
+thresholds used to design the follow-up studies.
 
 \begin{table}[H]
 \centering
@@ -2279,47 +2307,48 @@ Tolerance confidence & \(c=0.90\) & \(c=0.95\) & \(c=0.99\)\\
 
 This distinction matters for interpreting the small sample sizes in
 \citet{PourmohamadRichardsonSanso2026CalibratedBNP}. The values
-\((38,77,388)\) are appropriate for a \(90\%\)-confidence lane. A
-\(95\%\)-confidence lane needs the larger thresholds \((46,93,473)\). The
+\((38,77,388)\) are appropriate at \(90\%\) tolerance confidence. A
+\(95\%\)-confidence design needs the larger thresholds \((46,93,473)\). The
 follow-up configuration therefore stores paired design cells instead of forming
 all combinations of sample size, content, and confidence.
 
-The follow-up validation has three lanes. The ECM-200 lane reruns the primary
-\(0.95\)-confidence grid for the fixed-target MTI ECM row with 200 iterations
-and compact trace summaries: initial objective, final objective, relative
-objective drop, final stationarity, and trace length. We interpret the ECM
-flag using a fixed-target stationarity tolerance of \(10^{-3}\); this is a
-numerical optimizer diagnostic and does not replace the scan-calibrated
-order-statistic action. This preserves the completed primary comparison for
-unchanged methods while directly auditing the only setting that changed. The
-paper-matched lane uses confidence \(0.90\) and
-the threshold cells \((38,0.90)\), \((77,0.95)\), and \((388,0.99)\), with an
-added standardized Beta law to stress bounded skewness. The small-sample
-\(0.95\)-confidence lane uses the thresholds \((46,0.90)\), \((93,0.95)\), and
-\((473,0.99)\), plus practical \(n=50\) and \(n=100\) stress cells that are
-explicitly allowed to fail closed when the target is infeasible.
+The follow-up validation has three designs. The ECM 200-iteration diagnostic
+reruns the primary \(0.95\)-confidence grid for the fixed-target MTI ECM row
+with compact trace summaries: initial objective, final objective, relative
+objective drop, final stationarity, and trace length. We interpret the ECM flag
+using a fixed-target stationarity tolerance of \(10^{-3}\). This numerical
+diagnostic assesses optimizer behavior for the fixed target; tolerance validity
+continues to come from the scan-calibrated order-statistic action. The design
+preserves the completed primary comparison for unchanged methods while directly
+auditing the only computational setting that changed. The minimal full-range
+\(90\%\)-confidence design uses the threshold cells \((38,0.90)\),
+\((77,0.95)\), and \((388,0.99)\), with an added standardized Beta law to
+stress bounded skewness. The small-sample \(95\%\)-confidence design uses the
+threshold cells \((46,0.90)\), \((93,0.95)\), and \((473,0.99)\), plus practical
+\(n=50\) and \(n=100\) stress cells that are explicitly allowed to return
+infeasibility when the target cannot be certified.
 
-The reported metrics are aligned across lanes: delivery success, conditional
-content success among returned intervals, true content, width, width relative to
-the TCSP scan action, width relative to the population shortest oracle,
+The reported metrics are aligned across these designs: delivery success,
+success among returned intervals, true content, width, width relative to the
+TCSP scan action, width relative to the population shortest oracle,
 infeasibility, posterior-constraint status for Bayesian-screened actions, ECM
 trace diagnostics, and runtime. The Young--Mathew comparator is evaluated
 through the \texttt{tolerance} package's \texttt{nptol.int(..., method = "YM")}
 implementation, and its package version is hashed into the method audit digest.
-The hybrid direct-DP method is retained where runtime is scientifically useful;
-the largest small-sample \(0.95\)-confidence lane omits that expensive screen
-because the primary study already shows that it returns the same formal scan
-window at much higher runtime.
+The hybrid direct-DP method is retained where runtime is scientifically useful.
+It is omitted from the largest small-sample \(0.95\)-confidence design because
+the primary study already shows that it returns the same formal scan window at
+much higher runtime.
 
 \begin{table}[H]
 \centering
-\caption{\textbf{Follow-up tolerance-validation lane summary.} Delivery counts
-infeasible cells as failures. Feasible success conditions on methods returning
+\caption{\textbf{Follow-up tolerance-validation design summary.} Delivery counts
+infeasible cells as failures. Returned success conditions on methods returning
 an interval. Width is measured relative to the TCSP scan action on the same
 data set and target.}
-\label{tab:supp-followup-lane-summary}
+\label{tab:supp-followup-design-summary}
 \TableStyle
-\input{tables/tolerance_validation_followup_lane_summary.tex}
+\input{tables/tolerance_validation_followup_design_summary.tex}
 \end{table}
 
 \begin{table}[H]

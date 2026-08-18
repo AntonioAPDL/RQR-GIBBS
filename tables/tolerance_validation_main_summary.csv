@@ -1,4 +1,4 @@
-"method_id","method","role","dataset_thresholds","infeasible_rate","grid_delivery_success","conditional_success","median_width_ratio_to_tcsp","median_elapsed_sec"
+"method_id","method","role","dataset_thresholds","infeasible_rate","grid_delivery_success","returned_success","median_width_ratio_to_tcsp","median_elapsed_sec"
 "tcsp_mc","TCSP scan","Shortest empirical scan action",12600,0,0.987142857142857,0.987142857142857,1,0.0029999999969732
 "hdp_s_mc","Hybrid DP--scan","Scan action with direct-DP content screen",12600,0,0.987142857142857,0.987142857142857,1,307.573
 "tcsp_mti_gibbs_median_mc","MTI Gibbs","Fixed-target generalized-Bayes summary",12600,0.166666666666667,0.828095238095238,0.993714285714286,1.03199471508313,0.00300000000061118

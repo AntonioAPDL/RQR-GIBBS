@@ -50,8 +50,8 @@ if (!is.finite(stationarity_tol) || stationarity_tol < 0) {
 }
 
 outputs <- c(
-  "tolerance_validation_followup_lane_summary.csv",
-  "tolerance_validation_followup_lane_summary.tex",
+  "tolerance_validation_followup_design_summary.csv",
+  "tolerance_validation_followup_design_summary.tex",
   "tolerance_validation_ecm_diagnostics.csv",
   "tolerance_validation_ecm_diagnostics.tex",
   "tolerance_validation_small_sample_content_summary.csv",
@@ -121,7 +121,7 @@ escape_latex <- function(x) {
 }
 
 method_labels <- c(
-  oracle_sh = "Oracle SH",
+  oracle_sh = "Population shortest oracle",
   hdp_s_mc = "Hybrid DP--scan",
   tcsp_mc = "TCSP scan",
   tcsp_mti_gibbs_median_mc = "MTI Gibbs",
@@ -130,13 +130,18 @@ method_labels <- c(
   wilks_minmax = "Wilks min--max",
   tcsp_dkw = "DKW scan"
 )
-lane_labels <- c(
-  ecm200_audit = "ECM-200 audit",
-  paper_matched_90 = "Paper-matched 90%",
-  small_sample_95 = "Small-sample 95%"
+design_labels <- c(
+  ecm200_audit = "ECM 200-iteration diagnostic",
+  paper_matched_90 = "Minimal 90% confidence design",
+  small_sample_95 = "Small-sample 95% confidence design"
+)
+public_design_ids <- c(
+  ecm200_audit = "ecm_200_iteration_diagnostic",
+  paper_matched_90 = "minimal_full_range_90_confidence",
+  small_sample_95 = "small_sample_95_confidence"
 )
 
-read_lane <- function(path, lane_id) {
+read_design <- function(path, design_id) {
   out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
   required <- c(
     "mode", "method_id", "success", "infeasible", "width_ratio_to_reference",
@@ -146,20 +151,20 @@ read_lane <- function(path, lane_id) {
   )
   missing <- setdiff(required, names(out))
   if (length(missing)) {
-    stopf(lane_id, " results are missing column(s): ",
+    stopf(design_id, " results are missing column(s): ",
           paste(missing, collapse = ", "))
   }
-  out$lane_id <- lane_id
+  out$design_id <- design_id
   out
 }
 
-results <- do.call(rbind, Map(read_lane, paths, names(paths)))
+results <- do.call(rbind, Map(read_design, paths, names(paths)))
 results$method_label <- unname(method_labels[results$method_id])
 results$method_label[is.na(results$method_label)] <-
   results$method_id[is.na(results$method_label)]
-results$lane_label <- unname(lane_labels[results$mode])
-results$lane_label[is.na(results$lane_label)] <-
-  results$mode[is.na(results$lane_label)]
+results$design_label <- unname(design_labels[results$mode])
+results$design_label[is.na(results$design_label)] <-
+  results$mode[is.na(results$design_label)]
 
 summarize_group <- function(df) {
   feasible <- !truthy(df$infeasible)
@@ -167,7 +172,7 @@ summarize_group <- function(df) {
     replications = nrow(df),
     infeasible_rate = mean(truthy(df$infeasible)),
     delivery_success = mean(truthy(df$success)),
-    feasible_success = if (any(feasible)) {
+    returned_success = if (any(feasible)) {
       mean(truthy(df$success[feasible]))
     } else {
       NA_real_
@@ -181,27 +186,32 @@ summarize_group <- function(df) {
 
 split_keys <- interaction(results$mode, results$method_id, drop = TRUE,
                           sep = "||")
-lane_summary <- do.call(rbind, lapply(split(results, split_keys), summarize_group))
-keys <- do.call(rbind, strsplit(rownames(lane_summary), "||", fixed = TRUE))
-lane_summary$mode <- keys[, 1L]
-lane_summary$method_id <- keys[, 2L]
-rownames(lane_summary) <- NULL
-lane_summary$lane <- unname(lane_labels[lane_summary$mode])
-lane_summary$method <- unname(method_labels[lane_summary$method_id])
-lane_summary$lane[is.na(lane_summary$lane)] <- lane_summary$mode[is.na(lane_summary$lane)]
-lane_summary$method[is.na(lane_summary$method)] <- lane_summary$method_id[is.na(lane_summary$method)]
-lane_order <- c("ecm200_audit", "paper_matched_90", "small_sample_95")
+design_summary <- do.call(rbind, lapply(split(results, split_keys), summarize_group))
+keys <- do.call(rbind, strsplit(rownames(design_summary), "||", fixed = TRUE))
+design_summary$mode <- keys[, 1L]
+design_summary$method_id <- keys[, 2L]
+rownames(design_summary) <- NULL
+design_summary$design <- unname(design_labels[design_summary$mode])
+design_summary$design_id <- unname(public_design_ids[design_summary$mode])
+design_summary$method <- unname(method_labels[design_summary$method_id])
+design_summary$design[is.na(design_summary$design)] <-
+  design_summary$mode[is.na(design_summary$design)]
+design_summary$design_id[is.na(design_summary$design_id)] <-
+  design_summary$mode[is.na(design_summary$design_id)]
+design_summary$method[is.na(design_summary$method)] <-
+  design_summary$method_id[is.na(design_summary$method)]
+design_order <- c("ecm200_audit", "paper_matched_90", "small_sample_95")
 method_order <- c(
   "oracle_sh", "tcsp_mc", "hdp_s_mc", "tcsp_mti_gibbs_median_mc",
   "tcsp_mti_ecm_map_mc", "young_mathew", "wilks_minmax", "tcsp_dkw"
 )
-lane_summary <- lane_summary[order(
-  match(lane_summary$mode, lane_order),
-  match(lane_summary$method_id, method_order)
+design_summary <- design_summary[order(
+  match(design_summary$mode, design_order),
+  match(design_summary$method_id, method_order)
 ), ]
-lane_summary <- lane_summary[c(
-  "mode", "lane", "method_id", "method", "replications", "infeasible_rate",
-  "delivery_success", "feasible_success", "median_width_ratio_to_tcsp",
+design_summary <- design_summary[c(
+  "design_id", "design", "method_id", "method", "replications", "infeasible_rate",
+  "delivery_success", "returned_success", "median_width_ratio_to_tcsp",
   "median_width_ratio_to_oracle", "median_elapsed_sec"
 )]
 
@@ -211,7 +221,8 @@ ecm_diag <- do.call(rbind, lapply(split(ecm_rows, ecm_rows$mode), function(df) {
   has_stat <- is.finite(stat)
   data.frame(
     mode = df$mode[[1L]],
-    lane = unname(lane_labels[df$mode[[1L]]]),
+    design_id = unname(public_design_ids[df$mode[[1L]]]),
+    design = unname(design_labels[df$mode[[1L]]]),
     rows = nrow(df),
     rows_with_stationarity = sum(has_stat),
     stationarity_pass_rate = if (any(has_stat)) {
@@ -228,8 +239,17 @@ ecm_diag <- do.call(rbind, lapply(split(ecm_rows, ecm_rows$mode), function(df) {
     stringsAsFactors = FALSE
   )
 }))
-ecm_diag$lane[is.na(ecm_diag$lane)] <- ecm_diag$mode[is.na(ecm_diag$lane)]
-ecm_diag <- ecm_diag[order(match(ecm_diag$mode, lane_order)), ]
+ecm_diag$design[is.na(ecm_diag$design)] <-
+  ecm_diag$mode[is.na(ecm_diag$design)]
+ecm_diag$design_id[is.na(ecm_diag$design_id)] <-
+  ecm_diag$mode[is.na(ecm_diag$design_id)]
+ecm_diag <- ecm_diag[order(match(ecm_diag$mode, design_order)), ]
+ecm_diag <- ecm_diag[c(
+  "design_id", "design", "rows", "rows_with_stationarity",
+  "stationarity_pass_rate", "median_stationarity", "p95_stationarity",
+  "max_stationarity", "median_abs_relative_objective_drop",
+  "median_trace_length"
+)]
 
 small_methods <- c(
   "tcsp_mc", "tcsp_mti_gibbs_median_mc", "tcsp_mti_ecm_map_mc",
@@ -258,7 +278,7 @@ small_content <- small_content[order(
 ), ]
 small_content <- small_content[c(
   "guaranteed_content", "method_id", "method", "replications",
-  "infeasible_rate", "delivery_success", "feasible_success",
+  "infeasible_rate", "delivery_success", "returned_success",
   "median_width_ratio_to_tcsp", "median_elapsed_sec"
 )]
 
@@ -267,36 +287,51 @@ write_table <- function(df, name) {
                    row.names = FALSE)
 }
 
-write_table(lane_summary, "tolerance_validation_followup_lane_summary")
+write_table(design_summary, "tolerance_validation_followup_design_summary")
 write_table(ecm_diag, "tolerance_validation_ecm_diagnostics")
 write_table(small_content, "tolerance_validation_small_sample_content_summary")
 
-lane_body <- vapply(seq_len(nrow(lane_summary)), function(ii) {
-  sprintf(
-    "%s & %s & %s & %s & %s & %s & %s \\\\",
-    escape_latex(lane_summary$lane[[ii]]),
-    escape_latex(lane_summary$method[[ii]]),
-    format_pct(lane_summary$infeasible_rate[[ii]]),
-    format_pct(lane_summary$delivery_success[[ii]]),
-    format_pct(lane_summary$feasible_success[[ii]]),
-    format_num(lane_summary$median_width_ratio_to_tcsp[[ii]], 3),
-    format_sec(lane_summary$median_elapsed_sec[[ii]])
-  )
-}, character(1L))
-writeLines(c(
-  "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrrrrr@{}}",
+design_lines <- c(
+  "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrrr@{}}",
   "\\toprule",
-  "Lane & Method & Infeasible (\\%) & Delivery (\\%) & Feasible success (\\%) & Width/TCSP & Median sec\\\\",
-  "\\midrule",
-  lane_body,
+  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width/TCSP & Median sec\\\\",
+  "\\midrule"
+)
+for (design_name in unique(design_summary$design)) {
+  block <- design_summary[
+    design_summary$design == design_name,
+    ,
+    drop = FALSE
+  ]
+  design_lines <- c(
+    design_lines,
+    "\\addlinespace[0.35em]",
+    sprintf("\\multicolumn{6}{@{}l}{\\textit{%s}}\\\\",
+            escape_latex(design_name))
+  )
+  body <- vapply(seq_len(nrow(block)), function(ii) {
+    sprintf(
+      "%s & %s & %s & %s & %s & %s \\\\",
+      escape_latex(block$method[[ii]]),
+      format_pct(block$infeasible_rate[[ii]]),
+      format_pct(block$delivery_success[[ii]]),
+      format_pct(block$returned_success[[ii]]),
+      format_num(block$median_width_ratio_to_tcsp[[ii]], 3),
+      format_sec(block$median_elapsed_sec[[ii]])
+    )
+  }, character(1L))
+  design_lines <- c(design_lines, body)
+}
+writeLines(c(
+  design_lines,
   "\\bottomrule",
   "\\end{tabularx}"
-), file.path(output_dir, "tolerance_validation_followup_lane_summary.tex"))
+), file.path(output_dir, "tolerance_validation_followup_design_summary.tex"))
 
 ecm_body <- vapply(seq_len(nrow(ecm_diag)), function(ii) {
   sprintf(
     "%s & %s & %s & %s & %s & %s & %s \\\\",
-    escape_latex(ecm_diag$lane[[ii]]),
+    escape_latex(ecm_diag$design[[ii]]),
     format_int(ecm_diag$rows_with_stationarity[[ii]]),
     format_pct(ecm_diag$stationarity_pass_rate[[ii]]),
     format_num(ecm_diag$median_stationarity[[ii]], 5),
@@ -308,33 +343,48 @@ ecm_body <- vapply(seq_len(nrow(ecm_diag)), function(ii) {
 writeLines(c(
   "\\begin{tabular}{@{}lrrrrrr@{}}",
   "\\toprule",
-  "Lane & ECM rows & Pass (\\%) & Median stat. & P95 stat. & Max stat. & Median rel. obj.\\\\",
+  "Design & ECM rows & Pass (\\%) & Median stat. & P95 stat. & Max stat. & Median rel. obj.\\\\",
   "\\midrule",
   ecm_body,
   "\\bottomrule",
   "\\end{tabular}"
 ), file.path(output_dir, "tolerance_validation_ecm_diagnostics.tex"))
 
-small_body <- vapply(seq_len(nrow(small_content)), function(ii) {
-  sprintf(
-    "%.2f & %s & %s & %s & %s & %s & %s \\\\",
-    small_content$guaranteed_content[[ii]],
-    escape_latex(small_content$method[[ii]]),
-    format_pct(small_content$infeasible_rate[[ii]]),
-    format_pct(small_content$delivery_success[[ii]]),
-    format_pct(small_content$feasible_success[[ii]]),
-    format_num(small_content$median_width_ratio_to_tcsp[[ii]], 3),
-    format_sec(small_content$median_elapsed_sec[[ii]])
-  )
-}, character(1L))
-writeLines(c(
-  "\\begin{tabular}{@{}llrrrrr@{}}",
+small_lines <- c(
+  "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrrr@{}}",
   "\\toprule",
-  "Content & Method & Infeasible (\\%) & Delivery (\\%) & Feasible success (\\%) & Width/TCSP & Median sec\\\\",
-  "\\midrule",
-  small_body,
+  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width/TCSP & Median sec\\\\",
+  "\\midrule"
+)
+for (cc in sort(unique(small_content$guaranteed_content))) {
+  block <- small_content[
+    abs(small_content$guaranteed_content - cc) < 1e-12,
+    ,
+    drop = FALSE
+  ]
+  small_lines <- c(
+    small_lines,
+    "\\addlinespace[0.35em]",
+    sprintf("\\multicolumn{6}{@{}l}{\\textit{Target content $c=%.2f$}}\\\\",
+            cc)
+  )
+  body <- vapply(seq_len(nrow(block)), function(ii) {
+    sprintf(
+      "%s & %s & %s & %s & %s & %s \\\\",
+      escape_latex(block$method[[ii]]),
+      format_pct(block$infeasible_rate[[ii]]),
+      format_pct(block$delivery_success[[ii]]),
+      format_pct(block$returned_success[[ii]]),
+      format_num(block$median_width_ratio_to_tcsp[[ii]], 3),
+      format_sec(block$median_elapsed_sec[[ii]])
+    )
+  }, character(1L))
+  small_lines <- c(small_lines, body)
+}
+writeLines(c(
+  small_lines,
   "\\bottomrule",
-  "\\end{tabular}"
+  "\\end{tabularx}"
 ), file.path(output_dir, "tolerance_validation_small_sample_content_summary.tex"))
 
 cat("Wrote tolerance follow-up tables to: ", output_dir, "\n", sep = "")

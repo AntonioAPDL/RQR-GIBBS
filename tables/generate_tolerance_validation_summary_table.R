@@ -128,7 +128,7 @@ out <- data.frame(
   dataset_thresholds = selected$dataset_thresholds,
   infeasible_rate = selected$infeasible_rate,
   grid_delivery_success = selected$grid_delivery_success,
-  conditional_success = selected$conditional_success,
+  returned_success = selected$conditional_success,
   median_width_ratio_to_tcsp = selected$median_width_ratio_to_tcsp,
   median_elapsed_sec = selected$median_elapsed_sec,
   stringsAsFactors = FALSE
@@ -142,7 +142,7 @@ body <- vapply(seq_len(nrow(out)), function(ii) {
     escape_latex(out$method[[ii]]),
     escape_latex(out$role[[ii]]),
     format_pct(out$grid_delivery_success[[ii]]),
-    format_pct(out$conditional_success[[ii]]),
+    format_pct(out$returned_success[[ii]]),
     format_num(out$median_width_ratio_to_tcsp[[ii]], 3),
     format_sec(out$median_elapsed_sec[[ii]])
   )
@@ -151,7 +151,7 @@ body <- vapply(seq_len(nrow(out)), function(ii) {
 lines <- c(
   "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrrrr@{}}",
   "\\toprule",
-  "Method & Role & Delivery (\\%) & Feasible success (\\%) & Width/TCSP & Median sec\\\\",
+  "Method & Role & Delivery (\\%) & Returned success (\\%) & Width/TCSP & Median sec\\\\",
   "\\midrule",
   body,
   "\\bottomrule",
