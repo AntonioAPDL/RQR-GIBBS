@@ -1574,17 +1574,27 @@ TCSP, infeasibility, and runtime.
 
 \begin{table}[!htbp]
 \centering
-\caption{\textbf{Primary iid tolerance-validation summary.} Results aggregate
-the completed primary grid with seven data-generating laws, \(n\in\{500,1000\}\),
-\(c\in\{0.90,0.95,0.99\}\), tolerance confidence \(0.95\), and 100
-replications per cell. The table keeps the confirmatory rows: formal scan
-actions, classical comparators, the hybrid Bayesian--scan action, and MTI ECM.
-Delivery counts infeasible cells as failures; returned success conditions on
-methods that return an interval. Width is reported relative to the TCSP scan
-action on the same data set and target.}
-\label{tab:tolerance-validation-main}
+\caption{\textbf{Primary iid tolerance validation at \(n=500\).} Results are
+shown by target content and method. Each row summarizes the range across seven
+data-generating laws, with 100 paired replications per law. ``Fail-closed''
+counts DGP-level cells in which the method returned no interval for all
+replications. Delivery counts fail-closed cells as failures; returned success
+conditions on methods that return an interval. Width is reported relative to
+the TCSP scan action on the same data set and target.}
+\label{tab:tolerance-validation-primary-n500}
 \TableStyle
-\input{tables/tolerance_validation_main_summary.tex}
+\input{tables/tolerance_validation_primary_scenario_ranges_n500.tex}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Primary iid tolerance validation at \(n=1000\).} The table
+uses the same scenario-range summaries as
+Table~\ref{tab:tolerance-validation-primary-n500}. This sample size is less
+dominated by the \(c=0.99\) two-sided full-range feasibility boundary.}
+\label{tab:tolerance-validation-primary-n1000}
+\TableStyle
+\input{tables/tolerance_validation_primary_scenario_ranges_n1000.tex}
 \end{table}
 
 \begin{figure}[!htbp]
@@ -1595,26 +1605,50 @@ target content.} Delivery counts infeasible cells as failures. Returned success
 conditions on methods that return an interval. Dashed reference lines
 mark nominal \(0.95\) delivery and TCSP-relative width one. The hybrid
 DP--scan action is omitted because it returned the same delivered intervals as
-TCSP on the primary grid; its aggregate runtime and delivery are reported in
-Table~\ref{tab:tolerance-validation-main}. MTI Gibbs is omitted from the
-confirmatory figure and reported as a diagnostic sampler in the supplement.}
+TCSP on the primary grid; Tables~\ref{tab:tolerance-validation-primary-n500}
+and~\ref{tab:tolerance-validation-primary-n1000} include its scenario-level
+delivery. MTI Gibbs is omitted from the confirmatory figure and reported as a
+diagnostic sampler in the supplement.}
 \label{fig:tolerance-validation-primary}
 \end{figure}
 
-Table~\ref{tab:tolerance-validation-main} gives a compact view of the primary
-run, and Figure~\ref{fig:tolerance-validation-primary} shows how the main
-patterns change with sample size and target content. TCSP and the hybrid
-DP--scan action have identical delivered intervals on this grid, with
-\(98.7\%\) delivery and median relative width one; the hybrid screen adds a
-Bayesian content check at a large runtime cost. Wilks min--max is slightly more
-conservative in delivery, \(99.3\%\), with median width about \(42\%\) larger
-than TCSP. Young--Mathew is slightly narrower than TCSP on median and delivers
-\(96.4\%\), above the nominal \(95\%\)-confidence target. MTI ECM has high
-returned success in feasible cells and lower aggregate delivery because the
-difficult \(n=500,c=0.99\) setting is recorded as fixed-target infeasibility.
-The DKW fallback is a conservative diagnostic: when it returns an interval it
-succeeds, although many cells are infeasible and the returned intervals are
-substantially wider.
+Tables~\ref{tab:tolerance-validation-primary-n500}
+and~\ref{tab:tolerance-validation-primary-n1000} avoid averaging over
+distributional scenarios. TCSP and the hybrid DP--scan action deliver the same
+formal scan intervals throughout the primary grid. The hybrid screen adds a
+Bayesian content check at a large runtime cost, while leaving the delivered
+interval unchanged in these cells. MTI ECM matches the formal scan action in
+all feasible primary cells and records the \(n=500,c=0.99\) fixed target as
+fail-closed. Young--Mathew is usually slightly narrower than TCSP and remains
+near the target in the primary grid, although its delivery range is lower in
+the most skewed or separated scenarios. Wilks is conservative for lower
+contents and reduces to the full range near the boundary. The DKW fallback is
+useful as a conservative diagnostic because it succeeds when it returns an
+interval, but it is often too conservative to return one.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Small-sample feasibility boundary at tolerance confidence
+\(0.95\).} The table reports practical \(n=50\) and \(n=100\) follow-up cells,
+summarized by ranges across eight data-generating laws. Blank returned-success
+and width entries occur when the method fails closed for every DGP cell. For
+Young--Mathew and Wilks, blank width entries indicate that TCSP did not return
+a reference interval in that cell.}
+\label{tab:tolerance-validation-small-boundary}
+\TableStyle
+\input{tables/tolerance_validation_small_sample_boundary.tex}
+\end{table}
+
+Table~\ref{tab:tolerance-validation-small-boundary} shows why the small-sample
+stress cells are central to the validation. At \(n=50,c=0.90\), TCSP, Wilks,
+and Young--Mathew all deliver close to the requested statement across DGPs,
+whereas MTI ECM has no feasible fixed target. At \(n=50,c=0.95\) and
+\(n=100,c=0.99\), the scan-calibrated methods fail closed because the requested
+distribution-free statement is not available from the sample size. Young--Mathew
+and Wilks return intervals in those cells, with delivered content well below the
+\(95\%\)-confidence target, especially for \(c=0.99\). The scan-calibrated
+behavior is therefore interpretable: feasibility is reported explicitly instead
+of being hidden by an interval that cannot support the requested statement.
 
 Four follow-up checks complete the validation protocol. First, the primary
 grid is rerun for the MTI ECM row with 200 iterations and compact objective

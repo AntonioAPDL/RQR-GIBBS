@@ -6,7 +6,7 @@
 \usepackage{microtype}
 \usepackage{setspace}
 \setstretch{1.08}
-\usepackage{amsmath,amssymb,mathtools,bm,booktabs,tabularx,array,amsthm}
+\usepackage{amsmath,amssymb,mathtools,bm,booktabs,tabularx,array,amsthm,longtable}
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{tikz}
@@ -2245,12 +2245,13 @@ log-normal skewness, stronger log-normal skewness, separated mixtures,
 scale contamination, and Student \(t_3\) tails. Each cell uses paired random
 samples across methods and records the repository commit, frozen JSON
 configuration, scan-calibration cache, oracle certificates, wave plan, and
-artifact hashes. The primary validation table in the main article is generated
-from the collected primary run summary rather than edited by hand. Its rows are
-restricted to the confirmatory comparison: TCSP, hybrid DP--scan, MTI ECM,
-Young--Mathew, Wilks min--max, and the conservative DKW fallback. MTI Gibbs is
-reported separately as a sampler diagnostic because the multi-chain checks below
-show unstable mixing in several feasible cells.
+artifact hashes. The scenario-range tables in the main article are generated
+from the raw validation rows and the Young--Mathew add-on, then summarized
+across DGPs within each \((n,c)\) cell. Their rows are restricted to the
+confirmatory comparison: TCSP, hybrid DP--scan, MTI ECM, Young--Mathew, Wilks
+min--max, and the conservative DKW fallback. MTI Gibbs is reported separately
+as a sampler diagnostic because the multi-chain checks below show unstable
+mixing in several feasible cells.
 
 \begin{table}[H]
 \centering
@@ -2275,10 +2276,20 @@ the same data set and target.}
 \end{table}
 
 Tables~\ref{tab:supp-primary-by-content-n500}
-and~\ref{tab:supp-primary-by-content-n1000} expand the aggregate article table
-by sample size and target content. Delivery makes infeasible cells visible in
-the same scale as empirical content success, while returned success separates
-content behavior from the decision to return an interval.
+and~\ref{tab:supp-primary-by-content-n1000} summarize the same primary run by
+sample size and target content after averaging over DGPs. Delivery makes
+infeasible cells visible in the same scale as empirical content success, while
+returned success separates content behavior from the decision to return an
+interval. Table~\ref{tab:supp-primary-dgp-delivery} gives the DGP-level
+delivery percentages that underlie the scenario ranges reported in the main
+article. The corresponding scenario-detail CSV in the tables directory contains
+the DGP-level returned success, infeasibility, relative width, and runtime
+summaries.
+
+\begingroup
+\TableStyle
+\input{tables/tolerance_validation_primary_dgp_delivery.tex}
+\endgroup
 
 Small-sample feasibility is governed by the full-range two-sided order-statistic
 coverage probability
@@ -2400,6 +2411,16 @@ the design.}
 \TableStyle
 \input{tables/tolerance_validation_small_sample_content_summary.tex}
 \end{table}
+
+Table~\ref{tab:supp-small-sample-dgp-delivery} gives the DGP-level delivery
+percentages for the practical \(n=50\) and \(n=100\) small-sample cells shown
+in the main article. The corresponding scenario-detail CSV in the tables
+directory contains the remaining DGP-level metrics.
+
+\begingroup
+\TableStyle
+\input{tables/tolerance_validation_small_sample_dgp_delivery.tex}
+\endgroup
 
 \section{Reproducibility and Evidence Boundaries}
 \label{sec:supp-reproducibility}
