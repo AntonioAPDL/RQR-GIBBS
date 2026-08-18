@@ -100,9 +100,10 @@ is supplied by scan calibration, while posterior credibility describes the
 fitted generalized posterior. MTI endpoint summaries diagnose endpoint
 uncertainty; response-predictive draws require a response-distribution layer.
 A prespecified iid validation study at tolerance confidence \(0.95\) compares
-scan-calibrated actions, fixed-target MTI summaries, Young--Mathew and Wilks
-order-statistic competitors, and a conservative DKW fallback across three
-contents and seven distributional families.
+scan-calibrated actions, fixed-target MTI ECM summaries, Young--Mathew and
+Wilks order-statistic competitors, and a conservative DKW fallback across
+three contents and seven distributional families; MTI Gibbs diagnostics are
+reported separately for the same fixed target.
 \end{abstract}
 
 \section{Introduction}
@@ -1559,24 +1560,27 @@ the empirical scan action.
 The method set separates the object being compared. The population shortest
 interval is an oracle width reference. TCSP is the formal scan-calibrated
 shortest empirical action. The hybrid DP--scan action adds a direct
-Dirichlet-process content screen to the same calibrated count. The MTI Gibbs and
-MTI ECM rows are fixed-target generalized-Bayes endpoint summaries constructed
-after the scan selects the retained count and sample tilt; their formal scan
-window remains recorded separately. Young--Mathew interpolation
+Dirichlet-process content screen to the same calibrated count. MTI ECM is the
+main fixed-target generalized-Bayes endpoint summary after the scan selects the
+retained count and sample tilt; the associated formal scan window remains
+recorded separately. Young--Mathew interpolation
 \citep{YoungMathew2014NonparametricTolerance}, Wilks min--max intervals
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction}, and the DKW
-fallback provide classical and conservative order-statistic comparators. Primary
-metrics are grid delivery success, success among returned intervals, median
-width relative to TCSP, infeasibility, and runtime.
+fallback provide classical and conservative order-statistic comparators. MTI
+Gibbs is retained as a diagnostic sampler for the same fixed target, with its
+multi-chain behavior reported in the supplement. Primary metrics are grid
+delivery success, success among returned intervals, median width relative to
+TCSP, infeasibility, and runtime.
 
 \begin{table}[!htbp]
 \centering
 \caption{\textbf{Primary iid tolerance-validation summary.} Results aggregate
 the completed primary grid with seven data-generating laws, \(n\in\{500,1000\}\),
-\(c\in\{0.90,0.95,0.99\}\), tolerance confidence \(0.95\), three posterior
-content thresholds for Bayesian-screened methods, and 100 replications per
-cell. Delivery counts infeasible cells as failures; returned success conditions
-on methods that return an interval. Width is reported relative to the TCSP scan
+\(c\in\{0.90,0.95,0.99\}\), tolerance confidence \(0.95\), and 100
+replications per cell. The table keeps the confirmatory rows: formal scan
+actions, classical comparators, the hybrid Bayesian--scan action, and MTI ECM.
+Delivery counts infeasible cells as failures; returned success conditions on
+methods that return an interval. Width is reported relative to the TCSP scan
 action on the same data set and target.}
 \label{tab:tolerance-validation-main}
 \TableStyle
@@ -1592,7 +1596,8 @@ conditions on methods that return an interval. Dashed reference lines
 mark nominal \(0.95\) delivery and TCSP-relative width one. The hybrid
 DP--scan action is omitted because it returned the same delivered intervals as
 TCSP on the primary grid; its aggregate runtime and delivery are reported in
-Table~\ref{tab:tolerance-validation-main}.}
+Table~\ref{tab:tolerance-validation-main}. MTI Gibbs is omitted from the
+confirmatory figure and reported as a diagnostic sampler in the supplement.}
 \label{fig:tolerance-validation-primary}
 \end{figure}
 
@@ -1604,29 +1609,35 @@ DP--scan action have identical delivered intervals on this grid, with
 Bayesian content check at a large runtime cost. Wilks min--max is slightly more
 conservative in delivery, \(99.3\%\), with median width about \(42\%\) larger
 than TCSP. Young--Mathew is slightly narrower than TCSP on median and delivers
-\(96.4\%\), above the nominal \(95\%\)-confidence target. The fixed-target MTI
-Gibbs and ECM summaries have high returned success in feasible cells. Their
-lower aggregate delivery is concentrated in the difficult \(n=500,c=0.99\)
-setting, where the implementation records infeasibility instead of reporting a
-fixed-target endpoint summary. The DKW fallback is a conservative diagnostic:
-when it returns an interval it succeeds, although many cells are infeasible and
-the returned intervals are substantially wider.
+\(96.4\%\), above the nominal \(95\%\)-confidence target. MTI ECM has high
+returned success in feasible cells and lower aggregate delivery because the
+difficult \(n=500,c=0.99\) setting is recorded as fixed-target infeasibility.
+The DKW fallback is a conservative diagnostic: when it returns an interval it
+succeeds, although many cells are infeasible and the returned intervals are
+substantially wider.
 
-Three follow-up checks complete the validation protocol. First, the primary
+Four follow-up checks complete the validation protocol. First, the primary
 grid is rerun for the MTI ECM row with 200 iterations and compact objective
 trace diagnostics, so the mode computation can be judged by objective descent
 and final stationarity, with the ECM flag interpreted at a fixed-target
-stationarity tolerance of \(10^{-3}\). Second, a minimal full-range
-\(90\%\)-confidence design uses the threshold cells
+stationarity tolerance of \(10^{-3}\). A targeted 500-iteration sensitivity run
+then repeats the hardest feasible ECM cell, \(n=1000,c=0.99\) under the hard
+log-normal law, to test whether the mild stationarity tail is resolved by a
+larger iteration cap. Second, MTI Gibbs is evaluated by a separate multi-chain
+diagnostic run on feasible diagnostic cells. Those diagnostics confirm that the
+sampler targets the intended generalized posterior, but several cells retain
+large between-chain discrepancies; Gibbs is therefore treated as a diagnostic
+implementation rather than a main confirmatory competitor. Third, a minimal
+full-range \(90\%\)-confidence design uses the threshold cells
 \((38,0.90)\), \((77,0.95)\), and \((388,0.99)\), matching the confidence
-level used in \citet{PourmohamadRichardsonSanso2026CalibratedBNP}. Third, a
+level used in \citet{PourmohamadRichardsonSanso2026CalibratedBNP}. Fourth, a
 small-sample \(95\%\)-confidence design uses the corresponding threshold cells
 \((46,0.90)\), \((93,0.95)\), and \((473,0.99)\), augmented by practical
 \(n=50\) and \(n=100\) stress cells. These paired cells are stored explicitly
 in the validation config, which prevents a Cartesian product from mixing
 thresholds across confidence levels. The supplement reports the follow-up
-summaries, ECM stationarity diagnostics, and small-sample content-level
-behavior.
+summaries, ECM stationarity diagnostics, Gibbs trace diagnostics, and
+small-sample content-level behavior.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -1674,10 +1685,12 @@ chooses an empirical retained count, after which the shortest closed
 order-statistic window at that count is reported. Generalized-Bayes
 computation begins only after the content and tilt are fixed. The reported
 TCSP interval is the formal tolerance action. MTI Gibbs and ECM endpoint
-summaries are interpreted conditionally on the scan-selected count and tilt;
-their numerical and posterior diagnostics assess that fixed target, while
-tolerance confidence remains attached to the scan action. This ordering
-prevents posterior credibility from being mistaken for tolerance confidence.
+summaries are interpreted conditionally on the scan-selected count and tilt.
+In the present validation evidence, MTI ECM is the stable fixed-target summary
+used for the main comparison, whereas MTI Gibbs remains a diagnostic sampler
+because several multi-chain checks show poor mixing. Tolerance confidence
+remains attached to the scan action, and posterior credibility is therefore
+kept separate from tolerance confidence.
 Publication-level finite-sample wording still requires an action-matched scan
 proof and certified critical-count calculation. Replacing the empirical
 window by a posterior summary would require an additional transfer or direct

@@ -78,6 +78,17 @@ RQR_BAYES_UQ_FOLLOWUP_WAVE_MAX_CONCURRENT ?= 40
 RQR_BAYES_UQ_FOLLOWUP_WAVE_POLL_SECONDS ?= 60
 RQR_BAYES_UQ_PRIMARY_SUMMARY ?= application/runs/rqr_bayes_uq_validation_main_20260813/wave_main_20260813T103232Z/final_combined_grid_complete_method_summary_with_young_mathew.csv
 RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT ?= application/runs/rqr_bayes_uq_validation_main_20260813/wave_main_20260813T103232Z/final_combined_method_by_n_content_with_young_mathew.csv
+RQR_TOLERANCE_ADJUDICATION_MAIN_RUN_DIR ?=
+RQR_TOLERANCE_ADJUDICATION_ECM_RUN_DIR ?= application/runs/rqr_bayes_uq_followup_20260816/wave_ecm200_audit_20260817T005025Z
+RQR_TOLERANCE_ADJUDICATION_SMALL95_RUN_DIR ?= application/runs/rqr_bayes_uq_followup_20260816/wave_small_sample_95_20260817T005145Z
+RQR_TOLERANCE_ADJUDICATION_PAPER90_RUN_DIR ?= application/runs/rqr_bayes_uq_followup_20260816/wave_paper_matched_90_20260817T005119Z
+RQR_TOLERANCE_ADJUDICATION_DIR ?= application/outputs/tolerance_validation_adjudication/adjudication_$(shell date -u +%Y%m%dT%H%M%SZ)
+RQR_TOLERANCE_GIBBS_DIAGNOSTIC_DIR ?= application/outputs/tolerance_mti_gibbs_diagnostics/gibbs_diagnostics_$(shell date -u +%Y%m%dT%H%M%SZ)
+RQR_TOLERANCE_GIBBS_DIAGNOSTIC_CHAINS ?= 4
+RQR_TOLERANCE_GIBBS_DIAGNOSTIC_WORKERS ?= 4
+RQR_TOLERANCE_GIBBS_DIAGNOSTIC_BURN ?= 500
+RQR_TOLERANCE_GIBBS_DIAGNOSTIC_DRAWS ?= 1000
+RQR_TOLERANCE_GIBBS_DIAGNOSTIC_SOURCE ?= application/outputs/tolerance_mti_gibbs_diagnostics/gibbs_diagnostics_long_20260818T013452Z/gibbs_estimator_diagnostics.csv
 RQR_DLM_AFFECTED_PRIMARY_ATTESTATION ?=
 RQR_DLM_AFFECTED_EXDQLM_ATTESTATION ?=
 RQR_DLM_AFFECTED_QUANTREG_ATTESTATION ?=
@@ -95,7 +106,7 @@ RQR_DLM_M02_CANARY_OUTPUT_ROOT ?=
 .PHONY: pdf supplement all-pdf theory-figures theory-tables model-illustration-figures test-theory-figures test-theory-tables test-manuscript-language arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication test-oracle-tilt-publication-v2 test-oracle-tilt-publication-v3 test-oracle-tilt-publication-v4 test-oracle-tilt-dlm-sh-adjudication test-oracle-tilt-campaign-closeout test-oracle-tilt-v2-workflow oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence oracle-tilt-v2-preflight oracle-tilt-v2-reference oracle-tilt-v2-benchmark oracle-tilt-v2-execute oracle-tilt-v2-package-evidence oracle-tilt-v3-preflight oracle-tilt-v3-reference oracle-tilt-v3-benchmark oracle-tilt-v3-resource-rehearsal oracle-tilt-v3-acceptance oracle-tilt-v3-execute oracle-tilt-v3-package-evidence oracle-tilt-v3-package-nonpromotion-evidence oracle-tilt-v3-promote-revised-evidence oracle-tilt-v4-preflight oracle-tilt-v4-reference oracle-tilt-v4-benchmark oracle-tilt-v4-resource-rehearsal oracle-tilt-v4-launch oracle-tilt-v4-select oracle-tilt-v4-package-evidence oracle-tilt-dlm-sh-adjudication-preflight oracle-tilt-dlm-sh-adjudication-execute oracle-tilt-dlm-sh-reconcile-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor launch-dlm-affected-wave-validation health-dlm-affected-wave-validation launch-dlm-multicomponent-recovery health-dlm-multicomponent-recovery launch-dlm-diagnostic-aware health-dlm-diagnostic-aware literature-manifest clean-tex
 .PHONY: test-oracle-tilt-publication-v5 oracle-tilt-v5-preflight oracle-tilt-v5-reference oracle-tilt-v5-benchmark oracle-tilt-v5-execute oracle-tilt-v5-package-evidence
 .PHONY: test-oracle-mean-tilt-validation oracle-mean-tilt-validation-preflight oracle-mean-tilt-validation-reference oracle-mean-tilt-validation-benchmark oracle-mean-tilt-validation-sentinel oracle-mean-tilt-validation-execute-wave oracle-mean-tilt-validation-collect oracle-mean-tilt-validation-precision oracle-mean-tilt-validation-package
-.PHONY: test-ecm test-tcsp test-tcsp-validation test-tcsp-validation-audit test-bayes-uq test-mpi-mti-naming rqr-ecm-validation-smoke tcsp-split-exact-validation-smoke rqr-bayes-uq-validation-smoke rqr-bayes-uq-validation-moderate launch-rqr-bayes-uq-overnight health-rqr-bayes-uq-validation rqr-bayes-uq-main-smoke prepare-rqr-bayes-uq-main-waves launch-rqr-bayes-uq-main launch-rqr-bayes-uq-main-dpm-companion health-rqr-bayes-uq-main collect-rqr-bayes-uq-main stop-rqr-bayes-uq-main rqr-bayes-uq-followup-smoke prepare-rqr-bayes-uq-followup-waves launch-rqr-bayes-uq-followup health-rqr-bayes-uq-followup collect-rqr-bayes-uq-followup stop-rqr-bayes-uq-followup mti-bayes-uq-main-smoke prepare-mti-bayes-uq-main-waves launch-mti-bayes-uq-main health-mti-bayes-uq-main collect-mti-bayes-uq-main stop-mti-bayes-uq-main tcsp-validation-preflight tcsp-validation-tiny tcsp-validation-pilot tcsp-validation-full-pilot tcsp-validation-health tcsp-validation-audit
+.PHONY: test-ecm test-tcsp test-tcsp-validation test-tcsp-validation-audit test-bayes-uq test-tolerance-adjudication test-mpi-mti-naming rqr-ecm-validation-smoke tcsp-split-exact-validation-smoke rqr-bayes-uq-validation-smoke rqr-bayes-uq-validation-moderate launch-rqr-bayes-uq-overnight health-rqr-bayes-uq-validation rqr-bayes-uq-main-smoke prepare-rqr-bayes-uq-main-waves launch-rqr-bayes-uq-main launch-rqr-bayes-uq-main-dpm-companion health-rqr-bayes-uq-main collect-rqr-bayes-uq-main stop-rqr-bayes-uq-main rqr-bayes-uq-followup-smoke prepare-rqr-bayes-uq-followup-waves launch-rqr-bayes-uq-followup health-rqr-bayes-uq-followup collect-rqr-bayes-uq-followup stop-rqr-bayes-uq-followup tolerance-validation-adjudication tolerance-mti-gibbs-diagnostics mti-bayes-uq-main-smoke prepare-mti-bayes-uq-main-waves launch-mti-bayes-uq-main health-mti-bayes-uq-main collect-mti-bayes-uq-main stop-mti-bayes-uq-main tcsp-validation-preflight tcsp-validation-tiny tcsp-validation-pilot tcsp-validation-full-pilot tcsp-validation-health tcsp-validation-audit
 .PHONY: validate-dlm-m02-diagnostic-canary
 
 theory-figures:
@@ -107,6 +118,7 @@ theory-tables:
 	$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_stratified_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_followup_tables.R --output-dir=$(THEORY_TABLE_DIR)
+	$(R) tables/generate_tolerance_validation_gibbs_diagnostic_table.R --diagnostics-csv=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_SOURCE) --output-dir=$(THEORY_TABLE_DIR)
 
 model-illustration-figures:
 	$(R) figures/generate_oracle_tilt_model_figures.R --evidence-dir=$(ORACLE_TILT_EVIDENCE_DIR) --output-dir=$(THEORY_FIGURE_DIR) --table-dir=$(THEORY_TABLE_DIR)
@@ -120,6 +132,7 @@ test-theory-tables:
 	$(R) tables/test_tolerance_validation_summary_table.R
 	$(R) tables/test_tolerance_validation_stratified_table.R
 	$(R) tables/test_tolerance_validation_followup_tables.R
+	$(R) tables/test_tolerance_validation_gibbs_diagnostic_table.R
 
 test-manuscript-language:
 	$(R) application/scripts/63_validate_manuscript_bayesian_language.R
@@ -169,12 +182,25 @@ test-bayes-uq: package-install
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-bayes-uq-plugin-scope.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-bayes-uq-main-validation-config.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-bayes-uq-followup-config.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-tolerance-validation-adjudication.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-tolerance-mti-gibbs-diagnostics.R
+
+test-tolerance-adjudication: package-install
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-tolerance-validation-adjudication.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-tolerance-mti-gibbs-diagnostics.R
 
 rqr-bayes-uq-validation-smoke: package-install
 	$(R) application/scripts/69_validate_rqr_bayes_uq.R --mode=smoke --config=$(RQR_BAYES_UQ_VALIDATION_CONFIG) --output-dir=$(RQR_BAYES_UQ_VALIDATION_SMOKE_DIR)
 
 rqr-bayes-uq-validation-moderate: package-install
 	$(R) application/scripts/69_validate_rqr_bayes_uq.R --mode=moderate --config=$(RQR_BAYES_UQ_VALIDATION_CONFIG) --output-dir=$(RQR_BAYES_UQ_VALIDATION_MODERATE_DIR)
+
+tolerance-validation-adjudication: package-install
+	@test -n "$(strip $(RQR_TOLERANCE_ADJUDICATION_MAIN_RUN_DIR))" || { echo "Set RQR_TOLERANCE_ADJUDICATION_MAIN_RUN_DIR to the completed primary validation run." >&2; exit 64; }
+	$(R) application/scripts/76_adjudicate_tolerance_validation_results.R --main-run-dir=$(RQR_TOLERANCE_ADJUDICATION_MAIN_RUN_DIR) --ecm-run-dir=$(RQR_TOLERANCE_ADJUDICATION_ECM_RUN_DIR) --small95-run-dir=$(RQR_TOLERANCE_ADJUDICATION_SMALL95_RUN_DIR) --paper90-run-dir=$(RQR_TOLERANCE_ADJUDICATION_PAPER90_RUN_DIR) --output-dir=$(RQR_TOLERANCE_ADJUDICATION_DIR)
+
+tolerance-mti-gibbs-diagnostics: package-install
+	$(R) application/scripts/77_run_tolerance_mti_gibbs_diagnostics.R --output-dir=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_DIR) --chains=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_CHAINS) --workers=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_WORKERS) --n-burn=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_BURN) --n-mcmc=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_DRAWS)
 
 launch-rqr-bayes-uq-overnight: package-install
 	bash application/scripts/70_launch_rqr_bayes_uq_overnight.sh

@@ -33,6 +33,11 @@ default_paths <- c(
   small95 = file.path(
     default_root, "wave_small_sample_95_20260817T005145Z",
     "bayes_uq_validation_results.csv"
+  ),
+  ecm500 = file.path(
+    "application", "outputs", "tolerance_ecm_sensitivity",
+    "ecm500_lognormal_hard_n1000_c099_20260818T013747Z",
+    "bayes_uq_validation_results.csv"
   )
 )
 
@@ -41,6 +46,8 @@ paths <- c(
   paper90 = arg_value("--paper90-results=", default_paths[["paper90"]]),
   small95 = arg_value("--small95-results=", default_paths[["small95"]])
 )
+ecm500_path <- arg_value("--ecm500-results=", default_paths[["ecm500"]])
+ecm500_requested <- any(startsWith(args, "--ecm500-results="))
 output_dir <- normalizePath(arg_value("--output-dir=", "tables"),
                             winslash = "/", mustWork = FALSE)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -74,6 +81,11 @@ if (length(missing_inputs)) {
   stopf("Missing follow-up result file(s): ",
         paste(names(missing_inputs), missing_inputs, sep = "=", collapse = "; "))
 }
+if (file.exists(ecm500_path)) {
+  paths <- c(paths, ecm500 = ecm500_path)
+} else if (ecm500_requested) {
+  stopf("Missing ECM 500 sensitivity result file: ", ecm500_path)
+}
 
 truthy <- function(x) !is.na(x) & x
 mean_or_na <- function(x) {
@@ -89,7 +101,11 @@ median_or_na <- function(x) {
 quantile_or_na <- function(x, prob) {
   x <- as.numeric(x)
   x <- x[is.finite(x)]
-  if (length(x)) unname(stats::quantile(x, prob, names = FALSE)) else NA_real_
+  if (length(x)) {
+    unname(stats::quantile(x, prob, names = FALSE, type = 8))
+  } else {
+    NA_real_
+  }
 }
 format_pct <- function(x) {
   x <- as.numeric(x)
@@ -133,12 +149,14 @@ method_labels <- c(
 design_labels <- c(
   ecm200_audit = "ECM 200-iteration diagnostic",
   paper_matched_90 = "Minimal 90% confidence design",
-  small_sample_95 = "Small-sample 95% confidence design"
+  small_sample_95 = "Small-sample 95% confidence design",
+  ecm500_sensitivity = "ECM 500-iteration sensitivity"
 )
 public_design_ids <- c(
   ecm200_audit = "ecm_200_iteration_diagnostic",
   paper_matched_90 = "minimal_full_range_90_confidence",
-  small_sample_95 = "small_sample_95_confidence"
+  small_sample_95 = "small_sample_95_confidence",
+  ecm500_sensitivity = "ecm_500_iteration_sensitivity"
 )
 
 read_design <- function(path, design_id) {
@@ -202,9 +220,15 @@ design_summary$method[is.na(design_summary$method)] <-
   design_summary$method_id[is.na(design_summary$method)]
 design_order <- c("ecm200_audit", "paper_matched_90", "small_sample_95")
 method_order <- c(
-  "oracle_sh", "tcsp_mc", "hdp_s_mc", "tcsp_mti_gibbs_median_mc",
-  "tcsp_mti_ecm_map_mc", "young_mathew", "wilks_minmax", "tcsp_dkw"
+  "oracle_sh", "tcsp_mc", "hdp_s_mc", "tcsp_mti_ecm_map_mc",
+  "young_mathew", "wilks_minmax", "tcsp_dkw"
 )
+design_order <- c(design_order, "ecm500_sensitivity")
+design_summary <- design_summary[
+  design_summary$method_id %in% method_order,
+  ,
+  drop = FALSE
+]
 design_summary <- design_summary[order(
   match(design_summary$mode, design_order),
   match(design_summary$method_id, method_order)
@@ -252,8 +276,8 @@ ecm_diag <- ecm_diag[c(
 )]
 
 small_methods <- c(
-  "tcsp_mc", "tcsp_mti_gibbs_median_mc", "tcsp_mti_ecm_map_mc",
-  "young_mathew", "wilks_minmax", "tcsp_dkw"
+  "tcsp_mc", "tcsp_mti_ecm_map_mc", "young_mathew", "wilks_minmax",
+  "tcsp_dkw"
 )
 small <- results[
   results$mode == "small_sample_95" & results$method_id %in% small_methods,

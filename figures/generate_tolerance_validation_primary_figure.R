@@ -36,7 +36,6 @@ manifest_path <- file.path(output_dir,
 
 method_order <- c(
   "tcsp_mc",
-  "tcsp_mti_gibbs_median_mc",
   "tcsp_mti_ecm_map_mc",
   "young_mathew",
   "wilks_minmax",
@@ -44,7 +43,6 @@ method_order <- c(
 )
 method_labels <- c(
   tcsp_mc = "TCSP",
-  tcsp_mti_gibbs_median_mc = "MTI Gibbs",
   tcsp_mti_ecm_map_mc = "MTI ECM",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks",
@@ -52,7 +50,6 @@ method_labels <- c(
 )
 method_colors <- c(
   tcsp_mc = "#0072B2",
-  tcsp_mti_gibbs_median_mc = "#009E73",
   tcsp_mti_ecm_map_mc = "#D55E00",
   young_mathew = "#CC79A7",
   wilks_minmax = "#000000",
@@ -60,7 +57,6 @@ method_colors <- c(
 )
 method_pch <- c(
   tcsp_mc = 16,
-  tcsp_mti_gibbs_median_mc = 17,
   tcsp_mti_ecm_map_mc = 15,
   young_mathew = 18,
   wilks_minmax = 4,
@@ -139,7 +135,7 @@ on.exit({
 }, add = TRUE)
 
 layout(matrix(c(1, 2, 3, 4, 5, 5), nrow = 3, byrow = TRUE),
-       heights = c(1, 1, 0.18))
+       heights = c(1, 1, 0.32))
 par(oma = c(0, 0, 1.2, 0), mar = c(4.1, 4.4, 2.5, 0.9),
     xaxs = "i", yaxs = "i")
 
@@ -188,7 +184,7 @@ plot.new()
 legend("center", legend = unname(method_labels[method_order]),
        col = unname(method_colors[method_order]),
        pch = unname(method_pch[method_order]), lwd = 1.5,
-       horiz = TRUE, bty = "n", xpd = NA, cex = 0.9)
+       ncol = 3, bty = "n", xpd = NA, cex = 0.9)
 mtext("Primary iid tolerance validation at tolerance confidence 0.95",
       outer = TRUE, cex = 1.05, font = 2)
 

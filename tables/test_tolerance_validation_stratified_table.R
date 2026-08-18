@@ -9,7 +9,6 @@ on.exit(unlink(work_dir, recursive = TRUE, force = TRUE), add = TRUE)
 methods <- c(
   "tcsp_mc",
   "hdp_s_mc",
-  "tcsp_mti_gibbs_median_mc",
   "tcsp_mti_ecm_map_mc",
   "young_mathew",
   "wilks_minmax",
@@ -69,6 +68,7 @@ stopifnot(file.exists(tex_500_path), file.exists(tex_1000_path))
 
 tab <- utils::read.csv(csv_path, stringsAsFactors = FALSE)
 stopifnot(nrow(tab) == length(methods) * 4L)
+stopifnot(!"tcsp_mti_gibbs_median_mc" %in% tab$method_id)
 closed <- tab[
   tab$method_id == "tcsp_dkw" & tab$n == 500L & tab$content == 0.99,
   ,

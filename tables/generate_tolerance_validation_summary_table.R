@@ -69,10 +69,7 @@ if (length(missing)) {
 method_order <- c(
   "tcsp_mc",
   "hdp_s_mc",
-  "tcsp_mti_gibbs_median_mc",
   "tcsp_mti_ecm_map_mc",
-  "split_empirical_shortest",
-  "split_ecm_fixed_tilt",
   "young_mathew",
   "wilks_minmax",
   "tcsp_dkw"
@@ -80,10 +77,7 @@ method_order <- c(
 labels <- c(
   tcsp_mc = "TCSP scan",
   hdp_s_mc = "Hybrid DP--scan",
-  tcsp_mti_gibbs_median_mc = "MTI Gibbs",
   tcsp_mti_ecm_map_mc = "MTI ECM",
-  split_empirical_shortest = "Split empirical",
-  split_ecm_fixed_tilt = "Split ECM",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks min--max",
   tcsp_dkw = "DKW scan"
@@ -91,10 +85,7 @@ labels <- c(
 roles <- c(
   tcsp_mc = "Shortest empirical scan action",
   hdp_s_mc = "Scan action with direct-DP content screen",
-  tcsp_mti_gibbs_median_mc = "Fixed-target generalized-Bayes summary",
   tcsp_mti_ecm_map_mc = "Fixed-target generalized-Bayes mode",
-  split_empirical_shortest = "Exact-spacing split action",
-  split_ecm_fixed_tilt = "Exact-spacing split action with ECM pilot",
   young_mathew = "Classical interpolated comparator",
   wilks_minmax = "Classical full-range comparator",
   tcsp_dkw = "Conservative scan fallback"

@@ -78,7 +78,6 @@ if (length(missing)) {
 method_order <- c(
   "tcsp_mc",
   "hdp_s_mc",
-  "tcsp_mti_gibbs_median_mc",
   "tcsp_mti_ecm_map_mc",
   "young_mathew",
   "wilks_minmax",
@@ -87,7 +86,6 @@ method_order <- c(
 method_labels <- c(
   tcsp_mc = "TCSP scan",
   hdp_s_mc = "Hybrid DP--scan",
-  tcsp_mti_gibbs_median_mc = "MTI Gibbs",
   tcsp_mti_ecm_map_mc = "MTI ECM",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks min--max",

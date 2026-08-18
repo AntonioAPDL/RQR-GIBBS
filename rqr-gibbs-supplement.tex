@@ -2246,7 +2246,11 @@ scale contamination, and Student \(t_3\) tails. Each cell uses paired random
 samples across methods and records the repository commit, frozen JSON
 configuration, scan-calibration cache, oracle certificates, wave plan, and
 artifact hashes. The primary validation table in the main article is generated
-from the collected primary run summary rather than edited by hand.
+from the collected primary run summary rather than edited by hand. Its rows are
+restricted to the confirmatory comparison: TCSP, hybrid DP--scan, MTI ECM,
+Young--Mathew, Wilks min--max, and the conservative DKW fallback. MTI Gibbs is
+reported separately as a sampler diagnostic because the multi-chain checks below
+show unstable mixing in several feasible cells.
 
 \begin{table}[H]
 \centering
@@ -2312,16 +2316,21 @@ This distinction matters for interpreting the small sample sizes in
 follow-up configuration therefore stores paired design cells instead of forming
 all combinations of sample size, content, and confidence.
 
-The follow-up validation has three designs. The ECM 200-iteration diagnostic
+The follow-up validation has four designs. The ECM 200-iteration diagnostic
 reruns the primary \(0.95\)-confidence grid for the fixed-target MTI ECM row
 with compact trace summaries: initial objective, final objective, relative
 objective drop, final stationarity, and trace length. We interpret the ECM flag
 using a fixed-target stationarity tolerance of \(10^{-3}\). This numerical
 diagnostic assesses optimizer behavior for the fixed target; tolerance validity
-continues to come from the scan-calibrated order-statistic action. The design
-preserves the completed primary comparison for unchanged methods while directly
-auditing the only computational setting that changed. The minimal full-range
-\(90\%\)-confidence design uses the threshold cells \((38,0.90)\),
+continues to come from the scan-calibrated order-statistic action. A 500-iteration
+sensitivity run repeats the hardest feasible ECM cell,
+\(n=1000,c=0.99\), for the hard log-normal law. The longer cap leaves the
+stationarity tail unchanged, which indicates that this residual tail is a
+target-specific numerical feature rather than an iteration-budget artifact.
+The MTI Gibbs diagnostic uses four chains and longer retained traces on feasible
+diagnostic cells. It checks the conditional generalized-Bayes sampler after the
+scan target is fixed. The minimal full-range \(90\%\)-confidence design uses the
+threshold cells \((38,0.90)\),
 \((77,0.95)\), and \((388,0.99)\), with an added standardized Beta law to
 stress bounded skewness. The small-sample \(95\%\)-confidence design uses the
 threshold cells \((46,0.90)\), \((93,0.95)\), and \((473,0.99)\), plus practical
@@ -2360,6 +2369,25 @@ guarantee.}
 \label{tab:supp-ecm-diagnostics}
 \TableStyle
 \input{tables/tolerance_validation_ecm_diagnostics.tex}
+\end{table}
+
+Table~\ref{tab:supp-gibbs-diagnostics} summarizes the separate Gibbs diagnostic
+run. The normal large-sample cell and the small contaminated-normal cell pass
+the basic multi-chain screen, but several small-sample and hard-tail cells have
+large \(\hat R\) values even after increasing the chain length. We therefore
+exclude MTI Gibbs from the confirmatory validation tables and treat it as an
+implementation diagnostic until the sampler is improved.
+
+\begin{table}[H]
+\centering
+\caption{\textbf{MTI Gibbs multi-chain diagnostics.} The diagnostic run uses
+four chains and 5,000 retained draws per chain after burn-in. ``Diagnostic
+only'' indicates that the current Gibbs implementation executed under the
+specified fixed-target generalized posterior but did not pass the multi-chain
+screen for that cell.}
+\label{tab:supp-gibbs-diagnostics}
+\TableStyle
+\input{tables/tolerance_validation_gibbs_diagnostics.tex}
 \end{table}
 
 \begin{table}[H]

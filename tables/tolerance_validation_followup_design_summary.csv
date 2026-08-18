@@ -7,15 +7,18 @@
 "minimal_full_range_90_confidence","Minimal 90% confidence design","oracle_sh","Population shortest oracle",15000,0,1,1,0.811964387826253,1,0.000999999999976353
 "minimal_full_range_90_confidence","Minimal 90% confidence design","tcsp_mc","TCSP scan",15000,0,0.900466666666667,0.900466666666667,1,1.23158110825008,0.00199999999995271
 "minimal_full_range_90_confidence","Minimal 90% confidence design","hdp_s_mc","Hybrid DP--scan",15000,0,0.900466666666667,0.900466666666667,1,1.23158110825008,2.64149999999972
-"minimal_full_range_90_confidence","Minimal 90% confidence design","tcsp_mti_gibbs_median_mc","MTI Gibbs",15000,1,0,NA,NA,NA,0.00199999999995271
 "minimal_full_range_90_confidence","Minimal 90% confidence design","tcsp_mti_ecm_map_mc","MTI ECM",15000,1,0,NA,NA,NA,0.00100000000020373
 "minimal_full_range_90_confidence","Minimal 90% confidence design","young_mathew","Young--Mathew",15000,0,0.8994,0.8994,0.998956388771215,1.22892663722271,0.007000000000005
 "minimal_full_range_90_confidence","Minimal 90% confidence design","wilks_minmax","Wilks min--max",15000,0,0.900466666666667,0.900466666666667,1,1.23158110825008,0
 "minimal_full_range_90_confidence","Minimal 90% confidence design","tcsp_dkw","DKW scan",15000,1,0,NA,NA,NA,0.000999999999748979
 "small_sample_95_confidence","Small-sample 95% confidence design","oracle_sh","Population shortest oracle",21600,0,1,1,0.752295871726635,1,0.000999999999976353
 "small_sample_95_confidence","Small-sample 95% confidence design","tcsp_mc","TCSP scan",21600,0.222222222222222,0.747546296296296,0.961130952380952,1,1.32926424618673,0.00199999999995271
-"small_sample_95_confidence","Small-sample 95% confidence design","tcsp_mti_gibbs_median_mc","MTI Gibbs",21600,0.888888888888889,0.111018518518519,0.999166666666667,1.23011988846537,1.7262949664181,0.00199999999999534
 "small_sample_95_confidence","Small-sample 95% confidence design","tcsp_mti_ecm_map_mc","MTI ECM",21600,0.888888888888889,0.109768518518519,0.987916666666667,1.00000000162954,1.31116299047228,0.00199999999999534
 "small_sample_95_confidence","Small-sample 95% confidence design","young_mathew","Young--Mathew",21600,0,0.922685185185185,0.922685185185185,0.996627373050237,1.32907418852333,0.00999999999999091
 "small_sample_95_confidence","Small-sample 95% confidence design","wilks_minmax","Wilks min--max",21600,0,0.858518518518519,0.858518518518519,1,1.28492018240778,0.000999999999976353
 "small_sample_95_confidence","Small-sample 95% confidence design","tcsp_dkw","DKW scan",21600,1,0,NA,NA,NA,0.000999999999990564
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","oracle_sh","Population shortest oracle",100,0,1,1,0.576508443320604,1,0.000999999999976353
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","tcsp_mc","TCSP scan",100,0,0.99,0.99,1,1.73458012705529,0.00200000000000066
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","tcsp_mti_ecm_map_mc","MTI ECM",100,0,0.99,0.99,1.0000000003698,1.73458012767344,5.25799999999998
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","young_mathew","Young--Mathew",100,0,0.97,0.97,1.11492483336602,2.03768497068787,0.00900000000001455
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","wilks_minmax","Wilks min--max",100,0,1,1,1.62936603290605,3.05268263184109,0.000999999999976353

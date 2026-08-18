@@ -1,7 +1,7 @@
 {
   "schema_version": "rqrgibbs_bayes_uq_validation/1.2.0",
   "study_id": "rqr_bayes_uq_followup_20260816",
-  "description": "Follow-up iid univariate tolerance validation lanes: 200-iteration MTI-ECM audit, 90%-confidence paper-matched feasibility cells, and 95%-confidence small-sample feasibility cells.",
+  "description": "Follow-up iid univariate tolerance validation lanes: 200-iteration MTI-ECM audit, minimal 90%-confidence full-range feasibility cells, and 95%-confidence small-sample feasibility cells.",
   "base_seed": 863216,
   "claim_scope": {
     "iid_univariate_continuous_only": true,
@@ -14,6 +14,7 @@
   "execution": {
     "smoke_authorized": true,
     "ecm200_audit_authorized": true,
+    "ecm500_sensitivity_authorized": true,
     "paper_matched_90_authorized": true,
     "small_sample_95_authorized": true,
     "overnight_mode": "small_sample_95",
@@ -87,6 +88,12 @@
       },
       "ecm200_audit_ecm_control": {
         "max_iter": 200,
+        "stable_iterations": 2,
+        "tol_stationarity": 0.001,
+        "store_iteration_trace": true
+      },
+      "ecm500_sensitivity_ecm_control": {
+        "max_iter": 500,
         "stable_iterations": 2,
         "tol_stationarity": 0.001,
         "store_iteration_trace": true
@@ -471,6 +478,29 @@
         "young_mathew",
         "wilks_minmax",
         "tcsp_dkw"
+      ]
+    },
+    "ecm500_sensitivity": {
+      "dgp_ids": [
+        "lognormal_hard"
+      ],
+      "design_cells": [
+        {
+          "cell_id": "primary95_c099_n1000_ecm500_sensitivity",
+          "n": 1000,
+          "guaranteed_content": 0.99,
+          "tolerance_confidence": 0.95
+        }
+      ],
+      "posterior_confidences": [0.95],
+      "replications": 100,
+      "paired_thresholds": true,
+      "method_ids": [
+        "oracle_sh",
+        "tcsp_mc",
+        "tcsp_mti_ecm_map_mc",
+        "young_mathew",
+        "wilks_minmax"
       ]
     }
   }

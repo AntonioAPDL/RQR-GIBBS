@@ -1,4 +1,5 @@
 "design_id","design","rows","rows_with_stationarity","stationarity_pass_rate","median_stationarity","p95_stationarity","max_stationarity","median_abs_relative_objective_drop","median_trace_length"
-"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic",4200,3500,0.995714285714286,0.000205306010058756,0.00067921292453678,0.00161986218214528,5.76067601057745e-15,201
+"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic",4200,3500,0.995714285714286,0.000205306010058756,0.000680203544393024,0.00161986218214528,5.76067601057745e-15,201
 "minimal_full_range_90_confidence","Minimal 90% confidence design",15000,0,NA,NA,NA,NA,NA,NA
-"small_sample_95_confidence","Small-sample 95% confidence design",21600,2400,1,0.000219204641992741,0.000396195340970207,0.000861621353574454,7.75392639153252e-14,201
+"small_sample_95_confidence","Small-sample 95% confidence design",21600,2400,1,0.000219204641992741,0.000396635289381758,0.000861621353574454,7.75392639153252e-14,201
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity",100,100,0.9,0.000697923240745538,0.00108699054833186,0.00161986218214528,4.12334833136841e-15,3

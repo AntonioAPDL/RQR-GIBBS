@@ -8,7 +8,6 @@ on.exit(unlink(work_dir, recursive = TRUE, force = TRUE), add = TRUE)
 
 methods <- c(
   "tcsp_mc",
-  "tcsp_mti_gibbs_median_mc",
   "tcsp_mti_ecm_map_mc",
   "young_mathew",
   "wilks_minmax",

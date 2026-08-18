@@ -63,11 +63,23 @@ small95 <- rbind(
   row("small_sample_95", "tcsp_dkw", FALSE, TRUE, 0.95,
       width_ref = NA, width_oracle = NA)
 )
+ecm500 <- rbind(
+  row("ecm500_sensitivity", "tcsp_mc", TRUE, FALSE, 0.99),
+  row("ecm500_sensitivity", "tcsp_mti_ecm_map_mc", TRUE, FALSE, 0.99,
+      stat = 1.2e-3, rel_drop = 1e-13, trace = 501),
+  row("ecm500_sensitivity", "young_mathew", TRUE, FALSE, 0.99,
+      width_ref = 1.1),
+  row("ecm500_sensitivity", "wilks_minmax", TRUE, FALSE, 0.99,
+      width_ref = 1.4)
+)
 
-paths <- file.path(work_dir, c("ecm200.csv", "paper90.csv", "small95.csv"))
+paths <- file.path(
+  work_dir, c("ecm200.csv", "paper90.csv", "small95.csv", "ecm500.csv")
+)
 utils::write.csv(ecm200, paths[[1L]], row.names = FALSE)
 utils::write.csv(paper90, paths[[2L]], row.names = FALSE)
 utils::write.csv(small95, paths[[3L]], row.names = FALSE)
+utils::write.csv(ecm500, paths[[4L]], row.names = FALSE)
 
 out_dir <- file.path(work_dir, "out")
 status <- system2(
@@ -77,6 +89,7 @@ status <- system2(
     paste0("--ecm200-results=", paths[[1L]]),
     paste0("--paper90-results=", paths[[2L]]),
     paste0("--small95-results=", paths[[3L]]),
+    paste0("--ecm500-results=", paths[[4L]]),
     paste0("--output-dir=", out_dir)
   ),
   stdout = TRUE,
@@ -106,6 +119,7 @@ ecm200_diag <- diag[
 ]
 stopifnot(nrow(ecm200_diag) == 1L)
 stopifnot(abs(ecm200_diag$stationarity_pass_rate - 0.5) < 1e-12)
+stopifnot(any(diag$design_id == "ecm_500_iteration_sensitivity"))
 
 small <- read.csv(
   file.path(out_dir, "tolerance_validation_small_sample_content_summary.csv"),
@@ -113,6 +127,7 @@ small <- read.csv(
 )
 stopifnot(any(small$guaranteed_content == 0.99))
 stopifnot(any(small$method_id == "wilks_minmax"))
+stopifnot(!any(small$method_id == "tcsp_mti_gibbs_median_mc"))
 
 tex <- paste(readLines(
   file.path(out_dir, "tolerance_validation_ecm_diagnostics.tex"),
@@ -127,7 +142,9 @@ design_tex <- paste(readLines(
 ), collapse = "\n")
 stopifnot(grepl("Method & Infeasible", design_tex, fixed = TRUE))
 stopifnot(grepl("Minimal 90\\% confidence design", design_tex, fixed = TRUE))
+stopifnot(grepl("ECM 500-iteration sensitivity", design_tex, fixed = TRUE))
 stopifnot(grepl("Returned success", design_tex, fixed = TRUE))
+stopifnot(!grepl("MTI Gibbs", design_tex, fixed = TRUE))
 stopifnot(!grepl("Lane", design_tex, fixed = TRUE))
 stopifnot(!grepl("Paper-matched", design_tex, fixed = TRUE))
 stopifnot(!grepl("Feasible success", design_tex, fixed = TRUE))
