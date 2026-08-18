@@ -91,14 +91,15 @@ readouts, and dynamic linear root states.
 
 Because the shortest-contiguous member is the minimum-width interval in the
 fixed-content class, the same target geometry also motivates calibrated
-minimum-width tolerance actions. The formal empirical action selects the
-shortest closed order-statistic interval at a calibrated retained count. A
-direct Dirichlet-process response-distribution layer gives exact
-fixed-interval Beta content probabilities, and a Bayesian-constrained scan
-action uses those probabilities to screen scan candidates. Tolerance confidence
-is supplied by scan calibration, while posterior credibility describes the
-fitted generalized posterior. MTI endpoint summaries diagnose endpoint
-uncertainty; response-predictive draws require a response-distribution layer.
+minimum-width tolerance actions. The primary TCSP action selects the shortest
+closed order-statistic interval at a calibrated retained count, giving the
+minimum-width member of the calibrated empirical scan class. A direct
+Dirichlet-process response-distribution layer gives exact fixed-interval Beta
+content probabilities, and a Bayesian-constrained scan action uses those
+probabilities to screen scan candidates. Tolerance confidence is supplied by
+scan calibration, while posterior credibility describes the fitted generalized
+posterior. MTI endpoint summaries diagnose endpoint uncertainty;
+response-predictive draws require a response-distribution layer.
 A prespecified iid validation study at tolerance confidence \(0.95\) compares
 scan-calibrated actions, fixed-target MTI ECM summaries, Young--Mathew and
 Wilks order-statistic competitors, and a conservative DKW fallback across
@@ -1559,11 +1560,14 @@ the empirical scan action.
 
 The method set separates the object being compared. The population shortest
 interval is an oracle width reference. TCSP is the formal scan-calibrated
-shortest empirical action. The hybrid DP--scan action adds a direct
-Dirichlet-process content screen to the same calibrated count. MTI ECM is the
-main fixed-target generalized-Bayes endpoint summary after the scan selects the
-retained count and sample tilt; the associated formal scan window remains
-recorded separately. Young--Mathew interpolation
+shortest empirical action and is therefore the primary tolerance action for this
+study. Its optimality is class-specific: it minimizes width among closed
+order-statistic windows satisfying the calibrated retained-count rule. The
+hybrid DP--scan action adds a direct Dirichlet-process content screen to the
+same calibrated count. MTI ECM is the main fixed-target generalized-Bayes
+endpoint summary after the scan selects the retained count and sample tilt; the
+associated formal scan window remains recorded separately. Young--Mathew
+interpolation
 \citep{YoungMathew2014NonparametricTolerance}, Wilks min--max intervals
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction}, and the DKW
 fallback provide classical and conservative order-statistic comparators. MTI
@@ -1614,17 +1618,17 @@ diagnostic sampler in the supplement.}
 
 Tables~\ref{tab:tolerance-validation-primary-n500}
 and~\ref{tab:tolerance-validation-primary-n1000} avoid averaging over
-distributional scenarios. TCSP and the hybrid DP--scan action deliver the same
-formal scan intervals throughout the primary grid. The hybrid screen adds a
-Bayesian content check at a large runtime cost, while leaving the delivered
-interval unchanged in these cells. MTI ECM matches the formal scan action in
-all feasible primary cells and records the \(n=500,c=0.99\) fixed target as
-fail-closed. Young--Mathew is usually slightly narrower than TCSP and remains
-near the target in the primary grid, although its delivery range is lower in
-the most skewed or separated scenarios. Wilks is conservative for lower
-contents and reduces to the full range near the boundary. The DKW fallback is
-useful as a conservative diagnostic because it succeeds when it returns an
-interval, but it is often too conservative to return one.
+distributional scenarios. The primary message is that the calibrated scan action
+is stable across the prespecified grid. TCSP and the hybrid DP--scan action
+deliver the same formal scan intervals throughout the primary study; the hybrid
+screen adds a Bayesian content check at a large runtime cost, with no change in
+the delivered interval in these cells. MTI ECM agrees with the formal scan
+action in feasible primary cells and records the \(n=500,c=0.99\) fixed target
+as fail-closed. Young--Mathew is often slightly narrower than TCSP, with lower
+delivery in the most skewed or separated scenarios. Wilks is conservative for
+lower contents and reduces to the full range near the boundary. The DKW fallback
+is a conservative diagnostic that succeeds when it returns an interval, while
+its critical count is frequently too conservative to produce one.
 
 \begin{table}[!htbp]
 \centering
@@ -1641,14 +1645,14 @@ a reference interval in that cell.}
 
 Table~\ref{tab:tolerance-validation-small-boundary} shows why the small-sample
 stress cells are central to the validation. At \(n=50,c=0.90\), TCSP, Wilks,
-and Young--Mathew all deliver close to the requested statement across DGPs,
-whereas MTI ECM has no feasible fixed target. At \(n=50,c=0.95\) and
+and Young--Mathew all deliver close to the requested statement across DGPs; MTI
+ECM has no feasible fixed target in that cell. At \(n=50,c=0.95\) and
 \(n=100,c=0.99\), the scan-calibrated methods fail closed because the requested
-distribution-free statement is not available from the sample size. Young--Mathew
+distribution-free statement is unavailable at that sample size. Young--Mathew
 and Wilks return intervals in those cells, with delivered content well below the
-\(95\%\)-confidence target, especially for \(c=0.99\). The scan-calibrated
-behavior is therefore interpretable: feasibility is reported explicitly instead
-of being hidden by an interval that cannot support the requested statement.
+\(95\%\)-confidence target, especially for \(c=0.99\). This boundary behavior is
+the intended calibrated decision: the procedure reports infeasibility instead of
+presenting an interval that cannot support the requested statement.
 
 Four follow-up checks complete the validation protocol. First, the primary
 grid is rerun for the MTI ECM row with 200 iterations and compact objective
@@ -1716,15 +1720,16 @@ joint density proof is supplied.
 
 The tolerance proposal adds a distinct frequentist layer. A scan statistic
 chooses an empirical retained count, after which the shortest closed
-order-statistic window at that count is reported. Generalized-Bayes
-computation begins only after the content and tilt are fixed. The reported
-TCSP interval is the formal tolerance action. MTI Gibbs and ECM endpoint
-summaries are interpreted conditionally on the scan-selected count and tilt.
-In the present validation evidence, MTI ECM is the stable fixed-target summary
-used for the main comparison, whereas MTI Gibbs remains a diagnostic sampler
-because several multi-chain checks show poor mixing. Tolerance confidence
-remains attached to the scan action, and posterior credibility is therefore
-kept separate from tolerance confidence.
+order-statistic window at that count is reported. This makes TCSP the formal
+tolerance action and gives a class-specific minimum-width property within the
+calibrated empirical scan class. Generalized-Bayes computation begins only after
+the content and tilt are fixed. MTI Gibbs and ECM endpoint summaries are
+interpreted conditionally on the scan-selected count and tilt. In the present
+validation evidence, MTI ECM supplies the stable fixed-target summary used for
+the main comparison. MTI Gibbs remains a diagnostic sampler because several
+multi-chain checks show poor mixing. Tolerance confidence remains attached to
+the scan action, and posterior credibility is therefore kept separate from
+tolerance confidence.
 Publication-level finite-sample wording still requires an action-matched scan
 proof and certified critical-count calculation. Replacing the empirical
 window by a posterior summary would require an additional transfer or direct

@@ -2234,9 +2234,11 @@ descriptive for the frozen data set and is not a calibration estimate.}
 The primary tolerance validation is restricted to iid continuous univariate
 samples. This is the setting in which the scan-calibrated empirical action,
 Wilks-style full-range intervals, Young--Mathew interpolation, and the direct
-Dirichlet-process content screen can be compared on the same target. Regression
-and dynamic tolerance calibration require additional results because the fitted
-intervals vary with covariates or time.
+Dirichlet-process content screen can be compared on the same target. The TCSP
+row is the primary calibrated action because it selects the shortest closed
+order-statistic window at the calibrated retained count. Regression and dynamic
+tolerance calibration require additional results because the fitted intervals
+vary with covariates or time.
 
 The primary grid used in the article fixes tolerance confidence \(1-\alpha=0.95\),
 uses \(n\in\{500,1000\}\), and studies contents
@@ -2276,15 +2278,15 @@ the same data set and target.}
 \end{table}
 
 Tables~\ref{tab:supp-primary-by-content-n500}
-and~\ref{tab:supp-primary-by-content-n1000} summarize the same primary run by
-sample size and target content after averaging over DGPs. Delivery makes
-infeasible cells visible in the same scale as empirical content success, while
-returned success separates content behavior from the decision to return an
-interval. Table~\ref{tab:supp-primary-dgp-delivery} gives the DGP-level
-delivery percentages that underlie the scenario ranges reported in the main
-article. The corresponding scenario-detail CSV in the tables directory contains
-the DGP-level returned success, infeasibility, relative width, and runtime
-summaries.
+and~\ref{tab:supp-primary-by-content-n1000} are orientation summaries for the
+same primary run by sample size and target content after averaging over DGPs.
+Delivery makes infeasible cells visible in the same scale as empirical content
+success, while returned success separates content behavior from the decision to
+return an interval. Table~\ref{tab:supp-primary-dgp-delivery} is the
+verification table behind the scenario ranges in the main article: it gives the
+DGP-level delivery percentages before averaging. The corresponding
+scenario-detail CSV in the tables directory contains returned success,
+infeasibility, relative width, and runtime for each DGP-level cell.
 
 \begingroup
 \TableStyle
@@ -2358,7 +2360,7 @@ implementation, and its package version is hashed into the method audit digest.
 The hybrid direct-DP method is retained where runtime is scientifically useful.
 It is omitted from the largest small-sample \(0.95\)-confidence design because
 the primary study already shows that it returns the same formal scan window at
-much higher runtime.
+substantially higher runtime.
 
 \begin{table}[H]
 \centering
@@ -2414,8 +2416,12 @@ the design.}
 
 Table~\ref{tab:supp-small-sample-dgp-delivery} gives the DGP-level delivery
 percentages for the practical \(n=50\) and \(n=100\) small-sample cells shown
-in the main article. The corresponding scenario-detail CSV in the tables
-directory contains the remaining DGP-level metrics.
+in the main article. These cells are the diagnostic boundary for feasibility:
+scan-calibrated methods report infeasibility when the requested
+content/confidence statement cannot be certified, and the classical comparators
+show the delivered content obtained after returning an interval anyway. The
+corresponding scenario-detail CSV in the tables directory contains the remaining
+DGP-level metrics.
 
 \begingroup
 \TableStyle
