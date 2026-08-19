@@ -18,14 +18,28 @@ repo_root <- normalizePath(file.path(dirname(script_path), ".."),
                            winslash = "/", mustWork = TRUE)
 setwd(repo_root)
 
-source_summary <- arg_value(
-  "--source-summary-csv=",
-  Sys.getenv("RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT", unset = "")
+default_primary_dir <- file.path(
+  "application", "runs", "rqr_bayes_uq_validation_main_20260813",
+  "wave_main_20260813T103232Z"
 )
-stratified_csv <- arg_value(
-  "--stratified-csv=",
-  file.path("tables", "tolerance_validation_by_n_content.csv")
+primary_results <- arg_value(
+  "--primary-results=",
+  Sys.getenv("RQR_BAYES_UQ_PRIMARY_RESULTS",
+             unset = file.path(default_primary_dir,
+                               "bayes_uq_validation_results.csv"))
 )
+young_mathew_results <- arg_value(
+  "--young-mathew-results=",
+  Sys.getenv("RQR_BAYES_UQ_PRIMARY_YM_RESULTS",
+             unset = file.path(default_primary_dir,
+                               "young_mathew_addon_20260815T064224Z",
+                               "bayes_uq_validation_results.csv"))
+)
+scenario_range_csv <- arg_value(
+  "--scenario-range-csv=",
+  file.path("tables", "tolerance_validation_primary_scenario_ranges.csv")
+)
+legacy_stratified_csv <- arg_value("--stratified-csv=", "")
 output_dir <- normalizePath(arg_value("--output-dir=", "figures/generated"),
                             winslash = "/", mustWork = FALSE)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -34,11 +48,7 @@ figure_path <- file.path(output_dir, "fig04_tolerance_validation_primary.png")
 manifest_path <- file.path(output_dir,
                            "tolerance_validation_primary_figure_manifest.csv")
 
-method_order <- c(
-  "tcsp_mc",
-  "young_mathew",
-  "wilks_minmax"
-)
+method_order <- c("tcsp_mc", "young_mathew", "wilks_minmax")
 method_labels <- c(
   tcsp_mc = "TCSP",
   young_mathew = "Young--Mathew",
@@ -49,71 +59,159 @@ method_colors <- c(
   young_mathew = "#CC79A7",
   wilks_minmax = "#000000"
 )
-method_pch <- c(
-  tcsp_mc = 16,
-  young_mathew = 18,
-  wilks_minmax = 4
+method_lty <- c(
+  tcsp_mc = 1,
+  young_mathew = 1,
+  wilks_minmax = 2
 )
 
-derive_from_source <- function(path) {
-  summary <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
-  required <- c(
-    "method_id", "n", "c", "infeasible_rate", "success_rate",
-    "median_width", "median_elapsed_sec"
-  )
-  missing <- setdiff(required, names(summary))
-  if (length(missing)) {
-    stopf("Primary stratified summary is missing column(s): ",
-          paste(missing, collapse = ", "))
+num <- function(x) suppressWarnings(as.numeric(x))
+truthy <- function(x) {
+  if (is.logical(x)) return(!is.na(x) & x)
+  if (is.numeric(x)) return(!is.na(x) & x != 0)
+  x <- tolower(trimws(as.character(x)))
+  !is.na(x) & x %in% c("true", "t", "1", "yes", "y")
+}
+quantile_or_na <- function(x, prob) {
+  x <- num(x)
+  x <- x[is.finite(x)]
+  if (length(x)) {
+    unname(stats::quantile(x, prob, names = FALSE, type = 8))
+  } else {
+    NA_real_
   }
-  selected <- summary[summary$method_id %in% method_order, , drop = FALSE]
-  feasible_fraction <- pmax(0, 1 - as.numeric(selected$infeasible_rate))
-  success_rate <- as.numeric(selected$success_rate)
-  delivery <- feasible_fraction * success_rate
-  delivery[!is.finite(delivery) & feasible_fraction == 0] <- 0
-  returned_success <- ifelse(feasible_fraction > 0, success_rate, NA_real_)
-  out <- data.frame(
-    n = as.integer(selected$n),
-    content = as.numeric(selected$c),
-    method_id = selected$method_id,
-    method = unname(method_labels[selected$method_id]),
-    infeasible_rate = as.numeric(selected$infeasible_rate),
-    delivery_success = delivery,
-    returned_success = returned_success,
-    median_width = as.numeric(selected$median_width),
-    median_elapsed_sec = as.numeric(selected$median_elapsed_sec),
-    stringsAsFactors = FALSE
+}
+min_or_na <- function(x) {
+  x <- num(x)
+  x <- x[is.finite(x)]
+  if (length(x)) min(x) else NA_real_
+}
+max_or_na <- function(x) {
+  x <- num(x)
+  x <- x[is.finite(x)]
+  if (length(x)) max(x) else NA_real_
+}
+
+bind_fill <- function(...) {
+  frames <- list(...)
+  frames <- frames[vapply(frames, nrow, integer(1L)) > 0L]
+  if (!length(frames)) return(data.frame())
+  cols <- Reduce(union, lapply(frames, names))
+  frames <- lapply(frames, function(x) {
+    missing <- setdiff(cols, names(x))
+    for (col in missing) x[[col]] <- NA
+    x[, cols, drop = FALSE]
+  })
+  do.call(rbind, frames)
+}
+
+read_result_file <- function(path, label) {
+  out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+  required <- c(
+    "dgp_id", "n", "guaranteed_content", "method_id", "success",
+    "infeasible", "width"
   )
+  missing <- setdiff(required, names(out))
+  if (length(missing)) {
+    stopf(label, " is missing column(s): ", paste(missing, collapse = ", "))
+  }
+  out
+}
+
+derive_ranges_from_raw <- function(primary_path, ym_path) {
+  frames <- list(read_result_file(primary_path, "Primary validation results"))
+  if (file.exists(ym_path)) {
+    frames <- c(frames, list(read_result_file(ym_path, "Young--Mathew results")))
+  }
+  raw <- do.call(bind_fill, frames)
+  raw <- raw[raw$method_id %in% method_order, , drop = FALSE]
+  if (!nrow(raw)) stopf("No selected methods are present in raw figure inputs.")
+  raw$n <- as.integer(raw$n)
+  raw$content <- num(raw$guaranteed_content)
+  raw$width <- num(raw$width)
+  raw$success_bool <- truthy(raw$success)
+  raw$infeasible_bool <- truthy(raw$infeasible)
+
+  dgp_key <- paste(raw$dgp_id, raw$n, sprintf("%.4f", raw$content),
+                   raw$method_id, sep = "||")
+  dgp_rows <- lapply(split(raw, dgp_key), function(df) {
+    data.frame(
+      dgp_id = df$dgp_id[[1L]],
+      n = as.integer(df$n[[1L]]),
+      content = num(df$content[[1L]]),
+      method_id = df$method_id[[1L]],
+      delivery_success = mean(!df$infeasible_bool & df$success_bool),
+      stringsAsFactors = FALSE
+    )
+  })
+  dgp_detail <- do.call(rbind, dgp_rows)
+
+  key <- paste(dgp_detail$n, sprintf("%.4f", dgp_detail$content),
+               dgp_detail$method_id, sep = "||")
+  rows <- lapply(split(dgp_detail, key), function(df) {
+    raw_hit <- raw[
+      raw$n == df$n[[1L]] &
+        abs(raw$content - df$content[[1L]]) < 1e-12 &
+        raw$method_id == df$method_id[[1L]],
+      ,
+      drop = FALSE
+    ]
+    data.frame(
+      n = as.integer(df$n[[1L]]),
+      content = num(df$content[[1L]]),
+      method_id = df$method_id[[1L]],
+      method = unname(method_labels[df$method_id[[1L]]]),
+      delivery_min = min_or_na(df$delivery_success),
+      delivery_max = max_or_na(df$delivery_success),
+      width_q025 = quantile_or_na(raw_hit$width, 0.025),
+      width_q975 = quantile_or_na(raw_hit$width, 0.975),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, rows)
   out[order(out$n, out$content, match(out$method_id, method_order)), ]
 }
 
-if (nzchar(source_summary) && file.exists(source_summary)) {
-  data <- derive_from_source(normalizePath(source_summary, winslash = "/",
-                                          mustWork = TRUE))
-  input_path <- normalizePath(source_summary, winslash = "/", mustWork = TRUE)
-} else if (file.exists(stratified_csv)) {
-  input_path <- normalizePath(stratified_csv, winslash = "/", mustWork = TRUE)
-  data <- utils::read.csv(input_path, stringsAsFactors = FALSE,
-                          check.names = FALSE)
-} else if (file.exists(figure_path) && file.exists(manifest_path)) {
-  cat("Using committed tolerance validation primary figure;",
-      "provide --source-summary-csv or --stratified-csv to regenerate.\n")
-  quit(status = 0)
-} else {
-  stopf("Missing source summary and stratified CSV for validation figure.")
+read_range_table <- function(path) {
+  out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+  required <- c(
+    "n", "content", "method_id", "delivery_min", "delivery_max",
+    "width_q025", "width_q975"
+  )
+  missing <- setdiff(required, names(out))
+  if (length(missing)) {
+    stopf("Scenario-range figure input is missing column(s): ",
+          paste(missing, collapse = ", "))
+  }
+  out <- out[out$method_id %in% method_order, , drop = FALSE]
+  out$method <- unname(method_labels[out$method_id])
+  out[order(out$n, out$content, match(out$method_id, method_order)), ]
 }
 
-required_data <- c(
-  "n", "content", "method_id", "delivery_success",
-  "median_width"
-)
-missing_data <- setdiff(required_data, names(data))
-if (length(missing_data)) {
-  stopf("Validation figure data are missing column(s): ",
-        paste(missing_data, collapse = ", "))
+input_paths <- character()
+if (file.exists(primary_results)) {
+  data <- derive_ranges_from_raw(primary_results, young_mathew_results)
+  input_paths <- c(primary_results,
+                   young_mathew_results[file.exists(young_mathew_results)])
+} else if (file.exists(scenario_range_csv)) {
+  data <- read_range_table(scenario_range_csv)
+  input_paths <- scenario_range_csv
+} else if (nzchar(legacy_stratified_csv) && file.exists(legacy_stratified_csv)) {
+  stopf("The validation figure now requires scenario ranges or raw result CSVs; ",
+        "the legacy stratified summary lacks range endpoints.")
+} else if (file.exists(figure_path) && file.exists(manifest_path)) {
+  cat("Using committed tolerance validation primary figure;",
+      "provide raw results or --scenario-range-csv to regenerate.\n")
+  quit(status = 0)
+} else {
+  stopf("Missing raw result CSVs and scenario-range CSV for validation figure.")
 }
-data <- data[data$method_id %in% method_order, , drop = FALSE]
+
 if (!nrow(data)) stopf("Validation figure has no selected methods.")
+
+contents <- sort(unique(data$content))
+offsets <- seq(-0.018, 0.018, length.out = length(method_order))
+names(offsets) <- method_order
 
 png(figure_path, width = 2400, height = 1500, res = 220)
 old_par <- par(no.readonly = TRUE)
@@ -127,56 +225,60 @@ on.exit({
 
 layout(matrix(c(1, 2, 3, 4, 5, 5), nrow = 3, byrow = TRUE),
        heights = c(1, 1, 0.32))
-par(oma = c(0, 0, 1.2, 0), mar = c(4.1, 4.4, 2.5, 0.9),
+par(oma = c(0, 0, 1.2, 0), mar = c(4.1, 4.6, 2.5, 0.9),
     xaxs = "i", yaxs = "i")
 
-contents <- sort(unique(data$content))
-offsets <- seq(-0.018, 0.018, length.out = length(method_order))
-names(offsets) <- method_order
-
-draw_panel <- function(nn, metric, ylab, main, reference, ylim) {
+draw_interval_panel <- function(nn, lower_col, upper_col, ylab, main,
+                                reference = NA_real_, ylim) {
   plot(NA_real_, NA_real_, xlim = range(contents) + c(-0.035, 0.035),
        ylim = ylim, xaxt = "n", xlab = "Target content",
        ylab = ylab, main = main, bty = "l")
   axis(1, at = contents, labels = sprintf("%.2f", contents))
   if (is.finite(reference)) {
-    abline(h = reference, col = "gray55", lty = 2, lwd = 1.2)
+    abline(h = reference, col = "gray55", lty = 3, lwd = 1.2)
   }
   panel <- data[data$n == nn, , drop = FALSE]
+  cap <- 0.004
   for (method in method_order) {
     block <- panel[panel$method_id == method, , drop = FALSE]
     block <- block[order(block$content), , drop = FALSE]
     if (!nrow(block)) next
     x <- block$content + offsets[[method]]
-    y <- as.numeric(block[[metric]])
-    finite <- is.finite(y)
-    if (sum(finite) >= 2L) {
-      lines(x[finite], y[finite], col = method_colors[[method]], lwd = 1.5)
-    }
-    points(x[finite], y[finite], pch = method_pch[[method]],
-           col = method_colors[[method]], bg = method_colors[[method]],
-           cex = 1.05, lwd = 1.4)
+    lower <- num(block[[lower_col]])
+    upper <- num(block[[upper_col]])
+    ok <- is.finite(lower) & is.finite(upper)
+    if (!any(ok)) next
+    col <- method_colors[[method]]
+    lty <- method_lty[[method]]
+    segments(x[ok], lower[ok], x[ok], upper[ok], col = col, lty = lty, lwd = 2.4)
+    segments(x[ok] - cap, lower[ok], x[ok] + cap, lower[ok],
+             col = col, lty = lty, lwd = 2.0)
+    segments(x[ok] - cap, upper[ok], x[ok] + cap, upper[ok],
+             col = col, lty = lty, lwd = 2.0)
   }
 }
 
-width_values <- data$median_width
-width_values <- width_values[is.finite(width_values)]
-width_ylim <- c(0, max(width_values, na.rm = TRUE) * 1.08)
+width_upper <- data$width_q975[is.finite(data$width_q975)]
+width_ylim <- c(0, max(width_upper, na.rm = TRUE) * 1.08)
 
-draw_panel(500, "delivery_success", "Delivery probability",
-           "Delivery, n = 500", 0.95, c(0, 1.05))
-draw_panel(1000, "delivery_success", "Delivery probability",
-           "Delivery, n = 1000", 0.95, c(0, 1.05))
-draw_panel(500, "median_width", "Median interval width",
-           "Width, n = 500", NA_real_, width_ylim)
-draw_panel(1000, "median_width", "Median interval width",
-           "Width, n = 1000", NA_real_, width_ylim)
+draw_interval_panel(500, "delivery_min", "delivery_max",
+                    "Delivery probability", "Delivery range, n = 500",
+                    0.95, c(0.9, 1.0))
+draw_interval_panel(1000, "delivery_min", "delivery_max",
+                    "Delivery probability", "Delivery range, n = 1000",
+                    0.95, c(0.9, 1.0))
+draw_interval_panel(500, "width_q025", "width_q975",
+                    "Interval width", "Width 95% range, n = 500",
+                    NA_real_, width_ylim)
+draw_interval_panel(1000, "width_q025", "width_q975",
+                    "Interval width", "Width 95% range, n = 1000",
+                    NA_real_, width_ylim)
 
 par(mar = c(0, 0, 0, 0))
 plot.new()
 legend("center", legend = unname(method_labels[method_order]),
        col = unname(method_colors[method_order]),
-       pch = unname(method_pch[method_order]), lwd = 1.5,
+       lty = unname(method_lty[method_order]), lwd = 2.4,
        ncol = 3, bty = "n", xpd = NA, cex = 0.9)
 mtext("Primary iid tolerance validation at tolerance confidence 0.95",
       outer = TRUE, cex = 1.05, font = 2)
@@ -199,10 +301,11 @@ rel_path <- function(path) {
     path
   }
 }
+manifest_inputs <- c(figure_path, input_paths)
 manifest <- data.frame(
-  relative_path = c(rel_path(figure_path), rel_path(input_path)),
-  sha256 = c(sha256(figure_path), sha256(input_path)),
-  bytes = as.numeric(file.info(c(figure_path, input_path))$size),
+  relative_path = vapply(manifest_inputs, rel_path, character(1L)),
+  sha256 = vapply(manifest_inputs, sha256, character(1L)),
+  bytes = as.numeric(file.info(manifest_inputs)$size),
   generator = "figures/generate_tolerance_validation_primary_figure.R",
   stringsAsFactors = FALSE
 )

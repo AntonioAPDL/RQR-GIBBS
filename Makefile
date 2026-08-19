@@ -114,12 +114,12 @@ RQR_DLM_M02_CANARY_OUTPUT_ROOT ?=
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
-	$(R) figures/generate_tolerance_validation_primary_figure.R --source-summary-csv=$(RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT) --stratified-csv=$(THEORY_TABLE_DIR)/tolerance_validation_by_n_content.csv --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_primary_scenario_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
 
 theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
-	$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --output-dir=$(THEORY_TABLE_DIR)
-	$(R) tables/generate_tolerance_validation_stratified_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT) --output-dir=$(THEORY_TABLE_DIR)
+	$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --results-csv=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
+	$(R) tables/generate_tolerance_validation_stratified_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT) --results-csv=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_followup_tables.R --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_scenario_tables.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --small95-results=$(RQR_BAYES_UQ_SMALL95_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_gibbs_diagnostic_table.R --diagnostics-csv=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_SOURCE) --output-dir=$(THEORY_TABLE_DIR)

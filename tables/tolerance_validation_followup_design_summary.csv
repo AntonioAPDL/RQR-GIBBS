@@ -1,24 +1,24 @@
-"design_id","design","method_id","method","replications","infeasible_rate","delivery_success","returned_success","median_width","width_q025","width_q975","median_width_ratio_to_tcsp","median_width_ratio_to_oracle","median_elapsed_sec"
-"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic","oracle_sh","Oracle width reference",4200,0,1,1,3.15844491267003,1.16862201617801,10.0654227435728,0.875874276961373,1,0.000999999999997669
-"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic","tcsp_mc","TCSP scan",4200,0,0.987380952380952,0.987380952380952,3.55367290382531,1.5083304590037,15.1688554999538,1,1.14171637341586,0.00299999999992906
-"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic","tcsp_mti_ecm_map_mc","MTI ECM",4200,0.166666666666667,0.825952380952381,0.991142857142857,3.35626645943247,1.46524270470911,12.5713590126304,1.0000000018346,1.12793502837733,4.58549999999999
-"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic","young_mathew","Young--Mathew",4200,0,0.96047619047619,0.96047619047619,3.57079095413043,1.93707198687023,15.0959953292704,0.991705878960969,1.13402672592019,0.0150000000000006
-"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic","wilks_minmax","Wilks min--max",4200,0,0.994523809523809,0.994523809523809,7.65811887216512,2.52289118226845,22.7202173190715,1.42464145433965,1.86634883205226,0.000999999999976353
-"minimal_full_range_90_confidence","Minimal 90% confidence design","oracle_sh","Oracle width reference",15000,0,1,1,3.28970725390294,1.16862201617801,6.74450112457348,0.811964387826253,1,0.000999999999976353
-"minimal_full_range_90_confidence","Minimal 90% confidence design","tcsp_mc","TCSP scan",15000,0,0.900466666666667,0.900466666666667,4.49878717834341,2.25305494990365,15.3265202597054,1,1.23158110825008,0.00199999999995271
-"minimal_full_range_90_confidence","Minimal 90% confidence design","hdp_s_mc","Hybrid DP--scan",15000,0,0.900466666666667,0.900466666666667,4.49878717834341,2.25305494990365,15.3265202597054,1,1.23158110825008,2.64149999999972
-"minimal_full_range_90_confidence","Minimal 90% confidence design","tcsp_mti_ecm_map_mc","MTI ECM",15000,1,0,NA,NA,NA,NA,NA,NA,0.00100000000020373
-"minimal_full_range_90_confidence","Minimal 90% confidence design","young_mathew","Young--Mathew",15000,0,0.8994,0.8994,4.48688485681443,2.25121880779559,15.285770003488,0.998956388771215,1.22892663722271,0.007000000000005
-"minimal_full_range_90_confidence","Minimal 90% confidence design","wilks_minmax","Wilks min--max",15000,0,0.900466666666667,0.900466666666667,4.49878717834341,2.25305494990365,15.3265202597054,1,1.23158110825008,0
-"minimal_full_range_90_confidence","Minimal 90% confidence design","tcsp_dkw","DKW scan",15000,1,0,NA,NA,NA,NA,NA,NA,0.000999999999748979
-"small_sample_95_confidence","Small-sample 95% confidence design","oracle_sh","Oracle width reference",21600,0,1,1,3.22407608328648,1.16862201617801,10.0654227435728,0.752295871726635,1,0.000999999999976353
-"small_sample_95_confidence","Small-sample 95% confidence design","tcsp_mc","TCSP scan",21600,0.222222222222222,0.747546296296296,0.961130952380952,4.45959047705723,2.28286663598961,16.7244227727676,1,1.32926424618673,0.00199999999995271
-"small_sample_95_confidence","Small-sample 95% confidence design","tcsp_mti_ecm_map_mc","MTI ECM",21600,0.888888888888889,0.109768518518519,0.987916666666667,3.5818647502514,2.00812759138063,6.39901872542152,1.00000000162954,1.31116299047228,0.00199999999999534
-"small_sample_95_confidence","Small-sample 95% confidence design","young_mathew","Young--Mathew",21600,0,0.922685185185185,0.922685185185185,4.60751053046544,2.29702298976667,19.4277998962962,0.996627373050237,1.32907418852333,0.00999999999999091
-"small_sample_95_confidence","Small-sample 95% confidence design","wilks_minmax","Wilks min--max",21600,0,0.858518518518519,0.858518518518519,4.604169520541,2.31510153139521,16.2374142876732,1,1.28492018240778,0.000999999999976353
-"small_sample_95_confidence","Small-sample 95% confidence design","tcsp_dkw","DKW scan",21600,1,0,NA,NA,NA,NA,NA,NA,0.000999999999990564
-"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","oracle_sh","Oracle width reference",100,0,1,1,4.31868860143067,4.31868860143067,4.31868860143067,0.576508443320604,1,0.000999999999976353
-"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","tcsp_mc","TCSP scan",100,0,0.99,0.99,7.49111142298188,4.84878397189979,13.1896638622423,1,1.73458012705529,0.00200000000000066
-"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","tcsp_mti_ecm_map_mc","MTI ECM",100,0,0.99,0.99,7.49111142565144,4.84878397602426,13.1896638651097,1.0000000003698,1.73458012767344,5.25799999999998
-"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","young_mathew","Young--Mathew",100,0,0.97,0.97,8.80012685621632,5.22855973859083,17.8916244069676,1.11492483336602,2.03768497068787,0.00900000000001455
-"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","wilks_minmax","Wilks min--max",100,0,1,1,13.1835856859175,6.10434265996715,34.6744099111993,1.62936603290605,3.05268263184109,0.000999999999976353
+"design_id","design","method_id","method","replications","infeasible_rate","delivery_success","returned_success","width_q025","width_q975"
+"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic","oracle_sh","Oracle width reference",4200,0,1,1,1.16862201617801,10.0654227435728
+"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic","tcsp_mc","TCSP scan",4200,0,0.987380952380952,0.987380952380952,1.5083304590037,15.1688554999538
+"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic","tcsp_mti_ecm_map_mc","MTI ECM",4200,0.166666666666667,0.825952380952381,0.991142857142857,1.46524270470911,12.5713590126304
+"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic","young_mathew","Young--Mathew",4200,0,0.96047619047619,0.96047619047619,1.93707198687023,15.0959953292704
+"ecm_200_iteration_diagnostic","ECM 200-iteration diagnostic","wilks_minmax","Wilks min--max",4200,0,0.994523809523809,0.994523809523809,2.52289118226845,22.7202173190715
+"minimal_full_range_90_confidence","Minimal 90% confidence design","oracle_sh","Oracle width reference",15000,0,1,1,1.16862201617801,6.74450112457348
+"minimal_full_range_90_confidence","Minimal 90% confidence design","tcsp_mc","TCSP scan",15000,0,0.900466666666667,0.900466666666667,2.25305494990365,15.3265202597054
+"minimal_full_range_90_confidence","Minimal 90% confidence design","hdp_s_mc","Hybrid DP--scan",15000,0,0.900466666666667,0.900466666666667,2.25305494990365,15.3265202597054
+"minimal_full_range_90_confidence","Minimal 90% confidence design","tcsp_mti_ecm_map_mc","MTI ECM",15000,1,0,NA,NA,NA
+"minimal_full_range_90_confidence","Minimal 90% confidence design","young_mathew","Young--Mathew",15000,0,0.8994,0.8994,2.25121880779559,15.285770003488
+"minimal_full_range_90_confidence","Minimal 90% confidence design","wilks_minmax","Wilks min--max",15000,0,0.900466666666667,0.900466666666667,2.25305494990365,15.3265202597054
+"minimal_full_range_90_confidence","Minimal 90% confidence design","tcsp_dkw","DKW scan",15000,1,0,NA,NA,NA
+"small_sample_95_confidence","Small-sample 95% confidence design","oracle_sh","Oracle width reference",21600,0,1,1,1.16862201617801,10.0654227435728
+"small_sample_95_confidence","Small-sample 95% confidence design","tcsp_mc","TCSP scan",21600,0.222222222222222,0.747546296296296,0.961130952380952,2.28286663598961,16.7244227727676
+"small_sample_95_confidence","Small-sample 95% confidence design","tcsp_mti_ecm_map_mc","MTI ECM",21600,0.888888888888889,0.109768518518519,0.987916666666667,2.00812759138063,6.39901872542152
+"small_sample_95_confidence","Small-sample 95% confidence design","young_mathew","Young--Mathew",21600,0,0.922685185185185,0.922685185185185,2.29702298976667,19.4277998962962
+"small_sample_95_confidence","Small-sample 95% confidence design","wilks_minmax","Wilks min--max",21600,0,0.858518518518519,0.858518518518519,2.31510153139521,16.2374142876732
+"small_sample_95_confidence","Small-sample 95% confidence design","tcsp_dkw","DKW scan",21600,1,0,NA,NA,NA
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","oracle_sh","Oracle width reference",100,0,1,1,4.31868860143067,4.31868860143067
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","tcsp_mc","TCSP scan",100,0,0.99,0.99,4.84878397189979,13.1896638622423
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","tcsp_mti_ecm_map_mc","MTI ECM",100,0,0.99,0.99,4.84878397602426,13.1896638651097
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","young_mathew","Young--Mathew",100,0,0.97,0.97,5.22855973859083,17.8916244069676
+"ecm_500_iteration_sensitivity","ECM 500-iteration sensitivity","wilks_minmax","Wilks min--max",100,0,1,1,6.10434265996715,34.6744099111993

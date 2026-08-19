@@ -14,7 +14,6 @@ template <- data.frame(
   width = numeric(),
   width_ratio_to_reference = numeric(),
   width_ratio_to_oracle_sh = numeric(),
-  elapsed_sec = numeric(),
   guaranteed_content = numeric(),
   ecm_final_stationarity = numeric(),
   ecm_relative_objective_drop = numeric(),
@@ -24,7 +23,6 @@ template <- data.frame(
 
 row <- function(mode, method_id, success, infeasible, content,
                 width = 2, width_ref = 1, width_oracle = 1.2,
-                elapsed = 0.01,
                 stat = NA_real_, rel_drop = NA_real_, trace = NA_real_) {
   data.frame(
     mode = mode,
@@ -34,7 +32,6 @@ row <- function(mode, method_id, success, infeasible, content,
     width = width,
     width_ratio_to_reference = width_ref,
     width_ratio_to_oracle_sh = width_oracle,
-    elapsed_sec = elapsed,
     guaranteed_content = content,
     ecm_final_stationarity = stat,
     ecm_relative_objective_drop = rel_drop,
@@ -115,6 +112,15 @@ stopifnot(all(file.exists(required)))
 
 diag <- read.csv(file.path(out_dir, "tolerance_validation_ecm_diagnostics.csv"),
                  stringsAsFactors = FALSE)
+design <- read.csv(
+  file.path(out_dir, "tolerance_validation_followup_design_summary.csv"),
+  stringsAsFactors = FALSE
+)
+stopifnot(!"median_elapsed_sec" %in% names(design))
+stopifnot(!"median_width" %in% names(design))
+stopifnot(!"median_width_ratio_to_tcsp" %in% names(design))
+stopifnot(!"median_width_ratio_to_oracle" %in% names(design))
+stopifnot(all(c("width_q025", "width_q975") %in% names(design)))
 ecm200_diag <- diag[
   diag$design_id == "ecm_200_iteration_diagnostic",
   ,
@@ -131,6 +137,9 @@ small <- read.csv(
 stopifnot(any(small$guaranteed_content == 0.99))
 stopifnot(any(small$method_id == "wilks_minmax"))
 stopifnot(!any(small$method_id == "tcsp_mti_gibbs_median_mc"))
+stopifnot(!"median_elapsed_sec" %in% names(small))
+stopifnot(!"median_width" %in% names(small))
+stopifnot(all(c("width_q025", "width_q975") %in% names(small)))
 
 tex <- paste(readLines(
   file.path(out_dir, "tolerance_validation_ecm_diagnostics.tex"),
@@ -148,6 +157,7 @@ stopifnot(grepl("Minimal 90\\% confidence design", design_tex, fixed = TRUE))
 stopifnot(grepl("ECM 500-iteration sensitivity", design_tex, fixed = TRUE))
 stopifnot(grepl("Returned success", design_tex, fixed = TRUE))
 stopifnot(grepl("Width 95\\% range", design_tex, fixed = TRUE))
+stopifnot(!grepl("Median sec", design_tex, fixed = TRUE))
 stopifnot(!grepl("Width/TCSP", design_tex, fixed = TRUE))
 stopifnot(!grepl("MTI Gibbs", design_tex, fixed = TRUE))
 stopifnot(!grepl("Lane", design_tex, fixed = TRUE))
@@ -161,6 +171,7 @@ small_tex <- paste(readLines(
 stopifnot(grepl("Target content", small_tex, fixed = TRUE))
 stopifnot(grepl("Returned success", small_tex, fixed = TRUE))
 stopifnot(grepl("Width 95\\% range", small_tex, fixed = TRUE))
+stopifnot(!grepl("Median sec", small_tex, fixed = TRUE))
 stopifnot(!grepl("Width/TCSP", small_tex, fixed = TRUE))
 stopifnot(!grepl("Feasible success", small_tex, fixed = TRUE))
 

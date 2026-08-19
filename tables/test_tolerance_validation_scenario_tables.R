@@ -10,7 +10,7 @@ dir.create(work_dir, recursive = TRUE, showWarnings = FALSE)
 on.exit(unlink(work_dir, recursive = TRUE, force = TRUE), add = TRUE)
 
 row <- function(dgp, n, content, rep, method, success = TRUE,
-                infeasible = FALSE, width = 2, elapsed = 0.01) {
+                infeasible = FALSE, width = 2) {
   data.frame(
     dgp_id = dgp,
     n = n,
@@ -21,7 +21,6 @@ row <- function(dgp, n, content, rep, method, success = TRUE,
     success = success,
     infeasible = infeasible,
     width = width,
-    elapsed_sec = elapsed,
     stringsAsFactors = FALSE
   )
 }
@@ -118,9 +117,14 @@ stopifnot(!"tcsp_mti_gibbs_median_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_mti_ecm_map_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_dkw" %in% primary_range$method_id)
 stopifnot(any(primary_range$method_id == "young_mathew"))
-stopifnot(primary_range$dgp_cells[primary_range$method_id == "tcsp_mc"][[1L]] == 2L)
-stopifnot(all(c("width_q025", "width_q975", "median_width") %in%
+stopifnot(!"dgp_cells" %in% names(primary_range))
+stopifnot(!"fail_closed_dgp_cells" %in% names(primary_range))
+stopifnot(!"partial_infeasible_dgp_cells" %in% names(primary_range))
+stopifnot(all(c("width_q025", "width_q975") %in%
                 names(primary_range)))
+stopifnot(!"median_width" %in% names(primary_range))
+stopifnot(!"median_width_ratio_to_tcsp" %in% names(primary_range))
+stopifnot(!"median_elapsed_sec" %in% names(primary_range))
 stopifnot(all(is.finite(primary_range$width_q025)))
 stopifnot(all(is.finite(primary_range$width_q975)))
 
@@ -140,6 +144,7 @@ tex <- paste(readLines(
 stopifnot(grepl("Delivery range", tex, fixed = TRUE))
 stopifnot(grepl("Young--Mathew", tex, fixed = TRUE))
 stopifnot(grepl("Width 95\\% range", tex, fixed = TRUE))
+stopifnot(!grepl("Median sec", tex, fixed = TRUE))
 stopifnot(!grepl("DGPs", tex, fixed = TRUE))
 stopifnot(!grepl("Fail-closed", tex, fixed = TRUE))
 stopifnot(!grepl("Width/TCSP", tex, fixed = TRUE))

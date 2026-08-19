@@ -1574,7 +1574,7 @@ classical order-statistic comparators in the main article. Fixed-target MTI
 ECM and Gibbs summaries, along with the conservative DKW fallback, are reported
 in the supplement as computation and feasibility diagnostics. Primary metrics
 are grid delivery success, success among returned intervals, raw interval
-width, and runtime.
+width, and feasibility.
 
 \begin{table}[!htbp]
 \centering
@@ -1605,10 +1605,11 @@ dominated by the \(c=0.99\) two-sided full-range feasibility boundary.}
 \includegraphics[width=\textwidth]{figures/generated/fig04_tolerance_validation_primary.png}
 \caption{\textbf{Primary iid tolerance-validation patterns by sample size and
 target content.} Delivery counts cases with no returned interval as failures.
-Returned success conditions on methods that return an interval. Dashed
-reference lines mark nominal \(0.95\) delivery. Width panels report raw median
-interval length. The hybrid DP--scan action is omitted because it returned the
-same delivered intervals as TCSP on the primary grid;
+Vertical intervals in the delivery panels show the range across distributional
+scenarios, and the axis is zoomed to \(0.90\)--\(1.00\). Dashed reference lines
+mark nominal \(0.95\) delivery. Width panels show empirical \(2.5\%\)--\(97.5\%\)
+ranges of returned interval lengths. The hybrid DP--scan action is omitted
+because it returned the same delivered intervals as TCSP on the primary grid;
 Tables~\ref{tab:tolerance-validation-primary-n500}
 and~\ref{tab:tolerance-validation-primary-n1000} include its scenario-level
 delivery. Fixed-target MTI and DKW diagnostics are reported in the supplement.}
@@ -1620,7 +1621,7 @@ and~\ref{tab:tolerance-validation-primary-n1000} avoid averaging over
 distributional scenarios. The primary message is that the calibrated scan action
 is stable across the prespecified grid. TCSP and the hybrid DP--scan action
 deliver the same formal scan intervals throughout the primary study; the hybrid
-screen adds a Bayesian content check at a large runtime cost, with no change in
+screen adds a Bayesian content check without changing
 the delivered interval in these cells. Young--Mathew is often slightly
 narrower than TCSP, with lower delivery in the most skewed or separated
 scenarios. Wilks is conservative for lower contents and reduces to the full

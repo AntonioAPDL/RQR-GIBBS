@@ -116,11 +116,6 @@ format_num <- function(x, digits = 3) {
   out <- ifelse(is.finite(x), sprintf(paste0("%.", digits, "f"), x), "--")
   sub("\\.?0+$", "", out)
 }
-format_sec <- function(x) {
-  x <- as.numeric(x)
-  ifelse(!is.finite(x), "--", ifelse(x < 0.01, sprintf("%.3f", x),
-                                     format_num(x, 3)))
-}
 format_sci <- function(x, digits = 2) {
   x <- as.numeric(x)
   ifelse(is.finite(x), sprintf(paste0("%.", digits, "e"), x), "--")
@@ -174,7 +169,6 @@ read_design <- function(path, design_id) {
   out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
   required <- c(
     "mode", "method_id", "success", "infeasible", "width",
-    "width_ratio_to_reference", "width_ratio_to_oracle_sh", "elapsed_sec",
     "guaranteed_content", "ecm_final_stationarity",
     "ecm_relative_objective_drop", "ecm_trace_length"
   )
@@ -206,12 +200,8 @@ summarize_group <- function(df) {
     } else {
       NA_real_
     },
-    median_width = median_or_na(df$width),
     width_q025 = quantile_or_na(df$width, 0.025),
     width_q975 = quantile_or_na(df$width, 0.975),
-    median_width_ratio_to_tcsp = median_or_na(df$width_ratio_to_reference),
-    median_width_ratio_to_oracle = median_or_na(df$width_ratio_to_oracle_sh),
-    median_elapsed_sec = median_or_na(df$elapsed_sec),
     stringsAsFactors = FALSE
   )
 }
@@ -249,9 +239,7 @@ design_summary <- design_summary[order(
 ), ]
 design_summary <- design_summary[c(
   "design_id", "design", "method_id", "method", "replications", "infeasible_rate",
-  "delivery_success", "returned_success", "median_width", "width_q025",
-  "width_q975", "median_width_ratio_to_tcsp", "median_width_ratio_to_oracle",
-  "median_elapsed_sec"
+  "delivery_success", "returned_success", "width_q025", "width_q975"
 )]
 
 ecm_rows <- results[results$method_id == "tcsp_mti_ecm_map_mc", , drop = FALSE]
@@ -318,7 +306,7 @@ small_content <- small_content[order(
 small_content <- small_content[c(
   "guaranteed_content", "method_id", "method", "replications",
   "infeasible_rate", "delivery_success", "returned_success",
-  "median_width", "width_q025", "width_q975", "median_elapsed_sec"
+  "width_q025", "width_q975"
 )]
 
 write_table <- function(df, name) {
@@ -331,9 +319,9 @@ write_table(ecm_diag, "tolerance_validation_ecm_diagnostics")
 write_table(small_content, "tolerance_validation_small_sample_content_summary")
 
 design_lines <- c(
-  "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrrr@{}}",
+  "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrr@{}}",
   "\\toprule",
-  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width 95\\% range & Median sec\\\\",
+  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width 95\\% range\\\\",
   "\\midrule"
 )
 for (design_name in unique(design_summary$design)) {
@@ -345,18 +333,17 @@ for (design_name in unique(design_summary$design)) {
   design_lines <- c(
     design_lines,
     "\\addlinespace[0.35em]",
-    sprintf("\\multicolumn{6}{@{}l}{\\textit{%s}}\\\\",
+    sprintf("\\multicolumn{5}{@{}l}{\\textit{%s}}\\\\",
             escape_latex(design_name))
   )
   body <- vapply(seq_len(nrow(block)), function(ii) {
     sprintf(
-      "%s & %s & %s & %s & %s & %s \\\\",
+      "%s & %s & %s & %s & %s \\\\",
       escape_latex(block$method[[ii]]),
       format_pct(block$infeasible_rate[[ii]]),
       format_pct(block$delivery_success[[ii]]),
       format_pct(block$returned_success[[ii]]),
-      format_width_range(block$width_q025[[ii]], block$width_q975[[ii]]),
-      format_sec(block$median_elapsed_sec[[ii]])
+      format_width_range(block$width_q025[[ii]], block$width_q975[[ii]])
     )
   }, character(1L))
   design_lines <- c(design_lines, body)
@@ -390,9 +377,9 @@ writeLines(c(
 ), file.path(output_dir, "tolerance_validation_ecm_diagnostics.tex"))
 
 small_lines <- c(
-  "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrrr@{}}",
+  "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrr@{}}",
   "\\toprule",
-  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width 95\\% range & Median sec\\\\",
+  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width 95\\% range\\\\",
   "\\midrule"
 )
 for (cc in sort(unique(small_content$guaranteed_content))) {
@@ -404,18 +391,17 @@ for (cc in sort(unique(small_content$guaranteed_content))) {
   small_lines <- c(
     small_lines,
     "\\addlinespace[0.35em]",
-    sprintf("\\multicolumn{6}{@{}l}{\\textit{Target content $c=%.2f$}}\\\\",
+    sprintf("\\multicolumn{5}{@{}l}{\\textit{Target content $c=%.2f$}}\\\\",
             cc)
   )
   body <- vapply(seq_len(nrow(block)), function(ii) {
     sprintf(
-      "%s & %s & %s & %s & %s & %s \\\\",
+      "%s & %s & %s & %s & %s \\\\",
       escape_latex(block$method[[ii]]),
       format_pct(block$infeasible_rate[[ii]]),
       format_pct(block$delivery_success[[ii]]),
       format_pct(block$returned_success[[ii]]),
-      format_width_range(block$width_q025[[ii]], block$width_q975[[ii]]),
-      format_sec(block$median_elapsed_sec[[ii]])
+      format_width_range(block$width_q025[[ii]], block$width_q975[[ii]])
     )
   }, character(1L))
   small_lines <- c(small_lines, body)

@@ -2260,8 +2260,8 @@ feasible cells.
 \centering
 \caption{\textbf{Primary iid tolerance validation for \(n=500\).} Delivery
 counts cases with no returned interval as failures. Returned success conditions on methods
-that return an interval. Width is the median raw interval length over the
-corresponding primary-grid rows.}
+that return an interval. Width is the empirical \(2.5\%\)--\(97.5\%\) range
+of returned interval lengths pooled over the corresponding primary-grid rows.}
 \label{tab:supp-primary-by-content-n500}
 \TableStyle
 \input{tables/tolerance_validation_by_n_500_content.tex}
@@ -2271,8 +2271,8 @@ corresponding primary-grid rows.}
 \centering
 \caption{\textbf{Primary iid tolerance validation for \(n=1000\).} Delivery
 counts cases with no returned interval as failures. Returned success conditions on methods
-that return an interval. Width is the median raw interval length over the
-corresponding primary-grid rows.}
+that return an interval. Width is the empirical \(2.5\%\)--\(97.5\%\) range
+of returned interval lengths pooled over the corresponding primary-grid rows.}
 \label{tab:supp-primary-by-content-n1000}
 \TableStyle
 \input{tables/tolerance_validation_by_n_1000_content.tex}
@@ -2285,10 +2285,9 @@ Delivery makes infeasible cells visible in the same scale as empirical content
 success, while returned success separates content behavior from the decision to
 return an interval. Table~\ref{tab:supp-primary-dgp-delivery} is the
 verification table behind the scenario ranges in the main article: it gives the
-DGP-level delivery percentages before averaging. The corresponding
+DGP-level delivery percentages before aggregation. The corresponding
 scenario-detail CSV in the tables directory contains returned success,
-infeasibility, raw width summaries, diagnostic width ratios, and runtime for
-each DGP-level cell.
+infeasibility, and raw width summaries for each DGP-level cell.
 
 \begingroup
 \TableStyle
@@ -2353,16 +2352,16 @@ threshold cells \((46,0.90)\), \((93,0.95)\), and \((473,0.99)\), plus practical
 infeasibility when the target cannot be certified.
 
 The reported metrics are aligned across these designs: delivery success,
-success among returned intervals, true content, raw width summaries,
-diagnostic width ratios to the TCSP scan action and population shortest oracle,
-infeasibility, posterior-constraint status for Bayesian-screened actions, ECM
-trace diagnostics, and runtime. The Young--Mathew comparator is evaluated
+success among returned intervals, true content, raw width ranges,
+infeasibility, posterior-constraint status for Bayesian-screened actions, and
+ECM trace diagnostics. The Young--Mathew comparator is evaluated
 through the \texttt{tolerance} package's \texttt{nptol.int(..., method = "YM")}
 implementation, and its package version is hashed into the method audit digest.
-The hybrid direct-DP method is retained where runtime is scientifically useful.
+The hybrid direct-DP method is retained where the direct Bayesian screen is
+scientifically useful.
 It is omitted from the largest small-sample \(0.95\)-confidence design because
 the primary study already shows that it returns the same formal scan window at
-substantially higher runtime.
+that design point.
 Rows labelled as oracle width references use the known generating law and serve
 only as distribution-aware width benchmarks.
 

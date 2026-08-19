@@ -28,13 +28,8 @@ summary$success_rate <- 0.96
 summary$success_gap_vs_095 <- 0.01
 summary$mean_content_gap <- 0.02
 summary$median_width <- 1
-summary$median_width_ratio_to_tcsp <- ifelse(
-  summary$method_id == "wilks_minmax", 1.4,
-  ifelse(summary$method_id == "young_mathew", 0.99, 1)
-)
-summary$median_width_ratio_to_oracle <- 1.2
-summary$median_elapsed_sec <- 0.01
-summary$mean_elapsed_sec <- 0.02
+summary$width_q025 <- 0.9
+summary$width_q975 <- 1.1
 summary$infeasible_rate[
   summary$method_id == "tcsp_dkw" & summary$n == 500L & summary$c == 0.99
 ] <- 1
@@ -69,7 +64,10 @@ stopifnot(file.exists(tex_500_path), file.exists(tex_1000_path))
 tab <- utils::read.csv(csv_path, stringsAsFactors = FALSE)
 stopifnot(nrow(tab) == length(methods) * 4L)
 stopifnot(!"tcsp_mti_gibbs_median_mc" %in% tab$method_id)
-stopifnot("median_width" %in% names(tab))
+stopifnot(all(c("width_q025", "width_q975") %in% names(tab)))
+stopifnot(!"median_width" %in% names(tab))
+stopifnot(!"median_width_ratio_to_tcsp" %in% names(tab))
+stopifnot(!"median_elapsed_sec" %in% names(tab))
 closed <- tab[
   tab$method_id == "tcsp_dkw" & tab$n == 500L & tab$content == 0.99,
   ,
@@ -82,7 +80,9 @@ stopifnot(is.na(closed$returned_success))
 tex <- paste(readLines(tex_path, warn = FALSE), collapse = "\n")
 stopifnot(grepl("Sample size", tex, fixed = TRUE))
 stopifnot(grepl("Returned success", tex, fixed = TRUE))
-stopifnot(grepl("Median width", tex, fixed = TRUE))
+stopifnot(grepl("Width 95\\% range", tex, fixed = TRUE))
+stopifnot(!grepl("Median width", tex, fixed = TRUE))
+stopifnot(!grepl("Median sec", tex, fixed = TRUE))
 stopifnot(!grepl("Width/TCSP", tex, fixed = TRUE))
 stopifnot(!grepl("paper-matched", tex, ignore.case = TRUE))
 stopifnot(!grepl("lane", tex, ignore.case = TRUE))

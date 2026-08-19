@@ -135,8 +135,7 @@ dgp_labels <- c(
 
 required_columns <- c(
   "dgp_id", "n", "guaranteed_content", "tolerance_confidence",
-  "replication", "method_id", "success", "infeasible", "width",
-  "elapsed_sec"
+  "replication", "method_id", "success", "infeasible", "width"
 )
 read_results <- function(path, label) {
   out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
@@ -190,43 +189,16 @@ quantile_or_na <- function(x, prob) {
   }
 }
 
-add_tcsp_width_ratio <- function(results) {
-  results$n <- as.integer(results$n)
-  results$guaranteed_content <- num(results$guaranteed_content)
-  results$tolerance_confidence <- num(results$tolerance_confidence)
-  results$replication <- as.integer(results$replication)
-  results$width <- num(results$width)
-  key <- paste(results$dgp_id, results$n,
-               sprintf("%.4f", results$guaranteed_content),
-               sprintf("%.4f", results$tolerance_confidence),
-               results$replication, sep = "||")
-  tcsp <- results[results$method_id == "tcsp_mc", , drop = FALSE]
-  tcsp_key <- paste(tcsp$dgp_id, tcsp$n,
-                    sprintf("%.4f", tcsp$guaranteed_content),
-                    sprintf("%.4f", tcsp$tolerance_confidence),
-                    tcsp$replication, sep = "||")
-  tcsp_width <- tcsp$width
-  names(tcsp_width) <- tcsp_key
-  results$tcsp_reference_width <- unname(tcsp_width[key])
-  results$width_ratio_to_tcsp <- results$width / results$tcsp_reference_width
-  results$width_ratio_to_tcsp[
-    !is.finite(results$width_ratio_to_tcsp)
-  ] <- NA_real_
-  results
-}
-
 scenario_detail <- function(results, methods) {
   results <- results[results$method_id %in% methods, , drop = FALSE]
   results$infeasible_bool <- truthy(results$infeasible)
   results$success_bool <- truthy(results$success)
-  results$elapsed_sec <- num(results$elapsed_sec)
   key <- paste(results$dgp_id, results$n,
                sprintf("%.4f", results$guaranteed_content),
                results$method_id, sep = "||")
   rows <- lapply(split(results, key), function(df) {
     returned <- !df$infeasible_bool & !is.na(df$success_bool)
     finite_width <- is.finite(df$width)
-    finite_ratio <- is.finite(df$width_ratio_to_tcsp)
     data.frame(
       dgp_id = df$dgp_id[[1L]],
       dgp = dgp_labels[df$dgp_id[[1L]]],
@@ -249,12 +221,6 @@ scenario_detail <- function(results, methods) {
       },
       width_q025 = quantile_or_na(df$width, 0.025),
       width_q975 = quantile_or_na(df$width, 0.975),
-      median_width_ratio_to_tcsp = if (any(finite_ratio)) {
-        stats::median(df$width_ratio_to_tcsp[finite_ratio])
-      } else {
-        NA_real_
-      },
-      median_elapsed_sec = median_or_na(df$elapsed_sec),
       stringsAsFactors = FALSE
     )
   })
@@ -278,20 +244,12 @@ range_summary <- function(detail, methods, raw_results = NULL) {
       content = num(df$content[[1L]]),
       method_id = df$method_id[[1L]],
       method = df$method[[1L]],
-      dgp_cells = nrow(df),
-      fail_closed_dgp_cells = sum(df$infeasible_rate >= 1 - 1e-12),
-      partial_infeasible_dgp_cells = sum(df$infeasible_rate > 1e-12 &
-                                           df$infeasible_rate < 1 - 1e-12),
       delivery_min = min_or_na(df$delivery_success),
       delivery_max = max_or_na(df$delivery_success),
       returned_success_min = min_or_na(df$returned_success),
       returned_success_max = max_or_na(df$returned_success),
       width_q025 = min_or_na(df$width_q025),
       width_q975 = max_or_na(df$width_q975),
-      median_width = median_or_na(df$median_width),
-      median_width_ratio_to_tcsp =
-        median_or_na(df$median_width_ratio_to_tcsp),
-      median_elapsed_sec = median_or_na(df$median_elapsed_sec),
       stringsAsFactors = FALSE
     )
   })
@@ -310,7 +268,6 @@ range_summary <- function(detail, methods, raw_results = NULL) {
         method_id = df$method_id[[1L]],
         width_q025 = quantile_or_na(df$width, 0.025),
         width_q975 = quantile_or_na(df$width, 0.975),
-        median_width = median_or_na(df$width),
         stringsAsFactors = FALSE
       )
     })
@@ -318,7 +275,6 @@ range_summary <- function(detail, methods, raw_results = NULL) {
     merge_keys <- c("n", "content", "method_id")
     out$width_q025 <- NULL
     out$width_q975 <- NULL
-    out$median_width <- NULL
     out <- merge(out, width_summary, by = merge_keys, all.x = TRUE,
                  sort = FALSE)
   }
@@ -358,11 +314,6 @@ format_width_range <- function(a, b) {
                             format_num(b[ok & !same], 2))
   out
 }
-format_sec <- function(x) {
-  x <- num(x)
-  ifelse(!is.finite(x), "--", ifelse(x < 0.01, sprintf("%.3f", x),
-                                     format_num(x, 3)))
-}
 escape_latex <- function(x) {
   x <- gsub("\\\\", "\\\\textbackslash{}", x)
   x <- gsub("([_%&#])", "\\\\\\1", x, perl = TRUE)
@@ -374,9 +325,9 @@ cell_label <- function(n, content) {
 
 write_range_tex <- function(summary, path) {
   lines <- c(
-    "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrrrr@{}}",
+    "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrrr@{}}",
     "\\toprule",
-    "Cell & Method & Delivery range (\\%) & Returned range (\\%) & Width 95\\% range & Median sec\\\\",
+    "Cell & Method & Delivery range (\\%) & Returned range (\\%) & Width 95\\% range\\\\",
     "\\midrule"
   )
   for (cell in unique(paste(summary$n, summary$content, sep = "||"))) {
@@ -384,14 +335,13 @@ write_range_tex <- function(summary, path) {
                      , drop = FALSE]
     for (ii in seq_len(nrow(block))) {
       lines <- c(lines, sprintf(
-        "%s & %s & %s & %s & %s & %s \\\\",
+        "%s & %s & %s & %s & %s \\\\",
         if (ii == 1L) cell_label(block$n[[ii]], block$content[[ii]]) else "",
         escape_latex(block$method[[ii]]),
         format_range(block$delivery_min[[ii]], block$delivery_max[[ii]]),
         format_range(block$returned_success_min[[ii]],
                      block$returned_success_max[[ii]]),
-        format_width_range(block$width_q025[[ii]], block$width_q975[[ii]]),
-        format_sec(block$median_elapsed_sec[[ii]])
+        format_width_range(block$width_q025[[ii]], block$width_q975[[ii]])
       ))
     }
     lines <- c(lines, "\\addlinespace[0.25em]")
@@ -465,9 +415,6 @@ if (file.exists(young_mathew_path)) {
   )
 }
 small <- read_results(small_path, "Small-sample validation results")
-
-primary <- add_tcsp_width_ratio(primary)
-small <- add_tcsp_width_ratio(small)
 
 primary_detail <- scenario_detail(primary, primary_supp_method_order)
 primary_range <- range_summary(

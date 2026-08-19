@@ -72,15 +72,14 @@ summary <- utils::read.csv(summary_path, stringsAsFactors = FALSE,
                            check.names = FALSE)
 required <- c(
   "method_id", "dataset_thresholds", "infeasible_rate",
-  "conditional_success", "grid_delivery_success",
-  "median_width_ratio_to_tcsp", "median_elapsed_sec"
+  "conditional_success", "grid_delivery_success"
 )
 missing <- setdiff(required, names(summary))
 if (length(missing)) {
   stopf("Summary CSV is missing required columns: ", paste(missing, collapse = ", "))
 }
 
-median_width_from_results <- function(primary_path, young_mathew_path) {
+width_range_from_results <- function(primary_path, young_mathew_path) {
   paths <- c(primary_path, young_mathew_path)
   paths <- paths[file.exists(paths)]
   if (!length(paths)) return(data.frame())
@@ -100,21 +99,34 @@ median_width_from_results <- function(primary_path, young_mathew_path) {
     width <- df$width[is.finite(df$width)]
     data.frame(
       method_id = df$method_id[[1L]],
-      median_width = if (length(width)) stats::median(width) else NA_real_,
+      width_q025 = if (length(width)) {
+        unname(stats::quantile(width, 0.025, names = FALSE, type = 8))
+      } else {
+        NA_real_
+      },
+      width_q975 = if (length(width)) {
+        unname(stats::quantile(width, 0.975, names = FALSE, type = 8))
+      } else {
+        NA_real_
+      },
       stringsAsFactors = FALSE
     )
   })
   do.call(rbind, rows)
 }
 
-if (!"median_width" %in% names(summary)) {
-  width_summary <- median_width_from_results(results_path_arg,
-                                             young_mathew_path_arg)
+if (!all(c("width_q025", "width_q975") %in% names(summary))) {
+  width_summary <- width_range_from_results(results_path_arg,
+                                            young_mathew_path_arg)
   if (nrow(width_summary)) {
     summary <- merge(summary, width_summary, by = "method_id", all.x = TRUE,
                      sort = FALSE)
+  } else if ("median_width" %in% names(summary)) {
+    summary$width_q025 <- summary$median_width
+    summary$width_q975 <- summary$median_width
   } else {
-    summary$median_width <- NA_real_
+    summary$width_q025 <- NA_real_
+    summary$width_q975 <- NA_real_
   }
 }
 
@@ -148,9 +160,16 @@ format_num <- function(x, digits = 3) {
   out <- sprintf(paste0("%.", digits, "f"), as.numeric(x))
   sub("\\.?0+$", "", out)
 }
-format_sec <- function(x) {
-  x <- as.numeric(x)
-  ifelse(x < 0.01, sprintf("%.3f", x), format_num(x, 3))
+format_width_range <- function(lower, upper) {
+  lower <- as.numeric(lower)
+  upper <- as.numeric(upper)
+  out <- rep("--", length(lower))
+  ok <- is.finite(lower) & is.finite(upper)
+  same <- ok & abs(lower - upper) < 5e-4
+  out[same] <- format_num(lower[same], 2)
+  out[ok & !same] <- paste0(format_num(lower[ok & !same], 2), "--",
+                            format_num(upper[ok & !same], 2))
+  out
 }
 escape_latex <- function(x) {
   x <- gsub("\\\\", "\\\\textbackslash{}", x)
@@ -166,9 +185,8 @@ out <- data.frame(
   infeasible_rate = selected$infeasible_rate,
   grid_delivery_success = selected$grid_delivery_success,
   returned_success = selected$conditional_success,
-  median_width = selected$median_width,
-  median_width_ratio_to_tcsp = selected$median_width_ratio_to_tcsp,
-  median_elapsed_sec = selected$median_elapsed_sec,
+  width_q025 = selected$width_q025,
+  width_q975 = selected$width_q975,
   stringsAsFactors = FALSE
 )
 
@@ -176,20 +194,19 @@ utils::write.csv(out, csv_path, row.names = FALSE)
 
 body <- vapply(seq_len(nrow(out)), function(ii) {
   sprintf(
-    "%s & %s & %s & %s & %s & %s \\\\",
+    "%s & %s & %s & %s & %s \\\\",
     escape_latex(out$method[[ii]]),
     escape_latex(out$role[[ii]]),
     format_pct(out$grid_delivery_success[[ii]]),
     format_pct(out$returned_success[[ii]]),
-    format_num(out$median_width[[ii]], 2),
-    format_sec(out$median_elapsed_sec[[ii]])
+    format_width_range(out$width_q025[[ii]], out$width_q975[[ii]])
   )
 }, character(1L))
 
 lines <- c(
-  "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrrrr@{}}",
+  "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrrr@{}}",
   "\\toprule",
-  "Method & Role & Delivery (\\%) & Returned success (\\%) & Median width & Median sec\\\\",
+  "Method & Role & Delivery (\\%) & Returned success (\\%) & Width 95\\% range\\\\",
   "\\midrule",
   body,
   "\\bottomrule",
