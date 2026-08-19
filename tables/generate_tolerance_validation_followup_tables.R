@@ -120,17 +120,6 @@ format_sci <- function(x, digits = 2) {
   x <- as.numeric(x)
   ifelse(is.finite(x), sprintf(paste0("%.", digits, "e"), x), "--")
 }
-format_width_range <- function(lower, upper) {
-  lower <- as.numeric(lower)
-  upper <- as.numeric(upper)
-  out <- rep("--", length(lower))
-  ok <- is.finite(lower) & is.finite(upper)
-  same <- ok & abs(lower - upper) < 5e-4
-  out[same] <- format_num(lower[same], 2)
-  out[ok & !same] <- paste0(format_num(lower[ok & !same], 2), "--",
-                            format_num(upper[ok & !same], 2))
-  out
-}
 format_int <- function(x) {
   x <- as.numeric(x)
   ifelse(is.finite(x), format(round(x), big.mark = ",", scientific = FALSE),
@@ -200,8 +189,6 @@ summarize_group <- function(df) {
     } else {
       NA_real_
     },
-    width_q025 = quantile_or_na(df$width, 0.025),
-    width_q975 = quantile_or_na(df$width, 0.975),
     stringsAsFactors = FALSE
   )
 }
@@ -239,7 +226,7 @@ design_summary <- design_summary[order(
 ), ]
 design_summary <- design_summary[c(
   "design_id", "design", "method_id", "method", "replications", "infeasible_rate",
-  "delivery_success", "returned_success", "width_q025", "width_q975"
+  "delivery_success", "returned_success"
 )]
 
 ecm_rows <- results[results$method_id == "tcsp_mti_ecm_map_mc", , drop = FALSE]
@@ -305,8 +292,7 @@ small_content <- small_content[order(
 ), ]
 small_content <- small_content[c(
   "guaranteed_content", "method_id", "method", "replications",
-  "infeasible_rate", "delivery_success", "returned_success",
-  "width_q025", "width_q975"
+  "infeasible_rate", "delivery_success", "returned_success"
 )]
 
 write_table <- function(df, name) {
@@ -319,9 +305,9 @@ write_table(ecm_diag, "tolerance_validation_ecm_diagnostics")
 write_table(small_content, "tolerance_validation_small_sample_content_summary")
 
 design_lines <- c(
-  "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrr@{}}",
+  "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrr@{}}",
   "\\toprule",
-  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width 95\\% range\\\\",
+  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%)\\\\",
   "\\midrule"
 )
 for (design_name in unique(design_summary$design)) {
@@ -333,17 +319,16 @@ for (design_name in unique(design_summary$design)) {
   design_lines <- c(
     design_lines,
     "\\addlinespace[0.35em]",
-    sprintf("\\multicolumn{5}{@{}l}{\\textit{%s}}\\\\",
+    sprintf("\\multicolumn{4}{@{}l}{\\textit{%s}}\\\\",
             escape_latex(design_name))
   )
   body <- vapply(seq_len(nrow(block)), function(ii) {
     sprintf(
-      "%s & %s & %s & %s & %s \\\\",
+      "%s & %s & %s & %s \\\\",
       escape_latex(block$method[[ii]]),
       format_pct(block$infeasible_rate[[ii]]),
       format_pct(block$delivery_success[[ii]]),
-      format_pct(block$returned_success[[ii]]),
-      format_width_range(block$width_q025[[ii]], block$width_q975[[ii]])
+      format_pct(block$returned_success[[ii]])
     )
   }, character(1L))
   design_lines <- c(design_lines, body)
@@ -377,9 +362,9 @@ writeLines(c(
 ), file.path(output_dir, "tolerance_validation_ecm_diagnostics.tex"))
 
 small_lines <- c(
-  "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrr@{}}",
+  "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrr@{}}",
   "\\toprule",
-  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width 95\\% range\\\\",
+  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%)\\\\",
   "\\midrule"
 )
 for (cc in sort(unique(small_content$guaranteed_content))) {
@@ -391,17 +376,16 @@ for (cc in sort(unique(small_content$guaranteed_content))) {
   small_lines <- c(
     small_lines,
     "\\addlinespace[0.35em]",
-    sprintf("\\multicolumn{5}{@{}l}{\\textit{Target content $c=%.2f$}}\\\\",
+    sprintf("\\multicolumn{4}{@{}l}{\\textit{Target content $c=%.2f$}}\\\\",
             cc)
   )
   body <- vapply(seq_len(nrow(block)), function(ii) {
     sprintf(
-      "%s & %s & %s & %s & %s \\\\",
+      "%s & %s & %s & %s \\\\",
       escape_latex(block$method[[ii]]),
       format_pct(block$infeasible_rate[[ii]]),
       format_pct(block$delivery_success[[ii]]),
-      format_pct(block$returned_success[[ii]]),
-      format_width_range(block$width_q025[[ii]], block$width_q975[[ii]])
+      format_pct(block$returned_success[[ii]])
     )
   }, character(1L))
   small_lines <- c(small_lines, body)

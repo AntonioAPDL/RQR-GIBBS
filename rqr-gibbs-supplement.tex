@@ -2254,14 +2254,15 @@ comparison: TCSP, hybrid DP--scan, Young--Mathew, and Wilks min--max. The
 supplement keeps MTI ECM, MTI Gibbs, and the conservative DKW fallback as
 fixed-target computation and feasibility diagnostics. MTI Gibbs is reported
 separately because the multi-chain checks below show unstable mixing in several
-feasible cells.
+feasible cells. Widths are reported at the DGP level rather than averaged
+across distributions, because raw interval lengths depend on the scale and tail
+shape of the generating law.
 
 \begin{table}[H]
 \centering
 \caption{\textbf{Primary iid tolerance validation for \(n=500\).} Delivery
 counts cases with no returned interval as failures. Returned success conditions on methods
-that return an interval. Width is the empirical \(2.5\%\)--\(97.5\%\) range
-of returned interval lengths pooled over the corresponding primary-grid rows.}
+that return an interval. DGP-level width ranges are reported separately below.}
 \label{tab:supp-primary-by-content-n500}
 \TableStyle
 \input{tables/tolerance_validation_by_n_500_content.tex}
@@ -2271,8 +2272,7 @@ of returned interval lengths pooled over the corresponding primary-grid rows.}
 \centering
 \caption{\textbf{Primary iid tolerance validation for \(n=1000\).} Delivery
 counts cases with no returned interval as failures. Returned success conditions on methods
-that return an interval. Width is the empirical \(2.5\%\)--\(97.5\%\) range
-of returned interval lengths pooled over the corresponding primary-grid rows.}
+that return an interval. DGP-level width ranges are reported separately below.}
 \label{tab:supp-primary-by-content-n1000}
 \TableStyle
 \input{tables/tolerance_validation_by_n_1000_content.tex}
@@ -2285,14 +2285,17 @@ Delivery makes infeasible cells visible in the same scale as empirical content
 success, while returned success separates content behavior from the decision to
 return an interval. Table~\ref{tab:supp-primary-dgp-delivery} is the
 verification table behind the scenario ranges in the main article: it gives the
-DGP-level delivery percentages before aggregation. The corresponding
-scenario-detail CSV in the tables directory contains returned success,
-infeasibility, and raw width summaries for each DGP-level cell.
+DGP-level delivery percentages before aggregation. Table~\ref{tab:supp-primary-dgp-width-ranges}
+reports the corresponding DGP-level 2.5\%--97.5\% ranges of returned interval
+lengths. The scenario-detail CSV in the tables directory contains returned
+success, infeasibility, and raw width summaries for each DGP-level cell.
 
 \begingroup
 \TableStyle
 \input{tables/tolerance_validation_primary_dgp_delivery.tex}
 \endgroup
+
+\input{tables/tolerance_validation_primary_dgp_width_ranges.tex}
 
 Small-sample feasibility is governed by the full-range two-sided order-statistic
 coverage probability
@@ -2352,7 +2355,7 @@ threshold cells \((46,0.90)\), \((93,0.95)\), and \((473,0.99)\), plus practical
 infeasibility when the target cannot be certified.
 
 The reported metrics are aligned across these designs: delivery success,
-success among returned intervals, true content, raw width ranges,
+success among returned intervals, true content,
 infeasibility, posterior-constraint status for Bayesian-screened actions, and
 ECM trace diagnostics. The Young--Mathew comparator is evaluated
 through the \texttt{tolerance} package's \texttt{nptol.int(..., method = "YM")}
@@ -2369,8 +2372,8 @@ only as distribution-aware width benchmarks.
 \centering
 \caption{\textbf{Follow-up tolerance-validation design summary.} Delivery counts
 cases with no returned interval as failures. Returned success conditions on
-methods returning an interval. Width is the empirical \(2.5\%\)--\(97.5\%\)
-range of raw returned interval lengths within each design and method.}
+methods returning an interval. DGP-level width ranges for the practical
+small-sample cells are reported below.}
 \label{tab:supp-followup-design-summary}
 \TableStyle
 \input{tables/tolerance_validation_followup_design_summary.tex}
@@ -2423,13 +2426,16 @@ in the main article. These cells are the diagnostic boundary for feasibility:
 scan-calibrated methods report infeasibility when the requested
 content/confidence statement cannot be certified, and the classical comparators
 show the delivered content obtained after returning an interval anyway. The
-corresponding scenario-detail CSV in the tables directory contains the remaining
-DGP-level metrics.
+corresponding width ranges are shown in
+Table~\ref{tab:supp-small-sample-dgp-width-ranges}. The scenario-detail CSV in
+the tables directory contains the remaining DGP-level metrics.
 
 \begingroup
 \TableStyle
 \input{tables/tolerance_validation_small_sample_dgp_delivery.tex}
 \endgroup
+
+\input{tables/tolerance_validation_small_sample_dgp_width_ranges.tex}
 
 \section{Reproducibility and Evidence Boundaries}
 \label{sec:supp-reproducibility}

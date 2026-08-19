@@ -16,6 +16,7 @@ row <- function(dgp, n, content, rep, method, success = TRUE,
     n = n,
     guaranteed_content = content,
     tolerance_confidence = 0.95,
+    posterior_confidence = 0.95,
     replication = rep,
     method_id = method,
     success = success,
@@ -64,6 +65,9 @@ small <- do.call(rbind, lapply(c("normal", "student_t3", "beta_left"), function(
     )
   }))
 }))
+primary <- rbind(primary, transform(primary, posterior_confidence = 0.99))
+young <- rbind(young, transform(young, posterior_confidence = 0.99))
+small <- rbind(small, transform(small, posterior_confidence = 0.99))
 
 primary_path <- file.path(work_dir, "primary.csv")
 young_path <- file.path(work_dir, "young.csv")
@@ -99,8 +103,12 @@ required <- file.path(out_dir, c(
   "tolerance_validation_small_sample_boundary.tex",
   "tolerance_validation_primary_dgp_delivery.csv",
   "tolerance_validation_primary_dgp_delivery.tex",
+  "tolerance_validation_primary_dgp_width_ranges.csv",
+  "tolerance_validation_primary_dgp_width_ranges.tex",
   "tolerance_validation_small_sample_dgp_delivery.csv",
   "tolerance_validation_small_sample_dgp_delivery.tex",
+  "tolerance_validation_small_sample_dgp_width_ranges.csv",
+  "tolerance_validation_small_sample_dgp_width_ranges.tex",
   "tolerance_validation_primary_scenario_details.csv",
   "tolerance_validation_small_sample_scenario_details.csv"
 ))
@@ -120,13 +128,22 @@ stopifnot(any(primary_range$method_id == "young_mathew"))
 stopifnot(!"dgp_cells" %in% names(primary_range))
 stopifnot(!"fail_closed_dgp_cells" %in% names(primary_range))
 stopifnot(!"partial_infeasible_dgp_cells" %in% names(primary_range))
-stopifnot(all(c("width_q025", "width_q975") %in%
-                names(primary_range)))
+stopifnot(!"width_q025" %in% names(primary_range))
+stopifnot(!"width_q975" %in% names(primary_range))
 stopifnot(!"median_width" %in% names(primary_range))
 stopifnot(!"median_width_ratio_to_tcsp" %in% names(primary_range))
 stopifnot(!"median_elapsed_sec" %in% names(primary_range))
-stopifnot(all(is.finite(primary_range$width_q025)))
-stopifnot(all(is.finite(primary_range$width_q975)))
+
+primary_widths <- read.csv(
+  file.path(out_dir, "tolerance_validation_primary_dgp_width_ranges.csv"),
+  stringsAsFactors = FALSE
+)
+stopifnot(all(c("dgp_id", "dgp", "n", "content", "method_id",
+                "replications", "width_q025", "width_q975") %in%
+                names(primary_widths)))
+stopifnot(all(primary_widths$replications == 2L))
+stopifnot(any(primary_widths$method_id == "young_mathew"))
+stopifnot(!any(primary_widths$method_id == "tcsp_dkw"))
 
 small_boundary <- read.csv(
   file.path(out_dir, "tolerance_validation_small_sample_boundary.csv"),
@@ -143,7 +160,7 @@ tex <- paste(readLines(
 ), collapse = "\n")
 stopifnot(grepl("Delivery range", tex, fixed = TRUE))
 stopifnot(grepl("Young--Mathew", tex, fixed = TRUE))
-stopifnot(grepl("Width 95\\% range", tex, fixed = TRUE))
+stopifnot(!grepl("Width 95\\% range", tex, fixed = TRUE))
 stopifnot(!grepl("Median sec", tex, fixed = TRUE))
 stopifnot(!grepl("DGPs", tex, fixed = TRUE))
 stopifnot(!grepl("Fail-closed", tex, fixed = TRUE))
@@ -159,5 +176,12 @@ supp_tex <- paste(readLines(
 ), collapse = "\n")
 stopifnot(grepl("Student t3", supp_tex, fixed = TRUE))
 stopifnot(grepl("Hybrid DP--scan", supp_tex, fixed = TRUE))
+
+width_tex <- paste(readLines(
+  file.path(out_dir, "tolerance_validation_primary_dgp_width_ranges.tex"),
+  warn = FALSE
+), collapse = "\n")
+stopifnot(grepl("Width 95\\% range", width_tex, fixed = TRUE))
+stopifnot(grepl("not pooled across DGPs", width_tex, fixed = TRUE))
 
 cat("Scenario-aware tolerance validation table test passed.\n")

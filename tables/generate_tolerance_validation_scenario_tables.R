@@ -60,8 +60,12 @@ outputs <- c(
   "tolerance_validation_small_sample_boundary.tex",
   "tolerance_validation_primary_dgp_delivery.csv",
   "tolerance_validation_primary_dgp_delivery.tex",
+  "tolerance_validation_primary_dgp_width_ranges.csv",
+  "tolerance_validation_primary_dgp_width_ranges.tex",
   "tolerance_validation_small_sample_dgp_delivery.csv",
   "tolerance_validation_small_sample_dgp_delivery.tex",
+  "tolerance_validation_small_sample_dgp_width_ranges.csv",
+  "tolerance_validation_small_sample_dgp_width_ranges.tex",
   "tolerance_validation_primary_scenario_details.csv",
   "tolerance_validation_small_sample_scenario_details.csv"
 )
@@ -188,6 +192,32 @@ quantile_or_na <- function(x, prob) {
     NA_real_
   }
 }
+first_ordered_replicate_rows <- function(results) {
+  results$n <- as.integer(results$n)
+  results$guaranteed_content <- num(results$guaranteed_content)
+  results$tolerance_confidence <- num(results$tolerance_confidence)
+  results$replication <- as.integer(results$replication)
+  results$width <- num(results$width)
+  if ("posterior_confidence" %in% names(results)) {
+    results$posterior_confidence <- num(results$posterior_confidence)
+    post <- results$posterior_confidence
+  } else {
+    post <- rep(NA_real_, nrow(results))
+  }
+  ord <- order(
+    results$dgp_id, results$n, results$guaranteed_content,
+    results$tolerance_confidence, results$method_id, results$replication,
+    post, na.last = TRUE
+  )
+  results <- results[ord, , drop = FALSE]
+  key <- paste(
+    results$dgp_id, results$n, sprintf("%.4f", results$guaranteed_content),
+    sprintf("%.4f", results$tolerance_confidence), results$method_id,
+    results$replication,
+    sep = "||"
+  )
+  results[!duplicated(key), , drop = FALSE]
+}
 
 scenario_detail <- function(results, methods) {
   results <- results[results$method_id %in% methods, , drop = FALSE]
@@ -235,7 +265,7 @@ scenario_detail <- function(results, methods) {
   out
 }
 
-range_summary <- function(detail, methods, raw_results = NULL) {
+range_summary <- function(detail, methods) {
   key <- paste(detail$n, sprintf("%.4f", detail$content),
                detail$method_id, sep = "||")
   rows <- lapply(split(detail, key), function(df) {
@@ -248,36 +278,10 @@ range_summary <- function(detail, methods, raw_results = NULL) {
       delivery_max = max_or_na(df$delivery_success),
       returned_success_min = min_or_na(df$returned_success),
       returned_success_max = max_or_na(df$returned_success),
-      width_q025 = min_or_na(df$width_q025),
-      width_q975 = max_or_na(df$width_q975),
       stringsAsFactors = FALSE
     )
   })
   out <- do.call(rbind, rows)
-  if (!is.null(raw_results) && nrow(raw_results)) {
-    raw <- raw_results[raw_results$method_id %in% methods, , drop = FALSE]
-    raw$n <- as.integer(raw$n)
-    raw$guaranteed_content <- num(raw$guaranteed_content)
-    raw$width <- num(raw$width)
-    raw_key <- paste(raw$n, sprintf("%.4f", raw$guaranteed_content),
-                     raw$method_id, sep = "||")
-    width_rows <- lapply(split(raw, raw_key), function(df) {
-      data.frame(
-        n = as.integer(df$n[[1L]]),
-        content = num(df$guaranteed_content[[1L]]),
-        method_id = df$method_id[[1L]],
-        width_q025 = quantile_or_na(df$width, 0.025),
-        width_q975 = quantile_or_na(df$width, 0.975),
-        stringsAsFactors = FALSE
-      )
-    })
-    width_summary <- do.call(rbind, width_rows)
-    merge_keys <- c("n", "content", "method_id")
-    out$width_q025 <- NULL
-    out$width_q975 <- NULL
-    out <- merge(out, width_summary, by = merge_keys, all.x = TRUE,
-                 sort = FALSE)
-  }
   out <- out[order(out$n, out$content, match(out$method_id, methods)), ]
   rownames(out) <- NULL
   out
@@ -323,11 +327,23 @@ cell_label <- function(n, content) {
   sprintf("\\(n=%s,c=%.2f\\)", as.integer(n), num(content))
 }
 
+dgp_width_ranges <- function(detail, methods) {
+  out <- detail[detail$method_id %in% methods, c(
+    "dgp_id", "dgp", "n", "content", "method_id", "method",
+    "replications", "delivery_success", "returned_success",
+    "width_q025", "width_q975"
+  ), drop = FALSE]
+  out <- out[order(out$n, out$content, out$dgp,
+                   match(out$method_id, methods)), ]
+  rownames(out) <- NULL
+  out
+}
+
 write_range_tex <- function(summary, path) {
   lines <- c(
-    "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrrr@{}}",
+    "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrr@{}}",
     "\\toprule",
-    "Cell & Method & Delivery range (\\%) & Returned range (\\%) & Width 95\\% range\\\\",
+    "Cell & Method & Delivery range (\\%) & Returned-success range (\\%)\\\\",
     "\\midrule"
   )
   for (cell in unique(paste(summary$n, summary$content, sep = "||"))) {
@@ -335,19 +351,49 @@ write_range_tex <- function(summary, path) {
                      , drop = FALSE]
     for (ii in seq_len(nrow(block))) {
       lines <- c(lines, sprintf(
-        "%s & %s & %s & %s & %s \\\\",
+        "%s & %s & %s & %s \\\\",
         if (ii == 1L) cell_label(block$n[[ii]], block$content[[ii]]) else "",
         escape_latex(block$method[[ii]]),
         format_range(block$delivery_min[[ii]], block$delivery_max[[ii]]),
         format_range(block$returned_success_min[[ii]],
-                     block$returned_success_max[[ii]]),
-        format_width_range(block$width_q025[[ii]], block$width_q975[[ii]])
+                     block$returned_success_max[[ii]])
       ))
     }
     lines <- c(lines, "\\addlinespace[0.25em]")
   }
   lines <- lines[-length(lines)]
   writeLines(c(lines, "\\bottomrule", "\\end{tabularx}"), path)
+}
+
+write_dgp_width_tex <- function(widths, path, caption, label) {
+  lines <- c(
+    "\\begingroup",
+    "\\scriptsize",
+    "\\begin{longtable}{@{}p{0.20\\textwidth}rrp{0.18\\textwidth}rrr@{}}",
+    sprintf("\\caption{%s}\\label{%s}\\\\", caption, label),
+    "\\toprule",
+    "DGP & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Returned (\\%) & Width 95\\% range\\\\",
+    "\\midrule",
+    "\\endfirsthead",
+    "\\toprule",
+    "DGP & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Returned (\\%) & Width 95\\% range\\\\",
+    "\\midrule",
+    "\\endhead"
+  )
+  body <- vapply(seq_len(nrow(widths)), function(ii) {
+    sprintf(
+      "%s & %s & %.2f & %s & %s & %s & %s \\\\",
+      escape_latex(widths$dgp[[ii]]),
+      as.integer(widths$n[[ii]]),
+      num(widths$content[[ii]]),
+      escape_latex(widths$method[[ii]]),
+      format_pct(widths$delivery_success[[ii]]),
+      format_pct(widths$returned_success[[ii]]),
+      format_width_range(widths$width_q025[[ii]], widths$width_q975[[ii]])
+    )
+  }, character(1L))
+  writeLines(c(lines, body, "\\bottomrule", "\\end{longtable}", "\\endgroup"),
+             path)
 }
 
 wide_delivery <- function(detail, methods) {
@@ -415,13 +461,14 @@ if (file.exists(young_mathew_path)) {
   )
 }
 small <- read_results(small_path, "Small-sample validation results")
+primary <- first_ordered_replicate_rows(primary)
+small <- first_ordered_replicate_rows(small)
 
 primary_detail <- scenario_detail(primary, primary_supp_method_order)
 primary_range <- range_summary(
   primary_detail[primary_detail$method_id %in% primary_main_method_order,
                  , drop = FALSE],
-  primary_main_method_order,
-  primary
+  primary_main_method_order
 )
 small_detail <- scenario_detail(small, small_supp_method_order)
 small_boundary_detail <- small_detail[
@@ -435,9 +482,12 @@ small_boundary <- range_summary(
     ,
     drop = FALSE
   ],
-  small_main_method_order,
-  small
+  small_main_method_order
 )
+primary_dgp_widths <- dgp_width_ranges(primary_detail,
+                                       primary_main_method_order)
+small_dgp_widths <- dgp_width_ranges(small_boundary_detail,
+                                     small_main_method_order)
 
 primary_delivery <- wide_delivery(primary_detail, primary_supp_method_order)
 small_delivery <- wide_delivery(small_boundary_detail, small_supp_method_order)
@@ -454,9 +504,17 @@ utils::write.csv(primary_delivery,
                  file.path(output_dir,
                            "tolerance_validation_primary_dgp_delivery.csv"),
                  row.names = FALSE)
+utils::write.csv(primary_dgp_widths,
+                 file.path(output_dir,
+                           "tolerance_validation_primary_dgp_width_ranges.csv"),
+                 row.names = FALSE)
 utils::write.csv(small_delivery,
                  file.path(output_dir,
                            "tolerance_validation_small_sample_dgp_delivery.csv"),
+                 row.names = FALSE)
+utils::write.csv(small_dgp_widths,
+                 file.path(output_dir,
+                           "tolerance_validation_small_sample_dgp_width_ranges.csv"),
                  row.names = FALSE)
 utils::write.csv(primary_detail,
                  file.path(output_dir,
@@ -491,12 +549,24 @@ write_wide_delivery_tex(
   "\\textbf{Primary iid tolerance-validation delivery by DGP.} Entries are delivery percentages for the primary grid at tolerance confidence \\(0.95\\). Delivery counts cells with no returned interval as failures.",
   "tab:supp-primary-dgp-delivery"
 )
+write_dgp_width_tex(
+  primary_dgp_widths,
+  file.path(output_dir, "tolerance_validation_primary_dgp_width_ranges.tex"),
+  "\\textbf{Primary iid tolerance-validation width ranges by DGP.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each DGP, sample size, content, and method. Widths are not pooled across DGPs.",
+  "tab:supp-primary-dgp-width-ranges"
+)
 write_wide_delivery_tex(
   small_delivery,
   file.path(output_dir, "tolerance_validation_small_sample_dgp_delivery.tex"),
   small_supp_method_order,
   "\\textbf{Small-sample tolerance-validation delivery by DGP.} Entries are delivery percentages for the practical \\(n=50\\) and \\(n=100\\) follow-up cells at tolerance confidence \\(0.95\\).",
   "tab:supp-small-sample-dgp-delivery"
+)
+write_dgp_width_tex(
+  small_dgp_widths,
+  file.path(output_dir, "tolerance_validation_small_sample_dgp_width_ranges.tex"),
+  "\\textbf{Small-sample tolerance-validation width ranges by DGP.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each DGP, sample size, content, and method. Widths are not pooled across DGPs.",
+  "tab:supp-small-sample-dgp-width-ranges"
 )
 
 cat("Wrote scenario-aware tolerance validation tables to: ",

@@ -109,7 +109,7 @@ read_result_file <- function(path, label) {
   out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
   required <- c(
     "dgp_id", "n", "guaranteed_content", "method_id", "success",
-    "infeasible", "width"
+    "infeasible"
   )
   missing <- setdiff(required, names(out))
   if (length(missing)) {
@@ -128,9 +128,32 @@ derive_ranges_from_raw <- function(primary_path, ym_path) {
   if (!nrow(raw)) stopf("No selected methods are present in raw figure inputs.")
   raw$n <- as.integer(raw$n)
   raw$content <- num(raw$guaranteed_content)
-  raw$width <- num(raw$width)
   raw$success_bool <- truthy(raw$success)
   raw$infeasible_bool <- truthy(raw$infeasible)
+  if ("tolerance_confidence" %in% names(raw)) {
+    raw$tolerance_confidence <- num(raw$tolerance_confidence)
+  } else {
+    raw$tolerance_confidence <- NA_real_
+  }
+  if ("posterior_confidence" %in% names(raw)) {
+    raw$posterior_confidence <- num(raw$posterior_confidence)
+  } else {
+    raw$posterior_confidence <- NA_real_
+  }
+  if ("replication" %in% names(raw)) {
+    raw$replication <- as.integer(raw$replication)
+    ord <- order(raw$dgp_id, raw$n, raw$content,
+                 raw$tolerance_confidence, raw$method_id, raw$replication,
+                 raw$posterior_confidence, na.last = TRUE)
+    raw <- raw[ord, , drop = FALSE]
+    rep_key <- paste(
+      raw$dgp_id, raw$n, sprintf("%.4f", raw$content),
+      sprintf("%.4f", raw$tolerance_confidence), raw$method_id,
+      raw$replication,
+      sep = "||"
+    )
+    raw <- raw[!duplicated(rep_key), , drop = FALSE]
+  }
 
   dgp_key <- paste(raw$dgp_id, raw$n, sprintf("%.4f", raw$content),
                    raw$method_id, sep = "||")
@@ -149,13 +172,6 @@ derive_ranges_from_raw <- function(primary_path, ym_path) {
   key <- paste(dgp_detail$n, sprintf("%.4f", dgp_detail$content),
                dgp_detail$method_id, sep = "||")
   rows <- lapply(split(dgp_detail, key), function(df) {
-    raw_hit <- raw[
-      raw$n == df$n[[1L]] &
-        abs(raw$content - df$content[[1L]]) < 1e-12 &
-        raw$method_id == df$method_id[[1L]],
-      ,
-      drop = FALSE
-    ]
     data.frame(
       n = as.integer(df$n[[1L]]),
       content = num(df$content[[1L]]),
@@ -163,8 +179,6 @@ derive_ranges_from_raw <- function(primary_path, ym_path) {
       method = unname(method_labels[df$method_id[[1L]]]),
       delivery_min = min_or_na(df$delivery_success),
       delivery_max = max_or_na(df$delivery_success),
-      width_q025 = quantile_or_na(raw_hit$width, 0.025),
-      width_q975 = quantile_or_na(raw_hit$width, 0.975),
       stringsAsFactors = FALSE
     )
   })
@@ -175,8 +189,7 @@ derive_ranges_from_raw <- function(primary_path, ym_path) {
 read_range_table <- function(path) {
   out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
   required <- c(
-    "n", "content", "method_id", "delivery_min", "delivery_max",
-    "width_q025", "width_q975"
+    "n", "content", "method_id", "delivery_min", "delivery_max"
   )
   missing <- setdiff(required, names(out))
   if (length(missing)) {
@@ -213,7 +226,7 @@ contents <- sort(unique(data$content))
 offsets <- seq(-0.018, 0.018, length.out = length(method_order))
 names(offsets) <- method_order
 
-png(figure_path, width = 2400, height = 1500, res = 220)
+png(figure_path, width = 2400, height = 950, res = 220)
 old_par <- par(no.readonly = TRUE)
 device_open <- TRUE
 on.exit({
@@ -223,8 +236,8 @@ on.exit({
   }
 }, add = TRUE)
 
-layout(matrix(c(1, 2, 3, 4, 5, 5), nrow = 3, byrow = TRUE),
-       heights = c(1, 1, 0.32))
+layout(matrix(c(1, 2, 3, 3), nrow = 2, byrow = TRUE),
+       heights = c(1, 0.28))
 par(oma = c(0, 0, 1.2, 0), mar = c(4.1, 4.6, 2.5, 0.9),
     xaxs = "i", yaxs = "i")
 
@@ -258,21 +271,12 @@ draw_interval_panel <- function(nn, lower_col, upper_col, ylab, main,
   }
 }
 
-width_upper <- data$width_q975[is.finite(data$width_q975)]
-width_ylim <- c(0, max(width_upper, na.rm = TRUE) * 1.08)
-
 draw_interval_panel(500, "delivery_min", "delivery_max",
                     "Delivery probability", "Delivery range, n = 500",
                     0.95, c(0.9, 1.0))
 draw_interval_panel(1000, "delivery_min", "delivery_max",
                     "Delivery probability", "Delivery range, n = 1000",
                     0.95, c(0.9, 1.0))
-draw_interval_panel(500, "width_q025", "width_q975",
-                    "Interval width", "Width 95% range, n = 500",
-                    NA_real_, width_ylim)
-draw_interval_panel(1000, "width_q025", "width_q975",
-                    "Interval width", "Width 95% range, n = 1000",
-                    NA_real_, width_ylim)
 
 par(mar = c(0, 0, 0, 0))
 plot.new()

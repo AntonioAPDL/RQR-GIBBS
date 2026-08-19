@@ -1573,8 +1573,9 @@ interpolation
 classical order-statistic comparators in the main article. Fixed-target MTI
 ECM and Gibbs summaries, along with the conservative DKW fallback, are reported
 in the supplement as computation and feasibility diagnostics. Primary metrics
-are grid delivery success, success among returned intervals, raw interval
-width, and feasibility.
+are grid delivery success, success among returned intervals, and feasibility.
+Raw interval widths are summarized by DGP in the supplement, avoiding width
+averages across distributions with different intrinsic scales and tail shapes.
 
 \begin{table}[!htbp]
 \centering
@@ -1582,8 +1583,8 @@ width, and feasibility.
 shown by target content and method. Each row summarizes the range across seven
 data-generating laws, with 100 paired replications per law. Delivery counts
 replications with no returned interval as failures; returned success conditions
-on methods that return an interval. The width column gives the empirical
-2.5\%--97.5\% range of returned interval lengths pooled within the row.}
+on methods that return an interval. Widths are reported by DGP in the
+supplement rather than pooled across distributional scenarios.}
 \label{tab:tolerance-validation-primary-n500}
 \TableStyle
 \input{tables/tolerance_validation_primary_scenario_ranges_n500.tex}
@@ -1607,12 +1608,12 @@ dominated by the \(c=0.99\) two-sided full-range feasibility boundary.}
 target content.} Delivery counts cases with no returned interval as failures.
 Vertical intervals in the delivery panels show the range across distributional
 scenarios, and the axis is zoomed to \(0.90\)--\(1.00\). Dashed reference lines
-mark nominal \(0.95\) delivery. Width panels show empirical \(2.5\%\)--\(97.5\%\)
-ranges of returned interval lengths. The hybrid DP--scan action is omitted
+mark nominal \(0.95\) delivery. The hybrid DP--scan action is omitted
 because it returned the same delivered intervals as TCSP on the primary grid;
 Tables~\ref{tab:tolerance-validation-primary-n500}
 and~\ref{tab:tolerance-validation-primary-n1000} include its scenario-level
-delivery. Fixed-target MTI and DKW diagnostics are reported in the supplement.}
+delivery. DGP-level width ranges and fixed-target MTI and DKW diagnostics are
+reported in the supplement.}
 \label{fig:tolerance-validation-primary}
 \end{figure}
 
@@ -1625,18 +1626,18 @@ screen adds a Bayesian content check without changing
 the delivered interval in these cells. Young--Mathew is often slightly
 narrower than TCSP, with lower delivery in the most skewed or separated
 scenarios. Wilks is conservative for lower contents and reduces to the full
-range near the boundary. The supplement gives the corresponding MTI ECM, MTI
-Gibbs, and DKW diagnostics, which are useful for computation and feasibility
-accounting but are not part of the main comparator set.
+range near the boundary. The supplement gives DGP-level width ranges and the
+corresponding MTI ECM, MTI Gibbs, and DKW diagnostics, which are useful for
+computation and feasibility accounting but are not part of the main comparator
+set.
 
 \begin{table}[!htbp]
 \centering
 \caption{\textbf{Small-sample feasibility boundary at tolerance confidence
 \(0.95\).} The table reports practical \(n=50\) and \(n=100\) follow-up cells,
 summarized by ranges across eight data-generating laws. Blank returned-success
-and width entries occur when the method returned no certified interval in that
-cell. Width is the empirical 2.5\%--97.5\% range of returned interval lengths
-pooled within the row.}
+entries occur when the method returned no certified interval in that cell.
+Small-sample width ranges by DGP are reported in the supplement.}
 \label{tab:tolerance-validation-small-boundary}
 \TableStyle
 \input{tables/tolerance_validation_small_sample_boundary.tex}
