@@ -72,9 +72,20 @@ small <- rbind(small, transform(small, posterior_confidence = 0.99))
 primary_path <- file.path(work_dir, "primary.csv")
 young_path <- file.path(work_dir, "young.csv")
 small_path <- file.path(work_dir, "small.csv")
+scan_path <- file.path(work_dir, "scan.csv")
 utils::write.csv(primary, primary_path, row.names = FALSE)
 utils::write.csv(young, young_path, row.names = FALSE)
 utils::write.csv(small, small_path, row.names = FALSE)
+utils::write.csv(data.frame(
+  n = c(500L, 1000L),
+  guaranteed_content = c(0.90, 0.90),
+  tolerance_confidence = c(0.95, 0.95),
+  retained_count = c(470L, 940L),
+  content_buffer = c(0.04, 0.04),
+  certified_lower_probability = c(0.951, 0.952),
+  infeasible = c(FALSE, FALSE),
+  stringsAsFactors = FALSE
+), scan_path, row.names = FALSE)
 
 out_dir <- file.path(work_dir, "out")
 status <- system2(
@@ -84,6 +95,7 @@ status <- system2(
     paste0("--primary-results=", primary_path),
     paste0("--young-mathew-results=", young_path),
     paste0("--small95-results=", small_path),
+    paste0("--scan-calibration-csv=", scan_path),
     paste0("--output-dir=", out_dir)
   ),
   stdout = TRUE,
@@ -105,6 +117,8 @@ required <- file.path(out_dir, c(
   "tolerance_validation_article_dgp_delivery.tex",
   "tolerance_validation_article_dgp_width_ranges.csv",
   "tolerance_validation_article_dgp_width_ranges.tex",
+  "tolerance_validation_article_scan_calibration.csv",
+  "tolerance_validation_article_scan_calibration.tex",
   "tolerance_validation_article_small_sample_dgp_delivery.csv",
   "tolerance_validation_article_small_sample_dgp_delivery.tex",
   "tolerance_validation_article_small_sample_dgp_width_ranges.csv",
@@ -160,6 +174,7 @@ tex <- paste(readLines(
   warn = FALSE
 ), collapse = "\n")
 stopifnot(grepl("Delivery range", tex, fixed = TRUE))
+stopifnot(!grepl("Returned-success range", tex, fixed = TRUE))
 stopifnot(grepl("Young--Mathew", tex, fixed = TRUE))
 stopifnot(!grepl("Width 95\\% range", tex, fixed = TRUE))
 stopifnot(!grepl("Median sec", tex, fixed = TRUE))
@@ -186,6 +201,14 @@ width_tex <- paste(readLines(
 ), collapse = "\n")
 stopifnot(grepl("Width 95\\% range", width_tex, fixed = TRUE))
 stopifnot(grepl("not pooled across DGPs", width_tex, fixed = TRUE))
+stopifnot(!grepl("Returned (\\%)", width_tex, fixed = TRUE))
+
+scan_tex <- paste(readLines(
+  file.path(out_dir, "tolerance_validation_article_scan_calibration.tex"),
+  warn = FALSE
+), collapse = "\n")
+stopifnot(grepl("Retained count", scan_tex, fixed = TRUE))
+stopifnot(grepl("0.951", scan_tex, fixed = TRUE))
 
 out_dir_no_small <- file.path(work_dir, "out-no-small")
 status <- system2(
@@ -195,6 +218,7 @@ status <- system2(
     paste0("--primary-results=", primary_path),
     paste0("--young-mathew-results=", young_path),
     paste0("--small95-results=", file.path(work_dir, "missing-small.csv")),
+    paste0("--scan-calibration-csv=", scan_path),
     paste0("--output-dir=", out_dir_no_small)
   ),
   stdout = TRUE,

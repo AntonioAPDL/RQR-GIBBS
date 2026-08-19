@@ -2255,14 +2255,17 @@ The distributional shapes are Gaussian, moderate log-normal skewness, stronger
 log-normal skewness, separated mixtures, scale contamination, and Student
 \(t_3\) tails. Each cell uses paired random samples across methods and records
 the repository commit, frozen JSON configuration, scan-calibration cache, wave
-plan, and artifact hashes. The scenario-range table in the main article is
-generated from the raw validation rows and summarized across DGPs within each
-\((n,c)\) cell. Table~\ref{tab:supp-primary-dgp-delivery} gives the DGP-level
-delivery percentages before aggregation, and
+plan, and artifact hashes. The completed confirmatory run contains 189
+method-specific waves and 189,000 result rows; all waves completed, and all
+three article-facing methods returned an interval in every replication. The
+scenario-range table in the main article is generated from the raw validation
+rows and summarized across DGPs within each \((n,c)\) cell.
+Table~\ref{tab:supp-primary-dgp-delivery} gives the DGP-level delivery
+percentages before aggregation, and
 Table~\ref{tab:supp-primary-dgp-width-ranges} reports the corresponding
 DGP-level 2.5\%--97.5\% ranges of returned interval lengths. The
-scenario-detail CSV in the tables directory contains returned success,
-infeasibility, and raw width summaries for each DGP-level cell.
+scenario-detail CSV in the tables directory retains returned success,
+infeasibility, and raw width summaries for each DGP-level cell as audit fields.
 
 \begingroup
 \TableStyle
@@ -2270,6 +2273,23 @@ infeasibility, and raw width summaries for each DGP-level cell.
 \endgroup
 
 \input{tables/tolerance_validation_article_dgp_width_ranges.tex}
+
+The TCSP calibration chooses the retained count \(k\) before seeing the
+replicated samples. Table~\ref{tab:supp-tcsp-scan-calibration} records the
+retained counts, retained fractions, content buffers, and certified lower
+probabilities used in the article grid. When \(k=n\), TCSP is forced to use the
+full sample range and therefore coincides with Wilks at the formal-action
+level. This occurs for \((n,c)=(50,0.90),(100,0.95)\), and \((500,0.99)\).
+
+\begin{table}[H]
+\centering
+\caption{\textbf{TCSP scan calibration for the article grid.} The retained
+count \(k\) is selected by conservative Monte Carlo scan calibration before the
+empirical shortest-window action is applied. The content buffer is \(k/n-c\).}
+\label{tab:supp-tcsp-scan-calibration}
+\TableStyle
+\input{tables/tolerance_validation_article_scan_calibration.tex}
+\end{table}
 
 Small-sample feasibility is governed by the full-range two-sided order-statistic
 coverage probability
@@ -2308,8 +2328,9 @@ article configuration therefore stores the feasible cells explicitly instead of
 forming a Cartesian product of sample sizes and contents. This prevents the
 comparison from treating structural infeasibility as an algorithmic failure.
 The Young--Mathew comparator is evaluated through the \texttt{tolerance}
-package's \texttt{nptol.int(..., method = "YM")} implementation, and its
-package version is hashed into the method audit digest.
+package's \texttt{nptol.int(..., method = "YM")} implementation. The completed
+run used \texttt{tolerance} version 3.0.0, and the package version is included
+in the method audit digest.
 
 \section{Reproducibility and Evidence Boundaries}
 \label{sec:supp-reproducibility}

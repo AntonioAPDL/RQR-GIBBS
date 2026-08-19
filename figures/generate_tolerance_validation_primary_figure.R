@@ -19,8 +19,9 @@ repo_root <- normalizePath(file.path(dirname(script_path), ".."),
 setwd(repo_root)
 
 default_primary_dir <- file.path(
-  "application", "runs", "rqr_bayes_uq_validation_main_20260813",
-  "wave_main_20260813T103232Z"
+  "application", "runs",
+  "rqr_bayes_uq_validation_main_3method_1000_20260819",
+  "wave_confirmatory_3method1000_20260819T090047Z"
 )
 primary_results <- arg_value(
   "--primary-results=",
@@ -31,9 +32,7 @@ primary_results <- arg_value(
 young_mathew_results <- arg_value(
   "--young-mathew-results=",
   Sys.getenv("RQR_BAYES_UQ_PRIMARY_YM_RESULTS",
-             unset = file.path(default_primary_dir,
-                               "young_mathew_addon_20260815T064224Z",
-                               "bayes_uq_validation_results.csv"))
+             unset = "")
 )
 scenario_range_csv <- arg_value(
   "--scenario-range-csv=",

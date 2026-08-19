@@ -1494,8 +1494,8 @@ following simulation-study reporting principles
 seven standardized data-generating laws: Gaussian, two log-normal skewness
 levels, two separated mixtures, a five-percent scale-contaminated normal, and a
 Student \(t_3\) law. The primary grid fixes tolerance confidence at \(0.95\)
-and uses 1000 paired replications per data-generating law. The feasible cells
-are \(n=50,c=0.90\), \(n=100,c\in\{0.90,0.95\}\), and
+and uses 1000 paired replications per data-generating law and feasible cell.
+The feasible cells are \(n=50,c=0.90\), \(n=100,c\in\{0.90,0.95\}\), and
 \(n\in\{500,1000\},c\in\{0.90,0.95,0.99\}\).
 
 The small-sample restriction is structural. For a two-sided distribution-free
@@ -1518,19 +1518,19 @@ windows satisfying the calibrated retained-count rule. Young--Mathew
 interpolation
 \citep{YoungMathew2014NonparametricTolerance} and Wilks min--max intervals
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction} provide the
-classical order-statistic comparators. Primary metrics are delivery success,
-success among returned intervals, and raw interval width. Delivery counts
-replications with no returned interval as failures. Widths are reported as
-DGP-level empirical 2.5\%--97.5\% ranges, avoiding width averages across
-distributions with different scales and tail behavior.
+classical order-statistic comparators. The primary metric is delivery success:
+the empirical fraction of replications in which the reported interval attains
+the required population content. Replications with no returned interval would
+count as failures. Widths are reported as DGP-level empirical
+2.5\%--97.5\% ranges, avoiding width averages across distributions with
+different scales and tail behavior.
 
 \begin{table}[!htbp]
 \centering
 \caption{\textbf{Article-facing iid tolerance validation.} Results are shown by
 feasible sample-size/content cell and method. Each row summarizes the range
-across seven data-generating laws at tolerance confidence \(0.95\). Delivery
-counts replications with no returned interval as failures; returned success
-conditions on methods that return an interval.}
+across seven data-generating laws at tolerance confidence \(0.95\). All three
+article-facing methods returned an interval in every replication in this run.}
 \label{tab:tolerance-validation-primary}
 \TableStyle
 \input{tables/tolerance_validation_article_scenario_ranges.tex}
@@ -1558,22 +1558,24 @@ the values remain raw interval lengths.}
 \label{fig:tolerance-validation-width-ranges}
 \end{figure}
 
-Table~\ref{tab:tolerance-validation-primary} and
-Figures~\ref{fig:tolerance-validation-primary}
-and~\ref{fig:tolerance-validation-width-ranges} avoid pooling widths across
-distributional scenarios. The primary message is that the calibrated scan action
+In the completed run, TCSP delivery ranges from 95.0\% to 99.7\% across
+DGP-level cells, compared with 94.1\% to 98.2\% for Young--Mathew and 95.0\%
+to 100.0\% for Wilks. Figures~\ref{fig:tolerance-validation-primary}
+and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
+pooling widths across distributional scenarios. The calibrated scan action
 targets the requested finite-sample statement directly. Young--Mathew is a
-strong nonparametric comparator and can be slightly narrower in some skewed
-settings. Wilks is simple and conservative at lower contents, but it becomes a
-full-range benchmark near the high-content boundary.
+strong nonparametric comparator and can be slightly narrower in some skewed or
+boundary cells. Wilks is simple and conservative at lower contents, but it can
+be substantially wider when the scan calibration does not force the full sample
+range.
 
 The supplement gives the DGP-level delivery and width tables behind these
-summaries, together with the full-range feasibility thresholds used to choose
-the grid. The excluded small-sample cells are not treated as algorithmic
-failures; they fall outside the region where a two-sided distribution-free
-tolerance statement can be certified at confidence \(0.95\). Alternative
-diagnostic methods remain available in the repository, but the article
-comparison is restricted to the three methods above.
+summaries, together with the TCSP retained counts and full-range feasibility
+thresholds used to choose the grid. The excluded small-sample cells are not
+treated as algorithmic failures; they fall outside the region where a two-sided
+distribution-free tolerance statement can be certified at confidence \(0.95\).
+Alternative diagnostic methods remain available in the repository, but the
+article comparison is restricted to the three methods above.
 
 \section{Discussion}
 \label{sec:discussion}

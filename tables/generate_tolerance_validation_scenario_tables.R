@@ -19,20 +19,16 @@ repo_root <- normalizePath(file.path(dirname(script_path), ".."),
 setwd(repo_root)
 
 default_primary_dir <- file.path(
-  "application", "runs", "rqr_bayes_uq_validation_main_20260813",
-  "wave_main_20260813T103232Z"
+  "application", "runs",
+  "rqr_bayes_uq_validation_main_3method_1000_20260819",
+  "wave_confirmatory_3method1000_20260819T090047Z"
 )
 default_primary_results <- file.path(default_primary_dir,
                                      "bayes_uq_validation_results.csv")
-default_young_mathew_results <- file.path(
-  default_primary_dir, "young_mathew_addon_20260815T064224Z",
-  "bayes_uq_validation_results.csv"
-)
-default_small_results <- file.path(
-  "application", "runs", "rqr_bayes_uq_followup_20260816",
-  "wave_small_sample_95_20260817T005145Z",
-  "bayes_uq_validation_results.csv"
-)
+default_young_mathew_results <- ""
+default_small_results <- ""
+default_scan_calibration <- file.path(default_primary_dir,
+                                      "scan_calibration_summary.csv")
 
 primary_path <- arg_value(
   "--primary-results=",
@@ -47,6 +43,11 @@ small_path <- arg_value(
   "--small95-results=",
   Sys.getenv("RQR_BAYES_UQ_SMALL95_RESULTS", unset = default_small_results)
 )
+scan_calibration_path <- arg_value(
+  "--scan-calibration-csv=",
+  Sys.getenv("RQR_BAYES_UQ_SCAN_CALIBRATION",
+             unset = default_scan_calibration)
+)
 output_dir <- normalizePath(arg_value("--output-dir=", "tables"),
                             winslash = "/", mustWork = FALSE)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -58,6 +59,8 @@ primary_outputs <- c(
   "tolerance_validation_article_dgp_delivery.tex",
   "tolerance_validation_article_dgp_width_ranges.csv",
   "tolerance_validation_article_dgp_width_ranges.tex",
+  "tolerance_validation_article_scan_calibration.csv",
+  "tolerance_validation_article_scan_calibration.tex",
   "tolerance_validation_article_scenario_details.csv"
 )
 small_outputs <- c(
@@ -365,15 +368,15 @@ dgp_width_ranges <- function(detail, methods) {
 
 write_range_tex <- function(summary, path) {
   lines <- c(
-    "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrr@{}}",
+    "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xr@{}}",
     "\\toprule",
-    "Cell & Method & Delivery range (\\%) & Returned-success range (\\%)\\\\",
+    "Cell & Method & Delivery range (\\%)\\\\",
     "\\midrule"
   )
   if (!nrow(summary)) {
     writeLines(c(
       lines,
-      "\\multicolumn{4}{@{}l@{}}{No selected validation rows.}\\\\",
+      "\\multicolumn{3}{@{}l@{}}{No selected validation rows.}\\\\",
       "\\bottomrule",
       "\\end{tabularx}"
     ), path)
@@ -384,12 +387,10 @@ write_range_tex <- function(summary, path) {
                      , drop = FALSE]
     for (ii in seq_len(nrow(block))) {
       lines <- c(lines, sprintf(
-        "%s & %s & %s & %s \\\\",
+        "%s & %s & %s \\\\",
         if (ii == 1L) cell_label(block$n[[ii]], block$content[[ii]]) else "",
         escape_latex(block$method[[ii]]),
-        format_range(block$delivery_min[[ii]], block$delivery_max[[ii]]),
-        format_range(block$returned_success_min[[ii]],
-                     block$returned_success_max[[ii]])
+        format_range(block$delivery_min[[ii]], block$delivery_max[[ii]])
       ))
     }
     lines <- c(lines, "\\addlinespace[0.25em]")
@@ -402,26 +403,25 @@ write_dgp_width_tex <- function(widths, path, caption, label) {
   lines <- c(
     "\\begingroup",
     "\\scriptsize",
-    "\\begin{longtable}{@{}p{0.20\\textwidth}rrp{0.18\\textwidth}rrr@{}}",
+    "\\begin{longtable}{@{}p{0.24\\textwidth}rrp{0.20\\textwidth}rr@{}}",
     sprintf("\\caption{%s}\\label{%s}\\\\", caption, label),
     "\\toprule",
-    "DGP & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Returned (\\%) & Width 95\\% range\\\\",
+    "DGP & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Width 95\\% range\\\\",
     "\\midrule",
     "\\endfirsthead",
     "\\toprule",
-    "DGP & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Returned (\\%) & Width 95\\% range\\\\",
+    "DGP & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Width 95\\% range\\\\",
     "\\midrule",
     "\\endhead"
   )
   body <- vapply(seq_len(nrow(widths)), function(ii) {
     sprintf(
-      "%s & %s & %.2f & %s & %s & %s & %s \\\\",
+      "%s & %s & %.2f & %s & %s & %s \\\\",
       escape_latex(widths$dgp[[ii]]),
       as.integer(widths$n[[ii]]),
       num(widths$content[[ii]]),
       escape_latex(widths$method[[ii]]),
       format_pct(widths$delivery_success[[ii]]),
-      format_pct(widths$returned_success[[ii]]),
       format_width_range(widths$width_q025[[ii]], widths$width_q975[[ii]])
     )
   }, character(1L))
@@ -492,6 +492,82 @@ write_wide_delivery_tex <- function(wide, path, methods, caption, label) {
   writeLines(c(lines, "\\bottomrule", "\\end{longtable}"), path)
 }
 
+scan_calibration_table <- function(path) {
+  if (!nzchar(path) || !file.exists(path)) {
+    return(data.frame(
+      n = integer(), content = numeric(), tolerance_confidence = numeric(),
+      retained_count = integer(), retained_fraction = numeric(),
+      content_buffer = numeric(), certified_lower_probability = numeric(),
+      stringsAsFactors = FALSE
+    ))
+  }
+  scan <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+  required <- c(
+    "n", "guaranteed_content", "tolerance_confidence", "retained_count",
+    "content_buffer", "certified_lower_probability"
+  )
+  missing <- setdiff(required, names(scan))
+  if (length(missing)) {
+    stopf("Scan calibration CSV is missing column(s): ",
+          paste(missing, collapse = ", "))
+  }
+  scan$n <- as.integer(scan$n)
+  scan$content <- num(scan$guaranteed_content)
+  scan$tolerance_confidence <- num(scan$tolerance_confidence)
+  scan$retained_count <- as.integer(scan$retained_count)
+  scan$content_buffer <- num(scan$content_buffer)
+  scan$certified_lower_probability <- num(scan$certified_lower_probability)
+  if ("infeasible" %in% names(scan)) {
+    scan$infeasible_bool <- truthy(scan$infeasible)
+  } else {
+    scan$infeasible_bool <- FALSE
+  }
+  scan <- scan[!scan$infeasible_bool, , drop = FALSE]
+  scan$retained_fraction <- scan$retained_count / scan$n
+  out <- unique(scan[, c(
+    "n", "content", "tolerance_confidence", "retained_count",
+    "retained_fraction", "content_buffer", "certified_lower_probability"
+  ), drop = FALSE])
+  out <- out[order(out$n, out$content, out$tolerance_confidence), ]
+  rownames(out) <- NULL
+  out
+}
+
+format_prob3 <- function(x) {
+  x <- num(x)
+  ifelse(is.finite(x), sprintf("%.3f", x), "--")
+}
+
+write_scan_calibration_tex <- function(scan, path) {
+  lines <- c(
+    "\\begin{tabular}{@{}rrrrrr@{}}",
+    "\\toprule",
+    "\\(n\\) & \\(c\\) & Retained count \\(k\\) & \\(k/n\\) & Buffer \\(k/n-c\\) & Certified lower probability\\\\",
+    "\\midrule"
+  )
+  if (!nrow(scan)) {
+    writeLines(c(
+      lines,
+      "\\multicolumn{6}{@{}l@{}}{No scan-calibration input was provided.}\\\\",
+      "\\bottomrule",
+      "\\end{tabular}"
+    ), path)
+    return(invisible(path))
+  }
+  body <- vapply(seq_len(nrow(scan)), function(ii) {
+    sprintf(
+      "%s & %.2f & %s & %s & %s & %s \\\\",
+      as.integer(scan$n[[ii]]),
+      num(scan$content[[ii]]),
+      as.integer(scan$retained_count[[ii]]),
+      format_prob3(scan$retained_fraction[[ii]]),
+      format_prob3(scan$content_buffer[[ii]]),
+      format_prob3(scan$certified_lower_probability[[ii]])
+    )
+  }, character(1L))
+  writeLines(c(lines, body, "\\bottomrule", "\\end{tabular}"), path)
+}
+
 primary <- read_results(primary_path, "Primary validation results")
 if (file.exists(young_mathew_path) &&
     !any(primary$method_id == "young_mathew")) {
@@ -501,12 +577,12 @@ if (file.exists(young_mathew_path) &&
   )
 }
 primary <- first_ordered_replicate_rows(primary)
-small <- if (file.exists(small_path)) {
+small <- if (nzchar(small_path) && file.exists(small_path)) {
   first_ordered_replicate_rows(
     read_results(small_path, "Small-sample validation results")
   )
 } else {
-  primary[as.integer(primary$n) < 500L, , drop = FALSE]
+  primary[0L, , drop = FALSE]
 }
 
 primary_detail <- scenario_detail(primary, primary_supp_method_order)
@@ -534,6 +610,7 @@ primary_dgp_widths <- dgp_width_ranges(primary_detail,
                                        primary_main_method_order)
 small_dgp_widths <- dgp_width_ranges(small_boundary_detail,
                                      small_main_method_order)
+scan_calibration <- scan_calibration_table(scan_calibration_path)
 
 primary_delivery <- wide_delivery(primary_detail, primary_supp_method_order)
 small_delivery <- wide_delivery(small_boundary_detail, small_supp_method_order)
@@ -549,6 +626,10 @@ utils::write.csv(primary_delivery,
 utils::write.csv(primary_dgp_widths,
                  file.path(output_dir,
                            "tolerance_validation_article_dgp_width_ranges.csv"),
+                 row.names = FALSE)
+utils::write.csv(scan_calibration,
+                 file.path(output_dir,
+                           "tolerance_validation_article_scan_calibration.csv"),
                  row.names = FALSE)
 utils::write.csv(primary_detail,
                  file.path(output_dir,
@@ -600,6 +681,10 @@ write_dgp_width_tex(
   file.path(output_dir, "tolerance_validation_article_dgp_width_ranges.tex"),
   "\\textbf{Primary iid tolerance-validation width ranges by DGP.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each DGP, sample size, content, and method. Widths are not pooled across DGPs.",
   "tab:supp-primary-dgp-width-ranges"
+)
+write_scan_calibration_tex(
+  scan_calibration,
+  file.path(output_dir, "tolerance_validation_article_scan_calibration.tex")
 )
 if (has_small_boundary) {
   write_range_tex(

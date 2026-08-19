@@ -46,6 +46,18 @@ method_pch <- c(tcsp_mc = 16, young_mathew = 16, wilks_minmax = 1)
 
 num <- function(x) suppressWarnings(as.numeric(x))
 format_content <- function(x) sprintf("%.2f", num(x))
+format_width_tick <- function(x) {
+  x <- num(x)
+  ifelse(
+    x < 1,
+    format(signif(x, 2), trim = TRUE, scientific = FALSE),
+    ifelse(
+      x < 10,
+      format(signif(x, 2), trim = TRUE, scientific = FALSE),
+      format(round(x), trim = TRUE, scientific = FALSE)
+    )
+  )
+}
 
 if (!file.exists(width_csv)) {
   if (file.exists(figure_path) && file.exists(manifest_path)) {
@@ -113,10 +125,12 @@ for (ii in seq_len(nrow(cells))) {
   y_base <- seq_along(dgp_levels)
   plot(NA_real_, NA_real_, xlim = xlim + c(-pad, pad),
        ylim = c(0.45, length(dgp_levels) + 0.55),
-       yaxt = "n", xlab = "Raw interval width, log scale",
+       xaxt = "n", yaxt = "n", xlab = "Raw interval width, log scale",
        ylab = "", main = sprintf("n = %s, c = %s", nn, format_content(cc)),
        bty = "l")
-  axis(1, at = pretty(xlim), labels = signif(10^pretty(xlim), 3))
+  ticks <- pretty(xlim, n = 4)
+  ticks <- ticks[ticks >= xlim[[1L]] & ticks <= xlim[[2L]]]
+  axis(1, at = ticks, labels = format_width_tick(10^ticks), cex.axis = 0.75)
   axis(2, at = y_base, labels = dgp_levels, las = 1, cex.axis = 0.72)
   abline(h = y_base, col = "gray92", lwd = 0.7)
   for (method in method_order) {
