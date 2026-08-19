@@ -22,10 +22,10 @@ The follow-up config is
 - `ecm200_audit`: reruns the primary grid only for methods needed to audit the
   fixed-target MTI ECM row at 200 iterations. It records initial/final objective,
   relative objective drop, final stationarity, and trace length.
-- `paper_matched_90`: uses the full-range threshold cells `(38, 0.90)`,
-  `(77, 0.95)`, and `(388, 0.99)` at tolerance confidence `0.90`, matching the
-  feasibility convention used in the calibrated Bayesian nonparametric tolerance
-  interval paper.
+- `reference_90`: uses the full-range threshold cells `(38, 0.90)`,
+  `(77, 0.95)`, and `(388, 0.99)` at tolerance confidence `0.90`. This lane
+  records the lower-confidence reference design used to compare against
+  published calibrated Bayesian nonparametric tolerance-interval examples.
 - `small_sample_95`: uses the corresponding `0.95`-confidence thresholds
   `(46, 0.90)`, `(93, 0.95)`, and `(473, 0.99)`, plus practical `n = 50` and
   `n = 100` stress cells. These cells are paired explicitly in the config to

@@ -1,7 +1,7 @@
 {
   "schema_version": "rqrgibbs_bayes_uq_validation/1.2.0",
   "study_id": "rqr_bayes_uq_followup_20260816",
-  "description": "Follow-up iid univariate tolerance validation lanes: 200-iteration MTI-ECM audit, 90%-confidence paper-matched feasibility cells, and 95%-confidence small-sample feasibility cells.",
+  "description": "Follow-up iid univariate tolerance validation lanes: 200-iteration MTI-ECM audit, 90%-confidence reference feasibility cells, and 95%-confidence small-sample feasibility cells.",
   "base_seed": 863216,
   "claim_scope": {
     "iid_univariate_continuous_only": true,
@@ -14,7 +14,7 @@
   "execution": {
     "smoke_authorized": true,
     "ecm200_audit_authorized": true,
-    "paper_matched_90_authorized": true,
+    "reference_90_authorized": true,
     "small_sample_95_authorized": true,
     "overnight_mode": "small_sample_95",
     "checkpoint_every_datasets": 10
@@ -23,7 +23,7 @@
     "reference_method_id": "tcsp_mc",
     "oracle_width_reference_method_id": "oracle_sh",
     "primary_tolerance_confidence": 0.95,
-    "paper_matched_tolerance_confidence": 0.90,
+    "reference_tolerance_confidence": 0.90,
     "full_range_feasibility_formula": "1 - n * (1 - c) * c^(n - 1) - c^n"
   },
   "oracle": {
@@ -37,8 +37,8 @@
     "smoke_numerical_confidence": 0.995,
     "ecm200_audit_n_sim": 5000,
     "ecm200_audit_numerical_confidence": 0.995,
-    "paper_matched_90_n_sim": 5000,
-    "paper_matched_90_numerical_confidence": 0.995,
+    "reference_90_n_sim": 5000,
+    "reference_90_numerical_confidence": 0.995,
     "small_sample_95_n_sim": 5000,
     "small_sample_95_numerical_confidence": 0.995,
     "seed": 1512616
@@ -65,7 +65,7 @@
         "n_mcmc": 12,
         "thin": 1
       },
-      "paper_matched_90_mcmc_control": {
+      "reference_90_mcmc_control": {
         "n_burn": 25,
         "n_mcmc": 50,
         "thin": 1
@@ -91,7 +91,7 @@
         "tol_stationarity": 0.00001,
         "store_iteration_trace": true
       },
-      "paper_matched_90_ecm_control": {
+      "reference_90_ecm_control": {
         "max_iter": 200,
         "stable_iterations": 2,
         "tol_stationarity": 0.00001,
@@ -351,7 +351,7 @@
         "wilks_minmax"
       ]
     },
-    "paper_matched_90": {
+    "reference_90": {
       "dgp_ids": [
         "normal",
         "lognormal_hard",

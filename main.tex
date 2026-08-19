@@ -1495,18 +1495,27 @@ comparison. Hybrid Bayesian--scan actions are evaluated at posterior content
 thresholds \(0.90\), \(0.95\), and \(0.99\), using the same random samples as
 the empirical scan action.
 
-The method set separates the object being compared. The population shortest
-interval is an oracle width reference. TCSP is the formal scan-calibrated
-shortest empirical action. The hybrid DP--scan action adds a direct
-Dirichlet-process content screen to the same calibrated count. The MTI Gibbs and
-MTI ECM rows are fixed-target generalized-Bayes endpoint summaries constructed
-after the scan selects the retained count and sample tilt; their formal scan
-window remains recorded separately. Young--Mathew interpolation
-\citep{YoungMathew2014NonparametricTolerance}, Wilks min--max intervals
-\citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction}, and the DKW
-fallback provide classical and conservative order-statistic comparators. Primary
-metrics are grid delivery success, conditional success among feasible fits,
-median width relative to TCSP, infeasibility, and runtime.
+The main comparison is restricted to deployable data-based tolerance actions.
+TCSP is the formal scan-calibrated shortest empirical action. The hybrid
+DP--scan action uses the same selected window after adding a direct
+Dirichlet-process content screen. Young--Mathew interpolation
+\citep{YoungMathew2014NonparametricTolerance} and Wilks min--max intervals
+\citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction} provide the two
+external distribution-free comparators. The population shortest interval is
+reported only as a non-deployable efficiency benchmark in the supplement. The
+fixed-target MTI Gibbs and MTI ECM summaries, DKW fallback, split-sample
+variants, and Bayesian bootstrap shortest-window diagnostic are also kept in the
+supplement because they answer narrower computational or diagnostic questions
+rather than the primary deployable tolerance question.
+
+The reported metrics separate numerical return, content assessment, and
+tolerance delivery. Returned intervals are planned fits that produce a finite
+interval. Content success conditions on returned intervals and checks whether
+the true population content under the data-generating law is at least the target
+\(c\). Delivery counts every planned fit and therefore treats non-returned
+intervals as failures. Width is the raw interval length, summarized by its
+median and central 95\% Monte Carlo range, and runtime is the median elapsed
+time among returned intervals.
 
 \begin{table}[!htbp]
 \centering
@@ -1514,40 +1523,35 @@ median width relative to TCSP, infeasibility, and runtime.
 the completed primary grid with seven data-generating laws, \(n\in\{500,1000\}\),
 \(c\in\{0.90,0.95,0.99\}\), tolerance confidence \(0.95\), three posterior
 content thresholds for Bayesian-screened methods, and 100 replications per
-cell. Delivery counts infeasible cells as failures; feasible success conditions
-on methods returning an interval. Width is reported relative to the TCSP scan
-action on the same data set and target.}
+cell. The table includes deployable data-based tolerance procedures only.
+Returned intervals are finite intervals. Content success conditions on returned
+intervals and checks true population content against the target \(c\). Delivery
+counts non-returned intervals as failures. Width is raw interval length,
+reported as median [2.5\%, 97.5\%].}
 \label{tab:tolerance-validation-main}
 \TableStyle
 \input{tables/tolerance_validation_main_summary.tex}
 \end{table}
 
-Table~\ref{tab:tolerance-validation-main} gives a compact view of the primary
-run. TCSP and the hybrid DP--scan action have identical delivered intervals on
-this grid, with \(98.7\%\) delivery and median relative width one; the hybrid
-screen adds a Bayesian content check at a large runtime cost. Wilks min--max is
-slightly more conservative in delivery, \(99.3\%\), but its median width is
-about \(42\%\) larger than TCSP. Young--Mathew is slightly narrower than TCSP on
-median and delivers \(96.4\%\), above the nominal \(95\%\)-confidence target but
-below the scan and Wilks comparators on this hard multi-family grid. The
-fixed-target MTI Gibbs and ECM summaries have high
-conditional success among feasible cells, while their delivery rates reflect the
-intended fail-closed behavior at the difficult \(n=500,c=0.99\) cells. The DKW
-fallback is included as a conservative diagnostic: when feasible it succeeds,
-but it is often infeasible and substantially wider.
+Table~\ref{tab:tolerance-validation-main} gives the current primary-run
+summary. TCSP and the hybrid DP--scan action return intervals in all planned
+cells, deliver \(98.7\%\) content success over the full grid, and have identical
+raw width summaries, \(3.546\,[1.488,15.563]\). The hybrid content screen is
+therefore best interpreted as a Bayesian uncertainty-quantification layer for
+the scan action; in this implementation it has a median runtime of 307.573
+seconds, compared with 0.003 seconds for TCSP. Young--Mathew is the closest
+external benchmark, with full return, \(96.4\%\) delivery, and width
+\(3.584\,[1.930,15.289]\). Wilks is the most conservative main comparator:
+delivery is \(99.3\%\), while the median width increases to
+\(7.684\,[2.517,23.043]\).
 
-Two follow-up lanes are now part of the validation protocol. First, the primary
-grid is rerun for the MTI ECM row with 200 iterations and compact objective
-trace diagnostics, so the mode computation can be judged by objective descent
-and final stationarity rather than by a strict convergence flag alone. Second,
-small-sample cells are added with paired \((n,c,1-\alpha)\) triples. For the
-paper-matched \(90\%\)-confidence lane, the full-range thresholds are
-\((38,0.90)\), \((77,0.95)\), and \((388,0.99)\)
-\citep{PourmohamadRichardsonSanso2026CalibratedBNP}. For the \(95\%\)-confidence
-lane, the corresponding thresholds are \((46,0.90)\), \((93,0.95)\), and
-\((473,0.99)\), augmented by practical \(n=50\) and \(n=100\) stress cells. The
-design cells are stored explicitly in the validation config, which prevents a
-Cartesian product from mixing thresholds across confidence levels.
+The supplement records the broader audit used to decide this main roster. It
+keeps oracle shortest intervals as non-deployable efficiency references, reports
+fixed-target MTI Gibbs and ECM summaries as computational variants of the
+mean-tilted construction, and documents DKW, split-sample, fallback, and
+Bayesian-bootstrap diagnostics. It also states the feasibility thresholds that
+would govern any focused small-sample relaunch, including the distinction
+between \(90\%\)- and \(95\%\)-confidence lanes.
 
 \section{Discussion}
 \label{sec:discussion}

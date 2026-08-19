@@ -1,15 +1,10 @@
-\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xrrrr@{}}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xrrrrr@{}}
 \toprule
-Method & Role & Delivery (\%) & Feasible success (\%) & Width/TCSP & Median sec\\
+Method and role & Returned (\%) & Content success (\%) & Delivery (\%) & Width & Median sec\\
 \midrule
-TCSP scan & Shortest empirical scan action & 98.7 & 98.7 & 1 & 0.003 \\
-Hybrid DP--scan & Scan action with direct-DP content screen & 98.7 & 98.7 & 1 & 307.573 \\
-MTI Gibbs & Fixed-target generalized-Bayes summary & 82.8 & 99.4 & 1.032 & 0.003 \\
-MTI ECM & Fixed-target generalized-Bayes mode & 82.7 & 99.2 & 1 & 0.002 \\
-Split empirical & Exact-spacing split action & 80.2 & 96.3 & 1.003 & 0.003 \\
-Split ECM & Exact-spacing split action with ECM pilot & 80.2 & 96.3 & 1.005 & 1.185 \\
-Young--Mathew & Classical interpolated comparator & 96.4 & 96.4 & 0.993 & 0.036 \\
-Wilks min--max & Classical full-range comparator & 99.3 & 99.3 & 1.423 & 0.001 \\
-DKW scan & Conservative scan fallback & 16.7 & 100.0 & 1.724 & 0.001 \\
+TCSP scan: Shortest empirical scan action & 100.0 & 98.7 & 98.7 & 3.546 [1.488, 15.563] & 0.003 \\
+Hybrid DP--scan: Scan action with DP content screen & 100.0 & 98.7 & 98.7 & 3.546 [1.488, 15.563] & 307.573 \\
+Young--Mathew: External tolerance comparator & 100.0 & 96.4 & 96.4 & 3.584 [1.930, 15.289] & 0.036 \\
+Wilks min--max: Full-range order-statistic baseline & 100.0 & 99.3 & 99.3 & 7.684 [2.517, 23.043] & 0.001 \\
 \bottomrule
 \end{tabularx}

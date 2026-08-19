@@ -2118,19 +2118,31 @@ warnings described above.}
 The primary tolerance validation is restricted to iid continuous univariate
 samples. This is the setting in which the scan-calibrated empirical action,
 Wilks-style full-range intervals, Young--Mathew interpolation, and the direct
-Dirichlet-process content screen can be compared on the same target. Regression
-and dynamic tolerance calibration require additional results because the fitted
-intervals vary with covariates or time.
+Dirichlet-process content screen share a common repeated-sampling target.
+Regression and dynamic tolerance calibration require separate theory because
+their fitted intervals vary with covariates or time.
 
-The primary grid used in the article fixes tolerance confidence \(1-\alpha=0.95\),
-uses \(n\in\{500,1000\}\), and studies contents
-\(c\in\{0.90,0.95,0.99\}\). The distributional shapes are Gaussian, moderate
-log-normal skewness, stronger log-normal skewness, separated mixtures,
-scale contamination, and Student \(t_3\) tails. Each cell uses paired random
-samples across methods and records the repository commit, frozen JSON
-configuration, scan-calibration cache, oracle certificates, wave plan, and
-artifact hashes. The primary validation table in the main article is generated
-from the collected primary run summary rather than edited by hand.
+The primary grid used in the article fixes tolerance confidence
+\(1-\alpha=0.95\), uses \(n\in\{500,1000\}\), and studies contents
+\(c\in\{0.90,0.95,0.99\}\). The seven distributional shapes are Gaussian, two
+log-normal skewness levels, two separated mixtures, five-percent scale
+contamination, and Student \(t_3\) tails. Each cell uses paired random samples
+across methods and records the repository commit, frozen JSON configuration,
+scan-calibration cache, oracle certificates, wave plan, and artifact hashes.
+The primary validation table in the main article is regenerated from row-level
+outputs by \texttt{tables/generate\_tolerance\_validation\_summary\_table.R}.
+
+The main article reports four deployable data-based tolerance actions. TCSP is
+the scan-calibrated shortest empirical action. Hybrid DP--scan augments that
+same action with a direct Dirichlet-process content screen. Young--Mathew and
+Wilks min--max are retained as external distribution-free comparators. Other
+rows in the validation output serve narrower roles and are therefore kept out of
+the main table. The population shortest interval is an oracle efficiency
+reference because it uses the true data-generating distribution. Fixed-target
+MTI Gibbs and MTI ECM summaries audit cheaper mean-tilted generalized-Bayes
+computations after the scan has selected a retained count and sample tilt. The
+DKW fallback, split-sample variants, MTI fallback, and Bayesian-bootstrap
+shortest-window diagnostic are implementation and boundary checks.
 
 Small-sample feasibility is governed by the full-range two-sided order-statistic
 coverage probability
@@ -2163,34 +2175,47 @@ Tolerance confidence & \(c=0.90\) & \(c=0.95\) & \(c=0.99\)\\
 
 This distinction matters for interpreting the small sample sizes in
 \citet{PourmohamadRichardsonSanso2026CalibratedBNP}. The values
-\((38,77,388)\) are appropriate for a \(90\%\)-confidence lane. A
-\(95\%\)-confidence lane needs the larger thresholds \((46,93,473)\). The
-follow-up configuration therefore stores paired design cells instead of forming
-all combinations of sample size, content, and confidence.
+\((38,77,388)\) are appropriate for a \(90\%\)-confidence reference lane. A
+\(95\%\)-confidence lane needs the larger thresholds \((46,93,473)\). Any
+focused small-sample relaunch should therefore store paired design cells
+instead of forming all combinations of sample size, content, and confidence.
 
-The follow-up validation has three lanes. The ECM-200 lane reruns the primary
-\(0.95\)-confidence grid for the fixed-target MTI ECM row with 200 iterations
-and compact trace summaries: initial objective, final objective, relative
-objective drop, final stationarity, and trace length. This preserves the
-completed primary comparison for unchanged methods while directly auditing the
-only setting that changed. The paper-matched lane uses confidence \(0.90\) and
-the threshold cells \((38,0.90)\), \((77,0.95)\), and \((388,0.99)\), with an
-added standardized Beta law to stress bounded skewness. The small-sample
-\(0.95\)-confidence lane uses the thresholds \((46,0.90)\), \((93,0.95)\), and
-\((473,0.99)\), plus practical \(n=50\) and \(n=100\) stress cells that are
-explicitly allowed to fail closed when the target is infeasible.
+The feasibility boundary is method-dependent. For a full-range
+distribution-free interval, Table~\ref{tab:supp-full-range-thresholds} gives the
+smallest \(n\). For a split-sample procedure with training fraction \(\rho\),
+only the calibration sample carries the order-statistic guarantee, so the total
+sample size must be inflated by roughly \(1/(1-\rho)\). At
+\(1-\alpha=0.95\), this gives total sizes approximately
+\((53,109,556)\) for a \(15/85\) split and \((65,132,675)\) for a \(30/70\)
+split at \(c=(0.90,0.95,0.99)\). The DKW fallback is much more restrictive:
+using \(2\exp(-2n\epsilon^2)\le \alpha\) with
+\(\epsilon=(1-c)/2\) requires \(n\ge 738, 2952,\) and \(73778\) for the same
+three contents at \(95\%\) confidence. Its poor feasibility in the primary grid
+is therefore structural, not a numerical bug, and it is treated as a
+supplemental stress diagnostic rather than a main comparator.
 
-The reported metrics are aligned across lanes: delivery success, conditional
-content success among returned intervals, true content, width, width relative to
-the TCSP scan action, width relative to the population shortest oracle,
-infeasibility, posterior-constraint status for Bayesian-screened actions, ECM
-trace diagnostics, and runtime. The Young--Mathew comparator is evaluated
-through the \texttt{tolerance} package's \texttt{nptol.int(..., method = "YM")}
+The reported metrics are aligned across lanes. Returned intervals are finite
+intervals produced by the method. Content success conditions on returned
+intervals and evaluates the true population content under the known
+data-generating law. Delivery is the unconditional success rate across planned
+fits, with non-returned intervals counted as failures. Raw width is summarized
+by the median and central Monte Carlo range; relative widths are retained only
+as supplemental efficiency diagnostics against TCSP or the population shortest
+oracle. The Young--Mathew comparator is evaluated through the
+\texttt{tolerance} package's \texttt{nptol.int(..., method = "YM")}
 implementation, and its package version is hashed into the method audit digest.
 The hybrid direct-DP method is retained where runtime is scientifically useful;
-the largest small-sample \(0.95\)-confidence lane omits that expensive screen
-because the primary study already shows that it returns the same formal scan
-window at much higher runtime.
+the primary study already shows that it returns the same formal scan window as
+TCSP at much higher runtime.
+
+A focused relaunch, if needed, should have two purposes. First, rerun the
+fixed-target MTI ECM row with 200 iterations and compact objective-trace
+diagnostics: initial objective, final objective, relative objective drop, final
+stationarity, and trace length. Second, evaluate feasible small-sample cells
+with fixed \(95\%\) tolerance confidence, especially \(n=50\), \(n=100\), and
+the content-specific thresholds in Table~\ref{tab:supp-full-range-thresholds}.
+This design tests the region where the main methods differ most while avoiding
+comparisons dominated by deterministic infeasibility.
 
 \section{Reproducibility and Evidence Boundaries}
 \label{sec:supp-reproducibility}
