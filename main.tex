@@ -1559,7 +1559,9 @@ thresholds \(0.90\), \(0.95\), and \(0.99\), using the same random samples as
 the empirical scan action.
 
 The method set separates the primary tolerance actions from computational
-diagnostics. The population shortest interval is an oracle width reference.
+diagnostics. The population shortest interval is kept only in diagnostic outputs
+as a distribution-aware lower-bound width reference and is excluded from the
+article comparisons because it uses oracle knowledge of \(F\).
 TCSP is the formal scan-calibrated shortest empirical action and is therefore
 the primary tolerance action for this study. Its optimality is class-specific:
 it minimizes width among closed order-statistic windows satisfying the
@@ -1721,11 +1723,12 @@ tolerance action and gives a class-specific minimum-width property within the
 calibrated empirical scan class. Generalized-Bayes computation begins only after
 the content and tilt are fixed. MTI Gibbs and ECM endpoint summaries are
 interpreted conditionally on the scan-selected count and tilt. In the present
-validation evidence, MTI ECM supplies the stable fixed-target summary used for
-the main comparison. MTI Gibbs remains a diagnostic sampler because several
-multi-chain checks show poor mixing. Tolerance confidence remains attached to
-the scan action, and posterior credibility is therefore kept separate from
-tolerance confidence.
+validation evidence, MTI ECM supplies a stable fixed-target diagnostic in the
+supplement, while the main comparison uses the formal scan actions and
+classical order-statistic comparators. MTI Gibbs remains a diagnostic sampler
+because several multi-chain checks show poor mixing. Tolerance confidence
+remains attached to the scan action, and posterior credibility is therefore
+kept separate from tolerance confidence.
 Publication-level finite-sample wording still requires an action-matched scan
 proof and certified critical-count calculation. Replacing the empirical
 window by a posterior summary would require an additional transfer or direct

@@ -11,6 +11,7 @@ template <- data.frame(
   method_id = character(),
   success = logical(),
   infeasible = logical(),
+  width = numeric(),
   width_ratio_to_reference = numeric(),
   width_ratio_to_oracle_sh = numeric(),
   elapsed_sec = numeric(),
@@ -22,13 +23,15 @@ template <- data.frame(
 )
 
 row <- function(mode, method_id, success, infeasible, content,
-                width_ref = 1, width_oracle = 1.2, elapsed = 0.01,
+                width = 2, width_ref = 1, width_oracle = 1.2,
+                elapsed = 0.01,
                 stat = NA_real_, rel_drop = NA_real_, trace = NA_real_) {
   data.frame(
     mode = mode,
     method_id = method_id,
     success = success,
     infeasible = infeasible,
+    width = width,
     width_ratio_to_reference = width_ref,
     width_ratio_to_oracle_sh = width_oracle,
     elapsed_sec = elapsed,
@@ -144,6 +147,8 @@ stopifnot(grepl("Method & Infeasible", design_tex, fixed = TRUE))
 stopifnot(grepl("Minimal 90\\% confidence design", design_tex, fixed = TRUE))
 stopifnot(grepl("ECM 500-iteration sensitivity", design_tex, fixed = TRUE))
 stopifnot(grepl("Returned success", design_tex, fixed = TRUE))
+stopifnot(grepl("Width 95\\% range", design_tex, fixed = TRUE))
+stopifnot(!grepl("Width/TCSP", design_tex, fixed = TRUE))
 stopifnot(!grepl("MTI Gibbs", design_tex, fixed = TRUE))
 stopifnot(!grepl("Lane", design_tex, fixed = TRUE))
 stopifnot(!grepl("Paper-matched", design_tex, fixed = TRUE))
@@ -155,6 +160,8 @@ small_tex <- paste(readLines(
 ), collapse = "\n")
 stopifnot(grepl("Target content", small_tex, fixed = TRUE))
 stopifnot(grepl("Returned success", small_tex, fixed = TRUE))
+stopifnot(grepl("Width 95\\% range", small_tex, fixed = TRUE))
+stopifnot(!grepl("Width/TCSP", small_tex, fixed = TRUE))
 stopifnot(!grepl("Feasible success", small_tex, fixed = TRUE))
 
 cat("Tolerance follow-up table test passed.\n")

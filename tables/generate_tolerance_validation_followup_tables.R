@@ -125,6 +125,17 @@ format_sci <- function(x, digits = 2) {
   x <- as.numeric(x)
   ifelse(is.finite(x), sprintf(paste0("%.", digits, "e"), x), "--")
 }
+format_width_range <- function(lower, upper) {
+  lower <- as.numeric(lower)
+  upper <- as.numeric(upper)
+  out <- rep("--", length(lower))
+  ok <- is.finite(lower) & is.finite(upper)
+  same <- ok & abs(lower - upper) < 5e-4
+  out[same] <- format_num(lower[same], 2)
+  out[ok & !same] <- paste0(format_num(lower[ok & !same], 2), "--",
+                            format_num(upper[ok & !same], 2))
+  out
+}
 format_int <- function(x) {
   x <- as.numeric(x)
   ifelse(is.finite(x), format(round(x), big.mark = ",", scientific = FALSE),
@@ -137,7 +148,7 @@ escape_latex <- function(x) {
 }
 
 method_labels <- c(
-  oracle_sh = "Population shortest oracle",
+  oracle_sh = "Oracle width reference",
   hdp_s_mc = "Hybrid DP--scan",
   tcsp_mc = "TCSP scan",
   tcsp_mti_gibbs_median_mc = "MTI Gibbs",
@@ -162,10 +173,10 @@ public_design_ids <- c(
 read_design <- function(path, design_id) {
   out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
   required <- c(
-    "mode", "method_id", "success", "infeasible", "width_ratio_to_reference",
-    "width_ratio_to_oracle_sh", "elapsed_sec", "guaranteed_content",
-    "ecm_final_stationarity", "ecm_relative_objective_drop",
-    "ecm_trace_length"
+    "mode", "method_id", "success", "infeasible", "width",
+    "width_ratio_to_reference", "width_ratio_to_oracle_sh", "elapsed_sec",
+    "guaranteed_content", "ecm_final_stationarity",
+    "ecm_relative_objective_drop", "ecm_trace_length"
   )
   missing <- setdiff(required, names(out))
   if (length(missing)) {
@@ -195,6 +206,9 @@ summarize_group <- function(df) {
     } else {
       NA_real_
     },
+    median_width = median_or_na(df$width),
+    width_q025 = quantile_or_na(df$width, 0.025),
+    width_q975 = quantile_or_na(df$width, 0.975),
     median_width_ratio_to_tcsp = median_or_na(df$width_ratio_to_reference),
     median_width_ratio_to_oracle = median_or_na(df$width_ratio_to_oracle_sh),
     median_elapsed_sec = median_or_na(df$elapsed_sec),
@@ -235,8 +249,9 @@ design_summary <- design_summary[order(
 ), ]
 design_summary <- design_summary[c(
   "design_id", "design", "method_id", "method", "replications", "infeasible_rate",
-  "delivery_success", "returned_success", "median_width_ratio_to_tcsp",
-  "median_width_ratio_to_oracle", "median_elapsed_sec"
+  "delivery_success", "returned_success", "median_width", "width_q025",
+  "width_q975", "median_width_ratio_to_tcsp", "median_width_ratio_to_oracle",
+  "median_elapsed_sec"
 )]
 
 ecm_rows <- results[results$method_id == "tcsp_mti_ecm_map_mc", , drop = FALSE]
@@ -303,7 +318,7 @@ small_content <- small_content[order(
 small_content <- small_content[c(
   "guaranteed_content", "method_id", "method", "replications",
   "infeasible_rate", "delivery_success", "returned_success",
-  "median_width_ratio_to_tcsp", "median_elapsed_sec"
+  "median_width", "width_q025", "width_q975", "median_elapsed_sec"
 )]
 
 write_table <- function(df, name) {
@@ -318,7 +333,7 @@ write_table(small_content, "tolerance_validation_small_sample_content_summary")
 design_lines <- c(
   "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrrr@{}}",
   "\\toprule",
-  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width/TCSP & Median sec\\\\",
+  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width 95\\% range & Median sec\\\\",
   "\\midrule"
 )
 for (design_name in unique(design_summary$design)) {
@@ -340,7 +355,7 @@ for (design_name in unique(design_summary$design)) {
       format_pct(block$infeasible_rate[[ii]]),
       format_pct(block$delivery_success[[ii]]),
       format_pct(block$returned_success[[ii]]),
-      format_num(block$median_width_ratio_to_tcsp[[ii]], 3),
+      format_width_range(block$width_q025[[ii]], block$width_q975[[ii]]),
       format_sec(block$median_elapsed_sec[[ii]])
     )
   }, character(1L))
@@ -377,7 +392,7 @@ writeLines(c(
 small_lines <- c(
   "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrrr@{}}",
   "\\toprule",
-  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width/TCSP & Median sec\\\\",
+  "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width 95\\% range & Median sec\\\\",
   "\\midrule"
 )
 for (cc in sort(unique(small_content$guaranteed_content))) {
@@ -399,7 +414,7 @@ for (cc in sort(unique(small_content$guaranteed_content))) {
       format_pct(block$infeasible_rate[[ii]]),
       format_pct(block$delivery_success[[ii]]),
       format_pct(block$returned_success[[ii]]),
-      format_num(block$median_width_ratio_to_tcsp[[ii]], 3),
+      format_width_range(block$width_q025[[ii]], block$width_q975[[ii]]),
       format_sec(block$median_elapsed_sec[[ii]])
     )
   }, character(1L))
