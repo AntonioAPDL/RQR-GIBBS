@@ -93,6 +93,7 @@ config <- canonicalize_bayes_uq_config(config)
 wave_id <- arg_value("--wave-id=", NA_character_)
 wave_filters <- list(
   dgp_id = csv_values(arg_value("--wave-dgp=", NULL)),
+  method_id = csv_values(arg_value("--wave-method=", NULL)),
   n = csv_values(arg_value("--wave-n=", NULL)),
   guaranteed_content = csv_values(arg_value("--wave-content=", NULL)),
   tolerance_confidence = csv_values(
@@ -279,6 +280,9 @@ filter_design_cells <- function(cells) {
 
 mode_cfg$dgp_ids <- filter_character(
   mode_cfg$dgp_ids, wave_filters$dgp_id, "dgp_id"
+)
+mode_cfg$method_ids <- filter_character(
+  mode_cfg$method_ids, wave_filters$method_id, "method_id"
 )
 mode_cfg$posterior_confidences <- filter_numeric(
   mode_cfg$posterior_confidences, wave_filters$posterior_confidence,
