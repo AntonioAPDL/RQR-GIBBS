@@ -1,9 +1,9 @@
 # RQR-DLM frozen-source completion run: user-requested stop
 
-Date: 2026-08-14  
-Run ID: `rqr_dlm_frozen_source_completion_20260811_3e8e50b`  
-Authorization/source commit: `3e8e50b262d3101bf9d253620961207579748b59`  
-Repository branch at closeout: `feature/bayesian-uq-authoritative-report6-20260812`  
+Date: 2026-08-14
+Run ID: `rqr_dlm_frozen_source_completion_20260811_3e8e50b`
+Authorization/source commit: `3e8e50b262d3101bf9d253620961207579748b59`
+Repository branch at closeout: `feature/bayesian-uq-authoritative-report6-20260812`
 Repository commit before this closeout: `e51ef2835b2cf4cc617ec45ff237b05fb6103f11`
 
 ## Scope

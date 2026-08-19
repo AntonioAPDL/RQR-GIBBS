@@ -1,0 +1,37 @@
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xrrrrr@{}}
+\toprule
+Method & Infeasible (\%) & Delivery (\%) & Returned success (\%) & Width/TCSP & Median sec\\
+\midrule
+\addlinespace[0.35em]
+\multicolumn{6}{@{}l}{\textit{ECM 200-iteration diagnostic}}\\
+Population shortest oracle & 0.0 & 100.0 & 100.0 & 0.876 & 0.001 \\
+TCSP scan & 0.0 & 98.7 & 98.7 & 1 & 0.003 \\
+MTI ECM & 16.7 & 82.6 & 99.1 & 1 & 4.585 \\
+Young--Mathew & 0.0 & 96.0 & 96.0 & 0.992 & 0.015 \\
+Wilks min--max & 0.0 & 99.5 & 99.5 & 1.425 & 0.001 \\
+\addlinespace[0.35em]
+\multicolumn{6}{@{}l}{\textit{Minimal 90\% confidence design}}\\
+Population shortest oracle & 0.0 & 100.0 & 100.0 & 0.812 & 0.001 \\
+TCSP scan & 0.0 & 90.0 & 90.0 & 1 & 0.002 \\
+Hybrid DP--scan & 0.0 & 90.0 & 90.0 & 1 & 2.641 \\
+MTI ECM & 100.0 & 0.0 & -- & -- & 0.001 \\
+Young--Mathew & 0.0 & 89.9 & 89.9 & 0.999 & 0.007 \\
+Wilks min--max & 0.0 & 90.0 & 90.0 & 1 & 0.000 \\
+DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
+\addlinespace[0.35em]
+\multicolumn{6}{@{}l}{\textit{Small-sample 95\% confidence design}}\\
+Population shortest oracle & 0.0 & 100.0 & 100.0 & 0.752 & 0.001 \\
+TCSP scan & 22.2 & 74.8 & 96.1 & 1 & 0.002 \\
+MTI ECM & 88.9 & 11.0 & 98.8 & 1 & 0.002 \\
+Young--Mathew & 0.0 & 92.3 & 92.3 & 0.997 & 0.010 \\
+Wilks min--max & 0.0 & 85.9 & 85.9 & 1 & 0.001 \\
+DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
+\addlinespace[0.35em]
+\multicolumn{6}{@{}l}{\textit{ECM 500-iteration sensitivity}}\\
+Population shortest oracle & 0.0 & 100.0 & 100.0 & 0.577 & 0.001 \\
+TCSP scan & 0.0 & 99.0 & 99.0 & 1 & 0.002 \\
+MTI ECM & 0.0 & 99.0 & 99.0 & 1 & 5.258 \\
+Young--Mathew & 0.0 & 97.0 & 97.0 & 1.115 & 0.009 \\
+Wilks min--max & 0.0 & 100.0 & 100.0 & 1.629 & 0.001 \\
+\bottomrule
+\end{tabularx}

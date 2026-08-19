@@ -1,0 +1,361 @@
+"dgp_id","dgp","n","content","method_id","method","replications","infeasible_rate","delivery_success","returned_success","median_width_ratio_to_tcsp","median_elapsed_sec"
+"contaminated_normal","contaminated normal",46,0.9,"tcsp_mc","TCSP",300,0,0.953333333333333,0.953333333333333,1,0.00199999999998113
+"contaminated_normal","contaminated normal",46,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999998113
+"contaminated_normal","contaminated normal",46,0.9,"young_mathew","Young--Mathew",300,0,0.953333333333333,0.953333333333333,0.992890535449751,0.00900000000001455
+"contaminated_normal","contaminated normal",46,0.9,"wilks_minmax","Wilks",300,0,0.953333333333333,0.953333333333333,1,0
+"contaminated_normal","contaminated normal",46,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"normal","Gaussian",46,0.9,"tcsp_mc","TCSP",300,0,0.95,0.95,1,0.00199999999999889
+"normal","Gaussian",46,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999712
+"normal","Gaussian",46,0.9,"young_mathew","Young--Mathew",300,0,0.95,0.95,0.997751040426262,0.0120000000000005
+"normal","Gaussian",46,0.9,"wilks_minmax","Wilks",300,0,0.95,0.95,1,0
+"normal","Gaussian",46,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"lognormal_hard","hard log-normal",46,0.9,"tcsp_mc","TCSP",300,0,0.953333333333333,0.953333333333333,1,0.00100000000000477
+"lognormal_hard","hard log-normal",46,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00100000000000477
+"lognormal_hard","hard log-normal",46,0.9,"young_mathew","Young--Mathew",300,0,0.95,0.95,0.992962503211499,0.007000000000005
+"lognormal_hard","hard log-normal",46,0.9,"wilks_minmax","Wilks",300,0,0.953333333333333,0.953333333333333,1,0
+"lognormal_hard","hard log-normal",46,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"beta_left","left-skewed Beta",46,0.9,"tcsp_mc","TCSP",300,0,0.933333333333333,0.933333333333333,1,0.00199999999995271
+"beta_left","left-skewed Beta",46,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999998113
+"beta_left","left-skewed Beta",46,0.9,"young_mathew","Young--Mathew",300,0,0.933333333333333,0.933333333333333,0.998145947822796,0.00800000000000978
+"beta_left","left-skewed Beta",46,0.9,"wilks_minmax","Wilks",300,0,0.933333333333333,0.933333333333333,1,0
+"beta_left","left-skewed Beta",46,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"lognormal","log-normal",46,0.9,"tcsp_mc","TCSP",300,0,0.936666666666667,0.936666666666667,1,0.00199999999999534
+"lognormal","log-normal",46,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999998113
+"lognormal","log-normal",46,0.9,"young_mathew","Young--Mathew",300,0,0.936666666666667,0.936666666666667,0.995881108782777,0.00900000000001455
+"lognormal","log-normal",46,0.9,"wilks_minmax","Wilks",300,0,0.936666666666667,0.936666666666667,1,0.000999999999976353
+"lognormal","log-normal",46,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"mixture","mixture",46,0.9,"tcsp_mc","TCSP",300,0,0.956666666666667,0.956666666666667,1,0.00199999999999534
+"mixture","mixture",46,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999534
+"mixture","mixture",46,0.9,"young_mathew","Young--Mathew",300,0,0.956666666666667,0.956666666666667,0.998746460804995,0.0109999999999815
+"mixture","mixture",46,0.9,"wilks_minmax","Wilks",300,0,0.956666666666667,0.956666666666667,1,0.000999999999976353
+"mixture","mixture",46,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"sharp_mixture","sharp mixture",46,0.9,"tcsp_mc","TCSP",300,0,0.96,0.96,1,0.0010000000000332
+"sharp_mixture","sharp mixture",46,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.0010000000000332
+"sharp_mixture","sharp mixture",46,0.9,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.999567090097831,0.00800000000000978
+"sharp_mixture","sharp mixture",46,0.9,"wilks_minmax","Wilks",300,0,0.96,0.96,1,0
+"sharp_mixture","sharp mixture",46,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"student_t3","Student t3",46,0.9,"tcsp_mc","TCSP",300,0,0.95,0.95,1,0.0010000000000332
+"student_t3","Student t3",46,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.0010000000000332
+"student_t3","Student t3",46,0.9,"young_mathew","Young--Mathew",300,0,0.946666666666667,0.946666666666667,0.995518278970063,0.0080000000000382
+"student_t3","Student t3",46,0.9,"wilks_minmax","Wilks",300,0,0.95,0.95,1,0
+"student_t3","Student t3",46,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"contaminated_normal","contaminated normal",50,0.9,"tcsp_mc","TCSP",300,0,0.953333333333333,0.953333333333333,1,0.00200000000000955
+"contaminated_normal","contaminated normal",50,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000244
+"contaminated_normal","contaminated normal",50,0.9,"young_mathew","Young--Mathew",300,0,0.946666666666667,0.946666666666667,0.919440345263927,0.0120000000000005
+"contaminated_normal","contaminated normal",50,0.9,"wilks_minmax","Wilks",300,0,0.953333333333333,0.953333333333333,1,0.000999999999976353
+"contaminated_normal","contaminated normal",50,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"normal","Gaussian",50,0.9,"tcsp_mc","TCSP",300,0,0.97,0.97,1,0.00199999999999534
+"normal","Gaussian",50,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999534
+"normal","Gaussian",50,0.9,"young_mathew","Young--Mathew",300,0,0.963333333333333,0.963333333333333,0.976201700201775,0.00900000000001455
+"normal","Gaussian",50,0.9,"wilks_minmax","Wilks",300,0,0.97,0.97,1,0.000999999999976353
+"normal","Gaussian",50,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"lognormal_hard","hard log-normal",50,0.9,"tcsp_mc","TCSP",300,0,0.983333333333333,0.983333333333333,1,0.00199999999999534
+"lognormal_hard","hard log-normal",50,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999534
+"lognormal_hard","hard log-normal",50,0.9,"young_mathew","Young--Mathew",300,0,0.98,0.98,0.933676793542705,0.00900000000001455
+"lognormal_hard","hard log-normal",50,0.9,"wilks_minmax","Wilks",300,0,0.983333333333333,0.983333333333333,1,0.000999999999976353
+"lognormal_hard","hard log-normal",50,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"beta_left","left-skewed Beta",50,0.9,"tcsp_mc","TCSP",300,0,0.973333333333333,0.973333333333333,1,0.00199999999998824
+"beta_left","left-skewed Beta",50,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999534
+"beta_left","left-skewed Beta",50,0.9,"young_mathew","Young--Mathew",300,0,0.973333333333333,0.973333333333333,0.982026446710195,0.0080000000000382
+"beta_left","left-skewed Beta",50,0.9,"wilks_minmax","Wilks",300,0,0.973333333333333,0.973333333333333,1,0
+"beta_left","left-skewed Beta",50,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"lognormal","log-normal",50,0.9,"tcsp_mc","TCSP",300,0,0.96,0.96,1,0.00100000000000477
+"lognormal","log-normal",50,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.0010000000000332
+"lognormal","log-normal",50,0.9,"young_mathew","Young--Mathew",300,0,0.943333333333333,0.943333333333333,0.951961295628703,0.00799999999999912
+"lognormal","log-normal",50,0.9,"wilks_minmax","Wilks",300,0,0.96,0.96,1,0
+"lognormal","log-normal",50,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"mixture","mixture",50,0.9,"tcsp_mc","TCSP",300,0,0.96,0.96,1,0.0010000000000332
+"mixture","mixture",50,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999998113
+"mixture","mixture",50,0.9,"young_mathew","Young--Mathew",300,0,0.956666666666667,0.956666666666667,0.987144206645664,0.00900000000001455
+"mixture","mixture",50,0.9,"wilks_minmax","Wilks",300,0,0.96,0.96,1,0.000999999999976353
+"mixture","mixture",50,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"sharp_mixture","sharp mixture",50,0.9,"tcsp_mc","TCSP",300,0,0.97,0.97,1,0.00200000000000955
+"sharp_mixture","sharp mixture",50,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"sharp_mixture","sharp mixture",50,0.9,"young_mathew","Young--Mathew",300,0,0.966666666666667,0.966666666666667,0.994937601345617,0.0110000000000241
+"sharp_mixture","sharp mixture",50,0.9,"wilks_minmax","Wilks",300,0,0.97,0.97,1,0.000999999999976353
+"sharp_mixture","sharp mixture",50,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"student_t3","Student t3",50,0.9,"tcsp_mc","TCSP",300,0,0.956666666666667,0.956666666666667,1,0.00199999999999712
+"student_t3","Student t3",50,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999534
+"student_t3","Student t3",50,0.9,"young_mathew","Young--Mathew",300,0,0.95,0.95,0.95673457580788,0.00900000000001455
+"student_t3","Student t3",50,0.9,"wilks_minmax","Wilks",300,0,0.956666666666667,0.956666666666667,1,0.000999999999976353
+"student_t3","Student t3",50,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"contaminated_normal","contaminated normal",50,0.95,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999990564
+"contaminated_normal","contaminated normal",50,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00100000000000122
+"contaminated_normal","contaminated normal",50,0.95,"young_mathew","Young--Mathew",300,0,0.88,0.88,NA,0.0110000000000135
+"contaminated_normal","contaminated normal",50,0.95,"wilks_minmax","Wilks",300,0,0.8,0.8,NA,0
+"contaminated_normal","contaminated normal",50,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"normal","Gaussian",50,0.95,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999990564
+"normal","Gaussian",50,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999990564
+"normal","Gaussian",50,0.95,"young_mathew","Young--Mathew",300,0,0.85,0.85,NA,0.00900000000001455
+"normal","Gaussian",50,0.95,"wilks_minmax","Wilks",300,0,0.696666666666667,0.696666666666667,NA,0.000999999999976353
+"normal","Gaussian",50,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"lognormal_hard","hard log-normal",50,0.95,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999997669
+"lognormal_hard","hard log-normal",50,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999998558
+"lognormal_hard","hard log-normal",50,0.95,"young_mathew","Young--Mathew",300,0,0.883333333333333,0.883333333333333,NA,0.00900000000001455
+"lognormal_hard","hard log-normal",50,0.95,"wilks_minmax","Wilks",300,0,0.693333333333333,0.693333333333333,NA,0
+"lognormal_hard","hard log-normal",50,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"beta_left","left-skewed Beta",50,0.95,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999990564
+"beta_left","left-skewed Beta",50,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00100000000000033
+"beta_left","left-skewed Beta",50,0.95,"young_mathew","Young--Mathew",300,0,0.863333333333333,0.863333333333333,NA,0.00900000000000034
+"beta_left","left-skewed Beta",50,0.95,"wilks_minmax","Wilks",300,0,0.71,0.71,NA,0
+"beta_left","left-skewed Beta",50,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"lognormal","log-normal",50,0.95,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999997669
+"lognormal","log-normal",50,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999976353
+"lognormal","log-normal",50,0.95,"young_mathew","Young--Mathew",300,0,0.84,0.84,NA,0.0080000000000382
+"lognormal","log-normal",50,0.95,"wilks_minmax","Wilks",300,0,0.696666666666667,0.696666666666667,NA,0
+"lognormal","log-normal",50,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"mixture","mixture",50,0.95,"tcsp_mc","TCSP",300,1,0,NA,NA,0.00100000000000122
+"mixture","mixture",50,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00100000000000477
+"mixture","mixture",50,0.95,"young_mathew","Young--Mathew",300,0,0.873333333333333,0.873333333333333,NA,0.0120000000000005
+"mixture","mixture",50,0.95,"wilks_minmax","Wilks",300,0,0.746666666666667,0.746666666666667,NA,0.000999999999976353
+"mixture","mixture",50,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000000122
+"sharp_mixture","sharp mixture",50,0.95,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999997669
+"sharp_mixture","sharp mixture",50,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999999668
+"sharp_mixture","sharp mixture",50,0.95,"young_mathew","Young--Mathew",300,0,0.856666666666667,0.856666666666667,NA,0.0120000000000005
+"sharp_mixture","sharp mixture",50,0.95,"wilks_minmax","Wilks",300,0,0.713333333333333,0.713333333333333,NA,0
+"sharp_mixture","sharp mixture",50,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"student_t3","Student t3",50,0.95,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999997669
+"student_t3","Student t3",50,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999997669
+"student_t3","Student t3",50,0.95,"young_mathew","Young--Mathew",300,0,0.813333333333333,0.813333333333333,NA,0.00800000000000978
+"student_t3","Student t3",50,0.95,"wilks_minmax","Wilks",300,0,0.713333333333333,0.713333333333333,NA,0
+"student_t3","Student t3",50,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"contaminated_normal","contaminated normal",93,0.95,"tcsp_mc","TCSP",300,0,0.926666666666667,0.926666666666667,1,0.00200000000000156
+"contaminated_normal","contaminated normal",93,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000244
+"contaminated_normal","contaminated normal",93,0.95,"young_mathew","Young--Mathew",300,0,0.926666666666667,0.926666666666667,0.999919848807559,0.00900000000001455
+"contaminated_normal","contaminated normal",93,0.95,"wilks_minmax","Wilks",300,0,0.926666666666667,0.926666666666667,1,0.000999999999976353
+"contaminated_normal","contaminated normal",93,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"normal","Gaussian",93,0.95,"tcsp_mc","TCSP",300,0,0.953333333333333,0.953333333333333,1,0.00199999999999534
+"normal","Gaussian",93,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999534
+"normal","Gaussian",93,0.95,"young_mathew","Young--Mathew",300,0,0.953333333333333,0.953333333333333,0.999977524673455,0.0080000000000382
+"normal","Gaussian",93,0.95,"wilks_minmax","Wilks",300,0,0.953333333333333,0.953333333333333,1,0
+"normal","Gaussian",93,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"lognormal_hard","hard log-normal",93,0.95,"tcsp_mc","TCSP",300,0,0.956666666666667,0.956666666666667,1,0.00200000000000244
+"lognormal_hard","hard log-normal",93,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"lognormal_hard","hard log-normal",93,0.95,"young_mathew","Young--Mathew",300,0,0.956666666666667,0.956666666666667,0.99993262662738,0.0110000000000241
+"lognormal_hard","hard log-normal",93,0.95,"wilks_minmax","Wilks",300,0,0.956666666666667,0.956666666666667,1,0.000999999999976353
+"lognormal_hard","hard log-normal",93,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"beta_left","left-skewed Beta",93,0.95,"tcsp_mc","TCSP",300,0,0.966666666666667,0.966666666666667,1,0.00199999999998113
+"beta_left","left-skewed Beta",93,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999998113
+"beta_left","left-skewed Beta",93,0.95,"young_mathew","Young--Mathew",300,0,0.966666666666667,0.966666666666667,0.999982927385534,0.00799999999999557
+"beta_left","left-skewed Beta",93,0.95,"wilks_minmax","Wilks",300,0,0.966666666666667,0.966666666666667,1,0
+"beta_left","left-skewed Beta",93,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"lognormal","log-normal",93,0.95,"tcsp_mc","TCSP",300,0,0.913333333333333,0.913333333333333,1,0.00199999999999534
+"lognormal","log-normal",93,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999889
+"lognormal","log-normal",93,0.95,"young_mathew","Young--Mathew",300,0,0.913333333333333,0.913333333333333,0.999957008667623,0.00900000000001455
+"lognormal","log-normal",93,0.95,"wilks_minmax","Wilks",300,0,0.913333333333333,0.913333333333333,1,0.000999999999976353
+"lognormal","log-normal",93,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"mixture","mixture",93,0.95,"tcsp_mc","TCSP",300,0,0.96,0.96,1,0.00200000000000244
+"mixture","mixture",93,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000023
+"mixture","mixture",93,0.95,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.999987352528442,0.0129999999999768
+"mixture","mixture",93,0.95,"wilks_minmax","Wilks",300,0,0.96,0.96,1,0.000999999999976353
+"mixture","mixture",93,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"sharp_mixture","sharp mixture",93,0.95,"tcsp_mc","TCSP",300,0,0.953333333333333,0.953333333333333,1,0.00199999999999534
+"sharp_mixture","sharp mixture",93,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999534
+"sharp_mixture","sharp mixture",93,0.95,"young_mathew","Young--Mathew",300,0,0.953333333333333,0.953333333333333,0.9999950483749,0.0104999999999862
+"sharp_mixture","sharp mixture",93,0.95,"wilks_minmax","Wilks",300,0,0.953333333333333,0.953333333333333,1,0.000999999999976353
+"sharp_mixture","sharp mixture",93,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"student_t3","Student t3",93,0.95,"tcsp_mc","TCSP",300,0,0.946666666666667,0.946666666666667,1,0.00199999999999534
+"student_t3","Student t3",93,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999534
+"student_t3","Student t3",93,0.95,"young_mathew","Young--Mathew",300,0,0.946666666666667,0.946666666666667,0.999953472734675,0.00900000000001455
+"student_t3","Student t3",93,0.95,"wilks_minmax","Wilks",300,0,0.946666666666667,0.946666666666667,1,0.000999999999976353
+"student_t3","Student t3",93,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"contaminated_normal","contaminated normal",100,0.9,"tcsp_mc","TCSP",300,0,0.993333333333333,0.993333333333333,1,0.00199999999995271
+"contaminated_normal","contaminated normal",100,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.993333333333333,0.993333333333333,1.00000000150455,3.06750000000005
+"contaminated_normal","contaminated normal",100,0.9,"young_mathew","Young--Mathew",300,0,0.956666666666667,0.956666666666667,0.962810959539001,0.0119999999999436
+"contaminated_normal","contaminated normal",100,0.9,"wilks_minmax","Wilks",300,0,1,1,2.11238686271414,0.000999999999976353
+"contaminated_normal","contaminated normal",100,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"normal","Gaussian",100,0.9,"tcsp_mc","TCSP",300,0,0.98,0.98,1,0.00199999999995271
+"normal","Gaussian",100,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.98,0.98,1.00000000121853,4.19100000000003
+"normal","Gaussian",100,0.9,"young_mathew","Young--Mathew",300,0,0.976666666666667,0.976666666666667,0.980749669888676,0.0159999999999911
+"normal","Gaussian",100,0.9,"wilks_minmax","Wilks",300,0,1,1,1.18670847346357,0.000999999999976353
+"normal","Gaussian",100,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"lognormal_hard","hard log-normal",100,0.9,"tcsp_mc","TCSP",300,0,0.993333333333333,0.993333333333333,1,0.00199999999995271
+"lognormal_hard","hard log-normal",100,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.993333333333333,0.993333333333333,1.00000000314837,3.81349999999998
+"lognormal_hard","hard log-normal",100,0.9,"young_mathew","Young--Mathew",300,0,0.966666666666667,0.966666666666667,1.19491819295975,0.0139999999999993
+"lognormal_hard","hard log-normal",100,0.9,"wilks_minmax","Wilks",300,0,1,1,1.8751054056702,0.000999999999976353
+"lognormal_hard","hard log-normal",100,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"beta_left","left-skewed Beta",100,0.9,"tcsp_mc","TCSP",300,0,0.986666666666667,0.986666666666667,1,0.000999999999976353
+"beta_left","left-skewed Beta",100,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.986666666666667,0.986666666666667,1.0000000014516,2.77500000000003
+"beta_left","left-skewed Beta",100,0.9,"young_mathew","Young--Mathew",300,0,0.96,0.96,1.00537593759132,0.0109999999999673
+"beta_left","left-skewed Beta",100,0.9,"wilks_minmax","Wilks",300,0,1,1,1.1460422717614,0.000999999999976353
+"beta_left","left-skewed Beta",100,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"lognormal","log-normal",100,0.9,"tcsp_mc","TCSP",300,0,0.986666666666667,0.986666666666667,1,0.00199999999995271
+"lognormal","log-normal",100,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.986666666666667,0.986666666666667,1.00000000168167,4.03199999999981
+"lognormal","log-normal",100,0.9,"young_mathew","Young--Mathew",300,0,0.953333333333333,0.953333333333333,1.09649056110921,0.0160000000000764
+"lognormal","log-normal",100,0.9,"wilks_minmax","Wilks",300,0,1,1,1.45062684572755,0.000999999999976353
+"lognormal","log-normal",100,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"mixture","mixture",100,0.9,"tcsp_mc","TCSP",300,0,0.98,0.98,1,0.00199999999995271
+"mixture","mixture",100,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.98,0.98,1.00000000168435,3.51900000000001
+"mixture","mixture",100,0.9,"young_mathew","Young--Mathew",300,0,0.963333333333333,0.963333333333333,0.989413805733675,0.01299999999992
+"mixture","mixture",100,0.9,"wilks_minmax","Wilks",300,0,1,1,1.09968947299141,0.000999999999976353
+"mixture","mixture",100,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"sharp_mixture","sharp mixture",100,0.9,"tcsp_mc","TCSP",300,0,0.996666666666667,0.996666666666667,1,0.00199999999995271
+"sharp_mixture","sharp mixture",100,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.996666666666667,0.996666666666667,1.00000000367575,3.18050000000003
+"sharp_mixture","sharp mixture",100,0.9,"young_mathew","Young--Mathew",300,0,0.973333333333333,0.973333333333333,0.995764947719518,0.012000000000171
+"sharp_mixture","sharp mixture",100,0.9,"wilks_minmax","Wilks",300,0,1,1,1.03549432449454,0.000999999999976353
+"sharp_mixture","sharp mixture",100,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"student_t3","Student t3",100,0.9,"tcsp_mc","TCSP",300,0,0.986666666666667,0.986666666666667,1,0.00100000000009004
+"student_t3","Student t3",100,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.986666666666667,0.986666666666667,1.00000000123071,2.83850000000001
+"student_t3","Student t3",100,0.9,"young_mathew","Young--Mathew",300,0,0.973333333333333,0.973333333333333,0.969134416141145,0.0110000000000809
+"student_t3","Student t3",100,0.9,"wilks_minmax","Wilks",300,0,1,1,1.47978723542116,0.000999999999976353
+"student_t3","Student t3",100,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"contaminated_normal","contaminated normal",100,0.95,"tcsp_mc","TCSP",300,0,0.95,0.95,1,0.00199999999999534
+"contaminated_normal","contaminated normal",100,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999998113
+"contaminated_normal","contaminated normal",100,0.95,"young_mathew","Young--Mathew",300,0,0.946666666666667,0.946666666666667,0.948893390566955,0.00900000000000034
+"contaminated_normal","contaminated normal",100,0.95,"wilks_minmax","Wilks",300,0,0.95,0.95,1,0.000999999999976353
+"contaminated_normal","contaminated normal",100,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"normal","Gaussian",100,0.95,"tcsp_mc","TCSP",300,0,0.963333333333333,0.963333333333333,1,0.0010000000000332
+"normal","Gaussian",100,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999995271
+"normal","Gaussian",100,0.95,"young_mathew","Young--Mathew",300,0,0.956666666666667,0.956666666666667,0.985097752394958,0.0080000000000009
+"normal","Gaussian",100,0.95,"wilks_minmax","Wilks",300,0,0.963333333333333,0.963333333333333,1,0
+"normal","Gaussian",100,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"lognormal_hard","hard log-normal",100,0.95,"tcsp_mc","TCSP",300,0,0.96,0.96,1,0.00199999999998113
+"lognormal_hard","hard log-normal",100,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999998113
+"lognormal_hard","hard log-normal",100,0.95,"young_mathew","Young--Mathew",300,0,0.956666666666667,0.956666666666667,0.947666301754694,0.00999999999999091
+"lognormal_hard","hard log-normal",100,0.95,"wilks_minmax","Wilks",300,0,0.96,0.96,1,0
+"lognormal_hard","hard log-normal",100,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"beta_left","left-skewed Beta",100,0.95,"tcsp_mc","TCSP",300,0,0.963333333333333,0.963333333333333,1,0.00100000000000477
+"beta_left","left-skewed Beta",100,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00100000000000477
+"beta_left","left-skewed Beta",100,0.95,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.989776353368089,0.007000000000005
+"beta_left","left-skewed Beta",100,0.95,"wilks_minmax","Wilks",300,0,0.963333333333333,0.963333333333333,1,0
+"beta_left","left-skewed Beta",100,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"lognormal","log-normal",100,0.95,"tcsp_mc","TCSP",300,0,0.976666666666667,0.976666666666667,1,0.00199999999999534
+"lognormal","log-normal",100,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999534
+"lognormal","log-normal",100,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,0.9681464133918,0.0080000000000382
+"lognormal","log-normal",100,0.95,"wilks_minmax","Wilks",300,0,0.976666666666667,0.976666666666667,1,0.000999999999976353
+"lognormal","log-normal",100,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"mixture","mixture",100,0.95,"tcsp_mc","TCSP",300,0,0.956666666666667,0.956666666666667,1,0.00199999999999889
+"mixture","mixture",100,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999712
+"mixture","mixture",100,0.95,"young_mathew","Young--Mathew",300,0,0.95,0.95,0.991880870132302,0.00900000000001455
+"mixture","mixture",100,0.95,"wilks_minmax","Wilks",300,0,0.956666666666667,0.956666666666667,1,0
+"mixture","mixture",100,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"sharp_mixture","sharp mixture",100,0.95,"tcsp_mc","TCSP",300,0,0.943333333333333,0.943333333333333,1,0.00199999999999933
+"sharp_mixture","sharp mixture",100,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000244
+"sharp_mixture","sharp mixture",100,0.95,"young_mathew","Young--Mathew",300,0,0.936666666666667,0.936666666666667,0.996809810106754,0.0110000000000135
+"sharp_mixture","sharp mixture",100,0.95,"wilks_minmax","Wilks",300,0,0.943333333333333,0.943333333333333,1,0.000999999999976353
+"sharp_mixture","sharp mixture",100,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"student_t3","Student t3",100,0.95,"tcsp_mc","TCSP",300,0,0.963333333333333,0.963333333333333,1,0.00199999999999534
+"student_t3","Student t3",100,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999999534
+"student_t3","Student t3",100,0.95,"young_mathew","Young--Mathew",300,0,0.956666666666667,0.956666666666667,0.967706576721193,0.0104999999999862
+"student_t3","Student t3",100,0.95,"wilks_minmax","Wilks",300,0,0.963333333333333,0.963333333333333,1,0.000999999999976353
+"student_t3","Student t3",100,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"contaminated_normal","contaminated normal",100,0.99,"tcsp_mc","TCSP",300,1,0,NA,NA,0.00100000000000122
+"contaminated_normal","contaminated normal",100,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999997669
+"contaminated_normal","contaminated normal",100,0.99,"young_mathew","Young--Mathew",300,0,0.606666666666667,0.606666666666667,NA,0.0120000000000005
+"contaminated_normal","contaminated normal",100,0.99,"wilks_minmax","Wilks",300,0,0.256666666666667,0.256666666666667,NA,0.000999999999976353
+"contaminated_normal","contaminated normal",100,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"normal","Gaussian",100,0.99,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999997669
+"normal","Gaussian",100,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999997669
+"normal","Gaussian",100,0.99,"young_mathew","Young--Mathew",300,0,0.786666666666667,0.786666666666667,NA,0.00800000000000978
+"normal","Gaussian",100,0.99,"wilks_minmax","Wilks",300,0,0.263333333333333,0.263333333333333,NA,0
+"normal","Gaussian",100,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"lognormal_hard","hard log-normal",100,0.99,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999999888
+"lognormal_hard","hard log-normal",100,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999997669
+"lognormal_hard","hard log-normal",100,0.99,"young_mathew","Young--Mathew",300,0,0.746666666666667,0.746666666666667,NA,0.0109999999999673
+"lognormal_hard","hard log-normal",100,0.99,"wilks_minmax","Wilks",300,0,0.243333333333333,0.243333333333333,NA,0.000999999999976353
+"lognormal_hard","hard log-normal",100,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999999888
+"beta_left","left-skewed Beta",100,0.99,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999976353
+"beta_left","left-skewed Beta",100,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999976353
+"beta_left","left-skewed Beta",100,0.99,"young_mathew","Young--Mathew",300,0,0.776666666666667,0.776666666666667,NA,0.007000000000005
+"beta_left","left-skewed Beta",100,0.99,"wilks_minmax","Wilks",300,0,0.236666666666667,0.236666666666667,NA,0
+"beta_left","left-skewed Beta",100,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"lognormal","log-normal",100,0.99,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999997669
+"lognormal","log-normal",100,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999997669
+"lognormal","log-normal",100,0.99,"young_mathew","Young--Mathew",300,0,0.773333333333333,0.773333333333333,NA,0.00800000000000978
+"lognormal","log-normal",100,0.99,"wilks_minmax","Wilks",300,0,0.283333333333333,0.283333333333333,NA,0
+"lognormal","log-normal",100,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"mixture","mixture",100,0.99,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999999888
+"mixture","mixture",100,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999997669
+"mixture","mixture",100,0.99,"young_mathew","Young--Mathew",300,0,0.826666666666667,0.826666666666667,NA,0.0120000000000005
+"mixture","mixture",100,0.99,"wilks_minmax","Wilks",300,0,0.323333333333333,0.323333333333333,NA,0.000999999999976353
+"mixture","mixture",100,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"sharp_mixture","sharp mixture",100,0.99,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999997669
+"sharp_mixture","sharp mixture",100,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999997669
+"sharp_mixture","sharp mixture",100,0.99,"young_mathew","Young--Mathew",300,0,0.803333333333333,0.803333333333333,NA,0.00999999999999091
+"sharp_mixture","sharp mixture",100,0.99,"wilks_minmax","Wilks",300,0,0.273333333333333,0.273333333333333,NA,0.000999999999976353
+"sharp_mixture","sharp mixture",100,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"student_t3","Student t3",100,0.99,"tcsp_mc","TCSP",300,1,0,NA,NA,0.000999999999999888
+"student_t3","Student t3",100,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.000999999999997669
+"student_t3","Student t3",100,0.99,"young_mathew","Young--Mathew",300,0,0.736666666666667,0.736666666666667,NA,0.0080000000000382
+"student_t3","Student t3",100,0.99,"wilks_minmax","Wilks",300,0,0.243333333333333,0.243333333333333,NA,0
+"student_t3","Student t3",100,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"contaminated_normal","contaminated normal",473,0.99,"tcsp_mc","TCSP",300,0,0.946666666666667,0.946666666666667,1,0.00200000000000955
+"contaminated_normal","contaminated normal",473,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"contaminated_normal","contaminated normal",473,0.99,"young_mathew","Young--Mathew",300,0,0.946666666666667,0.946666666666667,0.99969730271486,0.00950000000000273
+"contaminated_normal","contaminated normal",473,0.99,"wilks_minmax","Wilks",300,0,0.946666666666667,0.946666666666667,1,0
+"contaminated_normal","contaminated normal",473,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"normal","Gaussian",473,0.99,"tcsp_mc","TCSP",300,0,0.953333333333333,0.953333333333333,1,0.00200000000000955
+"normal","Gaussian",473,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"normal","Gaussian",473,0.99,"young_mathew","Young--Mathew",300,0,0.953333333333333,0.953333333333333,0.999868398927671,0.011000000000017
+"normal","Gaussian",473,0.99,"wilks_minmax","Wilks",300,0,0.953333333333333,0.953333333333333,1,0.000999999999976353
+"normal","Gaussian",473,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"lognormal_hard","hard log-normal",473,0.99,"tcsp_mc","TCSP",300,0,0.95,0.95,1,0.00200000000000955
+"lognormal_hard","hard log-normal",473,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"lognormal_hard","hard log-normal",473,0.99,"young_mathew","Young--Mathew",300,0,0.946666666666667,0.946666666666667,0.999470862092337,0.00899999999995771
+"lognormal_hard","hard log-normal",473,0.99,"wilks_minmax","Wilks",300,0,0.95,0.95,1,0.000999999999976353
+"lognormal_hard","hard log-normal",473,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"beta_left","left-skewed Beta",473,0.99,"tcsp_mc","TCSP",300,0,0.953333333333333,0.953333333333333,1,0.00199999999998113
+"beta_left","left-skewed Beta",473,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999998113
+"beta_left","left-skewed Beta",473,0.99,"young_mathew","Young--Mathew",300,0,0.953333333333333,0.953333333333333,0.999923576591347,0.007000000000005
+"beta_left","left-skewed Beta",473,0.99,"wilks_minmax","Wilks",300,0,0.953333333333333,0.953333333333333,1,0
+"beta_left","left-skewed Beta",473,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"lognormal","log-normal",473,0.99,"tcsp_mc","TCSP",300,0,0.96,0.96,1,0.00200000000000955
+"lognormal","log-normal",473,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"lognormal","log-normal",473,0.99,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.999679911676699,0.00900000000001455
+"lognormal","log-normal",473,0.99,"wilks_minmax","Wilks",300,0,0.96,0.96,1,0.000999999999976353
+"lognormal","log-normal",473,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"mixture","mixture",473,0.99,"tcsp_mc","TCSP",300,0,0.963333333333333,0.963333333333333,1,0.00200000000000955
+"mixture","mixture",473,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"mixture","mixture",473,0.99,"young_mathew","Young--Mathew",300,0,0.963333333333333,0.963333333333333,0.999924152368586,0.0129999999999768
+"mixture","mixture",473,0.99,"wilks_minmax","Wilks",300,0,0.963333333333333,0.963333333333333,1,0.000999999999976353
+"mixture","mixture",473,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"sharp_mixture","sharp mixture",473,0.99,"tcsp_mc","TCSP",300,0,0.946666666666667,0.946666666666667,1,0.00200000000000955
+"sharp_mixture","sharp mixture",473,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"sharp_mixture","sharp mixture",473,0.99,"young_mathew","Young--Mathew",300,0,0.946666666666667,0.946666666666667,0.999965438707359,0.0130000000000052
+"sharp_mixture","sharp mixture",473,0.99,"wilks_minmax","Wilks",300,0,0.946666666666667,0.946666666666667,1,0.000999999999976353
+"sharp_mixture","sharp mixture",473,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999998558
+"student_t3","Student t3",473,0.99,"tcsp_mc","TCSP",300,0,0.943333333333333,0.943333333333333,1,0.00200000000000955
+"student_t3","Student t3",473,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000244
+"student_t3","Student t3",473,0.99,"young_mathew","Young--Mathew",300,0,0.943333333333333,0.943333333333333,0.99960542455959,0.0080000000000382
+"student_t3","Student t3",473,0.99,"wilks_minmax","Wilks",300,0,0.943333333333333,0.943333333333333,1,0
+"student_t3","Student t3",473,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999990564
+"contaminated_normal","contaminated normal",500,0.99,"tcsp_mc","TCSP",300,0,0.98,0.98,1,0.00200000000000955
+"contaminated_normal","contaminated normal",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"contaminated_normal","contaminated normal",500,0.99,"young_mathew","Young--Mathew",300,0,0.976666666666667,0.976666666666667,0.979746885901263,0.0129999999999768
+"contaminated_normal","contaminated normal",500,0.99,"wilks_minmax","Wilks",300,0,0.98,0.98,1,0.000999999999976353
+"contaminated_normal","contaminated normal",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"normal","Gaussian",500,0.99,"tcsp_mc","TCSP",300,0,0.966666666666667,0.966666666666667,1,0.00200000000000955
+"normal","Gaussian",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"normal","Gaussian",500,0.99,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.992086466588017,0.00900000000001455
+"normal","Gaussian",500,0.99,"wilks_minmax","Wilks",300,0,0.966666666666667,0.966666666666667,1,0.000999999999976353
+"normal","Gaussian",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"lognormal_hard","hard log-normal",500,0.99,"tcsp_mc","TCSP",300,0,0.966666666666667,0.966666666666667,1,0.00200000000000955
+"lognormal_hard","hard log-normal",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"lognormal_hard","hard log-normal",500,0.99,"young_mathew","Young--Mathew",300,0,0.966666666666667,0.966666666666667,0.970934037641252,0.0110000000000241
+"lognormal_hard","hard log-normal",500,0.99,"wilks_minmax","Wilks",300,0,0.966666666666667,0.966666666666667,1,0.000999999999976353
+"lognormal_hard","hard log-normal",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"beta_left","left-skewed Beta",500,0.99,"tcsp_mc","TCSP",300,0,0.963333333333333,0.963333333333333,1,0.00199999999998113
+"beta_left","left-skewed Beta",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999998113
+"beta_left","left-skewed Beta",500,0.99,"young_mathew","Young--Mathew",300,0,0.963333333333333,0.963333333333333,0.995427231964399,0.007000000000005
+"beta_left","left-skewed Beta",500,0.99,"wilks_minmax","Wilks",300,0,0.963333333333333,0.963333333333333,1,0
+"beta_left","left-skewed Beta",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"lognormal","log-normal",500,0.99,"tcsp_mc","TCSP",300,0,0.966666666666667,0.966666666666667,1,0.00200000000000955
+"lognormal","log-normal",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"lognormal","log-normal",500,0.99,"young_mathew","Young--Mathew",300,0,0.966666666666667,0.966666666666667,0.980133582638035,0.0109999999999957
+"lognormal","log-normal",500,0.99,"wilks_minmax","Wilks",300,0,0.966666666666667,0.966666666666667,1,0.000999999999976353
+"lognormal","log-normal",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999976353
+"mixture","mixture",500,0.99,"tcsp_mc","TCSP",300,0,0.966666666666667,0.966666666666667,1,0.00200000000000955
+"mixture","mixture",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"mixture","mixture",500,0.99,"young_mathew","Young--Mathew",300,0,0.963333333333333,0.963333333333333,0.995625902972314,0.0110000000000241
+"mixture","mixture",500,0.99,"wilks_minmax","Wilks",300,0,0.966666666666667,0.966666666666667,1,0.000999999999976353
+"mixture","mixture",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669
+"sharp_mixture","sharp mixture",500,0.99,"tcsp_mc","TCSP",300,0,0.97,0.97,1,0.0029999999999859
+"sharp_mixture","sharp mixture",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"sharp_mixture","sharp mixture",500,0.99,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.998048306902148,0.0129999999999946
+"sharp_mixture","sharp mixture",500,0.99,"wilks_minmax","Wilks",300,0,0.97,0.97,1,0.000999999999976353
+"sharp_mixture","sharp mixture",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000000122
+"student_t3","Student t3",500,0.99,"tcsp_mc","TCSP",300,0,0.95,0.95,1,0.00200000000000955
+"student_t3","Student t3",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000000955
+"student_t3","Student t3",500,0.99,"young_mathew","Young--Mathew",300,0,0.946666666666667,0.946666666666667,0.97545377111514,0.00900000000000034
+"student_t3","Student t3",500,0.99,"wilks_minmax","Wilks",300,0,0.95,0.95,1,0
+"student_t3","Student t3",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.000999999999997669

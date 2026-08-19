@@ -1,0 +1,144 @@
+#!/usr/bin/env Rscript
+
+script <- normalizePath(
+  "tables/generate_tolerance_validation_scenario_tables.R",
+  winslash = "/",
+  mustWork = TRUE
+)
+work_dir <- tempfile("tolerance-scenario-table-test-")
+dir.create(work_dir, recursive = TRUE, showWarnings = FALSE)
+on.exit(unlink(work_dir, recursive = TRUE, force = TRUE), add = TRUE)
+
+row <- function(dgp, n, content, rep, method, success = TRUE,
+                infeasible = FALSE, width = 2, elapsed = 0.01) {
+  data.frame(
+    dgp_id = dgp,
+    n = n,
+    guaranteed_content = content,
+    tolerance_confidence = 0.95,
+    replication = rep,
+    method_id = method,
+    success = success,
+    infeasible = infeasible,
+    width = width,
+    elapsed_sec = elapsed,
+    stringsAsFactors = FALSE
+  )
+}
+
+methods <- c(
+  "tcsp_mc", "hdp_s_mc", "tcsp_mti_ecm_map_mc", "wilks_minmax", "tcsp_dkw"
+)
+primary <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
+  do.call(rbind, lapply(c(500L, 1000L), function(n) {
+    do.call(rbind, lapply(1:2, function(rep) {
+      rbind(
+        row(dgp, n, 0.90, rep, "tcsp_mc", width = 2),
+        row(dgp, n, 0.90, rep, "hdp_s_mc", width = 2),
+        row(dgp, n, 0.90, rep, "tcsp_mti_ecm_map_mc",
+            success = dgp == "normal", width = 2),
+        row(dgp, n, 0.90, rep, "wilks_minmax", width = 3),
+        row(dgp, n, 0.90, rep, "tcsp_dkw", infeasible = TRUE,
+            success = FALSE, width = NA_real_)
+      )
+    }))
+  }))
+}))
+young <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
+  do.call(rbind, lapply(c(500L, 1000L), function(n) {
+    do.call(rbind, lapply(1:2, function(rep) {
+      row(dgp, n, 0.90, rep, "young_mathew",
+          success = rep == 1L || dgp == "normal", width = 1.9)
+    }))
+  }))
+}))
+small <- do.call(rbind, lapply(c("normal", "student_t3", "beta_left"), function(dgp) {
+  do.call(rbind, lapply(1:2, function(rep) {
+    rbind(
+      row(dgp, 50, 0.90, rep, "tcsp_mc", width = 2),
+      row(dgp, 50, 0.90, rep, "tcsp_mti_ecm_map_mc",
+          infeasible = TRUE, success = FALSE, width = NA_real_),
+      row(dgp, 50, 0.90, rep, "young_mathew", width = 1.95),
+      row(dgp, 50, 0.90, rep, "wilks_minmax", width = 2.5),
+      row(dgp, 50, 0.90, rep, "tcsp_dkw",
+          infeasible = TRUE, success = FALSE, width = NA_real_)
+    )
+  }))
+}))
+
+primary_path <- file.path(work_dir, "primary.csv")
+young_path <- file.path(work_dir, "young.csv")
+small_path <- file.path(work_dir, "small.csv")
+utils::write.csv(primary, primary_path, row.names = FALSE)
+utils::write.csv(young, young_path, row.names = FALSE)
+utils::write.csv(small, small_path, row.names = FALSE)
+
+out_dir <- file.path(work_dir, "out")
+status <- system2(
+  "Rscript",
+  c(
+    script,
+    paste0("--primary-results=", primary_path),
+    paste0("--young-mathew-results=", young_path),
+    paste0("--small95-results=", small_path),
+    paste0("--output-dir=", out_dir)
+  ),
+  stdout = TRUE,
+  stderr = TRUE
+)
+if (!identical(attr(status, "status"), NULL)) {
+  cat(status, sep = "\n")
+  stop("Scenario table generator failed.", call. = FALSE)
+}
+
+required <- file.path(out_dir, c(
+  "tolerance_validation_primary_scenario_ranges.csv",
+  "tolerance_validation_primary_scenario_ranges.tex",
+  "tolerance_validation_primary_scenario_ranges_n500.tex",
+  "tolerance_validation_primary_scenario_ranges_n1000.tex",
+  "tolerance_validation_small_sample_boundary.csv",
+  "tolerance_validation_small_sample_boundary.tex",
+  "tolerance_validation_primary_dgp_delivery.csv",
+  "tolerance_validation_primary_dgp_delivery.tex",
+  "tolerance_validation_small_sample_dgp_delivery.csv",
+  "tolerance_validation_small_sample_dgp_delivery.tex",
+  "tolerance_validation_primary_scenario_details.csv",
+  "tolerance_validation_small_sample_scenario_details.csv"
+))
+stopifnot(all(file.exists(required)))
+
+primary_range <- read.csv(
+  file.path(out_dir, "tolerance_validation_primary_scenario_ranges.csv"),
+  stringsAsFactors = FALSE
+)
+stopifnot(!"tcsp_mti_gibbs_median_mc" %in% primary_range$method_id)
+stopifnot(any(primary_range$method_id == "young_mathew"))
+stopifnot(primary_range$dgp_cells[primary_range$method_id == "tcsp_mc"][[1L]] == 2L)
+stopifnot(primary_range$fail_closed_dgp_cells[
+  primary_range$method_id == "tcsp_dkw"
+][[1L]] == 2L)
+
+small_boundary <- read.csv(
+  file.path(out_dir, "tolerance_validation_small_sample_boundary.csv"),
+  stringsAsFactors = FALSE
+)
+stopifnot(all(small_boundary$n %in% c(50L, 100L)))
+stopifnot(any(small_boundary$fail_closed_dgp_cells == 3L))
+
+tex <- paste(readLines(
+  file.path(out_dir, "tolerance_validation_primary_scenario_ranges.tex"),
+  warn = FALSE
+), collapse = "\n")
+stopifnot(grepl("Delivery range", tex, fixed = TRUE))
+stopifnot(grepl("Young--Mathew", tex, fixed = TRUE))
+stopifnot(!grepl("posterior predictive", tex, fixed = TRUE))
+stopifnot(!grepl("MTI Gibbs", tex, fixed = TRUE))
+
+supp_tex <- paste(readLines(
+  file.path(out_dir, "tolerance_validation_primary_dgp_delivery.tex"),
+  warn = FALSE
+), collapse = "\n")
+stopifnot(grepl("Student t3", supp_tex, fixed = TRUE))
+stopifnot(grepl("Hybrid DP--scan", supp_tex, fixed = TRUE))
+
+cat("Scenario-aware tolerance validation table test passed.\n")

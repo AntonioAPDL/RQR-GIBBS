@@ -1,0 +1,26 @@
+\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xrrrrr@{}}
+\toprule
+Cell & Method & DGPs & Fail-closed & Delivery range (\%) & Returned range (\%) & Width/TCSP\\
+\midrule
+\(n=1000,c=0.90\) & TCSP & 7 & 0 & 99.0--100.0 & 99.0--100.0 & 1 \\
+ & Hybrid DP--scan & 7 & 0 & 99.0--100.0 & 99.0--100.0 & 1 \\
+ & MTI ECM & 7 & 0 & 99.0--100.0 & 99.0--100.0 & 1 \\
+ & Young--Mathew & 7 & 0 & 95.0--99.0 & 95.0--99.0 & 0.99 \\
+ & Wilks & 7 & 0 & 100.0 & 100.0 & 4.047 \\
+ & DKW & 7 & 0 & 100.0 & 100.0 & 1.766 \\
+\addlinespace[0.25em]
+\(n=1000,c=0.95\) & TCSP & 7 & 0 & 99.0--100.0 & 99.0--100.0 & 1 \\
+ & Hybrid DP--scan & 7 & 0 & 99.0--100.0 & 99.0--100.0 & 1 \\
+ & MTI ECM & 7 & 0 & 99.0--100.0 & 99.0--100.0 & 1 \\
+ & Young--Mathew & 7 & 0 & 93.0--98.0 & 93.0--98.0 & 0.991 \\
+ & Wilks & 7 & 0 & 100.0 & 100.0 & 2.913 \\
+ & DKW & 7 & 7 & 0.0 & -- & -- \\
+\addlinespace[0.25em]
+\(n=1000,c=0.99\) & TCSP & 7 & 0 & 96.0--100.0 & 96.0--100.0 & 1 \\
+ & Hybrid DP--scan & 7 & 0 & 96.0--100.0 & 96.0--100.0 & 1 \\
+ & MTI ECM & 7 & 0 & 96.0--100.0 & 96.0--100.0 & 1 \\
+ & Young--Mathew & 7 & 0 & 93.0--100.0 & 93.0--100.0 & 0.996 \\
+ & Wilks & 7 & 0 & 99.0--100.0 & 99.0--100.0 & 1.217 \\
+ & DKW & 7 & 7 & 0.0 & -- & -- \\
+\bottomrule
+\end{tabularx}

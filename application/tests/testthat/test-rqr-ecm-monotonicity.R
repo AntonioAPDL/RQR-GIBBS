@@ -19,6 +19,14 @@ test_that("accepted safeguarded ECM cycles do not increase exact objective", {
   expect_identical(fit$formal_tolerance_action, FALSE)
 })
 
+test_that("ECM default convergence flag uses operational stationarity tolerance", {
+  control <- rqrgibbs:::.rqr_ecm_assert_control(list())
+
+  expect_equal(control$tol_stationarity, 1e-3)
+  expect_equal(control$stable_iterations, 2L)
+  expect_false(control$fail_on_nonconvergence)
+})
+
 test_that("ECM multistart selects the smallest exact objective", {
   set.seed(8122)
   y <- c(rnorm(20, -1), rnorm(20, 1))

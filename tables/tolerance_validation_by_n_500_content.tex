@@ -1,0 +1,30 @@
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xrrrrr@{}}
+\toprule
+Method & Infeasible (\%) & Delivery (\%) & Returned success (\%) & Width/TCSP & Median sec\\
+\midrule
+\addlinespace[0.35em]
+\multicolumn{6}{@{}l}{\textit{Target content $c=0.90$}}\\
+TCSP scan & 0.0 & 99.0 & 99.0 & 1 & 0.003 \\
+Hybrid DP--scan & 0.0 & 99.0 & 99.0 & 1 & 133.591 \\
+MTI ECM & 0.0 & 99.0 & 99.0 & 1 & 0.003 \\
+Young--Mathew & 0.0 & 96.1 & 96.1 & 0.991 & 0.037 \\
+Wilks min--max & 0.0 & 100.0 & 100.0 & 2.732 & 0.001 \\
+DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
+\addlinespace[0.35em]
+\multicolumn{6}{@{}l}{\textit{Target content $c=0.95$}}\\
+TCSP scan & 0.0 & 99.4 & 99.4 & 1 & 0.003 \\
+Hybrid DP--scan & 0.0 & 99.4 & 99.4 & 1 & 133.658 \\
+MTI ECM & 0.0 & 99.4 & 99.4 & 1 & 0.003 \\
+Young--Mathew & 0.0 & 97.4 & 97.4 & 0.994 & 0.037 \\
+Wilks min--max & 0.0 & 100.0 & 100.0 & 1.967 & 0.001 \\
+DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
+\addlinespace[0.35em]
+\multicolumn{6}{@{}l}{\textit{Target content $c=0.99$}}\\
+TCSP scan & 0.0 & 96.1 & 96.1 & 1 & 0.002 \\
+Hybrid DP--scan & 0.0 & 96.1 & 96.1 & 1 & 132.926 \\
+MTI ECM & 100.0 & 0.0 & -- & -- & 0.002 \\
+Young--Mathew & 0.0 & 95.1 & 95.1 & 0.989 & 0.03 \\
+Wilks min--max & 0.0 & 96.1 & 96.1 & 1 & 0.000 \\
+DKW scan & 100.0 & 0.0 & -- & -- & 0.001 \\
+\bottomrule
+\end{tabularx}

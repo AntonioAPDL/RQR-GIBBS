@@ -35,7 +35,7 @@ test_that("follow-up config separates 90% and 95% feasibility thresholds", {
   config <- jsonlite::read_json(followup_config_path(), simplifyVector = FALSE)
 
   expect_true(config$execution$ecm200_audit_authorized)
-  expect_true(config$execution$reference_90_authorized)
+  expect_true(config$execution$paper_matched_90_authorized)
   expect_true(config$execution$small_sample_95_authorized)
   expect_true(config$claim_scope$iid_univariate_continuous_only)
   expect_false(config$claim_scope$regression_tolerance)
@@ -52,10 +52,10 @@ test_that("follow-up config separates 90% and 95% feasibility thresholds", {
     c(46L, 93L, 473L)
   )
 
-  reference <- mode_cells(config$modes$reference_90)
-  expect_equal(reference$n, c(38L, 77L, 388L))
-  expect_equal(reference$guaranteed_content, c(0.90, 0.95, 0.99))
-  expect_true(all(reference$tolerance_confidence == 0.90))
+  paper <- mode_cells(config$modes$paper_matched_90)
+  expect_equal(paper$n, c(38L, 77L, 388L))
+  expect_equal(paper$guaranteed_content, c(0.90, 0.95, 0.99))
+  expect_true(all(paper$tolerance_confidence == 0.90))
 
   small <- mode_cells(config$modes$small_sample_95)
   expect_true(all(small$tolerance_confidence == 0.95))
@@ -72,6 +72,18 @@ test_that("follow-up config separates 90% and 95% feasibility thresholds", {
   expect_equal(
     config$engine_defaults$mti_ecm$ecm200_audit_ecm_control$max_iter,
     200
+  )
+  expect_equal(
+    config$engine_defaults$mti_ecm$ecm200_audit_ecm_control$tol_stationarity,
+    1e-3
+  )
+  expect_equal(
+    config$engine_defaults$mti_ecm$paper_matched_90_ecm_control$tol_stationarity,
+    1e-3
+  )
+  expect_equal(
+    config$engine_defaults$mti_ecm$small_sample_95_ecm_control$tol_stationarity,
+    1e-3
   )
   expect_true(config$engine_defaults$mti_ecm$ecm200_audit_ecm_control$
                 store_iteration_trace)

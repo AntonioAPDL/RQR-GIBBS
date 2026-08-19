@@ -35,7 +35,7 @@ The highest-impact polish targets were:
 
 The main title was revised to:
 
-`Mean-Tilted Intervals: Fixed-Content Targets, Generalized Bayes, and Tolerance Actions`
+`Mean-Tilted Intervals: A Generalized-Bayes Approach to Fixed-Content and Tolerance Intervals`
 
 This title is shorter, names the statistical target class, and avoids implying
 that the paper is only a regression-computation article.

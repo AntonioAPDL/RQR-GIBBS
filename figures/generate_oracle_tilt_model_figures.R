@@ -109,13 +109,6 @@ if (identical(receipt$schema_version, v3_schema)) {
     oti_stop("The corrected version-5 evidence contract is inconsistent.")
   }
 }
-curves <- utils::read.csv(
-  file.path(evidence_dir, "fit_curves.csv"), stringsAsFactors = FALSE
-)
-errors <- utils::read.csv(
-  file.path(evidence_dir, "endpoint_error_density.csv"),
-  stringsAsFactors = FALSE
-)
 summary <- utils::read.csv(
   file.path(evidence_dir, "fit_summary.csv"), stringsAsFactors = FALSE
 )
@@ -125,65 +118,13 @@ required_cells <- expand.grid(
   stringsAsFactors = FALSE
 )
 cell_key <- function(x) paste(x$family, x$target, sep = "/")
-if (!setequal(cell_key(unique(curves[c("family", "target")])),
-              cell_key(required_cells)) ||
-    !setequal(cell_key(unique(errors[c("family", "target")])),
-              cell_key(required_cells)) ||
-    nrow(summary) != 6L ||
+if (nrow(summary) != 6L ||
     !setequal(cell_key(summary[c("family", "target")]),
               cell_key(required_cells))) {
-  oti_stop("Figure evidence does not contain the six required cells.")
+  oti_stop("Illustration evidence does not contain the six required cells.")
 }
 
-figure_specs <- list(
-  fixed_design = list(
-    fit = "fig04_fixed_design_oracle_tilt_c095",
-    error = "figS03_fixed_design_endpoint_error_c095",
-    title = "Nonlinear heteroscedastic interval-root fits at 95% content",
-    error_title = "Fixed-design endpoint errors at 95% content",
-    xlab = "Covariate x",
-    note = paste(
-      "Blue curves are population-oracle endpoints; orange curves and",
-      "ribbons are generalized-posterior means and central 95% summaries."
-    )
-  ),
-  dlm = list(
-    fit = "fig05_dlm_oracle_tilt_c095",
-    error = "figS04_dlm_endpoint_error_c095",
-    title = "Seasonal dynamic interval-root fits at 95% content",
-    error_title = "Dynamic linear endpoint errors at 95% content",
-    xlab = "Time",
-    note = paste(
-      "Missing responses are omitted from the loss and tilt sites and are",
-      "marked by magenta bands and triangles."
-    )
-  )
-)
 written <- character(0)
-for (family in names(figure_specs)) {
-  spec <- figure_specs[[family]]
-  family_curves <- curves[curves$family == family, , drop = FALSE]
-  family_errors <- errors[errors$family == family, , drop = FALSE]
-  for (extension in c("pdf", "png")) {
-    fit_file <- file.path(
-      output_dir, paste0(spec$fit, ".", extension)
-    )
-    error_file <- file.path(
-      output_dir, paste0(spec$error, ".", extension)
-    )
-    oti_plot_curve_panels(
-      family_curves, fit_file, spec$title,
-      xlab = spec$xlab, caption_note = spec$note
-    )
-    oti_plot_endpoint_error_panels(
-      family_errors, error_file, spec$error_title,
-      xlab = expression(
-        generalized-posterior~endpoint~draw - population-oracle~endpoint
-      )
-    )
-    written <- c(written, fit_file, error_file)
-  }
-}
 
 family_label <- ifelse(
   summary$family == "fixed_design", "Fixed design", "Dynamic roots"
@@ -255,4 +196,4 @@ write.csv(
   file.path(output_dir, "oracle_tilt_c095_figure_manifest.csv"),
   row.names = FALSE
 )
-message("[oracle-tilt-figures] rendered ", length(written), " artifacts.")
+message("[oracle-tilt-figures] rendered ", length(written), " artifact(s).")

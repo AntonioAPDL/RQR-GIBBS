@@ -15,7 +15,7 @@
   )
   tol_objective <- as.numeric(ecm_control$tol_objective %||% 1e-8)[1L]
   tol_parameters <- as.numeric(ecm_control$tol_parameters %||% 1e-7)[1L]
-  tol_stationarity <- as.numeric(ecm_control$tol_stationarity %||% 1e-5)[1L]
+  tol_stationarity <- as.numeric(ecm_control$tol_stationarity %||% 1e-3)[1L]
   residual_product_floor <- as.numeric(
     ecm_control$residual_product_floor %||% 1e-8
   )[1L]

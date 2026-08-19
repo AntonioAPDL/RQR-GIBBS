@@ -42,7 +42,8 @@ rqr_ecm_path(
 The ECM backend currently supports ridge roots only.}
 \item{ecm_control}{Named list controlling iterations, residual-product
 safeguards, monotone backtracking, deterministic multi-start, and convergence
-tolerances.}
+tolerances. The default stationarity tolerance for the convergence flag is
+\code{tol_stationarity = 1e-3}.}
 \item{init}{Optional initial root coefficients or a \code{previous_fit} for
 warm starts.}
 \item{...}{Reserved.}
@@ -70,6 +71,11 @@ posterior draws, and does not by itself define a tolerance interval.
 
 \code{rqr_ecm_path()} traces fixed \eqn{(q,\delta)} targets.  It does not
 perform TCSP scan calibration.
+
+The ECM convergence flag is a numerical stationarity diagnostic for the fixed
+target optimizer. It is not a tolerance-coverage statement and does not replace
+the scan-calibrated order-statistic action when finite-sample tolerance validity
+is required.
 }
 \value{
 An object of class \code{c("rqr_ecm", "rqr_fit")} for \code{rqr_ecm_fit()},

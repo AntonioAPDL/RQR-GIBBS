@@ -1,8 +1,9 @@
-# MPI/MTI article figures
+# MPI/MTI Figure Assets
 
-This directory contains tracked source for the article's deterministic
-population figures and algebraic schematics. It does not contain fitted
-models, MCMC output, simulation evidence, or a response-generating model.
+This directory contains tracked source for deterministic population figures,
+supplemental diagnostic displays, and algebraic schematics. It does not
+contain fitted models, MCMC output, simulation evidence, or a
+response-generating model.
 
 Run the numerical oracle and reproducibility checks with:
 
@@ -55,8 +56,8 @@ fails, repository cleanliness is recorded as unknown (`NA`), never as clean.
 An explicit commit or archive digest is recorded separately from detected Git
 state.
 
-The nested `.gitignore` retains the five deterministic publication PNGs, the
-compact model-illustration assets, and lightweight provenance receipts.
+The nested `.gitignore` retains the deterministic publication PNGs, the
+compact supplemental diagnostic assets, and lightweight provenance receipts.
 Redundant PDF, panel CSV, and full-manifest outputs remain ignored. The theory
 receipt records each deterministic publication PNG's byte count and SHA-256,
 the generator hash, and the detected and declared source identities. The full

@@ -93,7 +93,8 @@ required <- list(
     "The loss is built from",
     "mean-preserving interval (MPI)",
     "mean-tilted interval (MTI) family",
-    "Posterior credibility is not tolerance confidence",
+    "Tolerance confidence is supplied by scan calibration",
+    "posterior credibility describes the fitted generalized posterior",
     "direct Dirichlet-process response-distribution layer gives exact fixed-interval Beta",
     "The pointwise MPI loss is",
     "The familiar check-loss notation gives an equivalent compact representation",
@@ -101,8 +102,8 @@ required <- list(
     "Thus the prior is updated by the cumulative interval loss",
     "augmented generalized posterior",
     "Gaussian full conditional",
-    "not a sampling model for \\(y_i\\)",
-    "posterior predictive response draws",
+    "any sampling model for \\(Y\\) belongs to a separate response-distribution layer",
+    "response-predictive draws require a response-distribution layer",
     "Calibrated Minimum-Width Tolerance Intervals",
     "The theoretical scope is deliberately narrower than the implementation menu",
     "L_q'=\\frac{b_q}{\\lambda_q(a_q-b_q)}<0",
@@ -115,7 +116,8 @@ required <- list(
     "Pseudo-AL Augmentation and Full Conditionals",
     "augmented generalized posterior",
     "generalized-posterior distributions for endpoint functions",
-    "not a sampling density for \\(y_i\\)",
+    "density in the abstract pseudo-residual",
+    "Response likelihoods belong to a separately specified response-distribution model",
     "exact blocked Gibbs sampler"
   )
 )

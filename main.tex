@@ -42,8 +42,8 @@
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4.5pt}\renewcommand{\arraystretch}{1.12}}
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
-\newtheorem{theorem}[proposition]{Theorem}
-\newtheorem{corollary}[proposition]{Corollary}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
 \newcounter{algorithm}
 \newenvironment{algorithmblock}[1]{%
   \refstepcounter{algorithm}\par\medskip
@@ -54,7 +54,8 @@
 }
 
 \title{\vspace{-0.6cm}Mean-Tilted Intervals:\\
-A Generalized-Bayes Approach to Fixed-Content and Tolerance Intervals}
+A Generalized-Bayes Approach to\\
+Fixed-Content and Tolerance Intervals}
 \author{Antonio De Leon$^{1}$ \and Raquel Prado$^{1}$ \and Bruno Sans\'o$^{1}$}
 \date{\small $^{1}$ Department of Statistics, University of California, Santa Cruz\\
 \vspace{0.25em}July 2026}
@@ -72,43 +73,45 @@ intervals answer different statistical questions. Pouplin et al. introduced a
 residual-product criterion under the name Relaxed Quantile Regression. We show
 that, under regularity conditions, its unrestricted regular minimizer is the
 unique fixed-content interval whose retained mean equals the population mean;
-we therefore call this target the mean-preserving interval (MPI). A fixed
-retained-mean offset gives the mean-tilted interval (MTI) family, whose tilt
-indexes the contiguous fixed-content windows. Equal-tailed and
-shortest-contiguous intervals are distribution-specific members of this family,
-not universal endpoint-quantile assignments.
+we therefore call this target the mean-preserving interval (MPI). The
+mean-tilted interval (MTI) family generalizes MPI by replacing zero
+retained-mean balance with a fixed retained-mean offset: \(\delta=0\)
+recovers MPI, and nonzero tilts index other contiguous fixed-content windows.
+The equal-tailed and shortest-contiguous intervals are distribution-specific
+members of this family.
 
-We develop loss-based generalized-Bayes computation for fixed MPI and MTI
-targets. A pseudo-asymmetric-Laplace normal--exponential augmentation yields
-generalized-inverse-Gaussian latent scales and conditionally Gaussian root
-updates. For fixed content, tilt, and learning rate, the same augmentation gives
-a deterministic expectation/conditional-maximization mode computation using
-exact inverse latent-scale moments. The resulting Gibbs and ECM constructions
-cover ridge-regularized static regression, frozen-feature deep echo state
-network readouts, and dynamic linear root states through alternating
-forward-filtering backward-sampling updates. Population calculations,
-Cornish--Fisher diagnostics, and reproducible single-data illustrations clarify
-target placement and computation.
+To estimate these targets, we develop a loss-based generalized-Bayes update for
+the two interval endpoints. A pseudo-asymmetric-Laplace normal--exponential
+augmentation gives closed-form Gibbs computation: latent scales have
+generalized-inverse-Gaussian full conditionals, and the interval-root updates
+are conditionally Gaussian. Exact inverse-scale moments give a deterministic
+expectation/conditional-maximization mode algorithm. These constructions cover
+ridge-regularized static regression, frozen-feature deep echo state network
+readouts, and dynamic linear root states.
 
-For tolerance inference, the repeated-sampling action is kept separate from
-generalized-posterior endpoint summaries. A scan-calibrated empirical action
-selects the shortest closed order-statistic interval at a calibrated retained
-count. A direct Dirichlet-process response-distribution layer gives exact
-fixed-interval Beta content probabilities, and a hybrid Bayesian--scan action
-adds a posterior content-probability constraint to the scan count. Posterior
-credibility is not tolerance confidence, and MTI endpoint draws are not
-posterior predictive response draws. A prespecified iid validation study at
-tolerance confidence \(0.95\) compares scan-calibrated actions, fixed-target MTI
-summaries, Young--Mathew and Wilks order-statistic competitors, and a
-conservative DKW fallback across three contents and seven distributional
-families.
+Because the shortest-contiguous member is the minimum-width interval in the
+fixed-content class, the same target geometry also motivates calibrated
+minimum-width tolerance actions. The primary TCSP action selects the shortest
+closed order-statistic interval at a calibrated retained count, giving the
+minimum-width member of the calibrated empirical scan class. A direct
+Dirichlet-process response-distribution layer gives exact fixed-interval Beta
+content probabilities, and a Bayesian-constrained scan action uses those
+probabilities to screen scan candidates. Tolerance confidence is supplied by
+scan calibration, while posterior credibility describes the fitted generalized
+posterior. MTI endpoint summaries diagnose endpoint uncertainty;
+response-predictive draws require a response-distribution layer.
+A prespecified iid validation study at tolerance confidence \(0.95\) compares
+scan-calibrated actions, fixed-target MTI ECM summaries, Young--Mathew and
+Wilks order-statistic competitors, and a conservative DKW fallback across
+three contents and seven distributional families; MTI Gibbs diagnostics are
+reported separately for the same fixed target.
 \end{abstract}
 
 \section{Introduction}
 \label{sec:introduction}
 
-An interval with prescribed probability content is a class, not a unique
-object. Equal-tailed, shortest-contiguous, and other intervals can contain the
+A prescribed probability content defines a class of possible intervals.
+Equal-tailed, shortest-contiguous, and other intervals can contain the
 same population fraction while placing their endpoints in different parts of
 the distribution. Tolerance intervals add a second requirement: with confidence
 \(1-\alpha\), the reported random set should contain at least content \(c\) of
@@ -117,8 +120,8 @@ the population distribution
 Thus content, placement, and repeated-sampling confidence must be kept
 separate. Fitting the two conditional quantiles at \((1-c)/2\) and
 \((1+c)/2\) is appropriate for a central equal-tailed target
-\citep{KoenkerBassett1978}, but it does not answer the shortest-interval or
-mean-preserving question. Evaluation should therefore match the interval
+\citep{KoenkerBassett1978}. Shortest-interval and mean-preserving questions
+require different functionals. Evaluation should therefore match the interval
 functional being estimated
 \citep{BrehmerGneiting2021Intervals,FisslerEtAl2021SetValued}.
 
@@ -131,16 +134,17 @@ criterion as an optimization tool. Here the population score equations identify
 the unrestricted regular target: among contiguous intervals of content \(c\),
 the minimizer is the interval whose retained mean equals the population mean.
 We call this target the mean-preserving interval (MPI). The terminology is
-descriptive and does not rename the original contribution.
+descriptive; the original contribution remains the Pouplin et al.
+residual-product criterion.
 
-The same score structure gives a placement coordinate. Replacing the
-mean-preserving equation by a fixed retained-mean offset \(\delta\) defines the
-mean-tilted interval (MTI) family. Content remains fixed at \(c\); the tilt
-selects where the interval sits within the content-\(c\) class. Equal-tailed and
+The same score structure gives a direct generalization. The mean-tilted
+interval (MTI) family keeps the MPI content score and replaces retained-mean
+equality by a fixed retained-mean offset \(\delta\). Thus MPI is the
+\(\delta=0\) member of the family, while nonzero tilts select where the
+interval sits within the content-\(c\) class. Equal-tailed and
 shortest-contiguous intervals correspond to distribution-specific tilts.
-Consequently, \(\delta\) is part of the target specification. It is fixed
-externally, or selected by a separate validation rule, rather than sampled as an
-ordinary response parameter.
+Consequently, \(\delta\) is part of the target specification, either fixed
+externally or selected by a separate validation rule.
 
 The computational construction follows generalized Bayes. A prior is updated by
 \(\exp\{-\omega_{\mathrm R}\sum_i\ell_i\}\) to define a generalized posterior
@@ -149,9 +153,10 @@ pseudo-asymmetric-Laplace normal--exponential augmentation, adapted from
 Bayesian quantile-regression computation
 \citep{yu2001bayesian,KozumiKobayashi2011Gibbs}, gives
 generalized-inverse-Gaussian latent-scale full conditionals and Gaussian root
-full conditionals. The augmentation is for the product-residual loss factor; it
-does not specify a sampling distribution for \(Y\). A fixed tilt changes only
-the Gaussian information vectors. The same conditional structure supports
+full conditionals. The augmentation represents the product-residual loss factor
+in the generalized posterior; the response distribution for \(Y\) enters only
+through a separately specified response model. A fixed tilt changes only the
+Gaussian information vectors. The same conditional structure supports
 static interval-root regression, frozen deep echo state network (DESN) feature
 readouts \citep{Jaeger2001EchoState,GallicchioMicheliPedrelli2018DeepESNDesign},
 and dynamic linear root states.
@@ -162,8 +167,8 @@ inverse latent-scale moments in the E-step and two Gaussian conditional
 maximization steps for the roots. Related asymmetric-Laplace quantile-regression EM
 algorithms operate in a response working-likelihood setting
 \citep{ZhaoLian2016EMBayesianQR}; the present ECM algorithm optimizes a
-fixed loss-defined generalized-posterior mode. It is not variational Bayes and
-does not produce posterior draws.
+fixed loss-defined generalized-posterior mode. Posterior draws require the
+Gibbs sampler described below.
 
 The dynamic extension replaces each root coefficient vector by a linear
 Gaussian state trajectory. The two trajectories have a jointly Gaussian stacked
@@ -179,8 +184,8 @@ this fixed-target construction. The scan-calibrated empirical procedure first
 chooses a retained count by a distribution-free scan statistic, selects the
 shortest closed order-statistic window at that count, and then records the MTI
 tilt of that selected window. A fixed-target MTI generalized posterior can
-summarize local endpoint uncertainty after this choice has been made, but it
-does not propagate uncertainty in the same-sample shortest-window selection.
+summarize local endpoint uncertainty after this choice has been made. The
+same-sample shortest-window selection has its own scan-calibration layer.
 The ordinary full-distribution Bayesian alternatives instead model the unknown
 response distribution \(F\): the direct Dirichlet-process posterior gives
 exact fixed-interval content probabilities, and a Gaussian
@@ -190,18 +195,20 @@ target, content, and evaluation criterion have been aligned.
 
 These layers are kept separate throughout the article. MPI and MTI are
 population fixed-content interval targets. The generalized posterior is a
-loss-based distribution over roots or parameters for a declared target, not a
-posterior predictive distribution for responses. A reported endpoint summary
-is a decision rule applied to that generalized posterior or to an optimizer.
+loss-based distribution over roots or parameters for a declared target.
+Response prediction belongs to a response-distribution model. A reported
+endpoint summary is a decision rule applied to that generalized posterior or to
+an optimizer.
 Tolerance calibration is an external content--confidence requirement attached
 to an empirical action. Full-distribution Bayesian alternatives instead put a
 sampling model and prior on \(F\), and their uncertainty summaries have the
 ordinary posterior interpretation under that model.
 
 The contributions are fourfold. First, the residual-product loss is shown to
-target the MPI member of the fixed-content interval class, and a fixed mean tilt
-is shown to index the remaining admissible contiguous windows; the same theory
-gives exact fractional empirical balance identities. Second, a pseudo-AL Gibbs
+target the MPI member of the fixed-content interval class, and MTI is shown to
+generalize MPI by adding a fixed retained-mean tilt that indexes the remaining
+admissible contiguous windows; the same theory gives exact fractional empirical
+balance identities. Second, a pseudo-asymmetric-Laplace (pseudo-AL) Gibbs
 sampler is derived for fixed-rate static targets and extended to
 ridge-regularized static regression, frozen-feature DESN readouts, and
 root-blocked dynamic linear states under the stated fixed-target conditions.
@@ -232,13 +239,14 @@ the fixed-content interval class. Sections~\ref{sec:mpi-loss}
 and~\ref{sec:mti-loss} identify the MPI target and the MTI placement family.
 Section~\ref{sec:static-theory-scope} gives finite-sample balance
 and fixed-dimensional iid uncertainty scope. Section~\ref{sec:posterior}
-develops generalized-Bayes endpoint computation, fixed-target ECM, MPI RHS-NS
-regularization, and the frozen-DESN specialization. Section~\ref{sec:dynamic}
+develops generalized-Bayes endpoint computation, fixed-target ECM, the MPI
+regularized-horseshoe Nishimura--Suchard (RHS-NS) prior adapter, and the
+frozen-DESN specialization. Section~\ref{sec:dynamic}
 gives the dynamic endpoint-state sampler. Section~\ref{sec:tcsp} defines the
 calibrated minimum-width, hybrid Bayesian--scan, and split exact-spacing
 tolerance interval actions and states the remaining proof requirements.
-Section~\ref{sec:evaluation} describes validation scope and numerical
-evidence, and Section~\ref{sec:discussion} concludes.
+Section~\ref{sec:evaluation} states the confirmatory validation scope, and
+Section~\ref{sec:discussion} concludes.
 
 \section{Fixed-Content Interval Targets}
 \label{sec:interval-functionals}
@@ -256,8 +264,10 @@ M_c(u)=\frac{1}{c}\int_u^{u+c}Q(v)\,dv,\qquad
 W_c(u)=Q(u+c)-Q(u).
 \]
 Probability content fixes the length of the window on the probability scale,
-but not its lower-tail index \(u\). Table~\ref{tab:interval-functionals}
-summarizes three principal placement rules.
+but not its lower-tail index \(u\). We use ET for equal-tailed, MPI for
+mean-preserving, and SH for shortest-contiguous intervals.
+Table~\ref{tab:interval-functionals} summarizes these three principal
+placement rules.
 \begin{table}[h!]
 \centering
 \caption{\textbf{Three contiguous fixed-content interval functionals.}}
@@ -276,7 +286,7 @@ MPI
 & \(M_c(u)=\mu\)
 & Mean-preserving truncation\\
 Shortest contiguous
-& \(u\in\mathcal U_{\mathrm{SH}}=\argmin_v W_c(v)\)
+& \(u\in S_{\mathrm{SH}}=\argmin_v W_c(v)\)
 & Minimum geometric width\\
 \bottomrule
 \end{tabularx}
@@ -322,8 +332,9 @@ c(y-a)(y-b), & y\le a\ \text{or}\ y\ge b.
 Both branches are nonnegative and meet continuously at zero when \(y=a\) or
 \(y=b\). An observation inside the interval is weighted by \(1-c\), whereas a
 miss is weighted by \(c\). The two factors also encode distance from both
-endpoints, so this is not a binary coverage penalty. Increasing \(c\) raises
-the relative cost of a miss; at a regular population optimum, this weighting
+endpoints, so the criterion weights membership and endpoint displacement
+together. Increasing \(c\) raises the relative cost of a miss; at a regular
+population optimum, this weighting
 produces the content equation established below. For data
 \(y_1,\ldots,y_n\), MPI minimizes
 \(\sum_{i=1}^n\ell_c^{\mathrm{MPI}}(a,b;y_i)\), or the corresponding regression
@@ -371,11 +382,11 @@ the prior. The results below concern an unrestricted pointwise population
 problem. Restricted regression classes generally recover only design-weighted
 projections of these identities.
 
-The first result gives the score-level interpretation of the loss. At a regular
-interior point, the two endpoint scores enforce both content and retained-mean
-balance.
+The endpoint scores have two population consequences: they set the interval
+content and make the retained conditional distribution preserve the conditional
+mean.
 
-\begin{proposition}[Mean-preserving population target]
+\begin{proposition}[Mean-preserving score characterization]
 \label{prop:population-characterization}
 Fix \(x\) and let \(a<b\). Suppose
 \(\E(Y^2\mid X=x)<\infty\), the conditional distribution has no mass at \(a\)
@@ -396,21 +407,21 @@ Equivalently,
 \]
 \end{proposition}
 
-The population content implication is due to
-\citet{PouplinEtAl2024RQR}. The conditional first-moment equation is a further
-consequence of the same first-order system. Equivalently, it implies zero
-conditional covariance between \(Y\) and interval membership. It also balances
-the first-moment contributions removed from the two tails rather than their
-probabilities:
+The population content equation is due to
+\citet{PouplinEtAl2024RQR}. The retained-mean equation is a further
+consequence of the same first-order system: conditional on \(X=x\), interval
+membership has zero covariance with \(Y\). In omitted-tail form, the same
+identity balances first-moment mass around the conditional mean:
 \[
-\int_{-\infty}^{a}\{\mu_x-y\}\,dF_x(y)
+\E[\{\mu_x-Y\}\ind(Y<a)\mid X=x]
 =
-\int_b^\infty\{y-\mu_x\}\,dF_x(y),
+\E[\{Y-\mu_x\}\ind(Y>b)\mid X=x],
 \qquad \mu_x=\E(Y\mid X=x).
 \]
-The retained core and its excluded complement consequently have the same
-conditional mean, although the endpoint midpoint need not equal that mean.
-The supplement further shows that the retained core is a mean-preserving
+Tail probabilities may differ; MPI balances their first moments around
+\(\mu_x\). The retained core and its excluded complement consequently have the
+same conditional mean, although the endpoint midpoint may differ from that
+mean. The supplement further shows that the retained core is a mean-preserving
 contraction of the full distribution in convex order. A finite first moment is
 enough for the retained-mean identity once the endpoint scores are valid. The
 stronger second-moment assumption ensures that the expected MPI loss
@@ -421,7 +432,7 @@ The next theorem converts the score identities into a quantile-window
 functional. This is the object that the unrestricted population loss estimates.
 
 \begin{theorem}[Quantile-window identification]
-\label{prop:quantile-window}
+\label{thm:quantile-window}
 In addition to the conditions of
 Proposition~\ref{prop:population-characterization}, suppose that \(F_x\) is
 continuous and strictly increasing on its support, and let \(Q_x=F_x^{-1}\).
@@ -442,17 +453,18 @@ If \(F_x\) is symmetric about \(\mu_x\), then
 \end{theorem}
 
 This theorem identifies the unique regular stationary window.
-Proposition~\ref{prop:profiled-mean-tilt} below strengthens that statement to
+Theorem~\ref{thm:profiled-mean-tilt} below strengthens that statement to
 the unique global expected-loss minimizer by profiling over the half-width.
 The supplement proves these results and records the restricted score
 equations. Under the connected-support and local positive-density conditions
-used in Theorem~\ref{prop:profiled-mean-tilt}, the regular unrestricted
+used in Theorem~\ref{thm:profiled-mean-tilt}, the regular unrestricted
 population intervals form a nested path. If the conditional quantile function
 is continuous at \(p_{\mu,x}=F_x(\mu_x)\) and
 \(Q_x(p_{\mu,x})=\mu_x\), the two endpoints converge to \(\mu_x\) as
 \(c\downarrow0\). Without this local support condition, the zero-content
-limit may straddle a support gap. This path statement does not turn the
-midpoint at a fixed positive content into a mean estimator. If the
+limit may straddle a support gap. At fixed positive content, the midpoint's
+role remains interval placement, while the conditional mean is imposed through
+retained-mean balance. If the
 conditional law has endpoint atoms,
 the corresponding directional conditions give
 \[
@@ -477,10 +489,10 @@ or asymptotic guarantees require a separate empirical-process argument.
 \section{Mean-Tilted Intervals}
 \label{sec:mti-loss}
 
-The MPI target is one member of the fixed-content class. To move through the
-content-\(c\) family without changing the coverage score,
-consider a fixed retained-mean tilt \(\delta\), measured in response units, and
-define
+The MTI family is the fixed-tilt generalization of MPI. It preserves the MPI
+content score and replaces the zero retained-mean-balance equation by a fixed
+retained-mean tilt \(\delta\), measured in response units. To move through the
+content-\(c\) family without changing the coverage score, define
 \[
 \ell_{c,\delta}^{\mathrm{MTI}}(m,h;y)
 =
@@ -495,8 +507,8 @@ Equivalently,
 The second form shows that the loss remains invariant to exchanging the two
 roots. MPI is exactly the \(\delta=0\) member of the MTI family.
 
-The fixed tilt changes placement but not content. The proposition records this
-separation explicitly.
+This generalization changes placement but not content. The proposition records
+that separation explicitly.
 
 \begin{proposition}[Fixed-content mean tilt]
 \label{prop:mean-tilt}
@@ -515,79 +527,63 @@ M_c(u_\delta)=\mu+\delta.
 \]
 \end{proposition}
 
-The score equations identify stationary points. The profiled-risk theorem adds
-global identification for finite ordered roots under connected-support
-regularity.
+The score equations identify stationary points. Global identification follows
+by profiling over the unique content-\(c\) radius at each midpoint and
+differentiating the profiled risk; the supplement gives the radius and
+envelope-derivative argument.
 
-\begin{theorem}[Profiled identification of the interior target]
-\label{prop:profiled-mean-tilt}
+\begin{theorem}[Global identification of the MTI target]
+\label{thm:profiled-mean-tilt}
 Suppose that the support closure is an interval (possibly with infinite
 endpoints), \(F\) is absolutely continuous and strictly increasing between its
 support endpoints, its density is positive and continuous on the support
 interior, and \(\E(Y^2)<\infty\). Extend \(F\) by zero and one beyond finite
-support endpoints. Then, for every finite midpoint \(m\), there is a unique
-radius \(h_c(m)>0\) satisfying
-\(\Pr\{|Y-m|<h_c(m)\}=c\). Define the profiled risk
-\[
-\overline R_{c,\delta}(m)
-=
-\E\{\ell_{c,\delta}^{\mathrm{MTI}}(m,h_c(m);Y)\}.
-\]
-Let \(u_c(m)=F\{m-h_c(m)\}\), with \(u_c(m)=0\) or \(1-c\) when the
-corresponding root extends beyond a finite support endpoint. Then
-\[
-\overline R_{c,\delta}'(m)
-=
-2c\left[M_c\{u_c(m)\}-\mu-\delta\right]
-\]
-where the derivative exists, with the analogous one-sided statement at a
-support transition. Consequently, for
+support endpoints. For every tilt satisfying
 \[
 M_c(0)-\mu<\delta<M_c(1-c)-\mu,
 \]
 the expected MTI loss has a unique global minimizer over finite ordered
-roots. Its index \(u_\delta\in(0,1-c)\) is the unique solution of
+roots. Its probability-window index \(u_\delta\in(0,1-c)\) is the unique
+solution of
 \[
 M_c(u_\delta)=\mu+\delta.
 \]
 Nondegeneracy gives \(M_c(0)<\mu<M_c(1-c)\), so MPI is the interior
-special case \(\delta=0\). Exchanging the two raw root labels leaves the target
-unchanged.
+special case \(\delta=0\).
 \end{theorem}
 
-The supplement proves existence and uniqueness of the radius, the envelope
-derivative, and the one-sided behavior when a root crosses a finite support
-endpoint. Finite second moments make both endpoint tilt values finite, even
-when a support endpoint is infinite. At an endpoint tilt, the canonical
-interval is the corresponding one-sided probability-window limit. An infinite
-support endpoint gives a semi-infinite interval that finite root coefficients
-cannot attain, although the limiting population-risk infimum is finite. At a
-finite support endpoint, roots beyond the support are inactive, so the loss
-does not identify a unique root representation without an additional support
-constraint. Outside the closed admissible tilt range, the unrestricted risk is
-unbounded below along the corresponding escaping-root direction. A proper
-Gaussian prior can nevertheless yield a proper finite-sample generalized
-posterior.
+Finite second moments make both endpoint tilt values finite, even when a
+support endpoint is infinite. Boundary tilts correspond to one-sided
+probability-window limits. Infinite support endpoints lead to semi-infinite
+limiting intervals, and finite endpoints require a support constraint to choose
+a unique inactive-root representation. Outside the closed admissible tilt range,
+the unrestricted risk is unbounded below along the corresponding escaping-root
+direction. A proper Gaussian prior can nevertheless yield a proper
+finite-sample generalized posterior.
 
 The recovery tilts translate familiar placement rules into the MTI coordinate.
-They are population quantities, not automatic sample estimators.
+There are three distinct uses of the tilt notation. A fixed target tilt is
+chosen before generalized-posterior computation; a population recovery tilt
+identifies which \(\delta\) reproduces a familiar interval functional under a
+known distribution; an empirical plug-in tilt estimates such a value through a
+separate target-selection protocol.
 
 \begin{corollary}[Recovery tilts for familiar interval functionals]
 \label{cor:recovery-tilts}
 MPI is recovered by \(\delta_{\mathrm{MPI}}=0\). Define
 \[
-\mathcal U_{\mathrm{SH}}
+S_{\mathrm{SH}}
 =
 \argmin_{0\le u\le1-c}W_c(u),\qquad
 \Delta_{\mathrm{SH}}
 =
-\{M_c(u)-\mu:u\in\mathcal U_{\mathrm{SH}}\}.
+\{M_c(u)-\mu:u\in S_{\mathrm{SH}}\}.
 \]
 The population recovery tilt for the equal-tailed interval is
 \[
 \delta_{\mathrm{ET}}=M_c\{(1-c)/2\}-\mu.
 \]
-Each \(u\in\mathcal U_{\mathrm{SH}}\) has recovery tilt
+Each \(u\in S_{\mathrm{SH}}\) has recovery tilt
 \(\delta_{\mathrm{SH}}(u)=M_c(u)-\mu\). Singular notation is used only when the
 shortest-contiguous window is unique or one minimizer has been selected.
 \end{corollary}
@@ -618,8 +614,8 @@ standardization. The top row shows standardized densities with equal-tailed
 Normal benchmark the three targets coincide at
 \(\delta/\operatorname{SD}(Y)=0\). Under skewness, ET and SH generally require
   nonzero, distribution-specific recovery tilts, while MPI remains the
-zero-tilt retained-mean-balance target. This deterministic population
-illustration is not a finite-sample tilt-selection rule.}
+zero-tilt retained-mean-balance target. The deterministic display is a
+population map for external target specification.}
 \label{fig:mean-tilt-map}
 \end{figure}
 
@@ -654,8 +650,8 @@ map and width profile from the left-skewed illustration. Filled markers are
 the exact population MPI, ET, and SH tilts. Open markers are the first-order
 Cornish--Fisher anchors computed from true population skewness. The display
 diagnoses a population approximation for initialization and external
-screening; it is not a data-driven tilt estimator, MCMC evidence, or a
-response-prediction result.}
+screening. Data-driven tilt estimation, MCMC evidence, and response prediction
+are separate empirical tasks.}
 \label{fig:mean-tilt-cf-anchors}
 \end{figure}
 
@@ -682,7 +678,8 @@ equivariant under positive affine changes of response scale when \(\delta\)
 and the fixed learning rate are transformed accordingly, but it is not
 invariant to arbitrary monotone response transformations. Fixed nonzero tilt
 is currently supported for fixed-rate ridge regression and MPI-DESN readouts,
-and for MPI-DLM with fixed evolution covariance or a frozen discount template.
+and for the MPI dynamic linear model (MPI-DLM) with fixed evolution covariance
+or a frozen discount template.
 Other prior, learning-rate, and evolution-mode combinations require separate
 propriety arguments and validation. Data-driven tilt selection likewise
 requires an external protocol before empirical claims are made.
@@ -698,10 +695,14 @@ propriety analysis before nonzero tilt is enabled.
 \section{Empirical Balance and Static Uncertainty}
 \label{sec:static-theory-scope}
 
-The population identities do not imply smooth finite-sample score equations:
-fitted endpoints depend on the observations, and the empirical MPI
-loss is nonsmooth when an observation lies on a root. The corresponding
-finite-sample result is fractional. For intercept-only MTI with fixed
+This section separates two finite-sample questions: what the fitted training
+interval balances exactly and how fixed-dimensional static endpoint uncertainty
+differs from generalized-posterior curvature.
+
+\paragraph{Training-sample balance.}
+Fitted endpoints depend on the observations, and the empirical MPI loss is
+nonsmooth when an observation lies on a root. The corresponding finite-sample
+score identity is fractional. For intercept-only MTI with fixed
 \(\delta\), let
 \((\widehat a,\widehat b)\), \(\widehat a<\widehat b\), be an interior
 subgradient-stationary empirical solution. Then there exist allocations
@@ -715,9 +716,11 @@ only at fitted roots, such that
 =nc(\overline y+\delta).
 \]
 Thus the training interval has exact fractional content and exact fractional
-retained-mean balance. This is a score identity for the fitted training
-sample, not an exact future-coverage statement. If \(B_n\) observations lie
-on fitted roots, then
+retained-mean balance in its empirical estimating equations. Population content
+requires an additional probability argument, such as the iid intercept-only DKW
+bound below.
+
+If \(B_n\) observations lie on fitted roots, then
 \[
 P_n(\widehat a<Y<\widehat b)\le c\le
 P_n(\widehat a\le Y\le\widehat b),
@@ -730,25 +733,29 @@ high-probability population-content bound; the supplement gives the explicit
 display. Regression fits satisfy analogous design-weighted score equations;
 when a global ordering is valid, their coverage component contains
 \(\sum_i X_i\widehat w_i(c-\widehat q_i)=0\), with
-\(\widehat w_i=\widehat U_i-\widehat L_i\). This is width-weighted
-calibration in the chosen design span, not pointwise conditional coverage.
+\(\widehat w_i=\widehat U_i-\widehat L_i\). Within such regression fits, the
+score controls a width-weighted projection in the chosen design span. Pointwise
+conditional coverage requires additional model and richness conditions.
 
+\paragraph{Static endpoint uncertainty.}
 A separate static large-sample theory concerns iid random-design observations
 \(Z_i=(X_i,Y_i)\), fixed coefficient dimension, fixed \(c\), fixed
 \(\delta(X)\), and fixed \(\omega_{\mathrm R}\). It assumes a globally
 labelable ordered chart with uniformly separated roots
 \(a_0(X)=X^\top\beta_{L0}<b_0(X)=X^\top\beta_{U0}\), positive endpoint
 densities, a unique population target, positive-definite curvature, and a
-proper prior positive near the target. Pointwise sorting of crossing raw
-linear roots is not covered by this ordered-chart theorem; nor are selected
-DESN reservoirs, deterministic fixed-design triangular arrays, dependent time
-series, growing feature dimension, learned \(\kappa\), or same-sample tilt
-selection.
+proper prior positive near the target. The scope is this ordered-chart setting.
+Crossing raw linear roots after pointwise sorting, selected DESN reservoirs,
+deterministic fixed-design triangular arrays, dependent time series, growing
+feature dimension, learned \(\kappa\), and same-sample tilt selection fall
+outside the theorem.
 
 Under these static regularity conditions, write
 \(\theta_0=(\beta_{L0}^\top,\beta_{U0}^\top)^\top\). Let \(H\) be the
 expected-risk Hessian and \(J=\operatorname{Var}\{\psi_0(Z)\}\) the variance
-of the endpoint score vector; the supplement records their block forms. The
+of the endpoint score vector; the supplement records their block forms. These
+matrices separate curvature of the loss-defined target from repeated-sampling
+variation in the empirical score. The
 empirical minimizer has asymptotic sandwich covariance
 \[
 \Sigma_F=H^{-1}JH^{-1},
@@ -769,17 +776,22 @@ definite, an open-faced-sandwich transformation
 (\theta-\widehat\theta)
 \]
 calibrates static coefficient and differentiable endpoint-function summaries
-to first order. This is a post-processing calibration of a generalized
-posterior, not a response likelihood and not a proof of dynamic or DESN
-forecast calibration.
+to first order. The adjustment is applied after the generalized-posterior draw
+is produced and targets static endpoint uncertainty; dynamic and DESN forecast
+calibration require the separate diagnostics and validation protocols below.
 
 \section{Generalized-Bayes Endpoint Computation}
 \label{sec:posterior}
 
 \subsection{Static Endpoint Models and Target Scope}
 
-Let \(\mathcal O\) index the observed rows of
-\(\mat X\in\R^{n\times p}\), with \(n_{\mathrm{obs}}=|\mathcal O|\), and
+This section uses raw roots for computation and ordered endpoints for
+reporting. The root labels \(1\) and \(2\) index coefficient blocks; lower
+and upper endpoints are formed only after the roots are evaluated at a design
+row.
+
+Let \(I_{\mathrm{obs}}\) index the observed rows of
+\(\mat X\in\R^{n\times p}\), with \(n_{\mathrm{obs}}=|I_{\mathrm{obs}}|\), and
 define two raw-root readouts
 \[
 \vect\eta_k=\mat X\vect\beta_k,\qquad k=1,2.
@@ -790,19 +802,46 @@ L_i=\min(\eta_{1i},\eta_{2i}),\quad
 U_i=\max(\eta_{1i},\eta_{2i}),\quad
 M_i=(L_i+U_i)/2,\quad W_i=U_i-L_i.
 \]
-These ordered summaries are posterior functionals. The static asymptotic
-result above is narrower: it assumes one globally labelable, uniformly
-separated endpoint ordering.
-When the two root priors are exchangeable, the raw labels \(k=1,2\) are not
-identified. The sampler may therefore apply a complete-root label swap as an
-acceptance-one symmetry move; this exchanges all root-specific coefficient and
-prior-state variables but does not assign lower- or upper-endpoint meaning to
-the raw labels. Coefficient-level lower/upper summaries are reported only as a
-post-processing chart on a declared reference design, and only when one complete
-root block is separated below the other across that design. If the fitted
-linear roots cross on the reference domain or the keep/swap assignment is
-ambiguous, the canonical coefficient chart is not reported; pointwise ordered
-endpoints remain well defined.
+These ordered summaries are generalized-posterior functionals of the unordered
+root pair. The implemented generalized posterior remains the raw-root
+specification in \((\vect\beta_1,\vect\beta_2)\). For interpretation, the same
+draws can be summarized by the midpoint and signed half-gap coefficients
+\[
+\vect\beta_m=\frac{\vect\beta_1+\vect\beta_2}{2},\qquad
+\vect\beta_s=\frac{\vect\beta_2-\vect\beta_1}{2}.
+\]
+At a design row \(\vect x\), write
+\[
+M(\vect x)=\vect x^\top\vect\beta_m,\qquad
+S(\vect x)=\vect x^\top\vect\beta_s.
+\]
+Then
+\[
+L(\vect x)=M(\vect x)-|S(\vect x)|,\qquad
+U(\vect x)=M(\vect x)+|S(\vect x)|,\qquad
+W(\vect x)=2|S(\vect x)|.
+\]
+A complete exchange of the two raw root blocks leaves
+\(\vect\beta_m\), \(L\), \(U\), and \(W\) unchanged and reverses the sign of
+\(\vect\beta_s\). Thus \(\vect\beta_m\) describes the geometric midpoint of the
+reported interval, while \(\vect\beta_s\) is a signed gap coordinate. This
+midpoint is geometric:
+Proposition~\ref{prop:population-characterization} concerns the retained
+conditional mean, and MTI uses \(\delta\) to set a retained-mean offset.
+
+When the two root priors are exchangeable, the raw labels \(k=1,2\) are
+therefore computational labels. The sampler may apply a complete-root label swap
+as an acceptance-one symmetry move; this exchanges all root-specific coefficient
+and prior-state variables while preserving the ordered interval functionals.
+Coefficient-level lower/upper summaries are reported only as a post-processing
+chart on a declared reference design, and only when one complete root block is
+separated below the other across that design. If the fitted linear roots cross
+on the reference domain or the keep/swap assignment is ambiguous, the canonical
+coefficient chart is suppressed. In that case, pointwise ordered endpoints,
+widths, midpoints, and covariate-profile contrasts are the appropriate
+summaries. The static asymptotic result above has the narrower ordered-chart
+scope: it assumes one globally labelable, uniformly separated endpoint
+ordering.
 
 For each observed row, define
 \[
@@ -810,18 +849,19 @@ e_i=(y_i-\eta_{1i})(y_i-\eta_{2i}),\qquad
 \ell_{c,\delta_i}(\eta_{1i},\eta_{2i};y_i)
 =\rho_c(e_i)-c\delta_i(\eta_{1i}+\eta_{2i}-2y_i).
 \]
-For priors \(\pi_1,\pi_2\), a fixed externally declared
-\(\vect\delta\), and a fixed learning rate \(\omega_{\mathrm R}>0\), the
-generalized posterior is
+Write \(\theta=(\vect\beta_1^\top,\vect\beta_2^\top)^\top\) for the two-root
+coefficient block. For prior densities \(\pi_1,\pi_2\), a fixed externally
+declared \(\vect\delta\), and a fixed learning rate \(\omega_{\mathrm R}>0\),
+the generalized posterior kernel is
 \begin{equation}
 \begin{split}
-\Pi_{\vect\delta}
-(d\vect\beta_1,d\vect\beta_2\mid\vect y,\mat X)
+\pi_{\vect\delta}
+(\vect\beta_1,\vect\beta_2\mid\vect y,\mat X)
 \propto{}&
-\pi_1(d\vect\beta_1)\pi_2(d\vect\beta_2)\\
+\pi_1(\vect\beta_1)\pi_2(\vect\beta_2)\\
 &\times\exp\left\{-\omega_{\mathrm R}
-\sum_{i\in\mathcal O}
-\ell_{c,\delta_i}^{\mathrm{MTI}}(\eta_{1i},\eta_{2i};y_i)\right\},
+\sum_{i\in I_{\mathrm{obs}}}
+\ell_{c,\delta_i}^{\mathrm{MTI}}(\eta_{1i},\eta_{2i};y_i)\right\}.
 \end{split}
 \label{eq:fixed-mt-target}
 \end{equation}
@@ -843,15 +883,24 @@ uses \(\eta_k=\mat X\vect\beta_k\); frozen-DESN readouts replace
 article refer to the specified generalized posterior under these adapters, not
 to a response likelihood or to calibrated endpoint uncertainty. Fixed-rate MPI
 and fixed-rate MTI admit Gaussian root updates under the stated Gaussian or
-ridge specifications. MPI also supports the learned loss-scale and RHS-NS
-extensions described below. Nonzero MTI is kept to fixed-rate Gaussian or
-ridge settings, frozen-DESN readouts, and fixed or frozen dynamic evolution
-specifications.
+ridge specifications. MPI also supports the learned loss-scale and the
+RHS-NS prior adapter described below. Nonzero MTI is kept to fixed-rate
+Gaussian or ridge settings, frozen-DESN readouts, and fixed or frozen dynamic
+evolution specifications.
 
-\subsection{Pseudo-AL Augmentation and Gibbs Updates}
+\subsection{Pseudo-AL Computation: Gibbs and ECM}
 \label{sec:gibbs}
 
-Let
+This subsection gives the computational bridge from the loss-defined target to
+Gibbs and deterministic mode calculations. The bridge has three parts: a
+normal--exponential identity for the product-residual loss factor, a
+generalized-inverse-Gaussian update for the latent scales, and Gaussian updates
+for one root conditional on the other. The same identity also gives the ECM
+mode update after replacing inverse latent scales by their exact conditional
+moments.
+
+\paragraph{Latent-scale identity.}
+For each observed row, let
 \[
 r_i=y_i^2,\qquad
 m_i^{\mathrm R}=y_i(\eta_{1i}+\eta_{2i})-\eta_{1i}\eta_{2i}.
@@ -872,9 +921,14 @@ r_i\mid m_i^{\mathrm R}+\xi_c v_i,\,
 \right)
 \Exp(v_i\mid \text{rate}=1/\sigma_{\mathrm R})\,dv_i .
 \]
-This identity defines a latent-variable augmentation of that generalized
-posterior factor. It is not a sampling model for \(y_i\). Under the
-three-parameter convention
+The integral is over the positive latent scale \(v_i\). It augments the
+single-observation factor of the generalized posterior; it is not a sampling
+density for the response. The response value enters through the
+product-residual loss, while any sampling model for \(Y\) belongs to a
+separate response-distribution layer.
+
+\paragraph{Latent-scale update.}
+Under the three-parameter convention
 \[
 \GIG(p,a,b):\quad
 p(v)\propto v^{p-1}\exp\{-(av+b/v)/2\},
@@ -888,29 +942,30 @@ v_i\mid\cdot\sim
 \frac{\omega_{\mathrm R}}{2c(1-c)},\,
 \frac{\omega_{\mathrm R}c(1-c)e_i^2}{2}
 \right),
-\qquad i\in\mathcal O.
+\qquad i\in I_{\mathrm{obs}}.
 \]
 The MPI learned-scale convention instead sets
-\(\sigma_{\mathrm R}=s_L/\kappa\) and follows the separate partially collapsed
-order stated in the following subsection and in the supplement.
+\(\sigma_{\mathrm R}=s_L/\kappa\) and follows the separate partially
+collapsed order stated later in this section and in the supplement.
 
+\paragraph{Gaussian root update.}
 Conditional on \(\vect\beta_2\), the pseudo-observation equation is linear in
 \(\vect\beta_1\):
 \[
-\mat A_1=\diag(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
-\mat X_{\mathcal O},\qquad
-\vect z_1=\vect y_{\mathcal O}\circ
-(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
--\xi_c\vect v_{\mathcal O}.
+\mat A_1=\diag(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}})
+\mat X_{\mathrm{obs}},\qquad
+\vect z_1=\vect y_{\mathrm{obs}}\circ
+(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}})
+-\xi_c\vect v_{\mathrm{obs}}.
 \]
 With
-\(\mat W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_i)^{-1}:i\in\mathcal O\}\)
+\(\mat W_v=\diag\{(\phi_c\sigma_{\mathrm R}v_i)^{-1}:i\in I_{\mathrm{obs}}\}\)
 and Gaussian prior
 canonical parameters \((\mat Q_{01},\vect h_{01})\),
 \[
 \mat Q_1=\mat Q_{01}+\mat A_1^\top\mat W_v\mat A_1,\qquad
 \vect h_1=\vect h_{01}+\mat A_1^\top\mat W_v\vect z_1
-+\omega_{\mathrm R}c\mat X_{\mathcal O}^{\top}\vect\delta_{\mathcal O},
++\omega_{\mathrm R}c\mat X_{\mathrm{obs}}^{\top}\vect\delta_{\mathrm{obs}},
 \]
 so the Gaussian full conditional is
 \[
@@ -922,6 +977,7 @@ conditioning on the newly drawn first root. The tilt changes only the two
 Gaussian information vectors: the latent-scale conditionals and Gaussian
 precision matrices are unchanged.
 
+\paragraph{ECM mode.}
 For a deterministic fixed-target mode, the same augmentation gives an ECM
 algorithm. At the current roots, for nonzero residual product \(e_i\),
 \[
@@ -929,10 +985,10 @@ algorithm. At the current roots, for nonzero residual product \(e_i\),
 \]
 Holding the second root fixed, let
 \[
-\mat A_1=\diag(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O})
-\mat X_{\mathcal O},\qquad
-\vect c_1=\vect y_{\mathcal O}\circ
-(\vect y_{\mathcal O}-\vect\eta_{2,\mathcal O}).
+\mat A_1=\diag(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}})
+\mat X_{\mathrm{obs}},\qquad
+\vect c_1=\vect y_{\mathrm{obs}}\circ
+(\vect y_{\mathrm{obs}}-\vect\eta_{2,\mathrm{obs}}).
 \]
 Replacing \(v_i^{-1}\) by \(\tau_i\) in the expected complete-data criterion
 gives a Gaussian conditional maximization with precision
@@ -948,7 +1004,7 @@ and canonical vector
 =\vect h_{01}
 +\frac{1}{\phi_c\sigma_{\mathrm R}}
 \mat A_1^\top\{\diag(\vect\tau)\vect c_1-\xi_c\vect 1\}
-+\omega_{\mathrm R}c\mat X_{\mathcal O}^\top\vect\delta_{\mathcal O}.
++\omega_{\mathrm R}c\mat X_{\mathrm{obs}}^\top\vect\delta_{\mathrm{obs}}.
 \]
 The first conditional maximization sets
 \(\vect\beta_1=(\mat Q_1^{\mathrm{ECM}})^{-1}\vect h_1^{\mathrm{ECM}}\);
@@ -958,7 +1014,8 @@ augmented pseudo-residual is quartic jointly in the two root blocks but
 quadratic in either block conditional on the other. The implemented algorithm
 uses a declared residual-product safeguard at \(e_i=0\), exact observed
 objective backtracking, and deterministic multi-start selection. Its endpoint
-output is a fixed-target mode summary and is not a tolerance certificate.
+output is a fixed-target mode summary; tolerance certification comes from the
+scan-calibrated decision rule.
 
 \subsection{Regularization and the Static Gibbs Sweep}
 
@@ -966,7 +1023,8 @@ The fixed-design calculation also supports regularized MPI. Let
 \(\vect\psi_k\) denote a root-specific prior state and suppose that,
 conditional on this state, root \(k\) has Gaussian canonical parameters
 \(\{\mat Q_{0k}(\vect\psi_k),\vect h_{0k}(\vect\psi_k)\}\). The MPI
-MCMC adapter supports RHS-NS
+MCMC adapter supports the regularized-horseshoe Nishimura--Suchard (RHS-NS)
+prior representation
 \citep{CarvalhoPolsonScott2010HS,PiironenVehtari2017RHS,
 NishimuraSuchard2023SSS}. As an input requirement for this branch, the first
 design column must be the declared intercept and is excluded from shrinkage.
@@ -982,21 +1040,20 @@ roots carry distinct, identically specified prior states, and a root-label
 swap moves \((\vect\beta_k,\vect\psi_k)\) as one complete block.
 
 This conditionally Gaussian adapter reuses the external RHS-NS hierarchy
-rather than rederiving its marginal prior. The legacy interface names this option
-\(\text{RHS-NS}\), rather than a generic \(\mathrm{RHS}\) mode. It is
-available only for MPI, \(\vect\delta=\vect 0\). The Gaussian
+rather than rederiving its marginal prior. It is available only for MPI,
+\(\vect\delta=\vect 0\). The Gaussian
 moment-generating-function argument that establishes fixed-rate nonzero-tilt
 propriety does not establish the same result after random-scale mixing.
 
 \begin{algorithmblock}{Static fixed-rate MPI/MTI root-blocked Gibbs sampler}
 \label{alg:fixed-design-gibbs}
 \item \textbf{Specify the generalized posterior.} Fix
-\(\vect y,\mat X,\mathcal O,c,\omega_{\mathrm R}\), the target tilt
-\(\vect\delta_{\mathcal O}\), proper root priors, and the label-swap rule.
+\(\vect y,\mat X,I_{\mathrm{obs}},c,\omega_{\mathrm R}\), the target tilt
+\(\vect\delta_{\mathrm{obs}}\), proper root priors, and the label-swap rule.
 Missing rows contribute no generalized-posterior factor, latent scale, or tilt
 term.
 \item \textbf{Initialize.} Choose finite
-\(\vect\beta_1,\vect\beta_2\), positive \(v_i\) for \(i\in\mathcal O\), and
+\(\vect\beta_1,\vect\beta_2\), positive \(v_i\) for \(i\in I_{\mathrm{obs}}\), and
 valid root-specific prior states when the MPI RHS-NS adapter is used.
 \item \textbf{Sweep.} For each iteration:
 \begin{enumerate}[label=(\alph*),leftmargin=1.8em,itemsep=0.15em,topsep=0.15em]
@@ -1004,8 +1061,8 @@ valid root-specific prior states when the MPI RHS-NS adapter is used.
 conditional;
 \item draw \(\vect\beta_1\) from its Gaussian full conditional given
 \(\vect\beta_2\), with tilt shift
-\(\omega_{\mathrm R}c\mat X_{\mathcal O}^{\top}
-\vect\delta_{\mathcal O}\);
+\(\omega_{\mathrm R}c\mat X_{\mathrm{obs}}^{\top}
+\vect\delta_{\mathrm{obs}}\);
 \item update root 1's MPI RHS-NS prior state when that adapter is active;
 \item rebuild the system and draw \(\vect\beta_2\) conditionally on the new
 \(\vect\beta_1\), using the same tilt shift;
@@ -1059,13 +1116,13 @@ data-selected reservoir features.
 
 A separate MPI-only convention uses a positive reference loss scale
 \(s_L\), sets \(\sigma_{\mathrm R}=s_L/\kappa\), writes
-\(\mathcal L_{n,c}(\vartheta)=
-\sum_{i\in\mathcal O}\rho_c(e_i)\), and declares
+\(L_{n,c}(\vartheta)=
+\sum_{i\in I_{\mathrm{obs}}}\rho_c(e_i)\), and declares
 \[
-\Pi_{\mathrm R}(d\vartheta,d\kappa\mid\vect y)
+\pi_{\mathrm R}(\vartheta,\kappa\mid\vect y)
 \propto
-\pi(d\vartheta)\kappa^{n_{\mathrm{obs}}}\pi_\kappa(d\kappa)
-\exp\{-\kappa\mathcal L_{n,c}(\vartheta)/s_L\},
+\pi(\vartheta)\kappa^{n_{\mathrm{obs}}}\pi_\kappa(\kappa)
+\exp\{-\kappa L_{n,c}(\vartheta)/s_L\},
 \]
 the \emph{pseudo-residual-normalized learned-scale generalized posterior}.
 The factor
@@ -1078,7 +1135,7 @@ collapsed full conditional is
 \[
 \kappa\mid\vartheta,\vect y
 \sim\mathrm{Gamma}\left(a_\kappa+n_{\mathrm{obs}},
-b_\kappa+\mathcal L_{n,c}(\vartheta)/s_L\right).
+b_\kappa+L_{n,c}(\vartheta)/s_L\right).
 \]
 The factor \(\kappa^{n_{\mathrm{obs}}}\) is part of this generalized posterior
 rather than an irrelevant constant when \(\kappa\) is learned. A pure-loss
@@ -1102,7 +1159,7 @@ immediately refreshes every observed latent scale at the new value, and only
 then updates roots 1 and 2; Supplement Algorithm~S1 gives the complete order.
 For any proper MPI root/prior-state law \(\pi(\vartheta)\), joint
 integrability follows because the loss is nonnegative,
-\(\exp\{-\kappa\mathcal L_{n,c}(\vartheta)/s_L\}\leq1\), and the Gamma prior
+\(\exp\{-\kappa L_{n,c}(\vartheta)/s_L\}\leq1\), and the Gamma prior
 has a finite \(n_{\mathrm{obs}}\)th moment. This covers the declared MPI
 RHS-NS adapter while preserving its complete prior-state updates.
 The mean-tilted loss may be negative, and a proper normalized joint generalized
@@ -1112,7 +1169,8 @@ above must not be copied to nonzero tilt.
 \section{Dynamic Endpoint-State Computation}
 \label{sec:dynamic}
 
-The MTI-DLM represents each raw root by a linear Gaussian state trajectory,
+The mean-tilted dynamic linear model (MTI-DLM) represents each raw root by a
+linear Gaussian state trajectory,
 \[
 \eta_{kt}=\vect f_t^\top\vect\theta_{kt},\qquad
 \vect\theta_{k0}\sim\Normal(\vect m_0,\mat C_0),\qquad
@@ -1135,13 +1193,16 @@ full-conditional updates for the specified fixed-joint generalized posterior.
 The resulting computational concern is Markov-chain mixing, not approximation
 of either full conditional.
 
-For \(t\in\mathcal O\), conditional on the second root path and the MTI latent
+For \(t\in I_{\mathrm{obs}}\), conditional on the second root path and the MTI latent
 scales, the first path has the pseudo-observation system
 \[
 z_{1t}=y_t(y_t-\eta_{2t})-\xi_c v_t,\qquad
 H_{1t}=(y_t-\eta_{2t})\vect f_t^\top,\qquad
 V_t=\phi_c\sigma_{\mathrm R}v_t.
 \]
+Here the state equation supplies the Gaussian prior on root trajectories, while
+the pseudo-observation equation is a conditional representation of the
+loss-based generalized-posterior factor.
 The second root is analogous and conditions on the newly drawn first path.
 Under fixed-rate MTI, the tilt adds the canonical linear site
 \[
@@ -1173,7 +1234,7 @@ empirical-Bayes specification.
 \begin{algorithmblock}{Fixed-rate MTI-DLM root-blocked Gibbs sampler}
 \label{alg:dynamic-gibbs}
 \item \textbf{Specify the joint generalized posterior.} Fix
-\((\vect y,\mathcal O)\), \(c,\omega_{\mathrm R}\), \(\delta_{1:T}\),
+\((\vect y,I_{\mathrm{obs}})\), \(c,\omega_{\mathrm R}\), \(\delta_{1:T}\),
 \(\vect f_{1:T}\), \(\mat G_{1:T}\), proper Gaussian initial laws, and either
 fixed \(\mat W_{1:T}\) or one precomputed frozen discount template.
 \item \textbf{Initialize.} Choose finite root paths
@@ -1183,7 +1244,7 @@ factor, latent scale, or tilt term.
 \item \textbf{Sweep.} For each iteration:
 \begin{enumerate}[label=(\alph*),leftmargin=1.8em,itemsep=0.15em,topsep=0.15em]
 \item compute the current product residual and draw \(v_t\) at every
-\(t\in\mathcal O\) from the GIG conditional;
+\(t\in I_{\mathrm{obs}}\) from the GIG conditional;
 \item conditional on \(\vect\theta_{2,1:T}\), build root 1's scalar Gaussian
 pseudo-observation system, add
 \(\vect g_t=\omega_{\mathrm R}c\delta_t\vect f_t\) at observed times, and draw
@@ -1227,14 +1288,13 @@ multipliers are shared across the two roots to preserve exchangeability. The
 MPI component-scale sampler uses rootwise partial collapse
 and centered/noncentered interweaving; the supplement gives the invariant
 transition and update order
-\citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. This extension is
-not silently generalized to nonzero tilt. In the noncentered parameterization
+\citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. The validated scope
+of this extension is the MPI target. In the noncentered parameterization
 the tilt depends on \(\sqrt{q_j}\) through the reconstructed state path, so a
 tilted component-scale generalized posterior requires separate normalization,
 propriety, and validation. Likewise, recomputing \(\mat W_t\) from each
 changing conditional filter covariance is retained only as an experimental
-working update, not as
-an exact Gibbs sampler for a common joint generalized posterior.
+working update until a common joint generalized posterior is supplied.
 
 \section{Calibrated Minimum-Width Tolerance Intervals}
 \label{sec:tcsp}
@@ -1247,23 +1307,16 @@ univariate observations, the target statement is
 C_F([L,U])=F(U)-F(L),
 \]
 where \(\widehat T_n\) is a data-dependent interval. Six quantities must be
-kept distinct:
-\[
-c \text{ is the required content},\quad
-1-\alpha \text{ is the tolerance confidence},\quad
-q=k/n \text{ is the fitted content},
-\]
-\[
-\delta \text{ is the fixed MTI placement tilt},\qquad
-\omega_{\mathrm R} \text{ is the generalized-Bayes learning rate}.
-\]
-\[
-1-\gamma \text{ is a posterior content-probability threshold under a response
-model for } F.
-\]
-Neither \(\omega_{\mathrm R}\) nor \(1-\gamma\) determines the tolerance
-confidence.
+kept distinct. The required population content is \(c\), and the tolerance
+confidence is \(1-\alpha\). The scan calibration returns a retained count
+\(k\), so the fitted content used by a fixed-target MTI approximation is
+\(q=k/n\). The fixed MTI placement tilt is \(\delta\), and the
+generalized-Bayes learning rate is \(\omega_{\mathrm R}\). When a separate
+response-distribution model for \(F\) is used, \(1-\gamma\) denotes a posterior
+content-probability screening threshold. Neither \(\omega_{\mathrm R}\) nor
+\(1-\gamma\) determines the tolerance confidence.
 
+\paragraph{Scan-calibrated empirical action.}
 Let \(Y_{(1)}\le\cdots\le Y_{(n)}\). For content \(c\), define the uniform scan
 statistic
 \[
@@ -1275,7 +1328,8 @@ The calibrated retained count is
 k_{n,c,\alpha}
 =\min\{k:\Pr(M_n(c)<k)\ge 1-\alpha\}.
 \]
-The formal action is the canonical closed order-statistic window
+This count is fixed before any endpoint model is fit. The formal empirical
+action is the canonical closed order-statistic window
 \[
 \widehat T_n=
 [Y_{(\widehat j)},Y_{(\widehat j+k-1)}],
@@ -1287,8 +1341,11 @@ with \(k=k_{n,c,\alpha}\). This convention is closed and contains exactly
 \(k\) sample observations under continuity. It differs from the half-open
 \((Y_{(j)},Y_{(j+k)}]\) convention sometimes used for order-statistic
 tolerance limits, so a result proved for one convention cannot be transferred
-without reconciling the indices and endpoint rule. The fitted MTI content
-and its content buffer are
+without reconciling the indices and endpoint rule.
+
+\paragraph{MTI summaries after selection.}
+The selected window also defines a fixed-target MTI approximation for endpoint
+uncertainty. Its fitted content and content buffer are
 \[
 q_{n,c,\alpha}=k_{n,c,\alpha}/n,\qquad
 t_{n,c,\alpha}=q_{n,c,\alpha}-c.
@@ -1300,22 +1357,24 @@ The empirical shortest-path tilt is
 \frac1k\sum_{\ell=\widehat j}^{\widehat j+k-1}Y_{(\ell)}
 -\frac1n\sum_{i=1}^nY_i.
 \]
-After fixing \(q\) and \(\widehat\delta_{\mathrm{SH}}\), the MTI update is
+After \(q\) and \(\widehat\delta_{\mathrm{SH}}\) are fixed, an MTI endpoint
+model with parameter block \(\theta\) uses the loss-based update
 \[
-\Pi_{q,\delta,\omega_{\mathrm R}}(d\theta\mid D_n)
+\pi_{q,\delta,\omega_{\mathrm R}}(\theta\mid D_n)
 \propto
-\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(\theta)\}\Pi_0(d\theta).
+\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(\theta)\}\pi_0(\theta).
 \]
 This generalized posterior quantifies uncertainty about a fixed interval-root
-functional. It is neither the tolerance certificate nor a response model.
-The formal tolerance action remains the empirical order-statistic window
-\(\widehat T_n\). Because \(\widehat\delta_{\mathrm{SH}}\) is computed from
-the same sample, these posterior summaries are conditional on the selected
-target and do not propagate shortest-window selection uncertainty. An
-unconditional interpretation requires a plug-in stability theorem or a
-separate target-selection sample.
+functional after the target has been declared. The formal tolerance action
+remains the empirical order-statistic window \(\widehat T_n\). Because
+\(\widehat\delta_{\mathrm{SH}}\) is computed from the same sample, these
+posterior summaries are conditional on the selected target and do not propagate
+shortest-window selection uncertainty. An unconditional interpretation requires
+a plug-in stability theorem or a separate target-selection sample.
 
-The full-distribution Bayesian layer instead models \(F\) directly. With
+\paragraph{Bayesian response-distribution actions.}
+The full-distribution Bayesian layer instead models \(F\) directly. Under a
+Dirichlet-process (DP) response-distribution model,
 \[
 F\sim \mathrm{DP}(a,H),\qquad Y_i\mid F\stackrel{\mathrm{iid}}{\sim} F,
 \]
@@ -1330,15 +1389,16 @@ This gives the exact posterior content probability
 \[
 p_n(I;c)=\Pr\{F(I)\ge c\mid D_n\}
 \]
-for every candidate interval. The direct-DP result is a fixed-interval
-posterior statement, not a repeated-sampling tolerance theorem and not an MTI
-generalized posterior. Posterior draws of the shortest \(c\)-content interval
+for every candidate interval. The direct DP result is a fixed-interval
+posterior statement for fixed intervals under the response-distribution model.
+Repeated-sampling tolerance guarantees and MTI generalized-posterior summaries
+are separate objects. Posterior draws of the shortest \(c\)-content interval
 can be computed from a stick-breaking representation
 \citep{Sethuraman1994ConstructiveDP}; they quantify uncertainty in the
 population shortest-interval functional under the response-distribution model.
 
-The hybrid Bayesian--scan tolerance action is the first minimum-width closed
-order-statistic interval satisfying both constraints:
+The hybrid Bayesian--scan (HBS) tolerance action is the first minimum-width
+closed order-statistic interval satisfying both constraints:
 \[
 \widehat T^{\mathrm{HBS}}_n
 =
@@ -1352,13 +1412,14 @@ p_n([Y_{(j)},Y_{(\ell)}];c)\ge 1-\gamma
 The scan count is fixed before posterior computation and is not resampled. The
 posterior threshold can bind, be redundant given the scan action, or make the
 candidate class infeasible; infeasibility is reported rather than repaired by
-weakening a constraint. A truncated Gaussian Dirichlet-process mixture
+weakening a constraint. A truncated Gaussian Dirichlet-process mixture (DPM)
 \citep{IshwaranJames2001GibbsDPM,IshwaranJames2002ApproximateDP} provides a
 smooth response-distribution alternative whose content probabilities are Monte
 Carlo posterior summaries. The Bayesian bootstrap
 \citep{Rubin1981BayesianBootstrap} is retained only as a diagnostic
 weighted-empirical comparator.
 
+\paragraph{Split exact-spacing action.}
 A sample-split alternative removes this same-sample placement issue for the
 univariate tolerance action. Randomly divide the observations into an
 independent pilot sample and an independent main sample. The pilot chooses a
@@ -1378,35 +1439,37 @@ validity of the fixed main-sample spacing. This first split construction is
 continuous-iid-univariate; regression-family tolerance calibration remains a
 separate theorem.
 
+\paragraph{Numerical certification and proof scope.}
 Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
 reported interval. The numerical procedure uses Monte Carlo calibration of
 the uniform scan distribution with a simultaneous
 Massart--DKW empirical-CDF lower band for \(\Pr\{M_n(c)<k\}\) across all
 candidate retained counts, together with a conservative Massart--DKW fallback
-\citep{Massart1990DKW}. The fallback is not an exact scan recursion.
-Accordingly, we treat exact critical-count
-calculation and the finite-sample theorem for this closed-window action as
-open proof and numerical-certification tasks rather than as established
-results.
+\citep{Massart1990DKW}. Exact scan recursion remains an open numerical task.
+Accordingly, exact critical-count calculation and the finite-sample theorem for
+this closed-window action are treated as open proof and certification tasks.
 
 The theoretical scope is deliberately narrower than the implementation menu.
-Theorems~\ref{prop:quantile-window}--\ref{prop:profiled-mean-tilt} identify
+Theorems~\ref{thm:quantile-window}--\ref{thm:profiled-mean-tilt} identify
 the fixed-content MTI family and its admissible tilt coordinate. For tolerance
 inference, the empirical closed order-statistic window is the formal action;
 generalized-posterior summaries for fixed \((q,\delta)\) describe endpoint-root
-uncertainty after a target has been declared and are not substituted for the
+uncertainty after a target has been declared and do not serve as the
 content--confidence certificate. Split exact-spacing calibration has an exact
 conditional iid univariate Beta law. The scan count is computed conservatively
 by the numerical procedure above, with numerical confidence recorded separately
-from tolerance confidence. Direct-DP and Gaussian-DPM intervals are ordinary
+from tolerance confidence. Direct DP and Gaussian DPM intervals are ordinary
 response-distribution Bayesian alternatives, not MTI generalized posteriors.
 Exact scan recursion, an action-matched finite-sample proof for the closed
 window convention, selected-action asymptotics, posterior-to-action transfer,
 and regression-family tolerance calibration remain separate certification
 tasks.
 
-The population shortest-window path gives a useful geometry for moving across
-contents. Suppose that the density is differentiable and strictly unimodal,
+\paragraph{Shortest-path continuation.}
+The population shortest-window path gives useful continuation geometry for
+moving across contents. This geometry helps initialize and check numerical
+paths; it is not the scan certificate. Suppose that the density is
+differentiable and strictly unimodal,
 and that the shortest window
 \(I_q=[L_q,U_q]=[Q(u_q),Q(u_q+q)]\) is unique and interior over a range of
 \(q\). Equal endpoint densities then satisfy
@@ -1458,28 +1521,28 @@ nonunique shortest windows, response-scale dependence of geometric width, and
 unsupported attempts to attach the scan certificate to posterior summaries.
 
 The construction therefore retains three distinct outputs: an empirical scan
-tolerance action, a full-distribution Bayesian shortest-interval UQ action, and
-fixed-target MTI generalized-posterior summaries. Finite-sample scan
+tolerance action, a full-distribution Bayesian shortest-interval uncertainty
+quantification action, and fixed-target MTI generalized-posterior summaries.
+Finite-sample scan
 validity requires an action-matched proof and certified critical count;
 first-order tolerance or oracle-width statements additionally require
 same-sample shortest-window asymptotics. Any transfer from posterior content
 probabilities to endpoint coverage, or from fixed-target MTI summaries to
 the selected shortest action, requires a separate action-equivalence or
-direct-calibration result. Posterior credibility is not tolerance confidence,
-and \(\omega_{\mathrm R}\) is not a tolerance factor.
+direct-calibration result. Tolerance confidence comes from the scan calibration,
+and \(\omega_{\mathrm R}\) remains the generalized-Bayes learning rate.
 
-\section{Validation Scope and Numerical Evidence}
+\section{Validation Scope}
 \label{sec:evaluation}
 
-The evidence is organized by inferential target. Population calculations verify
-the fixed-content and mean-tilt characterizations without Monte Carlo error.
-Computational fixtures compare generalized-posterior updates with quadrature,
-dense Gaussian full conditionals, analytic scale updates, and exact checkpoint
-continuation. The supplement reports the fixed-design and dynamic single-data
-oracle-tilt diagnostics, including endpoint-error summaries and MCMC checks.
-Those diagnostics establish agreement with the declared generalized-posterior
-targets on controlled fixtures. Repeated-sampling tolerance performance is
-evaluated separately.
+Validation is reserved for questions that require repeated sampling or
+held-out comparison. Population calculations verify the fixed-content and
+mean-tilt characterizations without Monte Carlo error. Computational fixtures
+compare generalized-posterior draws with quadrature, dense Gaussian full
+conditionals, analytic scale updates, and exact checkpoint continuation. These
+checks are implementation evidence for the stated computational target on
+reference problems. Empirical coverage, width efficiency, and comparator
+ranking require repeated-sampling validation.
 
 The main tolerance study is prespecified before inspecting comparative results,
 following simulation-study reporting principles
@@ -1495,101 +1558,178 @@ comparison. Hybrid Bayesian--scan actions are evaluated at posterior content
 thresholds \(0.90\), \(0.95\), and \(0.99\), using the same random samples as
 the empirical scan action.
 
-The main comparison is restricted to deployable data-based tolerance actions.
-TCSP is the formal scan-calibrated shortest empirical action. The hybrid
-DP--scan action uses the same selected window after adding a direct
-Dirichlet-process content screen. Young--Mathew interpolation
-\citep{YoungMathew2014NonparametricTolerance} and Wilks min--max intervals
-\citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction} provide the two
-external distribution-free comparators. The population shortest interval is
-reported only as a non-deployable efficiency benchmark in the supplement. The
-fixed-target MTI Gibbs and MTI ECM summaries, DKW fallback, split-sample
-variants, and Bayesian bootstrap shortest-window diagnostic are also kept in the
-supplement because they answer narrower computational or diagnostic questions
-rather than the primary deployable tolerance question.
-
-The reported metrics separate numerical return, content assessment, and
-tolerance delivery. Returned intervals are planned fits that produce a finite
-interval. Content success conditions on returned intervals and checks whether
-the true population content under the data-generating law is at least the target
-\(c\). Delivery counts every planned fit and therefore treats non-returned
-intervals as failures. Width is the raw interval length, summarized by its
-median and central 95\% Monte Carlo range, and runtime is the median elapsed
-time among returned intervals.
+The method set separates the object being compared. The population shortest
+interval is an oracle width reference. TCSP is the formal scan-calibrated
+shortest empirical action and is therefore the primary tolerance action for this
+study. Its optimality is class-specific: it minimizes width among closed
+order-statistic windows satisfying the calibrated retained-count rule. The
+hybrid DP--scan action adds a direct Dirichlet-process content screen to the
+same calibrated count. MTI ECM is the main fixed-target generalized-Bayes
+endpoint summary after the scan selects the retained count and sample tilt; the
+associated formal scan window remains recorded separately. Young--Mathew
+interpolation
+\citep{YoungMathew2014NonparametricTolerance}, Wilks min--max intervals
+\citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction}, and the DKW
+fallback provide classical and conservative order-statistic comparators. MTI
+Gibbs is retained as a diagnostic sampler for the same fixed target, with its
+multi-chain behavior reported in the supplement. Primary metrics are grid
+delivery success, success among returned intervals, median width relative to
+TCSP, infeasibility, and runtime.
 
 \begin{table}[!htbp]
 \centering
-\caption{\textbf{Primary iid tolerance-validation summary.} Results aggregate
-the completed primary grid with seven data-generating laws, \(n\in\{500,1000\}\),
-\(c\in\{0.90,0.95,0.99\}\), tolerance confidence \(0.95\), three posterior
-content thresholds for Bayesian-screened methods, and 100 replications per
-cell. The table includes deployable data-based tolerance procedures only.
-Returned intervals are finite intervals. Content success conditions on returned
-intervals and checks true population content against the target \(c\). Delivery
-counts non-returned intervals as failures. Width is raw interval length,
-reported as median [2.5\%, 97.5\%].}
-\label{tab:tolerance-validation-main}
+\caption{\textbf{Primary iid tolerance validation at \(n=500\).} Results are
+shown by target content and method. Each row summarizes the range across seven
+data-generating laws, with 100 paired replications per law. ``Fail-closed''
+counts DGP-level cells in which the method returned no interval for all
+replications. Delivery counts fail-closed cells as failures; returned success
+conditions on methods that return an interval. Width is reported relative to
+the TCSP scan action on the same data set and target.}
+\label{tab:tolerance-validation-primary-n500}
 \TableStyle
-\input{tables/tolerance_validation_main_summary.tex}
+\input{tables/tolerance_validation_primary_scenario_ranges_n500.tex}
 \end{table}
 
-Table~\ref{tab:tolerance-validation-main} gives the current primary-run
-summary. TCSP and the hybrid DP--scan action return intervals in all planned
-cells, deliver \(98.7\%\) content success over the full grid, and have identical
-raw width summaries, \(3.546\,[1.488,15.563]\). The hybrid content screen is
-therefore best interpreted as a Bayesian uncertainty-quantification layer for
-the scan action; in this implementation it has a median runtime of 307.573
-seconds, compared with 0.003 seconds for TCSP. Young--Mathew is the closest
-external benchmark, with full return, \(96.4\%\) delivery, and width
-\(3.584\,[1.930,15.289]\). Wilks is the most conservative main comparator:
-delivery is \(99.3\%\), while the median width increases to
-\(7.684\,[2.517,23.043]\).
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Primary iid tolerance validation at \(n=1000\).} The table
+uses the same scenario-range summaries as
+Table~\ref{tab:tolerance-validation-primary-n500}. This sample size is less
+dominated by the \(c=0.99\) two-sided full-range feasibility boundary.}
+\label{tab:tolerance-validation-primary-n1000}
+\TableStyle
+\input{tables/tolerance_validation_primary_scenario_ranges_n1000.tex}
+\end{table}
 
-The supplement records the broader audit used to decide this main roster. It
-keeps oracle shortest intervals as non-deployable efficiency references, reports
-fixed-target MTI Gibbs and ECM summaries as computational variants of the
-mean-tilted construction, and documents DKW, split-sample, fallback, and
-Bayesian-bootstrap diagnostics. It also states the feasibility thresholds that
-would govern any focused small-sample relaunch, including the distinction
-between \(90\%\)- and \(95\%\)-confidence lanes.
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/fig04_tolerance_validation_primary.png}
+\caption{\textbf{Primary iid tolerance-validation patterns by sample size and
+target content.} Delivery counts infeasible cells as failures. Returned success
+conditions on methods that return an interval. Dashed reference lines
+mark nominal \(0.95\) delivery and TCSP-relative width one. The hybrid
+DP--scan action is omitted because it returned the same delivered intervals as
+TCSP on the primary grid; Tables~\ref{tab:tolerance-validation-primary-n500}
+and~\ref{tab:tolerance-validation-primary-n1000} include its scenario-level
+delivery. MTI Gibbs is omitted from the confirmatory figure and reported as a
+diagnostic sampler in the supplement.}
+\label{fig:tolerance-validation-primary}
+\end{figure}
+
+Tables~\ref{tab:tolerance-validation-primary-n500}
+and~\ref{tab:tolerance-validation-primary-n1000} avoid averaging over
+distributional scenarios. The primary message is that the calibrated scan action
+is stable across the prespecified grid. TCSP and the hybrid DP--scan action
+deliver the same formal scan intervals throughout the primary study; the hybrid
+screen adds a Bayesian content check at a large runtime cost, with no change in
+the delivered interval in these cells. MTI ECM agrees with the formal scan
+action in feasible primary cells and records the \(n=500,c=0.99\) fixed target
+as fail-closed. Young--Mathew is often slightly narrower than TCSP, with lower
+delivery in the most skewed or separated scenarios. Wilks is conservative for
+lower contents and reduces to the full range near the boundary. The DKW fallback
+is a conservative diagnostic that succeeds when it returns an interval, while
+its critical count is frequently too conservative to produce one.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Small-sample feasibility boundary at tolerance confidence
+\(0.95\).} The table reports practical \(n=50\) and \(n=100\) follow-up cells,
+summarized by ranges across eight data-generating laws. Blank returned-success
+and width entries occur when the method fails closed for every DGP cell. For
+Young--Mathew and Wilks, blank width entries indicate that TCSP did not return
+a reference interval in that cell.}
+\label{tab:tolerance-validation-small-boundary}
+\TableStyle
+\input{tables/tolerance_validation_small_sample_boundary.tex}
+\end{table}
+
+Table~\ref{tab:tolerance-validation-small-boundary} shows why the small-sample
+stress cells are central to the validation. At \(n=50,c=0.90\), TCSP, Wilks,
+and Young--Mathew all deliver close to the requested statement across DGPs; MTI
+ECM has no feasible fixed target in that cell. At \(n=50,c=0.95\) and
+\(n=100,c=0.99\), the scan-calibrated methods fail closed because the requested
+distribution-free statement is unavailable at that sample size. Young--Mathew
+and Wilks return intervals in those cells, with delivered content well below the
+\(95\%\)-confidence target, especially for \(c=0.99\). This boundary behavior is
+the intended calibrated decision: the procedure reports infeasibility instead of
+presenting an interval that cannot support the requested statement.
+
+Four follow-up checks complete the validation protocol. First, the primary
+grid is rerun for the MTI ECM row with 200 iterations and compact objective
+trace diagnostics, so the mode computation can be judged by objective descent
+and final stationarity, with the ECM flag interpreted at a fixed-target
+stationarity tolerance of \(10^{-3}\). A targeted 500-iteration sensitivity run
+then repeats the hardest feasible ECM cell, \(n=1000,c=0.99\) under the hard
+log-normal law, to test whether the mild stationarity tail is resolved by a
+larger iteration cap. Second, MTI Gibbs is evaluated by a separate multi-chain
+diagnostic run on feasible diagnostic cells. Those diagnostics confirm that the
+sampler targets the intended generalized posterior, but several cells retain
+large between-chain discrepancies; Gibbs is therefore treated as a diagnostic
+implementation rather than a main confirmatory competitor. Third, a minimal
+full-range \(90\%\)-confidence design uses the threshold cells
+\((38,0.90)\), \((77,0.95)\), and \((388,0.99)\), matching the confidence
+level used in \citet{PourmohamadRichardsonSanso2026CalibratedBNP}. Fourth, a
+small-sample \(95\%\)-confidence design uses the corresponding threshold cells
+\((46,0.90)\), \((93,0.95)\), and \((473,0.99)\), augmented by practical
+\(n=50\) and \(n=100\) stress cells. These paired cells are stored explicitly
+in the validation config, which prevents a Cartesian product from mixing
+thresholds across confidence levels. The supplement reports the follow-up
+summaries, ECM stationarity diagnostics, Gibbs trace diagnostics, and
+small-sample content-level behavior.
 
 \section{Discussion}
 \label{sec:discussion}
 
-Probability content alone determines a class, not an interval placement.
+Probability content alone determines a class of interval placements.
 MPI selects its mean-preserving member under the stated population
-conditions. The mean tilt exposes the larger geometry: each admissible
-interior value specifies a retained mean and hence one contiguous
-content-\(c\) window. Equal-tailed and shortest-contiguous intervals are
-distribution-specific members of this family rather than universally named
-tilt values.
+conditions. MTI generalizes MPI by making retained-mean balance a fixed
+coordinate: \(\delta=0\) returns MPI, and each admissible interior value
+specifies one contiguous content-\(c\) window. Equal-tailed and
+shortest-contiguous intervals are distribution-specific members of this family
+rather than universally named tilt values.
 
 The generalized-Bayes computation follows directly from this target. The
 normal--exponential representation augments the generalized posterior with one
 latent scale per observed pseudo-residual. It yields Gaussian root full
-conditionals, but it neither supplies a response likelihood nor licenses
-simulated responses. The MPI RHS-NS adapter regularizes the coefficient
-blocks. A frozen DESN feature design invokes the same static sampler and does
-not define a separate interval model. The learned inverse-loss scale
+conditionals for the loss-based generalized posterior; response simulation
+requires a separate response model. The MPI RHS-NS adapter regularizes the
+coefficient blocks. A frozen DESN feature design invokes the same static sampler
+as a recorded-design endpoint regression. The learned inverse-loss scale
 \(\kappa\) is a convention within a specified hierarchical generalized
-posterior, not a response variance or an automatic endpoint-calibration
-parameter.
+posterior. Response variance and endpoint calibration are separate modeling and
+validation quantities.
+
+The exchangeable-root construction also determines how regression effects should
+be read. Raw root coefficients are useful computational coordinates, while the
+scientific summaries are the ordered endpoints, the geometric midpoint, the
+width, and contrasts of these quantities across named covariate profiles.
+Conventional lower- and upper-endpoint coefficient summaries require a passed
+global-separation audit on a declared domain. Under crossing or ambiguous
+labeling, the interval remains meaningful through its ordered pointwise
+functionals; a permanent endpoint role for one root block is then unavailable.
 
 The dynamic extension preserves the interval target while replacing static
-coefficients by evolving root states. A Gaussian stacked prior does not
-overcome the quartic joint term; exact computation instead alternates the two
-Gaussian root-path conditionals. Fixed evolution
+coefficients by evolving root states. The product residual leaves a quartic
+joint term under a Gaussian stacked prior, so exact computation alternates the
+two Gaussian root-path conditionals. Fixed evolution
 covariances, frozen discount templates, and MPI shared component
 scales define fixed-joint generalized posteriors. Nonzero-tilt component-scale
-interweaving is not yet available. Recomputing discount covariances from each
-changing conditional filter remains a working recursion, not an exact Gibbs
-sampler for a demonstrated joint density.
+interweaving remains future work. Recomputing discount covariances from each
+changing conditional filter should be treated as a working recursion until a
+joint density proof is supplied.
 
 The tolerance proposal adds a distinct frequentist layer. A scan statistic
 chooses an empirical retained count, after which the shortest closed
-order-statistic window at that count is reported. Generalized-Bayes
-computation begins only after the content and tilt are fixed. This ordering
-prevents posterior credibility from being mistaken for tolerance confidence.
+order-statistic window at that count is reported. This makes TCSP the formal
+tolerance action and gives a class-specific minimum-width property within the
+calibrated empirical scan class. Generalized-Bayes computation begins only after
+the content and tilt are fixed. MTI Gibbs and ECM endpoint summaries are
+interpreted conditionally on the scan-selected count and tilt. In the present
+validation evidence, MTI ECM supplies the stable fixed-target summary used for
+the main comparison. MTI Gibbs remains a diagnostic sampler because several
+multi-chain checks show poor mixing. Tolerance confidence remains attached to
+the scan action, and posterior credibility is therefore kept separate from
+tolerance confidence.
 Publication-level finite-sample wording still requires an action-matched scan
 proof and certified critical-count calculation. Replacing the empirical
 window by a posterior summary would require an additional transfer or direct
@@ -1599,8 +1739,8 @@ The limitations delimit several next steps. Population identification is
 unrestricted and pointwise, whereas regression and state-space models impose
 restricted predictor classes. Static covariance statements require
 fixed-dimensional iid random design and a globally separated ordered chart;
-they do not cover crossing raw linear roots after pointwise sorting, serial
-dependence, selected reservoirs, or large-\(T\) state asymptotics. Boundary
+crossing raw linear roots after pointwise sorting, serial dependence, selected
+reservoirs, and large-\(T\) state asymptotics are outside that scope. Boundary
 tilts can yield semi-infinite limits or inactive roots, and tilts outside the
 admissible range have no finite unrestricted target. Broader nonzero-tilt
 priors and evolution modes, external tilt selection, variational
