@@ -1,253 +1,253 @@
-"dgp_id","dgp","n","content","method_id","method","replications","infeasible_rate","delivery_success","returned_success","median_width_ratio_to_tcsp","median_elapsed_sec"
-"contaminated_normal","contaminated normal",500,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.0029999999969732
-"contaminated_normal","contaminated normal",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,147.911499999998
-"contaminated_normal","contaminated normal",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000479023,0.00300000000061118
-"contaminated_normal","contaminated normal",500,0.9,"young_mathew","Young--Mathew",300,0,0.99,0.99,0.963463266220312,0.0360000000000005
-"contaminated_normal","contaminated normal",500,0.9,"wilks_minmax","Wilks",300,0,1,1,6.93617808756799,0.00100000000020373
-"contaminated_normal","contaminated normal",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"normal","Gaussian",500,0.9,"tcsp_mc","TCSP",300,0,0.98,0.98,1,0.00200000000040745
-"normal","Gaussian",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.98,0.98,1,107.758000000001
-"normal","Gaussian",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.98,0.98,1.00000000154572,0.00200000000040745
-"normal","Gaussian",500,0.9,"young_mathew","Young--Mathew",300,0,0.92,0.92,0.973589380755504,0.0360000000000014
-"normal","Gaussian",500,0.9,"wilks_minmax","Wilks",300,0,1,1,1.64936047067962,0.00100000000020373
-"normal","Gaussian",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"lognormal_hard","hard log-normal",500,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.00299999999970169
-"lognormal_hard","hard log-normal",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,144.798500000001
-"lognormal_hard","hard log-normal",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000849739,0.00300000000061118
-"lognormal_hard","hard log-normal",500,0.9,"young_mathew","Young--Mathew",300,0,0.97,0.97,1.37885634299301,0.0369999999999919
-"lognormal_hard","hard log-normal",500,0.9,"wilks_minmax","Wilks",300,0,1,1,6.01454061647463,0.00100000000020373
-"lognormal_hard","hard log-normal",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"lognormal","log-normal",500,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.00200000000040745
-"lognormal","log-normal",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,100.194000000001
-"lognormal","log-normal",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000304558,0.00200000000040745
-"lognormal","log-normal",500,0.9,"young_mathew","Young--Mathew",300,0,0.95,0.95,1.15670144473078,0.0360000000000014
-"lognormal","log-normal",500,0.9,"wilks_minmax","Wilks",300,0,1,1,3.12175272663993,0.00100000000020373
-"lognormal","log-normal",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"mixture","mixture",500,0.9,"tcsp_mc","TCSP",300,0,1,1,1,0.00299999999970169
-"mixture","mixture",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,143.611000000001
-"mixture","mixture",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000186036,0.00300000000061118
-"mixture","mixture",500,0.9,"young_mathew","Young--Mathew",300,0,0.98,0.98,0.9869316190411,0.036999999999999
-"mixture","mixture",500,0.9,"wilks_minmax","Wilks",300,0,1,1,1.31002583151197,0.00100000000020373
-"mixture","mixture",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"sharp_mixture","sharp mixture",500,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.00300000000061118
-"sharp_mixture","sharp mixture",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,146.486499999999
-"sharp_mixture","sharp mixture",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000383409,0.00300000000061118
-"sharp_mixture","sharp mixture",500,0.9,"young_mathew","Young--Mathew",300,0,0.97,0.97,0.995557752852507,0.0360000000000014
-"sharp_mixture","sharp mixture",500,0.9,"wilks_minmax","Wilks",300,0,1,1,1.11203685702624,0.00100000000020373
-"sharp_mixture","sharp mixture",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"student_t3","Student t3",500,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.00299999999970169
-"student_t3","Student t3",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,146.9405
-"student_t3","Student t3",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000201501,0.00300000000061118
-"student_t3","Student t3",500,0.9,"young_mathew","Young--Mathew",300,0,0.95,0.95,0.955352415542381,0.0379999999999825
-"student_t3","Student t3",500,0.9,"wilks_minmax","Wilks",300,0,1,1,3.45368180293436,0.00100000000020373
-"student_t3","Student t3",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"contaminated_normal","contaminated normal",500,0.95,"tcsp_mc","TCSP",300,0,1,1,1,0.00300000000015643
-"contaminated_normal","contaminated normal",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,145.447500000002
-"contaminated_normal","contaminated normal",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000112673,0.00300000000061118
-"contaminated_normal","contaminated normal",500,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,0.923311528706936,0.0350000000000001
-"contaminated_normal","contaminated normal",500,0.95,"wilks_minmax","Wilks",300,0,1,1,3.44478163769296,0.00100000000020373
-"contaminated_normal","contaminated normal",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"normal","Gaussian",500,0.95,"tcsp_mc","TCSP",300,0,1,1,1,0.00200000000040745
-"normal","Gaussian",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,107.927
-"normal","Gaussian",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000108062,0.00200000000040745
-"normal","Gaussian",500,0.95,"young_mathew","Young--Mathew",300,0,0.99,0.99,0.982094911637055,0.0360000000000014
-"normal","Gaussian",500,0.95,"wilks_minmax","Wilks",300,0,1,1,1.37253783500164,0.00100000000020373
-"normal","Gaussian",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"lognormal_hard","hard log-normal",500,0.95,"tcsp_mc","TCSP",300,0,1,1,1,0.0029999999999859
-"lognormal_hard","hard log-normal",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,144.5755
-"lognormal_hard","hard log-normal",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.0000000030748,0.00300000000061118
-"lognormal_hard","hard log-normal",500,0.95,"young_mathew","Young--Mathew",300,0,0.95,0.95,1.28796930168151,0.0364999999999966
-"lognormal_hard","hard log-normal",500,0.95,"wilks_minmax","Wilks",300,0,1,1,3.71340901291057,0.00100000000020373
-"lognormal_hard","hard log-normal",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"lognormal","log-normal",500,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.00200000000040745
-"lognormal","log-normal",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,100.139000000001
-"lognormal","log-normal",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000155602,0.00200000000040745
-"lognormal","log-normal",500,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,1.14767747573666,0.036999999999999
-"lognormal","log-normal",500,0.95,"wilks_minmax","Wilks",300,0,1,1,2.08808360566188,0.00100000000020373
-"lognormal","log-normal",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"mixture","mixture",500,0.95,"tcsp_mc","TCSP",300,0,0.97,0.97,1,0.0029999999969732
-"mixture","mixture",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.97,0.97,1,142.314999999999
-"mixture","mixture",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.97,0.97,1.00000000155404,0.00300000000061118
-"mixture","mixture",500,0.95,"young_mathew","Young--Mathew",300,0,0.98,0.98,0.991248690386211,0.0370000000000061
-"mixture","mixture",500,0.95,"wilks_minmax","Wilks",300,0,1,1,1.18652268800747,0.00100000000020373
-"mixture","mixture",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"sharp_mixture","sharp mixture",500,0.95,"tcsp_mc","TCSP",300,0,1,1,1,0.00300000000007827
-"sharp_mixture","sharp mixture",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,146.798500000001
-"sharp_mixture","sharp mixture",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000357762,0.00300000000061118
-"sharp_mixture","sharp mixture",500,0.95,"young_mathew","Young--Mathew",300,0,0.99,0.99,0.996249255353259,0.0370000000000061
-"sharp_mixture","sharp mixture",500,0.95,"wilks_minmax","Wilks",300,0,1,1,1.07314269233252,0.00100000000020373
-"sharp_mixture","sharp mixture",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"student_t3","Student t3",500,0.95,"tcsp_mc","TCSP",300,0,1,1,1,0.00300000000061118
-"student_t3","Student t3",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,147.687499999999
-"student_t3","Student t3",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000098223,0.00300000000061118
-"student_t3","Student t3",500,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,0.962913340906471,0.0370000000000061
-"student_t3","Student t3",500,0.95,"wilks_minmax","Wilks",300,0,1,1,2.47594797916314,0.00100000000020373
-"student_t3","Student t3",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"contaminated_normal","contaminated normal",500,0.99,"tcsp_mc","TCSP",300,0,0.98,0.98,1,0.0029999999969732
-"contaminated_normal","contaminated normal",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.98,0.98,1,144.423000000001
-"contaminated_normal","contaminated normal",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000040745
-"contaminated_normal","contaminated normal",500,0.99,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.980538669661672,0.0299999999999994
-"contaminated_normal","contaminated normal",500,0.99,"wilks_minmax","Wilks",300,0,0.98,0.98,1,0
-"contaminated_normal","contaminated normal",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"normal","Gaussian",500,0.99,"tcsp_mc","TCSP",300,0,0.96,0.96,1,0.00200000000040745
-"normal","Gaussian",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.96,0.96,1,106.417999999999
-"normal","Gaussian",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999858846
-"normal","Gaussian",500,0.99,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.991387025293797,0.0289999999999964
-"normal","Gaussian",500,0.99,"wilks_minmax","Wilks",300,0,0.96,0.96,1,0
-"normal","Gaussian",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"lognormal_hard","hard log-normal",500,0.99,"tcsp_mc","TCSP",300,0,0.97,0.97,1,0.00200000000040745
-"lognormal_hard","hard log-normal",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.97,0.97,1,145.0115
-"lognormal_hard","hard log-normal",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000040745
-"lognormal_hard","hard log-normal",500,0.99,"young_mathew","Young--Mathew",300,0,0.95,0.95,0.969859949403796,0.0300000000000011
-"lognormal_hard","hard log-normal",500,0.99,"wilks_minmax","Wilks",300,0,0.97,0.97,1,0.000999999996565748
-"lognormal_hard","hard log-normal",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"lognormal","log-normal",500,0.99,"tcsp_mc","TCSP",300,0,0.94,0.94,1,0.00200000000040745
-"lognormal","log-normal",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.94,0.94,1,99.768
-"lognormal","log-normal",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00199999999949796
-"lognormal","log-normal",500,0.99,"young_mathew","Young--Mathew",300,0,0.93,0.93,0.984523124901373,0.0300000000000011
-"lognormal","log-normal",500,0.99,"wilks_minmax","Wilks",300,0,0.94,0.94,1,0
-"lognormal","log-normal",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"mixture","mixture",500,0.99,"tcsp_mc","TCSP",300,0,0.96,0.96,1,0.00200000000040745
-"mixture","mixture",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.96,0.96,1,144.288000000001
-"mixture","mixture",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000040745
-"mixture","mixture",500,0.99,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.99585996194141,0.0304999999999964
-"mixture","mixture",500,0.99,"wilks_minmax","Wilks",300,0,0.96,0.96,1,0.000499999998282874
-"mixture","mixture",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"sharp_mixture","sharp mixture",500,0.99,"tcsp_mc","TCSP",300,0,0.94,0.94,1,0.00200000000040745
-"sharp_mixture","sharp mixture",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.94,0.94,1,142.296000000001
-"sharp_mixture","sharp mixture",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000040745
-"sharp_mixture","sharp mixture",500,0.99,"young_mathew","Young--Mathew",300,0,0.92,0.92,0.998332510079651,0.0300000000000011
-"sharp_mixture","sharp mixture",500,0.99,"wilks_minmax","Wilks",300,0,0.94,0.94,1,0.000999999996565748
-"sharp_mixture","sharp mixture",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"student_t3","Student t3",500,0.99,"tcsp_mc","TCSP",300,0,0.98,0.98,1,0.00200000000040745
-"student_t3","Student t3",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.98,0.98,1,142.776999999999
-"student_t3","Student t3",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,0.00200000000040745
-"student_t3","Student t3",500,0.99,"young_mathew","Young--Mathew",300,0,0.98,0.98,0.979181893157438,0.0310000000000059
-"student_t3","Student t3",500,0.99,"wilks_minmax","Wilks",300,0,0.98,0.98,1,0.000999999996565748
-"student_t3","Student t3",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"contaminated_normal","contaminated normal",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,1,0.00300000000038381
-"contaminated_normal","contaminated normal",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,456.647000000004
-"contaminated_normal","contaminated normal",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000512876,0.00200000000768341
-"contaminated_normal","contaminated normal",1000,0.9,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.969471455856567,0.0360000000000014
-"contaminated_normal","contaminated normal",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,8.58187519717666,0.00100000000384171
-"contaminated_normal","contaminated normal",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,3.67707771663077,0.00200000000040745
-"normal","Gaussian",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,1,0.0029999999969732
-"normal","Gaussian",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,426.845499999994
-"normal","Gaussian",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000164161,0.00200000000768341
-"normal","Gaussian",1000,0.9,"young_mathew","Young--Mathew",300,0,0.99,0.99,0.98017370588738,0.0360000000000014
-"normal","Gaussian",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,1.81094967512258,0.00100000000384171
-"normal","Gaussian",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,1.34763210450914,0.00200000000040745
-"lognormal_hard","hard log-normal",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,1,0.00300000000061118
-"lognormal_hard","hard log-normal",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,443.076500000003
-"lognormal_hard","hard log-normal",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.0000000099897,0.00200000000768341
-"lognormal_hard","hard log-normal",1000,0.9,"young_mathew","Young--Mathew",300,0,0.98,0.98,1.40755689280632,0.0375000000000014
-"lognormal_hard","hard log-normal",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,8.61102911263287,0.00100000000384171
-"lognormal_hard","hard log-normal",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,2.45458989776296,0.00200000000040745
-"lognormal","log-normal",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,1,0.00299999999970169
-"lognormal","log-normal",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,447.920000000002
-"lognormal","log-normal",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000342189,0.00200000000768341
-"lognormal","log-normal",1000,0.9,"young_mathew","Young--Mathew",300,0,0.98,0.98,1.18134810013605,0.036999999999999
-"lognormal","log-normal",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,4.04665177040399,0.00100000000384171
-"lognormal","log-normal",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,1.76615342529947,0.00200000000040745
-"mixture","mixture",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,1,0.00300000000061118
-"mixture","mixture",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,458.318
-"mixture","mixture",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000189027,0.00200000000768341
-"mixture","mixture",1000,0.9,"young_mathew","Young--Mathew",300,0,0.98,0.98,0.989952065315176,0.0369999999999848
-"mixture","mixture",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,1.36939846448214,0.00100000001839362
-"mixture","mixture",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,1.16897059904869,0.00200000000040745
-"sharp_mixture","sharp mixture",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,1,0.00300000000243017
-"sharp_mixture","sharp mixture",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,437.226499999997
-"sharp_mixture","sharp mixture",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000387674,0.00200000000768341
-"sharp_mixture","sharp mixture",1000,0.9,"young_mathew","Young--Mathew",300,0,0.95,0.95,0.99650351942329,0.0380000000000109
-"sharp_mixture","sharp mixture",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,1.14163843856212,0.00100000000384171
-"sharp_mixture","sharp mixture",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,1.06407203187466,0.00200000000040745
-"student_t3","Student t3",1000,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.00300000001880107
-"student_t3","Student t3",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,446.614500000003
-"student_t3","Student t3",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000219315,0.00200000000768341
-"student_t3","Student t3",1000,0.9,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.95993701384831,0.0370000000000061
-"student_t3","Student t3",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,4.6041989027096,0.00199999997857958
-"student_t3","Student t3",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,1.86306699738075,0.00200000000040745
-"contaminated_normal","contaminated normal",1000,0.95,"tcsp_mc","TCSP",300,0,1,1,1,0.0029999999969732
-"contaminated_normal","contaminated normal",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,446.822999999997
-"contaminated_normal","contaminated normal",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000155928,0.00200000000768341
-"contaminated_normal","contaminated normal",1000,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,0.895958293123093,0.036999999999999
-"contaminated_normal","contaminated normal",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,4.58819351718658,0.00100000000384171
-"contaminated_normal","contaminated normal",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"normal","Gaussian",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.0029999999969732
-"normal","Gaussian",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,419.390500000003
-"normal","Gaussian",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000113615,0.00200000000768341
-"normal","Gaussian",1000,0.95,"young_mathew","Young--Mathew",300,0,0.98,0.98,0.980673120878596,0.0364999999999895
-"normal","Gaussian",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,1.49535459656508,0.00100000000384171
-"normal","Gaussian",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"lognormal_hard","hard log-normal",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.0029999999969732
-"lognormal_hard","hard log-normal",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,457.433000000005
-"lognormal_hard","hard log-normal",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000370702,0.00200000000768341
-"lognormal_hard","hard log-normal",1000,0.95,"young_mathew","Young--Mathew",300,0,0.93,0.93,1.31523102003065,0.0379999999999967
-"lognormal_hard","hard log-normal",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,5.20711236212394,0.00100000000384171
-"lognormal_hard","hard log-normal",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"lognormal","log-normal",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.0029999999969732
-"lognormal","log-normal",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,447.754499999999
-"lognormal","log-normal",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000180873,0.00200000000768341
-"lognormal","log-normal",1000,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,1.15762256810789,0.036999999999999
-"lognormal","log-normal",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,2.91330796943466,0.00100000000384171
-"lognormal","log-normal",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"mixture","mixture",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.0029999999969732
-"mixture","mixture",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,454.586499999997
-"mixture","mixture",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000157157,0.00200000000768341
-"mixture","mixture",1000,0.95,"young_mathew","Young--Mathew",300,0,0.94,0.94,0.990826536369369,0.0369999999999919
-"mixture","mixture",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,1.2573137094602,0.00100000000384171
-"mixture","mixture",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"sharp_mixture","sharp mixture",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.0029999999969732
-"sharp_mixture","sharp mixture",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,433.712
-"sharp_mixture","sharp mixture",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000362809,0.00200000000768341
-"sharp_mixture","sharp mixture",1000,0.95,"young_mathew","Young--Mathew",300,0,0.96,0.96,0.996539635623468,0.0380000000000109
-"sharp_mixture","sharp mixture",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,1.10112516172008,0.00100000000384171
-"sharp_mixture","sharp mixture",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"student_t3","Student t3",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.0029999999969732
-"student_t3","Student t3",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,438.759000000005
-"student_t3","Student t3",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.0000000011329,0.00200000000768341
-"student_t3","Student t3",1000,0.95,"young_mathew","Young--Mathew",300,0,0.93,0.93,0.962507023852542,0.0380000000000109
-"student_t3","Student t3",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,3.3593360039472,0.00100000000384171
-"student_t3","Student t3",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"contaminated_normal","contaminated normal",1000,0.99,"tcsp_mc","TCSP",300,0,0.98,0.98,1,0.0025000000023283
-"contaminated_normal","contaminated normal",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.98,0.98,1,453.116499999997
-"contaminated_normal","contaminated normal",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.98,0.98,1.00000000010791,0.00200000000768341
-"contaminated_normal","contaminated normal",1000,0.99,"young_mathew","Young--Mathew",300,0,0.94,0.94,0.980184256555073,0.036999999999999
-"contaminated_normal","contaminated normal",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,1.21679943592349,0.00100000000384171
-"contaminated_normal","contaminated normal",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"normal","Gaussian",1000,0.99,"tcsp_mc","TCSP",300,0,0.98,0.98,1,0.00200000000768341
-"normal","Gaussian",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.98,0.98,1,424.994500000004
-"normal","Gaussian",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.98,0.98,1.00000000061995,0.00200000000768341
-"normal","Gaussian",1000,0.99,"young_mathew","Young--Mathew",300,0,0.98,0.98,0.990638975771322,0.0369999999999777
-"normal","Gaussian",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,1.10340882049,0.00100000000384171
-"normal","Gaussian",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"lognormal_hard","hard log-normal",1000,0.99,"tcsp_mc","TCSP",300,0,0.96,0.96,1,0.00200000000768341
-"lognormal_hard","hard log-normal",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.96,0.96,1,451.826000000001
-"lognormal_hard","hard log-normal",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.96,0.96,1.00000000034146,0.00200000000768341
-"lognormal_hard","hard log-normal",1000,0.99,"young_mathew","Young--Mathew",300,0,0.93,0.93,1.15588922728686,0.0370000000000061
-"lognormal_hard","hard log-normal",1000,0.99,"wilks_minmax","Wilks",300,0,0.99,0.99,1.61513550954532,0.00100000000384171
-"lognormal_hard","hard log-normal",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000020373
-"lognormal","log-normal",1000,0.99,"tcsp_mc","TCSP",300,0,1,1,1,0.0029999999969732
-"lognormal","log-normal",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,456.228499999997
-"lognormal","log-normal",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000042842,0.00200000000768341
-"lognormal","log-normal",1000,0.99,"young_mathew","Young--Mathew",300,0,0.99,0.99,1.09028376988141,0.0370000000000061
-"lognormal","log-normal",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,1.33082301661603,0.00100000000384171
-"lognormal","log-normal",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"mixture","mixture",1000,0.99,"tcsp_mc","TCSP",300,0,1,1,1,0.0029999999969732
-"mixture","mixture",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,429.598000000006
-"mixture","mixture",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000112646,0.00200000000768341
-"mixture","mixture",1000,0.99,"young_mathew","Young--Mathew",300,0,0.99,0.99,0.99626436575233,0.0370000000000061
-"mixture","mixture",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,1.0583754908264,0.00100000000384171
-"mixture","mixture",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"sharp_mixture","sharp mixture",1000,0.99,"tcsp_mc","TCSP",300,0,1,1,1,0.0029999999969732
-"sharp_mixture","sharp mixture",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1,448.275500000003
-"sharp_mixture","sharp mixture",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.00000000315249,0.00200000000768341
-"sharp_mixture","sharp mixture",1000,0.99,"young_mathew","Young--Mathew",300,0,1,1,0.997977701077814,0.0379999999999825
-"sharp_mixture","sharp mixture",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,1.02263991615474,0.00100000000384171
-"sharp_mixture","sharp mixture",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
-"student_t3","Student t3",1000,0.99,"tcsp_mc","TCSP",300,0,0.99,0.99,1,0.0029999999969732
-"student_t3","Student t3",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1,454.568499999994
-"student_t3","Student t3",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.00000000021961,0.00200000000768341
-"student_t3","Student t3",1000,0.99,"young_mathew","Young--Mathew",300,0,0.98,0.98,0.975113098945319,0.0379999999999825
-"student_t3","Student t3",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,1.46985793532326,0.00100000000384171
-"student_t3","Student t3",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,0.00100000000384171
+"dgp_id","dgp","n","content","method_id","method","replications","infeasible_rate","delivery_success","returned_success","median_width","width_q025","width_q975","median_width_ratio_to_tcsp","median_elapsed_sec"
+"contaminated_normal","contaminated normal",500,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,2.11388095767428,1.94720143721011,2.54762447882044,1,0.0029999999969732
+"contaminated_normal","contaminated normal",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,2.11388095767428,1.94720143721011,2.54762447882044,1,147.911499999998
+"contaminated_normal","contaminated normal",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,2.11388096790058,1.94720144748024,2.54762448846713,1.00000000479023,0.00300000000061118
+"contaminated_normal","contaminated normal",500,0.9,"young_mathew","Young--Mathew",300,0,0.99,0.99,2.03754955992842,1.88164057910934,2.38291331076375,0.963463266220312,0.0360000000000005
+"contaminated_normal","contaminated normal",500,0.9,"wilks_minmax","Wilks",300,0,1,1,14.9254458894179,9.51348390371003,22.2628295707459,6.93617808756799,0.00100000000020373
+"contaminated_normal","contaminated normal",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"normal","Gaussian",500,0.9,"tcsp_mc","TCSP",300,0,0.98,0.98,3.64821577777923,3.32671264608316,3.88849341292989,1,0.00200000000040745
+"normal","Gaussian",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.98,0.98,3.64821577777923,3.32671264608316,3.88849341292989,1,107.758000000001
+"normal","Gaussian",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.98,0.98,3.64821578326081,3.3267126520945,3.88849341851064,1.00000000154572,0.00200000000040745
+"normal","Gaussian",500,0.9,"young_mathew","Young--Mathew",300,0,0.92,0.92,3.56075445203982,3.24538813408357,3.85625924011707,0.973589380755504,0.0360000000000014
+"normal","Gaussian",500,0.9,"wilks_minmax","Wilks",300,0,1,1,5.96511873646636,5.38007867247321,7.36217852872056,1.64936047067962,0.00100000000020373
+"normal","Gaussian",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"lognormal_hard","hard log-normal",500,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,1.59419026328728,1.29821914755474,2.03473605876527,1,0.00299999999970169
+"lognormal_hard","hard log-normal",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,1.59419026328728,1.29821914755474,2.03473605876527,1,144.798500000001
+"lognormal_hard","hard log-normal",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,1.59419027583158,1.29821916295892,2.03473607213552,1.00000000849739,0.00300000000061118
+"lognormal_hard","hard log-normal",500,0.9,"young_mathew","Young--Mathew",300,0,0.97,0.97,2.20732205333324,1.74014072788676,2.919377527987,1.37885634299301,0.0369999999999919
+"lognormal_hard","hard log-normal",500,0.9,"wilks_minmax","Wilks",300,0,1,1,9.77806546246382,5.12554826641584,30.4039326795338,6.01454061647463,0.00100000000020373
+"lognormal_hard","hard log-normal",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"lognormal","log-normal",500,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,2.63630059946648,2.36906187522951,3.01229562033421,1,0.00200000000040745
+"lognormal","log-normal",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,2.63630059946648,2.36906187522951,3.01229562033421,1,100.194000000001
+"lognormal","log-normal",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,2.63630060733478,2.36906188489869,3.01229562894618,1.00000000304558,0.00200000000040745
+"lognormal","log-normal",500,0.9,"young_mathew","Young--Mathew",300,0,0.95,0.95,3.08074517640954,2.67472582950048,3.75153951215167,1.15670144473078,0.0360000000000014
+"lognormal","log-normal",500,0.9,"wilks_minmax","Wilks",300,0,1,1,8.38655925617401,5.592461906599,16.1719103068602,3.12175272663993,0.00100000000020373
+"lognormal","log-normal",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"mixture","mixture",500,0.9,"tcsp_mc","TCSP",300,0,1,1,3.32657211260473,3.21226562365926,3.44540496027331,1,0.00299999999970169
+"mixture","mixture",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,3.32657211260473,3.21226562365926,3.44540496027331,1,143.611000000001
+"mixture","mixture",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,3.32657211885219,3.21226562988477,3.44540496624808,1.00000000186036,0.00300000000061118
+"mixture","mixture",500,0.9,"young_mathew","Young--Mathew",300,0,0.98,0.98,3.2843522082282,3.18091291703824,3.41955988944512,0.9869316190411,0.036999999999999
+"mixture","mixture",500,0.9,"wilks_minmax","Wilks",300,0,1,1,4.36307546991954,4.06520677498617,4.83911120255844,1.31002583151197,0.00100000000020373
+"mixture","mixture",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"sharp_mixture","sharp mixture",500,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,2.28533795680154,2.25703880463316,2.32183385685201,1,0.00300000000061118
+"sharp_mixture","sharp mixture",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,2.28533795680154,2.25703880463316,2.32183385685201,1,146.486499999999
+"sharp_mixture","sharp mixture",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,2.28533796555848,2.25703881349344,2.32183386558997,1.00000000383409,0.00300000000061118
+"sharp_mixture","sharp mixture",500,0.9,"young_mathew","Young--Mathew",300,0,0.97,0.97,2.27654173983376,2.24294911509816,2.3098952202483,0.995557752852507,0.0360000000000014
+"sharp_mixture","sharp mixture",500,0.9,"wilks_minmax","Wilks",300,0,1,1,2.53927005539459,2.44046101406776,2.68715389631608,1.11203685702624,0.00100000000020373
+"sharp_mixture","sharp mixture",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"student_t3","Student t3",500,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,3.22141945722846,2.88058519085923,3.61434079668367,1,0.00299999999970169
+"student_t3","Student t3",500,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,3.22141945722846,2.88058519085923,3.61434079668367,1,146.9405
+"student_t3","Student t3",500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,3.2214194634363,2.88058519780157,3.61434080449713,1.00000000201501,0.00300000000061118
+"student_t3","Student t3",500,0.9,"young_mathew","Young--Mathew",300,0,0.95,0.95,3.05818735513779,2.70032677387814,3.47415185867989,0.955352415542381,0.0379999999999825
+"student_t3","Student t3",500,0.9,"wilks_minmax","Wilks",300,0,1,1,11.0809468650076,7.4863687038217,26.1763714950573,3.45368180293436,0.00100000000020373
+"student_t3","Student t3",500,0.9,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"contaminated_normal","contaminated normal",500,0.95,"tcsp_mc","TCSP",300,0,1,1,4.40759662992606,2.65738422703629,6.80143973636274,1,0.00300000000015643
+"contaminated_normal","contaminated normal",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,4.40759662992606,2.65738422703629,6.80143973636274,1,145.447500000002
+"contaminated_normal","contaminated normal",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,4.40759663497452,2.65738423456174,6.80143974072764,1.00000000112673,0.00300000000061118
+"contaminated_normal","contaminated normal",500,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,3.91947117082551,2.56052605811226,6.58280101116574,0.923311528706936,0.0350000000000001
+"contaminated_normal","contaminated normal",500,0.95,"wilks_minmax","Wilks",300,0,1,1,15.7746513430085,10.7671453721784,21.8279936333794,3.44478163769296,0.00100000000020373
+"contaminated_normal","contaminated normal",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"normal","Gaussian",500,0.95,"tcsp_mc","TCSP",300,0,1,1,4.3844526649717,4.03487270666932,4.75542721772928,1,0.00200000000040745
+"normal","Gaussian",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,4.3844526649717,4.03487270666932,4.75542721772928,1,107.927
+"normal","Gaussian",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,4.38445266976938,4.03487271162561,4.75542722236227,1.00000000108062,0.00200000000040745
+"normal","Gaussian",500,0.95,"young_mathew","Young--Mathew",300,0,0.99,0.99,4.28032241090165,3.95790947196044,4.70235272943472,0.982094911637055,0.0360000000000014
+"normal","Gaussian",500,0.95,"wilks_minmax","Wilks",300,0,1,1,6.00026803227009,5.2397578382286,7.19493890241557,1.37253783500164,0.00100000000020373
+"normal","Gaussian",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"lognormal_hard","hard log-normal",500,0.95,"tcsp_mc","TCSP",300,0,1,1,2.71467691724269,2.08618473859393,3.62213906105117,1,0.0029999999999859
+"lognormal_hard","hard log-normal",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,2.71467691724269,2.08618473859393,3.62213906105117,1,144.5755
+"lognormal_hard","hard log-normal",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,2.71467693245535,2.08618474817985,3.62213906767012,1.0000000030748,0.00300000000061118
+"lognormal_hard","hard log-normal",500,0.95,"young_mathew","Young--Mathew",300,0,0.95,0.95,3.70682959371258,2.54020973771015,4.82423110226485,1.28796930168151,0.0364999999999966
+"lognormal_hard","hard log-normal",500,0.95,"wilks_minmax","Wilks",300,0,1,1,10.1104085681686,5.64647581865365,22.3956372672195,3.71340901291057,0.00100000000020373
+"lognormal_hard","hard log-normal",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"lognormal","log-normal",500,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,3.61945502642112,3.14925294666684,4.43748616762786,1,0.00200000000040745
+"lognormal","log-normal",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,3.61945502642112,3.14925294666684,4.43748616762786,1,100.139000000001
+"lognormal","log-normal",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,3.61945503246945,3.14925295301691,4.43748617415127,1.00000000155602,0.00200000000040745
+"lognormal","log-normal",500,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,4.1997388656889,3.4779699739424,5.09787781771134,1.14767747573666,0.036999999999999
+"lognormal","log-normal",500,0.95,"wilks_minmax","Wilks",300,0,1,1,7.79391718887511,5.30621576029967,15.6903945389689,2.08808360566188,0.00100000000020373
+"lognormal","log-normal",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"mixture","mixture",500,0.95,"tcsp_mc","TCSP",300,0,0.97,0.97,3.64600664632228,3.48453832882632,3.79752561574782,1,0.0029999999969732
+"mixture","mixture",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.97,0.97,3.64600664632228,3.48453832882632,3.79752561574782,1,142.314999999999
+"mixture","mixture",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.97,0.97,3.64600665180718,3.48453833456539,3.79752562118721,1.00000000155404,0.00300000000061118
+"mixture","mixture",500,0.95,"young_mathew","Young--Mathew",300,0,0.98,0.98,3.62714004281132,3.45778362682256,3.76871521570081,0.991248690386211,0.0370000000000061
+"mixture","mixture",500,0.95,"wilks_minmax","Wilks",300,0,1,1,4.33299956828939,3.98740641576753,4.87444845569218,1.18652268800747,0.00100000000020373
+"mixture","mixture",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"sharp_mixture","sharp mixture",500,0.95,"tcsp_mc","TCSP",300,0,1,1,2.369486544263,2.32871627403798,2.40954734366709,1,0.00300000000007827
+"sharp_mixture","sharp mixture",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,2.369486544263,2.32871627403798,2.40954734366709,1,146.798500000001
+"sharp_mixture","sharp mixture",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,2.36948655275642,2.32871628262554,2.40954735207173,1.00000000357762,0.00300000000061118
+"sharp_mixture","sharp mixture",500,0.95,"young_mathew","Young--Mathew",300,0,0.99,0.99,2.36079693623029,2.32125232052847,2.39752052558663,0.996249255353259,0.0370000000000061
+"sharp_mixture","sharp mixture",500,0.95,"wilks_minmax","Wilks",300,0,1,1,2.54700528280955,2.44086735265599,2.67713922568314,1.07314269233252,0.00100000000020373
+"sharp_mixture","sharp mixture",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"student_t3","Student t3",500,0.95,"tcsp_mc","TCSP",300,0,1,1,4.63358972033713,3.85553461823099,5.62526613623865,1,0.00300000000061118
+"student_t3","Student t3",500,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,4.63358972033713,3.85553461823099,5.62526613623865,1,147.687499999999
+"student_t3","Student t3",500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,4.63358972484942,3.85553462341782,5.62526614159808,1.00000000098223,0.00300000000061118
+"student_t3","Student t3",500,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,4.42529049741517,3.72678335770723,5.37342167201331,0.962913340906471,0.0370000000000061
+"student_t3","Student t3",500,0.95,"wilks_minmax","Wilks",300,0,1,1,11.0682583951353,7.35727224178276,26.1838157124959,2.47594797916314,0.00100000000020373
+"student_t3","Student t3",500,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"contaminated_normal","contaminated normal",500,0.99,"tcsp_mc","TCSP",300,0,0.98,0.98,15.705666626163,10.8188899765813,21.941178249052,1,0.0029999999969732
+"contaminated_normal","contaminated normal",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.98,0.98,15.705666626163,10.8188899765813,21.941178249052,1,144.423000000001
+"contaminated_normal","contaminated normal",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,NA,NA,NA,0.00200000000040745
+"contaminated_normal","contaminated normal",500,0.99,"young_mathew","Young--Mathew",300,0,0.96,0.96,15.4052140248392,10.7363284805063,20.9539874480047,0.980538669661672,0.0299999999999994
+"contaminated_normal","contaminated normal",500,0.99,"wilks_minmax","Wilks",300,0,0.98,0.98,15.705666626163,10.8188899765813,21.941178249052,1,0
+"contaminated_normal","contaminated normal",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"normal","Gaussian",500,0.99,"tcsp_mc","TCSP",300,0,0.96,0.96,6.06823808201671,5.14528935336703,7.13414448875157,1,0.00200000000040745
+"normal","Gaussian",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.96,0.96,6.06823808201671,5.14528935336703,7.13414448875157,1,106.417999999999
+"normal","Gaussian",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,NA,NA,NA,0.00199999999858846
+"normal","Gaussian",500,0.99,"young_mathew","Young--Mathew",300,0,0.96,0.96,6.0170783702942,5.09665582126705,7.0056698037915,0.991387025293797,0.0289999999999964
+"normal","Gaussian",500,0.99,"wilks_minmax","Wilks",300,0,0.96,0.96,6.06823808201671,5.14528935336703,7.13414448875157,1,0
+"normal","Gaussian",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"lognormal_hard","hard log-normal",500,0.99,"tcsp_mc","TCSP",300,0,0.97,0.97,8.99207945664127,5.01412364028163,26.1890167562517,1,0.00200000000040745
+"lognormal_hard","hard log-normal",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.97,0.97,8.99207945664127,5.01412364028163,26.1890167562517,1,145.0115
+"lognormal_hard","hard log-normal",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,NA,NA,NA,0.00200000000040745
+"lognormal_hard","hard log-normal",500,0.99,"young_mathew","Young--Mathew",300,0,0.95,0.95,8.72913906071014,4.99875103967127,24.9510169092748,0.969859949403796,0.0300000000000011
+"lognormal_hard","hard log-normal",500,0.99,"wilks_minmax","Wilks",300,0,0.97,0.97,8.99207945664127,5.01412364028163,26.1890167562517,1,0.000999999996565748
+"lognormal_hard","hard log-normal",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"lognormal","log-normal",500,0.99,"tcsp_mc","TCSP",300,0,0.94,0.94,7.59805674286703,5.19098111905685,13.9654476281879,1,0.00200000000040745
+"lognormal","log-normal",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.94,0.94,7.59805674286703,5.19098111905685,13.9654476281879,1,99.768
+"lognormal","log-normal",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,NA,NA,NA,0.00199999999949796
+"lognormal","log-normal",500,0.99,"young_mathew","Young--Mathew",300,0,0.93,0.93,7.42560432017315,5.18007244898001,13.3889603514301,0.984523124901373,0.0300000000000011
+"lognormal","log-normal",500,0.99,"wilks_minmax","Wilks",300,0,0.94,0.94,7.59805674286703,5.19098111905685,13.9654476281879,1,0
+"lognormal","log-normal",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"mixture","mixture",500,0.99,"tcsp_mc","TCSP",300,0,0.96,0.96,4.3183675259784,4.00091730543766,4.6987204598639,1,0.00200000000040745
+"mixture","mixture",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.96,0.96,4.3183675259784,4.00091730543766,4.6987204598639,1,144.288000000001
+"mixture","mixture",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,NA,NA,NA,0.00200000000040745
+"mixture","mixture",500,0.99,"young_mathew","Young--Mathew",300,0,0.96,0.96,4.30610402458965,3.99095577446465,4.66365980241125,0.99585996194141,0.0304999999999964
+"mixture","mixture",500,0.99,"wilks_minmax","Wilks",300,0,0.96,0.96,4.3183675259784,4.00091730543766,4.6987204598639,1,0.000499999998282874
+"mixture","mixture",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"sharp_mixture","sharp mixture",500,0.99,"tcsp_mc","TCSP",300,0,0.94,0.94,2.54371178561629,2.43845553348659,2.70153265030101,1,0.00200000000040745
+"sharp_mixture","sharp mixture",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.94,0.94,2.54371178561629,2.43845553348659,2.70153265030101,1,142.296000000001
+"sharp_mixture","sharp mixture",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,NA,NA,NA,0.00200000000040745
+"sharp_mixture","sharp mixture",500,0.99,"young_mathew","Young--Mathew",300,0,0.92,0.92,2.53857656391849,2.43527335287081,2.68917857070075,0.998332510079651,0.0300000000000011
+"sharp_mixture","sharp mixture",500,0.99,"wilks_minmax","Wilks",300,0,0.94,0.94,2.54371178561629,2.43845553348659,2.70153265030101,1,0.000999999996565748
+"sharp_mixture","sharp mixture",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"student_t3","Student t3",500,0.99,"tcsp_mc","TCSP",300,0,0.98,0.98,11.5106335459577,7.59675697422236,23.9514618360235,1,0.00200000000040745
+"student_t3","Student t3",500,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.98,0.98,11.5106335459577,7.59675697422236,23.9514618360235,1,142.776999999999
+"student_t3","Student t3",500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,1,0,NA,NA,NA,NA,NA,0.00200000000040745
+"student_t3","Student t3",500,0.99,"young_mathew","Young--Mathew",300,0,0.98,0.98,11.1849036859874,7.52308718192617,22.3303069284799,0.979181893157438,0.0310000000000059
+"student_t3","Student t3",500,0.99,"wilks_minmax","Wilks",300,0,0.98,0.98,11.5106335459577,7.59675697422236,23.9514618360235,1,0.000999999996565748
+"student_t3","Student t3",500,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"contaminated_normal","contaminated normal",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,2.01331141485514,1.88142968093624,2.15983420334185,1,0.00300000000038381
+"contaminated_normal","contaminated normal",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,2.01331141485514,1.88142968093624,2.15983420334185,1,456.647000000004
+"contaminated_normal","contaminated normal",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,2.01331142516125,1.88142969243365,2.15983421398334,1.00000000512876,0.00200000000768341
+"contaminated_normal","contaminated normal",1000,0.9,"young_mathew","Young--Mathew",300,0,0.96,0.96,1.9467507899653,1.81758984775018,2.10807550021142,0.969471455856567,0.0360000000000014
+"contaminated_normal","contaminated normal",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,17.1931779032992,12.6031369397349,23.0942505064532,8.58187519717666,0.00100000000384171
+"contaminated_normal","contaminated normal",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,7.34012873328039,5.14661647789375,9.17595438262043,3.67707771663077,0.00200000000040745
+"normal","Gaussian",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,3.5106923645268,3.3787651685195,3.73988127429066,1,0.0029999999969732
+"normal","Gaussian",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,3.5106923645268,3.3787651685195,3.73988127429066,1,426.845499999994
+"normal","Gaussian",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,3.51069237022311,3.37876517443823,3.7398812802588,1.00000000164161,0.00200000000768341
+"normal","Gaussian",1000,0.9,"young_mathew","Young--Mathew",300,0,0.99,0.99,3.43573996049413,3.30940260120725,3.66638447472707,0.98017370588738,0.0360000000000014
+"normal","Gaussian",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,6.38751560436351,5.44144186280234,7.30457350297642,1.81094967512258,0.00100000000384171
+"normal","Gaussian",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,4.75128879894248,4.48111388326319,5.07924468800437,1.34763210450914,0.00200000000040745
+"lognormal_hard","hard log-normal",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,1.43037402036497,1.26987316368927,1.62317677116612,1,0.00300000000061118
+"lognormal_hard","hard log-normal",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,1.43037402036497,1.26987316368927,1.62317677116612,1,443.076500000003
+"lognormal_hard","hard log-normal",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,1.43037403434593,1.2698731794373,1.62317678739003,1.0000000099897,0.00200000000768341
+"lognormal_hard","hard log-normal",1000,0.9,"young_mathew","Young--Mathew",300,0,0.98,0.98,2.01502844452746,1.7676871988172,2.43179131675353,1.40755689280632,0.0375000000000014
+"lognormal_hard","hard log-normal",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,12.6115933442924,6.35802447076503,47.6353744386417,8.61102911263287,0.00100000000384171
+"lognormal_hard","hard log-normal",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,3.59139810860752,2.78131958014792,4.93504462838982,2.45458989776296,0.00200000000040745
+"lognormal","log-normal",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,2.47942076367805,2.24193603787937,2.73096548125624,1,0.00299999999970169
+"lognormal","log-normal",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,2.47942076367805,2.24193603787937,2.73096548125624,1,447.920000000002
+"lognormal","log-normal",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,2.47942077174365,2.24193604679934,2.73096549041672,1.00000000342189,0.00200000000768341
+"lognormal","log-normal",1000,0.9,"young_mathew","Young--Mathew",300,0,0.98,0.98,2.90276344722424,2.59709187900169,3.21313432631768,1.18134810013605,0.036999999999999
+"lognormal","log-normal",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,9.98966326127801,6.34558923003551,17.3354420803841,4.04665177040399,0.00100000000384171
+"lognormal","log-normal",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,4.3182203849824,3.77478153231262,5.1610909217749,1.76615342529947,0.00200000000040745
+"mixture","mixture",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,3.2701402771755,3.19349524108944,3.36990900407753,1,0.00300000000061118
+"mixture","mixture",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,3.2701402771755,3.19349524108944,3.36990900407753,1,458.318
+"mixture","mixture",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,3.27014028329083,3.19349524735155,3.3699090102749,1.00000000189027,0.00200000000768341
+"mixture","mixture",1000,0.9,"young_mathew","Young--Mathew",300,0,0.98,0.98,3.23716548577208,3.16976754297687,3.3163018720752,0.989952065315176,0.0369999999999848
+"mixture","mixture",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,4.48396358576901,4.1754071087056,4.90249093472375,1.36939846448214,0.00100000001839362
+"mixture","mixture",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,3.82228630462802,3.67496559458935,3.96264229383393,1.16897059904869,0.00200000000040745
+"sharp_mixture","sharp mixture",1000,0.9,"tcsp_mc","TCSP",300,0,1,1,2.27552785961222,2.25048098994821,2.28794261650257,1,0.00300000000243017
+"sharp_mixture","sharp mixture",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,2.27552785961222,2.25048098994821,2.28794261650257,1,437.226499999997
+"sharp_mixture","sharp mixture",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,2.2755278684254,2.25048099883431,2.28794262524318,1.00000000387674,0.00200000000768341
+"sharp_mixture","sharp mixture",1000,0.9,"young_mathew","Young--Mathew",300,0,0.95,0.95,2.26807912605787,2.24215878720791,2.28202916243452,0.99650351942329,0.0380000000000109
+"sharp_mixture","sharp mixture",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,2.59758242943567,2.51730625349278,2.70137581654361,1.14163843856212,0.00100000000384171
+"sharp_mixture","sharp mixture",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,2.42061495419501,2.38550687812751,2.44706802260977,1.06407203187466,0.00200000000040745
+"student_t3","Student t3",1000,0.9,"tcsp_mc","TCSP",300,0,0.99,0.99,3.06344868157547,2.80594604731762,3.29622040165308,1,0.00300000001880107
+"student_t3","Student t3",1000,0.9,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,3.06344868157547,2.80594604731762,3.29622040165308,1,446.614500000003
+"student_t3","Student t3",1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,3.06344868810343,2.80594605444463,3.29622040788398,1.00000000219315,0.00200000000768341
+"student_t3","Student t3",1000,0.9,"young_mathew","Young--Mathew",300,0,0.96,0.96,2.94807888392316,2.6607466064433,3.16175864693191,0.95993701384831,0.0370000000000061
+"student_t3","Student t3",1000,0.9,"wilks_minmax","Wilks",300,0,1,1,14.3814460944367,9.90779811595372,31.898425456862,4.6041989027096,0.00199999997857958
+"student_t3","Student t3",1000,0.9,"tcsp_dkw","DKW",300,0,1,1,5.68253073140776,4.92735604340469,7.11045363986178,1.86306699738075,0.00200000000040745
+"contaminated_normal","contaminated normal",1000,0.95,"tcsp_mc","TCSP",300,0,1,1,3.69691791704394,2.59151810548827,5.31200353095601,1,0.0029999999969732
+"contaminated_normal","contaminated normal",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,3.69691791704394,2.59151810548827,5.31200353095601,1,446.822999999997
+"contaminated_normal","contaminated normal",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,3.69691792271185,2.59151811320498,5.3120035360592,1.00000000155928,0.00200000000768341
+"contaminated_normal","contaminated normal",1000,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,3.19802411169966,2.44181491076152,4.76384146551122,0.895958293123093,0.036999999999999
+"contaminated_normal","contaminated normal",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,17.4048527989941,13.5668976992036,22.7961681787243,4.58819351718658,0.00100000000384171
+"contaminated_normal","contaminated normal",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"normal","Gaussian",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,4.22634366691361,4.00865908507108,4.58492927256384,1,0.0029999999969732
+"normal","Gaussian",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,4.22634366691361,4.00865908507108,4.58492927256384,1,419.390500000003
+"normal","Gaussian",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,4.22634367170037,4.00865909005978,4.58492927744523,1.00000000113615,0.00200000000768341
+"normal","Gaussian",1000,0.95,"young_mathew","Young--Mathew",300,0,0.98,0.98,4.14495331757627,3.94780173470989,4.48039231412591,0.980673120878596,0.0364999999999895
+"normal","Gaussian",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,6.30345429080085,5.50057158222782,7.57015624623374,1.49535459656508,0.00100000000384171
+"normal","Gaussian",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"lognormal_hard","hard log-normal",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,2.35960489550883,1.92351588479248,2.83113601378014,1,0.0029999999969732
+"lognormal_hard","hard log-normal",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,2.35960489550883,1.92351588479248,2.83113601378014,1,457.433000000005
+"lognormal_hard","hard log-normal",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,2.35960490455674,1.92351589518906,2.83113602084373,1.00000000370702,0.00200000000768341
+"lognormal_hard","hard log-normal",1000,0.95,"young_mathew","Young--Mathew",300,0,0.93,0.93,3.09440834092645,2.38870338558348,4.09534412683351,1.31523102003065,0.0379999999999967
+"lognormal_hard","hard log-normal",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,12.3109924961096,6.75466745092227,28.474470879603,5.20711236212394,0.00100000000384171
+"lognormal_hard","hard log-normal",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"lognormal","log-normal",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,3.37295780611671,3.08826639235575,3.78848799804677,1,0.0029999999969732
+"lognormal","log-normal",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,3.37295780611671,3.08826639235575,3.78848799804677,1,447.754499999999
+"lognormal","log-normal",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,3.37295781205993,3.08826639883123,3.78848800405208,1.00000000180873,0.00200000000768341
+"lognormal","log-normal",1000,0.95,"young_mathew","Young--Mathew",300,0,0.97,0.97,3.93478443926101,3.42125724490786,4.45213767476073,1.15762256810789,0.036999999999999
+"lognormal","log-normal",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,9.68169179634398,6.39783877995923,18.0537269603291,2.91330796943466,0.00100000000384171
+"lognormal","log-normal",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"mixture","mixture",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,3.58978642506776,3.47459801736222,3.73487837761163,1,0.0029999999969732
+"mixture","mixture",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,3.58978642506776,3.47459801736222,3.73487837761163,1,454.586499999997
+"mixture","mixture",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,3.58978643068321,3.47459802311771,3.73487838328098,1.00000000157157,0.00200000000768341
+"mixture","mixture",1000,0.95,"young_mathew","Young--Mathew",300,0,0.94,0.94,3.55428001943747,3.43835322516948,3.70433873242521,0.990826536369369,0.0369999999999919
+"mixture","mixture",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,4.49091509588138,4.16899556426681,4.84981008859953,1.2573137094602,0.00100000000384171
+"mixture","mixture",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"sharp_mixture","sharp mixture",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,2.35159116767808,2.32680904218664,2.38287904754103,1,0.0029999999969732
+"sharp_mixture","sharp mixture",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,2.35159116767808,2.32680904218664,2.38287904754103,1,433.712
+"sharp_mixture","sharp mixture",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,2.35159117622316,2.32680905078124,2.38287905602082,1.00000000362809,0.00200000000768341
+"sharp_mixture","sharp mixture",1000,0.95,"young_mathew","Young--Mathew",300,0,0.96,0.96,2.34345176372752,2.31615883246358,2.37716653683433,0.996539635623468,0.0380000000000109
+"sharp_mixture","sharp mixture",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,2.59545213349501,2.49586367279974,2.72053670993906,1.10112516172008,0.00100000000384171
+"sharp_mixture","sharp mixture",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"student_t3","Student t3",1000,0.95,"tcsp_mc","TCSP",300,0,0.99,0.99,4.31081725335668,3.70351435957894,5.00655012950224,1,0.0029999999969732
+"student_t3","Student t3",1000,0.95,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,4.31081725335668,3.70351435957894,5.00655012950224,1,438.759000000005
+"student_t3","Student t3",1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,4.31081725799571,3.70351436497868,5.00655013349661,1.0000000011329,0.00200000000768341
+"student_t3","Student t3",1000,0.95,"young_mathew","Young--Mathew",300,0,0.93,0.93,4.16285490611845,3.59461123927587,4.77805081158847,0.962507023852542,0.0380000000000109
+"student_t3","Student t3",1000,0.95,"wilks_minmax","Wilks",300,0,1,1,14.4016399520344,8.70729211206428,33.9078503824344,3.3593360039472,0.00100000000384171
+"student_t3","Student t3",1000,0.95,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"contaminated_normal","contaminated normal",1000,0.99,"tcsp_mc","TCSP",300,0,0.98,0.98,13.8625683732338,10.2311773362918,17.3000498424984,1,0.0025000000023283
+"contaminated_normal","contaminated normal",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.98,0.98,13.8625683732338,10.2311773362918,17.3000498424984,1,453.116499999997
+"contaminated_normal","contaminated normal",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.98,0.98,13.8625683747675,10.2311773382465,17.3000498441657,1.00000000010791,0.00200000000768341
+"contaminated_normal","contaminated normal",1000,0.99,"young_mathew","Young--Mathew",300,0,0.94,0.94,13.5795495860713,10.0607918715444,16.6075784556082,0.980184256555073,0.036999999999999
+"contaminated_normal","contaminated normal",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,17.1970831572501,12.1793546136161,23.1479842790109,1.21679943592349,0.00100000000384171
+"contaminated_normal","contaminated normal",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"normal","Gaussian",1000,0.99,"tcsp_mc","TCSP",300,0,0.98,0.98,5.76295015691272,5.17300444498459,6.61479148818763,1,0.00200000000768341
+"normal","Gaussian",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.98,0.98,5.76295015691272,5.17300444498459,6.61479148818763,1,424.994500000004
+"normal","Gaussian",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.98,0.98,5.76295016048708,5.17300444885043,6.61479149128517,1.00000000061995,0.00200000000768341
+"normal","Gaussian",1000,0.99,"young_mathew","Young--Mathew",300,0,0.98,0.98,5.70366114660052,5.20088275015397,6.4478090701458,0.990638975771322,0.0369999999999777
+"normal","Gaussian",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,6.29188621779346,5.56617303832064,7.89939929658159,1.10340882049,0.00100000000384171
+"normal","Gaussian",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"lognormal_hard","hard log-normal",1000,0.99,"tcsp_mc","TCSP",300,0,0.96,0.96,7.8845540210182,4.48001600188254,13.2525164160756,1,0.00200000000768341
+"lognormal_hard","hard log-normal",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.96,0.96,7.8845540210182,4.48001600188254,13.2525164160756,1,451.826000000001
+"lognormal_hard","hard log-normal",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.96,0.96,7.88455402355454,4.48001600634636,13.2525164180319,1.00000000034146,0.00200000000768341
+"lognormal_hard","hard log-normal",1000,0.99,"young_mathew","Young--Mathew",300,0,0.93,0.93,9.80360387247854,4.78489794087157,17.9508216249756,1.15588922728686,0.0370000000000061
+"lognormal_hard","hard log-normal",1000,0.99,"wilks_minmax","Wilks",300,0,0.99,0.99,12.8752954062047,7.22051305484966,35.6853322169586,1.61513550954532,0.00100000000384171
+"lognormal_hard","hard log-normal",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000020373
+"lognormal","log-normal",1000,0.99,"tcsp_mc","TCSP",300,0,1,1,7.13823357665574,5.38459485828165,9.55176386577193,1,0.0029999999969732
+"lognormal","log-normal",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,7.13823357665574,5.38459485828165,9.55176386577193,1,456.228499999997
+"lognormal","log-normal",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,7.13823357968658,5.38459486199558,9.55176386882282,1.00000000042842,0.00200000000768341
+"lognormal","log-normal",1000,0.99,"young_mathew","Young--Mathew",300,0,0.99,0.99,7.95908452871446,5.71883935728577,12.6366985003008,1.09028376988141,0.0370000000000061
+"lognormal","log-normal",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,9.96749939568544,6.36573638086063,18.7915432477148,1.33082301661603,0.00100000000384171
+"lognormal","log-normal",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"mixture","mixture",1000,0.99,"tcsp_mc","TCSP",300,0,1,1,4.23872143564797,4.04102029578175,4.54958553126544,1,0.0029999999969732
+"mixture","mixture",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,4.23872143564797,4.04102029578175,4.54958553126544,1,429.598000000006
+"mixture","mixture",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,4.23872144036591,4.04102030073049,4.54958553586046,1.00000000112646,0.00200000000768341
+"mixture","mixture",1000,0.99,"young_mathew","Young--Mathew",300,0,0.99,0.99,4.23125164046793,4.03474045425315,4.53648057290038,0.99626436575233,0.0370000000000061
+"mixture","mixture",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,4.49089072499855,4.160708693099,4.96235112916402,1.0583754908264,0.00100000000384171
+"mixture","mixture",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"sharp_mixture","sharp mixture",1000,0.99,"tcsp_mc","TCSP",300,0,1,1,2.52170777540452,2.46922747623565,2.58753456444699,1,0.0029999999969732
+"sharp_mixture","sharp mixture",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,1,1,2.52170777540452,2.46922747623565,2.58753456444699,1,448.275500000003
+"sharp_mixture","sharp mixture",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,1,1,2.52170778337823,2.46922748433454,2.58753457217558,1.00000000315249,0.00200000000768341
+"sharp_mixture","sharp mixture",1000,0.99,"young_mathew","Young--Mathew",300,0,1,1,2.51701129543807,2.46759276053893,2.57899957858821,0.997977701077814,0.0379999999999825
+"sharp_mixture","sharp mixture",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,2.5883871457792,2.51216940848948,2.67833970245231,1.02263991615474,0.00100000000384171
+"sharp_mixture","sharp mixture",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171
+"student_t3","Student t3",1000,0.99,"tcsp_mc","TCSP",300,0,0.99,0.99,9.65599164166905,7.2714358123026,13.844686982727,1,0.0029999999969732
+"student_t3","Student t3",1000,0.99,"hdp_s_mc","Hybrid DP--scan",300,0,0.99,0.99,9.65599164166905,7.2714358123026,13.844686982727,1,454.568499999994
+"student_t3","Student t3",1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",300,0,0.99,0.99,9.65599164374012,7.27143581505282,13.8446869844501,1.00000000021961,0.00200000000768341
+"student_t3","Student t3",1000,0.99,"young_mathew","Young--Mathew",300,0,0.98,0.98,9.49827410464533,7.1310625324859,13.1224769366709,0.975113098945319,0.0379999999999825
+"student_t3","Student t3",1000,0.99,"wilks_minmax","Wilks",300,0,1,1,14.7977193997255,9.98516293483908,35.2454780616988,1.46985793532326,0.00100000000384171
+"student_t3","Student t3",1000,0.99,"tcsp_dkw","DKW",300,1,0,NA,NA,NA,NA,NA,0.00100000000384171

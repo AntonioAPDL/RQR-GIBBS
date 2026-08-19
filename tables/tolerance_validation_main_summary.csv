@@ -1,7 +1,5 @@
-"method_id","method","role","dataset_thresholds","infeasible_rate","grid_delivery_success","returned_success","median_width_ratio_to_tcsp","median_elapsed_sec"
-"tcsp_mc","TCSP scan","Shortest empirical scan action",12600,0,0.987142857142857,0.987142857142857,1,0.0029999999969732
-"hdp_s_mc","Hybrid DP--scan","Scan action with direct-DP content screen",12600,0,0.987142857142857,0.987142857142857,1,307.573
-"tcsp_mti_ecm_map_mc","MTI ECM","Fixed-target generalized-Bayes mode",12600,0.166666666666667,0.826904761904762,0.992285714285714,1.00000000183031,0.00200000000768341
-"young_mathew","Young--Mathew","Classical interpolated comparator",12600,0,0.964285714285714,0.964285714285714,0.993071131508027,0.0360000000000014
-"wilks_minmax","Wilks min--max","Classical full-range comparator",12600,0,0.993333333333333,0.993333333333333,1.42257042748704,0.00100000000020373
-"tcsp_dkw","DKW scan","Conservative scan fallback",12600,0.833333333333333,0.166666666666667,1,1.72380146486796,0.00100000000384171
+"method_id","method","role","dataset_thresholds","infeasible_rate","grid_delivery_success","returned_success","median_width","median_width_ratio_to_tcsp","median_elapsed_sec"
+"tcsp_mc","TCSP scan","Shortest empirical scan action",12600,0,0.987142857142857,0.987142857142857,3.54627195469727,1,0.0029999999969732
+"hdp_s_mc","Hybrid DP--scan","Scan action with direct-DP content screen",12600,0,0.987142857142857,0.987142857142857,3.54627195469727,1,307.573
+"young_mathew","Young--Mathew","Classical interpolated comparator",12600,0,0.964285714285714,0.964285714285714,3.58423004832671,0.993071131508027,0.0360000000000014
+"wilks_minmax","Wilks min--max","Classical full-range comparator",12600,0,0.993333333333333,0.993333333333333,7.68373016918336,1.42257042748704,0.00100000000020373

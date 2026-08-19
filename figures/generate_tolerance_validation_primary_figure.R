@@ -36,38 +36,30 @@ manifest_path <- file.path(output_dir,
 
 method_order <- c(
   "tcsp_mc",
-  "tcsp_mti_ecm_map_mc",
   "young_mathew",
-  "wilks_minmax",
-  "tcsp_dkw"
+  "wilks_minmax"
 )
 method_labels <- c(
   tcsp_mc = "TCSP",
-  tcsp_mti_ecm_map_mc = "MTI ECM",
   young_mathew = "Young--Mathew",
-  wilks_minmax = "Wilks",
-  tcsp_dkw = "DKW"
+  wilks_minmax = "Wilks"
 )
 method_colors <- c(
   tcsp_mc = "#0072B2",
-  tcsp_mti_ecm_map_mc = "#D55E00",
   young_mathew = "#CC79A7",
-  wilks_minmax = "#000000",
-  tcsp_dkw = "#666666"
+  wilks_minmax = "#000000"
 )
 method_pch <- c(
   tcsp_mc = 16,
-  tcsp_mti_ecm_map_mc = 15,
   young_mathew = 18,
-  wilks_minmax = 4,
-  tcsp_dkw = 1
+  wilks_minmax = 4
 )
 
 derive_from_source <- function(path) {
   summary <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
   required <- c(
     "method_id", "n", "c", "infeasible_rate", "success_rate",
-    "median_width_ratio_to_tcsp", "median_elapsed_sec"
+    "median_width", "median_elapsed_sec"
   )
   missing <- setdiff(required, names(summary))
   if (length(missing)) {
@@ -88,8 +80,7 @@ derive_from_source <- function(path) {
     infeasible_rate = as.numeric(selected$infeasible_rate),
     delivery_success = delivery,
     returned_success = returned_success,
-    median_width_ratio_to_tcsp =
-      as.numeric(selected$median_width_ratio_to_tcsp),
+    median_width = as.numeric(selected$median_width),
     median_elapsed_sec = as.numeric(selected$median_elapsed_sec),
     stringsAsFactors = FALSE
   )
@@ -114,7 +105,7 @@ if (nzchar(source_summary) && file.exists(source_summary)) {
 
 required_data <- c(
   "n", "content", "method_id", "delivery_success",
-  "median_width_ratio_to_tcsp"
+  "median_width"
 )
 missing_data <- setdiff(required_data, names(data))
 if (length(missing_data)) {
@@ -148,7 +139,9 @@ draw_panel <- function(nn, metric, ylab, main, reference, ylim) {
        ylim = ylim, xaxt = "n", xlab = "Target content",
        ylab = ylab, main = main, bty = "l")
   axis(1, at = contents, labels = sprintf("%.2f", contents))
-  abline(h = reference, col = "gray55", lty = 2, lwd = 1.2)
+  if (is.finite(reference)) {
+    abline(h = reference, col = "gray55", lty = 2, lwd = 1.2)
+  }
   panel <- data[data$n == nn, , drop = FALSE]
   for (method in method_order) {
     block <- panel[panel$method_id == method, , drop = FALSE]
@@ -166,18 +159,18 @@ draw_panel <- function(nn, metric, ylab, main, reference, ylim) {
   }
 }
 
-width_values <- data$median_width_ratio_to_tcsp
+width_values <- data$median_width
 width_values <- width_values[is.finite(width_values)]
-width_ylim <- c(0.75, max(1.15, width_values, na.rm = TRUE) * 1.08)
+width_ylim <- c(0, max(width_values, na.rm = TRUE) * 1.08)
 
 draw_panel(500, "delivery_success", "Delivery probability",
            "Delivery, n = 500", 0.95, c(0, 1.05))
 draw_panel(1000, "delivery_success", "Delivery probability",
            "Delivery, n = 1000", 0.95, c(0, 1.05))
-draw_panel(500, "median_width_ratio_to_tcsp", "Median width / TCSP",
-           "Width, n = 500", 1, width_ylim)
-draw_panel(1000, "median_width_ratio_to_tcsp", "Median width / TCSP",
-           "Width, n = 1000", 1, width_ylim)
+draw_panel(500, "median_width", "Median interval width",
+           "Width, n = 500", NA_real_, width_ylim)
+draw_panel(1000, "median_width", "Median interval width",
+           "Width, n = 1000", NA_real_, width_ylim)
 
 par(mar = c(0, 0, 0, 0))
 plot.new()

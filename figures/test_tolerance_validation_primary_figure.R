@@ -8,10 +8,8 @@ on.exit(unlink(work_dir, recursive = TRUE, force = TRUE), add = TRUE)
 
 methods <- c(
   "tcsp_mc",
-  "tcsp_mti_ecm_map_mc",
   "young_mathew",
-  "wilks_minmax",
-  "tcsp_dkw"
+  "wilks_minmax"
 )
 stratified <- expand.grid(
   n = c(500L, 1000L),
@@ -24,16 +22,15 @@ stratified$method <- stratified$method_id
 stratified$infeasible_rate <- 0
 stratified$delivery_success <- 0.96
 stratified$returned_success <- 0.96
-stratified$median_width_ratio_to_tcsp <- 1
+stratified$median_width <- 2.5
 stratified$median_elapsed_sec <- 0.01
 stratified$delivery_success[stratified$method_id == "wilks_minmax"] <- 0.99
-stratified$median_width_ratio_to_tcsp[
+stratified$median_width[
   stratified$method_id == "wilks_minmax"
-] <- 1.45
-stratified$delivery_success[stratified$method_id == "tcsp_dkw"] <- 0.50
-stratified$median_width_ratio_to_tcsp[
+] <- 4.1
+stratified$median_width[
   stratified$method_id == "young_mathew"
-] <- 0.98
+] <- 2.3
 
 csv_path <- file.path(work_dir, "stratified.csv")
 utils::write.csv(stratified, csv_path, row.names = FALSE)

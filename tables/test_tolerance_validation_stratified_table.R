@@ -69,6 +69,7 @@ stopifnot(file.exists(tex_500_path), file.exists(tex_1000_path))
 tab <- utils::read.csv(csv_path, stringsAsFactors = FALSE)
 stopifnot(nrow(tab) == length(methods) * 4L)
 stopifnot(!"tcsp_mti_gibbs_median_mc" %in% tab$method_id)
+stopifnot("median_width" %in% names(tab))
 closed <- tab[
   tab$method_id == "tcsp_dkw" & tab$n == 500L & tab$content == 0.99,
   ,
@@ -81,6 +82,8 @@ stopifnot(is.na(closed$returned_success))
 tex <- paste(readLines(tex_path, warn = FALSE), collapse = "\n")
 stopifnot(grepl("Sample size", tex, fixed = TRUE))
 stopifnot(grepl("Returned success", tex, fixed = TRUE))
+stopifnot(grepl("Median width", tex, fixed = TRUE))
+stopifnot(!grepl("Width/TCSP", tex, fixed = TRUE))
 stopifnot(!grepl("paper-matched", tex, ignore.case = TRUE))
 stopifnot(!grepl("lane", tex, ignore.case = TRUE))
 stopifnot(!grepl("Feasible success", tex, fixed = TRUE))

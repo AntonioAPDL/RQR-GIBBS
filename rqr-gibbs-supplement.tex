@@ -2249,18 +2249,19 @@ samples across methods and records the repository commit, frozen JSON
 configuration, scan-calibration cache, oracle certificates, wave plan, and
 artifact hashes. The scenario-range tables in the main article are generated
 from the raw validation rows and the Young--Mathew add-on, then summarized
-across DGPs within each \((n,c)\) cell. Their rows are restricted to the
-confirmatory comparison: TCSP, hybrid DP--scan, MTI ECM, Young--Mathew, Wilks
-min--max, and the conservative DKW fallback. MTI Gibbs is reported separately
-as a sampler diagnostic because the multi-chain checks below show unstable
-mixing in several feasible cells.
+across DGPs within each \((n,c)\) cell. Their rows are restricted to the main
+comparison: TCSP, hybrid DP--scan, Young--Mathew, and Wilks min--max. The
+supplement keeps MTI ECM, MTI Gibbs, and the conservative DKW fallback as
+fixed-target computation and feasibility diagnostics. MTI Gibbs is reported
+separately because the multi-chain checks below show unstable mixing in several
+feasible cells.
 
 \begin{table}[H]
 \centering
 \caption{\textbf{Primary iid tolerance validation for \(n=500\).} Delivery
 counts infeasible cells as failures. Returned success conditions on methods
-that return an interval. Width is measured relative to the TCSP scan action on
-the same data set and target.}
+that return an interval. Width is the median raw interval length over the
+corresponding primary-grid rows.}
 \label{tab:supp-primary-by-content-n500}
 \TableStyle
 \input{tables/tolerance_validation_by_n_500_content.tex}
@@ -2270,8 +2271,8 @@ the same data set and target.}
 \centering
 \caption{\textbf{Primary iid tolerance validation for \(n=1000\).} Delivery
 counts infeasible cells as failures. Returned success conditions on methods
-that return an interval. Width is measured relative to the TCSP scan action on
-the same data set and target.}
+that return an interval. Width is the median raw interval length over the
+corresponding primary-grid rows.}
 \label{tab:supp-primary-by-content-n1000}
 \TableStyle
 \input{tables/tolerance_validation_by_n_1000_content.tex}
@@ -2286,7 +2287,8 @@ return an interval. Table~\ref{tab:supp-primary-dgp-delivery} is the
 verification table behind the scenario ranges in the main article: it gives the
 DGP-level delivery percentages before averaging. The corresponding
 scenario-detail CSV in the tables directory contains returned success,
-infeasibility, relative width, and runtime for each DGP-level cell.
+infeasibility, raw width summaries, relative width, and runtime for each
+DGP-level cell.
 
 \begingroup
 \TableStyle

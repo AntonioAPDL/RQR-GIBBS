@@ -111,19 +111,27 @@ primary_range <- read.csv(
   file.path(out_dir, "tolerance_validation_primary_scenario_ranges.csv"),
   stringsAsFactors = FALSE
 )
+stopifnot(nrow(primary_range) ==
+            length(unique(primary_range$n)) *
+            length(unique(primary_range$content)) * 4L)
 stopifnot(!"tcsp_mti_gibbs_median_mc" %in% primary_range$method_id)
+stopifnot(!"tcsp_mti_ecm_map_mc" %in% primary_range$method_id)
+stopifnot(!"tcsp_dkw" %in% primary_range$method_id)
 stopifnot(any(primary_range$method_id == "young_mathew"))
 stopifnot(primary_range$dgp_cells[primary_range$method_id == "tcsp_mc"][[1L]] == 2L)
-stopifnot(primary_range$fail_closed_dgp_cells[
-  primary_range$method_id == "tcsp_dkw"
-][[1L]] == 2L)
+stopifnot(all(c("width_q025", "width_q975", "median_width") %in%
+                names(primary_range)))
+stopifnot(all(is.finite(primary_range$width_q025)))
+stopifnot(all(is.finite(primary_range$width_q975)))
 
 small_boundary <- read.csv(
   file.path(out_dir, "tolerance_validation_small_sample_boundary.csv"),
   stringsAsFactors = FALSE
 )
 stopifnot(all(small_boundary$n %in% c(50L, 100L)))
-stopifnot(any(small_boundary$fail_closed_dgp_cells == 3L))
+stopifnot(!"tcsp_mti_ecm_map_mc" %in% small_boundary$method_id)
+stopifnot(!"tcsp_dkw" %in% small_boundary$method_id)
+stopifnot(any(small_boundary$method_id == "wilks_minmax"))
 
 tex <- paste(readLines(
   file.path(out_dir, "tolerance_validation_primary_scenario_ranges.tex"),
@@ -131,6 +139,12 @@ tex <- paste(readLines(
 ), collapse = "\n")
 stopifnot(grepl("Delivery range", tex, fixed = TRUE))
 stopifnot(grepl("Young--Mathew", tex, fixed = TRUE))
+stopifnot(grepl("Width 95\\% range", tex, fixed = TRUE))
+stopifnot(!grepl("DGPs", tex, fixed = TRUE))
+stopifnot(!grepl("Fail-closed", tex, fixed = TRUE))
+stopifnot(!grepl("Width/TCSP", tex, fixed = TRUE))
+stopifnot(!grepl("MTI ECM", tex, fixed = TRUE))
+stopifnot(!grepl("DKW", tex, fixed = TRUE))
 stopifnot(!grepl("posterior predictive", tex, fixed = TRUE))
 stopifnot(!grepl("MTI Gibbs", tex, fixed = TRUE))
 

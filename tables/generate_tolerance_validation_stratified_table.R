@@ -67,7 +67,7 @@ summary <- utils::read.csv(summary_path, stringsAsFactors = FALSE,
                            check.names = FALSE)
 required <- c(
   "method_id", "n", "c", "infeasible_rate", "success_rate",
-  "median_width_ratio_to_tcsp", "median_elapsed_sec"
+  "median_width", "median_width_ratio_to_tcsp", "median_elapsed_sec"
 )
 missing <- setdiff(required, names(summary))
 if (length(missing)) {
@@ -124,6 +124,7 @@ selected$n <- as.integer(selected$n)
 selected$c <- as.numeric(selected$c)
 selected$infeasible_rate <- as.numeric(selected$infeasible_rate)
 selected$success_rate <- as.numeric(selected$success_rate)
+selected$median_width <- as.numeric(selected$median_width)
 selected$median_width_ratio_to_tcsp <-
   as.numeric(selected$median_width_ratio_to_tcsp)
 selected$median_elapsed_sec <- as.numeric(selected$median_elapsed_sec)
@@ -141,6 +142,7 @@ out <- data.frame(
   infeasible_rate = selected$infeasible_rate,
   delivery_success = delivery,
   returned_success = returned_success,
+  median_width = selected$median_width,
   median_width_ratio_to_tcsp = selected$median_width_ratio_to_tcsp,
   median_elapsed_sec = selected$median_elapsed_sec,
   stringsAsFactors = FALSE
@@ -155,7 +157,7 @@ make_tex_lines <- function(data, include_sample_size) {
   lines <- c(
     "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrrrr@{}}",
     "\\toprule",
-    "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Width/TCSP & Median sec\\\\",
+    "Method & Infeasible (\\%) & Delivery (\\%) & Returned success (\\%) & Median width & Median sec\\\\",
     "\\midrule"
   )
   for (nn in sort(unique(data$n))) {
@@ -182,7 +184,7 @@ make_tex_lines <- function(data, include_sample_size) {
           format_pct(block$infeasible_rate[[ii]]),
           format_pct(block$delivery_success[[ii]]),
           format_pct(block$returned_success[[ii]]),
-          format_num(block$median_width_ratio_to_tcsp[[ii]], 3),
+          format_num(block$median_width[[ii]], 2),
           format_sec(block$median_elapsed_sec[[ii]])
         )
       }, character(1L))

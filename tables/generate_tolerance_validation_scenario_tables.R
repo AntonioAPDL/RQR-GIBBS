@@ -88,7 +88,7 @@ if (!file.exists(primary_path) || !file.exists(small_path)) {
         paste(names(missing), missing, sep = "=", collapse = "; "))
 }
 
-method_order <- c(
+primary_supp_method_order <- c(
   "tcsp_mc",
   "hdp_s_mc",
   "tcsp_mti_ecm_map_mc",
@@ -96,12 +96,23 @@ method_order <- c(
   "wilks_minmax",
   "tcsp_dkw"
 )
-small_method_order <- c(
+primary_main_method_order <- c(
+  "tcsp_mc",
+  "hdp_s_mc",
+  "young_mathew",
+  "wilks_minmax"
+)
+small_supp_method_order <- c(
   "tcsp_mc",
   "tcsp_mti_ecm_map_mc",
   "young_mathew",
   "wilks_minmax",
   "tcsp_dkw"
+)
+small_main_method_order <- c(
+  "tcsp_mc",
+  "young_mathew",
+  "wilks_minmax"
 )
 method_labels <- c(
   tcsp_mc = "TCSP",
@@ -169,6 +180,15 @@ max_or_na <- function(x) {
   x <- x[is.finite(x)]
   if (length(x)) max(x) else NA_real_
 }
+quantile_or_na <- function(x, prob) {
+  x <- num(x)
+  x <- x[is.finite(x)]
+  if (length(x)) {
+    unname(stats::quantile(x, prob, names = FALSE, type = 8))
+  } else {
+    NA_real_
+  }
+}
 
 add_tcsp_width_ratio <- function(results) {
   results$n <- as.integer(results$n)
@@ -205,7 +225,8 @@ scenario_detail <- function(results, methods) {
                results$method_id, sep = "||")
   rows <- lapply(split(results, key), function(df) {
     returned <- !df$infeasible_bool & !is.na(df$success_bool)
-    finite_width <- is.finite(df$width_ratio_to_tcsp)
+    finite_width <- is.finite(df$width)
+    finite_ratio <- is.finite(df$width_ratio_to_tcsp)
     data.frame(
       dgp_id = df$dgp_id[[1L]],
       dgp = dgp_labels[df$dgp_id[[1L]]],
@@ -221,8 +242,15 @@ scenario_detail <- function(results, methods) {
       } else {
         NA_real_
       },
-      median_width_ratio_to_tcsp = if (any(finite_width)) {
-        stats::median(df$width_ratio_to_tcsp[finite_width])
+      median_width = if (any(finite_width)) {
+        stats::median(df$width[finite_width])
+      } else {
+        NA_real_
+      },
+      width_q025 = quantile_or_na(df$width, 0.025),
+      width_q975 = quantile_or_na(df$width, 0.975),
+      median_width_ratio_to_tcsp = if (any(finite_ratio)) {
+        stats::median(df$width_ratio_to_tcsp[finite_ratio])
       } else {
         NA_real_
       },
@@ -241,7 +269,7 @@ scenario_detail <- function(results, methods) {
   out
 }
 
-range_summary <- function(detail, methods) {
+range_summary <- function(detail, methods, raw_results = NULL) {
   key <- paste(detail$n, sprintf("%.4f", detail$content),
                detail$method_id, sep = "||")
   rows <- lapply(split(detail, key), function(df) {
@@ -258,6 +286,9 @@ range_summary <- function(detail, methods) {
       delivery_max = max_or_na(df$delivery_success),
       returned_success_min = min_or_na(df$returned_success),
       returned_success_max = max_or_na(df$returned_success),
+      width_q025 = min_or_na(df$width_q025),
+      width_q975 = max_or_na(df$width_q975),
+      median_width = median_or_na(df$median_width),
       median_width_ratio_to_tcsp =
         median_or_na(df$median_width_ratio_to_tcsp),
       median_elapsed_sec = median_or_na(df$median_elapsed_sec),
@@ -265,6 +296,32 @@ range_summary <- function(detail, methods) {
     )
   })
   out <- do.call(rbind, rows)
+  if (!is.null(raw_results) && nrow(raw_results)) {
+    raw <- raw_results[raw_results$method_id %in% methods, , drop = FALSE]
+    raw$n <- as.integer(raw$n)
+    raw$guaranteed_content <- num(raw$guaranteed_content)
+    raw$width <- num(raw$width)
+    raw_key <- paste(raw$n, sprintf("%.4f", raw$guaranteed_content),
+                     raw$method_id, sep = "||")
+    width_rows <- lapply(split(raw, raw_key), function(df) {
+      data.frame(
+        n = as.integer(df$n[[1L]]),
+        content = num(df$guaranteed_content[[1L]]),
+        method_id = df$method_id[[1L]],
+        width_q025 = quantile_or_na(df$width, 0.025),
+        width_q975 = quantile_or_na(df$width, 0.975),
+        median_width = median_or_na(df$width),
+        stringsAsFactors = FALSE
+      )
+    })
+    width_summary <- do.call(rbind, width_rows)
+    merge_keys <- c("n", "content", "method_id")
+    out$width_q025 <- NULL
+    out$width_q975 <- NULL
+    out$median_width <- NULL
+    out <- merge(out, width_summary, by = merge_keys, all.x = TRUE,
+                 sort = FALSE)
+  }
   out <- out[order(out$n, out$content, match(out$method_id, methods)), ]
   rownames(out) <- NULL
   out
@@ -290,6 +347,17 @@ format_num <- function(x, digits = 3) {
   out <- ifelse(is.finite(x), sprintf(paste0("%.", digits, "f"), x), "--")
   sub("\\.?0+$", "", out)
 }
+format_width_range <- function(a, b) {
+  a <- num(a)
+  b <- num(b)
+  out <- rep("--", length(a))
+  ok <- is.finite(a) & is.finite(b)
+  same <- ok & abs(a - b) < 5e-4
+  out[same] <- format_num(a[same], 2)
+  out[ok & !same] <- paste0(format_num(a[ok & !same], 2), "--",
+                            format_num(b[ok & !same], 2))
+  out
+}
 format_sec <- function(x) {
   x <- num(x)
   ifelse(!is.finite(x), "--", ifelse(x < 0.01, sprintf("%.3f", x),
@@ -306,9 +374,9 @@ cell_label <- function(n, content) {
 
 write_range_tex <- function(summary, path) {
   lines <- c(
-    "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrrrrr@{}}",
+    "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrrrr@{}}",
     "\\toprule",
-    "Cell & Method & DGPs & Fail-closed & Delivery range (\\%) & Returned range (\\%) & Width/TCSP\\\\",
+    "Cell & Method & Delivery range (\\%) & Returned range (\\%) & Width 95\\% range & Median sec\\\\",
     "\\midrule"
   )
   for (cell in unique(paste(summary$n, summary$content, sep = "||"))) {
@@ -316,15 +384,14 @@ write_range_tex <- function(summary, path) {
                      , drop = FALSE]
     for (ii in seq_len(nrow(block))) {
       lines <- c(lines, sprintf(
-        "%s & %s & %s & %s & %s & %s & %s \\\\",
+        "%s & %s & %s & %s & %s & %s \\\\",
         if (ii == 1L) cell_label(block$n[[ii]], block$content[[ii]]) else "",
         escape_latex(block$method[[ii]]),
-        block$dgp_cells[[ii]],
-        block$fail_closed_dgp_cells[[ii]],
         format_range(block$delivery_min[[ii]], block$delivery_max[[ii]]),
         format_range(block$returned_success_min[[ii]],
                      block$returned_success_max[[ii]]),
-        format_num(block$median_width_ratio_to_tcsp[[ii]], 3)
+        format_width_range(block$width_q025[[ii]], block$width_q975[[ii]]),
+        format_sec(block$median_elapsed_sec[[ii]])
       ))
     }
     lines <- c(lines, "\\addlinespace[0.25em]")
@@ -402,18 +469,31 @@ small <- read_results(small_path, "Small-sample validation results")
 primary <- add_tcsp_width_ratio(primary)
 small <- add_tcsp_width_ratio(small)
 
-primary_detail <- scenario_detail(primary, method_order)
-primary_range <- range_summary(primary_detail, method_order)
-small_detail <- scenario_detail(small, small_method_order)
+primary_detail <- scenario_detail(primary, primary_supp_method_order)
+primary_range <- range_summary(
+  primary_detail[primary_detail$method_id %in% primary_main_method_order,
+                 , drop = FALSE],
+  primary_main_method_order,
+  primary
+)
+small_detail <- scenario_detail(small, small_supp_method_order)
 small_boundary_detail <- small_detail[
   small_detail$n %in% c(50L, 100L),
   ,
   drop = FALSE
 ]
-small_boundary <- range_summary(small_boundary_detail, small_method_order)
+small_boundary <- range_summary(
+  small_boundary_detail[
+    small_boundary_detail$method_id %in% small_main_method_order,
+    ,
+    drop = FALSE
+  ],
+  small_main_method_order,
+  small
+)
 
-primary_delivery <- wide_delivery(primary_detail, method_order)
-small_delivery <- wide_delivery(small_boundary_detail, small_method_order)
+primary_delivery <- wide_delivery(primary_detail, primary_supp_method_order)
+small_delivery <- wide_delivery(small_boundary_detail, small_supp_method_order)
 
 utils::write.csv(primary_range,
                  file.path(output_dir,
@@ -460,14 +540,14 @@ write_range_tex(
 write_wide_delivery_tex(
   primary_delivery,
   file.path(output_dir, "tolerance_validation_primary_dgp_delivery.tex"),
-  method_order,
-  "\\textbf{Primary iid tolerance-validation delivery by DGP.} Entries are delivery percentages for the primary grid at tolerance confidence \\(0.95\\). Delivery counts fail-closed cells as failures.",
+  primary_supp_method_order,
+  "\\textbf{Primary iid tolerance-validation delivery by DGP.} Entries are delivery percentages for the primary grid at tolerance confidence \\(0.95\\). Delivery counts cells with no returned interval as failures.",
   "tab:supp-primary-dgp-delivery"
 )
 write_wide_delivery_tex(
   small_delivery,
   file.path(output_dir, "tolerance_validation_small_sample_dgp_delivery.tex"),
-  small_method_order,
+  small_supp_method_order,
   "\\textbf{Small-sample tolerance-validation delivery by DGP.} Entries are delivery percentages for the practical \\(n=50\\) and \\(n=100\\) follow-up cells at tolerance confidence \\(0.95\\).",
   "tab:supp-small-sample-dgp-delivery"
 )

@@ -17,19 +17,22 @@ tex_path <- file.path(out_dir, "tolerance_validation_main_summary.tex")
 stopifnot(file.exists(csv_path), file.exists(tex_path))
 
 tab <- read.csv(csv_path, stringsAsFactors = FALSE)
-stopifnot(nrow(tab) == 6L)
-stopifnot(all(c("tcsp_mc", "hdp_s_mc", "tcsp_mti_ecm_map_mc",
-                "young_mathew", "wilks_minmax") %in%
+stopifnot(nrow(tab) == 4L)
+stopifnot(all(c("tcsp_mc", "hdp_s_mc", "young_mathew", "wilks_minmax") %in%
                 tab$method_id))
+stopifnot(!"tcsp_mti_ecm_map_mc" %in% tab$method_id)
+stopifnot(!"tcsp_dkw" %in% tab$method_id)
 stopifnot(!"tcsp_mti_gibbs_median_mc" %in% tab$method_id)
 stopifnot(all(is.finite(tab$grid_delivery_success)))
 stopifnot(all(is.finite(tab$returned_success)))
-stopifnot(all(is.finite(tab$median_width_ratio_to_tcsp)))
+stopifnot(all(is.finite(tab$median_width)))
 
 tex <- paste(readLines(tex_path, warn = FALSE), collapse = "\n")
 stopifnot(grepl("\\\\begin\\{tabularx\\}", tex))
 stopifnot(grepl("Young--Mathew", tex, fixed = TRUE))
 stopifnot(grepl("Returned success", tex, fixed = TRUE))
+stopifnot(grepl("Median width", tex, fixed = TRUE))
+stopifnot(!grepl("Width/TCSP", tex, fixed = TRUE))
 stopifnot(!grepl("Feasible success", tex, fixed = TRUE))
 stopifnot(!grepl("posterior predictive", tex, fixed = TRUE))
 
