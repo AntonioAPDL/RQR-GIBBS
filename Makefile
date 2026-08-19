@@ -61,11 +61,11 @@ RQR_BAYES_UQ_VALIDATION_DIR ?= application/outputs/rqr_bayes_uq_validation_v1
 RQR_BAYES_UQ_VALIDATION_SMOKE_DIR ?= $(RQR_BAYES_UQ_VALIDATION_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
 RQR_BAYES_UQ_VALIDATION_MODERATE_DIR ?= $(RQR_BAYES_UQ_VALIDATION_DIR)/moderate_$(shell date -u +%Y%m%dT%H%M%SZ)
 RQR_BAYES_UQ_VALIDATION_RUN_DIR ?=
-RQR_BAYES_UQ_MAIN_CONFIG ?= application/config/rqr_bayes_uq_validation_main_20260813.json
-RQR_BAYES_UQ_MAIN_DIR ?= application/outputs/rqr_bayes_uq_validation_main_20260813
+RQR_BAYES_UQ_MAIN_CONFIG ?= application/config/rqr_bayes_uq_validation_main_3method_1000_20260819.json
+RQR_BAYES_UQ_MAIN_DIR ?= application/outputs/rqr_bayes_uq_validation_main_3method_1000_20260819
 RQR_BAYES_UQ_MAIN_SMOKE_DIR ?= $(RQR_BAYES_UQ_MAIN_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
 RQR_BAYES_UQ_MAIN_RUN_DIR ?=
-RQR_BAYES_UQ_MAIN_WAVE_RUN_ROOT ?= application/runs/rqr_bayes_uq_validation_main_20260813
+RQR_BAYES_UQ_MAIN_WAVE_RUN_ROOT ?= application/runs/rqr_bayes_uq_validation_main_3method_1000_20260819
 RQR_BAYES_UQ_MAIN_WAVE_MAX_CONCURRENT ?= 6
 RQR_BAYES_UQ_MAIN_WAVE_POLL_SECONDS ?= 60
 RQR_BAYES_UQ_FOLLOWUP_CONFIG ?= application/config/rqr_bayes_uq_followup_20260816.json
@@ -114,7 +114,8 @@ RQR_DLM_M02_CANARY_OUTPUT_ROOT ?=
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
-	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_primary_scenario_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
 
 theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
@@ -130,6 +131,7 @@ model-illustration-figures:
 test-theory-figures:
 	$(R) figures/test_rqr_theory_figure_oracles.R
 	$(R) figures/test_tolerance_validation_primary_figure.R
+	$(R) figures/test_tolerance_validation_width_figure.R
 
 test-theory-tables:
 	$(R) tables/test_mean_tilt_cf_mini_study_table.R

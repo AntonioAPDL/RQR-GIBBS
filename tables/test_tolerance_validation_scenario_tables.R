@@ -95,32 +95,33 @@ if (!identical(attr(status, "status"), NULL)) {
 }
 
 required <- file.path(out_dir, c(
-  "tolerance_validation_primary_scenario_ranges.csv",
-  "tolerance_validation_primary_scenario_ranges.tex",
-  "tolerance_validation_primary_scenario_ranges_n500.tex",
-  "tolerance_validation_primary_scenario_ranges_n1000.tex",
-  "tolerance_validation_small_sample_boundary.csv",
-  "tolerance_validation_small_sample_boundary.tex",
-  "tolerance_validation_primary_dgp_delivery.csv",
-  "tolerance_validation_primary_dgp_delivery.tex",
-  "tolerance_validation_primary_dgp_width_ranges.csv",
-  "tolerance_validation_primary_dgp_width_ranges.tex",
-  "tolerance_validation_small_sample_dgp_delivery.csv",
-  "tolerance_validation_small_sample_dgp_delivery.tex",
-  "tolerance_validation_small_sample_dgp_width_ranges.csv",
-  "tolerance_validation_small_sample_dgp_width_ranges.tex",
-  "tolerance_validation_primary_scenario_details.csv",
-  "tolerance_validation_small_sample_scenario_details.csv"
+  "tolerance_validation_article_scenario_ranges.csv",
+  "tolerance_validation_article_scenario_ranges.tex",
+  "tolerance_validation_article_scenario_ranges_n500.tex",
+  "tolerance_validation_article_scenario_ranges_n1000.tex",
+  "tolerance_validation_article_small_sample_boundary.csv",
+  "tolerance_validation_article_small_sample_boundary.tex",
+  "tolerance_validation_article_dgp_delivery.csv",
+  "tolerance_validation_article_dgp_delivery.tex",
+  "tolerance_validation_article_dgp_width_ranges.csv",
+  "tolerance_validation_article_dgp_width_ranges.tex",
+  "tolerance_validation_article_small_sample_dgp_delivery.csv",
+  "tolerance_validation_article_small_sample_dgp_delivery.tex",
+  "tolerance_validation_article_small_sample_dgp_width_ranges.csv",
+  "tolerance_validation_article_small_sample_dgp_width_ranges.tex",
+  "tolerance_validation_article_scenario_details.csv",
+  "tolerance_validation_article_small_sample_scenario_details.csv"
 ))
 stopifnot(all(file.exists(required)))
 
 primary_range <- read.csv(
-  file.path(out_dir, "tolerance_validation_primary_scenario_ranges.csv"),
+  file.path(out_dir, "tolerance_validation_article_scenario_ranges.csv"),
   stringsAsFactors = FALSE
 )
 stopifnot(nrow(primary_range) ==
             length(unique(primary_range$n)) *
-            length(unique(primary_range$content)) * 4L)
+            length(unique(primary_range$content)) * 3L)
+stopifnot(!"hdp_s_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_mti_gibbs_median_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_mti_ecm_map_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_dkw" %in% primary_range$method_id)
@@ -135,7 +136,7 @@ stopifnot(!"median_width_ratio_to_tcsp" %in% names(primary_range))
 stopifnot(!"median_elapsed_sec" %in% names(primary_range))
 
 primary_widths <- read.csv(
-  file.path(out_dir, "tolerance_validation_primary_dgp_width_ranges.csv"),
+  file.path(out_dir, "tolerance_validation_article_dgp_width_ranges.csv"),
   stringsAsFactors = FALSE
 )
 stopifnot(all(c("dgp_id", "dgp", "n", "content", "method_id",
@@ -146,7 +147,7 @@ stopifnot(any(primary_widths$method_id == "young_mathew"))
 stopifnot(!any(primary_widths$method_id == "tcsp_dkw"))
 
 small_boundary <- read.csv(
-  file.path(out_dir, "tolerance_validation_small_sample_boundary.csv"),
+  file.path(out_dir, "tolerance_validation_article_small_sample_boundary.csv"),
   stringsAsFactors = FALSE
 )
 stopifnot(all(small_boundary$n %in% c(50L, 100L)))
@@ -155,7 +156,7 @@ stopifnot(!"tcsp_dkw" %in% small_boundary$method_id)
 stopifnot(any(small_boundary$method_id == "wilks_minmax"))
 
 tex <- paste(readLines(
-  file.path(out_dir, "tolerance_validation_primary_scenario_ranges.tex"),
+  file.path(out_dir, "tolerance_validation_article_scenario_ranges.tex"),
   warn = FALSE
 ), collapse = "\n")
 stopifnot(grepl("Delivery range", tex, fixed = TRUE))
@@ -171,17 +172,48 @@ stopifnot(!grepl("posterior predictive", tex, fixed = TRUE))
 stopifnot(!grepl("MTI Gibbs", tex, fixed = TRUE))
 
 supp_tex <- paste(readLines(
-  file.path(out_dir, "tolerance_validation_primary_dgp_delivery.tex"),
+  file.path(out_dir, "tolerance_validation_article_dgp_delivery.tex"),
   warn = FALSE
 ), collapse = "\n")
 stopifnot(grepl("Student t3", supp_tex, fixed = TRUE))
-stopifnot(grepl("Hybrid DP--scan", supp_tex, fixed = TRUE))
+stopifnot(!grepl("Hybrid DP--scan", supp_tex, fixed = TRUE))
+stopifnot(!grepl("MTI ECM", supp_tex, fixed = TRUE))
+stopifnot(!grepl("DKW", supp_tex, fixed = TRUE))
 
 width_tex <- paste(readLines(
-  file.path(out_dir, "tolerance_validation_primary_dgp_width_ranges.tex"),
+  file.path(out_dir, "tolerance_validation_article_dgp_width_ranges.tex"),
   warn = FALSE
 ), collapse = "\n")
 stopifnot(grepl("Width 95\\% range", width_tex, fixed = TRUE))
 stopifnot(grepl("not pooled across DGPs", width_tex, fixed = TRUE))
+
+out_dir_no_small <- file.path(work_dir, "out-no-small")
+status <- system2(
+  "Rscript",
+  c(
+    script,
+    paste0("--primary-results=", primary_path),
+    paste0("--young-mathew-results=", young_path),
+    paste0("--small95-results=", file.path(work_dir, "missing-small.csv")),
+    paste0("--output-dir=", out_dir_no_small)
+  ),
+  stdout = TRUE,
+  stderr = TRUE
+)
+if (!identical(attr(status, "status"), NULL)) {
+  cat(status, sep = "\n")
+  stop("Scenario table generator failed without small-sample input.",
+       call. = FALSE)
+}
+stopifnot(file.exists(file.path(
+  out_dir_no_small, "tolerance_validation_article_scenario_ranges.csv"
+)))
+stopifnot(!file.exists(file.path(
+  out_dir_no_small, "tolerance_validation_article_small_sample_boundary.csv"
+)))
+stopifnot(!file.exists(file.path(
+  out_dir_no_small,
+  "tolerance_validation_article_small_sample_dgp_width_ranges.tex"
+)))
 
 cat("Scenario-aware tolerance validation table test passed.\n")

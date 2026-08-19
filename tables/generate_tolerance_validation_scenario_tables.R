@@ -51,41 +51,47 @@ output_dir <- normalizePath(arg_value("--output-dir=", "tables"),
                             winslash = "/", mustWork = FALSE)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-outputs <- c(
-  "tolerance_validation_primary_scenario_ranges.csv",
-  "tolerance_validation_primary_scenario_ranges.tex",
-  "tolerance_validation_primary_scenario_ranges_n500.tex",
-  "tolerance_validation_primary_scenario_ranges_n1000.tex",
-  "tolerance_validation_small_sample_boundary.csv",
-  "tolerance_validation_small_sample_boundary.tex",
-  "tolerance_validation_primary_dgp_delivery.csv",
-  "tolerance_validation_primary_dgp_delivery.tex",
-  "tolerance_validation_primary_dgp_width_ranges.csv",
-  "tolerance_validation_primary_dgp_width_ranges.tex",
-  "tolerance_validation_small_sample_dgp_delivery.csv",
-  "tolerance_validation_small_sample_dgp_delivery.tex",
-  "tolerance_validation_small_sample_dgp_width_ranges.csv",
-  "tolerance_validation_small_sample_dgp_width_ranges.tex",
-  "tolerance_validation_primary_scenario_details.csv",
-  "tolerance_validation_small_sample_scenario_details.csv"
+primary_outputs <- c(
+  "tolerance_validation_article_scenario_ranges.csv",
+  "tolerance_validation_article_scenario_ranges.tex",
+  "tolerance_validation_article_dgp_delivery.csv",
+  "tolerance_validation_article_dgp_delivery.tex",
+  "tolerance_validation_article_dgp_width_ranges.csv",
+  "tolerance_validation_article_dgp_width_ranges.tex",
+  "tolerance_validation_article_scenario_details.csv"
 )
+small_outputs <- c(
+  "tolerance_validation_article_small_sample_boundary.csv",
+  "tolerance_validation_article_small_sample_boundary.tex",
+  "tolerance_validation_article_small_sample_dgp_delivery.csv",
+  "tolerance_validation_article_small_sample_dgp_delivery.tex",
+  "tolerance_validation_article_small_sample_dgp_width_ranges.csv",
+  "tolerance_validation_article_small_sample_dgp_width_ranges.tex",
+  "tolerance_validation_article_small_sample_scenario_details.csv"
+)
+outputs <- c(primary_outputs, small_outputs)
 committed_outputs <- file.path(repo_root, "tables", outputs)
 target_outputs <- file.path(output_dir, outputs)
 
-if (!file.exists(primary_path) || !file.exists(small_path)) {
-  if (all(file.exists(committed_outputs))) {
+if (!file.exists(primary_path)) {
+  committed_primary_outputs <- file.path(repo_root, "tables", primary_outputs)
+  if (all(file.exists(committed_primary_outputs))) {
     if (!identical(normalizePath(output_dir, winslash = "/", mustWork = FALSE),
                    normalizePath(file.path(repo_root, "tables"),
                                  winslash = "/", mustWork = TRUE))) {
-      file.copy(committed_outputs, target_outputs, overwrite = TRUE)
+      copy_outputs <- c(
+        primary_outputs,
+        small_outputs[file.exists(file.path(repo_root, "tables", small_outputs))]
+      )
+      file.copy(file.path(repo_root, "tables", copy_outputs),
+                file.path(output_dir, copy_outputs), overwrite = TRUE)
     }
     cat("Using committed scenario-aware tolerance validation tables;",
         "provide raw result CSVs to regenerate.\n")
     quit(status = 0)
   }
   missing <- c(
-    primary_results = primary_path,
-    small95_results = small_path
+    primary_results = primary_path
   )
   missing <- missing[!file.exists(missing)]
   stopf("Missing scenario table input(s): ",
@@ -94,24 +100,18 @@ if (!file.exists(primary_path) || !file.exists(small_path)) {
 
 primary_supp_method_order <- c(
   "tcsp_mc",
-  "hdp_s_mc",
-  "tcsp_mti_ecm_map_mc",
   "young_mathew",
-  "wilks_minmax",
-  "tcsp_dkw"
+  "wilks_minmax"
 )
 primary_main_method_order <- c(
   "tcsp_mc",
-  "hdp_s_mc",
   "young_mathew",
   "wilks_minmax"
 )
 small_supp_method_order <- c(
   "tcsp_mc",
-  "tcsp_mti_ecm_map_mc",
   "young_mathew",
-  "wilks_minmax",
-  "tcsp_dkw"
+  "wilks_minmax"
 )
 small_main_method_order <- c(
   "tcsp_mc",
@@ -120,11 +120,8 @@ small_main_method_order <- c(
 )
 method_labels <- c(
   tcsp_mc = "TCSP",
-  hdp_s_mc = "Hybrid DP--scan",
-  tcsp_mti_ecm_map_mc = "MTI ECM",
   young_mathew = "Young--Mathew",
-  wilks_minmax = "Wilks",
-  tcsp_dkw = "DKW"
+  wilks_minmax = "Wilks"
 )
 dgp_labels <- c(
   normal = "Gaussian",
@@ -221,6 +218,16 @@ first_ordered_replicate_rows <- function(results) {
 
 scenario_detail <- function(results, methods) {
   results <- results[results$method_id %in% methods, , drop = FALSE]
+  if (!nrow(results)) {
+    return(data.frame(
+      dgp_id = character(), dgp = character(), n = integer(),
+      content = numeric(), method_id = character(), method = character(),
+      replications = integer(), infeasible_rate = numeric(),
+      delivery_success = numeric(), returned_success = numeric(),
+      median_width = numeric(), width_q025 = numeric(), width_q975 = numeric(),
+      stringsAsFactors = FALSE
+    ))
+  }
   results$infeasible_bool <- truthy(results$infeasible)
   results$success_bool <- truthy(results$success)
   key <- paste(results$dgp_id, results$n,
@@ -266,6 +273,14 @@ scenario_detail <- function(results, methods) {
 }
 
 range_summary <- function(detail, methods) {
+  if (!nrow(detail)) {
+    return(data.frame(
+      n = integer(), content = numeric(), method_id = character(),
+      method = character(), delivery_min = numeric(), delivery_max = numeric(),
+      returned_success_min = numeric(), returned_success_max = numeric(),
+      stringsAsFactors = FALSE
+    ))
+  }
   key <- paste(detail$n, sprintf("%.4f", detail$content),
                detail$method_id, sep = "||")
   rows <- lapply(split(detail, key), function(df) {
@@ -328,6 +343,15 @@ cell_label <- function(n, content) {
 }
 
 dgp_width_ranges <- function(detail, methods) {
+  if (!nrow(detail)) {
+    return(data.frame(
+      dgp_id = character(), dgp = character(), n = integer(),
+      content = numeric(), method_id = character(), method = character(),
+      replications = integer(), delivery_success = numeric(),
+      returned_success = numeric(), width_q025 = numeric(),
+      width_q975 = numeric(), stringsAsFactors = FALSE
+    ))
+  }
   out <- detail[detail$method_id %in% methods, c(
     "dgp_id", "dgp", "n", "content", "method_id", "method",
     "replications", "delivery_success", "returned_success",
@@ -346,6 +370,15 @@ write_range_tex <- function(summary, path) {
     "Cell & Method & Delivery range (\\%) & Returned-success range (\\%)\\\\",
     "\\midrule"
   )
+  if (!nrow(summary)) {
+    writeLines(c(
+      lines,
+      "\\multicolumn{4}{@{}l@{}}{No selected validation rows.}\\\\",
+      "\\bottomrule",
+      "\\end{tabularx}"
+    ), path)
+    return(invisible(path))
+  }
   for (cell in unique(paste(summary$n, summary$content, sep = "||"))) {
     block <- summary[paste(summary$n, summary$content, sep = "||") == cell,
                      , drop = FALSE]
@@ -397,6 +430,12 @@ write_dgp_width_tex <- function(widths, path, caption, label) {
 }
 
 wide_delivery <- function(detail, methods) {
+  if (!nrow(detail)) {
+    out <- data.frame(dgp = character(), n = integer(), content = numeric(),
+                      stringsAsFactors = FALSE)
+    for (method in methods) out[[unname(method_labels[method])]] <- character()
+    return(out)
+  }
   detail$delivery_pct <- format_pct(detail$delivery_success)
   scenarios <- unique(detail[, c("dgp", "n", "content"), drop = FALSE])
   scenarios <- scenarios[order(scenarios$n, scenarios$content, scenarios$dgp),
@@ -454,15 +493,21 @@ write_wide_delivery_tex <- function(wide, path, methods, caption, label) {
 }
 
 primary <- read_results(primary_path, "Primary validation results")
-if (file.exists(young_mathew_path)) {
+if (file.exists(young_mathew_path) &&
+    !any(primary$method_id == "young_mathew")) {
   primary <- bind_fill(
     primary,
     read_results(young_mathew_path, "Young--Mathew add-on results")
   )
 }
-small <- read_results(small_path, "Small-sample validation results")
 primary <- first_ordered_replicate_rows(primary)
-small <- first_ordered_replicate_rows(small)
+small <- if (file.exists(small_path)) {
+  first_ordered_replicate_rows(
+    read_results(small_path, "Small-sample validation results")
+  )
+} else {
+  primary[as.integer(primary$n) < 500L, , drop = FALSE]
+}
 
 primary_detail <- scenario_detail(primary, primary_supp_method_order)
 primary_range <- range_summary(
@@ -484,6 +529,7 @@ small_boundary <- range_summary(
   ],
   small_main_method_order
 )
+has_small_boundary <- nrow(small_boundary_detail) > 0L
 primary_dgp_widths <- dgp_width_ranges(primary_detail,
                                        primary_main_method_order)
 small_dgp_widths <- dgp_width_ranges(small_boundary_detail,
@@ -494,80 +540,88 @@ small_delivery <- wide_delivery(small_boundary_detail, small_supp_method_order)
 
 utils::write.csv(primary_range,
                  file.path(output_dir,
-                           "tolerance_validation_primary_scenario_ranges.csv"),
-                 row.names = FALSE)
-utils::write.csv(small_boundary,
-                 file.path(output_dir,
-                           "tolerance_validation_small_sample_boundary.csv"),
+                           "tolerance_validation_article_scenario_ranges.csv"),
                  row.names = FALSE)
 utils::write.csv(primary_delivery,
                  file.path(output_dir,
-                           "tolerance_validation_primary_dgp_delivery.csv"),
+                           "tolerance_validation_article_dgp_delivery.csv"),
                  row.names = FALSE)
 utils::write.csv(primary_dgp_widths,
                  file.path(output_dir,
-                           "tolerance_validation_primary_dgp_width_ranges.csv"),
-                 row.names = FALSE)
-utils::write.csv(small_delivery,
-                 file.path(output_dir,
-                           "tolerance_validation_small_sample_dgp_delivery.csv"),
-                 row.names = FALSE)
-utils::write.csv(small_dgp_widths,
-                 file.path(output_dir,
-                           "tolerance_validation_small_sample_dgp_width_ranges.csv"),
+                           "tolerance_validation_article_dgp_width_ranges.csv"),
                  row.names = FALSE)
 utils::write.csv(primary_detail,
                  file.path(output_dir,
-                           "tolerance_validation_primary_scenario_details.csv"),
+                           "tolerance_validation_article_scenario_details.csv"),
                  row.names = FALSE)
-utils::write.csv(small_detail,
-                 file.path(output_dir,
-                           "tolerance_validation_small_sample_scenario_details.csv"),
-                 row.names = FALSE)
+if (has_small_boundary) {
+  utils::write.csv(small_boundary,
+                   file.path(output_dir,
+                             "tolerance_validation_article_small_sample_boundary.csv"),
+                   row.names = FALSE)
+  utils::write.csv(small_delivery,
+                   file.path(output_dir,
+                             "tolerance_validation_article_small_sample_dgp_delivery.csv"),
+                   row.names = FALSE)
+  utils::write.csv(small_dgp_widths,
+                   file.path(output_dir,
+                             "tolerance_validation_article_small_sample_dgp_width_ranges.csv"),
+                   row.names = FALSE)
+  utils::write.csv(small_detail,
+                   file.path(output_dir,
+                             "tolerance_validation_article_small_sample_scenario_details.csv"),
+                   row.names = FALSE)
+} else {
+  unlink(file.path(output_dir, small_outputs), force = TRUE)
+}
 
 write_range_tex(
   primary_range,
-  file.path(output_dir, "tolerance_validation_primary_scenario_ranges.tex")
+  file.path(output_dir, "tolerance_validation_article_scenario_ranges.tex")
 )
 for (nn in sort(unique(primary_range$n))) {
   write_range_tex(
     primary_range[primary_range$n == nn, , drop = FALSE],
     file.path(
       output_dir,
-      sprintf("tolerance_validation_primary_scenario_ranges_n%s.tex", nn)
+      sprintf("tolerance_validation_article_scenario_ranges_n%s.tex", nn)
     )
   )
 }
-write_range_tex(
-  small_boundary,
-  file.path(output_dir, "tolerance_validation_small_sample_boundary.tex")
-)
 write_wide_delivery_tex(
   primary_delivery,
-  file.path(output_dir, "tolerance_validation_primary_dgp_delivery.tex"),
+  file.path(output_dir, "tolerance_validation_article_dgp_delivery.tex"),
   primary_supp_method_order,
-  "\\textbf{Primary iid tolerance-validation delivery by DGP.} Entries are delivery percentages for the primary grid at tolerance confidence \\(0.95\\). Delivery counts cells with no returned interval as failures.",
+  "\\textbf{Primary iid tolerance-validation delivery by DGP.} Entries are delivery percentages for the article-facing methods at tolerance confidence \\(0.95\\). Delivery counts cells with no returned interval as failures.",
   "tab:supp-primary-dgp-delivery"
 )
 write_dgp_width_tex(
   primary_dgp_widths,
-  file.path(output_dir, "tolerance_validation_primary_dgp_width_ranges.tex"),
+  file.path(output_dir, "tolerance_validation_article_dgp_width_ranges.tex"),
   "\\textbf{Primary iid tolerance-validation width ranges by DGP.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each DGP, sample size, content, and method. Widths are not pooled across DGPs.",
   "tab:supp-primary-dgp-width-ranges"
 )
-write_wide_delivery_tex(
-  small_delivery,
-  file.path(output_dir, "tolerance_validation_small_sample_dgp_delivery.tex"),
-  small_supp_method_order,
-  "\\textbf{Small-sample tolerance-validation delivery by DGP.} Entries are delivery percentages for the practical \\(n=50\\) and \\(n=100\\) follow-up cells at tolerance confidence \\(0.95\\).",
-  "tab:supp-small-sample-dgp-delivery"
-)
-write_dgp_width_tex(
-  small_dgp_widths,
-  file.path(output_dir, "tolerance_validation_small_sample_dgp_width_ranges.tex"),
-  "\\textbf{Small-sample tolerance-validation width ranges by DGP.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each DGP, sample size, content, and method. Widths are not pooled across DGPs.",
-  "tab:supp-small-sample-dgp-width-ranges"
-)
+if (has_small_boundary) {
+  write_range_tex(
+    small_boundary,
+    file.path(output_dir, "tolerance_validation_article_small_sample_boundary.tex")
+  )
+  write_wide_delivery_tex(
+    small_delivery,
+    file.path(output_dir,
+              "tolerance_validation_article_small_sample_dgp_delivery.tex"),
+    small_supp_method_order,
+    "\\textbf{Small-sample tolerance-validation delivery by DGP.} Entries are delivery percentages for the practical \\(n=50\\) and \\(n=100\\) follow-up cells at tolerance confidence \\(0.95\\).",
+    "tab:supp-small-sample-dgp-delivery"
+  )
+  write_dgp_width_tex(
+    small_dgp_widths,
+    file.path(output_dir,
+              "tolerance_validation_article_small_sample_dgp_width_ranges.tex"),
+    "\\textbf{Small-sample tolerance-validation width ranges by DGP.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each DGP, sample size, content, and method. Widths are not pooled across DGPs.",
+    "tab:supp-small-sample-dgp-width-ranges"
+  )
+}
 
 cat("Wrote scenario-aware tolerance validation tables to: ",
     output_dir, "\n", sep = "")

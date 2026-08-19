@@ -179,6 +179,7 @@ mode_design_cells <- function(mode_cfg) {
 }
 
 design_cells <- mode_design_cells(mode_cfg)
+split_waves_by_method <- isTRUE(mode_cfg$split_waves_by_method)
 
 sha256_file <- function(path) {
   digest::digest(path, algo = "sha256", file = TRUE)
@@ -349,32 +350,45 @@ build_wave_plan <- function() {
       n <- as.integer(design_cells$n[[cell_index]])
       c_target <- as.numeric(design_cells$guaranteed_content[[cell_index]])
       tol_conf <- as.numeric(design_cells$tolerance_confidence[[cell_index]])
-      index <- index + 1L
-      wave_id <- sprintf(
-        "w%03d_%s_n%04d_c%s_t%s",
-        index, safe_slug(dgp_id), n, format_probability(c_target),
-        format_probability(tol_conf)
-      )
-      expected_datasets <- length(numeric_values(mode_cfg$posterior_confidences)) *
-        as.integer(mode_cfg$replications)
-      out[[index]] <- data.frame(
-        wave_id = wave_id,
-        mode = mode,
-        dgp_id = dgp_id,
-        n = n,
-        guaranteed_content = c_target,
-        tolerance_confidence = tol_conf,
-        cell_id = design_cells$cell_id[[cell_index]],
-        posterior_confidences = paste(
-          numeric_values(mode_cfg$posterior_confidences), collapse = ";"
-        ),
-        replications = as.integer(mode_cfg$replications),
-        method_count = length(character_values(mode_cfg$method_ids)),
-        expected_datasets = expected_datasets,
-        expected_result_rows =
-          expected_datasets * length(character_values(mode_cfg$method_ids)),
-        stringsAsFactors = FALSE
-      )
+      method_groups <- if (split_waves_by_method) {
+        as.list(character_values(mode_cfg$method_ids))
+      } else {
+        list(character_values(mode_cfg$method_ids))
+      }
+      for (method_ids in method_groups) {
+        index <- index + 1L
+        method_slug <- if (split_waves_by_method) {
+          paste0("_", safe_slug(method_ids[[1L]]))
+        } else {
+          ""
+        }
+        wave_id <- sprintf(
+          "w%03d_%s_n%04d_c%s_t%s%s",
+          index, safe_slug(dgp_id), n, format_probability(c_target),
+          format_probability(tol_conf), method_slug
+        )
+        expected_datasets <-
+          length(numeric_values(mode_cfg$posterior_confidences)) *
+          as.integer(mode_cfg$replications)
+        out[[index]] <- data.frame(
+          wave_id = wave_id,
+          mode = mode,
+          dgp_id = dgp_id,
+          n = n,
+          guaranteed_content = c_target,
+          tolerance_confidence = tol_conf,
+          cell_id = design_cells$cell_id[[cell_index]],
+          posterior_confidences = paste(
+            numeric_values(mode_cfg$posterior_confidences), collapse = ";"
+          ),
+          replications = as.integer(mode_cfg$replications),
+          method_ids = paste(method_ids, collapse = ";"),
+          method_count = length(method_ids),
+          expected_datasets = expected_datasets,
+          expected_result_rows = expected_datasets * length(method_ids),
+          stringsAsFactors = FALSE
+        )
+      }
     }
   }
   do.call(rbind, out)
@@ -722,6 +736,7 @@ start_wave <- function(run_dir, wave) {
     paste0("--wave-n=", wave$n),
     paste0("--wave-content=", wave$guaranteed_content),
     paste0("--wave-tolerance-confidence=", wave$tolerance_confidence),
+    paste0("--wave-method=", wave$method_ids),
     paste0("--scan-calibration-cache=",
            file.path(run_dir, "scan_calibration_cache.rds")),
     paste0("--oracle-cache=", file.path(run_dir, "oracle_cache.rds"))

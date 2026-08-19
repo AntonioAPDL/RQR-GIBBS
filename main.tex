@@ -101,10 +101,10 @@ scan calibration, while posterior credibility describes the fitted generalized
 posterior. MTI endpoint summaries diagnose endpoint uncertainty;
 response-predictive draws require a response-distribution layer.
 A prespecified iid validation study at tolerance confidence \(0.95\) compares
-the TCSP scan action, the hybrid DP--scan action, and the Young--Mathew and
-Wilks order-statistic competitors across three contents and seven
-distributional families. The supplement reports fixed-target MTI ECM and Gibbs
-diagnostics, together with the conservative DKW feasibility check.
+the TCSP scan action with the Young--Mathew and Wilks order-statistic
+competitors across feasible content--sample-size cells and seven
+distributional families. The grid excludes cells where even the full sample
+range cannot support the requested two-sided distribution-free statement.
 \end{abstract}
 
 \section{Introduction}
@@ -243,8 +243,8 @@ develops generalized-Bayes endpoint computation, fixed-target ECM, the MPI
 regularized-horseshoe Nishimura--Suchard (RHS-NS) prior adapter, and the
 frozen-DESN specialization. Section~\ref{sec:dynamic}
 gives the dynamic endpoint-state sampler. Section~\ref{sec:tcsp} defines the
-calibrated minimum-width, hybrid Bayesian--scan, and split exact-spacing
-tolerance interval actions and states the remaining proof requirements.
+scan-calibrated minimum-width tolerance action and states the remaining proof
+requirements.
 Section~\ref{sec:evaluation} states the confirmatory validation scope, and
 Section~\ref{sec:discussion} concludes.
 
@@ -1372,72 +1372,16 @@ posterior summaries are conditional on the selected target and do not propagate
 shortest-window selection uncertainty. An unconditional interpretation requires
 a plug-in stability theorem or a separate target-selection sample.
 
-\paragraph{Bayesian response-distribution actions.}
-The full-distribution Bayesian layer instead models \(F\) directly. Under a
-Dirichlet-process (DP) response-distribution model,
-\[
-F\sim \mathrm{DP}(a,H),\qquad Y_i\mid F\stackrel{\mathrm{iid}}{\sim} F,
-\]
-the posterior is \(\mathrm{DP}(a+n,H_n)\), where
-\(H_n=(aH+\sum_i\delta_{Y_i})/(a+n)\)
-\citep{Ferguson1973DP}. For a fixed closed interval \(I=[l,u]\),
-\[
-F(I)\mid D_n \sim
-\mathrm{Beta}\{aH(I)+N_n(I),a(1-H(I))+n-N_n(I)\}.
-\]
-This gives the exact posterior content probability
-\[
-p_n(I;c)=\Pr\{F(I)\ge c\mid D_n\}
-\]
-for every candidate interval. The direct DP result is a fixed-interval
-posterior statement for fixed intervals under the response-distribution model.
-Repeated-sampling tolerance guarantees and MTI generalized-posterior summaries
-are separate objects. Posterior draws of the shortest \(c\)-content interval
-can be computed from a stick-breaking representation
-\citep{Sethuraman1994ConstructiveDP}; they quantify uncertainty in the
-population shortest-interval functional under the response-distribution model.
-
-The hybrid Bayesian--scan (HBS) tolerance action is the first minimum-width
-closed order-statistic interval satisfying both constraints:
-\[
-\widehat T^{\mathrm{HBS}}_n
-=
-\min_{\mathrm{width},\,\mathrm{first\ tie}}
-\left\{
-[Y_{(j)},Y_{(\ell)}]:
-\ell-j+1\ge k_{n,c,\alpha},\
-p_n([Y_{(j)},Y_{(\ell)}];c)\ge 1-\gamma
-\right\}.
-\]
-The scan count is fixed before posterior computation and is not resampled. The
-posterior threshold can bind, be redundant given the scan action, or make the
-candidate class infeasible; infeasibility is reported rather than repaired by
-weakening a constraint. A truncated Gaussian Dirichlet-process mixture (DPM)
-\citep{IshwaranJames2001GibbsDPM,IshwaranJames2002ApproximateDP} provides a
-smooth response-distribution alternative whose content probabilities are Monte
-Carlo posterior summaries. The Bayesian bootstrap
-\citep{Rubin1981BayesianBootstrap} is retained only as a diagnostic
-weighted-empirical comparator.
-
-\paragraph{Split exact-spacing action.}
-A sample-split alternative removes this same-sample placement issue for the
-univariate tolerance action. Randomly divide the observations into an
-independent pilot sample and an independent main sample. The pilot chooses a
-lower-tail placement \(\widehat u\). In the main sample, with order statistics
-\(Z_{(1)}\le\cdots\le Z_{(N)}\), fix indices \(r<s\) after the pilot and write
-\(d=s-r\). The spacing law
-\[
-F(Z_{(s)})-F(Z_{(r)})\sim \mathrm{Beta}(d,N+1-d)
-\]
-then gives an exact conditional distribution-free calibration
-\citep{DavidNagaraja2003OrderStatistics}. The closed interval contains
-\(d+1\) observed main-sample positions, so the probability-spacing index and
-the closed-count index differ by one. The pilot may use empirical shortest
-windows, Cornish--Fisher placement, or fixed-target ECM as a diagnostic
-placement engine. It affects efficiency and width, not the conditional Beta
-validity of the fixed main-sample spacing. This first split construction is
-continuous-iid-univariate; regression-family tolerance calibration remains a
-separate theorem.
+\paragraph{Supplementary extensions.}
+Response-distribution Bayesian screens and sample-split spacing constructions
+are useful extensions, but they answer different evidentiary questions from the
+article-facing TCSP action. A response-distribution model gives posterior
+content probabilities under a model for \(F\), whereas TCSP supplies a
+distribution-free scan-calibrated empirical action. A split-spacing construction
+uses independent pilot and calibration samples, whereas TCSP uses the full
+sample to choose the minimum-width calibrated order-statistic window. These
+extensions remain available as separate implementation and proof directions;
+they are not part of the main validation comparison.
 
 \paragraph{Numerical certification and proof scope.}
 Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
@@ -1549,133 +1493,87 @@ following simulation-study reporting principles
 \citep{MorrisWhiteCrowther2019Simulation}. It uses iid continuous samples from
 seven standardized data-generating laws: Gaussian, two log-normal skewness
 levels, two separated mixtures, a five-percent scale-contaminated normal, and a
-Student \(t_3\) law. The primary grid fixes tolerance confidence at \(0.95\),
-uses sample sizes \(n=500\) and \(n=1000\), and evaluates target contents
-\(c\in\{0.90,0.95,0.99\}\). The choice \(n=500\) is deliberately close to the
-two-sided full-range feasibility threshold for \(c=0.99\) at confidence
-\(0.95\), which is \(473\); \(n=1000\) gives a less boundary-dominated
-comparison. Hybrid Bayesian--scan actions are evaluated at posterior content
-thresholds \(0.90\), \(0.95\), and \(0.99\), using the same random samples as
-the empirical scan action.
+Student \(t_3\) law. The primary grid fixes tolerance confidence at \(0.95\)
+and uses 1000 paired replications per data-generating law. The feasible cells
+are \(n=50,c=0.90\), \(n=100,c\in\{0.90,0.95\}\), and
+\(n\in\{500,1000\},c\in\{0.90,0.95,0.99\}\).
 
-The method set separates the primary tolerance actions from computational
-diagnostics. The population shortest interval is kept only in diagnostic outputs
-as a distribution-aware lower-bound width reference and is excluded from the
-article comparisons because it uses oracle knowledge of \(F\).
-TCSP is the formal scan-calibrated shortest empirical action and is therefore
-the primary tolerance action for this study. Its optimality is class-specific:
-it minimizes width among closed order-statistic windows satisfying the
-calibrated retained-count rule. The hybrid DP--scan action adds a direct
-Dirichlet-process content screen to the same calibrated count. Young--Mathew
+The small-sample restriction is structural. For a two-sided distribution-free
+interval, even the full sample range reaches content \(c\) with confidence
+\(0.95\) only when
+\[
+  1-n(1-c)c^{n-1}-c^n \ge 0.95 .
+\]
+The corresponding minimum sample sizes are \(46\), \(93\), and \(473\) for
+\(c=0.90\), \(0.95\), and \(0.99\), respectively. Thus
+\(n=50,c=0.95\) and \(n=100,c=0.99\) are excluded from the confirmatory
+comparison because no two-sided distribution-free method can certify the
+requested statement in those cells. The \(c=0.99\) rows begin at \(n=500\), the
+nearest rounded sample size above the \(n=473\) threshold.
+
+The method set is intentionally narrow. TCSP is the formal scan-calibrated
+shortest empirical action and is therefore the primary tolerance action. Its
+optimality is class-specific: it minimizes width among closed order-statistic
+windows satisfying the calibrated retained-count rule. Young--Mathew
 interpolation
 \citep{YoungMathew2014NonparametricTolerance} and Wilks min--max intervals
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction} provide the
-classical order-statistic comparators in the main article. Fixed-target MTI
-ECM and Gibbs summaries, along with the conservative DKW fallback, are reported
-in the supplement as computation and feasibility diagnostics. Primary metrics
-are grid delivery success, success among returned intervals, and feasibility.
-Raw interval widths are summarized by DGP in the supplement, avoiding width
-averages across distributions with different intrinsic scales and tail shapes.
+classical order-statistic comparators. Primary metrics are delivery success,
+success among returned intervals, and raw interval width. Delivery counts
+replications with no returned interval as failures. Widths are reported as
+DGP-level empirical 2.5\%--97.5\% ranges, avoiding width averages across
+distributions with different scales and tail behavior.
 
 \begin{table}[!htbp]
 \centering
-\caption{\textbf{Primary iid tolerance validation at \(n=500\).} Results are
-shown by target content and method. Each row summarizes the range across seven
-data-generating laws, with 100 paired replications per law. Delivery counts
-replications with no returned interval as failures; returned success conditions
-on methods that return an interval. Widths are reported by DGP in the
-supplement rather than pooled across distributional scenarios.}
-\label{tab:tolerance-validation-primary-n500}
+\caption{\textbf{Article-facing iid tolerance validation.} Results are shown by
+feasible sample-size/content cell and method. Each row summarizes the range
+across seven data-generating laws at tolerance confidence \(0.95\). Delivery
+counts replications with no returned interval as failures; returned success
+conditions on methods that return an interval.}
+\label{tab:tolerance-validation-primary}
 \TableStyle
-\input{tables/tolerance_validation_primary_scenario_ranges_n500.tex}
-\end{table}
-
-\begin{table}[!htbp]
-\centering
-\caption{\textbf{Primary iid tolerance validation at \(n=1000\).} The table
-uses the same scenario-range summaries as
-Table~\ref{tab:tolerance-validation-primary-n500}. This sample size is less
-dominated by the \(c=0.99\) two-sided full-range feasibility boundary.}
-\label{tab:tolerance-validation-primary-n1000}
-\TableStyle
-\input{tables/tolerance_validation_primary_scenario_ranges_n1000.tex}
+\input{tables/tolerance_validation_article_scenario_ranges.tex}
 \end{table}
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig04_tolerance_validation_primary.png}
-\caption{\textbf{Primary iid tolerance-validation patterns by sample size and
-target content.} Delivery counts cases with no returned interval as failures.
+\caption{\textbf{Delivery patterns by sample size and target content.} Delivery
+counts cases with no returned interval as failures.
 Vertical intervals in the delivery panels show the range across distributional
 scenarios, and the axis is zoomed to \(0.90\)--\(1.00\). Dashed reference lines
-mark nominal \(0.95\) delivery. The hybrid DP--scan action is omitted
-because it returned the same delivered intervals as TCSP on the primary grid;
-Tables~\ref{tab:tolerance-validation-primary-n500}
-and~\ref{tab:tolerance-validation-primary-n1000} include its scenario-level
-delivery. DGP-level width ranges and fixed-target MTI and DKW diagnostics are
-reported in the supplement.}
+mark nominal \(0.95\) delivery.}
 \label{fig:tolerance-validation-primary}
 \end{figure}
 
-Tables~\ref{tab:tolerance-validation-primary-n500}
-and~\ref{tab:tolerance-validation-primary-n1000} avoid averaging over
-distributional scenarios. The primary message is that the calibrated scan action
-is stable across the prespecified grid. TCSP and the hybrid DP--scan action
-deliver the same formal scan intervals throughout the primary study; the hybrid
-screen adds a Bayesian content check without changing
-the delivered interval in these cells. Young--Mathew is often slightly
-narrower than TCSP, with lower delivery in the most skewed or separated
-scenarios. Wilks is conservative for lower contents and reduces to the full
-range near the boundary. The supplement gives DGP-level width ranges and the
-corresponding MTI ECM, MTI Gibbs, and DKW diagnostics, which are useful for
-computation and feasibility accounting but are not part of the main comparator
-set.
-
-\begin{table}[!htbp]
+\begin{figure}[!htbp]
 \centering
-\caption{\textbf{Small-sample feasibility boundary at tolerance confidence
-\(0.95\).} The table reports practical \(n=50\) and \(n=100\) follow-up cells,
-summarized by ranges across eight data-generating laws. Blank returned-success
-entries occur when the method returned no certified interval in that cell.
-Small-sample width ranges by DGP are reported in the supplement.}
-\label{tab:tolerance-validation-small-boundary}
-\TableStyle
-\input{tables/tolerance_validation_small_sample_boundary.tex}
-\end{table}
+\includegraphics[width=\textwidth]{figures/generated/fig05_tolerance_validation_width_ranges.png}
+\caption{\textbf{Raw width ranges by DGP.} Horizontal intervals show empirical
+2.5\%--97.5\% ranges of returned interval lengths within each DGP,
+sample-size/content cell, and method. The horizontal axis is logarithmic to
+display light-tailed, skewed, mixture, and heavy-tailed cases in one figure;
+the values remain raw interval lengths.}
+\label{fig:tolerance-validation-width-ranges}
+\end{figure}
 
-Table~\ref{tab:tolerance-validation-small-boundary} shows why the small-sample
-stress cells are central to the validation. At \(n=50,c=0.90\), TCSP, Wilks,
-and Young--Mathew all deliver close to the requested statement across DGPs. At
-\(n=50,c=0.95\) and \(n=100,c=0.99\), the scan-calibrated method reports that
-the requested distribution-free statement is unavailable at that sample size.
-Young--Mathew and Wilks return intervals in those cells, with delivered content
-well below the \(95\%\)-confidence target, especially for \(c=0.99\). This
-boundary behavior is the intended calibrated decision: the procedure reports
-infeasibility instead of presenting an interval that cannot support the
-requested statement.
+Table~\ref{tab:tolerance-validation-primary} and
+Figures~\ref{fig:tolerance-validation-primary}
+and~\ref{fig:tolerance-validation-width-ranges} avoid pooling widths across
+distributional scenarios. The primary message is that the calibrated scan action
+targets the requested finite-sample statement directly. Young--Mathew is a
+strong nonparametric comparator and can be slightly narrower in some skewed
+settings. Wilks is simple and conservative at lower contents, but it becomes a
+full-range benchmark near the high-content boundary.
 
-Four follow-up checks complete the validation protocol. First, the primary
-grid is rerun for the MTI ECM row with 200 iterations and compact objective
-trace diagnostics, so the mode computation can be judged by objective descent
-and final stationarity, with the ECM flag interpreted at a fixed-target
-stationarity tolerance of \(10^{-3}\). A targeted 500-iteration sensitivity run
-then repeats the hardest feasible ECM cell, \(n=1000,c=0.99\) under the hard
-log-normal law, to test whether the mild stationarity tail is resolved by a
-larger iteration cap. Second, MTI Gibbs is evaluated by a separate multi-chain
-diagnostic run on feasible diagnostic cells. Those diagnostics confirm that the
-sampler targets the intended generalized posterior, but several cells retain
-large between-chain discrepancies; Gibbs is therefore treated as a diagnostic
-implementation rather than a main confirmatory competitor. Third, a minimal
-full-range \(90\%\)-confidence design uses the threshold cells
-\((38,0.90)\), \((77,0.95)\), and \((388,0.99)\), matching the confidence
-level used in \citet{PourmohamadRichardsonSanso2026CalibratedBNP}. Fourth, a
-small-sample \(95\%\)-confidence design uses the corresponding threshold cells
-\((46,0.90)\), \((93,0.95)\), and \((473,0.99)\), augmented by practical
-\(n=50\) and \(n=100\) stress cells. These paired cells are stored explicitly
-in the validation config, which prevents a Cartesian product from mixing
-thresholds across confidence levels. The supplement reports the follow-up
-summaries, ECM stationarity diagnostics, Gibbs trace diagnostics, and
-small-sample content-level behavior.
+The supplement gives the DGP-level delivery and width tables behind these
+summaries, together with the full-range feasibility thresholds used to choose
+the grid. The excluded small-sample cells are not treated as algorithmic
+failures; they fall outside the region where a two-sided distribution-free
+tolerance statement can be certified at confidence \(0.95\). Alternative
+diagnostic methods remain available in the repository, but the article
+comparison is restricted to the three methods above.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -1723,14 +1621,11 @@ chooses an empirical retained count, after which the shortest closed
 order-statistic window at that count is reported. This makes TCSP the formal
 tolerance action and gives a class-specific minimum-width property within the
 calibrated empirical scan class. Generalized-Bayes computation begins only after
-the content and tilt are fixed. MTI Gibbs and ECM endpoint summaries are
-interpreted conditionally on the scan-selected count and tilt. In the present
-validation evidence, MTI ECM supplies a stable fixed-target diagnostic in the
-supplement, while the main comparison uses the formal scan actions and
-classical order-statistic comparators. MTI Gibbs remains a diagnostic sampler
-because several multi-chain checks show poor mixing. Tolerance confidence
-remains attached to the scan action, and posterior credibility is therefore
-kept separate from tolerance confidence.
+the content and tilt are fixed. Tolerance confidence remains attached to the
+scan action, and posterior credibility is therefore kept separate from tolerance
+confidence. The article validation consequently compares TCSP with
+Young--Mathew and Wilks as tolerance actions, rather than treating
+generalized-posterior endpoint summaries as tolerance-certified intervals.
 Publication-level finite-sample wording still requires an action-matched scan
 proof and certified critical-count calculation. Replacing the empirical
 window by a posterior summary would require an additional transfer or direct

@@ -37,7 +37,7 @@ young_mathew_results <- arg_value(
 )
 scenario_range_csv <- arg_value(
   "--scenario-range-csv=",
-  file.path("tables", "tolerance_validation_primary_scenario_ranges.csv")
+  file.path("tables", "tolerance_validation_article_scenario_ranges.csv")
 )
 legacy_stratified_csv <- arg_value("--stratified-csv=", "")
 output_dir <- normalizePath(arg_value("--output-dir=", "figures/generated"),
@@ -119,8 +119,9 @@ read_result_file <- function(path, label) {
 }
 
 derive_ranges_from_raw <- function(primary_path, ym_path) {
-  frames <- list(read_result_file(primary_path, "Primary validation results"))
-  if (file.exists(ym_path)) {
+  primary <- read_result_file(primary_path, "Primary validation results")
+  frames <- list(primary)
+  if (file.exists(ym_path) && !any(primary$method_id == "young_mathew")) {
     frames <- c(frames, list(read_result_file(ym_path, "Young--Mathew results")))
   }
   raw <- do.call(bind_fill, frames)
@@ -223,10 +224,19 @@ if (file.exists(primary_results)) {
 if (!nrow(data)) stopf("Validation figure has no selected methods.")
 
 contents <- sort(unique(data$content))
+sample_sizes <- sort(unique(data$n))
 offsets <- seq(-0.018, 0.018, length.out = length(method_order))
 names(offsets) <- method_order
 
-png(figure_path, width = 2400, height = 950, res = 220)
+panel_count <- length(sample_sizes)
+panel_cols <- min(2L, panel_count)
+panel_rows <- ceiling(panel_count / panel_cols)
+panel_matrix <- matrix(seq_len(panel_rows * panel_cols), nrow = panel_rows,
+                       ncol = panel_cols, byrow = TRUE)
+panel_matrix[panel_matrix > panel_count] <- 0L
+legend_row <- rep(panel_count + 1L, panel_cols)
+
+png(figure_path, width = 2400, height = 650 * panel_rows + 260, res = 220)
 old_par <- par(no.readonly = TRUE)
 device_open <- TRUE
 on.exit({
@@ -236,8 +246,8 @@ on.exit({
   }
 }, add = TRUE)
 
-layout(matrix(c(1, 2, 3, 3), nrow = 2, byrow = TRUE),
-       heights = c(1, 0.28))
+layout(rbind(panel_matrix, legend_row),
+       heights = c(rep(1, panel_rows), 0.28))
 par(oma = c(0, 0, 1.2, 0), mar = c(4.1, 4.6, 2.5, 0.9),
     xaxs = "i", yaxs = "i")
 
@@ -271,12 +281,15 @@ draw_interval_panel <- function(nn, lower_col, upper_col, ylab, main,
   }
 }
 
-draw_interval_panel(500, "delivery_min", "delivery_max",
-                    "Delivery probability", "Delivery range, n = 500",
-                    0.95, c(0.9, 1.0))
-draw_interval_panel(1000, "delivery_min", "delivery_max",
-                    "Delivery probability", "Delivery range, n = 1000",
-                    0.95, c(0.9, 1.0))
+for (nn in sample_sizes) {
+  draw_interval_panel(nn, "delivery_min", "delivery_max",
+                      "Delivery probability",
+                      sprintf("Delivery range, n = %s", nn),
+                      0.95, c(0.9, 1.0))
+}
+if (any(panel_matrix == 0L)) {
+  plot.new()
+}
 
 par(mar = c(0, 0, 0, 0))
 plot.new()
@@ -284,7 +297,7 @@ legend("center", legend = unname(method_labels[method_order]),
        col = unname(method_colors[method_order]),
        lty = unname(method_lty[method_order]), lwd = 2.4,
        ncol = 3, bty = "n", xpd = NA, cex = 0.9)
-mtext("Primary iid tolerance validation at tolerance confidence 0.95",
+mtext("Article-facing iid tolerance validation at tolerance confidence 0.95",
       outer = TRUE, cex = 1.05, font = 2)
 
 par(old_par)
