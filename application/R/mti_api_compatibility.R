@@ -271,6 +271,18 @@ tcsp_calibrate_count <- function(...) rqr_tcsp_calibrate_count(...)
 
 #' @rdname mpi_mti_api
 #' @export
+tcsp_calibration_boundary_map <- function(...) {
+  rqr_tcsp_calibration_boundary_map(...)
+}
+
+#' @rdname mpi_mti_api
+#' @export
+tcsp_calibration_stability <- function(...) {
+  rqr_tcsp_calibration_stability(...)
+}
+
+#' @rdname mpi_mti_api
+#' @export
 tcsp_shortest_window <- function(...) rqr_tcsp_shortest_window(...)
 
 #' @rdname mpi_mti_api

@@ -139,3 +139,95 @@ test_that("TCSP Monte Carlo calibration uses one simultaneous band for selection
     expect_lt(prev$certified_lower_probability, 0.75)
   }
 })
+
+test_that("TCSP adaptive CP calibration is certified and provenance-rich", {
+  cal <- rqr_tcsp_calibrate_count(
+    n = 30,
+    guaranteed_content = 0.40,
+    tolerance_confidence = 0.80,
+    method = "monte_carlo_cp_adaptive",
+    n_sim = 300,
+    numerical_confidence = 0.80,
+    seed = 9110,
+    adaptive_control = list(stable_looks = 1L)
+  )
+
+  expect_identical(cal$scan_critical_method, "monte_carlo_cp_adaptive")
+  expect_match(cal$calibration_schema_version, "1\\.1\\.0")
+  expect_false(cal$infeasible)
+  expect_lte(cal$retained_count, 30L)
+  expect_equal(cal$target_content, cal$retained_count / 30)
+  expect_true(
+    cal$scan_probability$certified_lower_probability >=
+      cal$tolerance_confidence
+  )
+  expect_identical(
+    cal$scan_probability$scan_cdf_band_method,
+    "clopper_pearson_bonferroni_adaptive_lower_bounds"
+  )
+  expect_true(is.data.frame(cal$scan_candidate_bounds))
+  expect_true(is.data.frame(cal$adaptive_batch_trace))
+  expect_true(nzchar(cal$calibration_digest))
+  expect_identical(
+    cal$adaptive_control$alpha_allocation,
+    "bonferroni_over_feasible_counts_and_adaptive_looks"
+  )
+  if (cal$retained_count > 1L) {
+    expect_lt(cal$previous_candidate_lower_bound,
+              cal$tolerance_confidence)
+  }
+})
+
+test_that("TCSP adaptive CP calibration identifies structural infeasibility", {
+  cal <- rqr_tcsp_calibrate_count(
+    n = 20,
+    guaranteed_content = 0.99,
+    tolerance_confidence = 0.95,
+    method = "monte_carlo_cp_adaptive",
+    n_sim = 50,
+    numerical_confidence = 0.80,
+    seed = 9111
+  )
+
+  expect_true(cal$infeasible)
+  expect_equal(cal$retained_count, 21L)
+  expect_identical(cal$structural_status, "terminal_not_certified")
+  expect_lt(cal$terminal_probability, cal$tolerance_confidence)
+  expect_identical(cal$scan_probability$method,
+                   "logical_infeasible_retained_count")
+  expect_equal(cal$scan_probability$n_sim, 0L)
+})
+
+test_that("TCSP calibration boundary and stability audits are scan-only", {
+  boundary <- rqr_tcsp_calibration_boundary_map(
+    sample_sizes = c(20L, 30L),
+    guaranteed_contents = c(0.40),
+    tolerance_confidences = c(0.80),
+    method = "monte_carlo_cp_adaptive",
+    n_sim = 120,
+    numerical_confidence = 0.80,
+    seed = 9112,
+    adaptive_control = list(stable_looks = 1L)
+  )
+  stability <- rqr_tcsp_calibration_stability(
+    sample_sizes = c(20L),
+    guaranteed_contents = c(0.40),
+    tolerance_confidences = c(0.80),
+    seeds = c(9113L, 9114L),
+    method = "monte_carlo_cp_adaptive",
+    n_sim = 120,
+    numerical_confidence = 0.80,
+    adaptive_control = list(stable_looks = 1L)
+  )
+
+  expect_equal(nrow(boundary), 2L)
+  expect_true(all(c(
+    "terminal_exact_probability", "terminal_certifies",
+    "interior_window_available", "structural_status",
+    "calibration_digest"
+  ) %in% names(boundary)))
+  expect_equal(nrow(stability), 2L)
+  expect_true("seed" %in% names(stability))
+  expect_true(all(stability$scan_critical_method ==
+                    "monte_carlo_cp_adaptive"))
+})

@@ -503,21 +503,38 @@ scan_method_for <- function(method_id) {
   method_meta <- method_by_id[[method_id]]
   configured <- method_meta$scan_method %||% NULL
   if (!is.null(configured)) return(as.character(configured)[1L])
+  scan_cfg <- config$scan_calibration %||% list()
+  global <- scan_cfg$method %||% NULL
   if (method_id %in% c(
     "hdp_s_mc", "tcsp_mc", "tcsp_mti_gibbs_median_mc",
     "tcsp_mti_gibbs_mean_mc", "tcsp_mti_ecm_map_mc",
     "tcsp_mti_gibbs_median_oracle_tilt_mc",
     "tcsp_mti_ecm_map_oracle_tilt_mc"
   )) {
+    if (!is.null(global)) return(as.character(global)[1L])
     return("monte_carlo_conservative")
   }
   if (method_id %in% c("hdp_s", "tcsp_dkw")) return("dkw_conservative")
   NA_character_
 }
 
+scan_adaptive_control_for <- function(method_id) {
+  method_meta <- method_by_id[[method_id]]
+  scan_cfg <- config$scan_calibration %||% list()
+  control <- scan_cfg$adaptive_control %||% list()
+  mode_control <- mode_cfg$scan_adaptive_control %||%
+    mode_cfg$adaptive_control %||% list()
+  method_control <- method_meta$scan_adaptive_control %||%
+    method_meta$adaptive_control %||% list()
+  control <- utils::modifyList(control, mode_control)
+  utils::modifyList(control, method_control)
+}
+
 scan_args_for <- function(method_id, n, c_target, tol_conf) {
   method_meta <- method_by_id[[method_id]]
   scan_cfg <- config$scan_calibration %||% list()
+  method <- scan_method_for(method_id)
+  adaptive_control <- scan_adaptive_control_for(method_id)
   n_sim <- method_meta$scan_n_sim %||%
     mode_cfg$scan_n_sim %||%
     scan_cfg[[paste0(mode, "_n_sim")]] %||%
@@ -531,12 +548,19 @@ scan_args_for <- function(method_id, n, c_target, tol_conf) {
   seed_base <- as.integer(
     scan_cfg$seed %||% (as.integer(config$base_seed %||% 862100L) + 500000L)
   )
-  key <- paste(mode, scan_method_for(method_id), n, c_target, tol_conf, n_sim,
-               numerical_confidence, sep = "|")
+  key_parts <- c(mode, method, n, c_target, tol_conf, n_sim,
+                 numerical_confidence)
+  if (identical(method, "monte_carlo_cp_adaptive") ||
+      length(adaptive_control)) {
+    key_parts <- c(key_parts, digest::digest(adaptive_control, algo = "sha256",
+                                             serialize = TRUE))
+  }
+  key <- paste(key_parts, collapse = "|")
   list(
     n_sim = as.integer(n_sim)[1L],
     numerical_confidence = as.numeric(numerical_confidence)[1L],
-    seed = hash_to_seed(key, base = seed_base)
+    seed = hash_to_seed(key, base = seed_base),
+    adaptive_control = adaptive_control
   )
 }
 
@@ -556,8 +580,15 @@ if (!is.null(scan_calibration_cache_path) &&
 get_scan_calibration <- function(method_id, n, c_target, tol_conf) {
   method <- scan_method_for(method_id)
   args <- scan_args_for(method_id, n, c_target, tol_conf)
-  key <- paste(method, n, c_target, tol_conf, args$n_sim,
-               args$numerical_confidence, args$seed, sep = "|")
+  key_parts <- c(method, n, c_target, tol_conf, args$n_sim,
+                 args$numerical_confidence, args$seed)
+  if (identical(method, "monte_carlo_cp_adaptive") ||
+      length(args$adaptive_control)) {
+    key_parts <- c(key_parts, digest::digest(args$adaptive_control,
+                                             algo = "sha256",
+                                             serialize = TRUE))
+  }
+  key <- paste(key_parts, collapse = "|")
   if (!exists(key, envir = scan_calibration_cache, inherits = FALSE)) {
     cal <- tryCatch(
       tcsp_calibrate_count(
@@ -567,7 +598,8 @@ get_scan_calibration <- function(method_id, n, c_target, tol_conf) {
         method = method,
         n_sim = args$n_sim,
         numerical_confidence = args$numerical_confidence,
-        seed = args$seed
+        seed = args$seed,
+        adaptive_control = args$adaptive_control
       ),
       error = function(e) {
         list(
@@ -585,6 +617,7 @@ get_scan_calibration <- function(method_id, n, c_target, tol_conf) {
             numerical_confidence = args$numerical_confidence,
             n_sim = args$n_sim
           ),
+          adaptive_control = args$adaptive_control,
           finite_sample_claim_available = FALSE,
           asymptotic_claim_available = FALSE,
           infeasible = TRUE,

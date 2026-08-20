@@ -22,7 +22,8 @@
 rqr_tcsp_hybrid_bayes_fit <- function(
     y, guaranteed_content, tolerance_confidence, posterior_confidence,
     distribution_engine = c("direct_dp", "gaussian_dpm"),
-    scan_method = c("monte_carlo_conservative", "dkw_conservative"),
+    scan_method = c("monte_carlo_conservative", "monte_carlo_cp_adaptive",
+                    "dkw_conservative"),
     action_class = "closed_order_statistic_intervals",
     distribution_args = list(), scan_args = list(), action_control = list(),
     na_rm = FALSE) {

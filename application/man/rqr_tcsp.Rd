@@ -4,6 +4,8 @@
 \alias{rqr_tcsp_scan_distribution}
 \alias{rqr_tcsp_scan_cdf_band}
 \alias{rqr_tcsp_calibrate_count}
+\alias{rqr_tcsp_calibration_boundary_map}
+\alias{rqr_tcsp_calibration_stability}
 \alias{rqr_tcsp_scan_count}
 \alias{rqr_tcsp_shortest_window}
 \alias{rqr_tcsp_tilt_from_window}
@@ -19,10 +21,11 @@ rqr_tcsp_scan_probability(
   n,
   guaranteed_content,
   retained_count,
-  method = c("monte_carlo_conservative", "dkw_conservative"),
+  method = c("monte_carlo_conservative", "monte_carlo_cp_adaptive", "dkw_conservative"),
   n_sim = 20000L,
   numerical_confidence = 0.999,
-  seed = NULL
+  seed = NULL,
+  adaptive_control = list()
 )
 
 rqr_tcsp_scan_distribution(
@@ -38,20 +41,44 @@ rqr_tcsp_calibrate_count(
   n,
   guaranteed_content,
   tolerance_confidence,
-  method = c("monte_carlo_conservative", "dkw_conservative"),
+  method = c("monte_carlo_conservative", "monte_carlo_cp_adaptive", "dkw_conservative"),
   n_sim = 20000L,
   numerical_confidence = 0.999,
-  seed = NULL
+  seed = NULL,
+  adaptive_control = list()
 )
 
 rqr_tcsp_scan_count(
   n,
   guaranteed_content,
   tolerance_confidence,
-  method = c("monte_carlo_conservative", "dkw_conservative"),
+  method = c("monte_carlo_conservative", "monte_carlo_cp_adaptive", "dkw_conservative"),
   n_sim = 20000L,
   numerical_confidence = 0.999,
-  seed = NULL
+  seed = NULL,
+  adaptive_control = list()
+)
+
+rqr_tcsp_calibration_boundary_map(
+  sample_sizes,
+  guaranteed_contents,
+  tolerance_confidences,
+  method = c("monte_carlo_cp_adaptive", "monte_carlo_conservative", "dkw_conservative"),
+  n_sim = 20000L,
+  numerical_confidence = 0.999,
+  seed = NULL,
+  adaptive_control = list()
+)
+
+rqr_tcsp_calibration_stability(
+  sample_sizes,
+  guaranteed_contents,
+  tolerance_confidences,
+  seeds,
+  method = c("monte_carlo_cp_adaptive", "monte_carlo_conservative", "dkw_conservative"),
+  n_sim = 20000L,
+  numerical_confidence = 0.999,
+  adaptive_control = list()
 )
 
 rqr_tcsp_shortest_window(y, retained_count, na_rm = FALSE)
@@ -62,10 +89,11 @@ rqr_tcsp_fit_univariate(
   y,
   guaranteed_content,
   tolerance_confidence,
-  scan_method = c("monte_carlo_conservative", "dkw_conservative"),
+  scan_method = c("monte_carlo_conservative", "monte_carlo_cp_adaptive", "dkw_conservative"),
   n_sim = 20000L,
   numerical_confidence = 0.999,
   seed = NULL,
+  adaptive_control = list(),
   fit_mcmc = FALSE,
   fit_ecm = FALSE,
   learning_rate = 1,
@@ -80,10 +108,11 @@ rqr_tcsp_path(
   y,
   guaranteed_contents,
   tolerance_confidence,
-  scan_method = c("monte_carlo_conservative", "dkw_conservative"),
+  scan_method = c("monte_carlo_conservative", "monte_carlo_cp_adaptive", "dkw_conservative"),
   n_sim = 20000L,
   numerical_confidence = 0.999,
   seed = NULL,
+  adaptive_control = list(),
   na_rm = FALSE
 )
 
@@ -101,9 +130,19 @@ rqr_tcsp_validate_action(fit)
 \item{n_sim}{Number of Monte Carlo replicates for the conservative scan method.}
 \item{numerical_confidence}{Confidence level for numerical calibration error control.}
 \item{seed}{Optional simulation seed.}
+\item{adaptive_control}{Optional list for
+\code{"monte_carlo_cp_adaptive"}. Recognized fields include
+\code{initial_n_sim}, \code{batch_n_sim}, \code{max_n_sim},
+\code{max_looks}, and \code{stable_looks}.}
 \item{distribution}{A simulated Uniform scan-statistic distribution from
 \code{rqr_tcsp_scan_distribution()}.}
 \item{tolerance_confidence}{Repeated-sample tolerance confidence \eqn{1-\alpha}.}
+\item{sample_sizes}{Integer sample sizes for scan-only calibration audits.}
+\item{guaranteed_contents}{Population contents for scan-only calibration
+audits, or ordered/unordered path contents for \code{rqr_tcsp_path()}.}
+\item{tolerance_confidences}{Tolerance confidence levels for scan-only
+calibration audits.}
+\item{seeds}{Integer seeds for seed-stability calibration audits.}
 \item{y}{Numeric response sample.}
 \item{na_rm}{Remove nonfinite observations before scanning.}
 \item{window}{A TCSP shortest-window object.}
@@ -113,7 +152,6 @@ rqr_tcsp_validate_action(fit)
 \item{mcmc_args}{Optional arguments passed to \code{rqr_mcmc_fit()}.}
 \item{ecm_args}{Optional arguments passed to \code{rqr_ecm_fit()}. Target
 arguments are reserved by the TCSP wrapper.}
-\item{guaranteed_contents}{Ordered or unordered vector of target contents.}
 \item{previous_window}{Previous TCSP window object.}
 \item{next_retained_count}{Next retained count for path prediction.}
 \item{trust_radius}{Local start-index trust-region radius.}
@@ -133,7 +171,8 @@ retained-mean tilt are frozen.
 The tolerance certificate comes from scan calibration, not from posterior
 credibility, ECM endpoint summaries, the learning rate, or a response
 likelihood. The current
-implementation provides conservative Monte Carlo and DKW calibration paths.
+implementation provides conservative Monte Carlo, adaptive certified Monte
+Carlo, and DKW calibration paths.
 Monte Carlo calibration simulates the Uniform scan-statistic distribution once
 per \code{n}/content cell and applies a simultaneous Massart-DKW empirical-CDF
 lower band over all retained-count candidates. It is numerical calibration,
@@ -143,6 +182,13 @@ Clopper-Pearson certificate. For the terminal retained-count candidate
 \eqn{\Pr\{\max_i U_i-\min_i U_i > c\}} when needed; this can certify the
 full-range action without weakening the numerical scan-band interpretation for
 nonterminal candidates.
+The adaptive certified Monte Carlo path simulates scan counts in batches and
+uses one-sided Clopper-Pearson lower bounds with Bonferroni allocation over
+feasible retained counts and adaptive looks. It may reduce avoidable
+Massart-DKW conservatism, but it still selects \eqn{k} only from a certified
+lower probability bound. The terminal \eqn{k=n} event keeps the exact
+sample-range calculation, and structurally infeasible full-range requests are
+reported as fail-closed calibration outcomes.
 The DKW path uses the strict retained-count rule
 \eqn{k/n > c + 2\epsilon_n} implied by the uniform band. Unsupported or
 infeasible requests fail closed.

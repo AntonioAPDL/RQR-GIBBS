@@ -209,21 +209,38 @@ scan_method_for <- function(method_id) {
   method_meta <- method_by_id[[method_id]]
   configured <- method_meta$scan_method %||% NULL
   if (!is.null(configured)) return(as.character(configured)[1L])
+  scan_cfg <- config$scan_calibration %||% list()
+  global <- scan_cfg$method %||% NULL
   if (method_id %in% c(
     "hdp_s_mc", "tcsp_mc", "tcsp_mti_gibbs_median_mc",
     "tcsp_mti_gibbs_mean_mc", "tcsp_mti_ecm_map_mc",
     "tcsp_mti_gibbs_median_oracle_tilt_mc",
     "tcsp_mti_ecm_map_oracle_tilt_mc"
   )) {
+    if (!is.null(global)) return(as.character(global)[1L])
     return("monte_carlo_conservative")
   }
   if (method_id %in% c("hdp_s", "tcsp_dkw")) return("dkw_conservative")
   NA_character_
 }
 
+scan_adaptive_control_for <- function(method_id) {
+  method_meta <- method_by_id[[method_id]]
+  scan_cfg <- config$scan_calibration %||% list()
+  control <- scan_cfg$adaptive_control %||% list()
+  mode_control <- mode_cfg$scan_adaptive_control %||%
+    mode_cfg$adaptive_control %||% list()
+  method_control <- method_meta$scan_adaptive_control %||%
+    method_meta$adaptive_control %||% list()
+  control <- utils::modifyList(control, mode_control)
+  utils::modifyList(control, method_control)
+}
+
 scan_args_for <- function(method_id, n, c_target, tol_conf) {
   method_meta <- method_by_id[[method_id]]
   scan_cfg <- config$scan_calibration %||% list()
+  method <- scan_method_for(method_id)
+  adaptive_control <- scan_adaptive_control_for(method_id)
   n_sim <- method_meta$scan_n_sim %||%
     mode_cfg$scan_n_sim %||%
     scan_cfg[[paste0(mode, "_n_sim")]] %||%
@@ -237,20 +254,34 @@ scan_args_for <- function(method_id, n, c_target, tol_conf) {
   seed_base <- as.integer(
     scan_cfg$seed %||% (as.integer(config$base_seed %||% 862100L) + 500000L)
   )
-  key <- paste(mode, scan_method_for(method_id), n, c_target, tol_conf, n_sim,
-               numerical_confidence, sep = "|")
+  key_parts <- c(mode, method, n, c_target, tol_conf, n_sim,
+                 numerical_confidence)
+  if (identical(method, "monte_carlo_cp_adaptive") ||
+      length(adaptive_control)) {
+    key_parts <- c(key_parts, digest::digest(adaptive_control, algo = "sha256",
+                                             serialize = TRUE))
+  }
+  key <- paste(key_parts, collapse = "|")
   list(
     n_sim = as.integer(n_sim)[1L],
     numerical_confidence = as.numeric(numerical_confidence)[1L],
-    seed = hash_to_seed(key, base = seed_base)
+    seed = hash_to_seed(key, base = seed_base),
+    adaptive_control = adaptive_control
   )
 }
 
 scan_cache_key <- function(method_id, n, c_target, tol_conf) {
   method <- scan_method_for(method_id)
   args <- scan_args_for(method_id, n, c_target, tol_conf)
-  paste(method, n, c_target, tol_conf, args$n_sim, args$numerical_confidence,
-        args$seed, sep = "|")
+  key_parts <- c(method, n, c_target, tol_conf, args$n_sim,
+                 args$numerical_confidence, args$seed)
+  if (identical(method, "monte_carlo_cp_adaptive") ||
+      length(args$adaptive_control)) {
+    key_parts <- c(key_parts, digest::digest(args$adaptive_control,
+                                             algo = "sha256",
+                                             serialize = TRUE))
+  }
+  paste(key_parts, collapse = "|")
 }
 
 calibrate_safely <- function(method_id, n, c_target, tol_conf) {
@@ -264,7 +295,8 @@ calibrate_safely <- function(method_id, n, c_target, tol_conf) {
       method = method,
       n_sim = args$n_sim,
       numerical_confidence = args$numerical_confidence,
-      seed = args$seed
+      seed = args$seed,
+      adaptive_control = args$adaptive_control
     ),
     error = function(e) {
       list(
@@ -282,6 +314,7 @@ calibrate_safely <- function(method_id, n, c_target, tol_conf) {
           numerical_confidence = args$numerical_confidence,
           n_sim = args$n_sim
         ),
+        adaptive_control = args$adaptive_control,
         finite_sample_claim_available = FALSE,
         asymptotic_claim_available = FALSE,
         infeasible = TRUE,
@@ -590,6 +623,15 @@ prepare_run <- function() {
         certified_lower_probability =
           calibration$scan_probability$certified_lower_probability %||%
           NA_real_,
+        probability_estimate =
+          calibration$scan_probability$probability_estimate %||% NA_real_,
+        n_sim_total = calibration$scan_probability$n_sim %||% NA_integer_,
+        point_estimate_crossing_k =
+          calibration$point_estimate_crossing_k %||% NA_integer_,
+        terminal_exact_probability =
+          calibration$terminal_probability %||% NA_real_,
+        structural_status =
+          calibration$structural_status %||% "",
         infeasible = isTRUE(calibration$infeasible),
         message = calibration$message %||% "",
         calibration_digest = digest::digest(calibration, algo = "sha256",
@@ -610,6 +652,11 @@ prepare_run <- function() {
       retained_count = integer(),
       content_buffer = numeric(),
       certified_lower_probability = numeric(),
+      probability_estimate = numeric(),
+      n_sim_total = integer(),
+      point_estimate_crossing_k = integer(),
+      terminal_exact_probability = numeric(),
+      structural_status = character(),
       infeasible = logical(),
       message = character(),
       calibration_digest = character(),

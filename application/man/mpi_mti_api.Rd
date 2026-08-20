@@ -49,6 +49,8 @@
 \alias{tcsp_scan_probability}
 \alias{tcsp_scan_count}
 \alias{tcsp_calibrate_count}
+\alias{tcsp_calibration_boundary_map}
+\alias{tcsp_calibration_stability}
 \alias{tcsp_shortest_window}
 \alias{tcsp_tilt_from_window}
 \alias{tcsp_predict_next_start}

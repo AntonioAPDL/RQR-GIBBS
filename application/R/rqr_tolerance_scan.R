@@ -18,7 +18,8 @@
 .rqr_tcsp_assert_method <- function(method) {
   match.arg(
     as.character(method)[1L],
-    c("monte_carlo_conservative", "dkw_conservative")
+    c("monte_carlo_conservative", "monte_carlo_cp_adaptive",
+      "dkw_conservative")
   )
 }
 
@@ -51,6 +52,446 @@
   counts <- tabulate(as.integer(max_counts) + 1L, nbins = n + 1L)
   names(counts) <- as.character(0:n)
   counts
+}
+
+.rqr_tcsp_package_version <- function() {
+  tryCatch(as.character(utils::packageVersion("rqrgibbs")),
+           error = function(e) NA_character_)
+}
+
+.rqr_tcsp_git_commit <- function() {
+  out <- tryCatch(
+    suppressWarnings(system2("git", c("rev-parse", "HEAD"),
+                             stdout = TRUE, stderr = FALSE)),
+    error = function(e) character(0)
+  )
+  status <- attr(out, "status") %||% 0L
+  if (!length(out) || is.na(status) || status != 0L) {
+    return(NA_character_)
+  }
+  as.character(out[[1L]])
+}
+
+.rqr_tcsp_git_status_short <- function() {
+  out <- tryCatch(
+    suppressWarnings(system2("git", c("status", "--short"),
+                             stdout = TRUE, stderr = FALSE)),
+    error = function(e) character(0)
+  )
+  status <- attr(out, "status") %||% 0L
+  if (is.na(status) || status != 0L) {
+    return(NA_character_)
+  }
+  as.character(out)
+}
+
+.rqr_tcsp_finalize_calibration <- function(out) {
+  out$package_version <- .rqr_tcsp_package_version()
+  out$git_commit <- .rqr_tcsp_git_commit()
+  out$git_status_short <- .rqr_tcsp_git_status_short()
+  out$calibration_digest <- .rqr_tcsp_digest(out)
+  out
+}
+
+.rqr_tcsp_scan_histogram_r <- function(n, guaranteed_content, n_sim) {
+  counts <- integer(n_sim)
+  for (ii in seq_len(n_sim)) {
+    counts[[ii]] <- .rqr_tcsp_scan_max_count(
+      stats::runif(n), guaranteed_content
+    )
+  }
+  .rqr_tcsp_count_histogram(counts, n)
+}
+
+.rqr_tcsp_binom_lower <- function(successes, trials, alpha) {
+  successes <- as.integer(successes)
+  trials <- as.integer(trials)
+  alpha <- as.numeric(alpha)
+  lower <- numeric(length(successes))
+  positive <- successes > 0L
+  lower[positive] <- stats::qbeta(
+    alpha,
+    successes[positive],
+    trials - successes[positive] + 1L
+  )
+  lower
+}
+
+.rqr_tcsp_adaptive_control <- function(n_sim, numerical_confidence,
+                                       adaptive_control = list()) {
+  if (is.null(adaptive_control)) adaptive_control <- list()
+  if (!is.list(adaptive_control)) {
+    stop("adaptive_control must be a list.", call. = FALSE)
+  }
+  n_sim <- .rqr_mt_assert_count(n_sim, "n_sim", 1L)
+  initial_n_sim <- .rqr_mt_assert_count(
+    adaptive_control$initial_n_sim %||% n_sim,
+    "adaptive_control$initial_n_sim", 1L
+  )
+  batch_n_sim <- .rqr_mt_assert_count(
+    adaptive_control$batch_n_sim %||% initial_n_sim,
+    "adaptive_control$batch_n_sim", 1L
+  )
+  default_max <- if (initial_n_sim >= 10000L) {
+    max(initial_n_sim, 200000L)
+  } else {
+    initial_n_sim
+  }
+  max_n_sim <- .rqr_mt_assert_count(
+    adaptive_control$max_n_sim %||% default_max,
+    "adaptive_control$max_n_sim", 1L
+  )
+  if (max_n_sim < initial_n_sim) {
+    stop("adaptive_control$max_n_sim cannot be smaller than initial_n_sim.",
+         call. = FALSE)
+  }
+  implied_looks <- 1L + ceiling(max(0L, max_n_sim - initial_n_sim) /
+                                  batch_n_sim)
+  max_looks <- .rqr_mt_assert_count(
+    adaptive_control$max_looks %||% implied_looks,
+    "adaptive_control$max_looks", 1L
+  )
+  stable_looks <- .rqr_mt_assert_count(
+    adaptive_control$stable_looks %||% 2L,
+    "adaptive_control$stable_looks", 1L
+  )
+  list(
+    initial_n_sim = as.integer(initial_n_sim),
+    batch_n_sim = as.integer(batch_n_sim),
+    max_n_sim = as.integer(max_n_sim),
+    max_looks = as.integer(max_looks),
+    stable_looks = as.integer(stable_looks),
+    numerical_confidence = numerical_confidence,
+    alpha_allocation = "bonferroni_over_feasible_counts_and_adaptive_looks",
+    alpha_num = 1 - numerical_confidence
+  )
+}
+
+.rqr_tcsp_infeasible_probability <- function(n, guaranteed_content,
+                                             requested_method) {
+  list(
+    method = "logical_infeasible_retained_count",
+    requested_method = requested_method,
+    n = n,
+    guaranteed_content = guaranteed_content,
+    retained_count = as.integer(n + 1L),
+    scan_threshold_max_count = as.integer(n),
+    probability_estimate = 1,
+    certified_lower_probability = 1,
+    numerical_confidence = 1,
+    numerical_error_control =
+      "Logical event M_n(c) < n + 1; retained_count=n+1 is infeasible as a data interval.",
+    simultaneous_numerical_calibration = FALSE,
+    exact_terminal_range_calibration = FALSE,
+    n_sim = 0L,
+    successes = NA_integer_,
+    failures = NA_integer_,
+    finite_sample_claim_available = FALSE
+  )
+}
+
+.rqr_tcsp_cp_candidate_bounds <- function(histogram, n, guaranteed_content,
+                                          numerical_confidence,
+                                          max_looks = 1L, look = 1L) {
+  histogram <- as.integer(histogram)
+  n <- .rqr_mt_assert_count(n, "n", 1L)
+  if (length(histogram) != n + 1L) {
+    stop("histogram must have length n + 1.", call. = FALSE)
+  }
+  n_sim <- sum(histogram)
+  if (!is.finite(n_sim) || n_sim < 1L) {
+    stop("histogram must contain at least one scan replicate.",
+         call. = FALSE)
+  }
+  numerical_confidence <- .rqr_tcsp_assert_probability(
+    numerical_confidence, "numerical_confidence"
+  )
+  max_looks <- .rqr_mt_assert_count(max_looks, "max_looks", 1L)
+  look <- .rqr_mt_assert_count(look, "look", 1L)
+  feasible_candidates <- max(n, 1L)
+  alpha_num <- 1 - numerical_confidence
+  alpha_per_bound <- alpha_num / (feasible_candidates * max_looks)
+  cumulative <- cumsum(histogram)
+  retained_count <- seq_len(n + 1L)
+  threshold <- retained_count - 1L
+  successes <- ifelse(threshold <= n, cumulative[threshold + 1L], n_sim)
+  empirical <- successes / n_sim
+  lower <- .rqr_tcsp_binom_lower(successes, n_sim, alpha_per_bound)
+  source <- rep("clopper_pearson_bonferroni_lower_bound",
+                length(retained_count))
+
+  terminal <- .rqr_tcsp_terminal_range_probability(
+    n, guaranteed_content, "monte_carlo_cp_adaptive"
+  )
+  lower[[n]] <- terminal$certified_lower_probability
+  empirical[[n]] <- terminal$probability_estimate
+  successes[[n]] <- NA_integer_
+  source[[n]] <- "exact_terminal_range"
+  lower[[n + 1L]] <- 1
+  empirical[[n + 1L]] <- 1
+  successes[[n + 1L]] <- n_sim
+  source[[n + 1L]] <- "logical_infeasible_retained_count"
+
+  data.frame(
+    retained_count = as.integer(retained_count),
+    scan_threshold_max_count = as.integer(threshold),
+    cumulative_count = as.integer(successes),
+    empirical_cdf = as.numeric(empirical),
+    certified_lower_cdf = as.numeric(lower),
+    lower_bound_source = source,
+    alpha_per_bound = alpha_per_bound,
+    look = as.integer(look),
+    n_sim = as.integer(n_sim),
+    stringsAsFactors = FALSE
+  )
+}
+
+.rqr_tcsp_probability_from_cp_bounds <- function(bounds, retained_count,
+                                                 n, guaranteed_content,
+                                                 numerical_confidence,
+                                                 control, histogram_digest) {
+  k <- .rqr_mt_assert_count(retained_count, "retained_count", 1L)
+  row <- bounds[bounds$retained_count == k, , drop = FALSE]
+  if (nrow(row) != 1L) {
+    stop("retained_count is not represented in the adaptive bounds.",
+         call. = FALSE)
+  }
+  list(
+    method = "monte_carlo_cp_adaptive",
+    scan_cdf_band_method =
+      "clopper_pearson_bonferroni_adaptive_lower_bounds",
+    n = n,
+    guaranteed_content = guaranteed_content,
+    retained_count = k,
+    scan_threshold_max_count = row$scan_threshold_max_count[[1L]],
+    probability_estimate = row$empirical_cdf[[1L]],
+    certified_lower_probability = row$certified_lower_cdf[[1L]],
+    numerical_confidence = numerical_confidence,
+    numerical_error_control = paste(
+      "One-sided Clopper-Pearson lower bounds with Bonferroni",
+      "allocation over feasible retained counts and adaptive looks."
+    ),
+    simultaneous_numerical_calibration = TRUE,
+    n_sim = row$n_sim[[1L]],
+    successes = row$cumulative_count[[1L]],
+    failures = if (is.na(row$cumulative_count[[1L]])) {
+      NA_integer_
+    } else {
+      row$n_sim[[1L]] - row$cumulative_count[[1L]]
+    },
+    alpha_per_bound = row$alpha_per_bound[[1L]],
+    lower_bound_source = row$lower_bound_source[[1L]],
+    adaptive_control = control,
+    scan_distribution_digest = histogram_digest,
+    cdf_band_digest = .rqr_tcsp_digest(bounds),
+    exact_terminal_range_calibration =
+      identical(row$lower_bound_source[[1L]], "exact_terminal_range"),
+    finite_sample_claim_available =
+      identical(row$lower_bound_source[[1L]], "exact_terminal_range")
+  )
+}
+
+.rqr_tcsp_adaptive_calibrate_count <- function(
+    n, guaranteed_content, tolerance_confidence,
+    n_sim = 20000L, numerical_confidence = 0.999, seed = NULL,
+    adaptive_control = list()) {
+  terminal <- .rqr_tcsp_terminal_range_probability(
+    n, guaranteed_content, "monte_carlo_cp_adaptive"
+  )
+  control <- .rqr_tcsp_adaptive_control(
+    n_sim, numerical_confidence, adaptive_control
+  )
+  if (terminal$certified_lower_probability < tolerance_confidence) {
+    prob <- .rqr_tcsp_infeasible_probability(
+      n, guaranteed_content, "monte_carlo_cp_adaptive"
+    )
+    out <- list(
+      schema_version = .rqr_tcsp_schema(),
+      calibration_schema_version = "rqrgibbs_tcsp_scan_calibration/1.1.0",
+      method = "scan_calibrated_tcsp_mti",
+      legacy_method = "scan_calibrated_tcsp_mt_rqr",
+      scan_critical_method = "monte_carlo_cp_adaptive",
+      n = n,
+      guaranteed_content = guaranteed_content,
+      tolerance_confidence = tolerance_confidence,
+      retained_count = as.integer(n + 1L),
+      target_content = NA_real_,
+      content_buffer = NA_real_,
+      scan_probability = prob,
+      terminal_probability = terminal$certified_lower_probability,
+      adaptive_control = control,
+      finite_sample_claim_available = FALSE,
+      asymptotic_claim_available = FALSE,
+      infeasible = TRUE,
+      structural_status = "terminal_not_certified",
+      message = paste(
+        "TCSP calibration is structurally infeasible: even the full sample",
+        "range does not certify the requested content and confidence."
+      )
+    )
+    return(.rqr_tcsp_finalize_calibration(out))
+  }
+
+  rng_kind <- RNGkind()
+  restore_rng <- .rqr_mt_seed_scope(seed)
+  on.exit(restore_rng(), add = TRUE)
+  histogram <- integer(n + 1L)
+  names(histogram) <- as.character(0:n)
+  total_n_sim <- 0L
+  previous_k <- NA_integer_
+  stable_count <- 0L
+  trace <- vector("list", control$max_looks)
+  last_bounds <- NULL
+  last_selected <- NA_integer_
+  last_point <- NA_integer_
+
+  for (look in seq_len(control$max_looks)) {
+    remaining <- control$max_n_sim - total_n_sim
+    if (remaining <= 0L) break
+    batch <- if (look == 1L) {
+      min(control$initial_n_sim, remaining)
+    } else {
+      min(control$batch_n_sim, remaining)
+    }
+    histogram <- histogram + .rqr_tcsp_scan_histogram_r(
+      n, guaranteed_content, batch
+    )
+    total_n_sim <- total_n_sim + batch
+    bounds <- .rqr_tcsp_cp_candidate_bounds(
+      histogram, n, guaranteed_content, numerical_confidence,
+      max_looks = control$max_looks, look = look
+    )
+    certified <- bounds$retained_count[
+      is.finite(bounds$certified_lower_cdf) &
+        bounds$certified_lower_cdf >= tolerance_confidence
+    ]
+    point <- bounds$retained_count[
+      is.finite(bounds$empirical_cdf) &
+        bounds$empirical_cdf >= tolerance_confidence
+    ]
+    selected_k <- if (length(certified)) certified[[1L]] else NA_integer_
+    point_k <- if (length(point)) point[[1L]] else NA_integer_
+    if (!is.na(selected_k) && identical(selected_k, previous_k)) {
+      stable_count <- stable_count + 1L
+    } else if (!is.na(selected_k)) {
+      stable_count <- 1L
+    } else {
+      stable_count <- 0L
+    }
+    previous_k <- selected_k
+    last_bounds <- bounds
+    last_selected <- selected_k
+    last_point <- point_k
+    trace[[look]] <- data.frame(
+      look = as.integer(look),
+      batch_n_sim = as.integer(batch),
+      n_sim_total = as.integer(total_n_sim),
+      certified_crossing_k = as.integer(selected_k),
+      point_estimate_crossing_k = as.integer(point_k),
+      selected_stable_looks = as.integer(stable_count),
+      stringsAsFactors = FALSE
+    )
+    if (!is.na(selected_k) &&
+        stable_count >= control$stable_looks &&
+        !is.na(point_k) && point_k == selected_k) {
+      break
+    }
+  }
+
+  batch_trace <- do.call(rbind, trace[!vapply(trace, is.null, logical(1L))])
+  if (is.null(last_bounds) || is.na(last_selected)) {
+    prob <- .rqr_tcsp_infeasible_probability(
+      n, guaranteed_content, "monte_carlo_cp_adaptive"
+    )
+    out <- list(
+      schema_version = .rqr_tcsp_schema(),
+      calibration_schema_version = "rqrgibbs_tcsp_scan_calibration/1.1.0",
+      method = "scan_calibrated_tcsp_mti",
+      legacy_method = "scan_calibrated_tcsp_mt_rqr",
+      scan_critical_method = "monte_carlo_cp_adaptive",
+      n = n,
+      guaranteed_content = guaranteed_content,
+      tolerance_confidence = tolerance_confidence,
+      retained_count = as.integer(n + 1L),
+      target_content = NA_real_,
+      content_buffer = NA_real_,
+      scan_probability = prob,
+      scan_candidate_bounds = last_bounds,
+      adaptive_batch_trace = batch_trace,
+      adaptive_control = control,
+      terminal_probability = terminal$certified_lower_probability,
+      finite_sample_claim_available = FALSE,
+      asymptotic_claim_available = FALSE,
+      infeasible = TRUE,
+      structural_status = "numerical_budget_exhausted",
+      message = paste(
+        "TCSP adaptive calibration exhausted the numerical budget without",
+        "a certified retained count."
+      )
+    )
+    return(.rqr_tcsp_finalize_calibration(out))
+  }
+
+  histogram_digest <- .rqr_tcsp_digest(list(
+    histogram = histogram,
+    n = n,
+    guaranteed_content = guaranteed_content,
+    n_sim = total_n_sim,
+    seed = seed,
+    rng_kind = rng_kind
+  ))
+  prob <- .rqr_tcsp_probability_from_cp_bounds(
+    last_bounds, last_selected, n, guaranteed_content,
+    numerical_confidence, control, histogram_digest
+  )
+  previous_row <- last_bounds[
+    last_bounds$retained_count == max(1L, last_selected - 1L),
+    , drop = FALSE
+  ]
+  out <- list(
+    schema_version = .rqr_tcsp_schema(),
+    calibration_schema_version = "rqrgibbs_tcsp_scan_calibration/1.1.0",
+    method = "scan_calibrated_tcsp_mti",
+    legacy_method = "scan_calibrated_tcsp_mt_rqr",
+    scan_critical_method = "monte_carlo_cp_adaptive",
+    n = n,
+    guaranteed_content = guaranteed_content,
+    tolerance_confidence = tolerance_confidence,
+    retained_count = as.integer(last_selected),
+    target_content = if (last_selected <= n) last_selected / n else NA_real_,
+    content_buffer = if (last_selected <= n) {
+      last_selected / n - guaranteed_content
+    } else {
+      NA_real_
+    },
+    point_estimate_crossing_k = as.integer(last_point),
+    certified_crossing_k = as.integer(last_selected),
+    previous_candidate_lower_bound =
+      previous_row$certified_lower_cdf[[1L]] %||% NA_real_,
+    selected_candidate_lower_bound = prob$certified_lower_probability,
+    scan_probability = prob,
+    scan_candidate_bounds = last_bounds,
+    adaptive_batch_trace = batch_trace,
+    adaptive_control = control,
+    scan_distribution_digest = histogram_digest,
+    cdf_band_digest = .rqr_tcsp_digest(last_bounds),
+    terminal_probability = terminal$certified_lower_probability,
+    simultaneous_numerical_calibration = TRUE,
+    exact_terminal_range_calibration =
+      isTRUE(prob$exact_terminal_range_calibration),
+    finite_sample_claim_available =
+      isTRUE(prob$exact_terminal_range_calibration),
+    asymptotic_claim_available = FALSE,
+    infeasible = last_selected > n,
+    structural_status = if (last_selected > n) {
+      "terminal_not_certified"
+    } else if (last_selected == n) {
+      "terminal_certified"
+    } else {
+      "interior_certified"
+    }
+  )
+  .rqr_tcsp_finalize_calibration(out)
 }
 
 .rqr_tcsp_probability_from_band <- function(band, retained_count) {
@@ -243,8 +684,10 @@ rqr_tcsp_scan_cdf_band <- function(distribution, numerical_confidence = 0.999) {
 #' @export
 rqr_tcsp_scan_probability <- function(
     n, guaranteed_content, retained_count,
-    method = c("monte_carlo_conservative", "dkw_conservative"),
-    n_sim = 20000L, numerical_confidence = 0.999, seed = NULL) {
+    method = c("monte_carlo_conservative", "monte_carlo_cp_adaptive",
+               "dkw_conservative"),
+    n_sim = 20000L, numerical_confidence = 0.999, seed = NULL,
+    adaptive_control = list()) {
   n <- .rqr_mt_assert_count(n, "n", 1L)
   c_target <- .rqr_tcsp_assert_probability(
     guaranteed_content, "guaranteed_content"
@@ -256,8 +699,12 @@ rqr_tcsp_scan_probability <- function(
     numerical_confidence, "numerical_confidence"
   )
 
-  if (identical(method, "monte_carlo_conservative") && k == n) {
+  if (method %in% c("monte_carlo_conservative", "monte_carlo_cp_adaptive") &&
+      k == n) {
     return(.rqr_tcsp_terminal_range_probability(n, c_target, method))
+  }
+  if (identical(method, "monte_carlo_cp_adaptive") && k == n + 1L) {
+    return(.rqr_tcsp_infeasible_probability(n, c_target, method))
   }
 
   if (identical(method, "dkw_conservative")) {
@@ -277,6 +724,23 @@ rqr_tcsp_scan_probability <- function(
       successes = NA_integer_,
       failures = NA_integer_,
       dkw_epsilon = eps
+    ))
+  }
+
+  if (identical(method, "monte_carlo_cp_adaptive")) {
+    distribution <- rqr_tcsp_scan_distribution(
+      n, c_target, n_sim = n_sim, seed = seed
+    )
+    control <- .rqr_tcsp_adaptive_control(
+      n_sim, numerical_confidence, adaptive_control
+    )
+    bounds <- .rqr_tcsp_cp_candidate_bounds(
+      distribution$max_count_histogram, n, c_target, numerical_confidence,
+      max_looks = control$max_looks, look = 1L
+    )
+    return(.rqr_tcsp_probability_from_cp_bounds(
+      bounds, k, n, c_target, numerical_confidence,
+      control, distribution$scan_distribution_digest
     ))
   }
 
@@ -300,8 +764,10 @@ rqr_tcsp_scan_probability <- function(
 #' @export
 rqr_tcsp_calibrate_count <- function(
     n, guaranteed_content, tolerance_confidence,
-    method = c("monte_carlo_conservative", "dkw_conservative"),
-    n_sim = 20000L, numerical_confidence = 0.999, seed = NULL) {
+    method = c("monte_carlo_conservative", "monte_carlo_cp_adaptive",
+               "dkw_conservative"),
+    n_sim = 20000L, numerical_confidence = 0.999, seed = NULL,
+    adaptive_control = list()) {
   n <- .rqr_mt_assert_count(n, "n", 1L)
   c_target <- .rqr_tcsp_assert_probability(
     guaranteed_content, "guaranteed_content"
@@ -310,6 +776,18 @@ rqr_tcsp_calibrate_count <- function(
     tolerance_confidence, "tolerance_confidence"
   )
   method <- .rqr_tcsp_assert_method(method)
+
+  if (identical(method, "monte_carlo_cp_adaptive")) {
+    return(.rqr_tcsp_adaptive_calibrate_count(
+      n = n,
+      guaranteed_content = c_target,
+      tolerance_confidence = tolerance_confidence,
+      n_sim = n_sim,
+      numerical_confidence = numerical_confidence,
+      seed = seed,
+      adaptive_control = adaptive_control
+    ))
+  }
 
   if (identical(method, "dkw_conservative")) {
     eps <- sqrt(log(2 / (1 - tolerance_confidence)) / (2 * n))
@@ -327,8 +805,9 @@ rqr_tcsp_calibrate_count <- function(
       n, c_target, k, method = method,
       numerical_confidence = tolerance_confidence
     )
-    return(list(
+    out <- list(
       schema_version = .rqr_tcsp_schema(),
+      calibration_schema_version = "rqrgibbs_tcsp_scan_calibration/1.0.0",
       method = "scan_calibrated_tcsp_mti",
       legacy_method = "scan_calibrated_tcsp_mt_rqr",
       scan_critical_method = method,
@@ -342,7 +821,8 @@ rqr_tcsp_calibrate_count <- function(
       finite_sample_claim_available = FALSE,
       asymptotic_claim_available = FALSE,
       infeasible = FALSE
-    ))
+    )
+    return(.rqr_tcsp_finalize_calibration(out))
   }
 
   distribution <- rqr_tcsp_scan_distribution(
@@ -359,8 +839,9 @@ rqr_tcsp_calibrate_count <- function(
     }
     if (is.finite(prob$certified_lower_probability) &&
         prob$certified_lower_probability >= tolerance_confidence) {
-      return(list(
+      out <- list(
         schema_version = .rqr_tcsp_schema(),
+        calibration_schema_version = "rqrgibbs_tcsp_scan_calibration/1.0.0",
         method = "scan_calibrated_tcsp_mti",
         legacy_method = "scan_calibrated_tcsp_mt_rqr",
         scan_critical_method = method,
@@ -382,7 +863,8 @@ rqr_tcsp_calibrate_count <- function(
           isTRUE(prob$finite_sample_claim_available),
         asymptotic_claim_available = FALSE,
         infeasible = k > n
-      ))
+      )
+      return(.rqr_tcsp_finalize_calibration(out))
     }
   }
   stop("TCSP calibration failed closed: no retained count reached the certificate.",
@@ -551,8 +1033,10 @@ rqr_tcsp_tilt_from_window <- function(window) {
 #' @export
 rqr_tcsp_fit_univariate <- function(
     y, guaranteed_content, tolerance_confidence,
-    scan_method = c("monte_carlo_conservative", "dkw_conservative"),
+    scan_method = c("monte_carlo_conservative", "monte_carlo_cp_adaptive",
+                    "dkw_conservative"),
     n_sim = 20000L, numerical_confidence = 0.999, seed = NULL,
+    adaptive_control = list(),
     fit_mcmc = FALSE, fit_ecm = FALSE, learning_rate = 1,
     mcmc_args = list(), ecm_args = list(),
     na_rm = FALSE) {
@@ -569,7 +1053,8 @@ rqr_tcsp_fit_univariate <- function(
     method = scan_method,
     n_sim = n_sim,
     numerical_confidence = numerical_confidence,
-    seed = seed
+    seed = seed,
+    adaptive_control = adaptive_control
   )
   if (isTRUE(calibration$infeasible) || calibration$retained_count > length(y)) {
     stop("TCSP calibration is infeasible for this sample size and target.",
@@ -913,8 +1398,10 @@ rqr_tcsp_local_correct <- function(y, retained_count, predicted_start,
 #' @export
 rqr_tcsp_path <- function(
     y, guaranteed_contents, tolerance_confidence,
-    scan_method = c("monte_carlo_conservative", "dkw_conservative"),
+    scan_method = c("monte_carlo_conservative", "monte_carlo_cp_adaptive",
+                    "dkw_conservative"),
     n_sim = 20000L, numerical_confidence = 0.999, seed = NULL,
+    adaptive_control = list(),
     na_rm = FALSE) {
   clean <- .rqr_mt_clean_sample(y, na_rm = na_rm)
   y <- clean$y
@@ -938,6 +1425,7 @@ rqr_tcsp_path <- function(
       n_sim = n_sim,
       numerical_confidence = numerical_confidence,
       seed = if (is.null(seed)) NULL else as.integer(seed) + ii,
+      adaptive_control = adaptive_control,
       fit_mcmc = FALSE
     )
     win <- fit$window
@@ -981,6 +1469,181 @@ rqr_tcsp_path <- function(
     diagnostics = diagnostics
   )
   class(out) <- c("tcsp_mti_path", "rqr_tcsp_path", "list")
+  out
+}
+
+#' TCSP scan-calibration boundary map
+#'
+#' Computes scan-only retained-count diagnostics over a grid of sample sizes,
+#' contents, and tolerance confidences.  This is a calibration audit: it does
+#' not fit MTI, Gibbs, ECM, or Bayesian response-distribution summaries.
+#'
+#' @param sample_sizes Integer sample sizes.
+#' @param guaranteed_contents Population contents.
+#' @param tolerance_confidences Tolerance confidence levels.
+#' @param method Scan calibration method.
+#' @inheritParams rqr_tcsp_calibrate_count
+#' @return A data frame with one row per calibration cell.
+#' @export
+rqr_tcsp_calibration_boundary_map <- function(
+    sample_sizes, guaranteed_contents, tolerance_confidences,
+    method = c("monte_carlo_cp_adaptive", "monte_carlo_conservative",
+               "dkw_conservative"),
+    n_sim = 20000L, numerical_confidence = 0.999, seed = NULL,
+    adaptive_control = list()) {
+  method <- .rqr_tcsp_assert_method(method)
+  sample_sizes <- as.integer(sample_sizes)
+  guaranteed_contents <- as.numeric(guaranteed_contents)
+  tolerance_confidences <- as.numeric(tolerance_confidences)
+  if (!length(sample_sizes) || !length(guaranteed_contents) ||
+      !length(tolerance_confidences)) {
+    stop("sample_sizes, guaranteed_contents, and tolerance_confidences cannot be empty.",
+         call. = FALSE)
+  }
+  rows <- list()
+  index <- 0L
+  counter <- 0L
+  for (n in sample_sizes) {
+    n <- .rqr_mt_assert_count(n, "sample_sizes", 1L)
+    for (c_target in guaranteed_contents) {
+      c_target <- .rqr_tcsp_assert_probability(
+        c_target, "guaranteed_contents"
+      )
+      terminal <- .rqr_tcsp_terminal_range_probability(
+        n, c_target, method
+      )
+      for (gamma in tolerance_confidences) {
+        gamma <- .rqr_tcsp_assert_probability(
+          gamma, "tolerance_confidences"
+        )
+        counter <- counter + 1L
+        cell_seed <- if (is.null(seed)) NULL else as.integer(seed) + counter
+        cal <- tryCatch(
+          rqr_tcsp_calibrate_count(
+            n = n,
+            guaranteed_content = c_target,
+            tolerance_confidence = gamma,
+            method = method,
+            n_sim = n_sim,
+            numerical_confidence = numerical_confidence,
+            seed = cell_seed,
+            adaptive_control = adaptive_control
+          ),
+          error = function(e) {
+            list(
+              scan_critical_method = method,
+              n = n,
+              guaranteed_content = c_target,
+              tolerance_confidence = gamma,
+              retained_count = as.integer(n + 1L),
+              target_content = NA_real_,
+              content_buffer = NA_real_,
+              scan_probability = list(
+                probability_estimate = NA_real_,
+                certified_lower_probability = NA_real_,
+                n_sim = as.integer(n_sim)
+              ),
+              infeasible = TRUE,
+              structural_status = "calibration_error",
+              message = conditionMessage(e),
+              calibration_digest = NA_character_
+            )
+          }
+        )
+        retained <- as.integer(cal$retained_count %||% NA_integer_)
+        infeasible <- isTRUE(cal$infeasible) || is.na(retained) ||
+          retained > n
+        status <- cal$structural_status %||%
+          if (terminal$certified_lower_probability < gamma) {
+            "terminal_not_certified"
+          } else if (infeasible) {
+            "numerical_budget_exhausted"
+          } else if (retained == n) {
+            "terminal_certified"
+          } else {
+            "interior_certified"
+          }
+        index <- index + 1L
+        rows[[index]] <- data.frame(
+          n = as.integer(n),
+          guaranteed_content = c_target,
+          tolerance_confidence = gamma,
+          scan_critical_method = cal$scan_critical_method %||% method,
+          retained_count = retained,
+          target_content = if (!infeasible) {
+            cal$target_content %||% (retained / n)
+          } else {
+            NA_real_
+          },
+          content_buffer = if (!infeasible) {
+            cal$content_buffer %||% (retained / n - c_target)
+          } else {
+            NA_real_
+          },
+          certified_lower_probability =
+            cal$scan_probability$certified_lower_probability %||% NA_real_,
+          point_estimate_probability =
+            cal$scan_probability$probability_estimate %||% NA_real_,
+          n_sim_total = cal$scan_probability$n_sim %||% NA_integer_,
+          terminal_exact_probability =
+            terminal$certified_lower_probability,
+          terminal_certifies =
+            terminal$certified_lower_probability + 1e-12 >= gamma,
+          interior_window_available = !infeasible && retained < n,
+          infeasible = infeasible,
+          structural_status = status,
+          calibration_digest = cal$calibration_digest %||% NA_character_,
+          message = cal$message %||% "",
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+  }
+  out <- do.call(rbind, rows)
+  rownames(out) <- NULL
+  out
+}
+
+#' TCSP scan-calibration seed-stability audit
+#'
+#' Repeats scan-only calibration over independent seeds and records the selected
+#' retained count for each cell.  This diagnoses Monte Carlo calibration
+#' stability without fitting interval models.
+#'
+#' @param seeds Integer seeds.
+#' @inheritParams rqr_tcsp_calibration_boundary_map
+#' @return A data frame with one row per cell and seed.
+#' @export
+rqr_tcsp_calibration_stability <- function(
+    sample_sizes, guaranteed_contents, tolerance_confidences, seeds,
+    method = c("monte_carlo_cp_adaptive", "monte_carlo_conservative",
+               "dkw_conservative"),
+    n_sim = 20000L, numerical_confidence = 0.999,
+    adaptive_control = list()) {
+  seeds <- as.integer(seeds)
+  if (!length(seeds) || any(!is.finite(seeds))) {
+    stop("seeds must contain at least one finite integer seed.",
+         call. = FALSE)
+  }
+  rows <- vector("list", length(seeds))
+  for (ii in seq_along(seeds)) {
+    one <- rqr_tcsp_calibration_boundary_map(
+      sample_sizes = sample_sizes,
+      guaranteed_contents = guaranteed_contents,
+      tolerance_confidences = tolerance_confidences,
+      method = method,
+      n_sim = n_sim,
+      numerical_confidence = numerical_confidence,
+      seed = seeds[[ii]],
+      adaptive_control = adaptive_control
+    )
+    one$seed <- seeds[[ii]]
+    rows[[ii]] <- one
+  }
+  out <- do.call(rbind, rows)
+  out <- out[order(out$n, out$guaranteed_content,
+                   out$tolerance_confidence, out$seed), , drop = FALSE]
+  rownames(out) <- NULL
   out
 }
 
