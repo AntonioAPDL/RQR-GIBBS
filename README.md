@@ -95,9 +95,10 @@ not an EM algorithm for a response likelihood, does not return posterior
 draws, and does not create tolerance validity.
 
 The TCSP scan layer currently exposes canonical `tcsp_*` helpers for
-conservative scan calibration, canonical closed-window selection,
-shortest-path tilt metadata, path continuation diagnostics, and
-action-contract validation. `tcsp_plugin_mti_fit()` names the fixed-target MTI
+adaptive Clopper-Pearson and conservative scan calibration, canonical
+closed-window selection, shortest-path tilt metadata, path continuation
+diagnostics, and action-contract validation. `tcsp_plugin_mti_fit()` names the
+fixed-target MTI
 plug-in path. `tcsp_hybrid_bayes_fit()` is the authoritative
 full-distribution Bayesian UQ interface. The direct-DP helpers are `dp_*`; the
 smooth DPM helpers are `dpm_*`; and `bayesian_bootstrap_shortest_draws()` is a
