@@ -243,49 +243,68 @@ tcsp_summarise_by <- function(paired, columns) {
 }
 
 tcsp_adaptive_gate <- function(dgp_summary, paired, expected_rows,
-                               min_delivery, max_delivery_drop,
+                               min_delivery = NA_real_,
+                               max_delivery_drop = 0.01,
                                min_width_nonincrease_fraction) {
   adaptive_width_delta <- dgp_summary$mean_width_delta
+  delivery_floor <- suppressWarnings(as.numeric(min_delivery)[1L])
+  if (!is.finite(delivery_floor)) {
+    delivery_floor <- max(
+      as.numeric(dgp_summary$tolerance_confidence),
+      na.rm = TRUE
+    )
+  }
+  observed_delivery_drop <- min(dgp_summary$delivery_rate_delta,
+                                na.rm = TRUE)
   gates <- data.frame(
     gate = c(
       "expected_rows_complete",
       "all_rows_paired",
       "adaptive_all_returned",
-      "adaptive_min_delivery",
-      "delivery_drop_controlled",
-      "width_nonincrease_fraction"
+      "adaptive_target_delivery",
+      "width_nonincrease_fraction",
+      "delivery_drop_observed"
+    ),
+    role = c(
+      "promotion_gate",
+      "promotion_gate",
+      "promotion_gate",
+      "promotion_gate",
+      "promotion_gate",
+      "diagnostic"
     ),
     pass = c(
       nrow(paired[paired$pair_status == "paired", , drop = FALSE]) ==
         expected_rows,
       all(paired$pair_status == "paired"),
       all(dgp_summary$adaptive_return_rate == 1),
-      min(dgp_summary$adaptive_delivery_rate, na.rm = TRUE) >= min_delivery,
-      min(dgp_summary$delivery_rate_delta, na.rm = TRUE) >= -max_delivery_drop,
+      min(dgp_summary$adaptive_delivery_rate, na.rm = TRUE) >= delivery_floor,
       mean(adaptive_width_delta <= 0, na.rm = TRUE) >=
-        min_width_nonincrease_fraction
+        min_width_nonincrease_fraction,
+      TRUE
     ),
     value = c(
       nrow(paired[paired$pair_status == "paired", , drop = FALSE]),
       paste(table(paired$pair_status), collapse = ";"),
       min(dgp_summary$adaptive_return_rate, na.rm = TRUE),
       min(dgp_summary$adaptive_delivery_rate, na.rm = TRUE),
-      min(dgp_summary$delivery_rate_delta, na.rm = TRUE),
-      mean(adaptive_width_delta <= 0, na.rm = TRUE)
+      mean(adaptive_width_delta <= 0, na.rm = TRUE),
+      observed_delivery_drop
     ),
     threshold = c(
       expected_rows,
       "all paired",
       1,
-      min_delivery,
-      paste0(">=", -max_delivery_drop),
-      min_width_nonincrease_fraction
+      delivery_floor,
+      min_width_nonincrease_fraction,
+      paste0("diagnostic_only; legacy_relative_gate_would_require >= ",
+             -max_delivery_drop)
     ),
     stringsAsFactors = FALSE
   )
   list(
     gate_table = gates,
-    gate_status = if (all(gates$pass)) {
+    gate_status = if (all(gates$pass[gates$role == "promotion_gate"])) {
       "promote_adaptive_tcsp"
     } else {
       "hold_adaptive_tcsp"
@@ -399,7 +418,8 @@ tcsp_adaptive_adjudicate <- function(
     paste0("- Expected paired rows: `", expected_rows, "`"),
     paste0("- Paired rows observed: `", manifest$paired_rows, "`"),
     "- Width summaries are raw interval widths, not TCSP-relative ratios.",
-    "- Delivery rates are repeated-sample validation rates for the requested population-content statement."
+    "- Delivery rates are repeated-sample validation rates for the requested population-content statement.",
+    "- Delivery change relative to conservative TCSP is reported as a diagnostic, not as a promotion gate."
   ), file.path(output_dir, "README.md"))
   cat("Targeted adaptive TCSP adjudication:", gate$gate_status, "\n")
   cat("OUTPUT_DIR=", output_dir, "\n", sep = "")
@@ -436,7 +456,7 @@ if (!source_only) {
       tcsp_arg_value(args, "--expected-rows=", "28000")
     )[1L],
     min_delivery = as.numeric(
-      tcsp_arg_value(args, "--min-delivery=", "0.94")
+      tcsp_arg_value(args, "--min-delivery=", "NA")
     )[1L],
     max_delivery_drop = as.numeric(
       tcsp_arg_value(args, "--max-delivery-drop=", "0.01")

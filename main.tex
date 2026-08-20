@@ -1385,10 +1385,13 @@ they are not part of the main validation comparison.
 
 \paragraph{Numerical certification and proof scope.}
 Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
-reported interval. The numerical procedure uses Monte Carlo calibration of
-the uniform scan distribution with a simultaneous
-Massart--DKW empirical-CDF lower band for \(\Pr\{M_n(c)<k\}\) across all
-candidate retained counts, together with a conservative Massart--DKW fallback
+reported interval. The article-facing implementation uses adaptive Monte Carlo
+calibration of the uniform scan distribution. At each look, one-sided
+Clopper--Pearson lower bounds are Bonferroni-adjusted over feasible retained
+counts and adaptive looks, and the first retained count whose certified lower
+probability reaches \(1-\alpha\) is selected. The terminal full-range candidate
+uses its exact order-statistic probability. A more conservative
+Massart--DKW empirical-CDF lower band remains available as a fallback
 \citep{Massart1990DKW}. Exact scan recursion remains an open numerical task.
 Accordingly, exact critical-count calculation and the finite-sample theorem for
 this closed-window action are treated as open proof and certification tasks.
@@ -1400,9 +1403,10 @@ inference, the empirical closed order-statistic window is the formal action;
 generalized-posterior summaries for fixed \((q,\delta)\) describe endpoint-root
 uncertainty after a target has been declared and do not serve as the
 content--confidence certificate. Split exact-spacing calibration has an exact
-conditional iid univariate Beta law. The scan count is computed conservatively
-by the numerical procedure above, with numerical confidence recorded separately
-from tolerance confidence. Direct DP and Gaussian DPM intervals are ordinary
+conditional iid univariate Beta law. The scan count is certified by the
+adaptive Clopper--Pearson numerical procedure above, with numerical confidence
+recorded separately from tolerance confidence. Direct DP and Gaussian DPM
+intervals are ordinary
 response-distribution Bayesian alternatives, not MTI generalized posteriors.
 Exact scan recursion, an action-matched finite-sample proof for the closed
 window convention, selected-action asymptotics, posterior-to-action transfer,
@@ -1512,9 +1516,13 @@ requested statement in those cells. The \(c=0.99\) rows begin at \(n=500\), the
 nearest rounded sample size above the \(n=473\) threshold.
 
 The method set is intentionally narrow. TCSP is the formal scan-calibrated
-shortest empirical action and is therefore the primary tolerance action. Its
-optimality is class-specific: it minimizes width among closed order-statistic
-windows satisfying the calibrated retained-count rule. Young--Mathew
+shortest empirical action and is therefore the primary tolerance action. The
+reported TCSP rows use the adaptive Clopper--Pearson scan calibration described
+above. This calibration reduced the retained count by one in four large-sample
+cells relative to the initial conservative scan calibration and left the other
+cells unchanged. Its optimality is class-specific: it minimizes width among
+closed order-statistic windows satisfying the calibrated retained-count rule.
+Young--Mathew
 interpolation
 \citep{YoungMathew2014NonparametricTolerance} and Wilks min--max intervals
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction} provide the
@@ -1559,16 +1567,18 @@ the values remain raw interval lengths.}
 \label{fig:tolerance-validation-width-ranges}
 \end{figure}
 
-In the completed run, TCSP delivery ranges from 95.0\% to 99.7\% across
+In the completed run, TCSP delivery ranges from 95.0\% to 99.6\% across
 DGP-level cells, compared with 94.1\% to 98.2\% for Young--Mathew and 95.0\%
 to 100.0\% for Wilks. Figures~\ref{fig:tolerance-validation-primary}
 and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
 pooling widths across distributional scenarios. The calibrated scan action
-targets the requested finite-sample statement directly. Young--Mathew is a
-strong nonparametric comparator and can be slightly narrower in some skewed or
-boundary cells. Wilks is simple and conservative at lower contents, but it can
-be substantially wider when the scan calibration does not force the full sample
-range.
+targets the requested finite-sample statement directly. The adaptive
+calibration sharpens TCSP where the scan evidence supports a smaller retained
+count, while preserving empirical delivery above the nominal tolerance
+confidence in every DGP-level cell. Young--Mathew is a strong nonparametric
+comparator and can be slightly narrower in some skewed or boundary cells. Wilks
+is simple and conservative at lower contents, but it can be substantially wider
+when the scan calibration does not force the full sample range.
 
 The supplement gives the DGP-level delivery and width tables behind these
 summaries, together with the TCSP retained counts and full-range feasibility

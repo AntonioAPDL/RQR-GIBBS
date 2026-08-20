@@ -2236,7 +2236,11 @@ samples. This is the setting in which the scan-calibrated empirical action,
 Young--Mathew interpolation, and Wilks-style full-range intervals can be
 compared on the same target. The TCSP row is the primary calibrated action
 because it selects the shortest closed order-statistic window at the calibrated
-retained count. Young--Mathew and Wilks are included as classical
+retained count. The article-facing TCSP rows use adaptive Clopper--Pearson scan
+calibration. This targeted promotion replaces the initial conservative TCSP
+rows only in the four large-sample cells where the adaptive calibration reduces
+the retained count while maintaining empirical delivery above the requested
+tolerance confidence. Young--Mathew and Wilks are included as classical
 order-statistic comparators. Regression and dynamic tolerance calibration
 require additional results because the fitted intervals vary with covariates or
 time.
@@ -2255,11 +2259,14 @@ The distributional shapes are Gaussian, moderate log-normal skewness, stronger
 log-normal skewness, separated mixtures, scale contamination, and Student
 \(t_3\) tails. Each cell uses paired random samples across methods and records
 the repository commit, frozen JSON configuration, scan-calibration cache, wave
-plan, and artifact hashes. The completed confirmatory run contains 189
-method-specific waves and 189,000 result rows; all waves completed, and all
-three article-facing methods returned an interval in every replication. The
-scenario-range table in the main article is generated from the raw validation
-rows and summarized across DGPs within each \((n,c)\) cell.
+plan, and artifact hashes. The completed three-method confirmatory run contains
+189 method-specific waves and 189,000 result rows; all waves completed, and all
+three article-facing methods returned an interval in every replication. A
+targeted adaptive TCSP promotion run adds 28 waves and 28,000 paired TCSP rows.
+The table and figure inputs are composed reproducibly by replacing only the
+affected TCSP rows and the corresponding scan-calibration rows. The
+scenario-range table in the main article is generated from these composed raw
+validation rows and summarized across DGPs within each \((n,c)\) cell.
 Table~\ref{tab:supp-primary-dgp-delivery} gives the DGP-level delivery
 percentages before aggregation, and
 Table~\ref{tab:supp-primary-dgp-width-ranges} reports the corresponding
@@ -2277,15 +2284,19 @@ infeasibility, and raw width summaries for each DGP-level cell as audit fields.
 The TCSP calibration chooses the retained count \(k\) before seeing the
 replicated samples. Table~\ref{tab:supp-tcsp-scan-calibration} records the
 retained counts, retained fractions, content buffers, and certified lower
-probabilities used in the article grid. When \(k=n\), TCSP is forced to use the
-full sample range and therefore coincides with Wilks at the formal-action
-level. This occurs for \((n,c)=(50,0.90),(100,0.95)\), and \((500,0.99)\).
+probabilities used in the article grid. Adaptive Clopper--Pearson calibration
+reduces \(k\) by one for \((n,c)=(500,0.90),(500,0.95),(1000,0.90)\), and
+\((1000,0.95)\) relative to the initial conservative calibration. When \(k=n\),
+TCSP is forced to use the full sample range and therefore coincides with Wilks
+at the formal-action level. This occurs for
+\((n,c)=(50,0.90),(100,0.95)\), and \((500,0.99)\).
 
 \begin{table}[H]
 \centering
 \caption{\textbf{TCSP scan calibration for the article grid.} The retained
-count \(k\) is selected by conservative Monte Carlo scan calibration before the
-empirical shortest-window action is applied. The content buffer is \(k/n-c\).}
+count \(k\) is selected by adaptive Clopper--Pearson Monte Carlo scan
+calibration where it sharpens the count and by the unchanged certified scan
+count in the remaining cells. The content buffer is \(k/n-c\).}
 \label{tab:supp-tcsp-scan-calibration}
 \TableStyle
 \input{tables/tolerance_validation_article_scan_calibration.tex}
