@@ -8,15 +8,12 @@ on.exit(unlink(work_dir, recursive = TRUE, force = TRUE), add = TRUE)
 
 methods <- c(
   "tcsp_mc",
-  "hdp_s_mc",
-  "tcsp_mti_ecm_map_mc",
   "young_mathew",
-  "wilks_minmax",
-  "tcsp_dkw"
+  "wilks_minmax"
 )
 summary <- expand.grid(
   method_id = methods,
-  n = c(500L, 1000L),
+  n = c(50L, 500L, 1000L),
   c = c(0.90, 0.99),
   KEEP.OUT.ATTRS = FALSE,
   stringsAsFactors = FALSE
@@ -28,13 +25,6 @@ summary$success_rate <- 0.96
 summary$success_gap_vs_095 <- 0.01
 summary$mean_content_gap <- 0.02
 summary$median_width <- 1
-summary$infeasible_rate[
-  summary$method_id == "tcsp_dkw" & summary$n == 500L & summary$c == 0.99
-] <- 1
-summary$success_rate[
-  summary$method_id == "tcsp_dkw" & summary$n == 500L & summary$c == 0.99
-] <- NA_real_
-
 summary_path <- file.path(work_dir, "summary.csv")
 utils::write.csv(summary, summary_path, row.names = FALSE)
 out_dir <- file.path(work_dir, "out")
@@ -54,28 +44,26 @@ if (!identical(attr(status, "status"), NULL)) {
 
 csv_path <- file.path(out_dir, "tolerance_validation_by_n_content.csv")
 tex_path <- file.path(out_dir, "tolerance_validation_by_n_content.tex")
+tex_50_path <- file.path(out_dir, "tolerance_validation_by_n_50_content.tex")
 tex_500_path <- file.path(out_dir, "tolerance_validation_by_n_500_content.tex")
 tex_1000_path <- file.path(out_dir, "tolerance_validation_by_n_1000_content.tex")
 stopifnot(file.exists(csv_path), file.exists(tex_path))
-stopifnot(file.exists(tex_500_path), file.exists(tex_1000_path))
+stopifnot(file.exists(tex_50_path), file.exists(tex_500_path),
+          file.exists(tex_1000_path))
 
 tab <- utils::read.csv(csv_path, stringsAsFactors = FALSE)
-stopifnot(nrow(tab) == length(methods) * 4L)
+stopifnot(nrow(tab) ==
+            length(methods) * length(unique(summary$n)) *
+            length(unique(summary$c)))
+stopifnot(!"hdp_s_mc" %in% tab$method_id)
 stopifnot(!"tcsp_mti_gibbs_median_mc" %in% tab$method_id)
+stopifnot(!"tcsp_mti_ecm_map_mc" %in% tab$method_id)
+stopifnot(!"tcsp_dkw" %in% tab$method_id)
 stopifnot(!"width_q025" %in% names(tab))
 stopifnot(!"width_q975" %in% names(tab))
 stopifnot(!"median_width" %in% names(tab))
 stopifnot(!"median_width_ratio_to_tcsp" %in% names(tab))
 stopifnot(!"median_elapsed_sec" %in% names(tab))
-closed <- tab[
-  tab$method_id == "tcsp_dkw" & tab$n == 500L & tab$content == 0.99,
-  ,
-  drop = FALSE
-]
-stopifnot(nrow(closed) == 1L)
-stopifnot(identical(closed$delivery_success, 0))
-stopifnot(is.na(closed$returned_success))
-
 tex <- paste(readLines(tex_path, warn = FALSE), collapse = "\n")
 stopifnot(grepl("Sample size", tex, fixed = TRUE))
 stopifnot(grepl("Returned success", tex, fixed = TRUE))

@@ -61,17 +61,18 @@ RQR_BAYES_UQ_VALIDATION_DIR ?= application/outputs/rqr_bayes_uq_validation_v1
 RQR_BAYES_UQ_VALIDATION_SMOKE_DIR ?= $(RQR_BAYES_UQ_VALIDATION_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
 RQR_BAYES_UQ_VALIDATION_MODERATE_DIR ?= $(RQR_BAYES_UQ_VALIDATION_DIR)/moderate_$(shell date -u +%Y%m%dT%H%M%SZ)
 RQR_BAYES_UQ_VALIDATION_RUN_DIR ?=
-RQR_BAYES_UQ_MAIN_CONFIG ?= application/config/rqr_bayes_uq_validation_main_3method_1000_20260819.json
-RQR_BAYES_UQ_MAIN_DIR ?= application/outputs/rqr_bayes_uq_validation_main_3method_1000_20260819
+RQR_BAYES_UQ_MAIN_CONFIG ?= application/config/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820.json
+RQR_BAYES_UQ_MAIN_DIR ?= application/outputs/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820
 RQR_BAYES_UQ_MAIN_SMOKE_DIR ?= $(RQR_BAYES_UQ_MAIN_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
 RQR_BAYES_UQ_MAIN_RUN_DIR ?=
-RQR_BAYES_UQ_MAIN_WAVE_RUN_ROOT ?= application/runs/rqr_bayes_uq_validation_main_3method_1000_20260819
-RQR_BAYES_UQ_MAIN_WAVE_MAX_CONCURRENT ?= 6
+RQR_BAYES_UQ_MAIN_WAVE_RUN_ROOT ?= application/runs/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820
+RQR_BAYES_UQ_MAIN_WAVE_MAX_CONCURRENT ?= 40
 RQR_BAYES_UQ_MAIN_WAVE_POLL_SECONDS ?= 60
 RQR_BAYES_UQ_REFINED_CONFIG ?= application/config/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820.json
 RQR_BAYES_UQ_REFINED_DIR ?= application/outputs/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820
 RQR_BAYES_UQ_REFINED_SMOKE_DIR ?= $(RQR_BAYES_UQ_REFINED_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
-RQR_BAYES_UQ_REFINED_RUN_DIR ?=
+RQR_BAYES_UQ_REFINED_COMPLETED_RUN_DIR ?= application/runs/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820/wave_confirmatory_refined_dgps_20260820T221539Z
+RQR_BAYES_UQ_REFINED_RUN_DIR ?= $(RQR_BAYES_UQ_REFINED_COMPLETED_RUN_DIR)
 RQR_BAYES_UQ_REFINED_WAVE_RUN_ROOT ?= application/runs/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820
 RQR_BAYES_UQ_REFINED_WAVE_RUN_ID ?= wave_confirmatory_refined_dgps_$(shell date -u +%Y%m%dT%H%M%SZ)
 RQR_BAYES_UQ_REFINED_WAVE_MAX_CONCURRENT ?= 40
@@ -84,15 +85,15 @@ RQR_BAYES_UQ_FOLLOWUP_WAVE_RUN_ROOT ?= application/runs/rqr_bayes_uq_followup_20
 RQR_BAYES_UQ_FOLLOWUP_WAVE_MODE ?= small_sample_95
 RQR_BAYES_UQ_FOLLOWUP_WAVE_MAX_CONCURRENT ?= 40
 RQR_BAYES_UQ_FOLLOWUP_WAVE_POLL_SECONDS ?= 60
-RQR_BAYES_UQ_PRIMARY_RUN_DIR ?= application/runs/rqr_bayes_uq_validation_main_3method_1000_20260819/wave_confirmatory_3method1000_20260819T090047Z
+RQR_BAYES_UQ_PRIMARY_RUN_DIR ?= $(RQR_BAYES_UQ_REFINED_COMPLETED_RUN_DIR)
 RQR_BAYES_UQ_ADAPTIVE_TCSP_RUN_DIR ?= application/runs/rqr_bayes_uq_validation_tcsp_adaptive_targeted_20260820/wave_confirmatory_tcsp_adaptive_targeted_20260820T071540Z
 RQR_BAYES_UQ_ARTICLE_COMPOSITE_DIR ?= application/outputs/rqr_bayes_uq_validation_article_adaptive_tcsp_20260820
-RQR_BAYES_UQ_PRIMARY_SUMMARY ?= application/runs/rqr_bayes_uq_validation_main_20260813/wave_main_20260813T103232Z/final_combined_grid_complete_method_summary_with_young_mathew.csv
-RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT ?= application/runs/rqr_bayes_uq_validation_main_20260813/wave_main_20260813T103232Z/final_combined_method_by_n_content_with_young_mathew.csv
-RQR_BAYES_UQ_PRIMARY_RESULTS ?= $(RQR_BAYES_UQ_ARTICLE_COMPOSITE_DIR)/bayes_uq_validation_results.csv
+RQR_BAYES_UQ_PRIMARY_SUMMARY ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/bayes_uq_validation_summary.csv
+RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/bayes_uq_validation_summary.csv
+RQR_BAYES_UQ_PRIMARY_RESULTS ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/bayes_uq_validation_results.csv
 RQR_BAYES_UQ_PRIMARY_YM_RESULTS ?=
 RQR_BAYES_UQ_SMALL95_RESULTS ?=
-RQR_BAYES_UQ_SCAN_CALIBRATION ?= $(RQR_BAYES_UQ_ARTICLE_COMPOSITE_DIR)/scan_calibration_summary.csv
+RQR_BAYES_UQ_SCAN_CALIBRATION ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/scan_calibration_summary.csv
 RQR_TOLERANCE_ADJUDICATION_MAIN_RUN_DIR ?=
 RQR_TOLERANCE_ADJUDICATION_ECM_RUN_DIR ?= application/runs/rqr_bayes_uq_followup_20260816/wave_ecm200_audit_20260817T005025Z
 RQR_TOLERANCE_ADJUDICATION_SMALL95_RUN_DIR ?= application/runs/rqr_bayes_uq_followup_20260816/wave_small_sample_95_20260817T005145Z
@@ -127,12 +128,12 @@ RQR_DLM_M02_CANARY_OUTPUT_ROOT ?=
 tolerance-validation-adaptive-article-inputs:
 	$(R) application/scripts/81_compose_adaptive_tcsp_article_inputs.R --baseline-run-dir=$(RQR_BAYES_UQ_PRIMARY_RUN_DIR) --adaptive-run-dir=$(RQR_BAYES_UQ_ADAPTIVE_TCSP_RUN_DIR) --output-dir=$(RQR_BAYES_UQ_ARTICLE_COMPOSITE_DIR) --overwrite=true
 
-theory-figures: tolerance-validation-adaptive-article-inputs
+theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
 
-theory-tables: tolerance-validation-adaptive-article-inputs
+theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --results-csv=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_stratified_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT) --results-csv=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
@@ -143,12 +144,12 @@ theory-tables: tolerance-validation-adaptive-article-inputs
 model-illustration-figures:
 	$(R) figures/generate_oracle_tilt_model_figures.R --evidence-dir=$(ORACLE_TILT_EVIDENCE_DIR) --output-dir=$(THEORY_FIGURE_DIR) --table-dir=$(THEORY_TABLE_DIR)
 
-test-theory-figures: tolerance-validation-adaptive-article-inputs
+test-theory-figures:
 	$(R) figures/test_rqr_theory_figure_oracles.R
 	$(R) figures/test_tolerance_validation_primary_figure.R
 	$(R) figures/test_tolerance_validation_width_figure.R
 
-test-theory-tables: tolerance-validation-adaptive-article-inputs
+test-theory-tables:
 	$(R) tables/test_mean_tilt_cf_mini_study_table.R
 	$(R) tables/test_tolerance_validation_summary_table.R
 	$(R) tables/test_tolerance_validation_stratified_table.R

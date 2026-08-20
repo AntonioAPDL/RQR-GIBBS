@@ -16,6 +16,7 @@ arg_value <- function(prefix, default = NULL) {
   hit <- args[startsWith(args, prefix)]
   if (length(hit)) sub(prefix, "", hit[[1L]], fixed = TRUE) else default
 }
+arg_present <- function(prefix) any(startsWith(args, prefix))
 stopf <- function(...) stop(paste0(...), call. = FALSE)
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
@@ -84,10 +85,18 @@ if (!action %in% allowed_actions) {
   stopf("Unsupported Bayesian UQ wave action: ", action)
 }
 mode <- tolower(arg_value("--mode=", "confirmatory"))
-config_path <- normalizePath(arg_value(
-  "--config=", file.path("application", "config",
-                         "rqr_bayes_uq_validation_main_20260813.json")
-), winslash = "/", mustWork = TRUE)
+run_dir_arg <- arg_value("--run-dir=", NULL)
+default_config_path <- file.path(
+  "application", "config", "rqr_bayes_uq_validation_main_20260813.json"
+)
+config_path_raw <- arg_value("--config=", default_config_path)
+if (!arg_present("--config=") && !is.null(run_dir_arg)) {
+  frozen_config_path <- file.path(run_dir_arg, "config_frozen.json")
+  if (file.exists(frozen_config_path)) {
+    config_path_raw <- frozen_config_path
+  }
+}
+config_path <- normalizePath(config_path_raw, winslash = "/", mustWork = TRUE)
 run_root <- normalizePath(arg_value(
   "--run-root=", file.path("application", "runs",
                            "rqr_bayes_uq_validation_main_20260813")
@@ -96,7 +105,6 @@ run_id <- arg_value(
   "--run-id=", paste0("wave_main_", format(Sys.time(), "%Y%m%dT%H%M%SZ",
                                            tz = "UTC"))
 )
-run_dir_arg <- arg_value("--run-dir=", NULL)
 max_concurrent <- as.integer(arg_value("--max-concurrent=", "6"))[1L]
 poll_seconds <- as.integer(arg_value("--poll-seconds=", "60"))[1L]
 require_clean <- !identical(tolower(arg_value("--require-clean=", "true")),

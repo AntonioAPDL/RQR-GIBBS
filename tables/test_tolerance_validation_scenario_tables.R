@@ -175,7 +175,7 @@ tex <- paste(readLines(
   warn = FALSE
 ), collapse = "\n")
 stopifnot(grepl("Delivery range", tex, fixed = TRUE))
-stopifnot(grepl("\\begin{tabular}{@{}l@{\\hspace{1.35em}}l",
+stopifnot(grepl("\\begin{tabular}{@{}l@{\\hspace{0.75em}}l",
                 tex, fixed = TRUE))
 stopifnot(!grepl("\\begin{tabularx}", tex, fixed = TRUE))
 stopifnot(!grepl("Returned-success range", tex, fixed = TRUE))

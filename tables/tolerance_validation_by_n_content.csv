@@ -1,37 +1,28 @@
 "n","content","method_id","method","infeasible_rate","delivery_success","returned_success"
-500,0.9,"tcsp_mc","TCSP scan",0,0.99,0.99
-500,0.9,"hdp_s_mc","Hybrid DP--scan",0,0.99,0.99
-500,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",0,0.99,0.99
-500,0.9,"young_mathew","Young--Mathew",0,0.961428571428571,0.961428571428571
+50,0.9,"tcsp_mc","TCSP scan",0,0.967875,0.967875
+50,0.9,"young_mathew","Young--Mathew",0,0.96225,0.96225
+50,0.9,"wilks_minmax","Wilks min--max",0,0.967875,0.967875
+100,0.9,"tcsp_mc","TCSP scan",0,0.989,0.989
+100,0.9,"young_mathew","Young--Mathew",0,0.968,0.968
+100,0.9,"wilks_minmax","Wilks min--max",0,1,1
+100,0.95,"tcsp_mc","TCSP scan",0,0.96225,0.96225
+100,0.95,"young_mathew","Young--Mathew",0,0.95675,0.95675
+100,0.95,"wilks_minmax","Wilks min--max",0,0.96225,0.96225
+500,0.9,"tcsp_mc","TCSP scan",0,0.980625,0.980625
+500,0.9,"young_mathew","Young--Mathew",0,0.955125,0.955125
 500,0.9,"wilks_minmax","Wilks min--max",0,1,1
-500,0.9,"tcsp_dkw","DKW scan",1,0,NA
-500,0.95,"tcsp_mc","TCSP scan",0,0.994285714285714,0.994285714285714
-500,0.95,"hdp_s_mc","Hybrid DP--scan",0,0.994285714285714,0.994285714285714
-500,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",0,0.994285714285714,0.994285714285714
-500,0.95,"young_mathew","Young--Mathew",0,0.974285714285714,0.974285714285714
+500,0.95,"tcsp_mc","TCSP scan",0,0.979875,0.979875
+500,0.95,"young_mathew","Young--Mathew",0,0.96125,0.96125
 500,0.95,"wilks_minmax","Wilks min--max",0,1,1
-500,0.95,"tcsp_dkw","DKW scan",1,0,NA
-500,0.99,"tcsp_mc","TCSP scan",0,0.961428571428571,0.961428571428571
-500,0.99,"hdp_s_mc","Hybrid DP--scan",0,0.961428571428571,0.961428571428571
-500,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",1,0,NA
-500,0.99,"young_mathew","Young--Mathew",0,0.951428571428571,0.951428571428571
-500,0.99,"wilks_minmax","Wilks min--max",0,0.961428571428571,0.961428571428571
-500,0.99,"tcsp_dkw","DKW scan",1,0,NA
-1000,0.9,"tcsp_mc","TCSP scan",0,0.998571428571429,0.998571428571429
-1000,0.9,"hdp_s_mc","Hybrid DP--scan",0,0.998571428571429,0.998571428571429
-1000,0.9,"tcsp_mti_ecm_map_mc","MTI ECM",0,0.998571428571429,0.998571428571429
-1000,0.9,"young_mathew","Young--Mathew",0,0.971428571428571,0.971428571428571
+500,0.99,"tcsp_mc","TCSP scan",0,0.95925,0.95925
+500,0.99,"young_mathew","Young--Mathew",0,0.955125,0.955125
+500,0.99,"wilks_minmax","Wilks min--max",0,0.95925,0.95925
+1000,0.9,"tcsp_mc","TCSP scan",0,0.987625,0.987625
+1000,0.9,"young_mathew","Young--Mathew",0,0.957,0.957
 1000,0.9,"wilks_minmax","Wilks min--max",0,1,1
-1000,0.9,"tcsp_dkw","DKW scan",0,1,1
-1000,0.95,"tcsp_mc","TCSP scan",0,0.991428571428571,0.991428571428571
-1000,0.95,"hdp_s_mc","Hybrid DP--scan",0,0.991428571428571,0.991428571428571
-1000,0.95,"tcsp_mti_ecm_map_mc","MTI ECM",0,0.991428571428571,0.991428571428571
-1000,0.95,"young_mathew","Young--Mathew",0,0.954285714285714,0.954285714285714
+1000,0.95,"tcsp_mc","TCSP scan",0,0.986875,0.986875
+1000,0.95,"young_mathew","Young--Mathew",0,0.955375,0.955375
 1000,0.95,"wilks_minmax","Wilks min--max",0,1,1
-1000,0.95,"tcsp_dkw","DKW scan",1,0,NA
-1000,0.99,"tcsp_mc","TCSP scan",0,0.987142857142857,0.987142857142857
-1000,0.99,"hdp_s_mc","Hybrid DP--scan",0,0.987142857142857,0.987142857142857
-1000,0.99,"tcsp_mti_ecm_map_mc","MTI ECM",0,0.987142857142857,0.987142857142857
-1000,0.99,"young_mathew","Young--Mathew",0,0.972857142857143,0.972857142857143
-1000,0.99,"wilks_minmax","Wilks min--max",0,0.998571428571429,0.998571428571429
-1000,0.99,"tcsp_dkw","DKW scan",1,0,NA
+1000,0.99,"tcsp_mc","TCSP scan",0,0.9855,0.9855
+1000,0.99,"young_mathew","Young--Mathew",0,0.964875,0.964875
+1000,0.99,"wilks_minmax","Wilks min--max",0,0.99975,0.99975

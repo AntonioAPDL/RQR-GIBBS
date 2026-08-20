@@ -20,8 +20,8 @@ setwd(repo_root)
 
 default_primary_dir <- file.path(
   "application", "runs",
-  "rqr_bayes_uq_validation_main_3method_1000_20260819",
-  "wave_confirmatory_3method1000_20260819T090047Z"
+  "rqr_bayes_uq_validation_main_3method_refined_dgps_20260820",
+  "wave_confirmatory_refined_dgps_20260820T221539Z"
 )
 primary_results <- arg_value(
   "--primary-results=",

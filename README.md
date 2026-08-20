@@ -159,7 +159,9 @@ It compares TCSP, Young--Mathew, and Wilks over the feasible iid tolerance grid
 using the refined non-separated DGP panel. Use
 `make launch-rqr-bayes-uq-refined` for the 40-worker launch, and pass
 `RQR_BAYES_UQ_REFINED_RUN_DIR=<run_dir>` to the matching health, collect, and
-stop targets.
+stop targets. The article-facing validation artifacts currently point to the
+completed run
+`application/runs/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820/wave_confirmatory_refined_dgps_20260820T221539Z`.
 
 The 95% single-data oracle-tilt illustrations are rendered from the corrected
 version-5 compact evidence bundle under

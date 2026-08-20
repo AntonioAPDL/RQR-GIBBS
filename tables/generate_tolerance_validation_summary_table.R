@@ -19,13 +19,13 @@ repo_root <- normalizePath(file.path(dirname(script_path), ".."),
 setwd(repo_root)
 
 default_run_dir <- file.path(
-  "application", "runs", "rqr_bayes_uq_validation_main_20260813",
-  "wave_main_20260813T103232Z"
+  "application", "runs",
+  "rqr_bayes_uq_validation_main_3method_refined_dgps_20260820",
+  "wave_confirmatory_refined_dgps_20260820T221539Z"
 )
 default_summary_path <- Sys.getenv(
   "RQR_BAYES_UQ_PRIMARY_SUMMARY",
-  unset = file.path(default_run_dir,
-                    "final_combined_grid_complete_method_summary_with_young_mathew.csv")
+  unset = file.path(default_run_dir, "bayes_uq_validation_summary.csv")
 )
 summary_path_arg <- arg_value("--summary-csv=", default_summary_path)
 output_dir <- normalizePath(arg_value("--output-dir=", "tables"),
@@ -54,37 +54,67 @@ if (!file.exists(summary_path_arg)) {
 
 summary_path <- normalizePath(summary_path_arg, winslash = "/", mustWork = TRUE)
 
-summary <- utils::read.csv(summary_path, stringsAsFactors = FALSE,
-                           check.names = FALSE)
-required <- c(
-  "method_id", "dataset_thresholds", "infeasible_rate",
-  "conditional_success", "grid_delivery_success"
-)
-missing <- setdiff(required, names(summary))
-if (length(missing)) {
-  stopf("Summary CSV is missing required columns: ", paste(missing, collapse = ", "))
-}
-
 method_order <- c(
   "tcsp_mc",
-  "hdp_s_mc",
   "young_mathew",
   "wilks_minmax"
 )
 labels <- c(
   tcsp_mc = "TCSP scan",
-  hdp_s_mc = "Hybrid DP--scan",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks min--max"
 )
 roles <- c(
   tcsp_mc = "Shortest empirical scan action",
-  hdp_s_mc = "Scan action with direct-DP content screen",
   young_mathew = "Classical interpolated comparator",
   wilks_minmax = "Classical full-range comparator"
 )
 
-selected <- summary[match(method_order, summary$method_id), , drop = FALSE]
+summary <- utils::read.csv(summary_path, stringsAsFactors = FALSE,
+                           check.names = FALSE)
+old_required <- c(
+  "method_id", "dataset_thresholds", "infeasible_rate",
+  "conditional_success", "grid_delivery_success"
+)
+new_required <- c(
+  "method_id", "replications", "infeasible_rate", "success_rate"
+)
+if (all(old_required %in% names(summary))) {
+  selected_summary <- summary[, old_required, drop = FALSE]
+} else if (all(new_required %in% names(summary))) {
+  summary$replications <- as.numeric(summary$replications)
+  summary$infeasible_rate <- as.numeric(summary$infeasible_rate)
+  summary$success_rate <- as.numeric(summary$success_rate)
+  rows <- lapply(split(summary, summary$method_id), function(df) {
+    weights <- df$replications
+    feasible_weights <- weights * pmax(0, 1 - df$infeasible_rate)
+    delivery <- stats::weighted.mean(df$success_rate, weights, na.rm = TRUE)
+    returned <- if (sum(feasible_weights, na.rm = TRUE) > 0) {
+      stats::weighted.mean(df$success_rate, feasible_weights, na.rm = TRUE)
+    } else {
+      NA_real_
+    }
+    data.frame(
+      method_id = df$method_id[[1L]],
+      dataset_thresholds = sum(weights, na.rm = TRUE),
+      infeasible_rate = stats::weighted.mean(
+        df$infeasible_rate, weights, na.rm = TRUE
+      ),
+      conditional_success = returned,
+      grid_delivery_success = delivery,
+      stringsAsFactors = FALSE
+    )
+  })
+  selected_summary <- do.call(rbind, rows)
+} else {
+  missing <- setdiff(new_required, names(summary))
+  stopf("Summary CSV is missing required column(s): ",
+        paste(missing, collapse = ", "))
+}
+
+selected <- selected_summary[
+  match(method_order, selected_summary$method_id), , drop = FALSE
+]
 if (any(is.na(selected$method_id))) {
   stopf("Summary CSV is missing method(s): ",
         paste(method_order[is.na(selected$method_id)], collapse = ", "))

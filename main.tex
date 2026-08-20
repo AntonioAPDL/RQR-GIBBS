@@ -102,7 +102,7 @@ posterior. MTI endpoint summaries diagnose endpoint uncertainty;
 response-predictive draws require a response-distribution layer.
 A prespecified iid validation study at tolerance confidence \(0.95\) compares
 the TCSP scan action with the Young--Mathew and Wilks order-statistic
-competitors across feasible content--sample-size cells and seven
+competitors across feasible content--sample-size cells and eight
 distributional families. The grid excludes cells where even the full sample
 range cannot support the requested two-sided distribution-free statement.
 \end{abstract}
@@ -1495,10 +1495,13 @@ ranking require repeated-sampling validation.
 The main tolerance study is prespecified before inspecting comparative results,
 following simulation-study reporting principles
 \citep{MorrisWhiteCrowther2019Simulation}. It uses iid continuous samples from
-seven standardized data-generating laws: Gaussian, two log-normal skewness
-levels, two separated mixtures, a five-percent scale-contaminated normal, and a
-Student \(t_3\) law. The primary grid fixes tolerance confidence at \(0.95\)
-and uses 1000 paired replications per data-generating law and feasible cell.
+eight centered and scaled data-generating laws: Gaussian, Laplace, Student
+\(t_3\), a five-percent scale-contaminated normal, Gamma\((2,1)\),
+exponential, hard log-normal, and Beta\((5,2)\). This panel separates
+symmetry, heavy tails, skewness, contamination, and bounded support without
+adding multimodal cases that none of the article-facing methods is designed to
+model. The primary grid fixes tolerance confidence at \(0.95\) and uses 1000
+paired replications per data-generating law and feasible cell.
 The feasible cells are \(n=50,c=0.90\), \(n=100,c\in\{0.90,0.95\}\), and
 \(n\in\{500,1000\},c\in\{0.90,0.95,0.99\}\).
 
@@ -1518,10 +1521,8 @@ nearest rounded sample size above the \(n=473\) threshold.
 The method set is intentionally narrow. TCSP is the formal scan-calibrated
 shortest empirical action and is therefore the primary tolerance action. The
 reported TCSP rows use the adaptive Clopper--Pearson scan calibration described
-above. This calibration reduced the retained count by one in four large-sample
-cells relative to the initial conservative scan calibration and left the other
-cells unchanged. Its optimality is class-specific: it minimizes width among
-closed order-statistic windows satisfying the calibrated retained-count rule.
+above. Its optimality is class-specific: it minimizes width among closed
+order-statistic windows satisfying the calibrated retained-count rule.
 Young--Mathew
 interpolation
 \citep{YoungMathew2014NonparametricTolerance} and Wilks min--max intervals
@@ -1537,7 +1538,7 @@ different scales and tail behavior.
 \centering
 \caption{\textbf{Article-facing iid tolerance validation.} Results are shown by
 feasible sample-size/content cell and method. Each row summarizes the range
-across seven data-generating laws at tolerance confidence \(0.95\). All three
+across eight data-generating laws at tolerance confidence \(0.95\). All three
 article-facing methods returned an interval in every replication in this run.}
 \label{tab:tolerance-validation-primary}
 \TableStyle
@@ -1562,21 +1563,23 @@ mark nominal \(0.95\) delivery.}
 2.5\%--97.5\% ranges of returned interval lengths within each DGP,
 sample-size/content cell, and method. Crosses mark the mean returned width
 across the 1000 paired replications. The horizontal axis is logarithmic to
-display light-tailed, skewed, mixture, and heavy-tailed cases in one figure;
+display light-tailed, skewed, contaminated, and heavy-tailed cases in one figure;
 the values remain raw interval lengths.}
 \label{fig:tolerance-validation-width-ranges}
 \end{figure}
 
-In the completed run, TCSP delivery ranges from 95.0\% to 99.6\% across
-DGP-level cells, compared with 94.1\% to 98.2\% for Young--Mathew and 95.0\%
-to 100.0\% for Wilks. Figures~\ref{fig:tolerance-validation-primary}
+In the completed run, TCSP delivery ranges from 95.1\% to 99.6\% across
+DGP-level cells, compared with 94.1\% to 98.5\% for Young--Mathew and 95.1\%
+to 100.0\% for Wilks. The mean returned widths across DGP-level cells are
+5.04 for TCSP, 5.10 for Young--Mathew, and 8.48 for Wilks.
+Figures~\ref{fig:tolerance-validation-primary}
 and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
 pooling widths across distributional scenarios. The calibrated scan action
 targets the requested finite-sample statement directly. The adaptive
-calibration sharpens TCSP where the scan evidence supports a smaller retained
-count, while preserving empirical delivery above the nominal tolerance
-confidence in every DGP-level cell. Young--Mathew is a strong nonparametric
-comparator and can be slightly narrower in some skewed or boundary cells. Wilks
+calibration preserves empirical delivery above the nominal tolerance confidence
+in every DGP-level cell. Young--Mathew is a strong nonparametric comparator and
+can be slightly narrower in some skewed or boundary cells, although it falls
+below nominal delivery in a small number of refined cells. Wilks
 is simple and conservative at lower contents, but it can be substantially wider
 when the scan calibration does not force the full sample range.
 

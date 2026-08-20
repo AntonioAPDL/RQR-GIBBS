@@ -21,9 +21,10 @@ setwd(repo_root)
 default_summary_path <- Sys.getenv(
   "RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT",
   unset = file.path(
-    "application", "runs", "rqr_bayes_uq_validation_main_20260813",
-    "wave_main_20260813T103232Z",
-    "final_combined_method_by_n_content_with_young_mathew.csv"
+    "application", "runs",
+    "rqr_bayes_uq_validation_main_3method_refined_dgps_20260820",
+    "wave_confirmatory_refined_dgps_20260820T221539Z",
+    "bayes_uq_validation_summary.csv"
   )
 )
 summary_path_arg <- arg_value("--summary-csv=", default_summary_path)
@@ -38,6 +39,8 @@ committed_csv <- file.path(repo_root, "tables",
 committed_tex <- file.path(repo_root, "tables",
                            "tolerance_validation_by_n_content.tex")
 per_n_tex_names <- c(
+  "tolerance_validation_by_n_50_content.tex",
+  "tolerance_validation_by_n_100_content.tex",
   "tolerance_validation_by_n_500_content.tex",
   "tolerance_validation_by_n_1000_content.tex"
 )
@@ -66,29 +69,32 @@ summary_path <- normalizePath(summary_path_arg, winslash = "/", mustWork = TRUE)
 summary <- utils::read.csv(summary_path, stringsAsFactors = FALSE,
                            check.names = FALSE)
 required <- c(
-  "method_id", "n", "c", "infeasible_rate", "success_rate"
+  "method_id", "n", "infeasible_rate", "success_rate"
 )
 missing <- setdiff(required, names(summary))
 if (length(missing)) {
   stopf("Stratified summary CSV is missing required columns: ",
         paste(missing, collapse = ", "))
 }
+if (!"c" %in% names(summary)) {
+  if ("guaranteed_content" %in% names(summary)) {
+    summary$c <- summary$guaranteed_content
+  } else if ("content" %in% names(summary)) {
+    summary$c <- summary$content
+  } else {
+    stopf("Stratified summary CSV is missing a content column.")
+  }
+}
 
 method_order <- c(
   "tcsp_mc",
-  "hdp_s_mc",
-  "tcsp_mti_ecm_map_mc",
   "young_mathew",
-  "wilks_minmax",
-  "tcsp_dkw"
+  "wilks_minmax"
 )
 method_labels <- c(
   tcsp_mc = "TCSP scan",
-  hdp_s_mc = "Hybrid DP--scan",
-  tcsp_mti_ecm_map_mc = "MTI ECM",
   young_mathew = "Young--Mathew",
-  wilks_minmax = "Wilks min--max",
-  tcsp_dkw = "DKW scan"
+  wilks_minmax = "Wilks min--max"
 )
 
 selected <- summary[summary$method_id %in% method_order, , drop = FALSE]
@@ -113,6 +119,29 @@ selected$c <- as.numeric(selected$c)
 selected$content <- selected$c
 selected$infeasible_rate <- as.numeric(selected$infeasible_rate)
 selected$success_rate <- as.numeric(selected$success_rate)
+selected$rows <- if ("rows" %in% names(selected)) {
+  as.numeric(selected$rows)
+} else if ("replications" %in% names(selected)) {
+  as.numeric(selected$replications)
+} else {
+  rep(1, nrow(selected))
+}
+group_key <- paste(selected$method_id, selected$n, selected$c, sep = "||")
+selected <- do.call(rbind, lapply(split(selected, group_key), function(df) {
+  weights <- df$rows
+  data.frame(
+    method_id = df$method_id[[1L]],
+    n = df$n[[1L]],
+    c = df$c[[1L]],
+    infeasible_rate = stats::weighted.mean(
+      df$infeasible_rate, weights, na.rm = TRUE
+    ),
+    success_rate = stats::weighted.mean(
+      df$success_rate, weights, na.rm = TRUE
+    ),
+    stringsAsFactors = FALSE
+  )
+}))
 
 feasible_fraction <- pmax(0, 1 - selected$infeasible_rate)
 delivery <- feasible_fraction * selected$success_rate

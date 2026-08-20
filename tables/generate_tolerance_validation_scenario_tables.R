@@ -20,8 +20,8 @@ setwd(repo_root)
 
 default_primary_dir <- file.path(
   "application", "runs",
-  "rqr_bayes_uq_validation_main_3method_1000_20260819",
-  "wave_confirmatory_3method1000_20260819T090047Z"
+  "rqr_bayes_uq_validation_main_3method_refined_dgps_20260820",
+  "wave_confirmatory_refined_dgps_20260820T221539Z"
 )
 default_primary_results <- file.path(default_primary_dir,
                                      "bayes_uq_validation_results.csv")
@@ -55,6 +55,10 @@ dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 primary_outputs <- c(
   "tolerance_validation_article_scenario_ranges.csv",
   "tolerance_validation_article_scenario_ranges.tex",
+  "tolerance_validation_article_scenario_ranges_n50.tex",
+  "tolerance_validation_article_scenario_ranges_n100.tex",
+  "tolerance_validation_article_scenario_ranges_n500.tex",
+  "tolerance_validation_article_scenario_ranges_n1000.tex",
   "tolerance_validation_article_dgp_delivery.csv",
   "tolerance_validation_article_dgp_delivery.tex",
   "tolerance_validation_article_dgp_width_ranges.csv",
@@ -377,7 +381,7 @@ dgp_width_ranges <- function(detail, methods) {
 
 write_range_tex <- function(summary, path) {
   lines <- c(
-    "\\begin{tabular}{@{}l@{\\hspace{1.35em}}l@{\\hspace{1.35em}}r@{}}",
+    "\\begin{tabular}{@{}l@{\\hspace{0.75em}}l@{\\hspace{0.75em}}r@{}}",
     "\\toprule",
     "Cell & Method & Delivery range (\\%)\\\\",
     "\\midrule"

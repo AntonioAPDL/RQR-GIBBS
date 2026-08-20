@@ -17,9 +17,10 @@ tex_path <- file.path(out_dir, "tolerance_validation_main_summary.tex")
 stopifnot(file.exists(csv_path), file.exists(tex_path))
 
 tab <- read.csv(csv_path, stringsAsFactors = FALSE)
-stopifnot(nrow(tab) == 4L)
-stopifnot(all(c("tcsp_mc", "hdp_s_mc", "young_mathew", "wilks_minmax") %in%
+stopifnot(nrow(tab) == 3L)
+stopifnot(all(c("tcsp_mc", "young_mathew", "wilks_minmax") %in%
                 tab$method_id))
+stopifnot(!"hdp_s_mc" %in% tab$method_id)
 stopifnot(!"tcsp_mti_ecm_map_mc" %in% tab$method_id)
 stopifnot(!"tcsp_dkw" %in% tab$method_id)
 stopifnot(!"tcsp_mti_gibbs_median_mc" %in% tab$method_id)
