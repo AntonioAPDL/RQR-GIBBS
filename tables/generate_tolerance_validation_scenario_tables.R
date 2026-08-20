@@ -128,12 +128,16 @@ method_labels <- c(
 )
 dgp_labels <- c(
   normal = "Gaussian",
+  laplace = "Laplace",
   lognormal = "log-normal",
   lognormal_hard = "hard log-normal",
   mixture = "mixture",
   sharp_mixture = "sharp mixture",
   contaminated_normal = "contaminated normal",
   student_t3 = "Student t3",
+  gamma2 = "Gamma(2,1)",
+  exponential = "exponential",
+  beta52 = "Beta(5,2)",
   beta_left = "left-skewed Beta"
 )
 

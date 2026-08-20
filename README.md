@@ -145,6 +145,7 @@ make test-bayes-uq
 make rqr-ecm-validation-smoke
 make tcsp-split-exact-validation-smoke
 make rqr-bayes-uq-validation-smoke
+make rqr-bayes-uq-refined-smoke
 make prepare-exdqlm-runtime
 make test-exdqlm-rqr
 make literature-manifest
@@ -152,6 +153,13 @@ make literature-manifest
 
 Long-running simulation and validation targets require explicit reviewed
 configuration and should write only under ignored local output roots.
+The refined article-facing tolerance validation is configured in
+`application/config/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820.json`.
+It compares TCSP, Young--Mathew, and Wilks over the feasible iid tolerance grid
+using the refined non-separated DGP panel. Use
+`make launch-rqr-bayes-uq-refined` for the 40-worker launch, and pass
+`RQR_BAYES_UQ_REFINED_RUN_DIR=<run_dir>` to the matching health, collect, and
+stop targets.
 
 The 95% single-data oracle-tilt illustrations are rendered from the corrected
 version-5 compact evidence bundle under

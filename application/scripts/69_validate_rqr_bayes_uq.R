@@ -310,6 +310,22 @@ dgp_meta <- function(dgp) {
       p = stats::pnorm
     ))
   }
+  if (identical(dgp$family, "standardized_laplace")) {
+    scale <- 1 / sqrt(2)
+    return(list(
+      r = function(n) {
+        signs <- sample(c(-1, 1), n, replace = TRUE)
+        signs * stats::rexp(n, rate = 1 / scale)
+      },
+      p = function(x) {
+        ifelse(
+          x < 0,
+          0.5 * exp(x / scale),
+          1 - 0.5 * exp(-x / scale)
+        )
+      }
+    ))
+  }
   if (identical(dgp$family, "standardized_lognormal")) {
     logsd <- as.numeric(dgp$logsd %||% 0.75)[1L]
     mean_raw <- exp(logsd^2 / 2)
@@ -352,6 +368,35 @@ dgp_meta <- function(dgp) {
       p = function(x) stats::pt(x * sd_raw, df = df)
     ))
   }
+  if (identical(dgp$family, "standardized_gamma")) {
+    shape <- as.numeric(dgp$shape %||% 2)[1L]
+    scale <- as.numeric(dgp$scale %||% 1)[1L]
+    if (!is.finite(shape) || shape <= 0 ||
+        !is.finite(scale) || scale <= 0) {
+      stopf("standardized_gamma requires positive shape and scale.")
+    }
+    mean_raw <- shape * scale
+    sd_raw <- sqrt(shape) * scale
+    return(list(
+      r = function(n) {
+        (stats::rgamma(n, shape = shape, scale = scale) - mean_raw) / sd_raw
+      },
+      p = function(x) {
+        stats::pgamma(x * sd_raw + mean_raw, shape = shape, scale = scale)
+      }
+    ))
+  }
+  if (identical(dgp$family, "centered_exponential") ||
+      identical(dgp$family, "standardized_exponential")) {
+    rate <- as.numeric(dgp$rate %||% 1)[1L]
+    if (!is.finite(rate) || rate <= 0) {
+      stopf("centered_exponential requires positive rate.")
+    }
+    return(list(
+      r = function(n) rate * stats::rexp(n, rate = rate) - 1,
+      p = function(x) stats::pexp((x + 1) / rate, rate = rate)
+    ))
+  }
   if (identical(dgp$family, "standardized_beta")) {
     shape1 <- as.numeric(dgp$shape1 %||% dgp$a %||% 2)[1L]
     shape2 <- as.numeric(dgp$shape2 %||% dgp$b %||% 5)[1L]
@@ -382,6 +427,12 @@ dgp_meta <- function(dgp) {
 oracle_spec_from_dgp <- function(dgp) {
   if (identical(dgp$family, "normal")) {
     return(list(family = "gaussian", params = list(mean = 0, sd = 1)))
+  }
+  if (identical(dgp$family, "standardized_laplace")) {
+    return(list(
+      family = "laplace",
+      params = list(location = 0, scale = 1 / sqrt(2))
+    ))
   }
   if (identical(dgp$family, "standardized_lognormal")) {
     return(list(
@@ -415,6 +466,29 @@ oracle_spec_from_dgp <- function(dgp) {
     return(list(
       family = "student_t",
       params = list(df = df, scale = sqrt((df - 2) / df))
+    ))
+  }
+  if (identical(dgp$family, "standardized_gamma")) {
+    shape <- as.numeric(dgp$shape %||% 2)[1L]
+    scale <- as.numeric(dgp$scale %||% 1)[1L]
+    if (!is.finite(shape) || shape <= 0 ||
+        !is.finite(scale) || scale <= 0) {
+      stopf("standardized_gamma requires positive shape and scale.")
+    }
+    return(list(
+      family = "centered_gamma",
+      params = list(shape = shape, scale = 1 / sqrt(shape))
+    ))
+  }
+  if (identical(dgp$family, "centered_exponential") ||
+      identical(dgp$family, "standardized_exponential")) {
+    rate <- as.numeric(dgp$rate %||% 1)[1L]
+    if (!is.finite(rate) || rate <= 0) {
+      stopf("centered_exponential requires positive rate.")
+    }
+    return(list(
+      family = "centered_exponential",
+      params = list(shape = 1, scale = 1)
     ))
   }
   if (identical(dgp$family, "standardized_beta")) {
