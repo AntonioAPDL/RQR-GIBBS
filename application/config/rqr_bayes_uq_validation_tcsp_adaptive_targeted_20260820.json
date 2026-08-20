@@ -1,0 +1,146 @@
+{
+  "schema_version": "rqrgibbs_bayes_uq_validation/1.3.0",
+  "study_id": "rqr_bayes_uq_validation_tcsp_adaptive_targeted_20260820",
+  "status": "targeted_adaptive_tcsp_validation_authorized",
+  "interpretation": "Targeted iid univariate tolerance validation for deciding whether adaptive Clopper-Pearson scan calibration should replace the current conservative TCSP calibration in the article-facing comparison. Coverage levels are guaranteed population contents. Repeated-sample content is empirical validation evidence, not posterior endpoint coverage.",
+  "generalized_bayes": false,
+  "response_likelihood": false,
+  "posterior_predictive_response_draws": false,
+  "method_family_scope": {
+    "mixed_method_families": false,
+    "scan_certified_empirical_actions": true,
+    "external_nonparametric_tolerance_comparators": false,
+    "row_level_method_flags_are_authoritative": true,
+    "diagnostic_methods_excluded_from_article_comparison": true
+  },
+  "claim_scope": {
+    "iid_univariate_continuous_only": true,
+    "regression_tolerance": false,
+    "dynamic_tolerance": false,
+    "posterior_endpoint_coverage_claim_available": false,
+    "scan_count_fixed_not_resampled": true,
+    "coverage_levels_are_guaranteed_contents": true,
+    "tolerance_confidence_fixed_at_0_95": true,
+    "structurally_infeasible_cells_excluded": true,
+    "confirmatory_authorized": true,
+    "promotion_requires_adjudication": true
+  },
+  "execution": {
+    "smoke_authorized": true,
+    "moderate_authorized": false,
+    "confirmatory_authorized": true,
+    "dpm_companion_authorized": false,
+    "overnight_mode": "confirmatory",
+    "checkpoint_every_datasets": 100
+  },
+  "diagnostics": {
+    "reference_method_id": "tcsp_mc",
+    "record_width_ratio_to_reference": true,
+    "record_retained_fraction": true,
+    "record_scan_content_buffer": true,
+    "paired_thresholds": true,
+    "article_methods_only": ["tcsp_mc"],
+    "baseline_comparison_run": "application/runs/rqr_bayes_uq_validation_main_3method_1000_20260819/wave_confirmatory_3method1000_20260819T090047Z"
+  },
+  "scan_calibration": {
+    "method": "monte_carlo_cp_adaptive",
+    "smoke_n_sim": 500,
+    "smoke_numerical_confidence": 0.95,
+    "confirmatory_n_sim": 10000,
+    "confirmatory_numerical_confidence": 0.999,
+    "seed": 1513600,
+    "adaptive_control": {
+      "initial_n_sim": 10000,
+      "batch_n_sim": 10000,
+      "max_n_sim": 200000,
+      "max_looks": 20,
+      "stable_looks": 2
+    }
+  },
+  "oracle": {
+    "target": "SH",
+    "role": "non_deployable_synthetic_dgp_reference_for_internal_audit_only",
+    "tilt_definition": "conditional_retained_mean_minus_population_mean",
+    "tol": 1e-10,
+    "grid_size": 1601
+  },
+  "modes": {
+    "smoke": {
+      "replications": 2,
+      "sample_sizes": [500],
+      "guaranteed_contents": [0.90],
+      "tolerance_confidences": [0.95],
+      "posterior_confidences": [0.95],
+      "design_cells": [
+        {"cell_id": "n0500_c090_t095", "n": 500, "guaranteed_content": 0.90, "tolerance_confidence": 0.95}
+      ],
+      "dgp_ids": ["normal", "lognormal_hard"],
+      "method_ids": ["tcsp_mc"],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "split_waves_by_method": true,
+      "checkpoint_every_datasets": 1,
+      "scan_n_sim": 500,
+      "scan_numerical_confidence": 0.95,
+      "scan_adaptive_control": {
+        "initial_n_sim": 500,
+        "batch_n_sim": 500,
+        "max_n_sim": 2000,
+        "max_looks": 4,
+        "stable_looks": 1
+      }
+    },
+    "confirmatory": {
+      "replications": 1000,
+      "sample_sizes": [500, 1000],
+      "guaranteed_contents": [0.90, 0.95],
+      "tolerance_confidences": [0.95],
+      "posterior_confidences": [0.95],
+      "design_cells": [
+        {"cell_id": "n0500_c090_t095", "n": 500, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n0500_c095_t095", "n": 500, "guaranteed_content": 0.95, "tolerance_confidence": 0.95},
+        {"cell_id": "n1000_c090_t095", "n": 1000, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n1000_c095_t095", "n": 1000, "guaranteed_content": 0.95, "tolerance_confidence": 0.95}
+      ],
+      "dgp_ids": ["normal", "lognormal", "lognormal_hard", "mixture", "sharp_mixture", "contaminated_normal", "student_t3"],
+      "method_ids": ["tcsp_mc"],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "split_waves_by_method": true,
+      "checkpoint_every_datasets": 100
+    }
+  },
+  "dgps": [
+    {"dgp_id": "normal", "family": "normal", "label": "standard normal"},
+    {"dgp_id": "lognormal", "family": "standardized_lognormal", "label": "centered standardized lognormal", "logsd": 0.75},
+    {"dgp_id": "lognormal_hard", "family": "standardized_lognormal", "label": "hard centered standardized lognormal", "logsd": 1.25},
+    {"dgp_id": "mixture", "family": "standardized_normal_mixture", "label": "standardized separated normal mixture", "weights": [0.80, 0.20], "means": [-1.00, 2.00], "sds": [0.60, 0.40]},
+    {"dgp_id": "sharp_mixture", "family": "standardized_normal_mixture", "label": "standardized sharp separated normal mixture", "weights": [0.50, 0.50], "means": [-2.00, 2.00], "sds": [0.20, 0.20]},
+    {"dgp_id": "contaminated_normal", "family": "standardized_normal_mixture", "label": "standardized five-percent scale-contaminated normal", "weights": [0.95, 0.05], "means": [0.00, 0.00], "sds": [1.00, 8.00]},
+    {"dgp_id": "student_t3", "family": "standardized_student_t", "label": "standardized Student t with three degrees of freedom", "df": 3}
+  ],
+  "methods": [
+    {
+      "method_id": "tcsp_mc",
+      "label": "TCSP shortest window with adaptive CP scan calibration",
+      "action_lane": "scan_certified_empirical",
+      "selected_interval_source": "formal_scan_action",
+      "formal_tolerance_action": true,
+      "response_likelihood": false,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "deployable": true,
+      "promotion_candidate": true
+    }
+  ],
+  "engine_defaults": {
+    "direct_dp": {
+      "concentration": 1,
+      "base": {"family": "normal", "mean": 0, "sd": 4},
+      "shortest_draws": 20,
+      "residual_mass_tol": 0.05
+    }
+  },
+  "base_seed": 963300,
+  "summary_confidence": 0.95
+}
