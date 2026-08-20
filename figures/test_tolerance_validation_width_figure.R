@@ -15,6 +15,7 @@ rows <- expand.grid(
 )
 rows$width_q025 <- seq_len(nrow(rows)) / 10 + 1
 rows$width_q975 <- rows$width_q025 + 0.5
+rows$mean_width <- rows$width_q025 + 0.25
 rows$dgp_id <- ifelse(rows$dgp == "Gaussian", "normal", "student_t3")
 rows$method <- c(
   tcsp_mc = "TCSP",

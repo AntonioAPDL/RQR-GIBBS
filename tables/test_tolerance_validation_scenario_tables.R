@@ -154,9 +154,10 @@ primary_widths <- read.csv(
   stringsAsFactors = FALSE
 )
 stopifnot(all(c("dgp_id", "dgp", "n", "content", "method_id",
-                "replications", "width_q025", "width_q975") %in%
+                "replications", "mean_width", "width_q025", "width_q975") %in%
                 names(primary_widths)))
 stopifnot(all(primary_widths$replications == 2L))
+stopifnot(all(is.finite(primary_widths$mean_width)))
 stopifnot(any(primary_widths$method_id == "young_mathew"))
 stopifnot(!any(primary_widths$method_id == "tcsp_dkw"))
 
@@ -174,6 +175,9 @@ tex <- paste(readLines(
   warn = FALSE
 ), collapse = "\n")
 stopifnot(grepl("Delivery range", tex, fixed = TRUE))
+stopifnot(grepl("\\begin{tabular}{@{}l@{\\hspace{1.35em}}l",
+                tex, fixed = TRUE))
+stopifnot(!grepl("\\begin{tabularx}", tex, fixed = TRUE))
 stopifnot(!grepl("Returned-success range", tex, fixed = TRUE))
 stopifnot(grepl("Young--Mathew", tex, fixed = TRUE))
 stopifnot(!grepl("Width 95\\% range", tex, fixed = TRUE))

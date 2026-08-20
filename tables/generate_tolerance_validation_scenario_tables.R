@@ -227,8 +227,8 @@ scenario_detail <- function(results, methods) {
       content = numeric(), method_id = character(), method = character(),
       replications = integer(), infeasible_rate = numeric(),
       delivery_success = numeric(), returned_success = numeric(),
-      median_width = numeric(), width_q025 = numeric(), width_q975 = numeric(),
-      stringsAsFactors = FALSE
+      median_width = numeric(), mean_width = numeric(), width_q025 = numeric(),
+      width_q975 = numeric(), stringsAsFactors = FALSE
     ))
   }
   results$infeasible_bool <- truthy(results$infeasible)
@@ -256,6 +256,11 @@ scenario_detail <- function(results, methods) {
       },
       median_width = if (any(finite_width)) {
         stats::median(df$width[finite_width])
+      } else {
+        NA_real_
+      },
+      mean_width = if (any(finite_width)) {
+        mean(df$width[finite_width])
       } else {
         NA_real_
       },
@@ -351,14 +356,14 @@ dgp_width_ranges <- function(detail, methods) {
       dgp_id = character(), dgp = character(), n = integer(),
       content = numeric(), method_id = character(), method = character(),
       replications = integer(), delivery_success = numeric(),
-      returned_success = numeric(), width_q025 = numeric(),
+      returned_success = numeric(), mean_width = numeric(), width_q025 = numeric(),
       width_q975 = numeric(), stringsAsFactors = FALSE
     ))
   }
   out <- detail[detail$method_id %in% methods, c(
     "dgp_id", "dgp", "n", "content", "method_id", "method",
     "replications", "delivery_success", "returned_success",
-    "width_q025", "width_q975"
+    "mean_width", "width_q025", "width_q975"
   ), drop = FALSE]
   out <- out[order(out$n, out$content, out$dgp,
                    match(out$method_id, methods)), ]
@@ -368,7 +373,7 @@ dgp_width_ranges <- function(detail, methods) {
 
 write_range_tex <- function(summary, path) {
   lines <- c(
-    "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xr@{}}",
+    "\\begin{tabular}{@{}l@{\\hspace{1.35em}}l@{\\hspace{1.35em}}r@{}}",
     "\\toprule",
     "Cell & Method & Delivery range (\\%)\\\\",
     "\\midrule"
@@ -378,7 +383,7 @@ write_range_tex <- function(summary, path) {
       lines,
       "\\multicolumn{3}{@{}l@{}}{No selected validation rows.}\\\\",
       "\\bottomrule",
-      "\\end{tabularx}"
+      "\\end{tabular}"
     ), path)
     return(invisible(path))
   }
@@ -396,7 +401,7 @@ write_range_tex <- function(summary, path) {
     lines <- c(lines, "\\addlinespace[0.25em]")
   }
   lines <- lines[-length(lines)]
-  writeLines(c(lines, "\\bottomrule", "\\end{tabularx}"), path)
+  writeLines(c(lines, "\\bottomrule", "\\end{tabular}"), path)
 }
 
 write_dgp_width_tex <- function(widths, path, caption, label) {

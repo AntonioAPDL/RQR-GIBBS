@@ -128,3 +128,73 @@ test_that("TCSP promotion audit produces old-vs-adaptive comparison", {
     "investigate_before_promotion"
   ))
 })
+
+test_that("TCSP promotion audit labels each comparison row independently", {
+  output_dir <- tempfile("tcsp-scan-promotion-labels-")
+  config_path <- tempfile("tcsp-scan-promotion-label-config-", fileext = ".json")
+  on.exit(unlink(c(output_dir, config_path), recursive = TRUE, force = TRUE),
+          add = TRUE)
+
+  config <- list(
+    scan_calibration = list(
+      smoke_n_sim = 100L,
+      smoke_numerical_confidence = 0.80,
+      seed = 333L
+    ),
+    modes = list(
+      smoke = list(
+        design_cells = list(
+          list(cell_id = "unchanged", n = 50L, guaranteed_content = 0.90,
+               tolerance_confidence = 0.80),
+          list(cell_id = "sharper", n = 100L,
+               guaranteed_content = 0.80, tolerance_confidence = 0.80)
+        )
+      )
+    )
+  )
+  jsonlite::write_json(config, config_path, auto_unbox = TRUE, pretty = TRUE)
+
+  script <- normalizePath(
+    testthat::test_path(
+      "..", "..", "scripts",
+      "79_compare_tcsp_scan_calibration_promotion.R"
+    ),
+    winslash = "/", mustWork = TRUE
+  )
+  status <- system2(
+    "Rscript",
+    c(
+      script,
+      "--mode=smoke",
+      paste0("--config=", config_path),
+      "--n-sim=100",
+      "--numerical-confidence=0.80",
+      "--initial-n-sim=100",
+      "--max-n-sim=100",
+      "--max-looks=1",
+      "--stable-looks=1",
+      "--workers=1",
+      paste0("--output-dir=", output_dir)
+    ),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  expect_equal(attr(status, "status") %||% 0L, 0L)
+
+  comparison <- read.csv(
+    file.path(output_dir, "old_vs_adaptive_comparison.csv"),
+    stringsAsFactors = FALSE
+  )
+  comparison <- comparison[order(comparison$cell_id), , drop = FALSE]
+
+  expect_equal(
+    comparison$promotion_relevance[comparison$cell_id == "unchanged"],
+    "unchanged"
+  )
+  expect_equal(
+    comparison$promotion_relevance[
+      comparison$cell_id == "sharper"
+    ],
+    "candidate_sharper"
+  )
+})

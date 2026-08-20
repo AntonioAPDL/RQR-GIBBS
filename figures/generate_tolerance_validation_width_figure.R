@@ -80,6 +80,11 @@ data$n <- as.integer(data$n)
 data$content <- num(data$content)
 data$width_q025 <- num(data$width_q025)
 data$width_q975 <- num(data$width_q975)
+data$mean_width <- if ("mean_width" %in% names(data)) {
+  num(data$mean_width)
+} else {
+  rep(NA_real_, nrow(data))
+}
 data <- data[is.finite(data$width_q025) & is.finite(data$width_q975) &
                data$width_q025 > 0 & data$width_q975 > 0, , drop = FALSE]
 if (!nrow(data)) stopf("Width-range figure has no finite selected rows.")
@@ -99,7 +104,8 @@ panel_matrix <- matrix(seq_len(panel_rows * panel_cols), nrow = panel_rows,
 panel_matrix[panel_matrix > panel_count] <- 0L
 legend_row <- rep(panel_count + 1L, panel_cols)
 
-png(figure_path, width = 3000, height = 760 * panel_rows + 320, res = 220)
+png(figure_path, width = 3400, height = 900 * panel_rows + 360, res = 220,
+    pointsize = 17)
 old_par <- par(no.readonly = TRUE)
 device_open <- TRUE
 on.exit({
@@ -111,27 +117,30 @@ on.exit({
 
 layout(rbind(panel_matrix, legend_row),
        heights = c(rep(1, panel_rows), 0.22))
-par(oma = c(0, 0, 1.2, 0), mar = c(3.6, 7.0, 2.4, 0.7),
-    xaxs = "i", yaxs = "i")
+par(oma = c(0, 0, 1.3, 0), mar = c(4.2, 8.4, 2.4, 0.8),
+    mgp = c(1.85, 0.55, 0), xaxs = "i", yaxs = "i")
 
 for (ii in seq_len(nrow(cells))) {
   nn <- cells$n[[ii]]
   cc <- cells$content[[ii]]
   panel <- data[data$n == nn & abs(data$content - cc) < 1e-12, , drop = FALSE]
-  x_range <- range(c(panel$width_q025, panel$width_q975), finite = TRUE)
+  positive_mean <- panel$mean_width[is.finite(panel$mean_width) &
+                                      panel$mean_width > 0]
+  x_range <- range(c(panel$width_q025, panel$width_q975, positive_mean),
+                   finite = TRUE)
   xlim <- log10(x_range)
   pad <- 0.04 * diff(xlim)
   if (!is.finite(pad) || pad <= 0) pad <- 0.05
   y_base <- seq_along(dgp_levels)
   plot(NA_real_, NA_real_, xlim = xlim + c(-pad, pad),
        ylim = c(0.45, length(dgp_levels) + 0.55),
-       xaxt = "n", yaxt = "n", xlab = "Raw interval width, log scale",
+       xaxt = "n", yaxt = "n", xlab = "Raw width (log scale)",
        ylab = "", main = sprintf("n = %s, c = %s", nn, format_content(cc)),
-       bty = "l")
-  ticks <- pretty(xlim, n = 4)
+       bty = "l", cex.lab = 0.98, cex.main = 1.02)
+  ticks <- pretty(xlim, n = 3)
   ticks <- ticks[ticks >= xlim[[1L]] & ticks <= xlim[[2L]]]
-  axis(1, at = ticks, labels = format_width_tick(10^ticks), cex.axis = 0.75)
-  axis(2, at = y_base, labels = dgp_levels, las = 1, cex.axis = 0.72)
+  axis(1, at = ticks, labels = format_width_tick(10^ticks), cex.axis = 0.86)
+  axis(2, at = y_base, labels = dgp_levels, las = 1, cex.axis = 0.82)
   abline(h = y_base, col = "gray92", lwd = 0.7)
   for (method in method_order) {
     block <- panel[panel$method_id == method, , drop = FALSE]
@@ -143,19 +152,21 @@ for (ii in seq_len(nrow(cells))) {
       segments(lower, y, upper, y, col = col, lwd = 2)
       points(c(lower, upper), c(y, y), col = col, pch = method_pch[[method]],
              cex = 0.55)
+      if (is.finite(block$mean_width[[jj]]) && block$mean_width[[jj]] > 0) {
+        points(log10(block$mean_width[[jj]]), y, col = col, pch = 4,
+               cex = 0.82, lwd = 1.5)
+      }
     }
   }
-}
-if (any(panel_matrix == 0L)) {
-  plot.new()
 }
 
 par(mar = c(0, 0, 0, 0))
 plot.new()
-legend("center", legend = unname(method_labels[method_order]),
-       col = unname(method_colors[method_order]),
-       pch = unname(method_pch[method_order]), lwd = 2,
-       ncol = 3, bty = "n", xpd = NA, cex = 0.9)
+legend("center", legend = c(unname(method_labels[method_order]), "Mean width"),
+       col = c(unname(method_colors[method_order]), "gray20"),
+       pch = c(unname(method_pch[method_order]), 4),
+       lwd = c(rep(2, length(method_order)), NA),
+       ncol = 4, bty = "n", xpd = NA, cex = 0.95)
 mtext("Raw width ranges by DGP for article-facing tolerance methods",
       outer = TRUE, cex = 1.05, font = 2)
 

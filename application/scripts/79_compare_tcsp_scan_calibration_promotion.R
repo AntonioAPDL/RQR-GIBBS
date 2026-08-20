@@ -261,15 +261,21 @@ comparison$delta_target_content <- comparison$target_content_adaptive -
   comparison$target_content_old
 comparison$delta_content_buffer <- comparison$content_buffer_adaptive -
   comparison$content_buffer_old
+adaptive_infeasible <- !is.na(comparison$infeasible_adaptive) &
+  as.logical(comparison$infeasible_adaptive)
 comparison$promotion_relevance <- ifelse(
-  isTRUE(comparison$infeasible_adaptive),
+  adaptive_infeasible,
   "reject_adaptive_infeasible",
   ifelse(
-    comparison$delta_k < 0,
-    "candidate_sharper",
-    ifelse(comparison$delta_k == 0,
-           "unchanged",
-           "investigate_more_conservative")
+    !is.finite(comparison$delta_k),
+    "incomplete_comparison",
+    ifelse(
+      comparison$delta_k < 0,
+      "candidate_sharper",
+      ifelse(comparison$delta_k == 0,
+             "unchanged",
+             "investigate_more_conservative")
+    )
   )
 )
 comparison <- comparison[order(comparison$n, comparison$guaranteed_content,

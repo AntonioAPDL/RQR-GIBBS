@@ -1,3 +1,3 @@
 "relative_path","sha256","bytes","generator"
-"figures/generated/fig05_tolerance_validation_width_ranges.png","282ad4200b5f395ad5d9d721a99977e55a32966aa5170b5946ecb96e12d905df",148892,"figures/generate_tolerance_validation_width_figure.R"
-"tables/tolerance_validation_article_dgp_width_ranges.csv","49619639765990d093815e38f8787e77993110faed63fbe3759451f298739cd9",20980,"figures/generate_tolerance_validation_width_figure.R"
+"figures/generated/fig05_tolerance_validation_width_ranges.png","83c5be8394d9b24bb55a8c9dca992fbd640a59ec8f6b7fd0b241d6402812d03a",327239,"figures/generate_tolerance_validation_width_figure.R"
+"tables/tolerance_validation_article_dgp_width_ranges.csv","d09dfe7eea21c9f3bc6397c97483b4934cfdb82f917e4069510d7ff730263466",24181,"figures/generate_tolerance_validation_width_figure.R"
