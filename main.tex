@@ -91,8 +91,9 @@ readouts, and dynamic linear root states.
 
 Because the shortest-contiguous member is the minimum-width interval in the
 fixed-content class, the same target geometry also motivates calibrated
-minimum-width tolerance actions. The primary TCSP action selects the shortest
-closed order-statistic interval at a calibrated retained count, giving the
+minimum-width tolerance actions. We use TCSP for the resulting
+tolerance-calibrated shortest-path action: it selects the shortest closed
+order-statistic interval at a calibrated retained count, giving the
 minimum-width member of the calibrated empirical scan class. A direct
 Dirichlet-process response-distribution layer gives exact fixed-interval Beta
 content probabilities, and a Bayesian-constrained scan action uses those
@@ -314,9 +315,9 @@ finite-sample or comparative-performance evidence.}
 \section{The Mean-Preserving Interval Target}
 \label{sec:mpi-loss}
 
-The residual-product loss is useful only after its target is identified. This
-section first defines the pointwise loss, then shows that its regular
-unrestricted population solution is the mean-preserving member of the
+The residual-product loss becomes a statistical procedure once its target is
+identified. This section first defines the pointwise loss, then shows that its
+regular unrestricted population solution is the mean-preserving member of the
 fixed-content interval class.
 
 Fix a desired interval content \(c\in(0,1)\) and ordered endpoints \(a<b\).
@@ -1315,6 +1316,9 @@ generalized-Bayes learning rate is \(\omega_{\mathrm R}\). When a separate
 response-distribution model for \(F\) is used, \(1-\gamma\) denotes a posterior
 content-probability screening threshold. Neither \(\omega_{\mathrm R}\) nor
 \(1-\gamma\) determines the tolerance confidence.
+In this article, TCSP denotes the tolerance-calibrated shortest-path action:
+first calibrate a retained count by the scan statistic, then report the
+shortest closed empirical window at that count.
 
 \paragraph{Scan-calibrated empirical action.}
 Let \(Y_{(1)}\le\cdots\le Y_{(n)}\). For content \(c\), define the uniform scan
@@ -1375,7 +1379,7 @@ a plug-in stability theorem or a separate target-selection sample.
 \paragraph{Supplementary extensions.}
 Response-distribution Bayesian screens and sample-split spacing constructions
 are useful extensions, but they answer different evidentiary questions from the
-article-facing TCSP action. A response-distribution model gives posterior
+primary TCSP action. A response-distribution model gives posterior
 content probabilities under a model for \(F\), whereas TCSP supplies a
 distribution-free scan-calibrated empirical action. A split-spacing construction
 uses independent pilot and calibration samples, whereas TCSP uses the full
@@ -1385,7 +1389,7 @@ they are not part of the main validation comparison.
 
 \paragraph{Numerical certification and proof scope.}
 Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
-reported interval. The article-facing implementation uses adaptive Monte Carlo
+reported interval. The reported implementation uses adaptive Monte Carlo
 calibration of the uniform scan distribution. At each look, one-sided
 Clopper--Pearson lower bounds are Bonferroni-adjusted over feasible retained
 counts and adaptive looks, and the first retained count whose certified lower
@@ -1499,8 +1503,8 @@ eight centered and scaled data-generating laws: Gaussian, Laplace, Student
 \(t_3\), a five-percent scale-contaminated normal, Gamma\((2,1)\),
 exponential, hard log-normal, and Beta\((5,2)\). This panel separates
 symmetry, heavy tails, skewness, contamination, and bounded support without
-adding multimodal cases that none of the article-facing methods is designed to
-model. The primary grid fixes tolerance confidence at \(0.95\) and uses 1000
+adding multimodal cases that none of the reported methods is designed to model.
+The primary grid fixes tolerance confidence at \(0.95\) and uses 1000
 paired replications per data-generating law and feasible cell.
 The feasible cells are \(n=50,c=0.90\), \(n=100,c\in\{0.90,0.95\}\), and
 \(n\in\{500,1000\},c\in\{0.90,0.95,0.99\}\).
@@ -1518,28 +1522,29 @@ comparison because no two-sided distribution-free method can certify the
 requested statement in those cells. The \(c=0.99\) rows begin at \(n=500\), the
 nearest rounded sample size above the \(n=473\) threshold.
 
-The method set is intentionally narrow. TCSP is the formal scan-calibrated
+The comparison is deliberately narrow. TCSP is the formal scan-calibrated
 shortest empirical action and is therefore the primary tolerance action. The
 reported TCSP rows use the adaptive Clopper--Pearson scan calibration described
 above. Its optimality is class-specific: it minimizes width among closed
 order-statistic windows satisfying the calibrated retained-count rule.
-Young--Mathew
-interpolation
-\citep{YoungMathew2014NonparametricTolerance} and Wilks min--max intervals
+Young--Mathew interpolation \citep{YoungMathew2014NonparametricTolerance}
+and Wilks min--max intervals
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction} provide the
 classical order-statistic comparators. The primary metric is delivery success:
 the empirical fraction of replications in which the reported interval attains
-the required population content. Replications with no returned interval would
+the required population content. For each replication, this content check uses
+the known simulation law rather than the fraction of sampled observations
+inside the returned interval. Replications with no returned interval would
 count as failures. Widths are reported as DGP-level empirical
 2.5\%--97.5\% ranges, avoiding width averages across distributions with
 different scales and tail behavior.
 
 \begin{table}[!htbp]
 \centering
-\caption{\textbf{Article-facing iid tolerance validation.} Results are shown by
+\caption{\textbf{Primary iid tolerance validation.} Results are shown by
 feasible sample-size/content cell and method. Each row summarizes the range
 across eight data-generating laws at tolerance confidence \(0.95\). All three
-article-facing methods returned an interval in every replication in this run.}
+reported methods returned an interval in every replication in this run.}
 \label{tab:tolerance-validation-primary}
 \TableStyle
 \input{tables/tolerance_validation_article_scenario_ranges.tex}
@@ -1570,8 +1575,7 @@ the values remain raw interval lengths.}
 
 In the completed run, TCSP delivery ranges from 95.1\% to 99.6\% across
 DGP-level cells, compared with 94.1\% to 98.5\% for Young--Mathew and 95.1\%
-to 100.0\% for Wilks. The mean returned widths across DGP-level cells are
-5.04 for TCSP, 5.10 for Young--Mathew, and 8.48 for Wilks.
+to 100.0\% for Wilks.
 Figures~\ref{fig:tolerance-validation-primary}
 and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
 pooling widths across distributional scenarios. The calibrated scan action
@@ -1588,8 +1592,7 @@ summaries, together with the TCSP retained counts and full-range feasibility
 thresholds used to choose the grid. The excluded small-sample cells are not
 treated as algorithmic failures; they fall outside the region where a two-sided
 distribution-free tolerance statement can be certified at confidence \(0.95\).
-Alternative diagnostic methods remain available in the repository, but the
-article comparison is restricted to the three methods above.
+Other diagnostic variants are kept outside the primary comparison.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -1638,14 +1641,13 @@ order-statistic window at that count is reported. This makes TCSP the formal
 tolerance action and gives a class-specific minimum-width property within the
 calibrated empirical scan class. Generalized-Bayes computation begins only after
 the content and tilt are fixed. Tolerance confidence remains attached to the
-scan action, and posterior credibility is therefore kept separate from tolerance
-confidence. The article validation consequently compares TCSP with
-Young--Mathew and Wilks as tolerance actions, rather than treating
-generalized-posterior endpoint summaries as tolerance-certified intervals.
-Publication-level finite-sample wording still requires an action-matched scan
-proof and certified critical-count calculation. Replacing the empirical
-window by a posterior summary would require an additional transfer or direct
-calibration result.
+scan action, while posterior credibility describes the chosen fixed-target
+generalized posterior. The article validation consequently compares TCSP with
+Young--Mathew and Wilks as tolerance actions. Generalized-posterior endpoint
+summaries become tolerance-certified intervals only with an additional transfer
+or direct-calibration result. A complete finite-sample theorem for the
+closed-window convention still requires an action-matched scan proof and
+certified critical-count calculation.
 
 The limitations delimit several next steps. Population identification is
 unrestricted and pointwise, whereas regression and state-space models impose
