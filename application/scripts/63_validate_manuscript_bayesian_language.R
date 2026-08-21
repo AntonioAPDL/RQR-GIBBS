@@ -105,7 +105,7 @@ required <- list(
     "any sampling model for \\(Y\\) belongs to a separate response-distribution layer",
     "response-predictive draws require a response-distribution layer",
     "Calibrated Minimum-Width Tolerance Intervals",
-    "The theoretical scope is deliberately narrower than the implementation menu",
+    "The theoretical scope is deliberately narrower than the implemented procedures",
     "L_q'=\\frac{b_q}{\\lambda_q(a_q-b_q)}<0",
     "U_q'=\\frac{a_q}{\\lambda_q(a_q-b_q)}>0"
   ),

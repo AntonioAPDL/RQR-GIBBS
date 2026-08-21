@@ -292,7 +292,7 @@ draw_interval_panel <- function(nn, lower_col, upper_col, ylab, main,
 
 for (nn in sample_sizes) {
   draw_interval_panel(nn, "delivery_min", "delivery_max",
-                      "Delivery success",
+                      "Content-attainment rate",
                       sprintf("n = %s", nn),
                       0.95, c(0.9, 1.0))
 }

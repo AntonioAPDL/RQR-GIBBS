@@ -139,7 +139,7 @@ if (identical(receipt$schema_version, v3_schema)) {
   allowed_dispositions <- c("strict_pass", "diagnostic_aware_pass")
   disposition <- summary$disposition
   warning_disposition <- "diagnostic_aware_pass"
-  warning_label <- "Diagnostic-aware"
+  warning_label <- "Minor ESS exception"
   if (!all(summary$hard_computational_pass) ||
       !all(summary$broad_recovery_pass) ||
       !all(summary$broad_heterogeneity_pass) ||

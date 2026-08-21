@@ -153,7 +153,7 @@ body <- vapply(seq_len(nrow(out)), function(ii) {
 writeLines(c(
   "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xlrrrrl@{}}",
   "\\toprule",
-  "Diagnostic cell & DGP & \\(n\\) & \\(c\\) & Max \\(\\hat R\\) & Min ESS & Status\\\\",
+  "Diagnostic cell & Distribution & \\(n\\) & \\(c\\) & Max \\(\\hat R\\) & Min ESS & Status\\\\",
   "\\midrule",
   body,
   "\\bottomrule",

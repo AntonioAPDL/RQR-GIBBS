@@ -1155,8 +1155,8 @@ figure_03_mean_tilt_cf_anchors <- function(out_dir, dist, content) {
   cf_summary <- cornish_fisher_tilt_summary(dist, summary, content)
   if (!all(cf_summary$within_admissible)) {
     fail(
-      "Figure 3 requires admissible Cornish-Fisher anchors; ",
-      "out-of-range anchors: ",
+      "Figure 3 requires admissible Cornish-Fisher approximations; ",
+      "out-of-range approximations: ",
       paste(cf_summary$approximation[!cf_summary$within_admissible], collapse = ", ")
     )
   }
