@@ -43,6 +43,25 @@ method_colors <- c(
   wilks_minmax = "#000000"
 )
 method_pch <- c(tcsp_mc = 16, young_mathew = 16, wilks_minmax = 1)
+dgp_order <- c(
+  "normal",
+  "student_t3",
+  "exponential",
+  "asym_laplace_tau010",
+  "two_piece_normal_1_12",
+  "beta18",
+  "gamma05",
+  "lognormal_hard"
+)
+dgp_rank <- function(id, label) {
+  rank <- match(id, dgp_order)
+  missing <- is.na(rank)
+  if (any(missing)) {
+    rank[missing] <- length(dgp_order) +
+      match(label[missing], sort(unique(label[missing])))
+  }
+  rank
+}
 
 num <- function(x) suppressWarnings(as.numeric(x))
 format_content <- function(x) sprintf("%.2f", num(x))
@@ -76,6 +95,7 @@ if (length(missing)) {
   stopf("Width-range CSV is missing column(s): ", paste(missing, collapse = ", "))
 }
 data <- data[data$method_id %in% method_order, , drop = FALSE]
+if (!"dgp_id" %in% names(data)) data$dgp_id <- data$dgp
 data$n <- as.integer(data$n)
 data$content <- num(data$content)
 data$width_q025 <- num(data$width_q025)
@@ -89,11 +109,12 @@ data <- data[is.finite(data$width_q025) & is.finite(data$width_q975) &
                data$width_q025 > 0 & data$width_q975 > 0, , drop = FALSE]
 if (!nrow(data)) stopf("Width-range figure has no finite selected rows.")
 
-cell_key <- paste(data$n, sprintf("%.4f", data$content), sep = "||")
 cells <- unique(data[, c("n", "content"), drop = FALSE])
 cells <- cells[order(cells$n, cells$content), , drop = FALSE]
-dgp_levels <- unique(data$dgp)
-dgp_levels <- dgp_levels[order(dgp_levels)]
+dgp_rows <- unique(data[, c("dgp_id", "dgp"), drop = FALSE])
+dgp_rows <- dgp_rows[order(dgp_rank(dgp_rows$dgp_id, dgp_rows$dgp)), ,
+                     drop = FALSE]
+dgp_levels <- rev(dgp_rows$dgp)
 method_offsets <- c(tcsp_mc = -0.22, young_mathew = 0, wilks_minmax = 0.22)
 
 panel_count <- nrow(cells)
@@ -117,7 +138,7 @@ on.exit({
 
 layout(rbind(panel_matrix, legend_row),
        heights = c(rep(1, panel_rows), 0.22))
-par(oma = c(0, 0, 1.3, 0), mar = c(4.2, 8.4, 2.4, 0.8),
+par(oma = c(0, 0, 1.3, 0), mar = c(4.2, 8.8, 2.4, 0.8),
     mgp = c(1.85, 0.55, 0), xaxs = "i", yaxs = "i")
 
 for (ii in seq_len(nrow(cells))) {

@@ -20,8 +20,8 @@ setwd(repo_root)
 
 default_primary_dir <- file.path(
   "application", "runs",
-  "rqr_bayes_uq_validation_main_3method_refined_dgps_20260820",
-  "wave_confirmatory_refined_dgps_20260820T221539Z"
+  "rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820",
+  "wave_confirmatory_skewstress_dgps_20260821T005632Z"
 )
 default_primary_results <- file.path(default_primary_dir,
                                      "bayes_uq_validation_results.csv")
@@ -133,21 +133,44 @@ method_labels <- c(
 dgp_labels <- c(
   normal = "Gaussian",
   laplace = "Laplace",
-  lognormal = "log-normal",
-  lognormal_hard = "hard log-normal",
-  mixture = "mixture",
-  sharp_mixture = "sharp mixture",
-  contaminated_normal = "contaminated normal",
-  student_t3 = "Student t3",
+  lognormal = "Log-normal",
+  lognormal_hard = "Log-normal (log sd 1.25)",
+  mixture = "Mixture",
+  sharp_mixture = "Sharp mixture",
+  contaminated_normal = "Contaminated normal",
+  student_t3 = "Student t(3)",
   gamma2 = "Gamma(2,1)",
   gamma05 = "Gamma(0.5,1)",
-  exponential = "exponential",
+  exponential = "Exponential",
   beta52 = "Beta(5,2)",
   beta18 = "Beta(1,8)",
-  asym_laplace_tau010 = "asymmetric Laplace",
-  two_piece_normal_1_12 = "two-piece normal",
-  beta_left = "left-skewed Beta"
+  asym_laplace_tau010 = "Asymmetric Laplace (tau=0.10)",
+  two_piece_normal_1_12 = "Two-piece Normal (1:12)",
+  beta_left = "Left-skewed Beta"
 )
+dgp_order <- c(
+  "normal",
+  "student_t3",
+  "exponential",
+  "asym_laplace_tau010",
+  "two_piece_normal_1_12",
+  "beta18",
+  "gamma05",
+  "lognormal_hard",
+  "laplace",
+  "contaminated_normal",
+  "gamma2",
+  "beta52",
+  "lognormal",
+  "mixture",
+  "sharp_mixture",
+  "beta_left"
+)
+dgp_rank <- function(id) {
+  rank <- match(id, dgp_order)
+  rank[is.na(rank)] <- length(dgp_order) + seq_len(sum(is.na(rank)))
+  rank
+}
 
 required_columns <- c(
   "dgp_id", "n", "guaranteed_content", "tolerance_confidence",
@@ -285,7 +308,7 @@ scenario_detail <- function(results, methods) {
   out$dgp[is.na(out$dgp)] <- out$dgp_id[is.na(out$dgp)]
   out$method[is.na(out$method)] <- out$method_id[is.na(out$method)]
   out <- out[order(
-    out$n, out$content, out$dgp,
+    out$n, out$content, dgp_rank(out$dgp_id),
     match(out$method_id, methods)
   ), ]
   rownames(out) <- NULL
@@ -377,7 +400,7 @@ dgp_width_ranges <- function(detail, methods) {
     "replications", "delivery_success", "returned_success",
     "mean_width", "width_q025", "width_q975"
   ), drop = FALSE]
-  out <- out[order(out$n, out$content, out$dgp,
+  out <- out[order(out$n, out$content, dgp_rank(out$dgp_id),
                    match(out$method_id, methods)), ]
   rownames(out) <- NULL
   out
@@ -420,7 +443,11 @@ write_dgp_width_tex <- function(widths, path, caption, label) {
   lines <- c(
     "\\begingroup",
     "\\scriptsize",
-    "\\begin{longtable}{@{}p{0.24\\textwidth}rrp{0.20\\textwidth}rr@{}}",
+    paste0(
+      "\\begin{longtable}{@{}",
+      ">{\\raggedright\\arraybackslash}p{0.24\\textwidth}",
+      "rr>{\\raggedright\\arraybackslash}p{0.20\\textwidth}rr@{}}"
+    ),
     sprintf("\\caption{%s}\\label{%s}\\\\", caption, label),
     "\\toprule",
     "Distribution & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Width 95\\% range\\\\",
@@ -455,7 +482,11 @@ wide_delivery <- function(detail, methods) {
   }
   detail$delivery_pct <- format_pct(detail$delivery_success)
   scenarios <- unique(detail[, c("dgp", "n", "content"), drop = FALSE])
-  scenarios <- scenarios[order(scenarios$n, scenarios$content, scenarios$dgp),
+  scenario_rank <- vapply(scenarios$dgp, function(label) {
+    hit <- names(dgp_labels)[match(label, unname(dgp_labels))]
+    if (is.na(hit)) length(dgp_order) + 1L else dgp_rank(hit)
+  }, numeric(1L))
+  scenarios <- scenarios[order(scenarios$n, scenarios$content, scenario_rank),
                          , drop = FALSE]
   out <- scenarios
   for (method in methods) {
@@ -479,7 +510,7 @@ wide_delivery <- function(detail, methods) {
 
 write_wide_delivery_tex <- function(wide, path, methods, caption, label) {
   method_headers <- escape_latex(unname(method_labels[methods]))
-  align <- paste0("@{}p{0.22\\textwidth}rr",
+  align <- paste0("@{}>{\\raggedright\\arraybackslash}p{0.22\\textwidth}rr",
                   paste(rep("r", length(methods)), collapse = ""), "@{}")
   header <- c(
     paste(c("Distribution", "\\(n\\)", "\\(c\\)", method_headers),
@@ -691,13 +722,13 @@ write_wide_delivery_tex(
   primary_delivery,
   file.path(output_dir, "tolerance_validation_article_dgp_delivery.tex"),
   primary_supp_method_order,
-  "\\textbf{Primary iid tolerance-validation delivery by distribution.} Entries are percentages of replications in which the returned interval attained the requested population content for the three reported methods at tolerance confidence \\(0.95\\). Replications with no returned interval count as failures.",
+  "\\textbf{Distribution-level tolerance-validation delivery.} Entries are percentages of replications in which the returned interval attained the requested population content for the three reported methods at tolerance confidence \\(0.95\\). Replications with no returned interval count as failures.",
   "tab:supp-primary-dgp-delivery"
 )
 write_dgp_width_tex(
   primary_dgp_widths,
   file.path(output_dir, "tolerance_validation_article_dgp_width_ranges.tex"),
-  "\\textbf{Primary iid tolerance-validation width ranges by distribution.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.",
+  "\\textbf{Distribution-level tolerance-validation width ranges.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.",
   "tab:supp-primary-dgp-width-ranges"
 )
 write_scan_calibration_tex(

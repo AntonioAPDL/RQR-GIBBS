@@ -1499,11 +1499,15 @@ ranking require repeated-sampling validation.
 The main tolerance study is prespecified before inspecting comparative results,
 following simulation-study reporting principles
 \citep{MorrisWhiteCrowther2019Simulation}. It uses iid continuous samples from
-eight centered and scaled data-generating laws: Gaussian, Laplace, Student
-\(t_3\), a five-percent scale-contaminated normal, Gamma\((2,1)\),
-exponential, hard log-normal, and Beta\((5,2)\). This panel separates
-symmetry, heavy tails, skewness, contamination, and bounded support without
-adding multimodal cases that none of the reported methods is designed to model.
+eight centered and scaled data-generating laws. Gaussian and Student \(t_3\)
+samples serve as symmetric anchors. The stress cases are exponential,
+asymmetric Laplace with \(\tau=0.10\), a two-piece Normal law with scale ratio
+\(1{:}12\), Beta\((1,8)\), Gamma\((0.5,1)\), and log-normal with log-scale
+standard deviation \(1.25\). This panel is intentionally skewed toward
+asymmetric laws because the theoretical advantage of a shortest calibrated
+window is most relevant when equal-tail or full-range behavior is inefficient.
+Multimodal cases are excluded because none of the reported methods is designed
+to recover disconnected high-density regions.
 The primary grid fixes tolerance confidence at \(0.95\) and uses 1000
 paired replications per data-generating law and feasible cell.
 The feasible cells are \(n=50,c=0.90\), \(n=100,c\in\{0.90,0.95\}\), and
@@ -1541,7 +1545,7 @@ different scales and tail behavior.
 
 \begin{table}[!htbp]
 \centering
-\caption{\textbf{Primary iid tolerance validation.} Results are shown by
+\caption{\textbf{Iid tolerance validation.} Results are shown by
 feasible sample-size/content cell and method. Each row summarizes the range
 across eight data-generating laws at tolerance confidence \(0.95\). All three
 reported methods returned an interval in every replication in this run.}
@@ -1568,24 +1572,25 @@ mark nominal \(0.95\) delivery.}
 2.5\%--97.5\% ranges of returned interval lengths within each distribution,
 sample-size/content cell, and method. Crosses mark the mean returned width
 across the 1000 paired replications. The horizontal axis is logarithmic to
-display light-tailed, skewed, contaminated, and heavy-tailed cases in one figure;
+display light-tailed, heavy-tailed, and strongly skewed cases in one figure;
 the values remain raw interval lengths.}
 \label{fig:tolerance-validation-width-ranges}
 \end{figure}
 
-In the completed run, TCSP delivery ranges from 95.1\% to 99.6\% across
-distribution-level cells, compared with 94.1\% to 98.5\% for Young--Mathew and 95.1\%
-to 100.0\% for Wilks.
+In the completed run, TCSP delivery ranges from 95.3\% to 99.6\% across
+distribution-level cells, compared with 94.1\% to 97.2\% for Young--Mathew and
+95.3\% to 100.0\% for Wilks.
 Figures~\ref{fig:tolerance-validation-primary}
 and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
 pooling widths across distributional scenarios. The calibrated scan action
 targets the requested finite-sample statement directly. The adaptive
 calibration preserves empirical delivery above the nominal tolerance confidence
-in every distribution-level cell. Young--Mathew is a strong nonparametric comparator and
-can be slightly narrower in some skewed or boundary cells, although it falls
-below nominal delivery in a small number of refined cells. Wilks
-is simple and conservative at lower contents, but it can be substantially wider
-when the scan calibration does not force the full sample range.
+in every distribution-level cell. Young--Mathew is a strong nonparametric
+comparator and is slightly shorter on the symmetric anchors, but it falls below
+nominal delivery in nine skew-stress or heavy-tail cells. In the six
+skew-stress laws, TCSP is shorter than Young--Mathew in 36 of 54 cells while
+maintaining nominal delivery. Wilks is simple and reliable, but it is often much
+wider when the scan calibration does not force the full sample range.
 
 The supplement gives the distribution-level delivery and width tables behind these
 summaries, together with the TCSP retained counts and full-range feasibility

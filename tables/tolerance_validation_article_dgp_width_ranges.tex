@@ -1,7 +1,7 @@
 \begingroup
 \scriptsize
-\begin{longtable}{@{}p{0.24\textwidth}rrp{0.20\textwidth}rr@{}}
-\caption{\textbf{Primary iid tolerance-validation width ranges by distribution.} Width intervals are empirical 2.5\%--97.5\% ranges over the paired resamplings within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.}\label{tab:supp-primary-dgp-width-ranges}\\
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.24\textwidth}rr>{\raggedright\arraybackslash}p{0.20\textwidth}rr@{}}
+\caption{\textbf{Distribution-level tolerance-validation width ranges.} Width intervals are empirical 2.5\%--97.5\% ranges over the paired resamplings within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.}\label{tab:supp-primary-dgp-width-ranges}\\
 \toprule
 Distribution & \(n\) & \(c\) & Method & Delivery (\%) & Width 95\% range\\
 \midrule
@@ -10,222 +10,222 @@ Distribution & \(n\) & \(c\) & Method & Delivery (\%) & Width 95\% range\\
 Distribution & \(n\) & \(c\) & Method & Delivery (\%) & Width 95\% range\\
 \midrule
 \endhead
-Beta(5,2) & 50 & 0.90 & TCSP & 95.7 & 3.16--5.06 \\
-Beta(5,2) & 50 & 0.90 & Young--Mathew & 95.2 & 3.12--4.86 \\
-Beta(5,2) & 50 & 0.90 & Wilks & 95.7 & 3.16--5.06 \\
-contaminated normal & 50 & 0.90 & TCSP & 97.3 & 1.98--13.98 \\
-contaminated normal & 50 & 0.90 & Young--Mathew & 96.9 & 1.93--12.68 \\
-contaminated normal & 50 & 0.90 & Wilks & 97.3 & 1.98--13.98 \\
-exponential & 50 & 0.90 & TCSP & 96.7 & 2.67--7.9 \\
-exponential & 50 & 0.90 & Young--Mathew & 96.4 & 2.62--7.15 \\
-exponential & 50 & 0.90 & Wilks & 96.7 & 2.67--7.9 \\
-Gamma(2,1) & 50 & 0.90 & TCSP & 97.7 & 2.95--7.1 \\
-Gamma(2,1) & 50 & 0.90 & Young--Mathew & 96.8 & 2.89--6.61 \\
-Gamma(2,1) & 50 & 0.90 & Wilks & 97.7 & 2.95--7.1 \\
 Gaussian & 50 & 0.90 & TCSP & 97.1 & 3.4--5.97 \\
 Gaussian & 50 & 0.90 & Young--Mathew & 96.0 & 3.33--5.7 \\
 Gaussian & 50 & 0.90 & Wilks & 97.1 & 3.4--5.97 \\
-hard log-normal & 50 & 0.90 & TCSP & 96.4 & 1.41--14.4 \\
-hard log-normal & 50 & 0.90 & Young--Mathew & 96.1 & 1.34--12.42 \\
-hard log-normal & 50 & 0.90 & Wilks & 96.4 & 1.41--14.4 \\
-Laplace & 50 & 0.90 & TCSP & 96.3 & 3.32--8.3 \\
-Laplace & 50 & 0.90 & Young--Mathew & 95.7 & 3.26--7.73 \\
-Laplace & 50 & 0.90 & Wilks & 96.3 & 3.32--8.3 \\
-Student t3 & 50 & 0.90 & TCSP & 97.1 & 2.89--13.27 \\
-Student t3 & 50 & 0.90 & Young--Mathew & 96.7 & 2.81--11.64 \\
-Student t3 & 50 & 0.90 & Wilks & 97.1 & 2.89--13.27 \\
-Beta(5,2) & 100 & 0.90 & TCSP & 98.8 & 3.25--4.47 \\
-Beta(5,2) & 100 & 0.90 & Young--Mathew & 97.6 & 3.28--4.58 \\
-Beta(5,2) & 100 & 0.90 & Wilks & 100.0 & 3.65--5.24 \\
-contaminated normal & 100 & 0.90 & TCSP & 98.6 & 2--8.74 \\
-contaminated normal & 100 & 0.90 & Young--Mathew & 96.8 & 1.95--8.45 \\
-contaminated normal & 100 & 0.90 & Wilks & 100.0 & 2.86--16.84 \\
-exponential & 100 & 0.90 & TCSP & 99.2 & 2.58--5.1 \\
-exponential & 100 & 0.90 & Young--Mathew & 95.2 & 2.86--5.85 \\
-exponential & 100 & 0.90 & Wilks & 100.0 & 3.3--8.24 \\
-Gamma(2,1) & 100 & 0.90 & TCSP & 99.2 & 2.99--4.86 \\
-Gamma(2,1) & 100 & 0.90 & Young--Mathew & 96.7 & 3.1--5.75 \\
-Gamma(2,1) & 100 & 0.90 & Wilks & 100.0 & 3.53--7.37 \\
+Student t(3) & 50 & 0.90 & TCSP & 97.1 & 2.89--13.27 \\
+Student t(3) & 50 & 0.90 & Young--Mathew & 96.7 & 2.81--11.64 \\
+Student t(3) & 50 & 0.90 & Wilks & 97.1 & 2.89--13.27 \\
+Exponential & 50 & 0.90 & TCSP & 96.7 & 2.67--7.9 \\
+Exponential & 50 & 0.90 & Young--Mathew & 96.4 & 2.62--7.15 \\
+Exponential & 50 & 0.90 & Wilks & 96.7 & 2.67--7.9 \\
+Asymmetric Laplace (tau=0.10) & 50 & 0.90 & TCSP & 95.9 & 2.63--7.71 \\
+Asymmetric Laplace (tau=0.10) & 50 & 0.90 & Young--Mathew & 95.5 & 2.58--7 \\
+Asymmetric Laplace (tau=0.10) & 50 & 0.90 & Wilks & 95.9 & 2.63--7.71 \\
+Two-piece Normal (1:12) & 50 & 0.90 & TCSP & 96.6 & 3--5.79 \\
+Two-piece Normal (1:12) & 50 & 0.90 & Young--Mathew & 95.9 & 2.97--5.43 \\
+Two-piece Normal (1:12) & 50 & 0.90 & Wilks & 96.6 & 3--5.79 \\
+Beta(1,8) & 50 & 0.90 & TCSP & 97.7 & 2.81--6.11 \\
+Beta(1,8) & 50 & 0.90 & Young--Mathew & 97.0 & 2.75--5.74 \\
+Beta(1,8) & 50 & 0.90 & Wilks & 97.7 & 2.81--6.11 \\
+Gamma(0.5,1) & 50 & 0.90 & TCSP & 95.6 & 2.22--8.37 \\
+Gamma(0.5,1) & 50 & 0.90 & Young--Mathew & 94.6 & 2.19--7.6 \\
+Gamma(0.5,1) & 50 & 0.90 & Wilks & 95.6 & 2.22--8.37 \\
+Log-normal (log sd 1.25) & 50 & 0.90 & TCSP & 96.4 & 1.41--14.4 \\
+Log-normal (log sd 1.25) & 50 & 0.90 & Young--Mathew & 96.1 & 1.34--12.42 \\
+Log-normal (log sd 1.25) & 50 & 0.90 & Wilks & 96.4 & 1.41--14.4 \\
 Gaussian & 100 & 0.90 & TCSP & 99.1 & 3.44--4.98 \\
 Gaussian & 100 & 0.90 & Young--Mathew & 96.9 & 3.37--4.87 \\
 Gaussian & 100 & 0.90 & Wilks & 100.0 & 3.95--6.24 \\
-hard log-normal & 100 & 0.90 & TCSP & 99.3 & 1.43--5.47 \\
-hard log-normal & 100 & 0.90 & Young--Mathew & 96.4 & 1.71--7.92 \\
-hard log-normal & 100 & 0.90 & Wilks & 100.0 & 2.21--18.36 \\
-Laplace & 100 & 0.90 & TCSP & 98.7 & 3.56--6.28 \\
-Laplace & 100 & 0.90 & Young--Mathew & 98.5 & 3.48--6.15 \\
-Laplace & 100 & 0.90 & Wilks & 100.0 & 4.36--9.49 \\
-Student t3 & 100 & 0.90 & TCSP & 98.3 & 2.91--6.5 \\
-Student t3 & 100 & 0.90 & Young--Mathew & 96.3 & 2.92--6.53 \\
-Student t3 & 100 & 0.90 & Wilks & 100.0 & 3.86--17.44 \\
-Beta(5,2) & 100 & 0.95 & TCSP & 95.5 & 3.63--5.25 \\
-Beta(5,2) & 100 & 0.95 & Young--Mathew & 94.9 & 3.6--5.1 \\
-Beta(5,2) & 100 & 0.95 & Wilks & 95.5 & 3.63--5.25 \\
-contaminated normal & 100 & 0.95 & TCSP & 95.4 & 2.72--16.53 \\
-contaminated normal & 100 & 0.95 & Young--Mathew & 95.3 & 2.67--15.45 \\
-contaminated normal & 100 & 0.95 & Wilks & 95.4 & 2.72--16.53 \\
-exponential & 100 & 0.95 & TCSP & 97.1 & 3.25--8.44 \\
-exponential & 100 & 0.95 & Young--Mathew & 96.7 & 3.2--7.95 \\
-exponential & 100 & 0.95 & Wilks & 97.1 & 3.25--8.44 \\
-Gamma(2,1) & 100 & 0.95 & TCSP & 95.8 & 3.44--7.5 \\
-Gamma(2,1) & 100 & 0.95 & Young--Mathew & 95.0 & 3.42--7.12 \\
-Gamma(2,1) & 100 & 0.95 & Wilks & 95.8 & 3.44--7.5 \\
+Student t(3) & 100 & 0.90 & TCSP & 98.3 & 2.91--6.5 \\
+Student t(3) & 100 & 0.90 & Young--Mathew & 96.3 & 2.92--6.53 \\
+Student t(3) & 100 & 0.90 & Wilks & 100.0 & 3.86--17.44 \\
+Exponential & 100 & 0.90 & TCSP & 99.2 & 2.58--5.1 \\
+Exponential & 100 & 0.90 & Young--Mathew & 95.2 & 2.86--5.85 \\
+Exponential & 100 & 0.90 & Wilks & 100.0 & 3.3--8.24 \\
+Asymmetric Laplace (tau=0.10) & 100 & 0.90 & TCSP & 99.1 & 2.79--5.22 \\
+Asymmetric Laplace (tau=0.10) & 100 & 0.90 & Young--Mathew & 95.9 & 2.96--6.13 \\
+Asymmetric Laplace (tau=0.10) & 100 & 0.90 & Wilks & 100.0 & 3.5--8.54 \\
+Two-piece Normal (1:12) & 100 & 0.90 & TCSP & 98.7 & 3.07--4.66 \\
+Two-piece Normal (1:12) & 100 & 0.90 & Young--Mathew & 96.0 & 3.15--5.02 \\
+Two-piece Normal (1:12) & 100 & 0.90 & Wilks & 99.9 & 3.52--6.24 \\
+Beta(1,8) & 100 & 0.90 & TCSP & 98.9 & 2.84--4.78 \\
+Beta(1,8) & 100 & 0.90 & Young--Mathew & 96.1 & 3.02--5.38 \\
+Beta(1,8) & 100 & 0.90 & Wilks & 99.9 & 3.43--6.43 \\
+Gamma(0.5,1) & 100 & 0.90 & TCSP & 99.4 & 2.35--5.37 \\
+Gamma(0.5,1) & 100 & 0.90 & Young--Mathew & 96.8 & 2.66--6.43 \\
+Gamma(0.5,1) & 100 & 0.90 & Wilks & 100.0 & 3.19--9.84 \\
+Log-normal (log sd 1.25) & 100 & 0.90 & TCSP & 99.3 & 1.43--5.47 \\
+Log-normal (log sd 1.25) & 100 & 0.90 & Young--Mathew & 96.4 & 1.71--7.92 \\
+Log-normal (log sd 1.25) & 100 & 0.90 & Wilks & 100.0 & 2.21--18.36 \\
 Gaussian & 100 & 0.95 & TCSP & 96.2 & 3.97--6.42 \\
 Gaussian & 100 & 0.95 & Young--Mathew & 95.5 & 3.91--6.18 \\
 Gaussian & 100 & 0.95 & Wilks & 96.2 & 3.97--6.42 \\
-hard log-normal & 100 & 0.95 & TCSP & 96.7 & 2.3--16.67 \\
-hard log-normal & 100 & 0.95 & Young--Mathew & 96.3 & 2.24--15.35 \\
-hard log-normal & 100 & 0.95 & Wilks & 96.7 & 2.3--16.67 \\
-Laplace & 100 & 0.95 & TCSP & 96.3 & 4.29--9.33 \\
-Laplace & 100 & 0.95 & Young--Mathew & 95.7 & 4.26--8.9 \\
-Laplace & 100 & 0.95 & Wilks & 96.3 & 4.29--9.33 \\
-Student t3 & 100 & 0.95 & TCSP & 96.8 & 3.8--16.99 \\
-Student t3 & 100 & 0.95 & Young--Mathew & 96.0 & 3.73--15.28 \\
-Student t3 & 100 & 0.95 & Wilks & 96.8 & 3.8--16.99 \\
-Beta(5,2) & 500 & 0.90 & TCSP & 98.1 & 3.13--3.55 \\
-Beta(5,2) & 500 & 0.90 & Young--Mathew & 95.5 & 3.21--3.7 \\
-Beta(5,2) & 500 & 0.90 & Wilks & 100.0 & 4.49--5.58 \\
-contaminated normal & 500 & 0.90 & TCSP & 97.4 & 1.85--2.42 \\
-contaminated normal & 500 & 0.90 & Young--Mathew & 95.8 & 1.82--2.38 \\
-contaminated normal & 500 & 0.90 & Wilks & 100.0 & 10.36--21.23 \\
-exponential & 500 & 0.90 & TCSP & 99.0 & 2.4--3.05 \\
-exponential & 500 & 0.90 & Young--Mathew & 94.5 & 2.83--3.71 \\
-exponential & 500 & 0.90 & Wilks & 100.0 & 4.87--10.39 \\
-Gamma(2,1) & 500 & 0.90 & TCSP & 98.5 & 2.76--3.32 \\
-Gamma(2,1) & 500 & 0.90 & Young--Mathew & 96.0 & 3.04--3.79 \\
-Gamma(2,1) & 500 & 0.90 & Wilks & 100.0 & 4.88--8.88 \\
+Student t(3) & 100 & 0.95 & TCSP & 96.8 & 3.8--16.99 \\
+Student t(3) & 100 & 0.95 & Young--Mathew & 96.0 & 3.73--15.28 \\
+Student t(3) & 100 & 0.95 & Wilks & 96.8 & 3.8--16.99 \\
+Exponential & 100 & 0.95 & TCSP & 97.1 & 3.25--8.44 \\
+Exponential & 100 & 0.95 & Young--Mathew & 96.7 & 3.2--7.95 \\
+Exponential & 100 & 0.95 & Wilks & 97.1 & 3.25--8.44 \\
+Asymmetric Laplace (tau=0.10) & 100 & 0.95 & TCSP & 97.2 & 3.56--8.56 \\
+Asymmetric Laplace (tau=0.10) & 100 & 0.95 & Young--Mathew & 96.6 & 3.5--8.1 \\
+Asymmetric Laplace (tau=0.10) & 100 & 0.95 & Wilks & 97.2 & 3.56--8.56 \\
+Two-piece Normal (1:12) & 100 & 0.95 & TCSP & 97.3 & 3.57--6.08 \\
+Two-piece Normal (1:12) & 100 & 0.95 & Young--Mathew & 96.7 & 3.53--5.83 \\
+Two-piece Normal (1:12) & 100 & 0.95 & Wilks & 97.3 & 3.57--6.08 \\
+Beta(1,8) & 100 & 0.95 & TCSP & 97.3 & 3.46--6.56 \\
+Beta(1,8) & 100 & 0.95 & Young--Mathew & 96.8 & 3.43--6.21 \\
+Beta(1,8) & 100 & 0.95 & Wilks & 97.3 & 3.46--6.56 \\
+Gamma(0.5,1) & 100 & 0.95 & TCSP & 96.8 & 3.11--9.07 \\
+Gamma(0.5,1) & 100 & 0.95 & Young--Mathew & 96.5 & 3.07--8.56 \\
+Gamma(0.5,1) & 100 & 0.95 & Wilks & 96.8 & 3.11--9.07 \\
+Log-normal (log sd 1.25) & 100 & 0.95 & TCSP & 96.7 & 2.3--16.67 \\
+Log-normal (log sd 1.25) & 100 & 0.95 & Young--Mathew & 96.3 & 2.24--15.35 \\
+Log-normal (log sd 1.25) & 100 & 0.95 & Wilks & 96.7 & 2.3--16.67 \\
 Gaussian & 500 & 0.90 & TCSP & 96.7 & 3.31--3.86 \\
 Gaussian & 500 & 0.90 & Young--Mathew & 95.6 & 3.26--3.84 \\
 Gaussian & 500 & 0.90 & Wilks & 100.0 & 5.17--7.28 \\
-hard log-normal & 500 & 0.90 & TCSP & 99.0 & 1.24--1.9 \\
-hard log-normal & 500 & 0.90 & Young--Mathew & 95.1 & 1.68--2.8 \\
-hard log-normal & 500 & 0.90 & Wilks & 100.0 & 5.03--29.37 \\
-Laplace & 500 & 0.90 & TCSP & 97.5 & 3.29--4.14 \\
-Laplace & 500 & 0.90 & Young--Mathew & 95.8 & 3.21--4.08 \\
-Laplace & 500 & 0.90 & Wilks & 100.0 & 6.64--11.23 \\
-Student t3 & 500 & 0.90 & TCSP & 98.3 & 2.77--3.62 \\
-Student t3 & 500 & 0.90 & Young--Mathew & 95.8 & 2.69--3.54 \\
-Student t3 & 500 & 0.90 & Wilks & 100.0 & 6.91--25.85 \\
-Beta(5,2) & 500 & 0.95 & TCSP & 97.7 & 3.63--4.15 \\
-Beta(5,2) & 500 & 0.95 & Young--Mathew & 95.9 & 3.71--4.36 \\
-Beta(5,2) & 500 & 0.95 & Wilks & 100.0 & 4.46--5.61 \\
-contaminated normal & 500 & 0.95 & TCSP & 98.3 & 2.6--6.88 \\
-contaminated normal & 500 & 0.95 & Young--Mathew & 96.9 & 2.53--6.77 \\
-contaminated normal & 500 & 0.95 & Wilks & 100.0 & 10.16--21.21 \\
-exponential & 500 & 0.95 & TCSP & 99.0 & 3.11--4.17 \\
-exponential & 500 & 0.95 & Young--Mathew & 96.2 & 3.56--4.92 \\
-exponential & 500 & 0.95 & Wilks & 100.0 & 4.96--9.51 \\
-Gamma(2,1) & 500 & 0.95 & TCSP & 98.2 & 3.4--4.31 \\
-Gamma(2,1) & 500 & 0.95 & Young--Mathew & 96.0 & 3.69--4.84 \\
-Gamma(2,1) & 500 & 0.95 & Wilks & 100.0 & 4.89--9 \\
+Student t(3) & 500 & 0.90 & TCSP & 98.3 & 2.77--3.62 \\
+Student t(3) & 500 & 0.90 & Young--Mathew & 95.8 & 2.69--3.54 \\
+Student t(3) & 500 & 0.90 & Wilks & 100.0 & 6.91--25.85 \\
+Exponential & 500 & 0.90 & TCSP & 99.0 & 2.4--3.05 \\
+Exponential & 500 & 0.90 & Young--Mathew & 94.5 & 2.83--3.71 \\
+Exponential & 500 & 0.90 & Wilks & 100.0 & 4.87--10.39 \\
+Asymmetric Laplace (tau=0.10) & 500 & 0.90 & TCSP & 99.0 & 2.62--3.3 \\
+Asymmetric Laplace (tau=0.10) & 500 & 0.90 & Young--Mathew & 96.1 & 2.87--3.76 \\
+Asymmetric Laplace (tau=0.10) & 500 & 0.90 & Wilks & 100.0 & 5.32--10.34 \\
+Two-piece Normal (1:12) & 500 & 0.90 & TCSP & 98.6 & 2.9--3.42 \\
+Two-piece Normal (1:12) & 500 & 0.90 & Young--Mathew & 95.1 & 3.09--3.67 \\
+Two-piece Normal (1:12) & 500 & 0.90 & Wilks & 100.0 & 4.6--6.83 \\
+Beta(1,8) & 500 & 0.90 & TCSP & 99.0 & 2.59--3.17 \\
+Beta(1,8) & 500 & 0.90 & Young--Mathew & 94.4 & 2.96--3.71 \\
+Beta(1,8) & 500 & 0.90 & Wilks & 100.0 & 4.55--7.18 \\
+Gamma(0.5,1) & 500 & 0.90 & TCSP & 98.8 & 2--2.77 \\
+Gamma(0.5,1) & 500 & 0.90 & Young--Mathew & 94.8 & 2.54--3.64 \\
+Gamma(0.5,1) & 500 & 0.90 & Wilks & 100.0 & 5.06--11.23 \\
+Log-normal (log sd 1.25) & 500 & 0.90 & TCSP & 99.0 & 1.24--1.9 \\
+Log-normal (log sd 1.25) & 500 & 0.90 & Young--Mathew & 95.1 & 1.68--2.8 \\
+Log-normal (log sd 1.25) & 500 & 0.90 & Wilks & 100.0 & 5.03--29.37 \\
 Gaussian & 500 & 0.95 & TCSP & 96.2 & 3.91--4.67 \\
 Gaussian & 500 & 0.95 & Young--Mathew & 96.0 & 3.9--4.66 \\
 Gaussian & 500 & 0.95 & Wilks & 100.0 & 5.19--7.3 \\
-hard log-normal & 500 & 0.95 & TCSP & 98.9 & 1.95--3.55 \\
-hard log-normal & 500 & 0.95 & Young--Mathew & 94.2 & 2.49--5.18 \\
-hard log-normal & 500 & 0.95 & Wilks & 100.0 & 4.91--30.5 \\
-Laplace & 500 & 0.95 & TCSP & 98.2 & 4.33--5.65 \\
-Laplace & 500 & 0.95 & Young--Mathew & 97.2 & 4.25--5.61 \\
-Laplace & 500 & 0.95 & Wilks & 100.0 & 6.49--11.54 \\
-Student t3 & 500 & 0.95 & TCSP & 97.4 & 3.73--5.38 \\
-Student t3 & 500 & 0.95 & Young--Mathew & 96.6 & 3.7--5.34 \\
-Student t3 & 500 & 0.95 & Wilks & 100.0 & 6.9--26.52 \\
-Beta(5,2) & 500 & 0.99 & TCSP & 95.3 & 4.46--5.59 \\
-Beta(5,2) & 500 & 0.99 & Young--Mathew & 94.6 & 4.44--5.52 \\
-Beta(5,2) & 500 & 0.99 & Wilks & 95.3 & 4.46--5.59 \\
-contaminated normal & 500 & 0.99 & TCSP & 95.7 & 9.97--21.36 \\
-contaminated normal & 500 & 0.99 & Young--Mathew & 95.2 & 9.9--20.72 \\
-contaminated normal & 500 & 0.99 & Wilks & 95.7 & 9.97--21.36 \\
-exponential & 500 & 0.99 & TCSP & 96.6 & 4.96--9.98 \\
-exponential & 500 & 0.99 & Young--Mathew & 96.3 & 4.92--9.61 \\
-exponential & 500 & 0.99 & Wilks & 96.6 & 4.96--9.98 \\
-Gamma(2,1) & 500 & 0.99 & TCSP & 95.3 & 4.9--8.89 \\
-Gamma(2,1) & 500 & 0.99 & Young--Mathew & 95.0 & 4.88--8.56 \\
-Gamma(2,1) & 500 & 0.99 & Wilks & 95.3 & 4.9--8.89 \\
+Student t(3) & 500 & 0.95 & TCSP & 97.4 & 3.73--5.38 \\
+Student t(3) & 500 & 0.95 & Young--Mathew & 96.6 & 3.7--5.34 \\
+Student t(3) & 500 & 0.95 & Wilks & 100.0 & 6.9--26.52 \\
+Exponential & 500 & 0.95 & TCSP & 99.0 & 3.11--4.17 \\
+Exponential & 500 & 0.95 & Young--Mathew & 96.2 & 3.56--4.92 \\
+Exponential & 500 & 0.95 & Wilks & 100.0 & 4.96--9.51 \\
+Asymmetric Laplace (tau=0.10) & 500 & 0.95 & TCSP & 98.0 & 3.36--4.48 \\
+Asymmetric Laplace (tau=0.10) & 500 & 0.95 & Young--Mathew & 95.1 & 3.58--4.98 \\
+Asymmetric Laplace (tau=0.10) & 500 & 0.95 & Wilks & 100.0 & 5.28--10.08 \\
+Two-piece Normal (1:12) & 500 & 0.95 & TCSP & 97.2 & 3.44--4.17 \\
+Two-piece Normal (1:12) & 500 & 0.95 & Young--Mathew & 94.4 & 3.61--4.44 \\
+Two-piece Normal (1:12) & 500 & 0.95 & Wilks & 100.0 & 4.62--6.81 \\
+Beta(1,8) & 500 & 0.95 & TCSP & 99.1 & 3.25--4.06 \\
+Beta(1,8) & 500 & 0.95 & Young--Mathew & 96.1 & 3.61--4.6 \\
+Beta(1,8) & 500 & 0.95 & Wilks & 100.0 & 4.64--7.19 \\
+Gamma(0.5,1) & 500 & 0.95 & TCSP & 99.0 & 2.86--4.17 \\
+Gamma(0.5,1) & 500 & 0.95 & Young--Mathew & 95.7 & 3.4--5.11 \\
+Gamma(0.5,1) & 500 & 0.95 & Wilks & 100.0 & 5.01--11.23 \\
+Log-normal (log sd 1.25) & 500 & 0.95 & TCSP & 98.9 & 1.95--3.55 \\
+Log-normal (log sd 1.25) & 500 & 0.95 & Young--Mathew & 94.2 & 2.49--5.18 \\
+Log-normal (log sd 1.25) & 500 & 0.95 & Wilks & 100.0 & 4.91--30.5 \\
 Gaussian & 500 & 0.99 & TCSP & 96.4 & 5.18--7.28 \\
 Gaussian & 500 & 0.99 & Young--Mathew & 95.8 & 5.17--7.17 \\
 Gaussian & 500 & 0.99 & Wilks & 96.4 & 5.18--7.28 \\
-hard log-normal & 500 & 0.99 & TCSP & 96.3 & 4.93--32.87 \\
-hard log-normal & 500 & 0.99 & Young--Mathew & 95.9 & 4.84--31.39 \\
-hard log-normal & 500 & 0.99 & Wilks & 96.3 & 4.93--32.87 \\
-Laplace & 500 & 0.99 & TCSP & 95.1 & 6.58--11.67 \\
-Laplace & 500 & 0.99 & Young--Mathew & 94.6 & 6.54--11.28 \\
-Laplace & 500 & 0.99 & Wilks & 95.1 & 6.58--11.67 \\
-Student t3 & 500 & 0.99 & TCSP & 96.7 & 7.01--26.46 \\
-Student t3 & 500 & 0.99 & Young--Mathew & 96.7 & 6.93--25.28 \\
-Student t3 & 500 & 0.99 & Wilks & 96.7 & 7.01--26.46 \\
-Beta(5,2) & 1000 & 0.90 & TCSP & 97.8 & 3.11--3.42 \\
-Beta(5,2) & 1000 & 0.90 & Young--Mathew & 95.7 & 3.21--3.56 \\
-Beta(5,2) & 1000 & 0.90 & Wilks & 100.0 & 4.7--5.71 \\
-contaminated normal & 1000 & 0.90 & TCSP & 98.9 & 1.86--2.2 \\
-contaminated normal & 1000 & 0.90 & Young--Mathew & 95.8 & 1.82--2.15 \\
-contaminated normal & 1000 & 0.90 & Wilks & 100.0 & 13.11--23.07 \\
-exponential & 1000 & 0.90 & TCSP & 99.6 & 2.37--2.8 \\
-exponential & 1000 & 0.90 & Young--Mathew & 96.1 & 2.85--3.44 \\
-exponential & 1000 & 0.90 & Wilks & 100.0 & 5.58--10.42 \\
-Gamma(2,1) & 1000 & 0.90 & TCSP & 99.6 & 2.78--3.16 \\
-Gamma(2,1) & 1000 & 0.90 & Young--Mathew & 96.2 & 3.04--3.54 \\
-Gamma(2,1) & 1000 & 0.90 & Wilks & 100.0 & 5.5--9.2 \\
+Student t(3) & 500 & 0.99 & TCSP & 96.7 & 7.01--26.46 \\
+Student t(3) & 500 & 0.99 & Young--Mathew & 96.7 & 6.93--25.28 \\
+Student t(3) & 500 & 0.99 & Wilks & 96.7 & 7.01--26.46 \\
+Exponential & 500 & 0.99 & TCSP & 96.6 & 4.96--9.98 \\
+Exponential & 500 & 0.99 & Young--Mathew & 96.3 & 4.92--9.61 \\
+Exponential & 500 & 0.99 & Wilks & 96.6 & 4.96--9.98 \\
+Asymmetric Laplace (tau=0.10) & 500 & 0.99 & TCSP & 96.1 & 5.23--10.66 \\
+Asymmetric Laplace (tau=0.10) & 500 & 0.99 & Young--Mathew & 95.6 & 5.21--10.17 \\
+Asymmetric Laplace (tau=0.10) & 500 & 0.99 & Wilks & 96.1 & 5.23--10.66 \\
+Two-piece Normal (1:12) & 500 & 0.99 & TCSP & 96.2 & 4.55--6.84 \\
+Two-piece Normal (1:12) & 500 & 0.99 & Young--Mathew & 95.9 & 4.52--6.65 \\
+Two-piece Normal (1:12) & 500 & 0.99 & Wilks & 96.2 & 4.55--6.84 \\
+Beta(1,8) & 500 & 0.99 & TCSP & 95.5 & 4.58--7.05 \\
+Beta(1,8) & 500 & 0.99 & Young--Mathew & 95.1 & 4.57--6.9 \\
+Beta(1,8) & 500 & 0.99 & Wilks & 95.5 & 4.58--7.05 \\
+Gamma(0.5,1) & 500 & 0.99 & TCSP & 95.3 & 5.13--11.93 \\
+Gamma(0.5,1) & 500 & 0.99 & Young--Mathew & 95.1 & 5.1--11.36 \\
+Gamma(0.5,1) & 500 & 0.99 & Wilks & 95.3 & 5.13--11.93 \\
+Log-normal (log sd 1.25) & 500 & 0.99 & TCSP & 96.3 & 4.93--32.87 \\
+Log-normal (log sd 1.25) & 500 & 0.99 & Young--Mathew & 95.9 & 4.84--31.39 \\
+Log-normal (log sd 1.25) & 500 & 0.99 & Wilks & 96.3 & 4.93--32.87 \\
 Gaussian & 1000 & 0.90 & TCSP & 98.0 & 3.32--3.69 \\
 Gaussian & 1000 & 0.90 & Young--Mathew & 95.3 & 3.27--3.65 \\
 Gaussian & 1000 & 0.90 & Wilks & 100.0 & 5.63--7.6 \\
-hard log-normal & 1000 & 0.90 & TCSP & 99.6 & 1.23--1.62 \\
-hard log-normal & 1000 & 0.90 & Young--Mathew & 96.6 & 1.71--2.4 \\
-hard log-normal & 1000 & 0.90 & Wilks & 100.0 & 6.5--40.48 \\
-Laplace & 1000 & 0.90 & TCSP & 98.0 & 3.3--3.88 \\
-Laplace & 1000 & 0.90 & Young--Mathew & 95.7 & 3.22--3.82 \\
-Laplace & 1000 & 0.90 & Wilks & 100.0 & 7.51--12.76 \\
-Student t3 & 1000 & 0.90 & TCSP & 98.6 & 2.77--3.33 \\
-Student t3 & 1000 & 0.90 & Young--Mathew & 94.2 & 2.69--3.24 \\
-Student t3 & 1000 & 0.90 & Wilks & 100.0 & 8.88--34.51 \\
-Beta(5,2) & 1000 & 0.95 & TCSP & 99.0 & 3.62--3.99 \\
-Beta(5,2) & 1000 & 0.95 & Young--Mathew & 97.2 & 3.72--4.13 \\
-Beta(5,2) & 1000 & 0.95 & Wilks & 100.0 & 4.74--5.68 \\
-contaminated normal & 1000 & 0.95 & TCSP & 98.7 & 2.52--5.38 \\
-contaminated normal & 1000 & 0.95 & Young--Mathew & 95.1 & 2.42--4.78 \\
-contaminated normal & 1000 & 0.95 & Wilks & 100.0 & 12.95--22.94 \\
-exponential & 1000 & 0.95 & TCSP & 99.6 & 3.11--3.77 \\
-exponential & 1000 & 0.95 & Young--Mathew & 95.5 & 3.56--4.42 \\
-exponential & 1000 & 0.95 & Wilks & 100.0 & 5.6--10.99 \\
-Gamma(2,1) & 1000 & 0.95 & TCSP & 99.0 & 3.42--3.98 \\
-Gamma(2,1) & 1000 & 0.95 & Young--Mathew & 95.2 & 3.69--4.42 \\
-Gamma(2,1) & 1000 & 0.95 & Wilks & 100.0 & 5.48--9.48 \\
+Student t(3) & 1000 & 0.90 & TCSP & 98.6 & 2.77--3.33 \\
+Student t(3) & 1000 & 0.90 & Young--Mathew & 94.2 & 2.69--3.24 \\
+Student t(3) & 1000 & 0.90 & Wilks & 100.0 & 8.88--34.51 \\
+Exponential & 1000 & 0.90 & TCSP & 99.6 & 2.37--2.8 \\
+Exponential & 1000 & 0.90 & Young--Mathew & 96.1 & 2.85--3.44 \\
+Exponential & 1000 & 0.90 & Wilks & 100.0 & 5.58--10.42 \\
+Asymmetric Laplace (tau=0.10) & 1000 & 0.90 & TCSP & 98.6 & 2.59--3.05 \\
+Asymmetric Laplace (tau=0.10) & 1000 & 0.90 & Young--Mathew & 95.2 & 2.88--3.45 \\
+Asymmetric Laplace (tau=0.10) & 1000 & 0.90 & Wilks & 100.0 & 6.02--11.23 \\
+Two-piece Normal (1:12) & 1000 & 0.90 & TCSP & 98.7 & 2.9--3.23 \\
+Two-piece Normal (1:12) & 1000 & 0.90 & Young--Mathew & 95.4 & 3.11--3.52 \\
+Two-piece Normal (1:12) & 1000 & 0.90 & Wilks & 100.0 & 5.04--7.03 \\
+Beta(1,8) & 1000 & 0.90 & TCSP & 99.2 & 2.58--2.97 \\
+Beta(1,8) & 1000 & 0.90 & Young--Mathew & 94.5 & 3--3.48 \\
+Beta(1,8) & 1000 & 0.90 & Wilks & 100.0 & 5.1--7.47 \\
+Gamma(0.5,1) & 1000 & 0.90 & TCSP & 99.5 & 1.98--2.51 \\
+Gamma(0.5,1) & 1000 & 0.90 & Young--Mathew & 96.1 & 2.56--3.32 \\
+Gamma(0.5,1) & 1000 & 0.90 & Wilks & 100.0 & 5.99--12.61 \\
+Log-normal (log sd 1.25) & 1000 & 0.90 & TCSP & 99.6 & 1.23--1.62 \\
+Log-normal (log sd 1.25) & 1000 & 0.90 & Young--Mathew & 96.6 & 1.71--2.4 \\
+Log-normal (log sd 1.25) & 1000 & 0.90 & Wilks & 100.0 & 6.5--40.48 \\
 Gaussian & 1000 & 0.95 & TCSP & 98.1 & 3.95--4.45 \\
 Gaussian & 1000 & 0.95 & Young--Mathew & 95.6 & 3.9--4.4 \\
 Gaussian & 1000 & 0.95 & Wilks & 100.0 & 5.6--7.68 \\
-hard log-normal & 1000 & 0.95 & TCSP & 99.6 & 1.97--2.9 \\
-hard log-normal & 1000 & 0.95 & Young--Mathew & 95.5 & 2.56--4.03 \\
-hard log-normal & 1000 & 0.95 & Wilks & 100.0 & 6.84--40.05 \\
-Laplace & 1000 & 0.95 & TCSP & 97.9 & 4.3--5.17 \\
-Laplace & 1000 & 0.95 & Young--Mathew & 94.8 & 4.21--5.08 \\
-Laplace & 1000 & 0.95 & Wilks & 100.0 & 7.54--12.8 \\
-Student t3 & 1000 & 0.95 & TCSP & 97.6 & 3.71--4.84 \\
-Student t3 & 1000 & 0.95 & Young--Mathew & 95.4 & 3.63--4.69 \\
-Student t3 & 1000 & 0.95 & Wilks & 100.0 & 8.66--37.39 \\
-Beta(5,2) & 1000 & 0.99 & TCSP & 98.0 & 4.46--5.19 \\
-Beta(5,2) & 1000 & 0.99 & Young--Mathew & 96.6 & 4.54--5.33 \\
-Beta(5,2) & 1000 & 0.99 & Wilks & 100.0 & 4.73--5.69 \\
-contaminated normal & 1000 & 0.99 & TCSP & 98.1 & 10.7--17.56 \\
-contaminated normal & 1000 & 0.99 & Young--Mathew & 97.3 & 10.56--17.32 \\
-contaminated normal & 1000 & 0.99 & Wilks & 100.0 & 13.03--23.77 \\
-exponential & 1000 & 0.99 & TCSP & 99.5 & 4.98--7.28 \\
-exponential & 1000 & 0.99 & Young--Mathew & 97.2 & 5.28--8.18 \\
-exponential & 1000 & 0.99 & Wilks & 100.0 & 5.6--10.39 \\
-Gamma(2,1) & 1000 & 0.99 & TCSP & 99.0 & 4.94--6.92 \\
-Gamma(2,1) & 1000 & 0.99 & Young--Mathew & 95.8 & 5.11--7.44 \\
-Gamma(2,1) & 1000 & 0.99 & Wilks & 100.0 & 5.48--9.12 \\
+Student t(3) & 1000 & 0.95 & TCSP & 97.6 & 3.71--4.84 \\
+Student t(3) & 1000 & 0.95 & Young--Mathew & 95.4 & 3.63--4.69 \\
+Student t(3) & 1000 & 0.95 & Wilks & 100.0 & 8.66--37.39 \\
+Exponential & 1000 & 0.95 & TCSP & 99.6 & 3.11--3.77 \\
+Exponential & 1000 & 0.95 & Young--Mathew & 95.5 & 3.56--4.42 \\
+Exponential & 1000 & 0.95 & Wilks & 100.0 & 5.6--10.99 \\
+Asymmetric Laplace (tau=0.10) & 1000 & 0.95 & TCSP & 98.5 & 3.38--4.1 \\
+Asymmetric Laplace (tau=0.10) & 1000 & 0.95 & Young--Mathew & 96.3 & 3.63--4.5 \\
+Asymmetric Laplace (tau=0.10) & 1000 & 0.95 & Wilks & 100.0 & 5.97--11.07 \\
+Two-piece Normal (1:12) & 1000 & 0.95 & TCSP & 98.8 & 3.47--3.9 \\
+Two-piece Normal (1:12) & 1000 & 0.95 & Young--Mathew & 95.1 & 3.62--4.16 \\
+Two-piece Normal (1:12) & 1000 & 0.95 & Wilks & 100.0 & 5.01--7.21 \\
+Beta(1,8) & 1000 & 0.95 & TCSP & 99.3 & 3.23--3.78 \\
+Beta(1,8) & 1000 & 0.95 & Young--Mathew & 95.1 & 3.59--4.3 \\
+Beta(1,8) & 1000 & 0.95 & Wilks & 100.0 & 5.1--7.35 \\
+Gamma(0.5,1) & 1000 & 0.95 & TCSP & 99.5 & 2.83--3.68 \\
+Gamma(0.5,1) & 1000 & 0.95 & Young--Mathew & 95.1 & 3.38--4.55 \\
+Gamma(0.5,1) & 1000 & 0.95 & Wilks & 100.0 & 6--12.25 \\
+Log-normal (log sd 1.25) & 1000 & 0.95 & TCSP & 99.6 & 1.97--2.9 \\
+Log-normal (log sd 1.25) & 1000 & 0.95 & Young--Mathew & 95.5 & 2.56--4.03 \\
+Log-normal (log sd 1.25) & 1000 & 0.95 & Wilks & 100.0 & 6.84--40.05 \\
 Gaussian & 1000 & 0.99 & TCSP & 97.5 & 5.21--6.41 \\
 Gaussian & 1000 & 0.99 & Young--Mathew & 96.9 & 5.19--6.42 \\
 Gaussian & 1000 & 0.99 & Wilks & 99.9 & 5.61--7.65 \\
-hard log-normal & 1000 & 0.99 & TCSP & 99.2 & 5.1--13.21 \\
-hard log-normal & 1000 & 0.99 & Young--Mathew & 94.1 & 5.52--17.47 \\
-hard log-normal & 1000 & 0.99 & Wilks & 100.0 & 6.37--39.88 \\
-Laplace & 1000 & 0.99 & TCSP & 98.3 & 6.71--9.41 \\
-Laplace & 1000 & 0.99 & Young--Mathew & 97.1 & 6.66--9.38 \\
-Laplace & 1000 & 0.99 & Wilks & 99.9 & 7.65--12.11 \\
-Student t3 & 1000 & 0.99 & TCSP & 98.8 & 7.26--14.48 \\
-Student t3 & 1000 & 0.99 & Young--Mathew & 96.9 & 7.17--14.7 \\
-Student t3 & 1000 & 0.99 & Wilks & 100.0 & 8.8--34.22 \\
+Student t(3) & 1000 & 0.99 & TCSP & 98.8 & 7.26--14.48 \\
+Student t(3) & 1000 & 0.99 & Young--Mathew & 96.9 & 7.17--14.7 \\
+Student t(3) & 1000 & 0.99 & Wilks & 100.0 & 8.8--34.22 \\
+Exponential & 1000 & 0.99 & TCSP & 99.5 & 4.98--7.28 \\
+Exponential & 1000 & 0.99 & Young--Mathew & 97.2 & 5.28--8.18 \\
+Exponential & 1000 & 0.99 & Wilks & 100.0 & 5.6--10.39 \\
+Asymmetric Laplace (tau=0.10) & 1000 & 0.99 & TCSP & 99.0 & 5.35--7.67 \\
+Asymmetric Laplace (tau=0.10) & 1000 & 0.99 & Young--Mathew & 96.8 & 5.48--8.38 \\
+Asymmetric Laplace (tau=0.10) & 1000 & 0.99 & Wilks & 100.0 & 5.98--10.87 \\
+Two-piece Normal (1:12) & 1000 & 0.99 & TCSP & 98.2 & 4.58--5.79 \\
+Two-piece Normal (1:12) & 1000 & 0.99 & Young--Mathew & 95.1 & 4.64--6.15 \\
+Two-piece Normal (1:12) & 1000 & 0.99 & Wilks & 100.0 & 4.89--7.11 \\
+Beta(1,8) & 1000 & 0.99 & TCSP & 98.8 & 4.63--6.11 \\
+Beta(1,8) & 1000 & 0.99 & Young--Mathew & 95.3 & 4.76--6.43 \\
+Beta(1,8) & 1000 & 0.99 & Wilks & 99.9 & 5.04--7.29 \\
+Gamma(0.5,1) & 1000 & 0.99 & TCSP & 98.9 & 5.16--8.37 \\
+Gamma(0.5,1) & 1000 & 0.99 & Young--Mathew & 96.4 & 5.49--9.84 \\
+Gamma(0.5,1) & 1000 & 0.99 & Wilks & 99.9 & 6.02--12.3 \\
+Log-normal (log sd 1.25) & 1000 & 0.99 & TCSP & 99.2 & 5.1--13.21 \\
+Log-normal (log sd 1.25) & 1000 & 0.99 & Young--Mathew & 94.1 & 5.52--17.47 \\
+Log-normal (log sd 1.25) & 1000 & 0.99 & Wilks & 100.0 & 6.37--39.88 \\
 \bottomrule
 \end{longtable}
 \endgroup

@@ -153,24 +153,23 @@ make literature-manifest
 
 Long-running simulation and validation targets require explicit reviewed
 configuration and should write only under ignored local output roots.
-The completed refined tolerance validation is configured in
-`application/config/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820.json`.
-It compares TCSP, Young--Mathew, and Wilks over the feasible iid tolerance grid
-using the refined non-separated DGP panel. Use
-`make launch-rqr-bayes-uq-refined` for the 40-worker launch, and pass
-`RQR_BAYES_UQ_REFINED_RUN_DIR=<run_dir>` to the matching health, collect, and
-stop targets. The manuscript validation artifacts currently point to the
-completed run
-`application/runs/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820/wave_confirmatory_refined_dgps_20260820T221539Z`.
-
-The prespecified skew-stress relaunch is configured in
+The authoritative tolerance validation for the manuscript is configured in
 `application/config/rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820.json`.
-It keeps the same three methods, feasible cells, tolerance confidence, and
-1000 paired replications, but uses two symmetric anchors and six skewed laws.
+It compares TCSP, Young--Mathew, and Wilks over the feasible iid tolerance
+grid at tolerance confidence 0.95, with 1000 paired replications per
+distribution, sample-size/content cell, and method. The panel uses two
+symmetric anchors and six skew-stress laws. The completed manuscript run is
+`application/runs/rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820/wave_confirmatory_skewstress_dgps_20260821T005632Z`.
 Use `make rqr-bayes-uq-skewstress-smoke` before
 `make launch-rqr-bayes-uq-skewstress`; pass
 `RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR=<run_dir>` to the matching health, collect,
 and stop targets.
+
+The earlier refined-panel validation remains available for audit under
+`application/config/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820.json`
+and
+`application/runs/rqr_bayes_uq_validation_main_3method_refined_dgps_20260820/wave_confirmatory_refined_dgps_20260820T221539Z`,
+but it is no longer the default source for article tables and figures.
 
 The 95% single-data oracle-tilt illustrations are rendered from the corrected
 version-5 compact evidence bundle under

@@ -2252,17 +2252,21 @@ explicit feasible design cells:
   &(1000,0.90),(1000,0.95),(1000,0.99)\}.
   \end{aligned}
 \]
-The distributional shapes are Gaussian, Laplace, Student \(t_3\), five-percent
-scale contamination, Gamma\((2,1)\), exponential, hard log-normal, and
-Beta\((5,2)\). Each cell uses paired random samples across methods and records
-the repository commit, frozen JSON configuration, scan-calibration cache, wave
+The distributional panel contains two symmetric anchors and six skew-stress
+laws. The anchors are Gaussian and Student \(t_3\). The skew-stress laws are
+exponential, asymmetric Laplace with \(\tau=0.10\), two-piece Normal with scale
+ratio \(1{:}12\), Beta\((1,8)\), Gamma\((0.5,1)\), and log-normal with
+log-scale standard deviation \(1.25\). All laws are centered and scaled before
+sampling. Each cell uses paired random samples across methods and records the
+repository commit, frozen JSON configuration, scan-calibration cache, wave
 plan, and artifact hashes. The completed three-method confirmatory run contains
 216 method-specific waves and 216,000 result rows; all waves completed, and all
 three reported methods returned an interval in every replication. The
-table and figure inputs are generated directly from these collected raw
+manuscript tables and figures are generated directly from these collected raw
 validation rows and the corresponding scan-calibration rows. The scenario-range
 table in the main article is summarized across distributions within each
-\((n,c)\) cell.
+\((n,c)\) cell, while the supplement keeps the distribution-level delivery and
+width summaries.
 Table~\ref{tab:supp-primary-dgp-delivery} gives the distribution-level delivery
 percentages before aggregation, and
 Table~\ref{tab:supp-primary-dgp-width-ranges} reports the corresponding

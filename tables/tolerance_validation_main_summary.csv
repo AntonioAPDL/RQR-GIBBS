@@ -1,4 +1,4 @@
 "method_id","method","role","dataset_thresholds","infeasible_rate","grid_delivery_success","returned_success"
-"tcsp_mc","TCSP scan","Shortest empirical scan action",72000,0,0.977652777777778,0.977652777777778
-"young_mathew","Young--Mathew","Classical interpolated comparator",72000,0,0.959527777777778,0.959527777777778
-"wilks_minmax","Wilks min--max","Classical full-range comparator",72000,0,0.987680555555556,0.987680555555556
+"tcsp_mc","TCSP scan","Shortest empirical scan action",72000,0,0.979930555555556,0.979930555555556
+"young_mathew","Young--Mathew","Classical interpolated comparator",72000,0,0.957875,0.957875
+"wilks_minmax","Wilks min--max","Classical full-range comparator",72000,0,0.988486111111111,0.988486111111111

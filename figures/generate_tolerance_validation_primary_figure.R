@@ -20,8 +20,8 @@ setwd(repo_root)
 
 default_primary_dir <- file.path(
   "application", "runs",
-  "rqr_bayes_uq_validation_main_3method_refined_dgps_20260820",
-  "wave_confirmatory_refined_dgps_20260820T221539Z"
+  "rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820",
+  "wave_confirmatory_skewstress_dgps_20260821T005632Z"
 )
 primary_results <- arg_value(
   "--primary-results=",
@@ -306,7 +306,7 @@ legend("center", legend = unname(method_labels[method_order]),
        col = unname(method_colors[method_order]),
        lty = unname(method_lty[method_order]), lwd = 2.4,
        ncol = 3, bty = "n", xpd = NA, cex = 0.9)
-mtext("Primary iid tolerance validation at 95% tolerance confidence",
+mtext("Iid tolerance validation at 95% tolerance confidence",
       outer = TRUE, cex = 1.05, font = 2)
 
 par(old_par)

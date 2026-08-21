@@ -194,7 +194,7 @@ supp_tex <- paste(readLines(
   file.path(out_dir, "tolerance_validation_article_dgp_delivery.tex"),
   warn = FALSE
 ), collapse = "\n")
-stopifnot(grepl("Student t3", supp_tex, fixed = TRUE))
+stopifnot(grepl("Student t(3)", supp_tex, fixed = TRUE))
 stopifnot(!grepl("Hybrid DP--scan", supp_tex, fixed = TRUE))
 stopifnot(!grepl("MTI ECM", supp_tex, fixed = TRUE))
 stopifnot(!grepl("DKW", supp_tex, fixed = TRUE))

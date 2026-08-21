@@ -20,8 +20,8 @@ setwd(repo_root)
 
 default_run_dir <- file.path(
   "application", "runs",
-  "rqr_bayes_uq_validation_main_3method_refined_dgps_20260820",
-  "wave_confirmatory_refined_dgps_20260820T221539Z"
+  "rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820",
+  "wave_confirmatory_skewstress_dgps_20260821T005632Z"
 )
 default_summary_path <- Sys.getenv(
   "RQR_BAYES_UQ_PRIMARY_SUMMARY",

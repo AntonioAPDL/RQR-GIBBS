@@ -1,28 +1,28 @@
 "n","content","method_id","method","infeasible_rate","delivery_success","returned_success"
-50,0.9,"tcsp_mc","TCSP scan",0,0.967875,0.967875
-50,0.9,"young_mathew","Young--Mathew",0,0.96225,0.96225
-50,0.9,"wilks_minmax","Wilks min--max",0,0.967875,0.967875
-100,0.9,"tcsp_mc","TCSP scan",0,0.989,0.989
-100,0.9,"young_mathew","Young--Mathew",0,0.968,0.968
-100,0.9,"wilks_minmax","Wilks min--max",0,1,1
-100,0.95,"tcsp_mc","TCSP scan",0,0.96225,0.96225
-100,0.95,"young_mathew","Young--Mathew",0,0.95675,0.95675
-100,0.95,"wilks_minmax","Wilks min--max",0,0.96225,0.96225
-500,0.9,"tcsp_mc","TCSP scan",0,0.980625,0.980625
-500,0.9,"young_mathew","Young--Mathew",0,0.955125,0.955125
+50,0.9,"tcsp_mc","TCSP scan",0,0.966375,0.966375
+50,0.9,"young_mathew","Young--Mathew",0,0.96025,0.96025
+50,0.9,"wilks_minmax","Wilks min--max",0,0.966375,0.966375
+100,0.9,"tcsp_mc","TCSP scan",0,0.99,0.99
+100,0.9,"young_mathew","Young--Mathew",0,0.962,0.962
+100,0.9,"wilks_minmax","Wilks min--max",0,0.99975,0.99975
+100,0.95,"tcsp_mc","TCSP scan",0,0.96925,0.96925
+100,0.95,"young_mathew","Young--Mathew",0,0.963875,0.963875
+100,0.95,"wilks_minmax","Wilks min--max",0,0.96925,0.96925
+500,0.9,"tcsp_mc","TCSP scan",0,0.9855,0.9855
+500,0.9,"young_mathew","Young--Mathew",0,0.95175,0.95175
 500,0.9,"wilks_minmax","Wilks min--max",0,1,1
-500,0.95,"tcsp_mc","TCSP scan",0,0.979875,0.979875
-500,0.95,"young_mathew","Young--Mathew",0,0.96125,0.96125
+500,0.95,"tcsp_mc","TCSP scan",0,0.981,0.981
+500,0.95,"young_mathew","Young--Mathew",0,0.955375,0.955375
 500,0.95,"wilks_minmax","Wilks min--max",0,1,1
-500,0.99,"tcsp_mc","TCSP scan",0,0.95925,0.95925
-500,0.99,"young_mathew","Young--Mathew",0,0.955125,0.955125
-500,0.99,"wilks_minmax","Wilks min--max",0,0.95925,0.95925
-1000,0.9,"tcsp_mc","TCSP scan",0,0.987625,0.987625
-1000,0.9,"young_mathew","Young--Mathew",0,0.957,0.957
+500,0.99,"tcsp_mc","TCSP scan",0,0.961375,0.961375
+500,0.99,"young_mathew","Young--Mathew",0,0.958,0.958
+500,0.99,"wilks_minmax","Wilks min--max",0,0.961375,0.961375
+1000,0.9,"tcsp_mc","TCSP scan",0,0.98975,0.98975
+1000,0.9,"young_mathew","Young--Mathew",0,0.95425,0.95425
 1000,0.9,"wilks_minmax","Wilks min--max",0,1,1
-1000,0.95,"tcsp_mc","TCSP scan",0,0.986875,0.986875
-1000,0.95,"young_mathew","Young--Mathew",0,0.955375,0.955375
+1000,0.95,"tcsp_mc","TCSP scan",0,0.98875,0.98875
+1000,0.95,"young_mathew","Young--Mathew",0,0.9545,0.9545
 1000,0.95,"wilks_minmax","Wilks min--max",0,1,1
-1000,0.99,"tcsp_mc","TCSP scan",0,0.9855,0.9855
-1000,0.99,"young_mathew","Young--Mathew",0,0.964875,0.964875
-1000,0.99,"wilks_minmax","Wilks min--max",0,0.99975,0.99975
+1000,0.99,"tcsp_mc","TCSP scan",0,0.987375,0.987375
+1000,0.99,"young_mathew","Young--Mathew",0,0.960875,0.960875
+1000,0.99,"wilks_minmax","Wilks min--max",0,0.999625,0.999625
