@@ -91,7 +91,7 @@ posterior endpoint-coverage transfer, and regression-family tolerance theory
 remain open.
 \end{abstract}
 
-\section*{Part I. Notation, Inferential Objects, and Support Map}
+\section*{Part I. Notation, Inferential Objects, and Guide to Supporting Results}
 
 \section{Guide to the Supplement}
 \label{sec:supp-scope}
@@ -145,14 +145,14 @@ RHS-NS & regularized-horseshoe Nishimura--Suchard prior adapter & MPI-only regul
 \end{tabularx}
 \end{table}
 
-The supplement is organized as a support map for the main article rather than
-as a second narrative paper. Table~\ref{tab:supp-support-map} records the
-principal claim types and where the reader can recover the corresponding
-derivation or computational specification.
+The supplement begins with a guide to the main article's supporting results.
+Table~\ref{tab:supp-support-map} records the principal claim types and where
+the reader can recover the corresponding derivation or computational
+specification.
 
 \begin{table}[H]
 \centering
-\caption{\textbf{Support map for the main article.} The table separates
+\caption{\textbf{Guide to supporting results.} The table separates
 population identification, finite-sample score identities, static uncertainty
 geometry, computation, and reproducibility scope.}
 \label{tab:supp-support-map}
@@ -208,14 +208,14 @@ Evidence and reproducibility scope
 \end{tabularx}
 \end{table}
 
-Table~\ref{tab:supp-status-ledger} records the status vocabulary used in this
-supplement. The labels separate what is mathematically established, what is an
-implemented computational specification, what is a reference calculation, and what
-remains a research task.
+Table~\ref{tab:supp-status-ledger} summarizes the level of support for the
+main claim classes. The labels separate what is mathematically established,
+what is an implemented computational specification, what is a reference
+calculation, and what remains a research task.
 
 \begin{table}[H]
 \centering
-\caption{\textbf{Central status ledger.} Status labels are attached to
+\caption{\textbf{Summary of claim support.} Support labels are attached to
 the strongest current support, not to intended future scope.}
 \label{tab:supp-status-ledger}
 \TableStyle
@@ -223,7 +223,7 @@ the strongest current support, not to intended future scope.}
   >{\raggedright\arraybackslash}p{0.31\textwidth}
   >{\raggedright\arraybackslash}X@{}}
 \toprule
-Status & Objects currently carrying the label & Reader consequence\\
+Level of support & Objects covered & Consequence for interpretation\\
 \midrule
 Established theorem
 & MPI population identification, MTI profiled-risk characterization, fractional empirical balance under stated conditions
@@ -245,7 +245,7 @@ Planned extension
 & Requires new objective statements, algorithms, proofs, or validation before manuscript-level claims\\
 Open conjecture or proof task
 & Exact scan recursion, action-matched closed-window finite-sample proof, posterior-to-action transfer, selected-action width regret
-& Must remain as limitation or future work until an audited proof is available\\
+& Must remain as limitation or future work until a complete proof is available\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -613,7 +613,7 @@ obtained by pointwise sorting after the raw roots are evaluated.
 Coefficient-level lower/upper summaries require a separate
 post-processing chart: one binary keep/swap assignment is made for each
 retained complete root block using distances on a declared reference design, and
-canonical coefficient summaries are suppressed if the two fitted linear roots
+lower/upper coefficient summaries are suppressed if the two fitted linear roots
 cross or the assignment is ambiguous on that design. The dynamic sampler
 uses the same rule for ordinate paths: a retained draw may be kept or swapped
 as one complete path, rather than by relabeling roots separately at different
@@ -995,20 +995,20 @@ Fisher--Pearson skewness \(\widehat\gamma_1\) and training standard deviation
 \widehat d_{\mathrm{SH}}^{\mathrm{CF}}/3,\qquad
 \widehat\delta=\widehat\sigma\,\widehat d.
 \]
-The plug-in quantities are fixed candidate tilts for initialization or
-external validation and candidate selection. They are not posterior draws, do not sample a
-tilt in the Gibbs chain, and do not justify reusing the MPI hierarchical-scale
-update at nonzero tilt. Strong skewness, finite-support boundary solutions,
-and heavy-tailed cases can move the first-order shortest approximation outside
-the admissible finite-root tilt range. The diagnostic code records adjusted
+The plug-in quantities are fixed candidate tilts for initialization, external
+validation, and candidate selection. A posterior treatment of tilt, or reuse of
+the MPI hierarchical-scale update at nonzero tilt, would require a separate
+model. Strong skewness, finite-support boundary solutions, and heavy-tailed
+cases can move the first-order shortest approximation outside the admissible
+finite-root tilt range. For this reason, the diagnostic code records adjusted
 skewness, excess kurtosis, standardized sixth moment, probability-window
-clipping, boundary proximity, and bootstrap sensitivity summaries for this reason. The
-main article's deterministic Cornish--Fisher figure and population comparison
-table illustrate both near-Normal accuracy and material departures under
-stronger skewness or support-boundary geometry. They are approximation
-diagnostics rather than empirical validation or held-out selection rules. The
-machine-readable population values remain in
-\texttt{tables/mean\_tilt\_cf\_mini\_study.csv}.
+clipping, boundary proximity, and bootstrap sensitivity summaries. The main
+article's deterministic Cornish--Fisher figure and population comparison table
+illustrate both near-Normal accuracy and material departures under stronger
+skewness or support-boundary geometry. These calculations assess the
+approximation, while empirical validation and held-out selection rules require
+separate study. The source table records the population values used to produce
+the display.
 
 The tilt indexes the estimand and is initially treated like a fixed quantile
 level. A scalar tilt generally defines only a restricted global target in a
@@ -2063,7 +2063,7 @@ separate degenerate models and are not part of the inverse-Gamma support.
 
 This part separates external tolerance actions from ordinary Bayesian
 response-distribution models. The main article defines the scan-calibrated
-empirical action; the supplement records the status ledger and gives the
+empirical action; the supplement summarizes claim support and gives the
 direct Dirichlet-process (direct DP) and Dirichlet-process-mixture (DPM)
 calculations used when uncertainty is placed on \(F\) itself.
 
@@ -2180,10 +2180,9 @@ reported only as a diagnostic, without the fixed-prior direct DP interpretation.
 
 \section*{Part V. Extended Numerical Evidence and Reproducibility}
 
-The numerical part documents bounded evidence for target recovery and
-implementation behavior. It reports deterministic or single-data diagnostics
-with provenance and does not convert them into repeated-sample performance
-claims.
+The numerical part reports fixed-data checks for target recovery and
+implementation behavior. These deterministic and single-data summaries are
+recorded with provenance; repeated-sampling performance is assessed separately.
 
 \section{Population-Tilt Single-Data Diagnostics}
 \label{sec:supp-oracle-tilt-diagnostics}
@@ -2201,25 +2200,23 @@ interval functionals under the specified generalized posterior; they are not
 repeated-sample
 coverage experiments.
 
-Table~\ref{tab:supp-oracle-tilt-summary} reports descriptive endpoint and width
-errors and the computational disposition. Realized coverage is included only
-to describe these two fixed samples. All six cells have zero repairs, source
-and software-version checks, passing dense conditional references and
-scale-pathology checks, and passing prespecified computational and broad
-recovery requirements. Five cells pass every strict diagnostic and recovery
-criterion. In
-dynamic SH, 132 of 137 maintained diagnostic rows pass; the five warnings are
-bulk effective sample size (bulk ESS) values between \(801\) and \(996\),
-below the prespecified \(1{,}000\) threshold. All dynamic-SH \(\widehat R\),
-tail ESS, and Monte Carlo standard error to posterior standard deviation
-(MCSE/SD) checks pass.
-Its width-contrast relative error is \(0.208\), compared with the narrow
-\(0.20\) diagnostic threshold, while endpoint RMSE is \(0.089\) times the
-population-reference mean width and the fitted-to-reference mean-width ratio is \(1.022\).
-Accordingly, the table labels this cell as a minor ESS exception;
-no threshold was relabeled, no seed was replaced, and no chain was selectively
-extended. Fixed-design fits use four chains and dynamic fits use five chains,
-all with 6,000 retained draws per chain.
+Table~\ref{tab:supp-oracle-tilt-summary} reports descriptive endpoint and
+width errors together with the prespecified numerical criteria. Realized
+coverage is included only to describe these two fixed samples. All six cells
+satisfy the source-record, software-record, dense conditional-reference, and
+scale-stability checks, and all satisfy the prespecified computational and
+recovery criteria. Five cells satisfy every strict diagnostic criterion. The
+dynamic SH cell has a minor ESS exception: 132 of 137 monitored diagnostic
+checks pass, and the five warnings are bulk effective sample size (bulk ESS)
+values between \(801\) and \(996\), below the prespecified \(1{,}000\)
+threshold. All dynamic-SH \(\widehat R\), tail ESS, and Monte Carlo standard
+error to posterior standard deviation (MCSE/SD) checks pass. Its
+width-contrast relative error is \(0.208\), compared with the narrow \(0.20\)
+diagnostic threshold, while endpoint RMSE is \(0.089\) times the
+population-reference mean width and the fitted-to-reference mean-width ratio
+is \(1.022\). No threshold was relabeled, no seed was replaced, and no chain
+was selectively extended. Fixed-design fits use four chains and dynamic fits
+use five chains, all with 6,000 retained draws per chain.
 
 \begin{table}[H]
 \centering
@@ -2353,13 +2350,13 @@ in the method reproducibility record.
 \section{Reproducibility and Evidence Boundaries}
 \label{sec:supp-reproducibility}
 
-Reproducibility records separate mathematical target status, numerical
-execution, and evidence eligibility. Reference checks cover the Gaussian filtering and
-smoothing algebra, latent- and component-scale conditionals, missing
-observations, root labels, and exact checkpoint continuation. A versioned run
+The reproducibility record separates mathematical target statements, numerical
+checks, and evidence scope. Reference calculations cover the Gaussian filtering
+and smoothing algebra, latent- and component-scale conditionals, missing
+observations, root labels, and exact checkpoint continuation. The versioned
 record stores the data-generating mechanism, forecast design, seeds,
-numerical policy, package versions, and source commits. Heavy paths and fitted
-objects remain in ignored local output directories.
+numerical policy, package versions, and source commits. Heavy fitted objects
+remain in ignored local output directories.
 
 These computational checks establish agreement with the specified generalized
 posteriors on their particular reference problems. They do not establish frequentist
@@ -2376,13 +2373,12 @@ The available validation evidence is deepest for the MPI special case
 \((\delta=0)\). Fixed-rate nonzero MTI has implementation checks for the
 Gaussian information shift, zero-tilt equivalence, dense conditional
 references, and the prespecified population-tilt illustrations in
-Section~\ref{sec:supp-oracle-tilt-diagnostics}. These checks do not replace an
-externally evaluated tilt-selection protocol or a repeated-sample calibration
-study, both of which remain necessary before comparative scientific evidence
-is claimed.
-Detailed software status, source records, diagnostic criteria, and
-withheld-evidence decisions are maintained in the companion repository rather
-than in the statistical supplement.
+Section~\ref{sec:supp-oracle-tilt-diagnostics}. Comparative scientific
+evidence still requires an externally evaluated tilt-selection protocol and a
+repeated-sample calibration study.
+Detailed source records, diagnostic criteria, and decisions about evidence
+eligibility are maintained in the companion repository rather than in the
+statistical supplement.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
