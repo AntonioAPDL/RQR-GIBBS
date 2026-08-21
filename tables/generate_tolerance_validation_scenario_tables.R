@@ -410,7 +410,7 @@ write_range_tex <- function(summary, path) {
   lines <- c(
     "\\begin{tabular}{@{}l@{\\hspace{0.75em}}l@{\\hspace{0.75em}}r@{}}",
     "\\toprule",
-    "Cell & Method & Delivery success range (\\%)\\\\",
+    "Cell & Method & Content-attainment range (\\%)\\\\",
     "\\midrule"
   )
   if (!nrow(summary)) {
@@ -450,11 +450,11 @@ write_dgp_width_tex <- function(widths, path, caption, label) {
     ),
     sprintf("\\caption{%s}\\label{%s}\\\\", caption, label),
     "\\toprule",
-    "Distribution & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Width 95\\% range\\\\",
+    "Distribution & \\(n\\) & \\(c\\) & Method & Content-attainment (\\%) & Width 95\\% range\\\\",
     "\\midrule",
     "\\endfirsthead",
     "\\toprule",
-    "Distribution & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Width 95\\% range\\\\",
+    "Distribution & \\(n\\) & \\(c\\) & Method & Content-attainment (\\%) & Width 95\\% range\\\\",
     "\\midrule",
     "\\endhead"
   )
@@ -722,7 +722,7 @@ write_wide_delivery_tex(
   primary_delivery,
   file.path(output_dir, "tolerance_validation_article_dgp_delivery.tex"),
   primary_supp_method_order,
-  "\\textbf{Distribution-level tolerance-validation delivery.} Entries are percentages of replications in which the returned interval attained the requested population content for the three reported methods at tolerance confidence \\(0.95\\). Replications with no returned interval count as failures.",
+  "\\textbf{Distribution-level tolerance-validation content attainment.} Entries are percentages of replications in which the returned interval attained the requested population content for the three reported methods at tolerance confidence \\(0.95\\). Replications with no returned interval count as failures.",
   "tab:supp-primary-dgp-delivery"
 )
 write_dgp_width_tex(
@@ -745,7 +745,7 @@ if (has_small_boundary) {
     file.path(output_dir,
               "tolerance_validation_article_small_sample_dgp_delivery.tex"),
     small_supp_method_order,
-    "\\textbf{Small-sample tolerance-validation delivery by distribution.} Entries are delivery percentages for the practical \\(n=50\\) and \\(n=100\\) follow-up cells at tolerance confidence \\(0.95\\).",
+    "\\textbf{Small-sample tolerance-validation content attainment by distribution.} Entries are content-attainment percentages for the practical \\(n=50\\) and \\(n=100\\) follow-up cells at tolerance confidence \\(0.95\\).",
     "tab:supp-small-sample-dgp-delivery"
   )
   write_dgp_width_tex(

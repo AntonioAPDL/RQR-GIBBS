@@ -146,14 +146,14 @@ write_cf_table_tex <- function(table, path) {
   header <- c(
     "\\begin{table}[H]",
     "\\centering",
-    "\\caption{\\textbf{Population accuracy of first-order Cornish--Fisher tilt anchors.} Each row uses a known population law, content $c=0.80$, and true skewness $\\gamma_1$. Oracle and CF columns report standardized recovery tilts $d=\\delta/\\operatorname{SD}(Y)$; $|e|$ is their absolute gap. Gamma arguments are shape and scale, lognormal arguments are meanlog and sdlog, and the exponential law has unit rate. $^{\\dagger}$ denotes an SH oracle at the lower support boundary. This is a deterministic population diagnostic, not MCMC, tilt-selection, or response-prediction evidence.}",
+    "\\caption{\\textbf{Population accuracy of first-order Cornish--Fisher recovery-tilt approximations.} Each row uses a known population law, content $c=0.80$, and true skewness $\\gamma_1$. Population and CF columns report standardized recovery tilts $d=\\delta/\\operatorname{SD}(Y)$; $|e|$ is their absolute gap. Gamma arguments are shape and scale, lognormal arguments are meanlog and sdlog, and the exponential law has unit rate. $^{\\dagger}$ denotes an SH population value at the lower support boundary. This is a deterministic population calculation, not MCMC, tilt-selection, or response-prediction evidence.}",
     "\\label{tab:mean-tilt-cf-mini-study}",
     "\\TableStyle",
     "\\begin{tabular}{@{}l@{\\hspace{0.8em}}rrrrrrr@{}}",
     "\\toprule",
-    "DGP & $\\gamma_1$ & \\multicolumn{3}{c}{Equal-tailed} & \\multicolumn{3}{c}{Shortest-contiguous} \\\\",
+    "Distribution & $\\gamma_1$ & \\multicolumn{3}{c}{Equal-tailed} & \\multicolumn{3}{c}{Shortest-contiguous} \\\\",
     "\\cmidrule(lr){3-5} \\cmidrule(l){6-8}",
-    "& & Oracle $d$ & CF $d$ & $|e|$ & Oracle $d$ & CF $d$ & $|e|$ \\\\",
+    "& & Population $d$ & CF $d$ & $|e|$ & Population $d$ & CF $d$ & $|e|$ \\\\",
     "\\midrule"
   )
   footer <- c(

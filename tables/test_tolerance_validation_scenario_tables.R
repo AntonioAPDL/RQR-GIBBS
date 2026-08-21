@@ -174,7 +174,7 @@ tex <- paste(readLines(
   file.path(out_dir, "tolerance_validation_article_scenario_ranges.tex"),
   warn = FALSE
 ), collapse = "\n")
-stopifnot(grepl("Delivery success range", tex, fixed = TRUE))
+stopifnot(grepl("Content-attainment range", tex, fixed = TRUE))
 stopifnot(grepl("\\begin{tabular}{@{}l@{\\hspace{0.75em}}l",
                 tex, fixed = TRUE))
 stopifnot(!grepl("\\begin{tabularx}", tex, fixed = TRUE))
@@ -195,6 +195,7 @@ supp_tex <- paste(readLines(
   warn = FALSE
 ), collapse = "\n")
 stopifnot(grepl("Student t(3)", supp_tex, fixed = TRUE))
+stopifnot(grepl("content attainment", supp_tex, fixed = TRUE))
 stopifnot(!grepl("Hybrid DP--scan", supp_tex, fixed = TRUE))
 stopifnot(!grepl("MTI ECM", supp_tex, fixed = TRUE))
 stopifnot(!grepl("DKW", supp_tex, fixed = TRUE))
@@ -204,6 +205,7 @@ width_tex <- paste(readLines(
   warn = FALSE
 ), collapse = "\n")
 stopifnot(grepl("Width 95\\% range", width_tex, fixed = TRUE))
+stopifnot(grepl("Content-attainment (\\%)", width_tex, fixed = TRUE))
 stopifnot(grepl("summarized within, rather than pooled across, distributions",
                 width_tex, fixed = TRUE))
 stopifnot(!grepl("Returned (\\%)", width_tex, fixed = TRUE))

@@ -38,14 +38,14 @@ result <- main(c(
 assert_true(file.exists(result$csv), "CSV output exists")
 assert_true(file.exists(result$tex), "TeX output exists")
 tab <- utils::read.csv(result$csv, stringsAsFactors = FALSE)
-assert_true(nrow(tab) == 7L, "seven DGP rows")
+assert_true(nrow(tab) == 7L, "seven distribution rows")
 assert_true(
   identical(
     tab$dgp_id,
     c("normal", "gamma16", "gamma4", "lognormal", "exponential",
       "beta_right", "beta_left")
   ),
-  "DGP order is stable"
+  "distribution order is stable"
 )
 normal <- tab[tab$dgp_id == "normal", ]
 assert_close(
@@ -110,11 +110,11 @@ assert_close(
     tab$d_shortest[tab$dgp_id == "beta_left"],
     tab$d_equal_tailed[tab$dgp_id == "beta_left"]
   ),
-  1e-8, "reflected Beta oracle tilts reverse sign"
+  1e-8, "reflected Beta population tilts reverse sign"
 )
 tex <- paste(readLines(result$tex, warn = FALSE), collapse = "\n")
 assert_true(
-  grepl("Population accuracy of first-order Cornish--Fisher tilt anchors",
+  grepl("Population accuracy of first-order Cornish--Fisher recovery-tilt approximations",
         tex, fixed = TRUE),
   "caption states table purpose"
 )
@@ -135,7 +135,7 @@ assert_true(
 )
 assert_true(
   grepl("Exponential$^{\\dagger}$", tex, fixed = TRUE) &&
-    grepl("SH oracle at the lower support boundary", tex, fixed = TRUE),
+    grepl("SH population value at the lower support boundary", tex, fixed = TRUE),
   "table identifies the boundary shortest-window case"
 )
 assert_true(
