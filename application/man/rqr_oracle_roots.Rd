@@ -12,7 +12,8 @@ rqr_oracle_roots(family, coverage_level, params = list(), tol = 1e-08)
 `"centered_exponential"`, `"asymmetric_laplace"`,
 `"gaussian_mixture"`, `"centered_lognormal"`,
 `"centered_standardized_lognormal"`, `"standardized_beta"`,
-`"normal_t_mixture"`, and `"standardized_skewed_normal_t_mixture"`.}
+`"standardized_two_piece_normal"`, `"normal_t_mixture"`, and
+`"standardized_skewed_normal_t_mixture"`.}
 
 \item{coverage_level}{Target interval coverage in `(0, 1)`.}
 

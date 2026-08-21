@@ -405,6 +405,32 @@ oracle_spec_from_dgp <- function(dgp) {
       )
     ))
   }
+  if (identical(dgp$family, "standardized_asymmetric_laplace")) {
+    return(list(
+      family = "asymmetric_laplace",
+      params = list(
+        tau = as.numeric(dgp$tau %||% dgp$p %||% dgp$p0 %||% 0.10)[1L],
+        scale = as.numeric(dgp$scale %||% 1)[1L],
+        variance_standardized = TRUE
+      )
+    ))
+  }
+  if (identical(dgp$family, "standardized_two_piece_normal")) {
+    return(list(
+      family = "standardized_two_piece_normal",
+      params = list(
+        left_scale = as.numeric(
+          dgp$left_scale %||% dgp$scale_left %||%
+            dgp$sigma_left %||% dgp$left_sd %||% 1
+        )[1L],
+        right_scale = as.numeric(
+          dgp$right_scale %||% dgp$scale_right %||%
+            dgp$sigma_right %||% dgp$right_sd %||% 12
+        )[1L],
+        variance_standardized = TRUE
+      )
+    ))
+  }
   stopf("Unsupported oracle DGP family: ", dgp$family)
 }
 

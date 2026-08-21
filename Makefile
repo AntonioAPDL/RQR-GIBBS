@@ -77,6 +77,14 @@ RQR_BAYES_UQ_REFINED_WAVE_RUN_ROOT ?= application/runs/rqr_bayes_uq_validation_m
 RQR_BAYES_UQ_REFINED_WAVE_RUN_ID ?= wave_confirmatory_refined_dgps_$(shell date -u +%Y%m%dT%H%M%SZ)
 RQR_BAYES_UQ_REFINED_WAVE_MAX_CONCURRENT ?= 40
 RQR_BAYES_UQ_REFINED_WAVE_POLL_SECONDS ?= 60
+RQR_BAYES_UQ_SKEWSTRESS_CONFIG ?= application/config/rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820.json
+RQR_BAYES_UQ_SKEWSTRESS_DIR ?= application/outputs/rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820
+RQR_BAYES_UQ_SKEWSTRESS_SMOKE_DIR ?= $(RQR_BAYES_UQ_SKEWSTRESS_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
+RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR ?=
+RQR_BAYES_UQ_SKEWSTRESS_WAVE_RUN_ROOT ?= application/runs/rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820
+RQR_BAYES_UQ_SKEWSTRESS_WAVE_RUN_ID ?= wave_confirmatory_skewstress_dgps_$(shell date -u +%Y%m%dT%H%M%SZ)
+RQR_BAYES_UQ_SKEWSTRESS_WAVE_MAX_CONCURRENT ?= 40
+RQR_BAYES_UQ_SKEWSTRESS_WAVE_POLL_SECONDS ?= 60
 RQR_BAYES_UQ_FOLLOWUP_CONFIG ?= application/config/rqr_bayes_uq_followup_20260816.json
 RQR_BAYES_UQ_FOLLOWUP_DIR ?= application/outputs/rqr_bayes_uq_followup_20260816
 RQR_BAYES_UQ_FOLLOWUP_SMOKE_DIR ?= $(RQR_BAYES_UQ_FOLLOWUP_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
@@ -122,7 +130,7 @@ RQR_DLM_M02_CANARY_OUTPUT_ROOT ?=
 .PHONY: pdf supplement all-pdf theory-figures theory-tables tolerance-validation-adaptive-article-inputs model-illustration-figures test-theory-figures test-theory-tables test-manuscript-language arxiv-source smoke package-install prepare-primary-runtime prepare-exdqlm-runtime prepare-exdqlm-cran-runtime prepare-quantreg-cran-runtime test-native test-native-mean-tilt test-oracle-tilt-illustrations test-oracle-tilt-forensics test-oracle-tilt-publication test-oracle-tilt-publication-v2 test-oracle-tilt-publication-v3 test-oracle-tilt-publication-v4 test-oracle-tilt-dlm-sh-adjudication test-oracle-tilt-campaign-closeout test-oracle-tilt-v2-workflow oracle-tilt-illustrations oracle-tilt-illustrations-dry-run oracle-tilt-forensics-preflight oracle-tilt-forensics-execute oracle-tilt-publication-preflight oracle-tilt-publication-execute oracle-tilt-package-evidence oracle-tilt-v2-preflight oracle-tilt-v2-reference oracle-tilt-v2-benchmark oracle-tilt-v2-execute oracle-tilt-v2-package-evidence oracle-tilt-v3-preflight oracle-tilt-v3-reference oracle-tilt-v3-benchmark oracle-tilt-v3-resource-rehearsal oracle-tilt-v3-acceptance oracle-tilt-v3-execute oracle-tilt-v3-package-evidence oracle-tilt-v3-package-nonpromotion-evidence oracle-tilt-v3-promote-revised-evidence oracle-tilt-v4-preflight oracle-tilt-v4-reference oracle-tilt-v4-benchmark oracle-tilt-v4-resource-rehearsal oracle-tilt-v4-launch oracle-tilt-v4-select oracle-tilt-v4-package-evidence oracle-tilt-dlm-sh-adjudication-preflight oracle-tilt-dlm-sh-adjudication-execute oracle-tilt-dlm-sh-reconcile-evidence test-standalone-contracts package-check test-exdqlm-rqr bounded-pilot preflight-dlm-bounded reference-dlm-bounded test-dlm-monitor benchmark-dlm-bounded-one-cell execute-dlm-bounded preflight-dlm-main oracle-reference-dlm-main tiny-end-to-end-dlm-main diagnostic-pilot-preflight-dlm-main preflight-dlm-confirmatory oracle-reference-dlm-confirmatory validate-dlm-main-wave1-correction validate-dlm-main-wave1-comparator validate-dlm-main-wave2-correction validate-dlm-main-wave2-comparator validate-dlm-main-horizon-fixed-design preflight-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-stress validate-dlm-main-wave2-m03-m08-full validate-dlm-main-resource-envelope failclosed-dlm-confirmatory failclosed-dlm-confirmatory-wave test-dlm-confirmatory-monitor launch-dlm-affected-wave-validation health-dlm-affected-wave-validation launch-dlm-multicomponent-recovery health-dlm-multicomponent-recovery launch-dlm-diagnostic-aware health-dlm-diagnostic-aware literature-manifest clean-tex
 .PHONY: test-oracle-tilt-publication-v5 oracle-tilt-v5-preflight oracle-tilt-v5-reference oracle-tilt-v5-benchmark oracle-tilt-v5-execute oracle-tilt-v5-package-evidence
 .PHONY: test-oracle-mean-tilt-validation oracle-mean-tilt-validation-preflight oracle-mean-tilt-validation-reference oracle-mean-tilt-validation-benchmark oracle-mean-tilt-validation-sentinel oracle-mean-tilt-validation-execute-wave oracle-mean-tilt-validation-collect oracle-mean-tilt-validation-precision oracle-mean-tilt-validation-package
-.PHONY: test-ecm test-tcsp test-tcsp-validation test-tcsp-validation-audit test-bayes-uq test-tolerance-adjudication test-mpi-mti-naming rqr-ecm-validation-smoke tcsp-split-exact-validation-smoke rqr-bayes-uq-validation-smoke rqr-bayes-uq-validation-moderate launch-rqr-bayes-uq-overnight health-rqr-bayes-uq-validation rqr-bayes-uq-main-smoke prepare-rqr-bayes-uq-main-waves launch-rqr-bayes-uq-main launch-rqr-bayes-uq-main-dpm-companion health-rqr-bayes-uq-main collect-rqr-bayes-uq-main stop-rqr-bayes-uq-main rqr-bayes-uq-refined-smoke prepare-rqr-bayes-uq-refined-waves launch-rqr-bayes-uq-refined health-rqr-bayes-uq-refined collect-rqr-bayes-uq-refined stop-rqr-bayes-uq-refined rqr-bayes-uq-followup-smoke prepare-rqr-bayes-uq-followup-waves launch-rqr-bayes-uq-followup health-rqr-bayes-uq-followup collect-rqr-bayes-uq-followup stop-rqr-bayes-uq-followup tolerance-validation-adjudication tolerance-mti-gibbs-diagnostics mti-bayes-uq-main-smoke prepare-mti-bayes-uq-main-waves launch-mti-bayes-uq-main health-mti-bayes-uq-main collect-mti-bayes-uq-main stop-mti-bayes-uq-main tcsp-validation-preflight tcsp-validation-tiny tcsp-validation-pilot tcsp-validation-full-pilot tcsp-validation-health tcsp-validation-audit
+.PHONY: test-ecm test-tcsp test-tcsp-validation test-tcsp-validation-audit test-bayes-uq test-tolerance-adjudication test-mpi-mti-naming rqr-ecm-validation-smoke tcsp-split-exact-validation-smoke rqr-bayes-uq-validation-smoke rqr-bayes-uq-validation-moderate launch-rqr-bayes-uq-overnight health-rqr-bayes-uq-validation rqr-bayes-uq-main-smoke prepare-rqr-bayes-uq-main-waves launch-rqr-bayes-uq-main launch-rqr-bayes-uq-main-dpm-companion health-rqr-bayes-uq-main collect-rqr-bayes-uq-main stop-rqr-bayes-uq-main rqr-bayes-uq-refined-smoke prepare-rqr-bayes-uq-refined-waves launch-rqr-bayes-uq-refined health-rqr-bayes-uq-refined collect-rqr-bayes-uq-refined stop-rqr-bayes-uq-refined rqr-bayes-uq-skewstress-smoke prepare-rqr-bayes-uq-skewstress-waves launch-rqr-bayes-uq-skewstress health-rqr-bayes-uq-skewstress collect-rqr-bayes-uq-skewstress stop-rqr-bayes-uq-skewstress rqr-bayes-uq-followup-smoke prepare-rqr-bayes-uq-followup-waves launch-rqr-bayes-uq-followup health-rqr-bayes-uq-followup collect-rqr-bayes-uq-followup stop-rqr-bayes-uq-followup tolerance-validation-adjudication tolerance-mti-gibbs-diagnostics mti-bayes-uq-main-smoke prepare-mti-bayes-uq-main-waves launch-mti-bayes-uq-main health-mti-bayes-uq-main collect-mti-bayes-uq-main stop-mti-bayes-uq-main tcsp-validation-preflight tcsp-validation-tiny tcsp-validation-pilot tcsp-validation-full-pilot tcsp-validation-health tcsp-validation-audit
 .PHONY: validate-dlm-m02-diagnostic-canary
 
 tolerance-validation-adaptive-article-inputs:
@@ -204,6 +212,7 @@ test-bayes-uq: package-install
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-bayes-uq-dpm.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-bayes-uq-plugin-scope.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-bayes-uq-main-validation-config.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-bayes-uq-skewstress-dgps.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-bayes-uq-followup-config.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-tolerance-validation-adjudication.R
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-tolerance-mti-gibbs-diagnostics.R
@@ -294,6 +303,37 @@ collect-rqr-bayes-uq-refined:
 stop-rqr-bayes-uq-refined:
 	@test -n "$(strip $(RQR_BAYES_UQ_REFINED_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_REFINED_RUN_DIR to one refined Bayesian UQ wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=stop --run-dir=$(RQR_BAYES_UQ_REFINED_RUN_DIR)
+
+rqr-bayes-uq-skewstress-smoke: package-install
+	$(R) application/scripts/69_validate_rqr_bayes_uq.R --mode=smoke --config=$(RQR_BAYES_UQ_SKEWSTRESS_CONFIG) --output-dir=$(RQR_BAYES_UQ_SKEWSTRESS_SMOKE_DIR)
+
+prepare-rqr-bayes-uq-skewstress-waves: package-install
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=prepare --mode=confirmatory --config=$(RQR_BAYES_UQ_SKEWSTRESS_CONFIG) --run-root=$(RQR_BAYES_UQ_SKEWSTRESS_WAVE_RUN_ROOT) --run-id=$(RQR_BAYES_UQ_SKEWSTRESS_WAVE_RUN_ID)
+
+launch-rqr-bayes-uq-skewstress: package-install
+	OMP_NUM_THREADS=1 \
+	OPENBLAS_NUM_THREADS=1 \
+	MKL_NUM_THREADS=1 \
+	VECLIB_MAXIMUM_THREADS=1 \
+	NUMEXPR_NUM_THREADS=1 \
+	RQR_BAYES_UQ_MAIN_CONFIG=$(RQR_BAYES_UQ_SKEWSTRESS_CONFIG) \
+	RQR_BAYES_UQ_MAIN_WAVE_RUN_ROOT=$(RQR_BAYES_UQ_SKEWSTRESS_WAVE_RUN_ROOT) \
+	RQR_BAYES_UQ_MAIN_WAVE_RUN_ID=$(RQR_BAYES_UQ_SKEWSTRESS_WAVE_RUN_ID) \
+	RQR_BAYES_UQ_MAIN_WAVE_MAX_CONCURRENT=$(RQR_BAYES_UQ_SKEWSTRESS_WAVE_MAX_CONCURRENT) \
+	RQR_BAYES_UQ_MAIN_WAVE_POLL_SECONDS=$(RQR_BAYES_UQ_SKEWSTRESS_WAVE_POLL_SECONDS) \
+	bash application/scripts/72_launch_rqr_bayes_uq_main_waves.sh
+
+health-rqr-bayes-uq-skewstress:
+	@test -n "$(strip $(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR to one skew-stress Bayesian UQ wave run." >&2; exit 64; }
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=health --run-dir=$(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR)
+
+collect-rqr-bayes-uq-skewstress:
+	@test -n "$(strip $(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR to one skew-stress Bayesian UQ wave run." >&2; exit 64; }
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=collect --run-dir=$(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR)
+
+stop-rqr-bayes-uq-skewstress:
+	@test -n "$(strip $(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR to one skew-stress Bayesian UQ wave run." >&2; exit 64; }
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=stop --run-dir=$(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR)
 
 rqr-bayes-uq-followup-smoke: package-install
 	$(R) application/scripts/69_validate_rqr_bayes_uq.R --mode=smoke --config=$(RQR_BAYES_UQ_FOLLOWUP_CONFIG) --output-dir=$(RQR_BAYES_UQ_FOLLOWUP_SMOKE_DIR)

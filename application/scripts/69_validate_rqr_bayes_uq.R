@@ -303,6 +303,92 @@ hash_to_seed <- function(text, base = 862100L) {
   value
 }
 
+standardized_asymmetric_laplace_meta <- function(dgp) {
+  tau <- as.numeric(dgp$tau %||% dgp$p %||% dgp$p0 %||% 0.10)[1L]
+  scale <- as.numeric(dgp$scale %||% 1)[1L]
+  if (!is.finite(tau) || tau <= 0 || tau >= 1 ||
+      !is.finite(scale) || scale <= 0) {
+    stopf("standardized_asymmetric_laplace requires tau in (0,1) and positive scale.")
+  }
+  raw_mean <- scale * (1 - 2 * tau) / (tau * (1 - tau))
+  raw_variance <- scale^2 *
+    (1 - 2 * tau + 2 * tau^2) / (tau^2 * (1 - tau)^2)
+  raw_sd <- sqrt(raw_variance)
+  F_raw <- function(z) {
+    ifelse(
+      z < 0,
+      tau * exp((1 - tau) * z / scale),
+      1 - (1 - tau) * exp(-tau * z / scale)
+    )
+  }
+  q_raw <- function(p) {
+    ifelse(
+      p < tau,
+      scale * log(p / tau) / (1 - tau),
+      -scale * log((1 - p) / (1 - tau)) / tau
+    )
+  }
+  list(
+    r = function(n) (q_raw(stats::runif(n)) - raw_mean) / raw_sd,
+    p = function(x) F_raw(raw_mean + raw_sd * as.numeric(x))
+  )
+}
+
+standardized_two_piece_normal_meta <- function(dgp) {
+  left_scale <- as.numeric(
+    dgp$left_scale %||% dgp$scale_left %||%
+      dgp$sigma_left %||% dgp$left_sd %||% 1
+  )[1L]
+  right_scale <- as.numeric(
+    dgp$right_scale %||% dgp$scale_right %||%
+      dgp$sigma_right %||% dgp$right_sd %||% 12
+  )[1L]
+  if (!is.finite(left_scale) || left_scale <= 0 ||
+      !is.finite(right_scale) || right_scale <= 0) {
+    stopf("standardized_two_piece_normal requires positive scales.")
+  }
+  raw_mean <- sqrt(2 / pi) * (right_scale - left_scale)
+  raw_second <- left_scale^2 - left_scale * right_scale + right_scale^2
+  raw_sd <- sqrt(raw_second - raw_mean^2)
+  if (!is.finite(raw_sd) || raw_sd <= 0) {
+    stopf("standardized_two_piece_normal has nonpositive variance.")
+  }
+  threshold <- left_scale / (left_scale + right_scale)
+  F_raw <- function(z) {
+    z <- as.numeric(z)
+    ifelse(
+      z < 0,
+      2 * left_scale / (left_scale + right_scale) *
+        stats::pnorm(z / left_scale),
+      (left_scale - right_scale) / (left_scale + right_scale) +
+        2 * right_scale / (left_scale + right_scale) *
+        stats::pnorm(z / right_scale)
+    )
+  }
+  q_raw <- function(p) {
+    p <- as.numeric(p)
+    out <- rep(NaN, length(p))
+    valid <- !is.na(p) & p >= 0 & p <= 1
+    out[is.na(p)] <- NA_real_
+    out[valid & p == 0] <- -Inf
+    out[valid & p == 1] <- Inf
+    left <- valid & p > 0 & p < threshold
+    right <- valid & p >= threshold & p < 1
+    out[left] <- left_scale * stats::qnorm(
+      p[left] * (left_scale + right_scale) / (2 * left_scale)
+    )
+    out[right] <- right_scale * stats::qnorm(
+      (p[right] * (left_scale + right_scale) -
+         left_scale + right_scale) / (2 * right_scale)
+    )
+    out
+  }
+  list(
+    r = function(n) (q_raw(stats::runif(n)) - raw_mean) / raw_sd,
+    p = function(x) F_raw(raw_mean + raw_sd * as.numeric(x))
+  )
+}
+
 dgp_meta <- function(dgp) {
   if (identical(dgp$family, "normal")) {
     return(list(
@@ -421,6 +507,12 @@ dgp_meta <- function(dgp) {
       }
     ))
   }
+  if (identical(dgp$family, "standardized_asymmetric_laplace")) {
+    return(standardized_asymmetric_laplace_meta(dgp))
+  }
+  if (identical(dgp$family, "standardized_two_piece_normal")) {
+    return(standardized_two_piece_normal_meta(dgp))
+  }
   stopf("Unsupported DGP family: ", dgp$family)
 }
 
@@ -497,6 +589,32 @@ oracle_spec_from_dgp <- function(dgp) {
       params = list(
         shape1 = as.numeric(dgp$shape1 %||% dgp$a %||% 2)[1L],
         shape2 = as.numeric(dgp$shape2 %||% dgp$b %||% 5)[1L]
+      )
+    ))
+  }
+  if (identical(dgp$family, "standardized_asymmetric_laplace")) {
+    return(list(
+      family = "asymmetric_laplace",
+      params = list(
+        tau = as.numeric(dgp$tau %||% dgp$p %||% dgp$p0 %||% 0.10)[1L],
+        scale = as.numeric(dgp$scale %||% 1)[1L],
+        variance_standardized = TRUE
+      )
+    ))
+  }
+  if (identical(dgp$family, "standardized_two_piece_normal")) {
+    return(list(
+      family = "standardized_two_piece_normal",
+      params = list(
+        left_scale = as.numeric(
+          dgp$left_scale %||% dgp$scale_left %||%
+            dgp$sigma_left %||% dgp$left_sd %||% 1
+        )[1L],
+        right_scale = as.numeric(
+          dgp$right_scale %||% dgp$scale_right %||%
+            dgp$sigma_right %||% dgp$right_sd %||% 12
+        )[1L],
+        variance_standardized = TRUE
       )
     ))
   }

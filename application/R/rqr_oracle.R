@@ -12,7 +12,8 @@
 #'   `"centered_exponential"`, `"asymmetric_laplace"`,
 #'   `"gaussian_mixture"`, `"centered_lognormal"`,
 #'   `"centered_standardized_lognormal"`, `"standardized_beta"`,
-#'   `"normal_t_mixture"`, and `"standardized_skewed_normal_t_mixture"`.
+#'   `"standardized_two_piece_normal"`, `"normal_t_mixture"`, and
+#'   `"standardized_skewed_normal_t_mixture"`.
 #' @param coverage_level Target interval coverage in `(0, 1)`.
 #' @param params Optional family parameters.
 #' @param tol Numerical tolerance for the scalar root search.
@@ -998,6 +999,137 @@ rqr_oracle_certificate <- function(
         raw_sd = sqrt(raw_variance),
         normalization_scale = normalization_scale,
         variance_standardized = variance_standardized
+      )
+    ))
+  }
+  if (family %in% c("two_piece_normal", "split_normal",
+                    "standardized_two_piece_normal")) {
+    left_scale <- as.numeric(
+      params$left_scale %||% params$scale_left %||%
+        params$sigma_left %||% params$left_sd %||% 1
+    )[1L]
+    right_scale <- as.numeric(
+      params$right_scale %||% params$scale_right %||%
+        params$sigma_right %||% params$right_sd %||% 2
+    )[1L]
+    if (!is.finite(left_scale) || left_scale <= 0 ||
+        !is.finite(right_scale) || right_scale <= 0) {
+      stop("two_piece_normal scales must be positive.", call. = FALSE)
+    }
+    standardize <- identical(family, "standardized_two_piece_normal") ||
+      isTRUE(params$variance_standardized %||% FALSE)
+    raw_mean <- sqrt(2 / pi) * (right_scale - left_scale)
+    raw_second <- left_scale^2 - left_scale * right_scale + right_scale^2
+    raw_variance <- raw_second - raw_mean^2
+    if (!is.finite(raw_variance) || raw_variance <= 0) {
+      stop("two_piece_normal variance is not positive.", call. = FALSE)
+    }
+    center <- if (isTRUE(params$center %||% standardize)) raw_mean else 0
+    normalization_scale <- if (standardize) sqrt(raw_variance) else 1
+    normalizing_constant <- sqrt(2 / pi) / (left_scale + right_scale)
+    F_raw <- function(z) {
+      z <- as.numeric(z)
+      ifelse(
+        z < 0,
+        2 * left_scale / (left_scale + right_scale) *
+          stats::pnorm(z / left_scale),
+        (left_scale - right_scale) / (left_scale + right_scale) +
+          2 * right_scale / (left_scale + right_scale) *
+          stats::pnorm(z / right_scale)
+      )
+    }
+    q_raw <- function(p) {
+      p <- as.numeric(p)
+      threshold <- left_scale / (left_scale + right_scale)
+      out <- rep(NaN, length(p))
+      valid <- !is.na(p) & p >= 0 & p <= 1
+      out[is.na(p)] <- NA_real_
+      out[valid & p == 0] <- -Inf
+      out[valid & p == 1] <- Inf
+      left <- valid & p > 0 & p < threshold
+      right <- valid & p >= threshold & p < 1
+      out[left] <- left_scale * stats::qnorm(
+        p[left] * (left_scale + right_scale) / (2 * left_scale)
+      )
+      out[right] <- right_scale * stats::qnorm(
+        (p[right] * (left_scale + right_scale) -
+           left_scale + right_scale) / (2 * right_scale)
+      )
+      out
+    }
+    d_raw <- function(z) {
+      z <- as.numeric(z)
+      scale <- ifelse(z < 0, left_scale, right_scale)
+      normalizing_constant * exp(-0.5 * (z / scale)^2)
+    }
+    M_raw <- function(z) {
+      z <- as.numeric(z)
+      out <- ifelse(
+        z < 0,
+        -normalizing_constant * left_scale^2 *
+          exp(-0.5 * (z / left_scale)^2),
+        -normalizing_constant * left_scale^2 +
+          normalizing_constant * right_scale^2 *
+          (1 - exp(-0.5 * (z / right_scale)^2))
+      )
+      out[is.infinite(z) & z < 0] <- 0
+      out[is.infinite(z) & z > 0] <- raw_mean
+      out
+    }
+    M2_raw <- function(z) {
+      z <- as.numeric(z)
+      out <- numeric(length(z))
+      left <- z < 0
+      right <- !left
+      zz <- z[left]
+      out[left] <- normalizing_constant * left_scale^3 * (
+        sqrt(2 * pi) * stats::pnorm(zz / left_scale) -
+          (zz / left_scale) * exp(-0.5 * (zz / left_scale)^2)
+      )
+      zz <- z[right]
+      left_second <- normalizing_constant * left_scale^3 * sqrt(pi / 2)
+      out[right] <- left_second +
+        normalizing_constant * right_scale^3 * (
+          sqrt(2 * pi) * (stats::pnorm(zz / right_scale) - 0.5) -
+            (zz / right_scale) * exp(-0.5 * (zz / right_scale)^2)
+        )
+      out[is.infinite(z) & z < 0] <- 0
+      out[is.infinite(z) & z > 0] <- raw_second
+      out
+    }
+    to_raw <- function(x) center + normalization_scale * as.numeric(x)
+    F <- function(x) F_raw(to_raw(x))
+    d <- function(x) normalization_scale * d_raw(to_raw(x))
+    q <- function(p) (q_raw(p) - center) / normalization_scale
+    M <- function(x) {
+      raw_x <- to_raw(x)
+      (M_raw(raw_x) - center * F_raw(raw_x)) / normalization_scale
+    }
+    M2 <- function(x) {
+      raw_x <- to_raw(x)
+      (
+        M2_raw(raw_x) - 2 * center * M_raw(raw_x) +
+          center^2 * F_raw(raw_x)
+      ) / normalization_scale^2
+    }
+    return(list(
+      family = if (standardize) "standardized_two_piece_normal" else
+        "two_piece_normal",
+      d = d, F = F, q = q, M = M, M2 = M2,
+      mean = (raw_mean - center) / normalization_scale,
+      second_moment =
+        (raw_second - 2 * center * raw_mean + center^2) /
+        normalization_scale^2,
+      support = c(-Inf, Inf),
+      kinks = -center / normalization_scale,
+      params = list(
+        left_scale = left_scale,
+        right_scale = right_scale,
+        center = center,
+        raw_mean = raw_mean,
+        raw_sd = sqrt(raw_variance),
+        normalization_scale = normalization_scale,
+        variance_standardized = standardize
       )
     ))
   }

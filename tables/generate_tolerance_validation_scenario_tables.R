@@ -140,8 +140,12 @@ dgp_labels <- c(
   contaminated_normal = "contaminated normal",
   student_t3 = "Student t3",
   gamma2 = "Gamma(2,1)",
+  gamma05 = "Gamma(0.5,1)",
   exponential = "exponential",
   beta52 = "Beta(5,2)",
+  beta18 = "Beta(1,8)",
+  asym_laplace_tau010 = "asymmetric Laplace",
+  two_piece_normal_1_12 = "two-piece normal",
   beta_left = "left-skewed Beta"
 )
 

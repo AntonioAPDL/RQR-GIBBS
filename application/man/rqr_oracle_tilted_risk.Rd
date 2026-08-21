@@ -29,7 +29,8 @@ rqr_oracle_tilted_risk(
 `"centered_exponential"`, `"asymmetric_laplace"`,
 `"gaussian_mixture"`, `"centered_lognormal"`,
 `"centered_standardized_lognormal"`, `"standardized_beta"`,
-`"normal_t_mixture"`, and `"standardized_skewed_normal_t_mixture"`.}
+`"standardized_two_piece_normal"`, `"normal_t_mixture"`, and
+`"standardized_skewed_normal_t_mixture"`.}
 
 \item{params}{Optional family parameters.}
 }

@@ -285,6 +285,40 @@ test_that("exact tilted risk agrees with split numerical integration", {
   expect_equal(risk$conditional_content, 0.90, tolerance = 1e-12)
 })
 
+test_that("two-piece normal oracle is standardized and internally coherent", {
+  params <- list(
+    left_scale = 1,
+    right_scale = 12,
+    variance_standardized = TRUE
+  )
+  spec <- rqrgibbs:::.rqr_oracle_family_spec(
+    "standardized_two_piece_normal", params
+  )
+  expect_equal(spec$mean, 0, tolerance = 1e-12)
+  expect_equal(spec$second_moment, 1, tolerance = 1e-12)
+
+  probs <- c(0.001, 0.01, 0.10, 0.50, 0.90, 0.99, 0.999)
+  roots <- spec$q(probs)
+  expect_true(all(is.finite(roots)))
+  expect_equal(spec$F(roots), probs, tolerance = 1e-10)
+  expect_true(all(diff(roots) > 0))
+
+  certificates <- lapply(c("RQR", "ET", "SH"), function(target) {
+    rqr_interval_oracle(
+      "standardized_two_piece_normal", 0.90, target,
+      params = params, tol = 1e-10, grid_size = 401L
+    )
+  })
+  for (certificate in certificates) {
+    expect_s3_class(certificate, "rqr_interval_oracle")
+    expect_lt(abs(certificate$content_residual), 1e-9)
+    expect_lt(abs(certificate$retained_mean_residual), 1e-9)
+    expect_true(is.finite(certificate$width))
+    expect_gt(certificate$width, 0)
+  }
+  expect_lt(certificates[[3L]]$width, certificates[[2L]]$width)
+})
+
 test_that("current oracle APIs reject legacy and invalid contracts", {
   legacy_path <- testthat::test_path(
     "..", "..", "..", "figures", "data", "oracle_tilt_c095_v3",
