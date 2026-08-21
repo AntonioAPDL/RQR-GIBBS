@@ -174,7 +174,7 @@ tex <- paste(readLines(
   file.path(out_dir, "tolerance_validation_article_scenario_ranges.tex"),
   warn = FALSE
 ), collapse = "\n")
-stopifnot(grepl("Delivery range", tex, fixed = TRUE))
+stopifnot(grepl("Delivery success range", tex, fixed = TRUE))
 stopifnot(grepl("\\begin{tabular}{@{}l@{\\hspace{0.75em}}l",
                 tex, fixed = TRUE))
 stopifnot(!grepl("\\begin{tabularx}", tex, fixed = TRUE))
@@ -204,7 +204,8 @@ width_tex <- paste(readLines(
   warn = FALSE
 ), collapse = "\n")
 stopifnot(grepl("Width 95\\% range", width_tex, fixed = TRUE))
-stopifnot(grepl("not pooled across DGPs", width_tex, fixed = TRUE))
+stopifnot(grepl("summarized within, rather than pooled across, distributions",
+                width_tex, fixed = TRUE))
 stopifnot(!grepl("Returned (\\%)", width_tex, fixed = TRUE))
 
 scan_tex <- paste(readLines(

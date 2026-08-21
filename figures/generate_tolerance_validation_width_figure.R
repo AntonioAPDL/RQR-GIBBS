@@ -134,7 +134,7 @@ for (ii in seq_len(nrow(cells))) {
   y_base <- seq_along(dgp_levels)
   plot(NA_real_, NA_real_, xlim = xlim + c(-pad, pad),
        ylim = c(0.45, length(dgp_levels) + 0.55),
-       xaxt = "n", yaxt = "n", xlab = "Raw width (log scale)",
+       xaxt = "n", yaxt = "n", xlab = "Interval width (log scale)",
        ylab = "", main = sprintf("n = %s, c = %s", nn, format_content(cc)),
        bty = "l", cex.lab = 0.98, cex.main = 1.02)
   ticks <- pretty(xlim, n = 3)
@@ -167,7 +167,7 @@ legend("center", legend = c(unname(method_labels[method_order]), "Mean width"),
        pch = c(unname(method_pch[method_order]), 4),
        lwd = c(rep(2, length(method_order)), NA),
        ncol = 4, bty = "n", xpd = NA, cex = 0.95)
-mtext("Raw width ranges by DGP for article-facing tolerance methods",
+mtext("Returned interval-width ranges by distribution",
       outer = TRUE, cex = 1.05, font = 2)
 
 par(old_par)

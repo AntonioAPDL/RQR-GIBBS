@@ -383,7 +383,7 @@ write_range_tex <- function(summary, path) {
   lines <- c(
     "\\begin{tabular}{@{}l@{\\hspace{0.75em}}l@{\\hspace{0.75em}}r@{}}",
     "\\toprule",
-    "Cell & Method & Delivery range (\\%)\\\\",
+    "Cell & Method & Delivery success range (\\%)\\\\",
     "\\midrule"
   )
   if (!nrow(summary)) {
@@ -419,11 +419,11 @@ write_dgp_width_tex <- function(widths, path, caption, label) {
     "\\begin{longtable}{@{}p{0.24\\textwidth}rrp{0.20\\textwidth}rr@{}}",
     sprintf("\\caption{%s}\\label{%s}\\\\", caption, label),
     "\\toprule",
-    "DGP & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Width 95\\% range\\\\",
+    "Distribution & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Width 95\\% range\\\\",
     "\\midrule",
     "\\endfirsthead",
     "\\toprule",
-    "DGP & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Width 95\\% range\\\\",
+    "Distribution & \\(n\\) & \\(c\\) & Method & Delivery (\\%) & Width 95\\% range\\\\",
     "\\midrule",
     "\\endhead"
   )
@@ -478,7 +478,8 @@ write_wide_delivery_tex <- function(wide, path, methods, caption, label) {
   align <- paste0("@{}p{0.22\\textwidth}rr",
                   paste(rep("r", length(methods)), collapse = ""), "@{}")
   header <- c(
-    paste(c("DGP", "\\(n\\)", "\\(c\\)", method_headers), collapse = " & "),
+    paste(c("Distribution", "\\(n\\)", "\\(c\\)", method_headers),
+          collapse = " & "),
     "\\\\",
     "\\midrule"
   )
@@ -686,13 +687,13 @@ write_wide_delivery_tex(
   primary_delivery,
   file.path(output_dir, "tolerance_validation_article_dgp_delivery.tex"),
   primary_supp_method_order,
-  "\\textbf{Primary iid tolerance-validation delivery by DGP.} Entries are delivery percentages for the article-facing methods at tolerance confidence \\(0.95\\). Delivery counts cells with no returned interval as failures.",
+  "\\textbf{Primary iid tolerance-validation delivery by distribution.} Entries are percentages of replications in which the returned interval attained the requested population content for the three reported methods at tolerance confidence \\(0.95\\). Replications with no returned interval count as failures.",
   "tab:supp-primary-dgp-delivery"
 )
 write_dgp_width_tex(
   primary_dgp_widths,
   file.path(output_dir, "tolerance_validation_article_dgp_width_ranges.tex"),
-  "\\textbf{Primary iid tolerance-validation width ranges by DGP.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each DGP, sample size, content, and method. Widths are not pooled across DGPs.",
+  "\\textbf{Primary iid tolerance-validation width ranges by distribution.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.",
   "tab:supp-primary-dgp-width-ranges"
 )
 write_scan_calibration_tex(
@@ -709,14 +710,14 @@ if (has_small_boundary) {
     file.path(output_dir,
               "tolerance_validation_article_small_sample_dgp_delivery.tex"),
     small_supp_method_order,
-    "\\textbf{Small-sample tolerance-validation delivery by DGP.} Entries are delivery percentages for the practical \\(n=50\\) and \\(n=100\\) follow-up cells at tolerance confidence \\(0.95\\).",
+    "\\textbf{Small-sample tolerance-validation delivery by distribution.} Entries are delivery percentages for the practical \\(n=50\\) and \\(n=100\\) follow-up cells at tolerance confidence \\(0.95\\).",
     "tab:supp-small-sample-dgp-delivery"
   )
   write_dgp_width_tex(
     small_dgp_widths,
     file.path(output_dir,
               "tolerance_validation_article_small_sample_dgp_width_ranges.tex"),
-    "\\textbf{Small-sample tolerance-validation width ranges by DGP.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each DGP, sample size, content, and method. Widths are not pooled across DGPs.",
+    "\\textbf{Small-sample tolerance-validation width ranges by distribution.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.",
     "tab:supp-small-sample-dgp-width-ranges"
   )
 }

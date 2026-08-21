@@ -224,7 +224,7 @@ if (!nrow(data)) stopf("Validation figure has no selected methods.")
 
 contents <- sort(unique(data$content))
 sample_sizes <- sort(unique(data$n))
-offsets <- seq(-0.018, 0.018, length.out = length(method_order))
+offsets <- c(tcsp_mc = -0.12, young_mathew = 0, wilks_minmax = 0.12)
 names(offsets) <- method_order
 
 panel_count <- length(sample_sizes)
@@ -252,23 +252,33 @@ par(oma = c(0, 0, 1.2, 0), mar = c(4.1, 4.6, 2.5, 0.9),
 
 draw_interval_panel <- function(nn, lower_col, upper_col, ylab, main,
                                 reference = NA_real_, ylim) {
-  plot(NA_real_, NA_real_, xlim = range(contents) + c(-0.035, 0.035),
-       ylim = ylim, xaxt = "n", xlab = "Target content",
+  panel <- data[data$n == nn, , drop = FALSE]
+  panel_contents <- sort(unique(panel$content))
+  if (!length(panel_contents)) panel_contents <- contents
+  content_positions <- seq_along(panel_contents)
+  names(content_positions) <- sprintf("%.12g", panel_contents)
+  plot(NA_real_, NA_real_, xlim = range(content_positions) + c(-0.45, 0.45),
+       ylim = ylim, xaxt = "n", xlab = "Target content c",
        ylab = ylab, main = main, bty = "l")
-  axis(1, at = contents, labels = sprintf("%.2f", contents))
+  axis(1, at = content_positions, labels = sprintf("%.2f", panel_contents))
+  if (length(content_positions) > 1L) {
+    abline(v = content_positions[-length(content_positions)] + 0.5,
+           col = "gray92", lwd = 0.8)
+  }
   if (is.finite(reference)) {
     abline(h = reference, col = "gray55", lty = 3, lwd = 1.2)
   }
-  panel <- data[data$n == nn, , drop = FALSE]
-  cap <- 0.004
+  cap <- 0.035
   for (method in method_order) {
     block <- panel[panel$method_id == method, , drop = FALSE]
     block <- block[order(block$content), , drop = FALSE]
     if (!nrow(block)) next
-    x <- block$content + offsets[[method]]
+    content_index <- match(sprintf("%.12g", block$content),
+                           names(content_positions))
+    x <- content_positions[content_index] + offsets[[method]]
     lower <- num(block[[lower_col]])
     upper <- num(block[[upper_col]])
-    ok <- is.finite(lower) & is.finite(upper)
+    ok <- is.finite(x) & is.finite(lower) & is.finite(upper)
     if (!any(ok)) next
     col <- method_colors[[method]]
     lty <- method_lty[[method]]
@@ -282,8 +292,8 @@ draw_interval_panel <- function(nn, lower_col, upper_col, ylab, main,
 
 for (nn in sample_sizes) {
   draw_interval_panel(nn, "delivery_min", "delivery_max",
-                      "Delivery probability",
-                      sprintf("Delivery range, n = %s", nn),
+                      "Delivery success",
+                      sprintf("n = %s", nn),
                       0.95, c(0.9, 1.0))
 }
 if (any(panel_matrix == 0L)) {
@@ -296,7 +306,7 @@ legend("center", legend = unname(method_labels[method_order]),
        col = unname(method_colors[method_order]),
        lty = unname(method_lty[method_order]), lwd = 2.4,
        ncol = 3, bty = "n", xpd = NA, cex = 0.9)
-mtext("Article-facing iid tolerance validation at tolerance confidence 0.95",
+mtext("Primary iid tolerance validation at 95% tolerance confidence",
       outer = TRUE, cex = 1.05, font = 2)
 
 par(old_par)

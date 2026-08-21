@@ -1535,7 +1535,7 @@ the empirical fraction of replications in which the reported interval attains
 the required population content. For each replication, this content check uses
 the known simulation law rather than the fraction of sampled observations
 inside the returned interval. Replications with no returned interval would
-count as failures. Widths are reported as DGP-level empirical
+count as failures. Widths are reported as distribution-level empirical
 2.5\%--97.5\% ranges, avoiding width averages across distributions with
 different scales and tail behavior.
 
@@ -1553,7 +1553,7 @@ reported methods returned an interval in every replication in this run.}
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig04_tolerance_validation_primary.png}
-\caption{\textbf{Delivery patterns by sample size and target content.} Delivery
+\caption{\textbf{Delivery success by sample size and target content.} Delivery
 counts cases with no returned interval as failures.
 Vertical intervals in the delivery panels show the range across distributional
 scenarios, and the axis is zoomed to \(0.90\)--\(1.00\). Dashed reference lines
@@ -1564,8 +1564,8 @@ mark nominal \(0.95\) delivery.}
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig05_tolerance_validation_width_ranges.png}
-\caption{\textbf{Raw width ranges by DGP.} Horizontal intervals show empirical
-2.5\%--97.5\% ranges of returned interval lengths within each DGP,
+\caption{\textbf{Returned interval-width ranges by distribution.} Horizontal intervals show empirical
+2.5\%--97.5\% ranges of returned interval lengths within each distribution,
 sample-size/content cell, and method. Crosses mark the mean returned width
 across the 1000 paired replications. The horizontal axis is logarithmic to
 display light-tailed, skewed, contaminated, and heavy-tailed cases in one figure;
@@ -1574,20 +1574,20 @@ the values remain raw interval lengths.}
 \end{figure}
 
 In the completed run, TCSP delivery ranges from 95.1\% to 99.6\% across
-DGP-level cells, compared with 94.1\% to 98.5\% for Young--Mathew and 95.1\%
+distribution-level cells, compared with 94.1\% to 98.5\% for Young--Mathew and 95.1\%
 to 100.0\% for Wilks.
 Figures~\ref{fig:tolerance-validation-primary}
 and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
 pooling widths across distributional scenarios. The calibrated scan action
 targets the requested finite-sample statement directly. The adaptive
 calibration preserves empirical delivery above the nominal tolerance confidence
-in every DGP-level cell. Young--Mathew is a strong nonparametric comparator and
+in every distribution-level cell. Young--Mathew is a strong nonparametric comparator and
 can be slightly narrower in some skewed or boundary cells, although it falls
 below nominal delivery in a small number of refined cells. Wilks
 is simple and conservative at lower contents, but it can be substantially wider
 when the scan calibration does not force the full sample range.
 
-The supplement gives the DGP-level delivery and width tables behind these
+The supplement gives the distribution-level delivery and width tables behind these
 summaries, together with the TCSP retained counts and full-range feasibility
 thresholds used to choose the grid. The excluded small-sample cells are not
 treated as algorithmic failures; they fall outside the region where a two-sided
