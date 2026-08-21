@@ -416,7 +416,7 @@ write_range_tex <- function(summary, path) {
   if (!nrow(summary)) {
     writeLines(c(
       lines,
-      "\\multicolumn{3}{@{}l@{}}{No selected validation rows.}\\\\",
+      "\\multicolumn{3}{@{}l@{}}{No selected validation results.}\\\\",
       "\\bottomrule",
       "\\end{tabular}"
     ), path)
@@ -722,13 +722,13 @@ write_wide_delivery_tex(
   primary_delivery,
   file.path(output_dir, "tolerance_validation_article_dgp_delivery.tex"),
   primary_supp_method_order,
-  "\\textbf{Distribution-level tolerance-validation content attainment.} Entries are percentages of replications in which the returned interval attained the requested population content for the three reported methods at tolerance confidence \\(0.95\\). Replications with no returned interval count as failures.",
+  "\\textbf{Distribution-level tolerance-validation content attainment.} Entries are percentages of replications in which the produced interval attained the requested population content for the three reported methods at tolerance confidence \\(0.95\\). Intervals not produced are counted as nonattainment.",
   "tab:supp-primary-dgp-delivery"
 )
 write_dgp_width_tex(
   primary_dgp_widths,
   file.path(output_dir, "tolerance_validation_article_dgp_width_ranges.tex"),
-  "\\textbf{Distribution-level tolerance-validation width ranges.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.",
+  "\\textbf{Distribution-level tolerance-validation width ranges.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired Monte Carlo replications within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.",
   "tab:supp-primary-dgp-width-ranges"
 )
 write_scan_calibration_tex(
@@ -752,7 +752,7 @@ if (has_small_boundary) {
     small_dgp_widths,
     file.path(output_dir,
               "tolerance_validation_article_small_sample_dgp_width_ranges.tex"),
-    "\\textbf{Small-sample tolerance-validation width ranges by distribution.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired resamplings within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.",
+    "\\textbf{Small-sample tolerance-validation width ranges by distribution.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired Monte Carlo replications within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.",
     "tab:supp-small-sample-dgp-width-ranges"
   )
 }

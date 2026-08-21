@@ -168,7 +168,7 @@ make_tex_lines <- function(data, include_sample_size) {
   lines <- c(
     "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrr@{}}",
     "\\toprule",
-    "Method & Infeasible (\\%) & Content-attainment (\\%) & Returned interval rate (\\%)\\\\",
+    "Method & Infeasible (\\%) & Content-attainment (\\%) & Interval-production rate (\\%)\\\\",
     "\\midrule"
   )
   for (nn in sort(unique(data$n))) {

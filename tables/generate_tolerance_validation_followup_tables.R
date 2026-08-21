@@ -307,7 +307,7 @@ write_table(small_content, "tolerance_validation_small_sample_content_summary")
 design_lines <- c(
   "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrr@{}}",
   "\\toprule",
-  "Method & Infeasible (\\%) & Content-attainment (\\%) & Returned interval rate (\\%)\\\\",
+  "Method & Infeasible (\\%) & Content-attainment (\\%) & Interval-production rate (\\%)\\\\",
   "\\midrule"
 )
 for (design_name in unique(design_summary$design)) {
@@ -364,7 +364,7 @@ writeLines(c(
 small_lines <- c(
   "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}Xrrr@{}}",
   "\\toprule",
-  "Method & Infeasible (\\%) & Content-attainment (\\%) & Returned interval rate (\\%)\\\\",
+  "Method & Infeasible (\\%) & Content-attainment (\\%) & Interval-production rate (\\%)\\\\",
   "\\midrule"
 )
 for (cc in sort(unique(small_content$guaranteed_content))) {

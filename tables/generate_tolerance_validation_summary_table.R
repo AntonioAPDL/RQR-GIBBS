@@ -153,7 +153,7 @@ body <- vapply(seq_len(nrow(out)), function(ii) {
 lines <- c(
   "\\begin{tabularx}{\\textwidth}{@{}l>{\\raggedright\\arraybackslash}Xrr@{}}",
   "\\toprule",
-  "Method & Role & Content-attainment (\\%) & Returned interval rate (\\%)\\\\",
+  "Method & Role & Content-attainment (\\%) & Interval-production rate (\\%)\\\\",
   "\\midrule",
   body,
   "\\bottomrule",
