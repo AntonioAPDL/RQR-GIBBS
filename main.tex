@@ -221,7 +221,7 @@ ordinary full-distribution Bayesian interval actions are formulated as separate
 inferential layers, with their available guarantees, diagnostics, and open
 proof requirements stated explicitly.
 
-The scope is intentionally bounded. Available nonzero-tilt computation uses
+The contribution is intentionally bounded. Available nonzero-tilt computation uses
 proper Gaussian priors, a fixed learning rate, and fixed or precomputed dynamic
 evolution covariances. Random shrinkage scales, random learning-rate tilt, adaptive or
 component-scale dynamic tilt, data-driven tilt selection, variational
@@ -240,15 +240,15 @@ calibration and sandwich adjustment address distinct uncertainty questions
 The paper proceeds as follows. Section~\ref{sec:interval-functionals} defines
 the fixed-content interval class. Sections~\ref{sec:mpi-loss}
 and~\ref{sec:mti-loss} identify the MPI target and the MTI placement family.
-Section~\ref{sec:static-theory-scope} gives finite-sample balance
-and fixed-dimensional iid uncertainty scope. Section~\ref{sec:posterior}
+Section~\ref{sec:static-theory-statements} gives finite-sample balance
+and fixed-dimensional iid uncertainty statements. Section~\ref{sec:posterior}
 develops generalized-Bayes endpoint computation, fixed-target ECM, the MPI
 regularized-horseshoe Nishimura--Suchard (RHS-NS) prior adapter, and the
 fixed-DESN-feature specialization. Section~\ref{sec:dynamic}
 gives the dynamic endpoint-state sampler. Section~\ref{sec:tcsp} defines the
 scan-calibrated minimum-width tolerance action and states the remaining proof
 requirements.
-Section~\ref{sec:evaluation} states the confirmatory validation scope, and
+Section~\ref{sec:evaluation} states the confirmatory validation design, and
 Section~\ref{sec:discussion} concludes.
 
 \section{Fixed-Content Interval Targets}
@@ -698,7 +698,7 @@ and Gaussian state models. Heavier-tailed shrinkage priors require a separate
 propriety analysis before nonzero tilt is enabled.
 
 \section{Empirical Balance and Static Uncertainty}
-\label{sec:static-theory-scope}
+\label{sec:static-theory-statements}
 
 This section separates two finite-sample questions: what the fitted training
 interval balances exactly and how fixed-dimensional static endpoint uncertainty
@@ -749,7 +749,7 @@ A separate static large-sample theory concerns iid random-design observations
 labelable ordered chart with uniformly separated roots
 \(a_0(X)=X^\top\beta_{L0}<b_0(X)=X^\top\beta_{U0}\), positive endpoint
 densities, a unique population target, positive-definite curvature, and a
-proper prior positive near the target. The scope is this ordered-chart setting.
+proper prior positive near the target. The result applies in this ordered-chart setting.
 Crossing raw linear roots after pointwise sorting, selected DESN reservoirs,
 deterministic fixed-design triangular arrays, dependent time series, growing
 feature dimension, random \(\kappa\), and same-sample tilt selection fall
@@ -788,7 +788,7 @@ calibration require the separate diagnostics and validation protocols below.
 \section{Generalized-Bayes Endpoint Computation}
 \label{sec:posterior}
 
-\subsection{Static Endpoint Models and Target Scope}
+\subsection{Static Endpoint Models and Target Definition}
 
 This section uses raw roots for computation and ordered endpoints for
 reporting. The root labels \(1\) and \(2\) index coefficient blocks; lower
@@ -845,7 +845,7 @@ on the reference domain or the keep/swap assignment is ambiguous, the
 lower/upper coefficient chart is suppressed. In that case, pointwise ordered endpoints,
 widths, midpoints, and covariate-profile contrasts are the appropriate
 summaries. The static asymptotic result above has the narrower ordered-chart
-scope: it assumes one globally labelable, uniformly separated endpoint
+setting: it assumes one globally labelable, uniformly separated endpoint
 ordering.
 
 For each observed row, define
@@ -1076,7 +1076,7 @@ conditional;
 acceptance-one label swap.
 \end{enumerate}
 \item \textbf{Report ordered functionals.} Store ordered endpoints, widths,
-midpoints, losses, raw root-label diagnostics, and target metadata. Optional
+midpoints, losses, raw root-label diagnostics, and target information. Optional
 labelability-based coefficient summaries are post-processing outputs and require a
 passed global labelability check on the declared reference design. The sampler leaves the
 specified fixed-rate proper-Gaussian generalized posterior invariant; at
@@ -1262,7 +1262,7 @@ apply the acceptance-one complete-root label swap.
 \end{enumerate}
 \item \textbf{Report root functionals.} Retain ordered time-local endpoints,
 widths, midpoints, selected state functionals, losses, and complete
-target/evolution metadata. These are not simulated responses. If a dynamic
+target and evolution specification. These are not simulated responses. If a dynamic
 lower/upper label is requested beyond pointwise ordered endpoints, the
 post-processing decision is one complete path assignment per retained draw,
 not a separate relabeling at each time. The sampler targets the exact
@@ -1294,8 +1294,8 @@ multipliers are shared across the two roots to preserve exchangeability. The
 MPI component-scale sampler uses rootwise partial collapse
 and centered/noncentered interweaving; the supplement gives the invariant
 transition and update order
-\citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. The validated scope
-of this extension is the MPI target. In the noncentered parameterization
+\citep{PapaspiliopoulosRobertsSkold2007,YuMeng2011ASIS}. This extension has
+been validated for the MPI target. In the noncentered parameterization
 the tilt depends on \(\sqrt{q_j}\) through the reconstructed state path, so a
 tilted component-scale generalized posterior requires separate normalization,
 propriety, and validation. Likewise, recomputing \(\mat W_t\) from each
@@ -1382,7 +1382,7 @@ shortest-window selection uncertainty. An unconditional interpretation requires
 a plug-in stability theorem or a separate target-selection sample.
 
 \paragraph{Supplementary extensions.}
-Response-distribution Bayesian screens and sample-split spacing constructions
+Response-distribution Bayesian shortest-interval calculations and sample-split spacing constructions
 are useful extensions, but they answer different evidentiary questions from the
 primary TCSP action. A response-distribution model gives posterior
 content probabilities under a model for \(F\), whereas TCSP supplies a
@@ -1392,7 +1392,7 @@ sample to choose the minimum-width calibrated order-statistic window. These
 extensions remain available as separate implementation and proof directions;
 they are not part of the main validation comparison.
 
-\paragraph{Numerical certification and proof scope.}
+\paragraph{Numerical certification and proof guarantees.}
 Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
 reported interval. The reported implementation uses adaptive Monte Carlo
 calibration of the uniform scan distribution. At each look, one-sided
@@ -1406,7 +1406,7 @@ alternative
 Accordingly, exact critical-count calculation and the finite-sample theorem for
 this closed-window action are treated as open proof and certification tasks.
 
-The theoretical scope is deliberately narrower than the implemented procedures.
+The available theory is deliberately narrower than the implemented procedures.
 Theorems~\ref{thm:quantile-window}--\ref{thm:profiled-mean-tilt} identify
 the fixed-content MTI family and its admissible tilt coordinate. For tolerance
 inference, the empirical closed order-statistic window is the formal action;
@@ -1490,7 +1490,7 @@ the selected shortest action, requires a separate action-equivalence or
 direct-calibration result. Tolerance confidence comes from the scan calibration,
 and \(\omega_{\mathrm R}\) remains the generalized-Bayes learning rate.
 
-\section{Validation Scope}
+\section{Validation Design}
 \label{sec:evaluation}
 
 Validation is reserved for questions that require repeated sampling or
@@ -1668,7 +1668,7 @@ unrestricted and pointwise, whereas regression and state-space models impose
 restricted predictor classes. Static covariance statements require
 fixed-dimensional iid random design and a globally separated ordered chart;
 crossing raw linear roots after pointwise sorting, serial dependence, selected
-reservoirs, and large-\(T\) state asymptotics are outside that scope. Boundary
+reservoirs, and large-\(T\) state asymptotics are outside the present analysis. Boundary
 tilts can yield semi-infinite limits or inactive roots, and tilts outside the
 admissible range have no finite unrestricted target. Broader nonzero-tilt
 priors and evolution modes, external tilt selection, variational

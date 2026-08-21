@@ -161,7 +161,7 @@ if (length(disposition) != nrow(summary) ||
   oti_stop("The six-cell illustration disposition is invalid.")
 }
 disposition_label <- ifelse(
-  disposition == "strict_pass", "Strict", warning_label
+  disposition == "strict_pass", "All criteria met", warning_label
 )
 rows <- sprintf(
   "%s & %s & %.3f & %.3f & %.3f & %.3f & %s \\\\",
@@ -178,7 +178,7 @@ writeLines(
     "\\toprule",
     paste(
       "Family & Target & Endpoint RMSE & Width RMSE & Realized coverage",
-      "& Mean width & Disposition \\\\"
+      "& Mean width & Diagnostic result \\\\"
     ),
     "\\midrule",
     rows,

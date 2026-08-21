@@ -94,10 +94,10 @@ remain open.
 \section*{Part I. Notation, Inferential Objects, and Guide to Supporting Results}
 
 \section{Guide to the Supplement}
-\label{sec:supp-scope}
+\label{sec:supp-guide}
 
-The main article carries the statistical narrative. The supplement is a recovery
-document for definitions, proofs, computational identities, and claim scope. The
+The main article carries the statistical narrative. The supplement provides a
+technical reference for definitions, proofs, computational identities, and claim support. The
 MTI generalized posterior combines a prior with a loss-based update
 \citep{BissiriHolmesWalker2016GeneralBayes}. Root-trajectory draws therefore
 induce generalized-posterior distributions for endpoint functions. Future
@@ -119,7 +119,7 @@ shorter ``obs'' subscript.
 \begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X
   >{\raggedright\arraybackslash}X@{}}
 \toprule
-Symbol & Role & Scope\\
+Symbol & Role & Where used\\
 \midrule
 \(c,u\) & content level and lower probability-window index & population theory\\
 \(q,k,\alpha,\gamma\) & fitted content, retained count, tolerance error level, and posterior content-error level & tolerance actions\\
@@ -154,7 +154,7 @@ specification.
 \centering
 \caption{\textbf{Guide to supporting results.} The table separates
 population identification, finite-sample score identities, static uncertainty
-geometry, computation, and reproducibility scope.}
+geometry, computation, and reproducibility records.}
 \label{tab:supp-support-map}
 \TableStyle
 \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.28\textwidth}
@@ -180,7 +180,7 @@ Exact fractional empirical balance
 & Clarke/subgradient allocation proof and regression score equations\\
 Static generalized-posterior uncertainty geometry
 & Section~\ref{sec:supp-static-theory}
-& Fixed-dimensional iid random-design scope, \(H/J\) covariance contrast, and sandwich transform\\
+& Fixed-dimensional iid random-design setting, \(H/J\) covariance contrast, and sandwich transform\\
 Scan-calibrated shortest-window tolerance construction
 & Main article, scan-calibration section
 & Definition of the empirical action and claim boundary; open tasks include
@@ -190,18 +190,18 @@ Full-distribution Bayesian shortest-interval uncertainty quantification
 & Section~\ref{sec:supp-bayes-uq}
 & Direct DP posterior conjugacy, exact fixed-interval Beta content law, HBS
   action definition, Gaussian DPM Gibbs functional summaries, and ECM
-  diagnostic scope\\
+  diagnostic setting\\
 Pseudo-asymmetric-Laplace (pseudo-AL) Gibbs sampler
 & Sections~\ref{sec:supp-pseudo-al}--\ref{sec:supp-static-regression}
 & Augmented generalized posterior, GIG latent-scale full conditionals, Gaussian root full conditionals, and prior adapters\\
 Fixed-target MTI-ECM
 & Section~\ref{sec:supp-static-regression}
 & Exact inverse latent-scale moment, two conditional Gaussian root solves,
-  safeguard scope, and distinction from variational Bayes or posterior sampling\\
+  safeguards, and distinction from variational Bayes or posterior sampling\\
 Dynamic linear root-state computation
 & Sections~\ref{sec:supp-dynamic}--\ref{sec:supp-discounts}
 & Quartic joint augmented generalized-posterior contribution, root-specific FFBS, precomputed discounts, component scales, and adaptive-discount caveat\\
-Evidence and reproducibility scope
+Evidence and reproducibility record
 & Sections~\ref{sec:supp-tolerance-validation-protocol}--\ref{sec:supp-reproducibility}
 & Tolerance-study design cells, feasibility thresholds, reference validation cases, and limits of empirical claims\\
 \bottomrule
@@ -216,7 +216,7 @@ calculation, and what remains a research task.
 \begin{table}[H]
 \centering
 \caption{\textbf{Summary of claim support.} Support labels are attached to
-the strongest current support, not to intended future scope.}
+the strongest current support, not to intended future coverage.}
 \label{tab:supp-status-ledger}
 \TableStyle
 \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.23\textwidth}
@@ -1121,7 +1121,7 @@ This is the finite-sample analogue of the restricted population score. Pointwise
 conditional coverage requires correct specification and a sufficiently rich
 predictor class.
 
-\subsection{Fixed-Dimensional iid Uncertainty}
+\subsection{Fixed-Dimensional Independent-Sample Uncertainty}
 
 The static asymptotic statements used for uncertainty calibration are
 fixed-dimensional iid random-design statements. Let \(Z=(X,Y)\) be iid with
@@ -1660,9 +1660,9 @@ their associated states together.
 \end{enumerate}
 \item \textbf{Stored quantities and label handling.} Retain ordered
 endpoints, widths, midpoints, losses, \(\kappa\), and complete target,
-missingness, source, and swap metadata. Omit the swap unless the complete
+missingness indicators, source identifiers, and swap information. Omit the swap unless the complete
 root-specific blocks are exchangeable.
-\item \textbf{Rate status.} This is the MPI-only hierarchical inverse-loss
+\item \textbf{Loss-scale interpretation.} This is the MPI-only hierarchical inverse-loss
 scale convention. Its \(\kappa\) is neither a response variance nor an
 automatic coverage-calibration parameter.
 \item \textbf{Target and applicability.} The displayed order is an exact
@@ -1807,10 +1807,10 @@ a positive one by taking absolute singular values. Under the default numerical
 policy, a failed factorization or negative-eigenvalue projection stops the fit;
 an exact positive-semidefinite draw with zero eigenvalues remains admissible.
 The numerical policy uses a declared jitter ladder and records every covariance
-alteration. When a backward prior
-covariance is repaired, the repaired matrix is used consistently in the gain,
-smoothing covariance, and path-draw covariance. Fixed-generalized-posterior
-fits with nonzero repair counts are excluded from exact-update summaries.
+adjustment. When an adjustment is required for a backward prior covariance,
+the adjusted matrix is used consistently in the gain, smoothing covariance,
+and path-draw covariance. Fixed-generalized-posterior fits with nonzero
+covariance adjustments are excluded from exact-update summaries.
 Symmetry and eigenvalue materiality are evaluated relative to the actual
 matrix scale, including for matrices with entries below one. Jitter is likewise
 matrix-relative except for an exactly zero matrix, for which use of the
@@ -1857,7 +1857,7 @@ posterior.
 The same discounts are used for both roots unless a future model deliberately
 breaks their prior exchangeability.
 
-\subsection{Compatibility Scope for Adaptive Conditional Discounts}
+\subsection{Compatibility Conditions for Adaptive Conditional Discounts}
 
 The experimental designation can be made precise. Consider \(T=2\), \(p=1\),
 \(f_t=G_t=1\), and a nonzero discount inflation
@@ -2138,8 +2138,8 @@ p_n(I;c)\ge 1-\gamma\}.
 \]
 The count \(k_{n,c,\alpha}\) is calibrated outside the Bayesian posterior and is
 held fixed. The posterior threshold can be redundant, binding, or infeasible
-within \(A_n\). The implementation records that status rather than
-relaxing either constraint.
+within \(A_n\). The implementation reports which case occurs without relaxing
+either constraint.
 
 Posterior shortest-target functionals are obtained by drawing a distribution
 from the posterior DP using a truncated stick-breaking representation
@@ -2351,7 +2351,7 @@ in the method reproducibility record.
 \label{sec:supp-reproducibility}
 
 The reproducibility record separates mathematical target statements, numerical
-checks, and evidence scope. Reference calculations cover the Gaussian filtering
+checks, and evidence used for manuscript claims. Reference calculations cover the Gaussian filtering
 and smoothing algebra, latent- and component-scale conditionals, missing
 observations, root labels, and exact checkpoint continuation. The versioned
 record stores the data-generating mechanism, forecast design, seeds,
@@ -2376,9 +2376,9 @@ references, and the prespecified population-tilt illustrations in
 Section~\ref{sec:supp-oracle-tilt-diagnostics}. Comparative scientific
 evidence still requires an externally evaluated tilt-selection protocol and a
 repeated-sample calibration study.
-Detailed source records, diagnostic criteria, and decisions about evidence
-eligibility are maintained in the companion repository rather than in the
-statistical supplement.
+Detailed source records, diagnostic criteria, and decisions about which
+computations support manuscript claims are maintained in the companion
+repository rather than in the statistical supplement.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
