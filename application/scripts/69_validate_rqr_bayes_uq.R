@@ -1080,6 +1080,14 @@ mti_mode_control <- function(engine, control_name) {
     list()
 }
 
+mti_dp_profile_control <- function(control_name) {
+  cfg <- config$engine_defaults$mti_ecm_dp_profile %||% list()
+  cfg[[paste0(mode, "_", control_name)]] %||%
+    cfg[[paste0("moderate_", control_name)]] %||%
+    cfg[[control_name]] %||%
+    list()
+}
+
 mti_learning_rate <- function(engine) {
   cfg <- config$engine_defaults[[engine]] %||% list()
   as.numeric(cfg$learning_rate %||% 1)[1L]
@@ -1340,6 +1348,122 @@ fit_tcsp_mti_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
   out
 }
 
+fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
+                                   post_conf, seed) {
+  method_meta <- method_by_id[[method_id]]
+  direct <- config$engine_defaults$direct_dp
+  base <- dp_base_from_config()
+  profile_cfg <- config$engine_defaults$mti_ecm_dp_profile %||% list()
+  calibration <- get_scan_calibration(method_id, length(y), c_target, tol_conf)
+  scan_target <- if (isTRUE(calibration$infeasible)) {
+    NA_real_
+  } else {
+    target <- calibration$target_content %||% NA_real_
+    if (!is.finite(as.numeric(target)[1L])) {
+      target <- as.numeric(calibration$retained_count %||% NA_real_) /
+        length(y)
+    }
+    as.numeric(target)[1L]
+  }
+  ecm_control <- mti_dp_profile_control("ecm_control")
+  ecm_control$seed <- seed
+  action <- rqr_mti_ecm_dp_profile_action(
+    y = y,
+    content = c_target,
+    posterior_confidence = post_conf,
+    dp_concentration = as.numeric(direct$concentration)[1L],
+    dp_base_measure = base,
+    strict_bayes = isTRUE(profile_cfg$strict_bayes %||% TRUE),
+    scan_target_content = scan_target,
+    q_grid_control = mti_dp_profile_control("q_grid_control"),
+    tilt_grid_control = mti_dp_profile_control("tilt_grid_control"),
+    learning_rate = as.numeric(profile_cfg$learning_rate %||% 1)[1L],
+    beta_prior_obj = beta_prior(
+      "ridge",
+      ridge = list(tau2 = as.numeric(
+        profile_cfg$beta_ridge_tau2 %||% 1e4
+      )[1L])
+    ),
+    ecm_control = ecm_control,
+    expand_if_empty = isTRUE(profile_cfg$expand_if_empty %||% TRUE)
+  )
+  selected <- action$selected
+  if (!nrow(selected)) {
+    return(empty_fit_result(
+      infeasible = TRUE,
+      message = "No MTI-ECM profile candidate satisfied the direct-DP content screen.",
+      fit_class = paste(class(action), collapse = "|"),
+      action_lane = method_meta$action_lane %||%
+        "mti_ecm_direct_dp_content_screen",
+      selected_interval_source = method_meta$selected_interval_source %||%
+        "mti_ecm_dp_profile_selected_action",
+      posterior_probability = NA_real_,
+      posterior_constraint_status = action$posterior_constraint_status,
+      candidate_feasible_count = action$feasible_count,
+      candidates_evaluated = action$candidates_evaluated,
+      scan_critical_method = calibration$scan_critical_method %||%
+        NA_character_,
+      content_buffer = calibration$content_buffer %||% NA_real_,
+      scan_certified_lower_probability =
+        calibration$scan_probability$certified_lower_probability %||%
+        NA_real_,
+      uq_engine = method_meta$uq_engine %||% "mti_ecm_direct_dp",
+      tilt_source = method_meta$tilt_source %||% "profile_grid",
+      scan_target_content = scan_target,
+      mti_certificate_scope =
+        "direct_dp_content_screen_repeated_sampling_validation",
+      ecm_backend = ecm_control$ecm_backend %||% NA_character_,
+      target_audit_digest = action$provenance_digest
+    ))
+  }
+  empty_fit_result(
+    lower = selected$lower[[1L]],
+    upper = selected$upper[[1L]],
+    width = selected$width[[1L]],
+    fitted_summary_lower = selected$lower[[1L]],
+    fitted_summary_upper = selected$upper[[1L]],
+    fitted_summary_width = selected$width[[1L]],
+    posterior_probability = selected$posterior_content_probability[[1L]],
+    retained_count = selected$observed_count[[1L]],
+    infeasible = FALSE,
+    fit_class = paste(class(action), collapse = "|"),
+    action_lane = method_meta$action_lane %||%
+      "mti_ecm_direct_dp_content_screen",
+    selected_interval_source = method_meta$selected_interval_source %||%
+      "mti_ecm_dp_profile_selected_action",
+    posterior_constraint_status = action$posterior_constraint_status,
+    candidate_feasible_count = action$feasible_count,
+    candidates_evaluated = action$candidates_evaluated,
+    scan_critical_method = calibration$scan_critical_method %||% NA_character_,
+    content_buffer = calibration$content_buffer %||% NA_real_,
+    scan_certified_lower_probability =
+      calibration$scan_probability$certified_lower_probability %||% NA_real_,
+    uq_engine = method_meta$uq_engine %||% "mti_ecm_direct_dp",
+    tilt_source = method_meta$tilt_source %||% "profile_grid",
+    target_content = selected$target_content[[1L]],
+    target_mean_tilt = selected$mean_tilt[[1L]],
+    scan_target_content = scan_target,
+    mti_ecm_target_content = selected$target_content[[1L]],
+    mti_tilt_rule = selected$tilt_rule[[1L]],
+    mti_tilt_lower_count = selected$mti_tilt_lower_count[[1L]],
+    mti_tilt_upper_count = selected$mti_tilt_upper_count[[1L]],
+    mti_tilt_interpolation_weight =
+      selected$mti_tilt_interpolation_weight[[1L]],
+    mti_certificate_scope =
+      "direct_dp_content_screen_repeated_sampling_validation",
+    ecm_backend = selected$ecm_backend[[1L]],
+    target_audit_digest = action$provenance_digest,
+    ecm_converged = isTRUE(selected$ecm_converged[[1L]]),
+    ecm_iterations = selected$ecm_iterations[[1L]],
+    ecm_objective = selected$ecm_objective[[1L]],
+    ecm_trace_length = NA_integer_,
+    ecm_initial_objective = NA_real_,
+    ecm_final_objective = selected$ecm_objective[[1L]],
+    ecm_relative_objective_drop = NA_real_,
+    ecm_final_stationarity = selected$ecm_final_stationarity[[1L]]
+  )
+}
+
 fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
                        seed) {
   direct <- config$engine_defaults$direct_dp
@@ -1442,6 +1566,16 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       dgp_id = dgp_id,
       c_target = c_target,
       tol_conf = tol_conf,
+      seed = seed
+    ))
+  }
+  if (identical(method_id, "mti_ecm_dp_profile")) {
+    return(fit_mti_ecm_dp_profile(
+      method_id = method_id,
+      y = y,
+      c_target = c_target,
+      tol_conf = tol_conf,
+      post_conf = post_conf,
       seed = seed
     ))
   }
@@ -2279,6 +2413,38 @@ summary <- do.call(rbind, summary_rows)
 write.csv(summary, file.path(staging, "bayes_uq_validation_summary.csv"),
           row.names = FALSE)
 
+method_ids_present <- sort(unique(as.character(results$method_id)))
+method_notes <- c(
+  paste0("- Methods present: `", paste(method_ids_present,
+                                      collapse = "`, `"), "`")
+)
+if ("mti_ecm_dp_profile" %in% method_ids_present) {
+  method_notes <- c(
+    method_notes,
+    "The `mti_ecm_dp_profile` rows use MTI-ECM endpoint candidates screened by direct-DP fixed-interval content probabilities.",
+    "For this method, `target_content` is the fitted MTI content, `target_mean_tilt` is the selected mean tilt, and `posterior_probability` is the direct-DP probability that the fixed interval has at least the requested population content.",
+    "This method is evaluated by repeated-sample validation; it is not an exact distribution-free scan certificate."
+  )
+}
+if (any(grepl("^tcsp_mti_", method_ids_present))) {
+  method_notes <- c(
+    method_notes,
+    "The `tcsp_mti_*` rows are fixed-target MTI summaries after scan calibration; `formal_action_*` records the associated scan action and `fitted_summary_*` records the MTI endpoint summary."
+  )
+}
+if ("hdp_s_mc" %in% method_ids_present) {
+  method_notes <- c(
+    method_notes,
+    "The hybrid direct-DP scan method fixes the scan count before evaluating direct-DP content probability."
+  )
+}
+if ("oracle_sh" %in% method_ids_present) {
+  method_notes <- c(
+    method_notes,
+    "The `oracle_sh` rows are non-deployable synthetic-DGP references for the population shortest interval and oracle mean tilt."
+  )
+}
+
 readme <- c(
   paste0("# ", config$study_id),
   "",
@@ -2291,12 +2457,8 @@ readme <- c(
   paste0("- Oracle shortest reference present: `",
          any(results$method_id == "oracle_sh"), "`"),
   "",
-  "This pilot separates response-distribution Bayesian UQ from RQR generalized-Bayes plug-in summaries.",
-  "The hybrid direct-DP scan method fixes the scan count before evaluating posterior content probability.",
-  "The `tcsp_mti_gibbs_*` and `tcsp_mti_ecm_*` rows are fixed-target MTI fitted summaries after scan calibration.",
-  "For those rows, `formal_action_*` records the associated scan action and `fitted_summary_*` records the Gibbs or ECM endpoint summary.",
-  "These artifacts are validation evidence only; they do not prove posterior endpoint coverage.",
-  "The `oracle_sh` rows are non-deployable synthetic-DGP benchmarks for the true population shortest interval and oracle mean tilt.",
+  "This validation run separates response-distribution Bayesian uncertainty quantification from loss-based generalized-Bayes MTI endpoint construction.",
+  method_notes,
   "Width-ratio, oracle-gap, and posterior-binding diagnostics are included for post-run method tuning."
 )
 writeLines(readme, file.path(staging, "README.md"))

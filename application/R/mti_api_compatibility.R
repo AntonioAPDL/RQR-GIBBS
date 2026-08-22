@@ -105,6 +105,10 @@ mti_ecm_fit <- function(y, X, content = NULL, ..., coverage_level = NULL) {
 
 #' @rdname mpi_mti_api
 #' @export
+mti_ecm_dp_profile_action <- function(...) rqr_mti_ecm_dp_profile_action(...)
+
+#' @rdname mpi_mti_api
+#' @export
 mti_ecm_path <- function(...) rqr_ecm_path(...)
 
 #' @rdname mpi_mti_api
