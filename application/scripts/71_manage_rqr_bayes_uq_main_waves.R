@@ -904,6 +904,13 @@ collect_run <- function(run_dir) {
       "This method is evaluated by repeated-sample validation; it is not an exact distribution-free scan certificate."
     )
   }
+  if (any(grepl("^mti_ecm_dp_profile_tune_", method_ids_present))) {
+    method_notes <- c(
+      method_notes,
+      "The `mti_ecm_dp_profile_tune_*` rows are MTI-ECM direct-DP profile tuning variants with method-specific screen levels and profile grids.",
+      "For these variants, `effective_posterior_confidence` records the direct-DP content-screen level actually used."
+    )
+  }
   if (any(grepl("^tcsp_mti_", method_ids_present))) {
     method_notes <- c(
       method_notes,

@@ -867,6 +867,7 @@ empty_fit_result <- function(
     ecm_final_objective = NA_real_,
     ecm_relative_objective_drop = NA_real_,
     ecm_final_stationarity = NA_real_,
+    effective_posterior_confidence = NA_real_,
     fit_reused_across_posterior_thresholds = FALSE) {
   list(
     lower = lower,
@@ -923,6 +924,7 @@ empty_fit_result <- function(
     ecm_final_objective = ecm_final_objective,
     ecm_relative_objective_drop = ecm_relative_objective_drop,
     ecm_final_stationarity = ecm_final_stationarity,
+    effective_posterior_confidence = effective_posterior_confidence,
     fit_reused_across_posterior_thresholds =
       fit_reused_across_posterior_thresholds
   )
@@ -1080,12 +1082,48 @@ mti_mode_control <- function(engine, control_name) {
     list()
 }
 
-mti_dp_profile_control <- function(control_name) {
-  cfg <- config$engine_defaults$mti_ecm_dp_profile %||% list()
+mti_dp_profile_config <- function(method_id) {
+  method_meta <- method_by_id[[method_id]] %||% list()
+  base <- config$engine_defaults$mti_ecm_dp_profile %||% list()
+  method_profile <- method_meta[["mti_ecm_dp_profile", exact = TRUE]]
+  profile_config <- method_meta[["profile_config", exact = TRUE]]
+  if (!is.list(method_profile)) method_profile <- NULL
+  if (!is.list(profile_config)) profile_config <- NULL
+  method_cfg <- method_profile %||% profile_config %||% list()
+  utils::modifyList(base, method_cfg)
+}
+
+mti_dp_profile_control <- function(method_id, control_name) {
+  cfg <- mti_dp_profile_config(method_id)
   cfg[[paste0(mode, "_", control_name)]] %||%
     cfg[[paste0("moderate_", control_name)]] %||%
     cfg[[control_name]] %||%
     list()
+}
+
+mti_dp_profile_probability <- function(method_id, post_conf) {
+  method_meta <- method_by_id[[method_id]] %||% list()
+  cfg <- mti_dp_profile_config(method_id)
+  value <- cfg[[paste0(mode, "_posterior_confidence")]] %||%
+    cfg$posterior_confidence %||%
+    method_meta$effective_posterior_confidence %||%
+    method_meta$posterior_confidence_override %||%
+    post_conf
+  value <- as.numeric(value)[1L]
+  if (!is.finite(value) || value <= 0 || value >= 1) {
+    stopf("MTI-ECM profile posterior confidence must be in (0, 1).")
+  }
+  value
+}
+
+is_mti_ecm_dp_profile_method <- function(method_id) {
+  method_meta <- method_by_id[[method_id]] %||% list()
+  identical(method_id, "mti_ecm_dp_profile") ||
+    isTRUE(method_meta$mti_ecm_dp_profile_method) ||
+    identical(method_meta$uq_engine %||% NA_character_,
+              "mti_ecm_direct_dp") ||
+    identical(method_meta$action_lane %||% NA_character_,
+              "mti_ecm_direct_dp_content_screen")
 }
 
 mti_learning_rate <- function(engine) {
@@ -1353,7 +1391,8 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
   method_meta <- method_by_id[[method_id]]
   direct <- config$engine_defaults$direct_dp
   base <- dp_base_from_config()
-  profile_cfg <- config$engine_defaults$mti_ecm_dp_profile %||% list()
+  profile_cfg <- mti_dp_profile_config(method_id)
+  effective_post_conf <- mti_dp_profile_probability(method_id, post_conf)
   calibration <- get_scan_calibration(method_id, length(y), c_target, tol_conf)
   scan_target <- if (isTRUE(calibration$infeasible)) {
     NA_real_
@@ -1365,18 +1404,23 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
     }
     as.numeric(target)[1L]
   }
-  ecm_control <- mti_dp_profile_control("ecm_control")
+  ecm_control <- mti_dp_profile_control(method_id, "ecm_control")
   ecm_control$seed <- seed
+  dp_concentration <- as.numeric(
+    profile_cfg$dp_concentration %||%
+      profile_cfg$direct_dp_concentration %||%
+      direct$concentration
+  )[1L]
   action <- rqr_mti_ecm_dp_profile_action(
     y = y,
     content = c_target,
-    posterior_confidence = post_conf,
-    dp_concentration = as.numeric(direct$concentration)[1L],
+    posterior_confidence = effective_post_conf,
+    dp_concentration = dp_concentration,
     dp_base_measure = base,
     strict_bayes = isTRUE(profile_cfg$strict_bayes %||% TRUE),
     scan_target_content = scan_target,
-    q_grid_control = mti_dp_profile_control("q_grid_control"),
-    tilt_grid_control = mti_dp_profile_control("tilt_grid_control"),
+    q_grid_control = mti_dp_profile_control(method_id, "q_grid_control"),
+    tilt_grid_control = mti_dp_profile_control(method_id, "tilt_grid_control"),
     learning_rate = as.numeric(profile_cfg$learning_rate %||% 1)[1L],
     beta_prior_obj = beta_prior(
       "ridge",
@@ -1413,7 +1457,8 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
       mti_certificate_scope =
         "direct_dp_content_screen_repeated_sampling_validation",
       ecm_backend = ecm_control$ecm_backend %||% NA_character_,
-      target_audit_digest = action$provenance_digest
+      target_audit_digest = action$provenance_digest,
+      effective_posterior_confidence = effective_post_conf
     ))
   }
   empty_fit_result(
@@ -1460,7 +1505,8 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
     ecm_initial_objective = NA_real_,
     ecm_final_objective = selected$ecm_objective[[1L]],
     ecm_relative_objective_drop = NA_real_,
-    ecm_final_stationarity = selected$ecm_final_stationarity[[1L]]
+    ecm_final_stationarity = selected$ecm_final_stationarity[[1L]],
+    effective_posterior_confidence = effective_post_conf
   )
 }
 
@@ -1569,7 +1615,7 @@ fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
       seed = seed
     ))
   }
-  if (identical(method_id, "mti_ecm_dp_profile")) {
+  if (is_mti_ecm_dp_profile_method(method_id)) {
     return(fit_mti_ecm_dp_profile(
       method_id = method_id,
       y = y,
@@ -1924,6 +1970,14 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                 )
               })
               if (inherits(fit, "error")) {
+                effective_post_conf <- tryCatch(
+                  if (is_mti_ecm_dp_profile_method(method_id)) {
+                    mti_dp_profile_probability(method_id, post_conf)
+                  } else {
+                    post_conf
+                  },
+                  error = function(e) post_conf
+                )
                 rows[[length(rows) + 1L]] <- data.frame(
                   mode = mode,
                   dgp_id = dgp_id,
@@ -2007,6 +2061,7 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   ecm_final_objective = NA_real_,
                   ecm_relative_objective_drop = NA_real_,
                   ecm_final_stationarity = NA_real_,
+                  effective_posterior_confidence = effective_post_conf,
                   fit_reused_across_posterior_thresholds = NA,
                   infeasible = TRUE,
                   message = conditionMessage(fit),
@@ -2041,6 +2096,9 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                 )
                 formal_content <- true_content(formal_lower, formal_upper,
                                                meta$p)
+                effective_post_conf <- fit_scalar(
+                  fit, "effective_posterior_confidence", post_conf
+                )
                 rows[[length(rows) + 1L]] <- data.frame(
                   mode = mode,
                   dgp_id = dgp_id,
@@ -2092,7 +2150,7 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   content_gap = content - c_target,
                   posterior_threshold_excess =
                     as.numeric(fit$posterior_probability %||% NA_real_) -
-                    post_conf,
+                    effective_post_conf,
                   scan_critical_method =
                     fit$scan_critical_method %||% NA_character_,
                   content_buffer = fit$content_buffer %||% NA_real_,
@@ -2204,6 +2262,7 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   ecm_final_stationarity = as.numeric(fit_scalar(
                     fit, "ecm_final_stationarity", NA_real_
                   )),
+                  effective_posterior_confidence = effective_post_conf,
                   fit_reused_across_posterior_thresholds = fit_scalar(
                     fit, "fit_reused_across_posterior_thresholds", FALSE
                   ),
@@ -2398,6 +2457,8 @@ summary_rows <- lapply(split(results, split_key), function(df) {
       mean_or_na(df$scan_certified_lower_probability),
     mean_posterior_probability =
       mean_or_na(df$posterior_probability),
+    mean_effective_posterior_confidence =
+      mean_or_na(df$effective_posterior_confidence),
     mean_posterior_threshold_excess =
       mean_or_na(df$posterior_threshold_excess),
     posterior_binding_rate =
@@ -2424,6 +2485,13 @@ if ("mti_ecm_dp_profile" %in% method_ids_present) {
     "The `mti_ecm_dp_profile` rows use MTI-ECM endpoint candidates screened by direct-DP fixed-interval content probabilities.",
     "For this method, `target_content` is the fitted MTI content, `target_mean_tilt` is the selected mean tilt, and `posterior_probability` is the direct-DP probability that the fixed interval has at least the requested population content.",
     "This method is evaluated by repeated-sample validation; it is not an exact distribution-free scan certificate."
+  )
+}
+if (any(grepl("^mti_ecm_dp_profile_tune_", method_ids_present))) {
+  method_notes <- c(
+    method_notes,
+    "The `mti_ecm_dp_profile_tune_*` rows are MTI-ECM direct-DP profile tuning variants with method-specific screen levels and profile grids.",
+    "For these variants, `effective_posterior_confidence` records the direct-DP content-screen level actually used."
   )
 }
 if (any(grepl("^tcsp_mti_", method_ids_present))) {

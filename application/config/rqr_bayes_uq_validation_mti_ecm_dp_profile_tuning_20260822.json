@@ -1,0 +1,336 @@
+{
+  "schema_version": "rqrgibbs_bayes_uq_validation/1.3.0",
+  "study_id": "rqr_bayes_uq_validation_mti_ecm_dp_profile_tuning_20260822",
+  "status": "mti_ecm_dp_profile_broad_tuning_authorized",
+  "interpretation": "Broad iid univariate tuning study for MTI-ECM endpoint profiles screened by direct-DP fixed-interval content probabilities. The tuning factors are the direct-DP content-screen level, the fitted-content profile grid, the tilt grid, and one ECM iteration-depth diagnostic. The simulated datasets are paired across variants by keeping the mode posterior-confidence grid fixed and recording the method-specific effective posterior-confidence threshold in each row.",
+  "generalized_bayes": true,
+  "response_likelihood": true,
+  "posterior_predictive_response_draws": false,
+  "method_family_scope": {
+    "mti_profile_tuning_only": true,
+    "direct_dp_content_screen": true,
+    "scan_calibration_used_only_as_profile_grid_reference": true,
+    "no_fallback_to_tcsp": true,
+    "method_specific_profile_controls": true,
+    "row_level_method_flags_are_authoritative": true
+  },
+  "claim_scope": {
+    "iid_univariate_continuous_only": true,
+    "regression_tolerance": false,
+    "dynamic_tolerance": false,
+    "posterior_endpoint_coverage_claim_available": false,
+    "coverage_levels_are_guaranteed_contents": true,
+    "tolerance_confidence_fixed_at_0_95": true,
+    "structurally_infeasible_cells_included_for_diagnosis": true,
+    "confirmatory_authorized": true,
+    "skewstress_panel_prespecified": true,
+    "empirical_frequentist_validation_required": true
+  },
+  "execution": {
+    "smoke_authorized": true,
+    "moderate_authorized": false,
+    "confirmatory_authorized": true,
+    "overnight_mode": "confirmatory",
+    "smoke_max_concurrent": 8,
+    "confirmatory_max_concurrent": 40,
+    "checkpoint_every_datasets": 100
+  },
+  "diagnostics": {
+    "reference_method_id": "tcsp_mc",
+    "record_width_ratio_to_reference": true,
+    "record_retained_fraction": true,
+    "record_scan_content_buffer": true,
+    "paired_thresholds": true,
+    "addon_methods_only": [
+      "mti_ecm_dp_profile_tune_p095",
+      "mti_ecm_dp_profile_tune_p975",
+      "mti_ecm_dp_profile_tune_p990",
+      "mti_ecm_dp_profile_tune_p995",
+      "mti_ecm_dp_profile_tune_p975_deepq",
+      "mti_ecm_dp_profile_tune_p990_deepq",
+      "mti_ecm_dp_profile_tune_p995_deepq_widetilt",
+      "mti_ecm_dp_profile_tune_p990_deepq_ecm200"
+    ]
+  },
+  "scan_calibration": {
+    "method": "monte_carlo_cp_adaptive",
+    "smoke_n_sim": 500,
+    "smoke_numerical_confidence": 0.95,
+    "confirmatory_n_sim": 10000,
+    "confirmatory_numerical_confidence": 0.999,
+    "seed": 1513600,
+    "adaptive_control": {
+      "initial_n_sim": 10000,
+      "batch_n_sim": 10000,
+      "max_n_sim": 200000,
+      "max_looks": 20,
+      "stable_looks": 2
+    }
+  },
+  "oracle": {
+    "target": "SH",
+    "role": "non_deployable_synthetic_dgp_reference_for_internal_audit_only",
+    "tilt_definition": "conditional_retained_mean_minus_population_mean",
+    "tol": 1e-10,
+    "grid_size": 1601
+  },
+  "modes": {
+    "smoke": {
+      "replications": 1,
+      "sample_sizes": [50, 100],
+      "guaranteed_contents": [0.90, 0.95],
+      "tolerance_confidences": [0.95],
+      "posterior_confidences": [0.95],
+      "design_cells": [
+        {"cell_id": "n0050_c090_t095", "n": 50, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n0100_c095_t095", "n": 100, "guaranteed_content": 0.95, "tolerance_confidence": 0.95}
+      ],
+      "dgp_ids": ["normal", "student_t3", "exponential", "lognormal_hard"],
+      "method_ids": [
+        "mti_ecm_dp_profile_tune_p095",
+        "mti_ecm_dp_profile_tune_p975",
+        "mti_ecm_dp_profile_tune_p990",
+        "mti_ecm_dp_profile_tune_p995",
+        "mti_ecm_dp_profile_tune_p975_deepq",
+        "mti_ecm_dp_profile_tune_p990_deepq",
+        "mti_ecm_dp_profile_tune_p995_deepq_widetilt",
+        "mti_ecm_dp_profile_tune_p990_deepq_ecm200"
+      ],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "split_waves_by_method": true,
+      "checkpoint_every_datasets": 1,
+      "scan_n_sim": 500,
+      "scan_numerical_confidence": 0.95,
+      "scan_adaptive_control": {
+        "initial_n_sim": 500,
+        "batch_n_sim": 500,
+        "max_n_sim": 2000,
+        "max_looks": 4,
+        "stable_looks": 1
+      }
+    },
+    "confirmatory": {
+      "replications": 1000,
+      "sample_sizes": [50, 100, 500, 1000],
+      "guaranteed_contents": [0.90, 0.95, 0.99],
+      "tolerance_confidences": [0.95],
+      "posterior_confidences": [0.95],
+      "design_cells": [
+        {"cell_id": "n0050_c090_t095", "n": 50, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n0100_c090_t095", "n": 100, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n0100_c095_t095", "n": 100, "guaranteed_content": 0.95, "tolerance_confidence": 0.95},
+        {"cell_id": "n0500_c090_t095", "n": 500, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n0500_c095_t095", "n": 500, "guaranteed_content": 0.95, "tolerance_confidence": 0.95},
+        {"cell_id": "n0500_c099_t095", "n": 500, "guaranteed_content": 0.99, "tolerance_confidence": 0.95},
+        {"cell_id": "n1000_c090_t095", "n": 1000, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n1000_c095_t095", "n": 1000, "guaranteed_content": 0.95, "tolerance_confidence": 0.95},
+        {"cell_id": "n1000_c099_t095", "n": 1000, "guaranteed_content": 0.99, "tolerance_confidence": 0.95}
+      ],
+      "dgp_ids": ["normal", "student_t3", "exponential", "asym_laplace_tau010", "two_piece_normal_1_12", "beta18", "gamma05", "lognormal_hard"],
+      "method_ids": [
+        "mti_ecm_dp_profile_tune_p095",
+        "mti_ecm_dp_profile_tune_p975",
+        "mti_ecm_dp_profile_tune_p990",
+        "mti_ecm_dp_profile_tune_p995",
+        "mti_ecm_dp_profile_tune_p975_deepq",
+        "mti_ecm_dp_profile_tune_p990_deepq",
+        "mti_ecm_dp_profile_tune_p995_deepq_widetilt",
+        "mti_ecm_dp_profile_tune_p990_deepq_ecm200"
+      ],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "split_waves_by_method": true,
+      "checkpoint_every_datasets": 100
+    }
+  },
+  "dgps": [
+    {"dgp_id": "normal", "family": "normal", "label": "Gaussian"},
+    {"dgp_id": "student_t3", "family": "standardized_student_t", "label": "standardized Student t with three degrees of freedom", "df": 3},
+    {"dgp_id": "exponential", "family": "centered_exponential", "label": "centered standardized exponential", "rate": 1},
+    {"dgp_id": "asym_laplace_tau010", "family": "standardized_asymmetric_laplace", "label": "standardized asymmetric Laplace, tau = 0.10", "tau": 0.10, "scale": 1},
+    {"dgp_id": "two_piece_normal_1_12", "family": "standardized_two_piece_normal", "label": "standardized two-piece normal, scale ratio 1:12", "left_scale": 1, "right_scale": 12},
+    {"dgp_id": "beta18", "family": "standardized_beta", "label": "standardized Beta(1,8)", "shape1": 1, "shape2": 8},
+    {"dgp_id": "gamma05", "family": "standardized_gamma", "label": "standardized Gamma(0.5,1)", "shape": 0.5, "scale": 1},
+    {"dgp_id": "lognormal_hard", "family": "standardized_lognormal", "label": "centered standardized log-normal, logsd = 1.25", "logsd": 1.25}
+  ],
+  "methods": [
+    {
+      "method_id": "mti_ecm_dp_profile_tune_p095",
+      "label": "MTI-ECM profile, DP screen 0.950",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_dp_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "deployable": false,
+      "profile_config": {"posterior_confidence": 0.950}
+    },
+    {
+      "method_id": "mti_ecm_dp_profile_tune_p975",
+      "label": "MTI-ECM profile, DP screen 0.975",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_dp_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "deployable": false,
+      "profile_config": {"posterior_confidence": 0.975}
+    },
+    {
+      "method_id": "mti_ecm_dp_profile_tune_p990",
+      "label": "MTI-ECM profile, DP screen 0.990",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_dp_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "deployable": false,
+      "profile_config": {"posterior_confidence": 0.990}
+    },
+    {
+      "method_id": "mti_ecm_dp_profile_tune_p995",
+      "label": "MTI-ECM profile, DP screen 0.995",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_dp_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "deployable": false,
+      "profile_config": {"posterior_confidence": 0.995}
+    },
+    {
+      "method_id": "mti_ecm_dp_profile_tune_p975_deepq",
+      "label": "MTI-ECM profile, DP screen 0.975, dense q grid",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_dp_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "deployable": false,
+      "profile_config": {
+        "posterior_confidence": 0.975,
+        "q_grid_control": {"n_points": 9, "q_min_buffer": 0.0001, "q_max": 0.999, "include_scan_target": true}
+      }
+    },
+    {
+      "method_id": "mti_ecm_dp_profile_tune_p990_deepq",
+      "label": "MTI-ECM profile, DP screen 0.990, dense q grid",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_dp_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "deployable": false,
+      "profile_config": {
+        "posterior_confidence": 0.990,
+        "q_grid_control": {"n_points": 9, "q_min_buffer": 0.0001, "q_max": 0.999, "include_scan_target": true}
+      }
+    },
+    {
+      "method_id": "mti_ecm_dp_profile_tune_p995_deepq_widetilt",
+      "label": "MTI-ECM profile, DP screen 0.995, dense q grid, wider tilt grid",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_dp_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "deployable": false,
+      "profile_config": {
+        "posterior_confidence": 0.995,
+        "q_grid_control": {"n_points": 11, "q_min_buffer": 0.00005, "q_max": 0.9995, "include_scan_target": true},
+        "tilt_grid_control": {"tilt_offsets_sd": [-0.75, -0.50, -0.25, 0, 0.25, 0.50, 0.75], "include_zero_tilt": true, "max_abs_tilt_sd": 3}
+      }
+    },
+    {
+      "method_id": "mti_ecm_dp_profile_tune_p990_deepq_ecm200",
+      "label": "MTI-ECM profile, DP screen 0.990, dense q grid, 200 ECM iterations",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_dp_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "deployable": false,
+      "profile_config": {
+        "posterior_confidence": 0.990,
+        "q_grid_control": {"n_points": 9, "q_min_buffer": 0.0001, "q_max": 0.999, "include_scan_target": true},
+        "ecm_control": {
+          "max_iter": 200,
+          "tol_stationarity": 0.001,
+          "stable_iterations": 1,
+          "residual_product_floor": 1e-8,
+          "multistart": false,
+          "store_iteration_trace": false,
+          "ecm_backend": "cpp"
+        }
+      }
+    }
+  ],
+  "engine_defaults": {
+    "direct_dp": {
+      "concentration": 1,
+      "base": {"family": "normal", "mean": 0, "sd": 4},
+      "shortest_draws": 20,
+      "residual_mass_tol": 0.05
+    },
+    "mti_ecm_dp_profile": {
+      "learning_rate": 1,
+      "beta_ridge_tau2": 10000,
+      "strict_bayes": true,
+      "expand_if_empty": true,
+      "q_grid_control": {
+        "n_points": 7,
+        "q_max": 0.995,
+        "include_scan_target": true
+      },
+      "tilt_grid_control": {
+        "tilt_offsets_sd": [-0.30, -0.15, 0, 0.15, 0.30],
+        "include_zero_tilt": true,
+        "max_abs_tilt_sd": 2
+      },
+      "ecm_control": {
+        "max_iter": 100,
+        "tol_stationarity": 0.001,
+        "stable_iterations": 1,
+        "residual_product_floor": 1e-8,
+        "multistart": false,
+        "store_iteration_trace": false,
+        "ecm_backend": "cpp"
+      }
+    }
+  },
+  "base_seed": 963300,
+  "summary_confidence": 0.95
+}
