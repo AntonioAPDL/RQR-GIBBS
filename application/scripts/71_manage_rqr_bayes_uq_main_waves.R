@@ -891,6 +891,37 @@ collect_run <- function(run_dir) {
                    row.names = FALSE)
   utils::write.csv(summary, file.path(run_dir, "bayes_uq_validation_summary.csv"),
                    row.names = FALSE)
+  method_ids_present <- sort(unique(as.character(results$method_id)))
+  method_notes <- c(
+    paste0("- Methods present: `", paste(method_ids_present,
+                                        collapse = "`, `"), "`")
+  )
+  if ("mti_ecm_dp_profile" %in% method_ids_present) {
+    method_notes <- c(
+      method_notes,
+      "The `mti_ecm_dp_profile` rows use MTI-ECM endpoint candidates screened by direct-DP fixed-interval content probabilities.",
+      "For this method, `target_content` is the fitted MTI content, `target_mean_tilt` is the selected mean tilt, and `posterior_probability` is the direct-DP probability that the fixed interval has at least the requested population content.",
+      "This method is evaluated by repeated-sample validation; it is not an exact distribution-free scan certificate."
+    )
+  }
+  if (any(grepl("^tcsp_mti_", method_ids_present))) {
+    method_notes <- c(
+      method_notes,
+      "The `tcsp_mti_*` rows are fixed-target MTI summaries after scan calibration; `formal_action_*` records the associated scan action and `fitted_summary_*` records the MTI endpoint summary."
+    )
+  }
+  if ("hdp_s_mc" %in% method_ids_present) {
+    method_notes <- c(
+      method_notes,
+      "The hybrid direct-DP scan method fixes the scan count before evaluating direct-DP content probability."
+    )
+  }
+  if ("oracle_sh" %in% method_ids_present) {
+    method_notes <- c(
+      method_notes,
+      "The `oracle_sh` rows are non-deployable synthetic-DGP references for the population shortest interval and oracle mean tilt."
+    )
+  }
   readme <- c(
     paste0("# ", config$study_id),
     "",
@@ -899,14 +930,15 @@ collect_run <- function(run_dir) {
     paste0("- Waves: `", nrow(status), "`"),
     paste0("- Result rows: `", nrow(results), "`"),
     paste0("- Summary rows: `", nrow(summary), "`"),
-    "- Diagnostic reference method: `tcsp_mc`",
-    "- Oracle shortest reference present: `TRUE`",
+    paste0("- Diagnostic reference method: `",
+           config$diagnostics$reference_method_id %||% "tcsp_mc", "`"),
+    paste0("- Oracle reference table present: `",
+           file.exists(file.path(run_dir, "oracle_reference.csv")), "`"),
     "",
-    "This is the collected wave run for the iid univariate Bayesian UQ main validation.",
-    "The `oracle_sh` method is a non-deployable synthetic-DGP benchmark for the true population shortest interval and exact mean tilt.",
-    "The `tcsp_mti_gibbs_*` and `tcsp_mti_ecm_*` rows are fixed-target MTI fitted summaries after scan calibration.",
-    "For those rows, `formal_action_*` records the associated scan action and `fitted_summary_*` records the Gibbs or ECM endpoint summary.",
-    "The operational reference remains `tcsp_mc`; oracle-relative gaps are efficiency diagnostics only."
+    "This is the collected wave run for iid univariate validation.",
+    "It separates response-distribution Bayesian uncertainty quantification from loss-based generalized-Bayes MTI endpoint construction.",
+    method_notes,
+    "Oracle-relative gaps are efficiency diagnostics only."
   )
   writeLines(readme, file.path(run_dir, "README.md"))
   artifact_files <- c(
