@@ -1,0 +1,175 @@
+{
+  "schema_version": "rqrgibbs_bayes_uq_validation/1.4.0",
+  "study_id": "rqr_bayes_uq_validation_mti_ecm_boundary_addon_20260821",
+  "status": "mti_ecm_boundary_continuation_addon_authorized",
+  "interpretation": "High-replication iid univariate add-on validation for fixed-target MTI-ECM with scan-aligned interior targets and boundary continuation when the scan count equals the sample size. The TCSP scan action retains the finite-sample tolerance certificate; the MTI-ECM interval is evaluated empirically under the same DGP and cell design used by the current three-method tolerance validation.",
+  "generalized_bayes": true,
+  "response_likelihood": false,
+  "posterior_predictive_response_draws": false,
+  "method_family_scope": {
+    "mti_loss_based_addon": true,
+    "scan_certified_reference_action_recorded": true,
+    "boundary_continuation_used_only_when_scan_count_is_full_range": true,
+    "row_level_method_flags_are_authoritative": true
+  },
+  "claim_scope": {
+    "iid_univariate_continuous_only": true,
+    "regression_tolerance": false,
+    "dynamic_tolerance": false,
+    "posterior_endpoint_coverage_claim_available": false,
+    "scan_count_fixed_not_resampled": true,
+    "coverage_levels_are_guaranteed_contents": true,
+    "tolerance_confidence_fixed_at_0_95": true,
+    "structurally_infeasible_cells_excluded": true,
+    "confirmatory_authorized": true,
+    "skewstress_panel_prespecified": true,
+    "mti_ecm_boundary_continuation_empirical_validation": true
+  },
+  "execution": {
+    "smoke_authorized": true,
+    "confirmatory_authorized": true,
+    "overnight_mode": "confirmatory",
+    "checkpoint_every_datasets": 100
+  },
+  "diagnostics": {
+    "reference_method_id": "tcsp_mc",
+    "record_width_ratio_to_reference": true,
+    "record_retained_fraction": true,
+    "record_scan_content_buffer": true,
+    "record_mti_boundary_continuation": true,
+    "paired_thresholds": true,
+    "addon_methods_only": ["tcsp_mti_ecm_boundary_mc"]
+  },
+  "scan_calibration": {
+    "method": "monte_carlo_cp_adaptive",
+    "smoke_n_sim": 500,
+    "smoke_numerical_confidence": 0.95,
+    "confirmatory_n_sim": 10000,
+    "confirmatory_numerical_confidence": 0.999,
+    "seed": 1513600,
+    "adaptive_control": {
+      "initial_n_sim": 10000,
+      "batch_n_sim": 10000,
+      "max_n_sim": 200000,
+      "max_looks": 20,
+      "stable_looks": 2
+    }
+  },
+  "oracle": {
+    "target": "SH",
+    "role": "non_deployable_synthetic_dgp_reference_for_internal_audit_only",
+    "tilt_definition": "conditional_retained_mean_minus_population_mean",
+    "tol": 1e-10,
+    "grid_size": 1601
+  },
+  "modes": {
+    "smoke": {
+      "replications": 2,
+      "sample_sizes": [50, 100, 500],
+      "guaranteed_contents": [0.90, 0.95],
+      "tolerance_confidences": [0.95],
+      "posterior_confidences": [0.95],
+      "design_cells": [
+        {"cell_id": "n0050_c090_t095", "n": 50, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n0100_c090_t095", "n": 100, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n0100_c095_t095", "n": 100, "guaranteed_content": 0.95, "tolerance_confidence": 0.95},
+        {"cell_id": "n0500_c095_t095", "n": 500, "guaranteed_content": 0.95, "tolerance_confidence": 0.95}
+      ],
+      "dgp_ids": ["normal", "lognormal_hard"],
+      "method_ids": ["tcsp_mti_ecm_boundary_mc"],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "split_waves_by_method": true,
+      "checkpoint_every_datasets": 1,
+      "scan_n_sim": 500,
+      "scan_numerical_confidence": 0.95,
+      "scan_adaptive_control": {
+        "initial_n_sim": 500,
+        "batch_n_sim": 500,
+        "max_n_sim": 2000,
+        "max_looks": 4,
+        "stable_looks": 1
+      }
+    },
+    "confirmatory": {
+      "replications": 1000,
+      "sample_sizes": [50, 100, 500, 1000],
+      "guaranteed_contents": [0.90, 0.95, 0.99],
+      "tolerance_confidences": [0.95],
+      "posterior_confidences": [0.95],
+      "design_cells": [
+        {"cell_id": "n0050_c090_t095", "n": 50, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n0100_c090_t095", "n": 100, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n0100_c095_t095", "n": 100, "guaranteed_content": 0.95, "tolerance_confidence": 0.95},
+        {"cell_id": "n0500_c090_t095", "n": 500, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n0500_c095_t095", "n": 500, "guaranteed_content": 0.95, "tolerance_confidence": 0.95},
+        {"cell_id": "n0500_c099_t095", "n": 500, "guaranteed_content": 0.99, "tolerance_confidence": 0.95},
+        {"cell_id": "n1000_c090_t095", "n": 1000, "guaranteed_content": 0.90, "tolerance_confidence": 0.95},
+        {"cell_id": "n1000_c095_t095", "n": 1000, "guaranteed_content": 0.95, "tolerance_confidence": 0.95},
+        {"cell_id": "n1000_c099_t095", "n": 1000, "guaranteed_content": 0.99, "tolerance_confidence": 0.95}
+      ],
+      "dgp_ids": ["normal", "student_t3", "exponential", "asym_laplace_tau010", "two_piece_normal_1_12", "beta18", "gamma05", "lognormal_hard"],
+      "method_ids": ["tcsp_mti_ecm_boundary_mc"],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "split_waves_by_method": true,
+      "checkpoint_every_datasets": 100
+    }
+  },
+  "dgps": [
+    {"dgp_id": "normal", "family": "normal", "label": "Gaussian"},
+    {"dgp_id": "student_t3", "family": "standardized_student_t", "label": "standardized Student t with three degrees of freedom", "df": 3},
+    {"dgp_id": "exponential", "family": "centered_exponential", "label": "centered standardized exponential", "rate": 1},
+    {"dgp_id": "asym_laplace_tau010", "family": "standardized_asymmetric_laplace", "label": "standardized asymmetric Laplace, tau = 0.10", "tau": 0.10, "scale": 1},
+    {"dgp_id": "two_piece_normal_1_12", "family": "standardized_two_piece_normal", "label": "standardized two-piece normal, scale ratio 1:12", "left_scale": 1, "right_scale": 12},
+    {"dgp_id": "beta18", "family": "standardized_beta", "label": "standardized Beta(1,8)", "shape1": 1, "shape2": 8},
+    {"dgp_id": "gamma05", "family": "standardized_gamma", "label": "standardized Gamma(0.5,1)", "shape": 0.5, "scale": 1},
+    {"dgp_id": "lognormal_hard", "family": "standardized_lognormal", "label": "centered standardized log-normal, logsd = 1.25", "logsd": 1.25}
+  ],
+  "methods": [
+    {
+      "method_id": "tcsp_mti_ecm_boundary_mc",
+      "label": "MTI-ECM with boundary-continuation target",
+      "action_lane": "fixed_target_mti_ecm_boundary_continuation",
+      "selected_interval_source": "mti_ecm_boundary_continuation_mode",
+      "formal_tolerance_action": false,
+      "response_likelihood": false,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm",
+      "tilt_source": "sample_shortest_window_boundary_continuation",
+      "mti_boundary_rule": "half_step_continuation",
+      "deployable": true
+    }
+  ],
+  "engine_defaults": {
+    "direct_dp": {
+      "concentration": 1,
+      "base": {"family": "normal", "mean": 0, "sd": 4},
+      "shortest_draws": 20,
+      "residual_mass_tol": 0.05
+    },
+    "mti_ecm": {
+      "learning_rate": 1,
+      "beta_ridge_tau2": 10000,
+      "smoke_ecm_control": {
+        "max_iter": 80,
+        "tol_stationarity": 0.001,
+        "stable_iterations": 2,
+        "residual_product_floor": 1e-8,
+        "store_iteration_trace": true,
+        "ecm_backend": "cpp"
+      },
+      "confirmatory_ecm_control": {
+        "max_iter": 200,
+        "tol_stationarity": 0.001,
+        "stable_iterations": 2,
+        "residual_product_floor": 1e-8,
+        "store_iteration_trace": true,
+        "ecm_backend": "cpp"
+      }
+    }
+  },
+  "base_seed": 963300,
+  "summary_confidence": 0.95
+}

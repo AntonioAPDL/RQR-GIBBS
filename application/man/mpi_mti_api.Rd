@@ -53,6 +53,8 @@
 \alias{tcsp_calibration_stability}
 \alias{tcsp_shortest_window}
 \alias{tcsp_tilt_from_window}
+\alias{tcsp_mti_boundary_target}
+\alias{tcsp_fractional_tilt}
 \alias{tcsp_predict_next_start}
 \alias{tcsp_local_correct}
 \alias{tcsp_tolerance_path}
@@ -90,6 +92,8 @@ mti_loss(y, eta1, eta2, content = NULL, mean_tilt = 0, details = FALSE,
   coverage_level = NULL)
 mpi_loss(y, eta1, eta2, content = NULL, details = FALSE,
   coverage_level = NULL)
+tcsp_mti_boundary_target(...)
+tcsp_fractional_tilt(...)
 mti_posterior_draws(object, nd = NULL, seed = NULL, ...)
 }
 \arguments{

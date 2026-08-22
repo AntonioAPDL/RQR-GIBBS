@@ -291,6 +291,14 @@ tcsp_tilt_from_window <- function(...) rqr_tcsp_tilt_from_window(...)
 
 #' @rdname mpi_mti_api
 #' @export
+tcsp_mti_boundary_target <- function(...) rqr_tcsp_mti_boundary_target(...)
+
+#' @rdname mpi_mti_api
+#' @export
+tcsp_fractional_tilt <- function(...) rqr_tcsp_fractional_tilt(...)
+
+#' @rdname mpi_mti_api
+#' @export
 tcsp_predict_next_start <- function(...) rqr_tcsp_predict_next_start(...)
 
 #' @rdname mpi_mti_api

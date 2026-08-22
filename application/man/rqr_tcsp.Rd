@@ -15,7 +15,9 @@
 \alias{rqr_tcsp_predict_next_start}
 \alias{rqr_tcsp_local_correct}
 \alias{rqr_tcsp_validate_action}
-\title{Scan-calibrated TCSP-MT-RQR tolerance actions}
+\alias{rqr_tcsp_mti_boundary_target}
+\alias{rqr_tcsp_fractional_tilt}
+\title{Scan-calibrated TCSP-MTI tolerance actions}
 \usage{
 rqr_tcsp_scan_probability(
   n,
@@ -85,6 +87,15 @@ rqr_tcsp_shortest_window(y, retained_count, na_rm = FALSE)
 
 rqr_tcsp_tilt_from_window(window)
 
+rqr_tcsp_mti_boundary_target(
+  n,
+  retained_count,
+  guaranteed_content,
+  epsilon_min = 1e-04
+)
+
+rqr_tcsp_fractional_tilt(y, target_content, na_rm = FALSE)
+
 rqr_tcsp_fit_univariate(
   y,
   guaranteed_content,
@@ -146,6 +157,9 @@ calibration audits.}
 \item{y}{Numeric response sample.}
 \item{na_rm}{Remove nonfinite observations before scanning.}
 \item{window}{A TCSP shortest-window object.}
+\item{epsilon_min}{Lower bound for the boundary offset from one.}
+\item{target_content}{Interior fitted content for a fixed-target MTI
+calculation.}
 \item{fit_mcmc}{Fit the intercept-only fixed-target generalized posterior.}
 \item{fit_ecm}{Fit the deterministic intercept-only fixed-target ECM mode.}
 \item{learning_rate}{Fixed generalized-Bayes learning rate \eqn{\omega}.}
@@ -157,7 +171,7 @@ arguments are reserved by the TCSP wrapper.}
 \item{trust_radius}{Local start-index trust-region radius.}
 \item{predicted_start}{Predicted local start index.}
 \item{global_window}{Optional globally verified shortest-window object.}
-\item{fit}{A TCSP fit or action contract.}
+\item{fit}{A TCSP fit or recorded action.}
 \item{...}{Arguments passed to \code{rqr_tcsp_fit_univariate()}.}
 }
 \description{
@@ -193,15 +207,30 @@ The DKW path uses the strict retained-count rule
 \eqn{k/n > c + 2\epsilon_n} implied by the uniform band. Unsupported or
 infeasible requests fail closed.
 
+\code{rqr_tcsp_mti_boundary_target()} is a deterministic bridge between the
+scan-calibrated retained count and the fitted-content parameter used by
+fixed-target MTI-ECM.  It leaves interior scan targets unchanged.  When the
+scan calibration selects the full sample range, it records the scan target as
+one and fits MTI-ECM at the predeclared interior continuation
+\eqn{q=1-\epsilon}, with \eqn{\epsilon=\min\{\max(1/(2n),
+\epsilon_{\min}), (1-c)/2\}}.  This continuation is an empirical fitted
+summary; the tolerance certificate remains the scan-calibrated order-statistic
+action.
+
+\code{rqr_tcsp_fractional_tilt()} computes the response-scale mean tilt for an
+interior fitted content.  If \eqn{nq} is an integer, it reproduces the usual
+shortest-window tilt.  Otherwise it linearly interpolates the tilts from the
+adjacent empirical shortest windows.
+
 \code{rqr_tcsp_fit_univariate()} and its explicit alias
-\code{rqr_tcsp_plugin_fit_univariate()} may attach fixed-target MT-RQR MCMC or
+\code{rqr_tcsp_plugin_fit_univariate()} may attach fixed-target MTI MCMC or
 ECM summaries after the empirical scan window has selected \(q=k/n\) and the
 mean tilt.  These summaries are marked with
 \code{uq_scope = "fixed_target_plugin"} and are superseded for unconditional
 shortest-interval Bayesian UQ by \code{rqr_tcsp_hybrid_bayes_fit()}.
 }
 \value{
-Lists with schema-versioned calibration, action, path, or validation metadata.
+Lists with schema-versioned calibration, action, path, or validation records.
 When \code{rqr_tcsp_fit_univariate(fit_ecm = TRUE)} or
 \code{rqr_tcsp_fit_univariate(fit_mcmc = TRUE)} is used, the returned object
 also contains deterministic ECM or generalized-posterior fits for the fixed

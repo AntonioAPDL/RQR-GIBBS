@@ -1,6 +1,106 @@
+.rqr_ecm_run_start_intercept_cpp <- function(
+    y, X, coverage_level, learning_rate, mean_tilt_info, beta_prior_obj,
+    control, start) {
+  constants <- rqr_constants(coverage_level, learning_rate)
+  p <- ncol(X)
+  prior_prec <- .rqr_prior_precision(beta_prior_obj, list(), p = p)
+  if (p != 1L || !.rqr_ecm_intercept_only(X)) {
+    stop("C++ ECM backend is currently available only for intercept-only designs.",
+         call. = FALSE)
+  }
+  beta1 <- as.numeric(start$beta1)
+  beta2 <- as.numeric(start$beta2)
+  response_product_scale <- .rqr_ecm_response_product_scale(y)
+  base_floor <- control$residual_product_floor * response_product_scale
+  floor_schedule <- base_floor * control$floor_schedule
+  cpp <- rqr_ecm_intercept_run_cpp(
+    y = y,
+    coverage_level = constants$alpha,
+    learning_rate = constants$omega,
+    mean_tilt = mean_tilt_info$observed,
+    prior_prec = prior_prec[[1L]],
+    beta1_start = beta1[[1L]],
+    beta2_start = beta2[[1L]],
+    max_iter = control$max_iter,
+    tol_objective = control$tol_objective,
+    tol_parameters = control$tol_parameters,
+    tol_stationarity = control$tol_stationarity,
+    stable_iterations = control$stable_iterations,
+    residual_product_floor = control$residual_product_floor,
+    floor_schedule = control$floor_schedule,
+    floor_type = control$floor_type,
+    monotone_backtracking = control$monotone_backtracking,
+    backtracking_max_steps = control$backtracking_max_steps,
+    monotone_tolerance = control$monotone_tolerance,
+    canonicalize_complete_roots = control$canonicalize_complete_roots,
+    start_label = start$label
+  )
+  beta1 <- as.numeric(cpp$beta_root1)
+  beta2 <- as.numeric(cpp$beta_root2)
+  objective <- .rqr_ecm_objective(
+    y, X, beta1, beta2, constants, mean_tilt_info$observed,
+    prior_prec, prior_prec
+  )
+  final_stationarity <- .rqr_ecm_stationarity(
+    y, X, beta1, beta2, constants, mean_tilt_info$observed,
+    prior_prec, prior_prec
+  )
+  final_latent <- .rqr_ecm_latent_inverse_mean(
+    objective$residual_products,
+    coverage_level = constants$alpha,
+    residual_product_floor = utils::tail(floor_schedule, 1L),
+    floor_type = control$floor_type
+  )
+  list(
+    beta_root1 = beta1,
+    beta_root2 = beta2,
+    objective = objective,
+    objective_trace = cpp$objective_trace,
+    latent_inverse_mean = final_latent$inverse_mean,
+    latent_mean = .rqr_ecm_latent_mean(
+      objective$residual_products, constants$alpha, constants$omega
+    ),
+    residual_products = objective$residual_products,
+    minimum_absolute_residual_product =
+      min(abs(objective$residual_products)),
+    residual_floor = list(
+      relative = control$residual_product_floor,
+      absolute = base_floor,
+      final_absolute = utils::tail(floor_schedule, 1L),
+      response_product_scale = response_product_scale,
+      floor_type = control$floor_type,
+      schedule = floor_schedule
+    ),
+    safeguard_used = base_floor > 0,
+    exact_ecm_eligible = !isTRUE(cpp$zero_residual_encountered),
+    backtracking_count = as.integer(cpp$backtracking_count),
+    precision_repairs = as.integer(cpp$precision_repairs),
+    condition_numbers = list(root1 = 1, root2 = 1),
+    iterations = as.integer(cpp$iterations),
+    converged = isTRUE(cpp$converged),
+    convergence_code = as.character(cpp$convergence_code)[1L],
+    stationarity_diagnostic = final_stationarity,
+    selected_start_label = as.character(cpp$selected_start_label)[1L],
+    root_swap_count = as.integer(cpp$root_swap_count),
+    ecm_backend = "cpp"
+  )
+}
+
 .rqr_ecm_run_start <- function(y, X, coverage_level, learning_rate,
                                mean_tilt_info, beta_prior_obj, control,
                                start) {
+  if (identical(control$ecm_backend, "cpp")) {
+    return(.rqr_ecm_run_start_intercept_cpp(
+      y = y,
+      X = X,
+      coverage_level = coverage_level,
+      learning_rate = learning_rate,
+      mean_tilt_info = mean_tilt_info,
+      beta_prior_obj = beta_prior_obj,
+      control = control,
+      start = start
+    ))
+  }
   constants <- rqr_constants(coverage_level, learning_rate)
   p <- ncol(X)
   prior_prec <- .rqr_prior_precision(beta_prior_obj, list(), p = p)
@@ -290,6 +390,11 @@ rqr_ecm_fit <- function(y, X, coverage_level, learning_rate = 1,
   }
   constants <- rqr_constants(coverage_level, learning_rate)
   control <- .rqr_ecm_assert_control(ecm_control)
+  if (identical(control$ecm_backend, "cpp") &&
+      !.rqr_ecm_intercept_only(X)) {
+    stop("ecm_backend='cpp' is currently available only for intercept-only designs.",
+         call. = FALSE)
+  }
   mean_tilt_info <- .rqr_normalize_mean_tilt(
     mean_tilt, n = nrow(X), observed = rep(TRUE, nrow(X))
   )
@@ -383,9 +488,17 @@ rqr_ecm_fit <- function(y, X, coverage_level, learning_rate = 1,
     "total", "product_loss", "mean_tilt", "prior_root1", "prior_root2"
   )]
   algorithm_variant <- if (isTRUE(best$safeguard_used)) {
-    "safeguarded_ecm_mm"
+    if (identical(best$ecm_backend %||% control$ecm_backend, "cpp")) {
+      "safeguarded_ecm_mm_cpp_intercept"
+    } else {
+      "safeguarded_ecm_mm"
+    }
   } else {
-    "exact_ecm"
+    if (identical(best$ecm_backend %||% control$ecm_backend, "cpp")) {
+      "exact_ecm_cpp_intercept"
+    } else {
+      "exact_ecm"
+    }
   }
   out <- list(
     schema_version = .rqr_ecm_schema(),
@@ -397,6 +510,7 @@ rqr_ecm_fit <- function(y, X, coverage_level, learning_rate = 1,
     learning_rate = constants$omega,
     mean_tilt = mean_tilt_info$observed,
     beta_prior_type = beta_prior_type,
+    ecm_backend = control$ecm_backend,
     beta_root1 = best$beta_root1,
     beta_root2 = best$beta_root2,
     ordered_endpoint_summary = ordered_endpoint_summary,
@@ -438,6 +552,7 @@ rqr_ecm_fit <- function(y, X, coverage_level, learning_rate = 1,
       mean_tilt_mode = mean_tilt_info$mode,
       mean_tilt_digest = mean_tilt_info$digest,
       inference = "ecm",
+      ecm_backend = control$ecm_backend,
       algorithm_variant = algorithm_variant,
       generalized_bayes = TRUE,
       response_likelihood = FALSE,

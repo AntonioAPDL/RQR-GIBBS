@@ -957,6 +957,164 @@ rqr_tcsp_tilt_from_window <- function(window) {
   )
 }
 
+#' Boundary-continuation target for fixed-target MTI-ECM
+#'
+#' The strict scan-aligned MTI-ECM target uses `q = retained_count / n`.
+#' When the scan calibration selects the full sample range, this value is one
+#' and the MTI/RQR fixed-target computation is singular.  This helper leaves
+#' interior scan targets unchanged and provides a predeclared interior
+#' continuation for the full-range case.
+#'
+#' @param n Sample size.
+#' @param retained_count Scan-calibrated retained count.
+#' @param guaranteed_content Requested population content.
+#' @param epsilon_min Lower bound for the boundary offset from one.
+#' @return A boundary-continuation target object.
+#' @export
+rqr_tcsp_mti_boundary_target <- function(
+    n, retained_count, guaranteed_content, epsilon_min = 1e-4) {
+  n <- .rqr_mt_assert_count(n, "n", 1L)
+  k <- .rqr_mt_assert_count(retained_count, "retained_count", 1L)
+  c_target <- .rqr_tcsp_assert_probability(
+    guaranteed_content, "guaranteed_content"
+  )
+  epsilon_min <- as.numeric(epsilon_min)[1L]
+  if (!is.finite(epsilon_min) || epsilon_min <= 0) {
+    stop("epsilon_min must be finite and positive.", call. = FALSE)
+  }
+  if (k > n) {
+    stop("retained_count cannot exceed n for MTI boundary continuation.",
+         call. = FALSE)
+  }
+  scan_target <- k / n
+  if (k < n) {
+    out <- list(
+      schema_version = "rqrgibbs_tcsp_mti_boundary_target/1.0.0",
+      rule = "scan_count_exact",
+      n = n,
+      retained_count = k,
+      guaranteed_content = c_target,
+      scan_target_content = scan_target,
+      ecm_target_content = scan_target,
+      epsilon = NA_real_,
+      boundary_continuation = FALSE,
+      certificate_scope = "scan_action_only"
+    )
+  } else {
+    epsilon <- min(max(1 / (2 * n), epsilon_min), (1 - c_target) / 2)
+    ecm_target <- 1 - epsilon
+    if (!is.finite(ecm_target) || ecm_target <= c_target ||
+        ecm_target >= 1) {
+      stop("Boundary continuation did not produce an interior target.",
+           call. = FALSE)
+    }
+    out <- list(
+      schema_version = "rqrgibbs_tcsp_mti_boundary_target/1.0.0",
+      rule = "half_step_full_range_continuation",
+      n = n,
+      retained_count = k,
+      guaranteed_content = c_target,
+      scan_target_content = scan_target,
+      ecm_target_content = ecm_target,
+      epsilon = epsilon,
+      boundary_continuation = TRUE,
+      certificate_scope = "scan_action_only"
+    )
+  }
+  out$target_digest <- .rqr_tcsp_digest(out)
+  class(out) <- c("tcsp_mti_boundary_target",
+                  "rqr_tcsp_mti_boundary_target", "list")
+  out
+}
+
+#' Fractional empirical MTI tilt from adjacent shortest windows
+#'
+#' Computes the empirical mean tilt associated with an interior target content.
+#' Integer retained-count targets reproduce the usual shortest-window tilt.
+#' Fractional targets linearly interpolate the tilts from the adjacent
+#' shortest-window counts.
+#'
+#' @param y Response sample.
+#' @param target_content Interior fitted content.
+#' @param na_rm Remove nonfinite observations before scanning.
+#' @return A fractional empirical tilt object.
+#' @export
+rqr_tcsp_fractional_tilt <- function(y, target_content, na_rm = FALSE) {
+  clean <- .rqr_mt_clean_sample(y, na_rm = na_rm)
+  y <- clean$y
+  n <- length(y)
+  q <- .rqr_tcsp_assert_probability(target_content, "target_content")
+  raw_count <- n * q
+  nearest <- round(raw_count)
+  integer_tol <- 100 * .Machine$double.eps * max(1, abs(raw_count))
+  if (abs(raw_count - nearest) <= integer_tol &&
+      nearest >= 1L && nearest <= n) {
+    window <- rqr_tcsp_shortest_window(y, as.integer(nearest), na_rm = FALSE)
+    tilt <- rqr_tcsp_tilt_from_window(window)
+    out <- list(
+      schema_version = "rqrgibbs_tcsp_fractional_tilt/1.0.0",
+      rule = "integer_shortest_window",
+      sample_size = n,
+      target_content = q,
+      lower_count = as.integer(nearest),
+      upper_count = as.integer(nearest),
+      interpolation_weight_lower = 1,
+      interpolation_weight_upper = 0,
+      delta_raw = tilt$delta_raw,
+      delta_standardized = tilt$delta_standardized,
+      retained_mean = tilt$retained_mean,
+      training_mean = tilt$training_mean,
+      n_removed = clean$n_removed,
+      lower_window = window,
+      upper_window = window
+    )
+    out$tilt_digest <- .rqr_tcsp_digest(out)
+    class(out) <- c("tcsp_fractional_tilt", "rqr_tcsp_fractional_tilt",
+                    "list")
+    return(out)
+  }
+
+  lower_count <- max(1L, floor(raw_count))
+  upper_count <- min(n, ceiling(raw_count))
+  if (lower_count == upper_count) {
+    stop("Fractional tilt target could not identify adjacent counts.",
+         call. = FALSE)
+  }
+  lower_q <- lower_count / n
+  upper_q <- upper_count / n
+  weight_lower <- (upper_q - q) / (upper_q - lower_q)
+  weight_upper <- 1 - weight_lower
+  lower_window <- rqr_tcsp_shortest_window(y, lower_count, na_rm = FALSE)
+  upper_window <- rqr_tcsp_shortest_window(y, upper_count, na_rm = FALSE)
+  lower_tilt <- rqr_tcsp_tilt_from_window(lower_window)
+  upper_tilt <- rqr_tcsp_tilt_from_window(upper_window)
+  delta_raw <- weight_lower * lower_tilt$delta_raw +
+    weight_upper * upper_tilt$delta_raw
+  y_sd <- stats::sd(y)
+  out <- list(
+    schema_version = "rqrgibbs_tcsp_fractional_tilt/1.0.0",
+    rule = "linear_interpolation_between_adjacent_shortest_windows",
+    sample_size = n,
+    target_content = q,
+    lower_count = as.integer(lower_count),
+    upper_count = as.integer(upper_count),
+    lower_content = lower_q,
+    upper_content = upper_q,
+    interpolation_weight_lower = weight_lower,
+    interpolation_weight_upper = weight_upper,
+    delta_raw = delta_raw,
+    delta_standardized = delta_raw / y_sd,
+    retained_mean = mean(y) + delta_raw,
+    training_mean = mean(y),
+    n_removed = clean$n_removed,
+    lower_window = lower_window,
+    upper_window = upper_window
+  )
+  out$tilt_digest <- .rqr_tcsp_digest(out)
+  class(out) <- c("tcsp_fractional_tilt", "rqr_tcsp_fractional_tilt", "list")
+  out
+}
+
 .rqr_tcsp_validate_mcmc_request <- function(fit_mcmc, mcmc_args) {
   if (!isTRUE(fit_mcmc)) return(invisible(TRUE))
   if (!is.list(mcmc_args)) stop("mcmc_args must be a list.", call. = FALSE)

@@ -24,6 +24,7 @@ legacy_method_id_map <- c(
   tcsp_mtrqr_gibbs_median_mc = "tcsp_mti_gibbs_median_mc",
   tcsp_mtrqr_gibbs_mean_mc = "tcsp_mti_gibbs_mean_mc",
   tcsp_mtrqr_ecm_map_mc = "tcsp_mti_ecm_map_mc",
+  tcsp_mtrqr_ecm_boundary_mc = "tcsp_mti_ecm_boundary_mc",
   tcsp_mtrqr_gibbs_median_oracle_tilt_mc =
     "tcsp_mti_gibbs_median_oracle_tilt_mc",
   tcsp_mtrqr_ecm_map_oracle_tilt_mc = "tcsp_mti_ecm_map_oracle_tilt_mc"
@@ -222,6 +223,7 @@ scan_method_for <- function(method_id) {
   if (method_id %in% c(
     "hdp_s_mc", "tcsp_mc", "tcsp_mti_gibbs_median_mc",
     "tcsp_mti_gibbs_mean_mc", "tcsp_mti_ecm_map_mc",
+    "tcsp_mti_ecm_boundary_mc",
     "tcsp_mti_gibbs_median_oracle_tilt_mc",
     "tcsp_mti_ecm_map_oracle_tilt_mc"
   )) {

@@ -42,6 +42,11 @@
     as.character(ecm_control$floor_type %||% "hard")[1L],
     c("hard", "smooth")
   )
+  ecm_backend <- match.arg(
+    as.character(ecm_control$ecm_backend %||%
+                   ecm_control$backend %||% "R")[1L],
+    c("R", "cpp")
+  )
   floor_schedule <- as.numeric(ecm_control$floor_schedule %||% 1)
   if (!length(floor_schedule) || any(!is.finite(floor_schedule)) ||
       any(floor_schedule <= 0)) {
@@ -77,6 +82,7 @@
     jitter_starts = jitter_starts,
     seed = ecm_control$seed %||% ecm_control$rng_seed %||% NULL,
     precision_jitter = as.numeric(ecm_control$precision_jitter %||% 1e-10)[1L],
+    ecm_backend = ecm_backend,
     canonicalize_complete_roots =
       isTRUE(ecm_control$canonicalize_complete_roots %||% TRUE),
     store_iteration_trace =

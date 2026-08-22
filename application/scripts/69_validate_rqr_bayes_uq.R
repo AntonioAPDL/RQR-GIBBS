@@ -27,6 +27,7 @@ legacy_method_id_map <- c(
   tcsp_mtrqr_gibbs_median_mc = "tcsp_mti_gibbs_median_mc",
   tcsp_mtrqr_gibbs_mean_mc = "tcsp_mti_gibbs_mean_mc",
   tcsp_mtrqr_ecm_map_mc = "tcsp_mti_ecm_map_mc",
+  tcsp_mtrqr_ecm_boundary_mc = "tcsp_mti_ecm_boundary_mc",
   tcsp_mtrqr_gibbs_median_oracle_tilt_mc =
     "tcsp_mti_gibbs_median_oracle_tilt_mc",
   tcsp_mtrqr_ecm_map_oracle_tilt_mc = "tcsp_mti_ecm_map_oracle_tilt_mc"
@@ -700,6 +701,7 @@ scan_method_for <- function(method_id) {
   if (method_id %in% c(
     "hdp_s_mc", "tcsp_mc", "tcsp_mti_gibbs_median_mc",
     "tcsp_mti_gibbs_mean_mc", "tcsp_mti_ecm_map_mc",
+    "tcsp_mti_ecm_boundary_mc",
     "tcsp_mti_gibbs_median_oracle_tilt_mc",
     "tcsp_mti_ecm_map_oracle_tilt_mc"
   )) {
@@ -850,6 +852,12 @@ empty_fit_result <- function(
     fitted_summary_upper = NA_real_, fitted_summary_width = NA_real_,
     uq_engine = NA_character_, tilt_source = NA_character_,
     target_content = NA_real_, target_mean_tilt = NA_real_,
+    scan_target_content = NA_real_, mti_ecm_target_content = NA_real_,
+    mti_boundary_continuation = NA, mti_boundary_epsilon = NA_real_,
+    mti_tilt_rule = NA_character_, mti_tilt_lower_count = NA_integer_,
+    mti_tilt_upper_count = NA_integer_,
+    mti_tilt_interpolation_weight = NA_real_,
+    mti_certificate_scope = NA_character_, ecm_backend = NA_character_,
     target_audit_digest = NA_character_, posterior_draws = NA_integer_,
     mcmc_n_burn = NA_integer_, mcmc_n_mcmc = NA_integer_,
     mcmc_thin = NA_integer_, ecm_converged = NA,
@@ -892,6 +900,16 @@ empty_fit_result <- function(
     tilt_source = tilt_source,
     target_content = target_content,
     target_mean_tilt = target_mean_tilt,
+    scan_target_content = scan_target_content,
+    mti_ecm_target_content = mti_ecm_target_content,
+    mti_boundary_continuation = mti_boundary_continuation,
+    mti_boundary_epsilon = mti_boundary_epsilon,
+    mti_tilt_rule = mti_tilt_rule,
+    mti_tilt_lower_count = mti_tilt_lower_count,
+    mti_tilt_upper_count = mti_tilt_upper_count,
+    mti_tilt_interpolation_weight = mti_tilt_interpolation_weight,
+    mti_certificate_scope = mti_certificate_scope,
+    ecm_backend = ecm_backend,
     target_audit_digest = target_audit_digest,
     posterior_draws = posterior_draws,
     mcmc_n_burn = mcmc_n_burn,
@@ -1047,6 +1065,7 @@ mti_plugin_method_ids <- c(
   "tcsp_mti_gibbs_median_mc",
   "tcsp_mti_gibbs_mean_mc",
   "tcsp_mti_ecm_map_mc",
+  "tcsp_mti_ecm_boundary_mc",
   "tcsp_mti_gibbs_median_oracle_tilt_mc",
   "tcsp_mti_ecm_map_oracle_tilt_mc"
 )
@@ -1088,6 +1107,9 @@ fit_tcsp_mti_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
   selected_source <- as.character(
     method_meta$selected_interval_source %||% method_id
   )[1L]
+  boundary_rule <- as.character(method_meta$mti_boundary_rule %||%
+                                  method_meta$boundary_rule %||%
+                                  "strict")[1L]
   calibration <- get_scan_calibration(method_id, length(y), c_target, tol_conf)
   if (isTRUE(calibration$infeasible) ||
       calibration$retained_count > length(y)) {
@@ -1117,11 +1139,37 @@ fit_tcsp_mti_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
     target_mean_tilt <- oracle_for(dgp_id, c_target)$mean_tilt
   }
   target_content <- calibration$target_content
+  boundary_target <- NULL
+  fractional_tilt <- NULL
+  if (identical(boundary_rule, "half_step_continuation")) {
+    boundary_target <- tcsp_mti_boundary_target(
+      n = length(y),
+      retained_count = calibration$retained_count,
+      guaranteed_content = c_target
+    )
+    target_content <- boundary_target$ecm_target_content
+    fractional_tilt <- tcsp_fractional_tilt(y, target_content, na_rm = FALSE)
+    if (!identical(tilt_source, "oracle_sh_population")) {
+      target_mean_tilt <- fractional_tilt$delta_raw
+    }
+  }
   formal_digest <- digest::digest(
     list(calibration = calibration, window = window,
-         tilt_source = tilt_source, target_mean_tilt = target_mean_tilt),
+         tilt_source = tilt_source, target_mean_tilt = target_mean_tilt,
+         boundary_rule = boundary_rule, boundary_target = boundary_target,
+         fractional_tilt = fractional_tilt),
     algo = "sha256", serialize = TRUE
   )
+  scan_target_content <- calibration$target_content %||% NA_real_
+  boundary_continuation <- isTRUE(
+    boundary_target$boundary_continuation %||% FALSE
+  )
+  tilt_rule <- fractional_tilt$rule %||% "integer_shortest_window"
+  tilt_lower_count <- fractional_tilt$lower_count %||%
+    as.integer(calibration$retained_count)
+  tilt_upper_count <- fractional_tilt$upper_count %||%
+    as.integer(calibration$retained_count)
+  tilt_weight <- fractional_tilt$interpolation_weight_lower %||% 1
   formal_fields <- list(
     formal_action_lower = window$lower_endpoint,
     formal_action_upper = window$upper_endpoint,
@@ -1132,7 +1180,17 @@ fit_tcsp_mti_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
     scan_certified_lower_probability =
       calibration$scan_probability$certified_lower_probability %||% NA_real_,
     target_content = target_content,
-    target_mean_tilt = target_mean_tilt
+    target_mean_tilt = target_mean_tilt,
+    scan_target_content = scan_target_content,
+    mti_ecm_target_content = target_content,
+    mti_boundary_continuation = boundary_continuation,
+    mti_boundary_epsilon = boundary_target$epsilon %||% NA_real_,
+    mti_tilt_rule = tilt_rule,
+    mti_tilt_lower_count = as.integer(tilt_lower_count),
+    mti_tilt_upper_count = as.integer(tilt_upper_count),
+    mti_tilt_interpolation_weight = as.numeric(tilt_weight),
+    mti_certificate_scope =
+      boundary_target$certificate_scope %||% "scan_action_only"
   )
   if (!is.finite(target_content) || target_content >= 1) {
     return(do.call(empty_fit_result, c(formal_fields, list(
@@ -1150,7 +1208,8 @@ fit_tcsp_mti_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
   cache_key <- digest::digest(
     list(method_id = method_id, y = y, c_target = c_target,
          tol_conf = tol_conf, target_content = target_content,
-         target_mean_tilt = target_mean_tilt, engine = engine),
+         target_mean_tilt = target_mean_tilt, engine = engine,
+         boundary_rule = boundary_rule),
     algo = "sha256", serialize = TRUE
   )
   if (exists(cache_key, envir = mti_plugin_cache, inherits = FALSE)) {
@@ -1264,6 +1323,8 @@ fit_tcsp_mti_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
       selected_interval_source = selected_source,
       uq_engine = engine,
       tilt_source = tilt_source,
+      ecm_backend = fit$ecm_backend %||% fit$model_spec$ecm_backend %||%
+        control$ecm_backend %||% "R",
       target_audit_digest = digest::digest(
         list(formal_digest = formal_digest, model_spec = fit$model_spec),
         algo = "sha256", serialize = TRUE
@@ -1789,6 +1850,16 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   tilt_source = method_meta$tilt_source %||% NA_character_,
                   target_content = NA_real_,
                   target_mean_tilt = NA_real_,
+                  scan_target_content = NA_real_,
+                  mti_ecm_target_content = NA_real_,
+                  mti_boundary_continuation = NA,
+                  mti_boundary_epsilon = NA_real_,
+                  mti_tilt_rule = NA_character_,
+                  mti_tilt_lower_count = NA_integer_,
+                  mti_tilt_upper_count = NA_integer_,
+                  mti_tilt_interpolation_weight = NA_real_,
+                  mti_certificate_scope = NA_character_,
+                  ecm_backend = method_meta$ecm_backend %||% NA_character_,
                   target_audit_digest = NA_character_,
                   posterior_draws = NA_integer_,
                   mcmc_n_burn = NA_integer_,
@@ -1930,6 +2001,37 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   ),
                   target_mean_tilt = fit_scalar(
                     fit, "target_mean_tilt", NA_real_
+                  ),
+                  scan_target_content = as.numeric(fit_scalar(
+                    fit, "scan_target_content", NA_real_
+                  )),
+                  mti_ecm_target_content = as.numeric(fit_scalar(
+                    fit, "mti_ecm_target_content", NA_real_
+                  )),
+                  mti_boundary_continuation = fit_scalar(
+                    fit, "mti_boundary_continuation", NA
+                  ),
+                  mti_boundary_epsilon = as.numeric(fit_scalar(
+                    fit, "mti_boundary_epsilon", NA_real_
+                  )),
+                  mti_tilt_rule = fit_scalar(
+                    fit, "mti_tilt_rule", NA_character_
+                  ),
+                  mti_tilt_lower_count = as.integer(fit_scalar(
+                    fit, "mti_tilt_lower_count", NA_integer_
+                  )),
+                  mti_tilt_upper_count = as.integer(fit_scalar(
+                    fit, "mti_tilt_upper_count", NA_integer_
+                  )),
+                  mti_tilt_interpolation_weight = as.numeric(fit_scalar(
+                    fit, "mti_tilt_interpolation_weight", NA_real_
+                  )),
+                  mti_certificate_scope = fit_scalar(
+                    fit, "mti_certificate_scope", NA_character_
+                  ),
+                  ecm_backend = fit_scalar(
+                    fit, "ecm_backend", method_meta$ecm_backend %||%
+                      NA_character_
                   ),
                   target_audit_digest = fit_scalar(
                     fit, "target_audit_digest", NA_character_
@@ -2123,6 +2225,16 @@ summary_rows <- lapply(split(results, split_key), function(df) {
     median_fitted_summary_width = median_or_na(df$fitted_summary_width),
     mean_target_content = mean_or_na(df$target_content),
     mean_target_mean_tilt = mean_or_na(df$target_mean_tilt),
+    mean_scan_target_content = mean_or_na(df$scan_target_content),
+    mean_mti_ecm_target_content = mean_or_na(df$mti_ecm_target_content),
+    mti_boundary_continuation_rate =
+      mean_or_na(df$mti_boundary_continuation),
+    mean_mti_boundary_epsilon = mean_or_na(df$mti_boundary_epsilon),
+    mean_mti_tilt_lower_count = mean_or_na(df$mti_tilt_lower_count),
+    mean_mti_tilt_upper_count = mean_or_na(df$mti_tilt_upper_count),
+    mean_mti_tilt_interpolation_weight =
+      mean_or_na(df$mti_tilt_interpolation_weight),
+    ecm_cpp_rate = mean_or_na(df$ecm_backend == "cpp"),
     mean_posterior_draws = mean_or_na(df$posterior_draws),
     mcmc_fit_reuse_rate =
       mean_or_na(df$fit_reused_across_posterior_thresholds),
