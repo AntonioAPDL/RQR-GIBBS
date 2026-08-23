@@ -908,7 +908,8 @@ collect_run <- function(run_dir) {
     method_notes <- c(
       method_notes,
       "The `mti_ecm_dp_profile_tune_*` rows are MTI-ECM direct-DP profile tuning variants with method-specific screen levels and profile grids.",
-      "For these variants, `effective_posterior_confidence` records the direct-DP content-screen level actually used."
+      "For these variants, `effective_posterior_confidence` records the direct-DP content-screen level actually used.",
+      "`direct_dp_concentration` records the direct-DP concentration used for the response-distribution content screen."
     )
   }
   if (any(grepl("^tcsp_mti_", method_ids_present))) {

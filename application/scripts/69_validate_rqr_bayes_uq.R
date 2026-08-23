@@ -868,6 +868,7 @@ empty_fit_result <- function(
     ecm_relative_objective_drop = NA_real_,
     ecm_final_stationarity = NA_real_,
     effective_posterior_confidence = NA_real_,
+    direct_dp_concentration = NA_real_,
     fit_reused_across_posterior_thresholds = FALSE) {
   list(
     lower = lower,
@@ -925,6 +926,7 @@ empty_fit_result <- function(
     ecm_relative_objective_drop = ecm_relative_objective_drop,
     ecm_final_stationarity = ecm_final_stationarity,
     effective_posterior_confidence = effective_posterior_confidence,
+    direct_dp_concentration = direct_dp_concentration,
     fit_reused_across_posterior_thresholds =
       fit_reused_across_posterior_thresholds
   )
@@ -1112,6 +1114,20 @@ mti_dp_profile_probability <- function(method_id, post_conf) {
   value <- as.numeric(value)[1L]
   if (!is.finite(value) || value <= 0 || value >= 1) {
     stopf("MTI-ECM profile posterior confidence must be in (0, 1).")
+  }
+  value
+}
+
+mti_dp_profile_concentration <- function(method_id) {
+  profile_cfg <- mti_dp_profile_config(method_id)
+  direct <- config$engine_defaults$direct_dp %||% list()
+  value <- as.numeric(
+    profile_cfg$dp_concentration %||%
+      profile_cfg$direct_dp_concentration %||%
+      direct$concentration
+  )[1L]
+  if (!is.finite(value) || value <= 0) {
+    stopf("MTI-ECM profile direct-DP concentration must be positive.")
   }
   value
 }
@@ -1389,7 +1405,6 @@ fit_tcsp_mti_plugin <- function(method_id, y, dgp_id, c_target, tol_conf,
 fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
                                    post_conf, seed) {
   method_meta <- method_by_id[[method_id]]
-  direct <- config$engine_defaults$direct_dp
   base <- dp_base_from_config()
   profile_cfg <- mti_dp_profile_config(method_id)
   effective_post_conf <- mti_dp_profile_probability(method_id, post_conf)
@@ -1406,11 +1421,7 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
   }
   ecm_control <- mti_dp_profile_control(method_id, "ecm_control")
   ecm_control$seed <- seed
-  dp_concentration <- as.numeric(
-    profile_cfg$dp_concentration %||%
-      profile_cfg$direct_dp_concentration %||%
-      direct$concentration
-  )[1L]
+  dp_concentration <- mti_dp_profile_concentration(method_id)
   action <- rqr_mti_ecm_dp_profile_action(
     y = y,
     content = c_target,
@@ -1458,7 +1469,8 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
         "direct_dp_content_screen_repeated_sampling_validation",
       ecm_backend = ecm_control$ecm_backend %||% NA_character_,
       target_audit_digest = action$provenance_digest,
-      effective_posterior_confidence = effective_post_conf
+      effective_posterior_confidence = effective_post_conf,
+      direct_dp_concentration = dp_concentration
     ))
   }
   empty_fit_result(
@@ -1506,7 +1518,8 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
     ecm_final_objective = selected$ecm_objective[[1L]],
     ecm_relative_objective_drop = NA_real_,
     ecm_final_stationarity = selected$ecm_final_stationarity[[1L]],
-    effective_posterior_confidence = effective_post_conf
+    effective_posterior_confidence = effective_post_conf,
+    direct_dp_concentration = dp_concentration
   )
 }
 
@@ -1978,6 +1991,14 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   },
                   error = function(e) post_conf
                 )
+                direct_dp_conc <- tryCatch(
+                  if (is_mti_ecm_dp_profile_method(method_id)) {
+                    mti_dp_profile_concentration(method_id)
+                  } else {
+                    NA_real_
+                  },
+                  error = function(e) NA_real_
+                )
                 rows[[length(rows) + 1L]] <- data.frame(
                   mode = mode,
                   dgp_id = dgp_id,
@@ -2062,6 +2083,7 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   ecm_relative_objective_drop = NA_real_,
                   ecm_final_stationarity = NA_real_,
                   effective_posterior_confidence = effective_post_conf,
+                  direct_dp_concentration = direct_dp_conc,
                   fit_reused_across_posterior_thresholds = NA,
                   infeasible = TRUE,
                   message = conditionMessage(fit),
@@ -2098,6 +2120,9 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                                                meta$p)
                 effective_post_conf <- fit_scalar(
                   fit, "effective_posterior_confidence", post_conf
+                )
+                direct_dp_conc <- fit_scalar(
+                  fit, "direct_dp_concentration", NA_real_
                 )
                 rows[[length(rows) + 1L]] <- data.frame(
                   mode = mode,
@@ -2263,6 +2288,7 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                     fit, "ecm_final_stationarity", NA_real_
                   )),
                   effective_posterior_confidence = effective_post_conf,
+                  direct_dp_concentration = as.numeric(direct_dp_conc),
                   fit_reused_across_posterior_thresholds = fit_scalar(
                     fit, "fit_reused_across_posterior_thresholds", FALSE
                   ),
@@ -2459,6 +2485,8 @@ summary_rows <- lapply(split(results, split_key), function(df) {
       mean_or_na(df$posterior_probability),
     mean_effective_posterior_confidence =
       mean_or_na(df$effective_posterior_confidence),
+    mean_direct_dp_concentration =
+      mean_or_na(df$direct_dp_concentration),
     mean_posterior_threshold_excess =
       mean_or_na(df$posterior_threshold_excess),
     posterior_binding_rate =
@@ -2491,7 +2519,8 @@ if (any(grepl("^mti_ecm_dp_profile_tune_", method_ids_present))) {
   method_notes <- c(
     method_notes,
     "The `mti_ecm_dp_profile_tune_*` rows are MTI-ECM direct-DP profile tuning variants with method-specific screen levels and profile grids.",
-    "For these variants, `effective_posterior_confidence` records the direct-DP content-screen level actually used."
+    "For these variants, `effective_posterior_confidence` records the direct-DP content-screen level actually used.",
+    "`direct_dp_concentration` records the direct-DP concentration used for the response-distribution content screen."
   )
 }
 if (any(grepl("^tcsp_mti_", method_ids_present))) {
