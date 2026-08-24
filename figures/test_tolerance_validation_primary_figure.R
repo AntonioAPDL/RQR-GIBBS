@@ -46,16 +46,31 @@ young <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
     }))
   }))
 }))
+mti <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
+  do.call(rbind, lapply(c(500L, 1000L), function(n) {
+    do.call(rbind, lapply(c(0.90, 0.95, 0.99), function(content) {
+      do.call(rbind, lapply(1:4, function(rep) {
+        row(dgp, n, content, rep,
+            "mti_ecm_dp_profile_tune_p989_deepq_q9995",
+            success = rep != 1L || dgp == "normal",
+            width = 1.7 + content + rep / 10)
+      }))
+    }))
+  }))
+}))
 
 primary_path <- file.path(work_dir, "primary.csv")
 young_path <- file.path(work_dir, "young.csv")
+mti_path <- file.path(work_dir, "mti.csv")
 utils::write.csv(primary, primary_path, row.names = FALSE)
 utils::write.csv(young, young_path, row.names = FALSE)
+utils::write.csv(mti, mti_path, row.names = FALSE)
 out_dir <- file.path(work_dir, "figures")
 
 status <- system2(
   "Rscript",
   c(script, paste0("--primary-results=", primary_path),
+    paste0("--mti-ecm-results=", mti_path),
     paste0("--young-mathew-results=", young_path),
     paste0("--output-dir=", out_dir)),
   stdout = TRUE,
@@ -78,6 +93,7 @@ manifest <- utils::read.csv(manifest_path, stringsAsFactors = FALSE)
 stopifnot(any(grepl("fig04_tolerance_validation_primary.png",
                     manifest$relative_path, fixed = TRUE)))
 stopifnot(any(grepl("primary.csv", manifest$relative_path, fixed = TRUE)))
+stopifnot(any(grepl("mti.csv", manifest$relative_path, fixed = TRUE)))
 stopifnot(any(grepl("young.csv", manifest$relative_path, fixed = TRUE)))
 
 cat("Tolerance validation primary figure test passed.\n")

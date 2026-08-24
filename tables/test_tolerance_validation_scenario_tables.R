@@ -52,6 +52,22 @@ young <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
     }))
   }))
 }))
+mti <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
+  do.call(rbind, lapply(c(500L, 1000L), function(n) {
+    do.call(rbind, lapply(1:2, function(rep) {
+      rbind(
+        row(dgp, n, 0.90, rep,
+            "mti_ecm_dp_profile_tune_p989_deepq_q9995",
+            success = TRUE, width = 1.85),
+        row(dgp, n, 0.90, rep,
+            "mti_ecm_dp_profile_tune_p985_deepq_q9995",
+            success = dgp == "normal", width = 1.75)
+      )
+    }))
+  }))
+}))
+mti$ecm_converged <- TRUE
+mti$ecm_final_stationarity <- 5e-4
 small <- do.call(rbind, lapply(c("normal", "student_t3", "beta_left"), function(dgp) {
   do.call(rbind, lapply(1:2, function(rep) {
     rbind(
@@ -67,14 +83,17 @@ small <- do.call(rbind, lapply(c("normal", "student_t3", "beta_left"), function(
 }))
 primary <- rbind(primary, transform(primary, posterior_confidence = 0.99))
 young <- rbind(young, transform(young, posterior_confidence = 0.99))
+mti <- rbind(mti, transform(mti, posterior_confidence = 0.99))
 small <- rbind(small, transform(small, posterior_confidence = 0.99))
 
 primary_path <- file.path(work_dir, "primary.csv")
 young_path <- file.path(work_dir, "young.csv")
+mti_path <- file.path(work_dir, "mti.csv")
 small_path <- file.path(work_dir, "small.csv")
 scan_path <- file.path(work_dir, "scan.csv")
 utils::write.csv(primary, primary_path, row.names = FALSE)
 utils::write.csv(young, young_path, row.names = FALSE)
+utils::write.csv(mti, mti_path, row.names = FALSE)
 utils::write.csv(small, small_path, row.names = FALSE)
 utils::write.csv(data.frame(
   n = c(500L, 1000L),
@@ -93,6 +112,7 @@ status <- system2(
   c(
     script,
     paste0("--primary-results=", primary_path),
+    paste0("--mti-ecm-results=", mti_path),
     paste0("--young-mathew-results=", young_path),
     paste0("--small95-results=", small_path),
     paste0("--scan-calibration-csv=", scan_path),
@@ -119,6 +139,10 @@ required <- file.path(out_dir, c(
   "tolerance_validation_article_dgp_width_ranges.tex",
   "tolerance_validation_article_scan_calibration.csv",
   "tolerance_validation_article_scan_calibration.tex",
+  "tolerance_validation_mti_ecm_stage2_tuning_summary.csv",
+  "tolerance_validation_mti_ecm_stage2_tuning_summary.tex",
+  "tolerance_validation_mti_ecm_stage2_outlier_audit.csv",
+  "tolerance_validation_mti_ecm_stage2_outlier_audit.tex",
   "tolerance_validation_article_small_sample_dgp_delivery.csv",
   "tolerance_validation_article_small_sample_dgp_delivery.tex",
   "tolerance_validation_article_small_sample_dgp_width_ranges.csv",
@@ -134,11 +158,15 @@ primary_range <- read.csv(
 )
 stopifnot(nrow(primary_range) ==
             length(unique(primary_range$n)) *
-            length(unique(primary_range$content)) * 3L)
+            length(unique(primary_range$content)) * 4L)
 stopifnot(!"hdp_s_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_mti_gibbs_median_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_mti_ecm_map_mc" %in% primary_range$method_id)
+stopifnot(!"mti_ecm_dp_profile_tune_p985_deepq_q9995" %in%
+            primary_range$method_id)
 stopifnot(!"tcsp_dkw" %in% primary_range$method_id)
+stopifnot(any(primary_range$method_id ==
+                "mti_ecm_dp_profile_tune_p989_deepq_q9995"))
 stopifnot(any(primary_range$method_id == "young_mathew"))
 stopifnot(!"dgp_cells" %in% names(primary_range))
 stopifnot(!"fail_closed_dgp_cells" %in% names(primary_range))
@@ -180,6 +208,7 @@ stopifnot(grepl("\\begin{tabular}{@{}l@{\\hspace{0.75em}}l",
 stopifnot(!grepl("\\begin{tabularx}", tex, fixed = TRUE))
 stopifnot(!grepl("Returned-success range", tex, fixed = TRUE))
 stopifnot(grepl("Young--Mathew", tex, fixed = TRUE))
+stopifnot(grepl("MTI-ECM", tex, fixed = TRUE))
 stopifnot(!grepl("Width 95\\% range", tex, fixed = TRUE))
 stopifnot(!grepl("Median sec", tex, fixed = TRUE))
 stopifnot(!grepl("DGPs", tex, fixed = TRUE))
@@ -196,6 +225,7 @@ supp_tex <- paste(readLines(
 ), collapse = "\n")
 stopifnot(grepl("Student t(3)", supp_tex, fixed = TRUE))
 stopifnot(grepl("content attainment", supp_tex, fixed = TRUE))
+stopifnot(grepl("MTI-ECM", supp_tex, fixed = TRUE))
 stopifnot(!grepl("Hybrid DP--scan", supp_tex, fixed = TRUE))
 stopifnot(!grepl("MTI ECM", supp_tex, fixed = TRUE))
 stopifnot(!grepl("DKW", supp_tex, fixed = TRUE))
@@ -217,12 +247,24 @@ scan_tex <- paste(readLines(
 stopifnot(grepl("Retained count", scan_tex, fixed = TRUE))
 stopifnot(grepl("0.951", scan_tex, fixed = TRUE))
 
+tuning_tex <- paste(readLines(
+  file.path(out_dir, "tolerance_validation_mti_ecm_stage2_tuning_summary.tex"),
+  warn = FALSE
+), collapse = "\n")
+stopifnot(grepl("MTI-ECM profile sensitivity summary", tuning_tex,
+                fixed = TRUE))
+stopifnot(grepl("Screen 0.989; fitted content up to 0.9995",
+                tuning_tex, fixed = TRUE))
+stopifnot(grepl("Selected for article comparison", tuning_tex, fixed = TRUE))
+stopifnot(!grepl("mti_ecm_dp_profile_tune", tuning_tex, fixed = TRUE))
+
 out_dir_no_small <- file.path(work_dir, "out-no-small")
 status <- system2(
   "Rscript",
   c(
     script,
     paste0("--primary-results=", primary_path),
+    paste0("--mti-ecm-results=", mti_path),
     paste0("--young-mathew-results=", young_path),
     paste0("--small95-results=", file.path(work_dir, "missing-small.csv")),
     paste0("--scan-calibration-csv=", scan_path),

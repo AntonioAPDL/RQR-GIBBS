@@ -23,10 +23,21 @@ default_primary_dir <- file.path(
   "rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820",
   "wave_confirmatory_skewstress_dgps_20260821T005632Z"
 )
+default_mti_ecm_dir <- file.path(
+  "application", "runs",
+  "rqr_bayes_uq_validation_mti_ecm_dp_profile_stage2_tuning_20260823",
+  "wave_confirmatory_mti_ecm_dp_profile_stage2_20260823T230135Z"
+)
 primary_results <- arg_value(
   "--primary-results=",
   Sys.getenv("RQR_BAYES_UQ_PRIMARY_RESULTS",
              unset = file.path(default_primary_dir,
+                               "bayes_uq_validation_results.csv"))
+)
+mti_ecm_results <- arg_value(
+  "--mti-ecm-results=",
+  Sys.getenv("RQR_BAYES_UQ_MTI_ECM_RESULTS",
+             unset = file.path(default_mti_ecm_dir,
                                "bayes_uq_validation_results.csv"))
 )
 young_mathew_results <- arg_value(
@@ -47,19 +58,29 @@ figure_path <- file.path(output_dir, "fig04_tolerance_validation_primary.png")
 manifest_path <- file.path(output_dir,
                            "tolerance_validation_primary_figure_manifest.csv")
 
-method_order <- c("tcsp_mc", "young_mathew", "wilks_minmax")
+selected_mti_ecm_method <- "mti_ecm_dp_profile_tune_p989_deepq_q9995"
+has_mti_ecm_input <- nzchar(mti_ecm_results) && file.exists(mti_ecm_results)
+method_order <- c(
+  "tcsp_mc",
+  selected_mti_ecm_method,
+  "young_mathew",
+  "wilks_minmax"
+)
 method_labels <- c(
   tcsp_mc = "TCSP",
+  mti_ecm_dp_profile_tune_p989_deepq_q9995 = "MTI-ECM",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks"
 )
 method_colors <- c(
   tcsp_mc = "#0072B2",
+  mti_ecm_dp_profile_tune_p989_deepq_q9995 = "#009E73",
   young_mathew = "#CC79A7",
   wilks_minmax = "#000000"
 )
 method_lty <- c(
   tcsp_mc = 1,
+  mti_ecm_dp_profile_tune_p989_deepq_q9995 = 1,
   young_mathew = 1,
   wilks_minmax = 2
 )
@@ -105,11 +126,21 @@ bind_fill <- function(...) {
 }
 
 read_result_file <- function(path, label) {
-  out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
   required <- c(
     "dgp_id", "n", "guaranteed_content", "method_id", "success",
     "infeasible"
   )
+  optional <- c("tolerance_confidence", "posterior_confidence", "replication")
+  if (requireNamespace("data.table", quietly = TRUE)) {
+    header <- names(data.table::fread(path, nrows = 0L, showProgress = FALSE))
+    selected <- intersect(unique(c(required, optional)), header)
+    out <- as.data.frame(data.table::fread(path, select = selected,
+                                           showProgress = FALSE))
+  } else {
+    out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+    out <- out[, intersect(unique(c(required, optional)), names(out)),
+               drop = FALSE]
+  }
   missing <- setdiff(required, names(out))
   if (length(missing)) {
     stopf(label, " is missing column(s): ", paste(missing, collapse = ", "))
@@ -120,6 +151,15 @@ read_result_file <- function(path, label) {
 derive_ranges_from_raw <- function(primary_path, ym_path) {
   primary <- read_result_file(primary_path, "Primary validation results")
   frames <- list(primary)
+  if (has_mti_ecm_input) {
+    mti <- read_result_file(mti_ecm_results, "MTI-ECM stage-2 results")
+    if (!any(mti$method_id == selected_mti_ecm_method)) {
+      stopf("MTI-ECM figure input does not contain selected method: ",
+            selected_mti_ecm_method)
+    }
+    frames <- c(frames, list(mti[mti$method_id == selected_mti_ecm_method,
+                                 , drop = FALSE]))
+  }
   if (file.exists(ym_path) && !any(primary$method_id == "young_mathew")) {
     frames <- c(frames, list(read_result_file(ym_path, "Young--Mathew results")))
   }
@@ -205,6 +245,7 @@ input_paths <- character()
 if (file.exists(primary_results)) {
   data <- derive_ranges_from_raw(primary_results, young_mathew_results)
   input_paths <- c(primary_results,
+                   mti_ecm_results[file.exists(mti_ecm_results)],
                    young_mathew_results[file.exists(young_mathew_results)])
 } else if (file.exists(scenario_range_csv)) {
   data <- read_range_table(scenario_range_csv)
@@ -221,10 +262,12 @@ if (file.exists(primary_results)) {
 }
 
 if (!nrow(data)) stopf("Validation figure has no selected methods.")
+method_order <- method_order[method_order %in% unique(data$method_id)]
 
 contents <- sort(unique(data$content))
 sample_sizes <- sort(unique(data$n))
-offsets <- c(tcsp_mc = -0.12, young_mathew = 0, wilks_minmax = 0.12)
+offset_template <- seq(-0.18, 0.18, length.out = length(method_order))
+offsets <- stats::setNames(offset_template, method_order)
 names(offsets) <- method_order
 
 panel_count <- length(sample_sizes)
@@ -305,7 +348,7 @@ plot.new()
 legend("center", legend = unname(method_labels[method_order]),
        col = unname(method_colors[method_order]),
        lty = unname(method_lty[method_order]), lwd = 2.4,
-       ncol = 3, bty = "n", xpd = NA, cex = 0.9)
+       ncol = length(method_order), bty = "n", xpd = NA, cex = 0.9)
 mtext("Iid tolerance validation at 95% tolerance confidence",
       outer = TRUE, cex = 1.05, font = 2)
 

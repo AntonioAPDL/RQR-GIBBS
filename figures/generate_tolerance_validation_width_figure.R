@@ -31,18 +31,31 @@ manifest_path <- file.path(
   output_dir, "tolerance_validation_width_figure_manifest.csv"
 )
 
-method_order <- c("tcsp_mc", "young_mathew", "wilks_minmax")
+selected_mti_ecm_method <- "mti_ecm_dp_profile_tune_p989_deepq_q9995"
+method_order <- c(
+  "tcsp_mc",
+  selected_mti_ecm_method,
+  "young_mathew",
+  "wilks_minmax"
+)
 method_labels <- c(
   tcsp_mc = "TCSP",
+  mti_ecm_dp_profile_tune_p989_deepq_q9995 = "MTI-ECM",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks"
 )
 method_colors <- c(
   tcsp_mc = "#0072B2",
+  mti_ecm_dp_profile_tune_p989_deepq_q9995 = "#009E73",
   young_mathew = "#CC79A7",
   wilks_minmax = "#000000"
 )
-method_pch <- c(tcsp_mc = 16, young_mathew = 16, wilks_minmax = 1)
+method_pch <- c(
+  tcsp_mc = 16,
+  mti_ecm_dp_profile_tune_p989_deepq_q9995 = 17,
+  young_mathew = 16,
+  wilks_minmax = 1
+)
 dgp_order <- c(
   "normal",
   "student_t3",
@@ -108,6 +121,7 @@ data$mean_width <- if ("mean_width" %in% names(data)) {
 data <- data[is.finite(data$width_q025) & is.finite(data$width_q975) &
                data$width_q025 > 0 & data$width_q975 > 0, , drop = FALSE]
 if (!nrow(data)) stopf("Width-range figure has no finite selected rows.")
+method_order <- method_order[method_order %in% unique(data$method_id)]
 
 cells <- unique(data[, c("n", "content"), drop = FALSE])
 cells <- cells[order(cells$n, cells$content), , drop = FALSE]
@@ -115,7 +129,10 @@ dgp_rows <- unique(data[, c("dgp_id", "dgp"), drop = FALSE])
 dgp_rows <- dgp_rows[order(dgp_rank(dgp_rows$dgp_id, dgp_rows$dgp)), ,
                      drop = FALSE]
 dgp_levels <- rev(dgp_rows$dgp)
-method_offsets <- c(tcsp_mc = -0.22, young_mathew = 0, wilks_minmax = 0.22)
+method_offsets <- stats::setNames(
+  seq(-0.30, 0.30, length.out = length(method_order)),
+  method_order
+)
 
 panel_count <- nrow(cells)
 panel_cols <- min(3L, panel_count)
@@ -125,7 +142,7 @@ panel_matrix <- matrix(seq_len(panel_rows * panel_cols), nrow = panel_rows,
 panel_matrix[panel_matrix > panel_count] <- 0L
 legend_row <- rep(panel_count + 1L, panel_cols)
 
-png(figure_path, width = 3400, height = 900 * panel_rows + 360, res = 220,
+png(figure_path, width = 3800, height = 900 * panel_rows + 360, res = 220,
     pointsize = 17)
 old_par <- par(no.readonly = TRUE)
 device_open <- TRUE
@@ -138,7 +155,7 @@ on.exit({
 
 layout(rbind(panel_matrix, legend_row),
        heights = c(rep(1, panel_rows), 0.22))
-par(oma = c(0, 0, 1.3, 0), mar = c(4.2, 8.8, 2.4, 0.8),
+par(oma = c(0, 0, 1.3, 0), mar = c(4.2, 10.6, 2.4, 0.8),
     mgp = c(1.85, 0.55, 0), xaxs = "i", yaxs = "i")
 
 for (ii in seq_len(nrow(cells))) {
@@ -187,7 +204,7 @@ legend("center", legend = c(unname(method_labels[method_order]), "Mean width"),
        col = c(unname(method_colors[method_order]), "gray20"),
        pch = c(unname(method_pch[method_order]), 4),
        lwd = c(rep(2, length(method_order)), NA),
-       ncol = 4, bty = "n", xpd = NA, cex = 0.95)
+       ncol = length(method_order) + 1L, bty = "n", xpd = NA, cex = 0.95)
 mtext("Returned interval-width ranges by distribution",
       outer = TRUE, cex = 1.05, font = 2)
 

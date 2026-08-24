@@ -1,0 +1,15 @@
+"method_id","variant","selected_for_article","max_width","widths_above_100","location","success_at_max","ecm_flag_at_max"
+"mti_ecm_dp_profile_tune_p980_deepq","Screen 0.980; dense fitted-content grid",FALSE,64.5823678972228,0,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p9825_deepq","Screen 0.9825; dense fitted-content grid",FALSE,107.980796466513,1,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p985_deepq","Screen 0.985; dense fitted-content grid",FALSE,128.301506851688,3,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p9875_deepq","Screen 0.9875; dense fitted-content grid",FALSE,128.301506851688,3,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p989_deepq","Screen 0.989; dense fitted-content grid",FALSE,6071.58505035681,4,"Student t(3), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p9825_deepq_q9995","Screen 0.9825; fitted content up to 0.9995",FALSE,107.980796467548,1,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p985_deepq_q9995","Screen 0.985; fitted content up to 0.9995",FALSE,126.428487386271,3,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p9875_deepq_q9995","Screen 0.9875; fitted content up to 0.9995",FALSE,126.428487386271,3,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p989_deepq_q9995","Screen 0.989; fitted content up to 0.9995",TRUE,126.428487386271,3,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p985_deepq_q9995_widetilt","Screen 0.985; wider tilt grid",FALSE,126.428487386271,3,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p9875_deepq_q9995_widetilt","Screen 0.9875; wider tilt grid",FALSE,126.428487386271,3,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p985_deepq_q9995_alpha05","Screen 0.985; DP concentration 0.5",FALSE,64.5894056464608,0,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p985_deepq_q9995_alpha2","Screen 0.985; DP concentration 2",FALSE,89772.7926325369,311,"Gamma(0.5,1), n=100, c=0.95",TRUE,FALSE
+"mti_ecm_dp_profile_tune_p985_deepq_q9995_ecm200","Screen 0.985; 200 ECM iterations",FALSE,126.428487386485,3,"Log-normal (log sd 1.25), n=500, c=0.99",TRUE,FALSE

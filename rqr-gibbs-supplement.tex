@@ -2237,14 +2237,17 @@ descriptive for the fixed data set and is not a calibration estimate.}
 
 The primary tolerance validation is restricted to iid continuous univariate
 samples. This is the setting in which the scan-calibrated empirical action,
-Young--Mathew interpolation, and Wilks-style full-range intervals can be
-compared on the same target. The TCSP row is the primary calibrated action
+the selected MTI-ECM profile rule, Young--Mathew interpolation, and
+Wilks-style full-range intervals can be compared on the same target. TCSP
+is the primary calibrated action
 because it selects the shortest closed order-statistic window at the calibrated
 retained count. The reported TCSP calculations use adaptive Clopper--Pearson scan
-calibration directly. Young--Mathew and Wilks are included as classical
-order-statistic comparators. Regression and dynamic tolerance calibration
-require additional results because the fitted intervals vary with covariates or
-time.
+calibration directly. The MTI-ECM comparator
+profiles fixed-target endpoint fits over fitted content and retained-mean tilt,
+then applies a direct Dirichlet-process fixed-interval content probability
+threshold. Young--Mathew and Wilks are included as classical order-statistic
+comparators. Regression and dynamic tolerance calibration require additional
+results because the fitted intervals vary with covariates or time.
 
 The simulation design fixes tolerance confidence \(1-\alpha=0.95\) and uses
 explicit feasible design cells:
@@ -2265,15 +2268,17 @@ log-scale standard deviation \(1.25\). All laws are centered and scaled before
 sampling. Each cell uses paired random samples across methods. The
 reproducibility materials include the code version, simulation settings,
 package versions, random seeds, calibration files, and numerical summaries.
-The completed three-method confirmatory run contains
-216 method-specific simulations and 216,000 replication-level results; all simulations
-completed, and all
-three reported methods returned an interval in every replication. The
-manuscript tables and figures are computed directly from these replication-level
-simulation outputs and the corresponding scan-calibration outputs. The scenario-range
-table in the main article is summarized across distributions within each
-\((n,c)\) cell, while the supplement keeps the distribution-level content-attainment and
-width summaries.
+The article comparison combines the completed TCSP, Young--Mathew, and Wilks
+confirmatory run with the selected MTI-ECM profile rule from the completed
+MTI-ECM sensitivity study. Together these sources contribute 288,000
+replication-level method evaluations over the 72 distribution-level cells used in the main
+comparison. All simulations completed, and all four reported methods returned
+an interval in every replication. The manuscript tables and figures are
+computed directly from these replication-level simulation outputs and the
+corresponding scan-calibration outputs. The scenario-range table in the main
+article is summarized across distributions within each \((n,c)\) cell, while
+the supplement keeps the distribution-level content-attainment and width
+summaries.
 Table~\ref{tab:supp-primary-dgp-delivery} gives the distribution-level
 content-attainment percentages before aggregation, and
 Table~\ref{tab:supp-primary-dgp-width-ranges} reports the corresponding
@@ -2282,12 +2287,30 @@ replication-level data file retains interval-production indicators,
 infeasibility indicators, and raw width summaries for each
 distribution-level cell as reproducibility information.
 
+The MTI-ECM comparator reported in the main article uses a direct
+Dirichlet-process content threshold of 0.989 and a fitted-content grid
+extending to 0.9995.
+
 \begingroup
 \TableStyle
 \input{tables/tolerance_validation_article_dgp_delivery.tex}
 \endgroup
 
 \input{tables/tolerance_validation_article_dgp_width_ranges.tex}
+
+Table~\ref{tab:supp-mti-ecm-tuning} summarizes the sensitivity calculations
+used to choose that rule. Lower direct-DP thresholds give shorter intervals but
+fall below nominal tolerance confidence in at least one distribution-level
+cell. The selected threshold has no below-nominal cell in this validation run
+and avoids the severe large-width behavior seen in the direct-DP
+concentration-2 sensitivity case. Table~\ref{tab:supp-mti-ecm-outliers}
+records the maximum observed width by sensitivity rule. These results are
+empirical repeated-sampling evidence for this particular profile rule; the
+finite-sample distribution-free certificate remains attached to TCSP.
+
+\input{tables/tolerance_validation_mti_ecm_stage2_tuning_summary.tex}
+
+\input{tables/tolerance_validation_mti_ecm_stage2_outlier_audit.tex}
 
 The TCSP calibration chooses the retained count \(k\) before seeing the
 replicated samples. Table~\ref{tab:supp-tcsp-scan-calibration} records the

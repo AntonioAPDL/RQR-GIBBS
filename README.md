@@ -157,9 +157,14 @@ The authoritative tolerance validation for the manuscript is configured in
 `application/config/rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820.json`.
 It compares TCSP, Young--Mathew, and Wilks over the feasible iid tolerance
 grid at tolerance confidence 0.95, with 1000 paired replications per
-distribution, sample-size/content cell, and method. The panel uses two
-symmetric anchors and six skew-stress laws. The completed manuscript run is
+distribution, sample-size/content cell, and method. The article tables and
+figures also include the selected profile-calibrated MTI-ECM comparator from
+`application/config/rqr_bayes_uq_validation_mti_ecm_dp_profile_stage2_tuning_20260823.json`.
+The panel uses two symmetric anchors and six skew-stress laws. The completed
+three-method manuscript run is
 `application/runs/rqr_bayes_uq_validation_main_3method_skewstress_dgps_20260820/wave_confirmatory_skewstress_dgps_20260821T005632Z`.
+The selected MTI-ECM source run is
+`application/runs/rqr_bayes_uq_validation_mti_ecm_dp_profile_stage2_tuning_20260823/wave_confirmatory_mti_ecm_dp_profile_stage2_20260823T230135Z`.
 Use `make rqr-bayes-uq-skewstress-smoke` before
 `make launch-rqr-bayes-uq-skewstress`; pass
 `RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR=<run_dir>` to the matching health, collect,

@@ -102,10 +102,11 @@ scan calibration, while posterior credibility describes the fitted generalized
 posterior. MTI endpoint summaries diagnose endpoint uncertainty;
 response-predictive draws require a response-distribution layer.
 A prespecified iid validation study at tolerance confidence \(0.95\) compares
-the TCSP scan action with the Young--Mathew and Wilks order-statistic
-competitors across feasible content--sample-size cells and eight
-distributional families. The simulation design excludes settings where even the full sample
-range cannot support the requested two-sided distribution-free statement.
+the TCSP scan action, a profile-calibrated MTI-ECM generalized-Bayes
+comparator, and the Young--Mathew and Wilks order-statistic competitors across
+feasible content--sample-size cells and eight distributional families. The
+simulation design excludes settings where even the full sample range cannot
+support the requested two-sided distribution-free statement.
 \end{abstract}
 
 \section{Introduction}
@@ -1537,8 +1538,14 @@ shortest empirical action and is therefore the primary tolerance action. The
 reported TCSP calculations use the adaptive Clopper--Pearson scan calibration described
 above. Its optimality is class-specific: it minimizes width among closed
 order-statistic windows satisfying the calibrated retained-count rule.
-Young--Mathew interpolation \citep{YoungMathew2014NonparametricTolerance}
-and Wilks min--max intervals
+The MTI-ECM comparator links the validation study to the generalized-Bayes
+interval construction. It profiles fixed-target MTI-ECM endpoint fits over
+fitted content and retained-mean tilt, then reports the shortest candidate
+whose direct Dirichlet-process fixed-interval content probability reaches
+0.989; the fitted-content grid extends to 0.9995. This empirical validation is
+separate from the distribution-free scan theorem that supports TCSP.
+Young--Mathew interpolation
+\citep{YoungMathew2014NonparametricTolerance} and Wilks min--max intervals
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction} provide the
 classical order-statistic comparators. The primary metric is the
 content-attainment rate: the Monte Carlo estimate of
@@ -1554,7 +1561,7 @@ different scales and tail behavior.
 \centering
 \caption{\textbf{Independent-sample tolerance validation.} Results are shown by
 feasible sample-size/content cell and method. Each row summarizes the range
-across eight simulation distributions at tolerance confidence \(0.95\). All three
+across eight simulation distributions at tolerance confidence \(0.95\). All four
 reported methods returned an interval in every replication in this run.}
 \label{tab:tolerance-validation-primary}
 \TableStyle
@@ -1585,27 +1592,30 @@ the values remain raw interval lengths.}
 \end{figure}
 
 In the completed run, TCSP content-attainment ranges from 95.3\% to 99.6\% across
-distribution-level cells, compared with 94.1\% to 97.2\% for Young--Mathew and
-95.3\% to 100.0\% for Wilks.
+distribution-level cells, compared with 95.1\% to 99.6\% for the selected
+MTI-ECM rule, 94.1\% to 97.2\% for Young--Mathew, and 95.3\% to 100.0\% for
+Wilks.
 Figures~\ref{fig:tolerance-validation-primary}
 and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
 pooling widths across distributional scenarios. The calibrated scan action
 targets the requested finite-sample statement directly. The adaptive
 calibration preserves empirical content attainment above the nominal tolerance confidence
-in every distribution-level cell. Young--Mathew is a strong nonparametric
-comparator and is slightly shorter on the symmetric reference distributions,
-but it falls below nominal tolerance confidence in nine skewed or heavy-tailed
-cells. In the six asymmetric simulation distributions, TCSP is shorter than
-Young--Mathew in 36 of 54 cells while maintaining nominal tolerance confidence.
-Wilks is simple and reliable, but it is often much
-wider when the scan calibration does not force the full sample range.
+in every distribution-level cell. The selected MTI-ECM rule also stays above
+nominal tolerance confidence in every distribution-level cell and has a smaller
+cellwise median width than TCSP in 31 of 72 cells. Young--Mathew is a strong
+nonparametric comparator and is slightly shorter on the symmetric reference
+distributions, but it falls below nominal tolerance confidence in nine skewed
+or heavy-tailed cells. In the six asymmetric simulation distributions, TCSP and
+MTI-ECM are each shorter than Young--Mathew in 36 of 54 cells while maintaining
+nominal tolerance confidence. Wilks is simple and reliable, but it is often
+much wider when the scan calibration does not force the full sample range.
 
 The supplement gives the distribution-level content-attainment and width tables behind these
-summaries, together with the TCSP retained counts and full-range feasibility
-thresholds used to choose the simulation design. The excluded small-sample cells
-fall outside the region where a two-sided distribution-free tolerance statement
-can be certified at confidence \(0.95\).
-Other diagnostic variants are kept outside the primary comparison.
+summaries, the MTI-ECM profile sensitivity analysis, the TCSP retained counts,
+and the full-range feasibility thresholds used to choose the simulation design.
+The excluded small-sample cells fall outside the region where a two-sided
+distribution-free tolerance statement can be certified at confidence \(0.95\).
+Other variants are kept outside the primary comparison.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -1655,10 +1665,12 @@ tolerance action and gives a class-specific minimum-width property within the
 calibrated empirical scan class. Generalized-Bayes computation begins only after
 the content and tilt are fixed. Tolerance confidence remains attached to the
 scan action, while posterior credibility describes the chosen fixed-target
-generalized posterior. The article validation consequently compares TCSP with
-Young--Mathew and Wilks as tolerance actions. Generalized-posterior endpoint
-summaries become tolerance-certified intervals only with an additional transfer
-or direct-calibration result. A complete finite-sample theorem for the
+generalized posterior. The article validation therefore treats TCSP as the
+formal tolerance action, MTI-ECM as a directly calibrated generalized-Bayes
+comparator, and Young--Mathew and Wilks as classical order-statistic
+comparators. Generalized-posterior endpoint summaries become
+tolerance-certified intervals only with an additional transfer or
+direct-calibration result. A complete finite-sample theorem for the
 closed-window convention still requires an action-matched scan proof and
 certified critical-count calculation.
 

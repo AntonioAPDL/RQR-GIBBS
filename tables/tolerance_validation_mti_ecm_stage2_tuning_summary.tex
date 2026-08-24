@@ -1,0 +1,32 @@
+\begingroup
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.28\textwidth}>{\centering\arraybackslash}p{0.12\textwidth}>{\centering\arraybackslash}p{0.08\textwidth}>{\centering\arraybackslash}p{0.09\textwidth}>{\centering\arraybackslash}p{0.12\textwidth}>{\raggedright\arraybackslash}p{0.22\textwidth}@{}}
+\caption{\textbf{MTI-ECM profile sensitivity summary.} The MTI-ECM comparator reported in the main text is chosen from the same 72 distribution-level validation cells used in the main study. The cellwise width span reports the smallest cellwise 2.5\% width quantile and the largest cellwise 97.5\% width quantile, rather than pooling widths across distributions.}\label{tab:supp-mti-ecm-tuning}\\
+\toprule
+Profile rule & Attainment range (\%) & Cells below 95\% & Median width & Cellwise width span & Decision
+\\
+\midrule
+\endfirsthead
+\toprule
+Profile rule & Attainment range (\%) & Cells below 95\% & Median width & Cellwise width span & Decision
+\\
+\midrule
+\endhead
+Screen 0.980; dense fitted-content grid & 84.5--99.1 & 20 & 3.78 & 1.18--16.67 & Excluded: below-nominal cells \\
+Screen 0.9825; dense fitted-content grid & 87.9--99.6 & 12 & 3.88 & 1.19--22.64 & Excluded: below-nominal cells \\
+Screen 0.985; dense fitted-content grid & 94.2--99.6 & 1 & 4.11 & 1.23--32.92 & Excluded: below-nominal cells \\
+Screen 0.9875; dense fitted-content grid & 95.3--99.6 & 0 & 4.11 & 1.23--32.92 & Sensitivity: wider than selected rule \\
+Screen 0.989; dense fitted-content grid & 95.3--99.6 & 0 & 4.11 & 1.23--32.92 & Excluded: large-width instability \\
+Screen 0.9825; fitted content up to 0.9995 & 87.1--99.0 & 5 & 3.82 & 1.19--22.64 & Excluded: below-nominal cells \\
+Screen 0.985; fitted content up to 0.9995 & 93.9--99.1 & 1 & 3.91 & 1.19--32.87 & Excluded: below-nominal cells \\
+Screen 0.9875; fitted content up to 0.9995 & 95.0--99.6 & 0 & 3.91 & 1.23--32.87 & Sensitivity: slightly lower attainment \\
+Screen 0.989; fitted content up to 0.9995 & 95.1--99.6 & 0 & 3.91 & 1.23--32.87 & Selected for article comparison \\
+Screen 0.985; wider tilt grid & 93.9--99.1 & 1 & 3.91 & 1.19--32.87 & Diagnostic: no gain from wider tilt grid \\
+Screen 0.9875; wider tilt grid & 95.0--99.6 & 0 & 3.91 & 1.23--32.87 & Diagnostic: no gain from wider tilt grid \\
+Screen 0.985; DP concentration 0.5 & 83.8--99.0 & 30 & 3.56 & 1.08--15.16 & Excluded: below-nominal cells \\
+Screen 0.985; DP concentration 2 & 95.0--99.6 & 0 & 4.02 & 1.23--69828.5 & Excluded: large-width instability \\
+Screen 0.985; 200 ECM iterations & 93.6--99.1 & 1 & 3.91 & 1.19--32.87 & Diagnostic: longer run did not fix underattainment \\
+\bottomrule
+\end{longtable}
+\endgroup

@@ -25,6 +25,13 @@ default_primary_dir <- file.path(
 )
 default_primary_results <- file.path(default_primary_dir,
                                      "bayes_uq_validation_results.csv")
+default_mti_ecm_dir <- file.path(
+  "application", "runs",
+  "rqr_bayes_uq_validation_mti_ecm_dp_profile_stage2_tuning_20260823",
+  "wave_confirmatory_mti_ecm_dp_profile_stage2_20260823T230135Z"
+)
+default_mti_ecm_results <- file.path(default_mti_ecm_dir,
+                                     "bayes_uq_validation_results.csv")
 default_young_mathew_results <- ""
 default_small_results <- ""
 default_scan_calibration <- file.path(default_primary_dir,
@@ -39,6 +46,11 @@ young_mathew_path <- arg_value(
   Sys.getenv("RQR_BAYES_UQ_PRIMARY_YM_RESULTS",
              unset = default_young_mathew_results)
 )
+mti_ecm_path <- arg_value(
+  "--mti-ecm-results=",
+  Sys.getenv("RQR_BAYES_UQ_MTI_ECM_RESULTS",
+             unset = default_mti_ecm_results)
+)
 small_path <- arg_value(
   "--small95-results=",
   Sys.getenv("RQR_BAYES_UQ_SMALL95_RESULTS", unset = default_small_results)
@@ -51,6 +63,9 @@ scan_calibration_path <- arg_value(
 output_dir <- normalizePath(arg_value("--output-dir=", "tables"),
                             winslash = "/", mustWork = FALSE)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+selected_mti_ecm_method <- "mti_ecm_dp_profile_tune_p989_deepq_q9995"
+has_mti_ecm_input <- nzchar(mti_ecm_path) && file.exists(mti_ecm_path)
 
 primary_outputs <- c(
   "tolerance_validation_article_scenario_ranges.csv",
@@ -65,7 +80,11 @@ primary_outputs <- c(
   "tolerance_validation_article_dgp_width_ranges.tex",
   "tolerance_validation_article_scan_calibration.csv",
   "tolerance_validation_article_scan_calibration.tex",
-  "tolerance_validation_article_scenario_details.csv"
+  "tolerance_validation_article_scenario_details.csv",
+  "tolerance_validation_mti_ecm_stage2_tuning_summary.csv",
+  "tolerance_validation_mti_ecm_stage2_tuning_summary.tex",
+  "tolerance_validation_mti_ecm_stage2_outlier_audit.csv",
+  "tolerance_validation_mti_ecm_stage2_outlier_audit.tex"
 )
 small_outputs <- c(
   "tolerance_validation_article_small_sample_boundary.csv",
@@ -107,11 +126,13 @@ if (!file.exists(primary_path)) {
 
 primary_supp_method_order <- c(
   "tcsp_mc",
+  if (has_mti_ecm_input) selected_mti_ecm_method,
   "young_mathew",
   "wilks_minmax"
 )
 primary_main_method_order <- c(
   "tcsp_mc",
+  if (has_mti_ecm_input) selected_mti_ecm_method,
   "young_mathew",
   "wilks_minmax"
 )
@@ -127,6 +148,7 @@ small_main_method_order <- c(
 )
 method_labels <- c(
   tcsp_mc = "TCSP",
+  mti_ecm_dp_profile_tune_p989_deepq_q9995 = "MTI-ECM",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks"
 )
@@ -176,8 +198,22 @@ required_columns <- c(
   "dgp_id", "n", "guaranteed_content", "tolerance_confidence",
   "replication", "method_id", "success", "infeasible", "width"
 )
-read_results <- function(path, label) {
-  out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+read_results <- function(path, label, extra_columns = character()) {
+  optional_columns <- c("posterior_confidence")
+  if (requireNamespace("data.table", quietly = TRUE)) {
+    header <- names(data.table::fread(path, nrows = 0L, showProgress = FALSE))
+    selected <- intersect(unique(c(required_columns, optional_columns,
+                                   extra_columns)), header)
+    out <- as.data.frame(data.table::fread(
+      path,
+      select = selected,
+      showProgress = FALSE
+    ))
+  } else {
+    out <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+    selected <- unique(c(required_columns, optional_columns, extra_columns))
+    out <- out[, intersect(selected, names(out)), drop = FALSE]
+  }
   missing <- setdiff(required_columns, names(out))
   if (length(missing)) {
     stopf(label, " is missing column(s): ", paste(missing, collapse = ", "))
@@ -443,6 +479,7 @@ write_dgp_width_tex <- function(widths, path, caption, label) {
   lines <- c(
     "\\begingroup",
     "\\scriptsize",
+    "\\setlength{\\tabcolsep}{2pt}",
     paste0(
       "\\begin{longtable}{@{}",
       ">{\\raggedright\\arraybackslash}p{0.24\\textwidth}",
@@ -617,6 +654,348 @@ write_scan_calibration_tex <- function(scan, path) {
   writeLines(c(lines, body, "\\bottomrule", "\\end{tabular}"), path)
 }
 
+mti_tuning_method_order <- c(
+  "mti_ecm_dp_profile_tune_p980_deepq",
+  "mti_ecm_dp_profile_tune_p9825_deepq",
+  "mti_ecm_dp_profile_tune_p985_deepq",
+  "mti_ecm_dp_profile_tune_p9875_deepq",
+  "mti_ecm_dp_profile_tune_p989_deepq",
+  "mti_ecm_dp_profile_tune_p9825_deepq_q9995",
+  "mti_ecm_dp_profile_tune_p985_deepq_q9995",
+  "mti_ecm_dp_profile_tune_p9875_deepq_q9995",
+  "mti_ecm_dp_profile_tune_p989_deepq_q9995",
+  "mti_ecm_dp_profile_tune_p985_deepq_q9995_widetilt",
+  "mti_ecm_dp_profile_tune_p9875_deepq_q9995_widetilt",
+  "mti_ecm_dp_profile_tune_p985_deepq_q9995_alpha05",
+  "mti_ecm_dp_profile_tune_p985_deepq_q9995_alpha2",
+  "mti_ecm_dp_profile_tune_p985_deepq_q9995_ecm200"
+)
+mti_variant_labels <- c(
+  mti_ecm_dp_profile_tune_p980_deepq =
+    "Screen 0.980; dense fitted-content grid",
+  mti_ecm_dp_profile_tune_p9825_deepq =
+    "Screen 0.9825; dense fitted-content grid",
+  mti_ecm_dp_profile_tune_p985_deepq =
+    "Screen 0.985; dense fitted-content grid",
+  mti_ecm_dp_profile_tune_p9875_deepq =
+    "Screen 0.9875; dense fitted-content grid",
+  mti_ecm_dp_profile_tune_p989_deepq =
+    "Screen 0.989; dense fitted-content grid",
+  mti_ecm_dp_profile_tune_p9825_deepq_q9995 =
+    "Screen 0.9825; fitted content up to 0.9995",
+  mti_ecm_dp_profile_tune_p985_deepq_q9995 =
+    "Screen 0.985; fitted content up to 0.9995",
+  mti_ecm_dp_profile_tune_p9875_deepq_q9995 =
+    "Screen 0.9875; fitted content up to 0.9995",
+  mti_ecm_dp_profile_tune_p989_deepq_q9995 =
+    "Screen 0.989; fitted content up to 0.9995",
+  mti_ecm_dp_profile_tune_p985_deepq_q9995_widetilt =
+    "Screen 0.985; wider tilt grid",
+  mti_ecm_dp_profile_tune_p9875_deepq_q9995_widetilt =
+    "Screen 0.9875; wider tilt grid",
+  mti_ecm_dp_profile_tune_p985_deepq_q9995_alpha05 =
+    "Screen 0.985; DP concentration 0.5",
+  mti_ecm_dp_profile_tune_p985_deepq_q9995_alpha2 =
+    "Screen 0.985; DP concentration 2",
+  mti_ecm_dp_profile_tune_p985_deepq_q9995_ecm200 =
+    "Screen 0.985; 200 ECM iterations"
+)
+mti_variant_label <- function(id) {
+  out <- unname(mti_variant_labels[id])
+  out[is.na(out)] <- id[is.na(out)]
+  out
+}
+mti_decision <- function(id, cells_below_95, max_width) {
+  out <- rep("Diagnostic", length(id))
+  out[id == selected_mti_ecm_method] <- "Selected for article comparison"
+  out[cells_below_95 > 0L] <- "Excluded: below-nominal cells"
+  out[max_width > 1000] <- "Excluded: large-width instability"
+  out[grepl("_widetilt$", id)] <- "Diagnostic: no gain from wider tilt grid"
+  out[grepl("_ecm200$", id)] <- "Diagnostic: longer run did not fix underattainment"
+  out[id == "mti_ecm_dp_profile_tune_p9875_deepq_q9995"] <-
+    "Sensitivity: slightly lower attainment"
+  out[id == "mti_ecm_dp_profile_tune_p9875_deepq"] <-
+    "Sensitivity: wider than selected rule"
+  out[id == selected_mti_ecm_method] <- "Selected for article comparison"
+  out
+}
+mean_or_na <- function(x) {
+  x <- num(x)
+  x <- x[is.finite(x)]
+  if (length(x)) mean(x) else NA_real_
+}
+sum_or_zero <- function(x) {
+  x <- x[is.finite(x)]
+  if (length(x)) sum(x) else 0
+}
+
+mti_ecm_tuning_summary <- function(results) {
+  if (!nrow(results)) {
+    return(data.frame(
+      method_id = character(), variant = character(),
+      selected_for_article = logical(), cells = integer(),
+      replications = integer(), delivery_mean = numeric(),
+      delivery_min = numeric(), delivery_max = numeric(),
+      cells_below_95 = integer(), median_width = numeric(),
+      mean_width = numeric(), width_q025_min = numeric(),
+      width_q975_max = numeric(), max_width = numeric(),
+      widths_above_100 = integer(), ecm_flag_rate = numeric(),
+      median_stationarity = numeric(), decision = character(),
+      stringsAsFactors = FALSE
+    ))
+  }
+  results <- first_ordered_replicate_rows(results)
+  results$infeasible_bool <- truthy(results$infeasible)
+  results$success_bool <- truthy(results$success)
+  results$width <- num(results$width)
+  results$ecm_flag <- if ("ecm_converged" %in% names(results)) {
+    truthy(results$ecm_converged)
+  } else {
+    rep(NA, nrow(results))
+  }
+  results$stationarity <- if ("ecm_final_stationarity" %in% names(results)) {
+    num(results$ecm_final_stationarity)
+  } else {
+    rep(NA_real_, nrow(results))
+  }
+  key <- paste(
+    results$method_id,
+    results$dgp_id,
+    results$n,
+    sprintf("%.4f", results$guaranteed_content),
+    sep = "||"
+  )
+  cell_rows <- lapply(split(results, key), function(df) {
+    finite_width <- is.finite(df$width)
+    data.frame(
+      method_id = df$method_id[[1L]],
+      replications = nrow(df),
+      delivery_success = mean(!df$infeasible_bool & df$success_bool),
+      median_width = median_or_na(df$width),
+      mean_width = mean_or_na(df$width),
+      width_q025 = quantile_or_na(df$width, 0.025),
+      width_q975 = quantile_or_na(df$width, 0.975),
+      max_width = if (any(finite_width)) max(df$width[finite_width]) else NA_real_,
+      widths_above_100 = sum(df$width > 100, na.rm = TRUE),
+      stringsAsFactors = FALSE
+    )
+  })
+  cells <- do.call(rbind, cell_rows)
+  method_rows <- lapply(split(cells, cells$method_id), function(df) {
+    id <- df$method_id[[1L]]
+    raw <- results[results$method_id == id, , drop = FALSE]
+    data.frame(
+      method_id = id,
+      variant = mti_variant_label(id),
+      selected_for_article = identical(id, selected_mti_ecm_method),
+      cells = nrow(df),
+      replications = sum(df$replications),
+      delivery_mean = mean_or_na(df$delivery_success),
+      delivery_min = min_or_na(df$delivery_success),
+      delivery_max = max_or_na(df$delivery_success),
+      cells_below_95 = sum(df$delivery_success < 0.95, na.rm = TRUE),
+      median_width = median_or_na(df$median_width),
+      mean_width = mean_or_na(df$mean_width),
+      width_q025_min = min_or_na(df$width_q025),
+      width_q975_max = max_or_na(df$width_q975),
+      max_width = max_or_na(df$max_width),
+      widths_above_100 = sum_or_zero(df$widths_above_100),
+      ecm_flag_rate = mean_or_na(raw$ecm_flag),
+      median_stationarity = median_or_na(raw$stationarity),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, method_rows)
+  out$decision <- mti_decision(out$method_id, out$cells_below_95,
+                               out$max_width)
+  out <- out[order(match(out$method_id, mti_tuning_method_order)), ,
+             drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+mti_ecm_outlier_audit <- function(results) {
+  if (!nrow(results)) {
+    return(data.frame(
+      method_id = character(), variant = character(),
+      selected_for_article = logical(), max_width = numeric(),
+      widths_above_100 = integer(), location = character(),
+      success_at_max = logical(), ecm_flag_at_max = logical(),
+      stringsAsFactors = FALSE
+    ))
+  }
+  results <- first_ordered_replicate_rows(results)
+  results$width <- num(results$width)
+  results$success_bool <- truthy(results$success)
+  results$ecm_flag <- if ("ecm_converged" %in% names(results)) {
+    truthy(results$ecm_converged)
+  } else {
+    rep(NA, nrow(results))
+  }
+  rows <- lapply(split(results, results$method_id), function(df) {
+    finite <- is.finite(df$width)
+    if (!any(finite)) return(NULL)
+    hit <- df[which.max(ifelse(finite, df$width, -Inf)), , drop = FALSE]
+    data.frame(
+      method_id = hit$method_id[[1L]],
+      variant = mti_variant_label(hit$method_id[[1L]]),
+      selected_for_article = identical(hit$method_id[[1L]],
+                                       selected_mti_ecm_method),
+      max_width = hit$width[[1L]],
+      widths_above_100 = sum(df$width > 100, na.rm = TRUE),
+      location = sprintf("%s, n=%s, c=%.2f",
+                         dgp_labels[hit$dgp_id[[1L]]],
+                         as.integer(hit$n[[1L]]),
+                         num(hit$guaranteed_content[[1L]])),
+      success_at_max = hit$success_bool[[1L]],
+      ecm_flag_at_max = hit$ecm_flag[[1L]],
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, rows)
+  out <- out[order(match(out$method_id, mti_tuning_method_order)), ,
+             drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+format_bool <- function(x) {
+  ifelse(is.na(x), "--", ifelse(x, "yes", "no"))
+}
+
+write_mti_ecm_tuning_tex <- function(summary, path) {
+  lines <- c(
+    "\\begingroup",
+    "\\scriptsize",
+    "\\setlength{\\tabcolsep}{2pt}",
+    paste0(
+      "\\begin{longtable}{@{}",
+      ">{\\raggedright\\arraybackslash}p{0.28\\textwidth}",
+      ">{\\centering\\arraybackslash}p{0.12\\textwidth}",
+      ">{\\centering\\arraybackslash}p{0.08\\textwidth}",
+      ">{\\centering\\arraybackslash}p{0.09\\textwidth}",
+      ">{\\centering\\arraybackslash}p{0.12\\textwidth}",
+      ">{\\raggedright\\arraybackslash}p{0.22\\textwidth}@{}}"
+    ),
+    paste0(
+      "\\caption{\\textbf{MTI-ECM profile sensitivity summary.} ",
+      "The MTI-ECM comparator reported in the main text is chosen from the same 72 ",
+      "distribution-level validation cells used in the main study. ",
+      "The cellwise width span reports the smallest cellwise 2.5\\% width ",
+      "quantile and the largest cellwise 97.5\\% width quantile, rather ",
+      "than pooling widths across distributions.}\\label{tab:supp-mti-ecm-tuning}\\\\"
+    ),
+    "\\toprule",
+    paste(
+      "Profile rule",
+      "Attainment range (\\%)",
+      "Cells below 95\\%",
+      "Median width",
+      "Cellwise width span",
+      "Decision",
+      sep = " & "
+    ),
+    "\\\\",
+    "\\midrule",
+    "\\endfirsthead",
+    "\\toprule",
+    paste(
+      "Profile rule",
+      "Attainment range (\\%)",
+      "Cells below 95\\%",
+      "Median width",
+      "Cellwise width span",
+      "Decision",
+      sep = " & "
+    ),
+    "\\\\",
+    "\\midrule",
+    "\\endhead"
+  )
+  if (!nrow(summary)) {
+    writeLines(c(
+      lines,
+      "\\multicolumn{6}{@{}l@{}}{No MTI-ECM tuning input was provided.}\\\\",
+      "\\bottomrule", "\\end{longtable}", "\\endgroup"
+    ), path)
+    return(invisible(path))
+  }
+  body <- vapply(seq_len(nrow(summary)), function(ii) {
+    sprintf(
+      "%s & %s & %s & %s & %s & %s \\\\",
+      escape_latex(summary$variant[[ii]]),
+      format_range(summary$delivery_min[[ii]], summary$delivery_max[[ii]]),
+      as.integer(summary$cells_below_95[[ii]]),
+      format_num(summary$median_width[[ii]], 2),
+      format_width_range(summary$width_q025_min[[ii]],
+                         summary$width_q975_max[[ii]]),
+      escape_latex(summary$decision[[ii]])
+    )
+  }, character(1L))
+  writeLines(c(lines, body, "\\bottomrule", "\\end{longtable}", "\\endgroup"),
+             path)
+}
+
+write_mti_ecm_outlier_tex <- function(audit, path) {
+  lines <- c(
+    "\\begingroup",
+    "\\scriptsize",
+    paste0(
+      "\\begin{longtable}{@{}",
+      ">{\\raggedright\\arraybackslash}p{0.34\\textwidth}",
+      ">{\\centering\\arraybackslash}p{0.12\\textwidth}",
+      ">{\\centering\\arraybackslash}p{0.12\\textwidth}",
+      ">{\\raggedright\\arraybackslash}p{0.34\\textwidth}@{}}"
+    ),
+    paste0(
+      "\\caption{\\textbf{MTI-ECM large-width sensitivity summary.} ",
+      "The table records the maximum width observed for each tuning ",
+      "variant and the distribution-level cell where it occurred.}\\label{tab:supp-mti-ecm-outliers}\\\\"
+    ),
+    "\\toprule",
+    paste(
+      "Profile rule",
+      "Maximum width",
+      "Widths above 100",
+      "Location of maximum",
+      sep = " & "
+    ),
+    "\\\\",
+    "\\midrule",
+    "\\endfirsthead",
+    "\\toprule",
+    paste(
+      "Profile rule",
+      "Maximum width",
+      "Widths above 100",
+      "Location of maximum",
+      sep = " & "
+    ),
+    "\\\\",
+    "\\midrule",
+    "\\endhead"
+  )
+  if (!nrow(audit)) {
+    writeLines(c(
+      lines,
+      "\\multicolumn{4}{@{}l@{}}{No MTI-ECM tuning input was provided.}\\\\",
+      "\\bottomrule", "\\end{longtable}", "\\endgroup"
+    ), path)
+    return(invisible(path))
+  }
+  body <- vapply(seq_len(nrow(audit)), function(ii) {
+    sprintf(
+      "%s & %s & %s & %s \\\\",
+      escape_latex(audit$variant[[ii]]),
+      format_num(audit$max_width[[ii]], 1),
+      as.integer(audit$widths_above_100[[ii]]),
+      escape_latex(audit$location[[ii]])
+    )
+  }, character(1L))
+  writeLines(c(lines, body, "\\bottomrule", "\\end{longtable}", "\\endgroup"),
+             path)
+}
+
 primary <- read_results(primary_path, "Primary validation results")
 if (file.exists(young_mathew_path) &&
     !any(primary$method_id == "young_mathew")) {
@@ -625,7 +1004,24 @@ if (file.exists(young_mathew_path) &&
     read_results(young_mathew_path, "Young--Mathew add-on results")
   )
 }
-primary <- first_ordered_replicate_rows(primary)
+mti_ecm <- if (has_mti_ecm_input) {
+  read_results(
+    mti_ecm_path,
+    "MTI-ECM stage-2 tuning results",
+    extra_columns = c("ecm_converged", "ecm_final_stationarity")
+  )
+} else {
+  primary[0L, , drop = FALSE]
+}
+if (has_mti_ecm_input &&
+    !any(mti_ecm$method_id == selected_mti_ecm_method)) {
+  stopf("MTI-ECM input does not contain selected method: ",
+        selected_mti_ecm_method)
+}
+primary <- first_ordered_replicate_rows(bind_fill(
+  primary,
+  mti_ecm[mti_ecm$method_id == selected_mti_ecm_method, , drop = FALSE]
+))
 small <- if (nzchar(small_path) && file.exists(small_path)) {
   first_ordered_replicate_rows(
     read_results(small_path, "Small-sample validation results")
@@ -660,6 +1056,8 @@ primary_dgp_widths <- dgp_width_ranges(primary_detail,
 small_dgp_widths <- dgp_width_ranges(small_boundary_detail,
                                      small_main_method_order)
 scan_calibration <- scan_calibration_table(scan_calibration_path)
+mti_ecm_tuning <- mti_ecm_tuning_summary(mti_ecm)
+mti_ecm_outliers <- mti_ecm_outlier_audit(mti_ecm)
 
 primary_delivery <- wide_delivery(primary_detail, primary_supp_method_order)
 small_delivery <- wide_delivery(small_boundary_detail, small_supp_method_order)
@@ -683,6 +1081,14 @@ utils::write.csv(scan_calibration,
 utils::write.csv(primary_detail,
                  file.path(output_dir,
                            "tolerance_validation_article_scenario_details.csv"),
+                 row.names = FALSE)
+utils::write.csv(mti_ecm_tuning,
+                 file.path(output_dir,
+                           "tolerance_validation_mti_ecm_stage2_tuning_summary.csv"),
+                 row.names = FALSE)
+utils::write.csv(mti_ecm_outliers,
+                 file.path(output_dir,
+                           "tolerance_validation_mti_ecm_stage2_outlier_audit.csv"),
                  row.names = FALSE)
 if (has_small_boundary) {
   utils::write.csv(small_boundary,
@@ -722,7 +1128,7 @@ write_wide_delivery_tex(
   primary_delivery,
   file.path(output_dir, "tolerance_validation_article_dgp_delivery.tex"),
   primary_supp_method_order,
-  "\\textbf{Distribution-level tolerance-validation content attainment.} Entries are percentages of replications in which the produced interval attained the requested population content for the three reported methods at tolerance confidence \\(0.95\\). Intervals not produced are counted as nonattainment.",
+  "\\textbf{Distribution-level tolerance-validation content attainment.} Entries are percentages of replications in which the produced interval attained the requested population content for the reported methods at tolerance confidence \\(0.95\\). Intervals not produced are counted as nonattainment.",
   "tab:supp-primary-dgp-delivery"
 )
 write_dgp_width_tex(
@@ -734,6 +1140,14 @@ write_dgp_width_tex(
 write_scan_calibration_tex(
   scan_calibration,
   file.path(output_dir, "tolerance_validation_article_scan_calibration.tex")
+)
+write_mti_ecm_tuning_tex(
+  mti_ecm_tuning,
+  file.path(output_dir, "tolerance_validation_mti_ecm_stage2_tuning_summary.tex")
+)
+write_mti_ecm_outlier_tex(
+  mti_ecm_outliers,
+  file.path(output_dir, "tolerance_validation_mti_ecm_stage2_outlier_audit.tex")
 )
 if (has_small_boundary) {
   write_range_tex(
