@@ -19,6 +19,7 @@ rqr_mti_ecm_dp_profile_action(
   beta_prior_obj = NULL,
   ecm_control = list(),
   expand_if_empty = TRUE,
+  return_candidate_traces = FALSE,
   na_rm = FALSE
 )
 
@@ -63,14 +64,18 @@ grid is built from \code{content}, sample size, and
 \item{expand_if_empty}{Expand the profile grid once if no candidate passes the
 DP screen.}
 
+\item{return_candidate_traces}{Return per-iteration ECM traces for every
+fitted profile candidate. This option is intended for focused diagnostics and
+is \code{FALSE} by default to keep validation outputs compact.}
+
 \item{na_rm}{Remove missing responses.}
 
 \item{...}{Arguments passed to \code{rqr_mti_ecm_dp_profile_action()}.}
 }
 \value{
 An \code{rqr_mti_ecm_dp_profile_action} object with the selected interval,
-candidate table, direct-DP content probabilities, ECM diagnostics, and
-provenance fields.
+candidate table, optional candidate traces, direct-DP content probabilities,
+ECM diagnostics, and provenance fields.
 }
 \description{
 Searches fixed-target MTI-ECM endpoint candidates over a grid of fitted

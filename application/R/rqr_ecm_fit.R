@@ -134,7 +134,14 @@
     root_swap_after_cycle = FALSE,
     precision_repairs = 0L,
     condition_number_root1 = NA_real_,
-    condition_number_root2 = NA_real_
+    condition_number_root2 = NA_real_,
+    root1 = if (length(beta1) == 1L) beta1[[1L]] else NA_real_,
+    root2 = if (length(beta2) == 1L) beta2[[1L]] else NA_real_,
+    width = if (length(beta1) == 1L && length(beta2) == 1L) {
+      beta2[[1L]] - beta1[[1L]]
+    } else {
+      NA_real_
+    }
   ))
 
   convergence_code <- "max_iter_reached"
@@ -291,7 +298,14 @@
         root_swap_after_cycle = swapped,
         precision_repairs = as.integer(mean1$repair_count + mean2$repair_count),
         condition_number_root1 = mean1$condition_number,
-        condition_number_root2 = mean2$condition_number
+        condition_number_root2 = mean2$condition_number,
+        root1 = if (length(beta1) == 1L) beta1[[1L]] else NA_real_,
+        root2 = if (length(beta2) == 1L) beta2[[1L]] else NA_real_,
+        width = if (length(beta1) == 1L && length(beta2) == 1L) {
+          beta2[[1L]] - beta1[[1L]]
+        } else {
+          NA_real_
+        }
       )
       if (isTRUE(control$verbose)) {
         message(sprintf(

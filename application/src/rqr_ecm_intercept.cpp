@@ -268,13 +268,17 @@ Rcpp::List rqr_ecm_intercept_run_cpp(
   std::vector<int> trace_repairs;
   std::vector<double> trace_cond1;
   std::vector<double> trace_cond2;
+  std::vector<double> trace_root1;
+  std::vector<double> trace_root2;
+  std::vector<double> trace_width;
 
   auto add_trace = [&](const int stage, const int iteration,
                        const double objective, const double rel_obj,
                        const double rel_param, const double stat,
                        const double min_abs, const double floor,
                        const int backtracking, const double step,
-                       const bool swapped) {
+                       const bool swapped, const double root1,
+                       const double root2) {
     trace_label.push_back(start_label);
     trace_stage.push_back(stage);
     trace_iteration.push_back(iteration);
@@ -290,10 +294,13 @@ Rcpp::List rqr_ecm_intercept_run_cpp(
     trace_repairs.push_back(0);
     trace_cond1.push_back(1.0);
     trace_cond2.push_back(1.0);
+    trace_root1.push_back(root1);
+    trace_root2.push_back(root2);
+    trace_width.push_back(root2 - root1);
   };
 
   add_trace(0, 0, obj, NA_REAL, NA_REAL, NA_REAL, min_abs0, NA_REAL,
-            0, 0.0, false);
+            0, 0.0, false, b1, b2);
 
   std::string convergence_code = "max_iter_reached";
   bool converged = false;
@@ -410,7 +417,7 @@ Rcpp::List rqr_ecm_intercept_run_cpp(
       add_trace(static_cast<int>(stage + 1), iterations, obj,
                 relative_objective_change, relative_parameter_change,
                 stat_max, stat_min, floor_current, backtracking_steps,
-                step_size, swapped_before);
+                step_size, swapped_before, b1, b2);
     }
   }
 
@@ -433,7 +440,10 @@ Rcpp::List rqr_ecm_intercept_run_cpp(
     Rcpp::Named("root_swap_after_cycle") = trace_swapped,
     Rcpp::Named("precision_repairs") = trace_repairs,
     Rcpp::Named("condition_number_root1") = trace_cond1,
-    Rcpp::Named("condition_number_root2") = trace_cond2
+    Rcpp::Named("condition_number_root2") = trace_cond2,
+    Rcpp::Named("root1") = trace_root1,
+    Rcpp::Named("root2") = trace_root2,
+    Rcpp::Named("width") = trace_width
   );
 
   return Rcpp::List::create(

@@ -108,7 +108,7 @@
 
 .rqr_mti_profile_ecm_row <- function(
     y, X, q, delta, central, learning_rate, beta_prior_obj, ecm_control,
-    candidate_index) {
+    candidate_index, return_trace = FALSE) {
   start_shift <- delta - central$central_tilt
   init <- list(
     beta1 = c(central$endpoints[["lower"]] + start_shift),
@@ -128,7 +128,7 @@
     error = function(e) e
   )
   if (inherits(fit, "error")) {
-    return(data.frame(
+    row <- data.frame(
       candidate_index = as.integer(candidate_index),
       target_content = q,
       mean_tilt = delta,
@@ -147,7 +147,9 @@
       finite_interval = FALSE,
       failure_reason = conditionMessage(fit),
       stringsAsFactors = FALSE
-    ))
+    )
+    if (!isTRUE(return_trace)) return(row)
+    return(list(row = row, trace = data.frame()))
   }
   pred <- predict_interval(fit, X_new = X[1L, , drop = FALSE])
   lower <- as.numeric(pred$lower)[1L]
@@ -155,7 +157,7 @@
   finite_interval <- is.finite(lower) && is.finite(upper) && upper >= lower
   stationarity <- fit$stationarity_diagnostic$max_abs_midpoint_gradient %||%
     NA_real_
-  data.frame(
+  row <- data.frame(
     candidate_index = as.integer(candidate_index),
     target_content = q,
     mean_tilt = delta,
@@ -184,6 +186,24 @@
     failure_reason = "",
     stringsAsFactors = FALSE
   )
+  if (!isTRUE(return_trace)) return(row)
+  trace <- fit$objective_trace
+  if (is.null(trace) || !nrow(trace)) {
+    trace <- data.frame()
+  } else {
+    trace$candidate_index <- as.integer(candidate_index)
+    trace$target_content <- as.numeric(q)
+    trace$mean_tilt <- as.numeric(delta)
+    trace$central_tilt <- as.numeric(central$central_tilt)
+    trace$final_lower <- lower
+    trace$final_upper <- upper
+    trace$final_width <- upper - lower
+    trace$ecm_converged <- isTRUE(fit$converged)
+    trace$ecm_iterations <- as.integer(fit$iterations %||% NA_integer_)
+    trace$ecm_backend <- fit$ecm_backend %||% fit$model_spec$ecm_backend %||%
+      ecm_control$ecm_backend %||% NA_character_
+  }
+  list(row = row, trace = trace)
 }
 
 #' DP-calibrated MTI-ECM profile action
@@ -219,6 +239,9 @@
 #'   `ecm_backend = "cpp"`.
 #' @param expand_if_empty Expand the profile grid once if no candidate passes
 #'   the DP screen.
+#' @param return_candidate_traces Return per-iteration ECM traces for every
+#'   fitted profile candidate. This is intended for focused diagnostics and is
+#'   `FALSE` by default to keep validation outputs compact.
 #' @param na_rm Remove missing responses.
 #' @return An `rqr_mti_ecm_dp_profile_action` object.
 #' @export
@@ -228,7 +251,7 @@ rqr_mti_ecm_dp_profile_action <- function(
     strict_bayes = TRUE, scan_target_content = NA_real_, q_grid = NULL,
     q_grid_control = list(), tilt_grid_control = list(), learning_rate = 1,
     beta_prior_obj = NULL, ecm_control = list(), expand_if_empty = TRUE,
-    na_rm = FALSE) {
+    return_candidate_traces = FALSE, na_rm = FALSE) {
   y <- .rqr_bayes_clean_y(y, na_rm = na_rm)
   if (length(y) < 2L) stop("At least two observations are required.",
                            call. = FALSE)
@@ -285,9 +308,10 @@ rqr_mti_ecm_dp_profile_action <- function(
     strict_bayes = strict_bayes
   )
   X <- matrix(1, length(y), 1L, dimnames = list(NULL, "(Intercept)"))
-  build_candidates <- function(grid, expanded = FALSE) {
+  trace_blocks <- list()
+  build_candidates <- function(grid, expanded = FALSE, index_offset = 0L) {
     rows <- list()
-    index <- 0L
+    local_index <- 0L
     for (q in grid) {
       central <- do.call(
         .rqr_mti_profile_tilt_values,
@@ -297,8 +321,9 @@ rqr_mti_ecm_dp_profile_action <- function(
         )
       )
       for (delta in central$values) {
-        index <- index + 1L
-        row <- .rqr_mti_profile_ecm_row(
+        local_index <- local_index + 1L
+        candidate_index <- index_offset + local_index
+        candidate <- .rqr_mti_profile_ecm_row(
           y = y,
           X = X,
           q = q,
@@ -307,20 +332,31 @@ rqr_mti_ecm_dp_profile_action <- function(
           learning_rate = learning_rate,
           beta_prior_obj = beta_prior_obj,
           ecm_control = ecm_control,
-          candidate_index = index
+          candidate_index = candidate_index,
+          return_trace = return_candidate_traces
         )
+        if (isTRUE(return_candidate_traces)) {
+          row <- candidate$row
+          trace <- candidate$trace
+          if (!is.null(trace) && nrow(trace)) {
+            trace$grid_expanded <- isTRUE(expanded)
+            trace_blocks[[length(trace_blocks) + 1L]] <<- trace
+          }
+        } else {
+          row <- candidate
+        }
         row$tilt_rule <- central$tilt_rule
         row$mti_tilt_lower_count <- central$lower_count
         row$mti_tilt_upper_count <- central$upper_count
         row$mti_tilt_interpolation_weight <-
           central$interpolation_weight_lower
         row$grid_expanded <- isTRUE(expanded)
-        rows[[index]] <- row
+        rows[[length(rows) + 1L]] <- row
       }
     }
     do.call(rbind, rows)
   }
-  candidates <- build_candidates(q_grid, expanded = FALSE)
+  candidates <- build_candidates(q_grid, expanded = FALSE, index_offset = 0L)
   finite <- candidates$finite_interval
   candidates$posterior_content_probability <- NA_real_
   candidates$posterior_mean_content <- NA_real_
@@ -358,7 +394,9 @@ rqr_mti_ecm_dp_profile_action <- function(
     )
     expanded_q <- setdiff(expanded_q, q_grid)
     if (length(expanded_q)) {
-      more <- build_candidates(expanded_q, expanded = TRUE)
+      more <- build_candidates(
+        expanded_q, expanded = TRUE, index_offset = nrow(candidates)
+      )
       finite_more <- more$finite_interval
       more$posterior_content_probability <- NA_real_
       more$posterior_mean_content <- NA_real_
@@ -382,7 +420,6 @@ rqr_mti_ecm_dp_profile_action <- function(
         is.finite(more$posterior_content_probability) &
         more$posterior_content_probability >= post_conf
       candidates <- rbind(candidates, more)
-      candidates$candidate_index <- seq_len(nrow(candidates))
     }
   }
 
@@ -407,6 +444,25 @@ rqr_mti_ecm_dp_profile_action <- function(
     status <- "infeasible_within_profile_grid"
   }
 
+  candidate_traces <- if (isTRUE(return_candidate_traces) &&
+                          length(trace_blocks)) {
+    do.call(rbind, trace_blocks)
+  } else {
+    NULL
+  }
+  if (!is.null(candidate_traces) && nrow(candidate_traces)) {
+    trace_match <- match(candidate_traces$candidate_index,
+                         candidates$candidate_index)
+    candidate_traces$posterior_content_probability <-
+      candidates$posterior_content_probability[trace_match]
+    candidate_traces$posterior_constraint_satisfied <-
+      candidates$posterior_constraint_satisfied[trace_match]
+    candidate_traces$candidate_finite_interval <-
+      candidates$finite_interval[trace_match]
+    candidate_traces$candidate_selected <-
+      candidate_traces$candidate_index %in% selected$candidate_index
+  }
+
   out <- list(
     schema_version = .rqr_mti_profile_schema(),
     method = "profile_calibrated_mti_ecm_with_direct_dp_content_screen",
@@ -417,6 +473,7 @@ rqr_mti_ecm_dp_profile_action <- function(
     profile_grid_expanded = expanded,
     selected = selected,
     candidates = candidates,
+    candidate_traces = candidate_traces,
     candidates_evaluated = nrow(candidates),
     feasible_count = nrow(feasible),
     posterior_constraint_status = status,
@@ -430,6 +487,11 @@ rqr_mti_ecm_dp_profile_action <- function(
     provenance = .rqr_bayes_provenance(extra = list(
       profile_grid_digest = .rqr_bayes_digest(q_grid),
       candidate_digest = .rqr_bayes_digest(candidates),
+      candidate_trace_digest = if (!is.null(candidate_traces)) {
+        .rqr_bayes_digest(candidate_traces)
+      } else {
+        NA_character_
+      },
       dp_fit_digest = fit_dp$provenance_digest,
       ecm_control = ecm_control
     ))
