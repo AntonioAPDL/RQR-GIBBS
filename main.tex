@@ -1576,7 +1576,7 @@ reported methods returned an interval in every replication in this run.}
 \caption{\textbf{Content-attainment by sample size and target content.}
 Intervals not produced are counted as nonattainment.
 Vertical intervals in the content-attainment panels show the range across
-distributional scenarios, and the axis is zoomed to \(0.90\)--\(1.00\).
+distributional scenarios, and the axis is zoomed to \(0.85\)--\(1.00\).
 Dashed reference lines mark nominal tolerance confidence \(0.95\).}
 \label{fig:tolerance-validation-primary}
 \end{figure}
@@ -1605,7 +1605,10 @@ calibration preserves empirical content attainment above the nominal tolerance c
 in every distribution-level cell. The selected MTI-ECM rule is more efficient
 but less uniformly conservative: it falls below nominal tolerance confidence in
 eight of 72 cells and has a smaller cellwise median width than TCSP in 64 of
-72 cells. Young--Mathew is a strong nonparametric comparator and is slightly
+72 cells. The weakest MTI-ECM cells occur when the profiled fitted content is
+near one, where small endpoint changes have large effects on the unattained
+tail probability and several ECM fits reach the maximum number of ECM
+iterations. Young--Mathew is a strong nonparametric comparator and is slightly
 shorter on the symmetric reference distributions, but it falls below nominal
 tolerance confidence in nine skewed or heavy-tailed cells. In the six
 asymmetric simulation distributions, TCSP and MTI-ECM are each shorter than

@@ -50,6 +50,10 @@ scenario_range_csv <- arg_value(
   file.path("tables", "tolerance_validation_article_scenario_ranges.csv")
 )
 legacy_stratified_csv <- arg_value("--stratified-csv=", "")
+delivery_y_min <- as.numeric(arg_value("--delivery-y-min=", "0.85"))
+if (!is.finite(delivery_y_min) || delivery_y_min >= 0.95 || delivery_y_min < 0) {
+  stopf("--delivery-y-min must be a finite value in [0, 0.95).")
+}
 output_dir <- normalizePath(arg_value("--output-dir=", "figures/generated"),
                             winslash = "/", mustWork = FALSE)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -301,9 +305,12 @@ draw_interval_panel <- function(nn, lower_col, upper_col, ylab, main,
   content_positions <- seq_along(panel_contents)
   names(content_positions) <- sprintf("%.12g", panel_contents)
   plot(NA_real_, NA_real_, xlim = range(content_positions) + c(-0.45, 0.45),
-       ylim = ylim, xaxt = "n", xlab = "Target content c",
+       ylim = ylim, xaxt = "n", yaxt = "n", xlab = "Target content c",
        ylab = ylab, main = main, bty = "l")
   axis(1, at = content_positions, labels = sprintf("%.2f", panel_contents))
+  axis_ticks <- sort(unique(c(ylim[[1L]], 0.90, 0.95, 1.00)))
+  axis_ticks <- axis_ticks[axis_ticks >= ylim[[1L]] & axis_ticks <= ylim[[2L]]]
+  axis(2, at = axis_ticks, labels = sprintf("%.2f", axis_ticks))
   if (length(content_positions) > 1L) {
     abline(v = content_positions[-length(content_positions)] + 0.5,
            col = "gray92", lwd = 0.8)
@@ -337,7 +344,7 @@ for (nn in sample_sizes) {
   draw_interval_panel(nn, "delivery_min", "delivery_max",
                       "Content-attainment rate",
                       sprintf("n = %s", nn),
-                      0.95, c(0.9, 1.0))
+                      0.95, c(delivery_y_min, 1.0))
 }
 if (any(panel_matrix == 0L)) {
   plot.new()
