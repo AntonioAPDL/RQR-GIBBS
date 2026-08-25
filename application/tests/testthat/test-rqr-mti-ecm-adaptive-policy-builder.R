@@ -63,3 +63,90 @@ test_that("adaptive MTI-ECM policy builder writes configured cell decisions", {
   expect_equal(out$bound_confidence, 0.50)
   expect_true(nzchar(out$input_results_digest))
 })
+
+test_that("adaptive MTI-ECM policy builder supports pooled cell deployment", {
+  script <- test_path(
+    "..", "..", "scripts", "82_build_mti_ecm_adaptive_policy.R"
+  )
+  skip_if_not(file.exists(script), "policy builder is outside package build")
+
+  rows <- list()
+  idx <- 0L
+  add_rows <- function(method_id, dgp_id, n, content, tol_conf, successes,
+                       reps, width_base, screen) {
+    for (rr in seq_len(reps)) {
+      idx <<- idx + 1L
+      rows[[idx]] <<- data.frame(
+        method_id = method_id,
+        dgp_id = dgp_id,
+        n = n,
+        guaranteed_content = content,
+        tolerance_confidence = tol_conf,
+        replication = rr,
+        success = rr <= successes,
+        infeasible = FALSE,
+        width = width_base + rr / 1000,
+        effective_posterior_confidence = screen,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  add_rows("mti_ecm_adaptive_screen_p980", "hard_left", 20, 0.50, 0.80,
+           successes = 7, reps = 10, width_base = 2, screen = 0.980)
+  add_rows("mti_ecm_adaptive_screen_p980", "hard_right", 20, 0.50, 0.80,
+           successes = 10, reps = 10, width_base = 2, screen = 0.980)
+  add_rows("mti_ecm_adaptive_screen_p985", "hard_left", 20, 0.50, 0.80,
+           successes = 10, reps = 10, width_base = 3, screen = 0.985)
+  add_rows("mti_ecm_adaptive_screen_p985", "hard_right", 20, 0.50, 0.80,
+           successes = 10, reps = 10, width_base = 3, screen = 0.985)
+
+  input <- tempfile("adaptive-pooled-input-", fileext = ".csv")
+  output <- tempfile("adaptive-pooled-output-", fileext = ".csv")
+  diagnostics <- tempfile("adaptive-pooled-diagnostics-", fileext = ".csv")
+  write.csv(do.call(rbind, rows), input, row.names = FALSE)
+
+  status <- system2(
+    "Rscript",
+    c(
+      script,
+      paste0("--results=", input),
+      paste0("--output=", output),
+      paste0("--diagnostics-output=", diagnostics),
+      "--policy-id=pooled_policy",
+      "--selection=pooled-cell",
+      "--method-pattern=^mti_ecm_adaptive_screen_",
+      "--bound-method=wilson",
+      "--bound-confidence=0.50",
+      "--margin=0"
+    ),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  exit_status <- attr(status, "status")
+  if (is.null(exit_status)) exit_status <- 0L
+  expect_equal(exit_status, 0L, info = paste(status, collapse = "\n"))
+
+  out <- read.csv(output)
+  expect_equal(nrow(out), 1L)
+  expect_equal(out$policy_id, "pooled_policy")
+  expect_equal(out$method_id, "mti_ecm_adaptive_cell")
+  expect_equal(out$selection_rule, "pooled-cell")
+  expect_equal(out$source_method_id, "mti_ecm_adaptive_screen_p980")
+  expect_equal(out$calibration_scope, "pooled_cell")
+  expect_equal(out$calibration_replications, 20L)
+  expect_equal(out$calibration_successes, 17L)
+  expect_equal(out$screen, 0.980)
+
+  diag <- read.csv(diagnostics)
+  expect_true(all(c("pooled_cell", "distribution_cell") %in%
+                    diag$calibration_scope))
+  hard_left <- diag[
+    diag$calibration_scope == "distribution_cell" &
+      diag$source_method_id == "mti_ecm_adaptive_screen_p980" &
+      diag$dgp_id == "hard_left",
+    ,
+    drop = FALSE
+  ]
+  expect_equal(nrow(hard_left), 1L)
+  expect_false(hard_left$admissible)
+})

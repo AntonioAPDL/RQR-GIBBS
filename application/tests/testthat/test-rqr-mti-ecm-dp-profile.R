@@ -500,6 +500,39 @@ test_that("adaptive MTI-ECM calibration config freezes candidate scope", {
   expect_equal(config$modes$confirmatory$replications, 1000)
 })
 
+test_that("adaptive MTI-ECM selected config freezes deployed cell policy", {
+  path <- test_path(
+    "..", "..", "config",
+    "rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825.json"
+  )
+  skip_if_not(file.exists(path), "validation config is outside package build")
+  config <- jsonlite::read_json(path, simplifyVector = FALSE)
+  methods <- vapply(config$methods, `[[`, character(1L), "method_id")
+
+  expect_equal(
+    config$study_id,
+    "rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825"
+  )
+  expect_equal(methods, "mti_ecm_adaptive_cell")
+  expect_equal(config$adaptive_mti_ecm$policy_id,
+               "mti_ecm_adaptive_cell_pooled_20260825")
+  repo_root <- normalizePath(test_path("..", "..", ".."),
+                             winslash = "/", mustWork = TRUE)
+  expect_true(file.exists(file.path(
+    repo_root, config$adaptive_mti_ecm$frozen_policy_path
+  )))
+  expect_true(file.exists(file.path(
+    repo_root, config$adaptive_mti_ecm$diagnostics_path
+  )))
+  expect_true(isTRUE(config$methods[[1L]]$deployable))
+  expect_true(isTRUE(config$methods[[1L]]$adaptive_mti_ecm_profile))
+  expect_equal(
+    config$methods[[1L]]$profile_config$frozen_policy_path,
+    config$adaptive_mti_ecm$frozen_policy_path
+  )
+  expect_equal(config$modes$confirmatory$replications, 1000)
+})
+
 test_that("validation worker records adaptive MTI-ECM menu diagnostics", {
   base_path <- test_path(
     "..", "..", "config",
@@ -581,4 +614,81 @@ test_that("validation worker records adaptive MTI-ECM menu diagnostics", {
   expect_true(is.finite(results$sample_bowley_skewness))
   expect_true(is.finite(results$sample_tail_ratio))
   expect_equal(results$effective_posterior_confidence, 0.985)
+})
+
+test_that("validation worker consumes frozen adaptive MTI-ECM policy", {
+  base_path <- test_path(
+    "..", "..", "config",
+    "rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825.json"
+  )
+  script <- test_path("..", "..", "scripts", "69_validate_rqr_bayes_uq.R")
+  skip_if_not(file.exists(base_path) && file.exists(script),
+              "validation launcher files are outside package build")
+  config <- jsonlite::read_json(base_path, simplifyVector = FALSE)
+  config$modes$smoke$replications <- 1
+  config$modes$smoke$dgp_ids <- list("normal")
+  config$modes$smoke$design_cells <- list(list(
+    cell_id = "n0050_c090_t095",
+    n = 50,
+    guaranteed_content = 0.90,
+    tolerance_confidence = 0.95
+  ))
+  config$modes$smoke$sample_sizes <- list(50)
+  config$modes$smoke$guaranteed_contents <- list(0.90)
+  config$modes$smoke$tolerance_confidences <- list(0.95)
+  config$modes$smoke$posterior_confidences <- list(0.95)
+  config$modes$smoke$scan_n_sim <- 100
+  config$modes$smoke$scan_numerical_confidence <- 0.80
+  config$modes$smoke$scan_adaptive_control <- list(
+    initial_n_sim = 100,
+    batch_n_sim = 100,
+    max_n_sim = 200,
+    max_looks = 2,
+    stable_looks = 1
+  )
+  config$engine_defaults$mti_ecm_dp_profile$tilt_grid_control <- list(
+    tilt_offsets_sd = list(0),
+    include_zero_tilt = TRUE,
+    max_abs_tilt_sd = 2
+  )
+  config$engine_defaults$mti_ecm_dp_profile$ecm_control <- list(
+    max_iter = 25,
+    tol_stationarity = 1e6,
+    stable_iterations = 1,
+    residual_product_floor = 1e-8,
+    multistart = FALSE,
+    store_iteration_trace = FALSE,
+    ecm_backend = "cpp"
+  )
+
+  config_path <- tempfile("mti-ecm-adaptive-selected-config-", fileext = ".json")
+  output_dir <- tempfile("mti-ecm-adaptive-selected-smoke-")
+  jsonlite::write_json(config, config_path, auto_unbox = TRUE, pretty = TRUE)
+  status <- system2(
+    "Rscript",
+    c(
+      script,
+      "--mode=smoke",
+      paste0("--config=", config_path),
+      paste0("--output-dir=", output_dir),
+      "--wave-id=mti_ecm_adaptive_selected_smoke"
+    ),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  exit_status <- attr(status, "status")
+  if (is.null(exit_status)) exit_status <- 0L
+  expect_equal(exit_status, 0L, info = paste(status, collapse = "\n"))
+
+  results <- read.csv(file.path(output_dir, "bayes_uq_validation_results.csv"))
+  expect_equal(nrow(results), 1L)
+  expect_equal(results$method_id, "mti_ecm_adaptive_cell")
+  expect_equal(results$adaptive_policy_id,
+               "mti_ecm_adaptive_cell_pooled_20260825")
+  expect_equal(results$adaptive_source_method_id,
+               "mti_ecm_adaptive_screen_p980")
+  expect_equal(results$effective_posterior_confidence, 0.980)
+  expect_true(nzchar(results$adaptive_calibration_digest))
+  expect_true(nzchar(results$adaptive_menu_digest))
+  expect_true(results$adaptive_q_grid_size >= 1)
 })
