@@ -869,6 +869,16 @@ empty_fit_result <- function(
     ecm_final_stationarity = NA_real_,
     effective_posterior_confidence = NA_real_,
     direct_dp_concentration = NA_real_,
+    adaptive_policy_id = NA_character_,
+    adaptive_menu_id = NA_character_,
+    adaptive_source_method_id = NA_character_,
+    adaptive_menu_digest = NA_character_,
+    adaptive_q_anchor = NA_real_,
+    adaptive_q_grid_size = NA_integer_,
+    adaptive_q_grid_digest = NA_character_,
+    adaptive_calibration_digest = NA_character_,
+    sample_bowley_skewness = NA_real_,
+    sample_tail_ratio = NA_real_,
     fit_reused_across_posterior_thresholds = FALSE) {
   list(
     lower = lower,
@@ -927,6 +937,16 @@ empty_fit_result <- function(
     ecm_final_stationarity = ecm_final_stationarity,
     effective_posterior_confidence = effective_posterior_confidence,
     direct_dp_concentration = direct_dp_concentration,
+    adaptive_policy_id = adaptive_policy_id,
+    adaptive_menu_id = adaptive_menu_id,
+    adaptive_source_method_id = adaptive_source_method_id,
+    adaptive_menu_digest = adaptive_menu_digest,
+    adaptive_q_anchor = adaptive_q_anchor,
+    adaptive_q_grid_size = adaptive_q_grid_size,
+    adaptive_q_grid_digest = adaptive_q_grid_digest,
+    adaptive_calibration_digest = adaptive_calibration_digest,
+    sample_bowley_skewness = sample_bowley_skewness,
+    sample_tail_ratio = sample_tail_ratio,
     fit_reused_across_posterior_thresholds =
       fit_reused_across_posterior_thresholds
   )
@@ -1095,8 +1115,102 @@ mti_dp_profile_config <- function(method_id) {
   utils::modifyList(base, method_cfg)
 }
 
+adaptive_policy_table_cache <- new.env(parent = emptyenv())
+
+mti_adaptive_profile_enabled <- function(method_id) {
+  method_meta <- method_by_id[[method_id]] %||% list()
+  cfg <- mti_dp_profile_config(method_id)
+  isTRUE(method_meta$adaptive_mti_ecm_profile) ||
+    isTRUE(cfg$adaptive_mti_ecm_profile) ||
+    !is.null(cfg$adaptive_policy)
+}
+
+mti_adaptive_policy_path <- function(method_id) {
+  method_meta <- method_by_id[[method_id]] %||% list()
+  cfg <- mti_dp_profile_config(method_id)
+  path <- cfg$calibration_table_path %||%
+    cfg$frozen_policy_path %||%
+    method_meta$calibration_table_path %||%
+    config$adaptive_mti_ecm$frozen_policy_path %||%
+    config$adaptive_mti_ecm$calibration_table_path %||%
+    NULL
+  if (is.null(path) || !nzchar(path)) return(NULL)
+  normalizePath(path, winslash = "/", mustWork = TRUE)
+}
+
+mti_adaptive_policy_table <- function(method_id) {
+  path <- mti_adaptive_policy_path(method_id)
+  if (is.null(path)) return(NULL)
+  if (!exists(path, envir = adaptive_policy_table_cache, inherits = FALSE)) {
+    tab <- utils::read.csv(path, stringsAsFactors = FALSE)
+    attr(tab, "source_path") <- path
+    attr(tab, "source_digest") <- digest::digest(path, algo = "sha256",
+                                                 file = TRUE)
+    assign(path, tab, envir = adaptive_policy_table_cache)
+  }
+  get(path, envir = adaptive_policy_table_cache, inherits = FALSE)
+}
+
+mti_adaptive_cell_key <- function(n, c_target, tol_conf) {
+  sprintf(
+    "n%04d_c%s_t%s",
+    as.integer(n),
+    gsub("\\.", "", sprintf("%.3f", as.numeric(c_target))),
+    gsub("\\.", "", sprintf("%.3f", as.numeric(tol_conf)))
+  )
+}
+
+mti_adaptive_policy_rule <- function(method_id, n, c_target, tol_conf) {
+  tab <- mti_adaptive_policy_table(method_id)
+  if (is.null(tab) || !nrow(tab)) return(NULL)
+  method_meta <- method_by_id[[method_id]] %||% list()
+  cfg <- mti_dp_profile_config(method_id)
+  policy_id <- as.character(
+    cfg$adaptive_policy_id %||% cfg$policy_id %||%
+      method_meta$adaptive_policy_id %||% method_id
+  )[1L]
+  keep <- rep(TRUE, nrow(tab))
+  if ("policy_id" %in% names(tab)) {
+    keep <- keep & (!nzchar(tab$policy_id) | tab$policy_id == policy_id)
+  }
+  if ("method_id" %in% names(tab)) {
+    keep <- keep & (!nzchar(tab$method_id) | tab$method_id == method_id)
+  }
+  cell_key <- mti_adaptive_cell_key(n, c_target, tol_conf)
+  if ("cell_key" %in% names(tab)) {
+    keep <- keep & tab$cell_key == cell_key
+  } else {
+    if ("n" %in% names(tab)) {
+      keep <- keep & as.integer(tab$n) == as.integer(n)
+    }
+    content_col <- intersect(c("content", "guaranteed_content"), names(tab))
+    if (length(content_col)) {
+      keep <- keep & abs(as.numeric(tab[[content_col[[1L]]]]) -
+                           c_target) <= 1e-12
+    }
+    tol_col <- intersect(
+      c("tolerance_confidence", "confidence", "p"),
+      names(tab)
+    )
+    if (length(tol_col)) {
+      keep <- keep & abs(as.numeric(tab[[tol_col[[1L]]]]) -
+                           tol_conf) <= 1e-12
+    }
+  }
+  hit <- tab[keep, , drop = FALSE]
+  if (!nrow(hit)) return(NULL)
+  row <- as.list(hit[1L, , drop = FALSE])
+  row$calibration_table_digest <- attr(tab, "source_digest")
+  row$calibration_table_path <- attr(tab, "source_path")
+  row
+}
+
 mti_dp_profile_control <- function(method_id, control_name) {
   cfg <- mti_dp_profile_config(method_id)
+  mti_dp_profile_control_from_config(cfg, control_name)
+}
+
+mti_dp_profile_control_from_config <- function(cfg, control_name) {
   cfg[[paste0(mode, "_", control_name)]] %||%
     cfg[[paste0("moderate_", control_name)]] %||%
     cfg[[control_name]] %||%
@@ -1407,7 +1521,6 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
   method_meta <- method_by_id[[method_id]]
   base <- dp_base_from_config()
   profile_cfg <- mti_dp_profile_config(method_id)
-  effective_post_conf <- mti_dp_profile_probability(method_id, post_conf)
   calibration <- get_scan_calibration(method_id, length(y), c_target, tol_conf)
   scan_target <- if (isTRUE(calibration$infeasible)) {
     NA_real_
@@ -1419,32 +1532,146 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
     }
     as.numeric(target)[1L]
   }
-  ecm_control <- mti_dp_profile_control(method_id, "ecm_control")
+  adaptive_enabled <- mti_adaptive_profile_enabled(method_id)
+  adaptive_rule <- if (adaptive_enabled) {
+    mti_adaptive_policy_rule(method_id, length(y), c_target, tol_conf)
+  } else {
+    NULL
+  }
+  adaptive_source_method <- as.character(
+    adaptive_rule$source_method_id %||%
+      adaptive_rule$selected_method_id %||%
+      adaptive_rule$candidate_method_id %||%
+      NA_character_
+  )[1L]
+  effective_profile_cfg <- profile_cfg
+  if (adaptive_enabled && !is.na(adaptive_source_method) &&
+      nzchar(adaptive_source_method) &&
+      adaptive_source_method %in% names(method_by_id)) {
+    effective_profile_cfg <- utils::modifyList(
+      profile_cfg,
+      mti_dp_profile_config(adaptive_source_method)
+    )
+  }
+  adaptive_menu <- NULL
+  if (adaptive_enabled) {
+    policy <- as.character(
+      profile_cfg$adaptive_policy %||%
+        method_meta$adaptive_policy %||%
+        "cell"
+    )[1L]
+    policy_config <- effective_profile_cfg$adaptive_policy_config %||%
+      effective_profile_cfg
+    policy_config$policy_id <- policy_config$policy_id %||%
+      policy_config$adaptive_policy_id %||%
+      method_meta$adaptive_policy_id %||% method_id
+    adaptive_menu <- rqr_mti_ecm_adaptive_profile_menu(
+      y = y,
+      content = c_target,
+      tolerance_confidence = tol_conf,
+      scan_target_content = scan_target,
+      policy = policy,
+      policy_config = policy_config,
+      calibration_rule = adaptive_rule
+    )
+    effective_post_conf <- adaptive_menu$posterior_confidence
+  } else {
+    effective_post_conf <- mti_dp_profile_probability(method_id, post_conf)
+  }
+  ecm_control <- mti_dp_profile_control_from_config(
+    effective_profile_cfg, "ecm_control"
+  )
   ecm_control$seed <- seed
-  dp_concentration <- mti_dp_profile_concentration(method_id)
+  dp_concentration <- if (!is.null(adaptive_menu)) {
+    adaptive_menu$dp_concentration
+  } else {
+    mti_dp_profile_concentration(method_id)
+  }
+  q_grid <- if (!is.null(adaptive_menu)) adaptive_menu$q_grid else NULL
+  q_grid_control <- if (is.null(adaptive_menu)) {
+    mti_dp_profile_control(method_id, "q_grid_control")
+  } else {
+    list()
+  }
+  tilt_grid_control <- if (!is.null(adaptive_menu)) {
+    adaptive_menu$tilt_grid_control
+  } else {
+    mti_dp_profile_control(method_id, "tilt_grid_control")
+  }
   action <- rqr_mti_ecm_dp_profile_action(
     y = y,
     content = c_target,
     posterior_confidence = effective_post_conf,
     dp_concentration = dp_concentration,
     dp_base_measure = base,
-    strict_bayes = isTRUE(profile_cfg$strict_bayes %||% TRUE),
+    strict_bayes = isTRUE(effective_profile_cfg$strict_bayes %||% TRUE),
     scan_target_content = scan_target,
-    q_grid_control = mti_dp_profile_control(method_id, "q_grid_control"),
-    tilt_grid_control = mti_dp_profile_control(method_id, "tilt_grid_control"),
-    learning_rate = as.numeric(profile_cfg$learning_rate %||% 1)[1L],
+    q_grid = q_grid,
+    q_grid_control = q_grid_control,
+    tilt_grid_control = tilt_grid_control,
+    learning_rate = as.numeric(effective_profile_cfg$learning_rate %||% 1)[1L],
     beta_prior_obj = beta_prior(
       "ridge",
       ridge = list(tau2 = as.numeric(
-        profile_cfg$beta_ridge_tau2 %||% 1e4
+        effective_profile_cfg$beta_ridge_tau2 %||% 1e4
       )[1L])
     ),
     ecm_control = ecm_control,
-    expand_if_empty = isTRUE(profile_cfg$expand_if_empty %||% TRUE)
+    expand_if_empty = isTRUE(effective_profile_cfg$expand_if_empty %||% TRUE)
+  )
+  adaptive_fields <- list(
+    adaptive_policy_id = if (!is.null(adaptive_menu)) {
+      adaptive_menu$policy_id
+    } else {
+      NA_character_
+    },
+    adaptive_menu_id = if (!is.null(adaptive_menu)) {
+      adaptive_menu$menu_id
+    } else {
+      NA_character_
+    },
+    adaptive_source_method_id = if (!is.na(adaptive_source_method)) {
+      adaptive_source_method
+    } else {
+      NA_character_
+    },
+    adaptive_menu_digest = if (!is.null(adaptive_menu)) {
+      adaptive_menu$provenance_digest
+    } else {
+      NA_character_
+    },
+    adaptive_q_anchor = if (!is.null(adaptive_menu)) {
+      adaptive_menu$q_anchor
+    } else {
+      NA_real_
+    },
+    adaptive_q_grid_size = if (!is.null(adaptive_menu)) {
+      length(adaptive_menu$q_grid)
+    } else {
+      NA_integer_
+    },
+    adaptive_q_grid_digest = if (!is.null(adaptive_menu)) {
+      digest::digest(adaptive_menu$q_grid, algo = "sha256",
+                     serialize = TRUE)
+    } else {
+      NA_character_
+    },
+    adaptive_calibration_digest = adaptive_rule$calibration_table_digest %||%
+      NA_character_,
+    sample_bowley_skewness = if (!is.null(adaptive_menu)) {
+      adaptive_menu$diagnostics$bowley_skewness[[1L]]
+    } else {
+      NA_real_
+    },
+    sample_tail_ratio = if (!is.null(adaptive_menu)) {
+      adaptive_menu$diagnostics$robust_tail_ratio[[1L]]
+    } else {
+      NA_real_
+    }
   )
   selected <- action$selected
   if (!nrow(selected)) {
-    return(empty_fit_result(
+    return(do.call(empty_fit_result, c(adaptive_fields, list(
       infeasible = TRUE,
       message = "No MTI-ECM profile candidate satisfied the direct-DP content screen.",
       fit_class = paste(class(action), collapse = "|"),
@@ -1471,9 +1698,9 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
       target_audit_digest = action$provenance_digest,
       effective_posterior_confidence = effective_post_conf,
       direct_dp_concentration = dp_concentration
-    ))
+    ))))
   }
-  empty_fit_result(
+  do.call(empty_fit_result, c(adaptive_fields, list(
     lower = selected$lower[[1L]],
     upper = selected$upper[[1L]],
     width = selected$width[[1L]],
@@ -1520,7 +1747,7 @@ fit_mti_ecm_dp_profile <- function(method_id, y, c_target, tol_conf,
     ecm_final_stationarity = selected$ecm_final_stationarity[[1L]],
     effective_posterior_confidence = effective_post_conf,
     direct_dp_concentration = dp_concentration
-  )
+  )))
 }
 
 fit_method <- function(method_id, y, dgp_id, c_target, tol_conf, post_conf,
@@ -2084,6 +2311,16 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   ecm_final_stationarity = NA_real_,
                   effective_posterior_confidence = effective_post_conf,
                   direct_dp_concentration = direct_dp_conc,
+                  adaptive_policy_id = NA_character_,
+                  adaptive_menu_id = NA_character_,
+                  adaptive_source_method_id = NA_character_,
+                  adaptive_menu_digest = NA_character_,
+                  adaptive_q_anchor = NA_real_,
+                  adaptive_q_grid_size = NA_integer_,
+                  adaptive_q_grid_digest = NA_character_,
+                  adaptive_calibration_digest = NA_character_,
+                  sample_bowley_skewness = NA_real_,
+                  sample_tail_ratio = NA_real_,
                   fit_reused_across_posterior_thresholds = NA,
                   infeasible = TRUE,
                   message = conditionMessage(fit),
@@ -2289,6 +2526,36 @@ for (dgp_id in as.character(mode_cfg$dgp_ids)) {
                   )),
                   effective_posterior_confidence = effective_post_conf,
                   direct_dp_concentration = as.numeric(direct_dp_conc),
+                  adaptive_policy_id = fit_scalar(
+                    fit, "adaptive_policy_id", NA_character_
+                  ),
+                  adaptive_menu_id = fit_scalar(
+                    fit, "adaptive_menu_id", NA_character_
+                  ),
+                  adaptive_source_method_id = fit_scalar(
+                    fit, "adaptive_source_method_id", NA_character_
+                  ),
+                  adaptive_menu_digest = fit_scalar(
+                    fit, "adaptive_menu_digest", NA_character_
+                  ),
+                  adaptive_q_anchor = as.numeric(fit_scalar(
+                    fit, "adaptive_q_anchor", NA_real_
+                  )),
+                  adaptive_q_grid_size = as.integer(fit_scalar(
+                    fit, "adaptive_q_grid_size", NA_integer_
+                  )),
+                  adaptive_q_grid_digest = fit_scalar(
+                    fit, "adaptive_q_grid_digest", NA_character_
+                  ),
+                  adaptive_calibration_digest = fit_scalar(
+                    fit, "adaptive_calibration_digest", NA_character_
+                  ),
+                  sample_bowley_skewness = as.numeric(fit_scalar(
+                    fit, "sample_bowley_skewness", NA_real_
+                  )),
+                  sample_tail_ratio = as.numeric(fit_scalar(
+                    fit, "sample_tail_ratio", NA_real_
+                  )),
                   fit_reused_across_posterior_thresholds = fit_scalar(
                     fit, "fit_reused_across_posterior_thresholds", FALSE
                   ),
@@ -2487,6 +2754,12 @@ summary_rows <- lapply(split(results, split_key), function(df) {
       mean_or_na(df$effective_posterior_confidence),
     mean_direct_dp_concentration =
       mean_or_na(df$direct_dp_concentration),
+    mean_adaptive_q_grid_size =
+      mean_or_na(df$adaptive_q_grid_size),
+    mean_sample_bowley_skewness =
+      mean_or_na(df$sample_bowley_skewness),
+    mean_sample_tail_ratio =
+      mean_or_na(df$sample_tail_ratio),
     mean_posterior_threshold_excess =
       mean_or_na(df$posterior_threshold_excess),
     posterior_binding_rate =
@@ -2521,6 +2794,14 @@ if (any(grepl("^mti_ecm_dp_profile_tune_", method_ids_present))) {
     "The `mti_ecm_dp_profile_tune_*` rows are MTI-ECM direct-DP profile tuning variants with method-specific screen levels and profile grids.",
     "For these variants, `effective_posterior_confidence` records the direct-DP content-screen level actually used.",
     "`direct_dp_concentration` records the direct-DP concentration used for the response-distribution content screen."
+  )
+}
+if (any(nzchar(results$adaptive_policy_id %||% ""))) {
+  method_notes <- c(
+    method_notes,
+    "Rows with nonempty `adaptive_policy_id` use an adaptive MTI-ECM profile menu fixed before endpoint selection.",
+    "`adaptive_menu_digest` and `adaptive_q_grid_digest` identify the menu used for each fitted interval.",
+    "Adaptive MTI-ECM rows are repeated-sample validation evidence for a calibrated generalized-Bayes rule; they are not exact distribution-free scan certificates."
   )
 }
 if (any(grepl("^tcsp_mti_", method_ids_present))) {

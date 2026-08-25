@@ -470,3 +470,115 @@ test_that("validation worker records stage-2 screens and DP concentration", {
     2
   )
 })
+
+test_that("adaptive MTI-ECM calibration config freezes candidate scope", {
+  path <- test_path(
+    "..", "..", "config",
+    "rqr_bayes_uq_validation_mti_ecm_adaptive_calibration_20260824.json"
+  )
+  skip_if_not(file.exists(path), "validation config is outside package build")
+  config <- jsonlite::read_json(path, simplifyVector = FALSE)
+  methods <- vapply(config$methods, `[[`, character(1L), "method_id")
+
+  expect_equal(
+    config$study_id,
+    "rqr_bayes_uq_validation_mti_ecm_adaptive_calibration_20260824"
+  )
+  expect_equal(length(methods), 7L)
+  expect_true(all(grepl("^mti_ecm_adaptive_screen_p", methods)))
+  expect_true(all(vapply(
+    config$methods,
+    function(x) isTRUE(x$adaptive_mti_ecm_profile),
+    logical(1L)
+  )))
+  expect_true(config$method_family_scope$candidate_methods_not_final_policy)
+  expect_equal(
+    config$engine_defaults$mti_ecm_dp_profile$adaptive_policy_id,
+    "mti_ecm_adaptive_cell_calibration"
+  )
+  expect_true(length(config$engine_defaults$mti_ecm_dp_profile$q_offsets) >= 5)
+  expect_equal(config$modes$confirmatory$replications, 1000)
+})
+
+test_that("validation worker records adaptive MTI-ECM menu diagnostics", {
+  base_path <- test_path(
+    "..", "..", "config",
+    "rqr_bayes_uq_validation_mti_ecm_adaptive_calibration_20260824.json"
+  )
+  script <- test_path("..", "..", "scripts", "69_validate_rqr_bayes_uq.R")
+  skip_if_not(file.exists(base_path) && file.exists(script),
+              "validation launcher files are outside package build")
+  config <- jsonlite::read_json(base_path, simplifyVector = FALSE)
+  keep <- "mti_ecm_adaptive_screen_p985"
+  config$methods <- config$methods[
+    vapply(config$methods, function(x) x$method_id %in% keep, logical(1L))
+  ]
+  config$modes$smoke$method_ids <- as.list(keep)
+  config$modes$smoke$replications <- 1
+  config$modes$smoke$dgp_ids <- list("normal")
+  config$modes$smoke$design_cells <- list(list(
+    cell_id = "n0020_c050_t080",
+    n = 20,
+    guaranteed_content = 0.50,
+    tolerance_confidence = 0.80
+  ))
+  config$modes$smoke$sample_sizes <- list(20)
+  config$modes$smoke$guaranteed_contents <- list(0.50)
+  config$modes$smoke$tolerance_confidences <- list(0.80)
+  config$modes$smoke$posterior_confidences <- list(0.95)
+  config$modes$smoke$scan_n_sim <- 100
+  config$modes$smoke$scan_numerical_confidence <- 0.80
+  config$modes$smoke$scan_adaptive_control <- list(
+    initial_n_sim = 100,
+    batch_n_sim = 100,
+    max_n_sim = 200,
+    max_looks = 2,
+    stable_looks = 1
+  )
+  config$engine_defaults$mti_ecm_dp_profile$tilt_grid_control <- list(
+    tilt_offsets_sd = list(0),
+    include_zero_tilt = TRUE,
+    max_abs_tilt_sd = 2
+  )
+  config$engine_defaults$mti_ecm_dp_profile$ecm_control <- list(
+    max_iter = 25,
+    tol_stationarity = 1e6,
+    stable_iterations = 1,
+    residual_product_floor = 1e-8,
+    multistart = FALSE,
+    store_iteration_trace = FALSE,
+    ecm_backend = "cpp"
+  )
+
+  config_path <- tempfile("mti-ecm-adaptive-config-", fileext = ".json")
+  output_dir <- tempfile("mti-ecm-adaptive-smoke-")
+  jsonlite::write_json(config, config_path, auto_unbox = TRUE, pretty = TRUE)
+  status <- system2(
+    "Rscript",
+    c(
+      script,
+      "--mode=smoke",
+      paste0("--config=", config_path),
+      paste0("--output-dir=", output_dir),
+      "--wave-id=mti_ecm_adaptive_smoke"
+    ),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  exit_status <- attr(status, "status")
+  if (is.null(exit_status)) exit_status <- 0L
+  expect_equal(exit_status, 0L, info = paste(status, collapse = "\n"))
+
+  results <- read.csv(file.path(output_dir, "bayes_uq_validation_results.csv"))
+  expect_equal(nrow(results), 1L)
+  expect_equal(results$method_id, keep)
+  expect_equal(results$adaptive_policy_id,
+               "mti_ecm_adaptive_cell_calibration")
+  expect_true(nzchar(results$adaptive_menu_digest))
+  expect_true(nzchar(results$adaptive_q_grid_digest))
+  expect_true(is.finite(results$adaptive_q_anchor))
+  expect_true(results$adaptive_q_grid_size >= 1)
+  expect_true(is.finite(results$sample_bowley_skewness))
+  expect_true(is.finite(results$sample_tail_ratio))
+  expect_equal(results$effective_posterior_confidence, 0.985)
+})
