@@ -500,6 +500,44 @@ test_that("adaptive MTI-ECM calibration config freezes candidate scope", {
   expect_equal(config$modes$confirmatory$replications, 1000)
 })
 
+test_that("strict adaptive MTI-ECM calibration config freezes retuning scope", {
+  path <- test_path(
+    "..", "..", "config",
+    "rqr_bayes_uq_validation_mti_ecm_adaptive_strict_calibration_20260825.json"
+  )
+  skip_if_not(file.exists(path), "validation config is outside package build")
+  config <- jsonlite::read_json(path, simplifyVector = FALSE)
+  methods <- vapply(config$methods, `[[`, character(1L), "method_id")
+  screens <- vapply(config$methods, function(x) {
+    as.numeric(x$profile_config$posterior_confidence)
+  }, numeric(1L))
+
+  expect_equal(
+    config$study_id,
+    "rqr_bayes_uq_validation_mti_ecm_adaptive_strict_calibration_20260825"
+  )
+  expect_equal(length(methods), 7L)
+  expect_true(all(grepl("^mti_ecm_adaptive_strict_screen_p", methods)))
+  expect_false(any(methods %in% c("tcsp_mc", "young_mathew", "wilks_exact")))
+  expect_equal(
+    screens,
+    c(0.980, 0.985, 0.990, 0.9925, 0.995, 0.9975, 0.9995)
+  )
+  expect_true(config$claim_scope$strict_policy_selection_required_before_promotion)
+  expect_equal(config$modes$confirmatory$replications, 1000)
+  expect_equal(length(config$modes$confirmatory$design_cells), 9L)
+  expect_equal(length(config$modes$confirmatory$dgp_ids), 8L)
+  expect_equal(config$modes$confirmatory$method_ids, as.list(methods))
+  q_offsets <- as.numeric(config$engine_defaults$mti_ecm_dp_profile$q_offsets)
+  expect_true(any(q_offsets < 0))
+  expect_true(any(q_offsets > 0))
+  expect_gte(config$engine_defaults$mti_ecm_dp_profile$q_max, 0.9995)
+  expect_equal(
+    config$engine_defaults$mti_ecm_dp_profile$adaptive_policy_id,
+    "mti_ecm_adaptive_cell_strict_calibration"
+  )
+})
+
 test_that("adaptive MTI-ECM selected config freezes deployed cell policy", {
   path <- test_path(
     "..", "..", "config",

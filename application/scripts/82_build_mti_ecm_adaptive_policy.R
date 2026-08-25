@@ -92,6 +92,16 @@ quantile_or_na <- function(x, p) {
   if (length(x)) as.numeric(stats::quantile(x, p, names = FALSE, type = 8))
   else NA_real_
 }
+min_or_na <- function(x) {
+  x <- num(x)
+  x <- x[is.finite(x)]
+  if (length(x)) min(x) else NA_real_
+}
+integer_min_or_na <- function(x) {
+  x <- as.integer(x)
+  x <- x[!is.na(x)]
+  if (length(x)) min(x) else NA_integer_
+}
 cell_key <- function(n, content, tolerance_confidence) {
   sprintf(
     "n%04d_c%s_t%s",
@@ -158,6 +168,18 @@ summarise_raw <- function(df, scope, dgp_id = NA_character_) {
     confidence = bound_confidence,
     method = bound_method
   )
+  required_successes <- rqrgibbs::rqr_delivery_min_successes(
+    replications = reps,
+    target = target,
+    confidence = bound_confidence,
+    method = bound_method,
+    margin = margin
+  )
+  success_margin <- if (is.na(required_successes)) {
+    NA_integer_
+  } else {
+    as.integer(successes - required_successes)
+  }
   width <- df$width_num[!df$infeasible_bool & is.finite(df$width_num)]
   data.frame(
     source_method_id = df$method_id[[1L]],
@@ -166,15 +188,19 @@ summarise_raw <- function(df, scope, dgp_id = NA_character_) {
     n = as.integer(df$n[[1L]]),
     content = as.numeric(df$guaranteed_content[[1L]]),
     tolerance_confidence = as.numeric(target),
+    delivery_target = as.numeric(target),
     cell_key = df$cell_key[[1L]],
     dgp_cells = length(unique(df$dgp_id)),
     passing_dgp_cells = NA_integer_,
     calibration_replications = as.integer(reps),
     calibration_successes = as.integer(successes),
+    minimum_successes_required = as.integer(required_successes),
+    success_margin_to_requirement = success_margin,
     observed_delivery = successes / reps,
     delivery_lower_bound = lower,
     min_observed_delivery = NA_real_,
     min_delivery_lower_bound = NA_real_,
+    min_success_margin_to_requirement = NA_integer_,
     all_dgp_cells_admissible = NA,
     admissible = is.finite(lower) && lower >= target + margin,
     mean_width = mean_or_na(width),
@@ -231,9 +257,10 @@ all_dgp_cell_candidates <- do.call(rbind, lapply(
     ]
     pooled <- summarise_raw(raw, scope = "all_distribution_cell")
     pooled$passing_dgp_cells <- sum(mm$admissible, na.rm = TRUE)
-    pooled$min_observed_delivery <- min(mm$observed_delivery, na.rm = TRUE)
-    pooled$min_delivery_lower_bound <- min(mm$delivery_lower_bound,
-                                           na.rm = TRUE)
+    pooled$min_observed_delivery <- min_or_na(mm$observed_delivery)
+    pooled$min_delivery_lower_bound <- min_or_na(mm$delivery_lower_bound)
+    pooled$min_success_margin_to_requirement <-
+      integer_min_or_na(mm$success_margin_to_requirement)
     pooled$all_dgp_cells_admissible <- all(mm$admissible)
     pooled$admissible <- pooled$all_dgp_cells_admissible
     pooled
@@ -333,11 +360,14 @@ out$created_at_utc <- format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
 front_cols <- c(
   "policy_id", "method_id", "source_method_id", "selection_rule",
   "calibration_scope", "decision", "n", "content", "tolerance_confidence",
-  "cell_key", "screen", "posterior_confidence", "calibration_replications",
-  "calibration_successes", "observed_delivery", "delivery_lower_bound",
+  "delivery_target", "cell_key", "screen", "posterior_confidence",
+  "calibration_replications", "calibration_successes",
+  "minimum_successes_required", "success_margin_to_requirement",
+  "observed_delivery", "delivery_lower_bound",
   "admissible", "mean_width", "median_width", "width_q025", "width_q975",
   "dgp_cells", "passing_dgp_cells", "min_observed_delivery",
-  "min_delivery_lower_bound", "all_dgp_cells_admissible"
+  "min_delivery_lower_bound", "min_success_margin_to_requirement",
+  "all_dgp_cells_admissible"
 )
 front_cols <- front_cols[front_cols %in% names(out)]
 out <- out[, c(front_cols, setdiff(names(out), front_cols)), drop = FALSE]

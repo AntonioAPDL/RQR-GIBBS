@@ -103,6 +103,17 @@ RQR_BAYES_UQ_PRIMARY_RESULTS ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/bayes_uq_validat
 RQR_BAYES_UQ_MTI_ECM_RUN_DIR ?= application/runs/rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825/wave_confirmatory_20260825T072935Z
 RQR_BAYES_UQ_MTI_ECM_RESULTS ?= $(RQR_BAYES_UQ_MTI_ECM_RUN_DIR)/bayes_uq_validation_results.csv
 RQR_BAYES_UQ_MTI_ECM_POLICY ?= application/config/mti_ecm_adaptive_cell_policy_20260825.csv
+RQR_BAYES_UQ_MTI_ECM_STRICT_CONFIG ?= application/config/rqr_bayes_uq_validation_mti_ecm_adaptive_strict_calibration_20260825.json
+RQR_BAYES_UQ_MTI_ECM_STRICT_DIR ?= application/outputs/rqr_bayes_uq_validation_mti_ecm_adaptive_strict_calibration_20260825
+RQR_BAYES_UQ_MTI_ECM_STRICT_SMOKE_DIR ?= $(RQR_BAYES_UQ_MTI_ECM_STRICT_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
+RQR_BAYES_UQ_MTI_ECM_STRICT_WAVE_RUN_ROOT ?= application/runs/rqr_bayes_uq_validation_mti_ecm_adaptive_strict_calibration_20260825
+RQR_BAYES_UQ_MTI_ECM_STRICT_WAVE_RUN_ID ?= wave_confirmatory_strict_mti_ecm_$(shell date -u +%Y%m%dT%H%M%SZ)
+RQR_BAYES_UQ_MTI_ECM_STRICT_WAVE_MAX_CONCURRENT ?= 40
+RQR_BAYES_UQ_MTI_ECM_STRICT_WAVE_POLL_SECONDS ?= 60
+RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR ?=
+RQR_BAYES_UQ_MTI_ECM_STRICT_RESULTS ?= $(RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR)/bayes_uq_validation_results.csv
+RQR_BAYES_UQ_MTI_ECM_STRICT_POLICY ?= application/config/mti_ecm_adaptive_cell_strict_policy_20260825.csv
+RQR_BAYES_UQ_MTI_ECM_STRICT_POLICY_DIAGNOSTICS ?= application/config/mti_ecm_adaptive_cell_strict_policy_20260825_diagnostics.csv
 RQR_MTI_ECM_TRACE_CONFIG ?= application/config/rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825.json
 RQR_MTI_ECM_TRACE_OUTPUT_DIR ?= application/outputs/mti_ecm_trace_diagnostics/trace_current_winner_$(shell date -u +%Y%m%dT%H%M%SZ)
 RQR_MTI_ECM_TRACE_REPS_PER_CELL ?= 3
@@ -140,6 +151,7 @@ RQR_DLM_M02_CANARY_OUTPUT_ROOT ?=
 .PHONY: test-oracle-tilt-publication-v5 oracle-tilt-v5-preflight oracle-tilt-v5-reference oracle-tilt-v5-benchmark oracle-tilt-v5-execute oracle-tilt-v5-package-evidence
 .PHONY: test-oracle-mean-tilt-validation oracle-mean-tilt-validation-preflight oracle-mean-tilt-validation-reference oracle-mean-tilt-validation-benchmark oracle-mean-tilt-validation-sentinel oracle-mean-tilt-validation-execute-wave oracle-mean-tilt-validation-collect oracle-mean-tilt-validation-precision oracle-mean-tilt-validation-package
 .PHONY: test-ecm test-tcsp test-tcsp-validation test-tcsp-validation-audit test-bayes-uq test-tolerance-adjudication test-mpi-mti-naming rqr-ecm-validation-smoke tcsp-split-exact-validation-smoke rqr-bayes-uq-validation-smoke rqr-bayes-uq-validation-moderate launch-rqr-bayes-uq-overnight health-rqr-bayes-uq-validation rqr-bayes-uq-main-smoke prepare-rqr-bayes-uq-main-waves launch-rqr-bayes-uq-main launch-rqr-bayes-uq-main-dpm-companion health-rqr-bayes-uq-main collect-rqr-bayes-uq-main stop-rqr-bayes-uq-main rqr-bayes-uq-refined-smoke prepare-rqr-bayes-uq-refined-waves launch-rqr-bayes-uq-refined health-rqr-bayes-uq-refined collect-rqr-bayes-uq-refined stop-rqr-bayes-uq-refined rqr-bayes-uq-skewstress-smoke prepare-rqr-bayes-uq-skewstress-waves launch-rqr-bayes-uq-skewstress health-rqr-bayes-uq-skewstress collect-rqr-bayes-uq-skewstress stop-rqr-bayes-uq-skewstress rqr-bayes-uq-followup-smoke prepare-rqr-bayes-uq-followup-waves launch-rqr-bayes-uq-followup health-rqr-bayes-uq-followup collect-rqr-bayes-uq-followup stop-rqr-bayes-uq-followup tolerance-validation-adjudication tolerance-mti-gibbs-diagnostics mti-ecm-trace-diagnostics mti-ecm-trace-diagnostic-figures mti-ecm-trace-report test-mti-ecm-trace-diagnostics mti-bayes-uq-main-smoke prepare-mti-bayes-uq-main-waves launch-mti-bayes-uq-main health-mti-bayes-uq-main collect-mti-bayes-uq-main stop-mti-bayes-uq-main tcsp-validation-preflight tcsp-validation-tiny tcsp-validation-pilot tcsp-validation-full-pilot tcsp-validation-health tcsp-validation-audit
+.PHONY: mti-ecm-strict-calibration-smoke prepare-mti-ecm-strict-calibration-waves launch-mti-ecm-strict-calibration health-mti-ecm-strict-calibration collect-mti-ecm-strict-calibration stop-mti-ecm-strict-calibration build-mti-ecm-strict-policy
 .PHONY: validate-dlm-m02-diagnostic-canary
 
 tolerance-validation-adaptive-article-inputs:
@@ -395,6 +407,37 @@ health-mti-bayes-uq-main: health-rqr-bayes-uq-main
 collect-mti-bayes-uq-main: collect-rqr-bayes-uq-main
 
 stop-mti-bayes-uq-main: stop-rqr-bayes-uq-main
+
+mti-ecm-strict-calibration-smoke: package-install
+	$(R) application/scripts/69_validate_rqr_bayes_uq.R --mode=smoke --config=$(RQR_BAYES_UQ_MTI_ECM_STRICT_CONFIG) --output-dir=$(RQR_BAYES_UQ_MTI_ECM_STRICT_SMOKE_DIR)
+
+prepare-mti-ecm-strict-calibration-waves: package-install
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=prepare --mode=confirmatory --config=$(RQR_BAYES_UQ_MTI_ECM_STRICT_CONFIG) --run-root=$(RQR_BAYES_UQ_MTI_ECM_STRICT_WAVE_RUN_ROOT) --run-id=$(RQR_BAYES_UQ_MTI_ECM_STRICT_WAVE_RUN_ID)
+
+launch-mti-ecm-strict-calibration: package-install
+	RQR_BAYES_UQ_MAIN_CONFIG=$(RQR_BAYES_UQ_MTI_ECM_STRICT_CONFIG) \
+	RQR_BAYES_UQ_MAIN_WAVE_RUN_ROOT=$(RQR_BAYES_UQ_MTI_ECM_STRICT_WAVE_RUN_ROOT) \
+	RQR_BAYES_UQ_MAIN_WAVE_RUN_ID=$(RQR_BAYES_UQ_MTI_ECM_STRICT_WAVE_RUN_ID) \
+	RQR_BAYES_UQ_MAIN_WAVE_MODE=confirmatory \
+	RQR_BAYES_UQ_MAIN_WAVE_MAX_CONCURRENT=$(RQR_BAYES_UQ_MTI_ECM_STRICT_WAVE_MAX_CONCURRENT) \
+	RQR_BAYES_UQ_MAIN_WAVE_POLL_SECONDS=$(RQR_BAYES_UQ_MTI_ECM_STRICT_WAVE_POLL_SECONDS) \
+	bash application/scripts/72_launch_rqr_bayes_uq_main_waves.sh
+
+health-mti-ecm-strict-calibration:
+	@test -n "$(strip $(RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR to one strict MTI-ECM wave run." >&2; exit 64; }
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=health --mode=confirmatory --config=$(RQR_BAYES_UQ_MTI_ECM_STRICT_CONFIG) --run-dir=$(RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR)
+
+collect-mti-ecm-strict-calibration:
+	@test -n "$(strip $(RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR to one strict MTI-ECM wave run." >&2; exit 64; }
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=collect --mode=confirmatory --config=$(RQR_BAYES_UQ_MTI_ECM_STRICT_CONFIG) --run-dir=$(RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR)
+
+stop-mti-ecm-strict-calibration:
+	@test -n "$(strip $(RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR to one strict MTI-ECM wave run." >&2; exit 64; }
+	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=stop --mode=confirmatory --config=$(RQR_BAYES_UQ_MTI_ECM_STRICT_CONFIG) --run-dir=$(RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR)
+
+build-mti-ecm-strict-policy: package-install
+	@test -n "$(strip $(RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MTI_ECM_STRICT_RUN_DIR to one completed strict MTI-ECM wave run." >&2; exit 64; }
+	$(R) application/scripts/82_build_mti_ecm_adaptive_policy.R --results=$(RQR_BAYES_UQ_MTI_ECM_STRICT_RESULTS) --output=$(RQR_BAYES_UQ_MTI_ECM_STRICT_POLICY) --diagnostics-output=$(RQR_BAYES_UQ_MTI_ECM_STRICT_POLICY_DIAGNOSTICS) --policy-id=mti_ecm_adaptive_cell_strict_20260825 --selection=cell --method-pattern=^mti_ecm_adaptive_strict_screen_
 
 tcsp-validation-preflight: package-install
 	$(R) application/scripts/64_run_tcsp_validation_study.R --mode=preflight --config=$(TCSP_VALIDATION_CONFIG) --output-dir=$(TCSP_VALIDATION_DIR)/preflight

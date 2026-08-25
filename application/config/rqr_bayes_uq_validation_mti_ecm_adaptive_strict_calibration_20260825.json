@@ -1,0 +1,464 @@
+{
+  "schema_version": "rqrgibbs_bayes_uq_validation/1.4.0",
+  "study_id": "rqr_bayes_uq_validation_mti_ecm_adaptive_strict_calibration_20260825",
+  "status": "strict_adaptive_mti_ecm_calibration_authorized",
+  "interpretation": "Strict calibration study for adaptive MTI-ECM profile menus. The candidate methods share a boundary-aware fitted-content grid and vary the direct-DP content screen. The output is calibration evidence for freezing a later cellwise policy; it is not itself the final validation table for manuscript promotion.",
+  "generalized_bayes": true,
+  "response_likelihood": true,
+  "posterior_predictive_response_draws": false,
+  "method_family_scope": {
+    "adaptive_mti_ecm_profile_candidates": true,
+    "direct_dp_content_screen": true,
+    "scan_calibration_used_only_as_profile_grid_reference": true,
+    "no_fallback_to_tcsp": true,
+    "candidate_methods_not_final_policy": true,
+    "row_level_method_flags_are_authoritative": true
+  },
+  "claim_scope": {
+    "iid_univariate_continuous_only": true,
+    "regression_tolerance": false,
+    "dynamic_tolerance": false,
+    "posterior_endpoint_coverage_claim_available": false,
+    "coverage_levels_are_guaranteed_contents": true,
+    "tolerance_confidence_fixed_at_0_95": true,
+    "confirmatory_authorized": true,
+    "empirical_frequentist_calibration_required": true,
+    "strict_policy_selection_required_before_promotion": true
+  },
+  "execution": {
+    "smoke_authorized": true,
+    "moderate_authorized": false,
+    "confirmatory_authorized": true,
+    "overnight_mode": "confirmatory",
+    "smoke_max_concurrent": 8,
+    "confirmatory_max_concurrent": 40,
+    "checkpoint_every_datasets": 100
+  },
+  "diagnostics": {
+    "reference_method_id": "tcsp_mc",
+    "record_width_ratio_to_reference": true,
+    "record_retained_fraction": true,
+    "record_scan_content_buffer": true,
+    "paired_thresholds": true,
+    "adaptive_menu_diagnostics": true,
+    "policy_builder_selection_rule": "cell",
+    "policy_builder_bound_method": "clopper_pearson",
+    "policy_builder_bound_confidence": 0.95,
+    "candidate_methods_only": [
+      "mti_ecm_adaptive_strict_screen_p980",
+      "mti_ecm_adaptive_strict_screen_p985",
+      "mti_ecm_adaptive_strict_screen_p990",
+      "mti_ecm_adaptive_strict_screen_p9925",
+      "mti_ecm_adaptive_strict_screen_p995",
+      "mti_ecm_adaptive_strict_screen_p9975",
+      "mti_ecm_adaptive_strict_screen_p9995"
+    ]
+  },
+  "scan_calibration": {
+    "method": "monte_carlo_cp_adaptive",
+    "smoke_n_sim": 500,
+    "smoke_numerical_confidence": 0.95,
+    "confirmatory_n_sim": 10000,
+    "confirmatory_numerical_confidence": 0.999,
+    "seed": 1513600,
+    "adaptive_control": {
+      "initial_n_sim": 10000,
+      "batch_n_sim": 10000,
+      "max_n_sim": 200000,
+      "max_looks": 20,
+      "stable_looks": 2
+    }
+  },
+  "oracle": {
+    "target": "SH",
+    "role": "non_deployable_synthetic_dgp_reference_for_internal_audit_only",
+    "tilt_definition": "conditional_retained_mean_minus_population_mean",
+    "tol": 1E-10,
+    "grid_size": 1601
+  },
+  "modes": {
+    "smoke": {
+      "replications": 1,
+      "sample_sizes": [50, 100],
+      "guaranteed_contents": [0.90, 0.95],
+      "tolerance_confidences": [0.95],
+      "posterior_confidences": [0.95],
+      "design_cells": [
+        {
+          "cell_id": "n0050_c090_t095",
+          "n": 50,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "n0100_c095_t095",
+          "n": 100,
+          "guaranteed_content": 0.95,
+          "tolerance_confidence": 0.95
+        }
+      ],
+      "dgp_ids": ["normal", "exponential"],
+      "method_ids": [
+        "mti_ecm_adaptive_strict_screen_p980",
+        "mti_ecm_adaptive_strict_screen_p995",
+        "mti_ecm_adaptive_strict_screen_p9995"
+      ],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "split_waves_by_method": true,
+      "checkpoint_every_datasets": 1,
+      "scan_n_sim": 500,
+      "scan_numerical_confidence": 0.95,
+      "scan_adaptive_control": {
+        "initial_n_sim": 500,
+        "batch_n_sim": 500,
+        "max_n_sim": 2000,
+        "max_looks": 4,
+        "stable_looks": 1
+      }
+    },
+    "confirmatory": {
+      "replications": 1000,
+      "sample_sizes": [50, 100, 500, 1000],
+      "guaranteed_contents": [0.90, 0.95, 0.99],
+      "tolerance_confidences": [0.95],
+      "posterior_confidences": [0.95],
+      "design_cells": [
+        {
+          "cell_id": "n0050_c090_t095",
+          "n": 50,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "n0100_c090_t095",
+          "n": 100,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "n0100_c095_t095",
+          "n": 100,
+          "guaranteed_content": 0.95,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "n0500_c090_t095",
+          "n": 500,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "n0500_c095_t095",
+          "n": 500,
+          "guaranteed_content": 0.95,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "n0500_c099_t095",
+          "n": 500,
+          "guaranteed_content": 0.99,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "n1000_c090_t095",
+          "n": 1000,
+          "guaranteed_content": 0.90,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "n1000_c095_t095",
+          "n": 1000,
+          "guaranteed_content": 0.95,
+          "tolerance_confidence": 0.95
+        },
+        {
+          "cell_id": "n1000_c099_t095",
+          "n": 1000,
+          "guaranteed_content": 0.99,
+          "tolerance_confidence": 0.95
+        }
+      ],
+      "dgp_ids": [
+        "normal",
+        "student_t3",
+        "exponential",
+        "asym_laplace_tau010",
+        "two_piece_normal_1_12",
+        "beta18",
+        "gamma05",
+        "lognormal_hard"
+      ],
+      "method_ids": [
+        "mti_ecm_adaptive_strict_screen_p980",
+        "mti_ecm_adaptive_strict_screen_p985",
+        "mti_ecm_adaptive_strict_screen_p990",
+        "mti_ecm_adaptive_strict_screen_p9925",
+        "mti_ecm_adaptive_strict_screen_p995",
+        "mti_ecm_adaptive_strict_screen_p9975",
+        "mti_ecm_adaptive_strict_screen_p9995"
+      ],
+      "reference_method_id": "tcsp_mc",
+      "paired_thresholds": true,
+      "split_waves_by_method": true,
+      "checkpoint_every_datasets": 100
+    }
+  },
+  "dgps": [
+    {
+      "dgp_id": "normal",
+      "family": "normal",
+      "label": "Gaussian"
+    },
+    {
+      "dgp_id": "student_t3",
+      "family": "standardized_student_t",
+      "label": "standardized Student t with three degrees of freedom",
+      "df": 3
+    },
+    {
+      "dgp_id": "exponential",
+      "family": "centered_exponential",
+      "label": "centered standardized exponential",
+      "rate": 1
+    },
+    {
+      "dgp_id": "asym_laplace_tau010",
+      "family": "standardized_asymmetric_laplace",
+      "label": "standardized asymmetric Laplace, tau = 0.10",
+      "tau": 0.10,
+      "scale": 1
+    },
+    {
+      "dgp_id": "two_piece_normal_1_12",
+      "family": "standardized_two_piece_normal",
+      "label": "standardized two-piece normal, scale ratio 1:12",
+      "left_scale": 1,
+      "right_scale": 12
+    },
+    {
+      "dgp_id": "beta18",
+      "family": "standardized_beta",
+      "label": "standardized Beta(1,8)",
+      "shape1": 1,
+      "shape2": 8
+    },
+    {
+      "dgp_id": "gamma05",
+      "family": "standardized_gamma",
+      "label": "standardized Gamma(0.5,1)",
+      "shape": 0.5,
+      "scale": 1
+    },
+    {
+      "dgp_id": "lognormal_hard",
+      "family": "standardized_lognormal",
+      "label": "centered standardized log-normal, logsd = 1.25",
+      "logsd": 1.25
+    }
+  ],
+  "methods": [
+    {
+      "method_id": "mti_ecm_adaptive_strict_screen_p980",
+      "label": "Adaptive MTI-ECM candidate, direct-DP screen 0.980",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_adaptive_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "adaptive_profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "adaptive_mti_ecm_profile": true,
+      "deployable": false,
+      "profile_config": {
+        "adaptive_policy": "cell",
+        "posterior_confidence": 0.980
+      }
+    },
+    {
+      "method_id": "mti_ecm_adaptive_strict_screen_p985",
+      "label": "Adaptive MTI-ECM candidate, direct-DP screen 0.985",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_adaptive_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "adaptive_profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "adaptive_mti_ecm_profile": true,
+      "deployable": false,
+      "profile_config": {
+        "adaptive_policy": "cell",
+        "posterior_confidence": 0.985
+      }
+    },
+    {
+      "method_id": "mti_ecm_adaptive_strict_screen_p990",
+      "label": "Adaptive MTI-ECM candidate, direct-DP screen 0.990",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_adaptive_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "adaptive_profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "adaptive_mti_ecm_profile": true,
+      "deployable": false,
+      "profile_config": {
+        "adaptive_policy": "cell",
+        "posterior_confidence": 0.990
+      }
+    },
+    {
+      "method_id": "mti_ecm_adaptive_strict_screen_p9925",
+      "label": "Adaptive MTI-ECM candidate, direct-DP screen 0.9925",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_adaptive_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "adaptive_profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "adaptive_mti_ecm_profile": true,
+      "deployable": false,
+      "profile_config": {
+        "adaptive_policy": "cell",
+        "posterior_confidence": 0.9925
+      }
+    },
+    {
+      "method_id": "mti_ecm_adaptive_strict_screen_p995",
+      "label": "Adaptive MTI-ECM candidate, direct-DP screen 0.995",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_adaptive_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "adaptive_profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "adaptive_mti_ecm_profile": true,
+      "deployable": false,
+      "profile_config": {
+        "adaptive_policy": "cell",
+        "posterior_confidence": 0.995
+      }
+    },
+    {
+      "method_id": "mti_ecm_adaptive_strict_screen_p9975",
+      "label": "Adaptive MTI-ECM candidate, direct-DP screen 0.9975",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_adaptive_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "adaptive_profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "adaptive_mti_ecm_profile": true,
+      "deployable": false,
+      "profile_config": {
+        "adaptive_policy": "cell",
+        "posterior_confidence": 0.9975
+      }
+    },
+    {
+      "method_id": "mti_ecm_adaptive_strict_screen_p9995",
+      "label": "Adaptive MTI-ECM candidate, direct-DP screen 0.9995",
+      "action_lane": "mti_ecm_direct_dp_content_screen",
+      "selected_interval_source": "mti_ecm_adaptive_profile_selected_action",
+      "formal_tolerance_action": false,
+      "response_likelihood": true,
+      "generalized_bayes": true,
+      "scan_method": "monte_carlo_cp_adaptive",
+      "uq_engine": "mti_ecm_direct_dp",
+      "tilt_source": "adaptive_profile_grid",
+      "mti_ecm_dp_profile_method": true,
+      "adaptive_mti_ecm_profile": true,
+      "deployable": false,
+      "profile_config": {
+        "adaptive_policy": "cell",
+        "posterior_confidence": 0.9995
+      }
+    }
+  ],
+  "engine_defaults": {
+    "direct_dp": {
+      "concentration": 1,
+      "base": {
+        "family": "normal",
+        "mean": 0,
+        "sd": 4
+      },
+      "shortest_draws": 20,
+      "residual_mass_tol": 0.05
+    },
+    "mti_ecm_dp_profile": {
+      "adaptive_mti_ecm_profile": true,
+      "adaptive_policy_id": "mti_ecm_adaptive_cell_strict_calibration",
+      "learning_rate": 1,
+      "beta_ridge_tau2": 10000,
+      "strict_bayes": true,
+      "expand_if_empty": true,
+      "q_offsets": [
+        -0.04,
+        -0.02,
+        -0.01,
+        -0.005,
+        -0.0025,
+        -0.001,
+        0,
+        0.001,
+        0.0025,
+        0.005,
+        0.01
+      ],
+      "q_min_buffer": 0.0001,
+      "q_max": 0.9999,
+      "boundary_anchor_cutoff": 0.990,
+      "boundary_q_values": [
+        0.995,
+        0.9975,
+        0.999,
+        0.9995,
+        0.99975,
+        0.9999
+      ],
+      "fallback_n_points": 9,
+      "tilt_grid_control": {
+        "tilt_offsets_sd": [
+          -0.45,
+          -0.30,
+          -0.15,
+          0,
+          0.15,
+          0.30,
+          0.45
+        ],
+        "include_zero_tilt": true,
+        "max_abs_tilt_sd": 2
+      },
+      "ecm_control": {
+        "max_iter": 100,
+        "tol_stationarity": 0.001,
+        "stable_iterations": 1,
+        "residual_product_floor": 1E-8,
+        "multistart": false,
+        "store_iteration_trace": false,
+        "ecm_backend": "cpp"
+      }
+    }
+  },
+  "base_seed": 974200,
+  "summary_confidence": 0.95
+}
