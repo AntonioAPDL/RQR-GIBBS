@@ -100,8 +100,9 @@ RQR_BAYES_UQ_ARTICLE_COMPOSITE_DIR ?= application/outputs/rqr_bayes_uq_validatio
 RQR_BAYES_UQ_PRIMARY_SUMMARY ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/bayes_uq_validation_summary.csv
 RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/bayes_uq_validation_summary.csv
 RQR_BAYES_UQ_PRIMARY_RESULTS ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/bayes_uq_validation_results.csv
-RQR_BAYES_UQ_MTI_ECM_RUN_DIR ?= application/runs/rqr_bayes_uq_validation_mti_ecm_dp_profile_stage2_tuning_20260823/wave_confirmatory_mti_ecm_dp_profile_stage2_20260823T230135Z
+RQR_BAYES_UQ_MTI_ECM_RUN_DIR ?= application/runs/rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825/wave_confirmatory_20260825T072935Z
 RQR_BAYES_UQ_MTI_ECM_RESULTS ?= $(RQR_BAYES_UQ_MTI_ECM_RUN_DIR)/bayes_uq_validation_results.csv
+RQR_BAYES_UQ_MTI_ECM_POLICY ?= application/config/mti_ecm_adaptive_cell_policy_20260825.csv
 RQR_BAYES_UQ_PRIMARY_YM_RESULTS ?=
 RQR_BAYES_UQ_SMALL95_RESULTS ?=
 RQR_BAYES_UQ_SCAN_CALIBRATION ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/scan_calibration_summary.csv
@@ -149,7 +150,7 @@ theory-tables:
 	$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --results-csv=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_stratified_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT) --results-csv=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_followup_tables.R --output-dir=$(THEORY_TABLE_DIR)
-	$(R) tables/generate_tolerance_validation_scenario_tables.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --small95-results=$(RQR_BAYES_UQ_SMALL95_RESULTS) --scan-calibration-csv=$(RQR_BAYES_UQ_SCAN_CALIBRATION) --output-dir=$(THEORY_TABLE_DIR)
+	$(R) tables/generate_tolerance_validation_scenario_tables.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_RESULTS) --mti-ecm-policy-csv=$(RQR_BAYES_UQ_MTI_ECM_POLICY) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --small95-results=$(RQR_BAYES_UQ_SMALL95_RESULTS) --scan-calibration-csv=$(RQR_BAYES_UQ_SCAN_CALIBRATION) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_gibbs_diagnostic_table.R --diagnostics-csv=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_SOURCE) --output-dir=$(THEORY_TABLE_DIR)
 
 model-illustration-figures:

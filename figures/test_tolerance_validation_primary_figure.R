@@ -51,7 +51,7 @@ mti <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
     do.call(rbind, lapply(c(0.90, 0.95, 0.99), function(content) {
       do.call(rbind, lapply(1:4, function(rep) {
         row(dgp, n, content, rep,
-            "mti_ecm_dp_profile_tune_p989_deepq_q9995",
+            "mti_ecm_adaptive_cell",
             success = rep != 1L || dgp == "normal",
             width = 1.7 + content + rep / 10)
       }))

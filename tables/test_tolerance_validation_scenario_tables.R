@@ -57,10 +57,10 @@ mti <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
     do.call(rbind, lapply(1:2, function(rep) {
       rbind(
         row(dgp, n, 0.90, rep,
-            "mti_ecm_dp_profile_tune_p989_deepq_q9995",
+            "mti_ecm_adaptive_cell",
             success = TRUE, width = 1.85),
         row(dgp, n, 0.90, rep,
-            "mti_ecm_dp_profile_tune_p985_deepq_q9995",
+            "mti_ecm_adaptive_screen_p985",
             success = dgp == "normal", width = 1.75)
       )
     }))
@@ -91,6 +91,7 @@ young_path <- file.path(work_dir, "young.csv")
 mti_path <- file.path(work_dir, "mti.csv")
 small_path <- file.path(work_dir, "small.csv")
 scan_path <- file.path(work_dir, "scan.csv")
+policy_path <- file.path(work_dir, "policy.csv")
 utils::write.csv(primary, primary_path, row.names = FALSE)
 utils::write.csv(young, young_path, row.names = FALSE)
 utils::write.csv(mti, mti_path, row.names = FALSE)
@@ -105,6 +106,19 @@ utils::write.csv(data.frame(
   infeasible = c(FALSE, FALSE),
   stringsAsFactors = FALSE
 ), scan_path, row.names = FALSE)
+utils::write.csv(data.frame(
+  policy_id = "test_adaptive_policy",
+  method_id = "mti_ecm_adaptive_cell",
+  source_method_id = "mti_ecm_adaptive_screen_p985",
+  n = c(500L, 1000L),
+  content = c(0.90, 0.90),
+  tolerance_confidence = c(0.95, 0.95),
+  screen = c(0.985, 0.985),
+  calibration_replications = c(20L, 20L),
+  observed_delivery = c(1, 1),
+  delivery_lower_bound = c(0.90, 0.90),
+  stringsAsFactors = FALSE
+), policy_path, row.names = FALSE)
 
 out_dir <- file.path(work_dir, "out")
 status <- system2(
@@ -113,6 +127,7 @@ status <- system2(
     script,
     paste0("--primary-results=", primary_path),
     paste0("--mti-ecm-results=", mti_path),
+    paste0("--mti-ecm-policy-csv=", policy_path),
     paste0("--young-mathew-results=", young_path),
     paste0("--small95-results=", small_path),
     paste0("--scan-calibration-csv=", scan_path),
@@ -139,10 +154,8 @@ required <- file.path(out_dir, c(
   "tolerance_validation_article_dgp_width_ranges.tex",
   "tolerance_validation_article_scan_calibration.csv",
   "tolerance_validation_article_scan_calibration.tex",
-  "tolerance_validation_mti_ecm_stage2_tuning_summary.csv",
-  "tolerance_validation_mti_ecm_stage2_tuning_summary.tex",
-  "tolerance_validation_mti_ecm_stage2_outlier_audit.csv",
-  "tolerance_validation_mti_ecm_stage2_outlier_audit.tex",
+  "tolerance_validation_mti_ecm_selected_policy_summary.csv",
+  "tolerance_validation_mti_ecm_selected_policy_summary.tex",
   "tolerance_validation_article_small_sample_dgp_delivery.csv",
   "tolerance_validation_article_small_sample_dgp_delivery.tex",
   "tolerance_validation_article_small_sample_dgp_width_ranges.csv",
@@ -162,11 +175,11 @@ stopifnot(nrow(primary_range) ==
 stopifnot(!"hdp_s_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_mti_gibbs_median_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_mti_ecm_map_mc" %in% primary_range$method_id)
-stopifnot(!"mti_ecm_dp_profile_tune_p985_deepq_q9995" %in%
+stopifnot(!"mti_ecm_adaptive_screen_p985" %in%
             primary_range$method_id)
 stopifnot(!"tcsp_dkw" %in% primary_range$method_id)
 stopifnot(any(primary_range$method_id ==
-                "mti_ecm_dp_profile_tune_p989_deepq_q9995"))
+                "mti_ecm_adaptive_cell"))
 stopifnot(any(primary_range$method_id == "young_mathew"))
 stopifnot(!"dgp_cells" %in% names(primary_range))
 stopifnot(!"fail_closed_dgp_cells" %in% names(primary_range))
@@ -247,16 +260,15 @@ scan_tex <- paste(readLines(
 stopifnot(grepl("Retained count", scan_tex, fixed = TRUE))
 stopifnot(grepl("0.951", scan_tex, fixed = TRUE))
 
-tuning_tex <- paste(readLines(
-  file.path(out_dir, "tolerance_validation_mti_ecm_stage2_tuning_summary.tex"),
+policy_tex <- paste(readLines(
+  file.path(out_dir, "tolerance_validation_mti_ecm_selected_policy_summary.tex"),
   warn = FALSE
 ), collapse = "\n")
-stopifnot(grepl("MTI-ECM profile sensitivity summary", tuning_tex,
+stopifnot(grepl("Selected adaptive MTI-ECM calibration policy", policy_tex,
                 fixed = TRUE))
-stopifnot(grepl("Screen 0.989; fitted content up to 0.9995",
-                tuning_tex, fixed = TRUE))
-stopifnot(grepl("Selected for article comparison", tuning_tex, fixed = TRUE))
-stopifnot(!grepl("mti_ecm_dp_profile_tune", tuning_tex, fixed = TRUE))
+stopifnot(grepl("0.985", policy_tex, fixed = TRUE))
+stopifnot(grepl("Validation range", policy_tex, fixed = TRUE))
+stopifnot(!grepl("mti_ecm_adaptive_", policy_tex, fixed = TRUE))
 
 out_dir_no_small <- file.path(work_dir, "out-no-small")
 status <- system2(
@@ -265,6 +277,7 @@ status <- system2(
     script,
     paste0("--primary-results=", primary_path),
     paste0("--mti-ecm-results=", mti_path),
+    paste0("--mti-ecm-policy-csv=", policy_path),
     paste0("--young-mathew-results=", young_path),
     paste0("--small95-results=", file.path(work_dir, "missing-small.csv")),
     paste0("--scan-calibration-csv=", scan_path),

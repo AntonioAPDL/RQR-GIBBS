@@ -25,8 +25,8 @@ default_primary_dir <- file.path(
 )
 default_mti_ecm_dir <- file.path(
   "application", "runs",
-  "rqr_bayes_uq_validation_mti_ecm_dp_profile_stage2_tuning_20260823",
-  "wave_confirmatory_mti_ecm_dp_profile_stage2_20260823T230135Z"
+  "rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825",
+  "wave_confirmatory_20260825T072935Z"
 )
 primary_results <- arg_value(
   "--primary-results=",
@@ -58,7 +58,7 @@ figure_path <- file.path(output_dir, "fig04_tolerance_validation_primary.png")
 manifest_path <- file.path(output_dir,
                            "tolerance_validation_primary_figure_manifest.csv")
 
-selected_mti_ecm_method <- "mti_ecm_dp_profile_tune_p989_deepq_q9995"
+selected_mti_ecm_method <- "mti_ecm_adaptive_cell"
 has_mti_ecm_input <- nzchar(mti_ecm_results) && file.exists(mti_ecm_results)
 method_order <- c(
   "tcsp_mc",
@@ -68,19 +68,19 @@ method_order <- c(
 )
 method_labels <- c(
   tcsp_mc = "TCSP",
-  mti_ecm_dp_profile_tune_p989_deepq_q9995 = "MTI-ECM",
+  mti_ecm_adaptive_cell = "MTI-ECM",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks"
 )
 method_colors <- c(
   tcsp_mc = "#0072B2",
-  mti_ecm_dp_profile_tune_p989_deepq_q9995 = "#009E73",
+  mti_ecm_adaptive_cell = "#009E73",
   young_mathew = "#CC79A7",
   wilks_minmax = "#000000"
 )
 method_lty <- c(
   tcsp_mc = 1,
-  mti_ecm_dp_profile_tune_p989_deepq_q9995 = 1,
+  mti_ecm_adaptive_cell = 1,
   young_mathew = 1,
   wilks_minmax = 2
 )
@@ -152,7 +152,7 @@ derive_ranges_from_raw <- function(primary_path, ym_path) {
   primary <- read_result_file(primary_path, "Primary validation results")
   frames <- list(primary)
   if (has_mti_ecm_input) {
-    mti <- read_result_file(mti_ecm_results, "MTI-ECM stage-2 results")
+    mti <- read_result_file(mti_ecm_results, "Selected MTI-ECM results")
     if (!any(mti$method_id == selected_mti_ecm_method)) {
       stopf("MTI-ECM figure input does not contain selected method: ",
             selected_mti_ecm_method)

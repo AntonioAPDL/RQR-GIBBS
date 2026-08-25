@@ -1,0 +1,10 @@
+"n","content","method_id","policy_id","source_method_id","direct_dp_screen","calibration_replications","calibration_delivery","calibration_lower_bound","validation_attainment_min","validation_attainment_max","dgp_cells","cells_below_95","mean_width","width_q025_min","width_q975_max"
+50,0.9,"mti_ecm_adaptive_cell","mti_ecm_adaptive_cell_pooled_20260825","mti_ecm_adaptive_screen_p980",0.98,8000,0.967875,0.964440653280759,0.957,0.977,8,0,4.61980178004126,1.41606919423303,13.9570691569466
+100,0.9,"mti_ecm_adaptive_cell","mti_ecm_adaptive_cell_pooled_20260825","mti_ecm_adaptive_screen_p9825",0.9825,8000,0.957875,0.953992706432844,0.89,0.984,8,2,3.25244790096504,1.28979394792274,4.90960673253803
+100,0.95,"mti_ecm_adaptive_cell","mti_ecm_adaptive_cell_pooled_20260825","mti_ecm_adaptive_screen_p980",0.98,8000,0.962625,0.958947013104196,0.944,0.973,8,1,5.48933483882666,2.16188850138787,20.0839211635394
+500,0.9,"mti_ecm_adaptive_cell","mti_ecm_adaptive_cell_pooled_20260825","mti_ecm_adaptive_screen_p980",0.98,8000,0.9695,0.966145501967955,0.955,0.989,8,0,2.73259281796867,1.19812371702972,3.80474908053297
+500,0.95,"mti_ecm_adaptive_cell","mti_ecm_adaptive_cell_pooled_20260825","mti_ecm_adaptive_screen_p980",0.98,8000,0.96875,0.965358364117558,0.952,0.987,8,0,3.65637878066926,1.94968122418643,5.27081109291331
+500,0.99,"mti_ecm_adaptive_cell","mti_ecm_adaptive_cell_pooled_20260825","mti_ecm_adaptive_screen_p985",0.985,8000,0.95675,0.952821269079027,0.907,0.967,8,3,7.48506818147956,4.55045213036298,30.7689463079022
+1000,0.9,"mti_ecm_adaptive_cell","mti_ecm_adaptive_cell_pooled_20260825","mti_ecm_adaptive_screen_p980",0.98,8000,0.962,0.958294320755927,0.948,0.983,8,1,2.61346946506565,1.17387316335134,3.633676652991
+1000,0.95,"mti_ecm_adaptive_cell","mti_ecm_adaptive_cell_pooled_20260825","mti_ecm_adaptive_screen_p980",0.98,8000,0.98,0.977229119599521,0.955,0.985,8,0,3.48718840513129,1.87578376389094,4.68761821896645
+1000,0.99,"mti_ecm_adaptive_cell","mti_ecm_adaptive_cell_pooled_20260825","mti_ecm_adaptive_screen_p980",0.98,8000,0.959875,0.956077046729996,0.931,0.981,8,1,6.16038956986218,4.49090223073322,12.3630097736106

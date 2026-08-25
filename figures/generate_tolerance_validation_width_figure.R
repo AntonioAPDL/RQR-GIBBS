@@ -31,7 +31,7 @@ manifest_path <- file.path(
   output_dir, "tolerance_validation_width_figure_manifest.csv"
 )
 
-selected_mti_ecm_method <- "mti_ecm_dp_profile_tune_p989_deepq_q9995"
+selected_mti_ecm_method <- "mti_ecm_adaptive_cell"
 method_order <- c(
   "tcsp_mc",
   selected_mti_ecm_method,
@@ -40,19 +40,19 @@ method_order <- c(
 )
 method_labels <- c(
   tcsp_mc = "TCSP",
-  mti_ecm_dp_profile_tune_p989_deepq_q9995 = "MTI-ECM",
+  mti_ecm_adaptive_cell = "MTI-ECM",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks"
 )
 method_colors <- c(
   tcsp_mc = "#0072B2",
-  mti_ecm_dp_profile_tune_p989_deepq_q9995 = "#009E73",
+  mti_ecm_adaptive_cell = "#009E73",
   young_mathew = "#CC79A7",
   wilks_minmax = "#000000"
 )
 method_pch <- c(
   tcsp_mc = 16,
-  mti_ecm_dp_profile_tune_p989_deepq_q9995 = 17,
+  mti_ecm_adaptive_cell = 17,
   young_mathew = 16,
   wilks_minmax = 1
 )

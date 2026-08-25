@@ -12,7 +12,7 @@ rows <- expand.grid(
   content = c(0.90, 0.99),
   method_id = c(
     "tcsp_mc",
-    "mti_ecm_dp_profile_tune_p989_deepq_q9995",
+    "mti_ecm_adaptive_cell",
     "young_mathew",
     "wilks_minmax"
   ),
@@ -24,7 +24,7 @@ rows$mean_width <- rows$width_q025 + 0.25
 rows$dgp_id <- ifelse(rows$dgp == "Gaussian", "normal", "student_t3")
 rows$method <- c(
   tcsp_mc = "TCSP",
-  mti_ecm_dp_profile_tune_p989_deepq_q9995 = "MTI-ECM",
+  mti_ecm_adaptive_cell = "MTI-ECM",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks"
 )[rows$method_id]

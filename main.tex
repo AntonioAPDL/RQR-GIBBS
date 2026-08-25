@@ -1539,11 +1539,13 @@ reported TCSP calculations use the adaptive Clopper--Pearson scan calibration de
 above. Its optimality is class-specific: it minimizes width among closed
 order-statistic windows satisfying the calibrated retained-count rule.
 The MTI-ECM comparator links the validation study to the generalized-Bayes
-interval construction. It profiles fixed-target MTI-ECM endpoint fits over
-fitted content and retained-mean tilt, then reports the shortest candidate
-whose direct Dirichlet-process fixed-interval content probability reaches
-0.989; the fitted-content grid extends to 0.9995. This empirical validation is
-separate from the distribution-free scan theorem that supports TCSP.
+interval construction. It uses a frozen adaptive calibration policy indexed by
+sample size and requested content. Within each cell, the policy fixes a
+direct Dirichlet-process content screen from an independent calibration run,
+then profiles fixed-target MTI-ECM endpoint fits over fitted content and
+retained-mean tilt and reports the shortest candidate passing that screen. This
+empirical validation is separate from the distribution-free scan theorem that
+supports TCSP.
 Young--Mathew interpolation
 \citep{YoungMathew2014NonparametricTolerance} and Wilks min--max intervals
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction} provide the
@@ -1592,7 +1594,7 @@ the values remain raw interval lengths.}
 \end{figure}
 
 In the completed run, TCSP content-attainment ranges from 95.3\% to 99.6\% across
-distribution-level cells, compared with 95.1\% to 99.6\% for the selected
+distribution-level cells, compared with 89.0\% to 98.9\% for the selected
 MTI-ECM rule, 94.1\% to 97.2\% for Young--Mathew, and 95.3\% to 100.0\% for
 Wilks.
 Figures~\ref{fig:tolerance-validation-primary}
@@ -1600,18 +1602,18 @@ and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
 pooling widths across distributional scenarios. The calibrated scan action
 targets the requested finite-sample statement directly. The adaptive
 calibration preserves empirical content attainment above the nominal tolerance confidence
-in every distribution-level cell. The selected MTI-ECM rule also stays above
-nominal tolerance confidence in every distribution-level cell and has a smaller
-cellwise median width than TCSP in 31 of 72 cells. Young--Mathew is a strong
-nonparametric comparator and is slightly shorter on the symmetric reference
-distributions, but it falls below nominal tolerance confidence in nine skewed
-or heavy-tailed cells. In the six asymmetric simulation distributions, TCSP and
-MTI-ECM are each shorter than Young--Mathew in 36 of 54 cells while maintaining
-nominal tolerance confidence. Wilks is simple and reliable, but it is often
+in every distribution-level cell. The selected MTI-ECM rule is more efficient
+but less uniformly conservative: it falls below nominal tolerance confidence in
+eight of 72 cells and has a smaller cellwise median width than TCSP in 64 of
+72 cells. Young--Mathew is a strong nonparametric comparator and is slightly
+shorter on the symmetric reference distributions, but it falls below nominal
+tolerance confidence in nine skewed or heavy-tailed cells. In the six
+asymmetric simulation distributions, TCSP and MTI-ECM are each shorter than
+Young--Mathew in 36 of 54 cells. Wilks is simple and reliable, but it is often
 much wider when the scan calibration does not force the full sample range.
 
 The supplement gives the distribution-level content-attainment and width tables behind these
-summaries, the MTI-ECM profile sensitivity analysis, the TCSP retained counts,
+summaries, the selected MTI-ECM policy summary, the TCSP retained counts,
 and the full-range feasibility thresholds used to choose the simulation design.
 The excluded small-sample cells fall outside the region where a two-sided
 distribution-free tolerance statement can be certified at confidence \(0.95\).
