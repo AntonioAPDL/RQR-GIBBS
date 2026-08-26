@@ -17,6 +17,20 @@ arg_value <- function(prefix, default = NULL) {
   if (length(hit)) sub(prefix, "", hit[[1L]], fixed = TRUE) else default
 }
 stopf <- function(...) stop(paste0(...), call. = FALSE)
+optional_numeric_arg <- function(prefix, default) {
+  value <- arg_value(prefix, NULL)
+  if (is.null(value) || !nzchar(value)) return(default)
+  value_lower <- tolower(value)
+  if (value_lower %in% c("inf", "+inf", "infinity", "+infinity")) {
+    return(Inf)
+  }
+  if (value_lower %in% c("-inf", "-infinity")) return(-Inf)
+  out <- suppressWarnings(as.numeric(value)[1L])
+  if (is.na(out)) {
+    stopf("Argument ", prefix, " must be numeric or Inf; got: ", value)
+  }
+  out
+}
 
 for (package in c("rqrgibbs", "digest")) {
   if (!requireNamespace(package, quietly = TRUE)) {
@@ -56,6 +70,22 @@ method_pattern <- arg_value(
   "--method-pattern=",
   "^(mti_ecm_dp_profile_tune_|mti_ecm_adaptive_screen_)"
 )
+width_objective <- tolower(gsub(
+  "_", "-", arg_value("--width-objective=", "mean-median")
+))
+max_infeasible_rate <- optional_numeric_arg("--max-infeasible-rate=", Inf)
+max_width_q975_to_median <- optional_numeric_arg(
+  "--max-width-q975-to-median=", Inf
+)
+max_mean_width_ratio_to_median <- optional_numeric_arg(
+  "--max-mean-width-ratio-to-median=", Inf
+)
+min_mean_candidate_feasible_count <- optional_numeric_arg(
+  "--min-mean-candidate-feasible-count=", -Inf
+)
+min_min_candidate_feasible_count <- optional_numeric_arg(
+  "--min-min-candidate-feasible-count=", -Inf
+)
 
 if (!selection %in% c("pooled-cell", "cell", "global", "oracle")) {
   stopf("--selection must be one of pooled-cell, cell, global, or oracle.")
@@ -69,6 +99,34 @@ if (!is.finite(margin) || margin < 0) {
 }
 if (!nzchar(method_pattern)) {
   stopf("--method-pattern must be a nonempty regular expression.")
+}
+if (!width_objective %in% c("mean-median", "median-q975")) {
+  stopf("--width-objective must be one of mean-median or median-q975.")
+}
+if (!is.infinite(max_infeasible_rate) &&
+    (!is.finite(max_infeasible_rate) ||
+     max_infeasible_rate < 0 || max_infeasible_rate > 1)) {
+  stopf("--max-infeasible-rate must be in [0, 1] or Inf.")
+}
+if (!is.infinite(max_width_q975_to_median) &&
+    (!is.finite(max_width_q975_to_median) ||
+     max_width_q975_to_median < 1)) {
+  stopf("--max-width-q975-to-median must be at least 1 or Inf.")
+}
+if (!is.infinite(max_mean_width_ratio_to_median) &&
+    (!is.finite(max_mean_width_ratio_to_median) ||
+     max_mean_width_ratio_to_median <= 0)) {
+  stopf("--max-mean-width-ratio-to-median must be positive or Inf.")
+}
+if (!is.infinite(min_mean_candidate_feasible_count) &&
+    (!is.finite(min_mean_candidate_feasible_count) ||
+     min_mean_candidate_feasible_count < 0)) {
+  stopf("--min-mean-candidate-feasible-count must be nonnegative or -Inf.")
+}
+if (!is.infinite(min_min_candidate_feasible_count) &&
+    (!is.finite(min_min_candidate_feasible_count) ||
+     min_min_candidate_feasible_count < 0)) {
+  stopf("--min-min-candidate-feasible-count must be nonnegative or -Inf.")
 }
 
 truthy <- function(x) {
@@ -97,10 +155,28 @@ min_or_na <- function(x) {
   x <- x[is.finite(x)]
   if (length(x)) min(x) else NA_real_
 }
+max_or_na <- function(x) {
+  x <- num(x)
+  x <- x[is.finite(x)]
+  if (length(x)) max(x) else NA_real_
+}
 integer_min_or_na <- function(x) {
   x <- as.integer(x)
   x <- x[!is.na(x)]
   if (length(x)) min(x) else NA_integer_
+}
+safe_ratio <- function(numerator, denominator) {
+  if (is.finite(numerator) && is.finite(denominator) && denominator > 0) {
+    numerator / denominator
+  } else {
+    NA_real_
+  }
+}
+pass_upper <- function(value, limit) {
+  is.infinite(limit) || (is.finite(value) && value <= limit)
+}
+pass_lower <- function(value, limit) {
+  is.infinite(limit) && limit < 0 || (is.finite(value) && value >= limit)
 }
 cell_key <- function(n, content, tolerance_confidence) {
   sprintf(
@@ -181,6 +257,40 @@ summarise_raw <- function(df, scope, dgp_id = NA_character_) {
     as.integer(successes - required_successes)
   }
   width <- df$width_num[!df$infeasible_bool & is.finite(df$width_num)]
+  mean_width <- mean_or_na(width)
+  median_width <- median_or_na(width)
+  width_q025 <- quantile_or_na(width, 0.025)
+  width_q975 <- quantile_or_na(width, 0.975)
+  width_q975_to_median <- safe_ratio(width_q975, median_width)
+  mean_width_to_median_width <- safe_ratio(mean_width, median_width)
+  infeasible_rate <- mean(df$infeasible_bool, na.rm = TRUE)
+  if (!is.finite(infeasible_rate)) infeasible_rate <- NA_real_
+  feasible_counts <- if ("candidate_feasible_count" %in% names(df)) {
+    num(df$candidate_feasible_count)
+  } else {
+    numeric()
+  }
+  mean_candidate_feasible_count <- mean_or_na(feasible_counts)
+  min_candidate_feasible_count <- min_or_na(feasible_counts)
+  max_candidate_feasible_count <- max_or_na(feasible_counts)
+  admissible_before_stability <- is.finite(lower) && lower >= target + margin
+  infeasible_rate_pass <- pass_upper(infeasible_rate, max_infeasible_rate)
+  width_q975_to_median_pass <- pass_upper(
+    width_q975_to_median, max_width_q975_to_median
+  )
+  mean_width_ratio_pass <- pass_upper(
+    mean_width_to_median_width, max_mean_width_ratio_to_median
+  )
+  mean_candidate_feasible_count_pass <- pass_lower(
+    mean_candidate_feasible_count, min_mean_candidate_feasible_count
+  )
+  min_candidate_feasible_count_pass <- pass_lower(
+    min_candidate_feasible_count, min_min_candidate_feasible_count
+  )
+  width_stability_pass <-
+    width_q975_to_median_pass && mean_width_ratio_pass
+  candidate_feasible_count_pass <-
+    mean_candidate_feasible_count_pass && min_candidate_feasible_count_pass
   data.frame(
     source_method_id = df$method_id[[1L]],
     calibration_scope = scope,
@@ -202,11 +312,37 @@ summarise_raw <- function(df, scope, dgp_id = NA_character_) {
     min_delivery_lower_bound = NA_real_,
     min_success_margin_to_requirement = NA_integer_,
     all_dgp_cells_admissible = NA,
-    admissible = is.finite(lower) && lower >= target + margin,
-    mean_width = mean_or_na(width),
-    median_width = median_or_na(width),
-    width_q025 = quantile_or_na(width, 0.025),
-    width_q975 = quantile_or_na(width, 0.975),
+    admissible_before_stability = admissible_before_stability,
+    infeasible_rate = infeasible_rate,
+    max_infeasible_rate = max_infeasible_rate,
+    infeasible_rate_pass = infeasible_rate_pass,
+    mean_candidate_feasible_count = mean_candidate_feasible_count,
+    min_candidate_feasible_count = min_candidate_feasible_count,
+    max_candidate_feasible_count = max_candidate_feasible_count,
+    min_mean_candidate_feasible_count =
+      min_mean_candidate_feasible_count,
+    min_min_candidate_feasible_count =
+      min_min_candidate_feasible_count,
+    mean_candidate_feasible_count_pass =
+      mean_candidate_feasible_count_pass,
+    min_candidate_feasible_count_pass =
+      min_candidate_feasible_count_pass,
+    candidate_feasible_count_pass = candidate_feasible_count_pass,
+    admissible = admissible_before_stability &&
+      infeasible_rate_pass &&
+      candidate_feasible_count_pass &&
+      width_stability_pass,
+    mean_width = mean_width,
+    median_width = median_width,
+    width_q025 = width_q025,
+    width_q975 = width_q975,
+    width_q975_to_median = width_q975_to_median,
+    max_width_q975_to_median = max_width_q975_to_median,
+    width_q975_to_median_pass = width_q975_to_median_pass,
+    mean_width_to_median_width = mean_width_to_median_width,
+    max_mean_width_ratio_to_median = max_mean_width_ratio_to_median,
+    mean_width_ratio_pass = mean_width_ratio_pass,
+    width_stability_pass = width_stability_pass,
     screen = mean_or_na(df$screen),
     posterior_confidence = mean_or_na(df$screen),
     stringsAsFactors = FALSE
@@ -278,13 +414,26 @@ choose_candidate <- function(candidates) {
   median_width_order <- function(df) {
     ifelse(is.finite(df$median_width), df$median_width, Inf)
   }
+  width_q975_order <- function(df) {
+    ifelse(is.finite(df$width_q975), df$width_q975, Inf)
+  }
   admissible <- candidates[candidates$admissible, , drop = FALSE]
   if (nrow(admissible)) {
-    admissible <- admissible[order(
-      mean_width_order(admissible),
-      median_width_order(admissible),
-      admissible$source_method_id
-    ), , drop = FALSE]
+    if (identical(width_objective, "median-q975")) {
+      admissible <- admissible[order(
+        median_width_order(admissible),
+        width_q975_order(admissible),
+        mean_width_order(admissible),
+        admissible$source_method_id
+      ), , drop = FALSE]
+    } else {
+      admissible <- admissible[order(
+        mean_width_order(admissible),
+        median_width_order(admissible),
+        width_q975_order(admissible),
+        admissible$source_method_id
+      ), , drop = FALSE]
+    }
     out <- admissible[1L, , drop = FALSE]
     out$decision <- "selected_by_configured_bound"
     return(out)
@@ -306,6 +455,7 @@ choose_candidate <- function(candidates) {
     -lower_score,
     mean_width_order(candidates),
     median_width_order(candidates),
+    width_q975_order(candidates),
     candidates$source_method_id
   ), , drop = FALSE]
   out <- candidates[1L, , drop = FALSE]
@@ -352,6 +502,15 @@ out$selection_rule <- selection
 out$bound_method <- bound_method
 out$bound_confidence <- bound_confidence
 out$delivery_margin <- margin
+out$width_objective <- width_objective
+out$max_infeasible_rate_configured <- max_infeasible_rate
+out$max_width_q975_to_median_configured <- max_width_q975_to_median
+out$max_mean_width_ratio_to_median_configured <-
+  max_mean_width_ratio_to_median
+out$min_mean_candidate_feasible_count_configured <-
+  min_mean_candidate_feasible_count
+out$min_min_candidate_feasible_count_configured <-
+  min_min_candidate_feasible_count
 out$input_results_path <- repo_relative_path(results_path)
 out$input_results_digest <- digest::digest(results_path, algo = "sha256",
                                            file = TRUE)
@@ -364,10 +523,14 @@ front_cols <- c(
   "calibration_replications", "calibration_successes",
   "minimum_successes_required", "success_margin_to_requirement",
   "observed_delivery", "delivery_lower_bound",
-  "admissible", "mean_width", "median_width", "width_q025", "width_q975",
+  "admissible_before_stability", "admissible",
+  "infeasible_rate", "infeasible_rate_pass",
+  "candidate_feasible_count_pass", "width_stability_pass",
+  "mean_width", "median_width", "width_q025", "width_q975",
+  "width_q975_to_median", "mean_width_to_median_width",
   "dgp_cells", "passing_dgp_cells", "min_observed_delivery",
   "min_delivery_lower_bound", "min_success_margin_to_requirement",
-  "all_dgp_cells_admissible"
+  "all_dgp_cells_admissible", "width_objective"
 )
 front_cols <- front_cols[front_cols %in% names(out)]
 out <- out[, c(front_cols, setdiff(names(out), front_cols)), drop = FALSE]
@@ -385,6 +548,15 @@ diagnostics$selection_rule <- selection
 diagnostics$bound_method <- bound_method
 diagnostics$bound_confidence <- bound_confidence
 diagnostics$delivery_margin <- margin
+diagnostics$width_objective <- width_objective
+diagnostics$max_infeasible_rate_configured <- max_infeasible_rate
+diagnostics$max_width_q975_to_median_configured <- max_width_q975_to_median
+diagnostics$max_mean_width_ratio_to_median_configured <-
+  max_mean_width_ratio_to_median
+diagnostics$min_mean_candidate_feasible_count_configured <-
+  min_mean_candidate_feasible_count
+diagnostics$min_min_candidate_feasible_count_configured <-
+  min_min_candidate_feasible_count
 diagnostics$input_results_digest <- out$input_results_digest[[1L]]
 diagnostics <- diagnostics[order(
   diagnostics$calibration_scope,
@@ -410,3 +582,12 @@ cat("  method_pattern=", method_pattern, "\n", sep = "")
 cat("  bound_method=", bound_method, "\n", sep = "")
 cat("  bound_confidence=", bound_confidence, "\n", sep = "")
 cat("  margin=", margin, "\n", sep = "")
+cat("  width_objective=", width_objective, "\n", sep = "")
+cat("  max_infeasible_rate=", max_infeasible_rate, "\n", sep = "")
+cat("  max_width_q975_to_median=", max_width_q975_to_median, "\n", sep = "")
+cat("  max_mean_width_ratio_to_median=", max_mean_width_ratio_to_median,
+    "\n", sep = "")
+cat("  min_mean_candidate_feasible_count=",
+    min_mean_candidate_feasible_count, "\n", sep = "")
+cat("  min_min_candidate_feasible_count=",
+    min_min_candidate_feasible_count, "\n", sep = "")

@@ -246,3 +246,224 @@ test_that("adaptive MTI-ECM policy builder labels unresolved strict cells", {
   expect_equal(out$min_success_margin_to_requirement,
                out$success_margin_to_requirement)
 })
+
+test_that("adaptive MTI-ECM policy builder rejects unstable width tails", {
+  script <- test_path(
+    "..", "..", "scripts", "82_build_mti_ecm_adaptive_policy.R"
+  )
+  skip_if_not(file.exists(script), "policy builder is outside package build")
+
+  rows <- list()
+  idx <- 0L
+  add_rows <- function(method_id, widths, screen) {
+    for (rr in seq_along(widths)) {
+      idx <<- idx + 1L
+      rows[[idx]] <<- data.frame(
+        method_id = method_id,
+        dgp_id = "skew_cell",
+        n = 50L,
+        guaranteed_content = 0.90,
+        tolerance_confidence = 0.80,
+        replication = rr,
+        success = TRUE,
+        infeasible = FALSE,
+        width = widths[[rr]],
+        effective_posterior_confidence = screen,
+        candidate_feasible_count = 3L,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  add_rows(
+    "mti_ecm_adaptive_refine_screen_p995",
+    c(rep(1, 19), 500),
+    0.995
+  )
+  add_rows(
+    "mti_ecm_adaptive_refine_screen_p9975",
+    rep(3, 20),
+    0.9975
+  )
+
+  input <- tempfile("adaptive-stability-input-", fileext = ".csv")
+  output <- tempfile("adaptive-stability-output-", fileext = ".csv")
+  diagnostics <- tempfile("adaptive-stability-diagnostics-", fileext = ".csv")
+  write.csv(do.call(rbind, rows), input, row.names = FALSE)
+
+  status <- system2(
+    "Rscript",
+    c(
+      script,
+      paste0("--results=", input),
+      paste0("--output=", output),
+      paste0("--diagnostics-output=", diagnostics),
+      "--policy-id=stability_policy",
+      "--selection=cell",
+      "--method-pattern=^mti_ecm_adaptive_refine_screen_",
+      "--bound-method=wilson",
+      "--bound-confidence=0.50",
+      "--margin=0",
+      "--width-objective=median-q975",
+      "--max-width-q975-to-median=10"
+    ),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  exit_status <- attr(status, "status")
+  if (is.null(exit_status)) exit_status <- 0L
+  expect_equal(exit_status, 0L, info = paste(status, collapse = "\n"))
+
+  out <- read.csv(output)
+  expect_equal(out$source_method_id, "mti_ecm_adaptive_refine_screen_p9975")
+  expect_true(out$admissible)
+  expect_equal(out$width_objective, "median-q975")
+
+  diag <- read.csv(diagnostics)
+  unstable <- diag[
+    diag$calibration_scope == "all_distribution_cell" &
+      diag$source_method_id == "mti_ecm_adaptive_refine_screen_p995",
+    ,
+    drop = FALSE
+  ]
+  expect_equal(nrow(unstable), 1L)
+  expect_true(unstable$admissible_before_stability)
+  expect_false(unstable$width_stability_pass)
+  expect_false(unstable$admissible)
+})
+
+test_that("adaptive MTI-ECM policy builder applies infeasible-rate limits", {
+  script <- test_path(
+    "..", "..", "scripts", "82_build_mti_ecm_adaptive_policy.R"
+  )
+  skip_if_not(file.exists(script), "policy builder is outside package build")
+
+  rows <- list()
+  idx <- 0L
+  add_rows <- function(method_id, infeasible_at, width_base, screen) {
+    for (rr in seq_len(20L)) {
+      idx <<- idx + 1L
+      is_infeasible <- rr %in% infeasible_at
+      rows[[idx]] <<- data.frame(
+        method_id = method_id,
+        dgp_id = "skew_cell",
+        n = 100L,
+        guaranteed_content = 0.90,
+        tolerance_confidence = 0.70,
+        replication = rr,
+        success = TRUE,
+        infeasible = is_infeasible,
+        width = width_base + rr / 1000,
+        effective_posterior_confidence = screen,
+        candidate_feasible_count = if (is_infeasible) 0L else 2L,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  add_rows("mti_ecm_adaptive_refine_screen_p996", 1L, 1, 0.996)
+  add_rows("mti_ecm_adaptive_refine_screen_p998", integer(), 2, 0.998)
+
+  input <- tempfile("adaptive-infeasible-input-", fileext = ".csv")
+  output <- tempfile("adaptive-infeasible-output-", fileext = ".csv")
+  diagnostics <- tempfile("adaptive-infeasible-diagnostics-", fileext = ".csv")
+  write.csv(do.call(rbind, rows), input, row.names = FALSE)
+
+  status <- system2(
+    "Rscript",
+    c(
+      script,
+      paste0("--results=", input),
+      paste0("--output=", output),
+      paste0("--diagnostics-output=", diagnostics),
+      "--policy-id=infeasible_policy",
+      "--selection=cell",
+      "--method-pattern=^mti_ecm_adaptive_refine_screen_",
+      "--bound-method=wilson",
+      "--bound-confidence=0.50",
+      "--margin=0",
+      "--max-infeasible-rate=0",
+      "--min-min-candidate-feasible-count=1"
+    ),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  exit_status <- attr(status, "status")
+  if (is.null(exit_status)) exit_status <- 0L
+  expect_equal(exit_status, 0L, info = paste(status, collapse = "\n"))
+
+  out <- read.csv(output)
+  expect_equal(out$source_method_id, "mti_ecm_adaptive_refine_screen_p998")
+  expect_true(out$admissible)
+
+  diag <- read.csv(diagnostics)
+  unstable <- diag[
+    diag$calibration_scope == "all_distribution_cell" &
+      diag$source_method_id == "mti_ecm_adaptive_refine_screen_p996",
+    ,
+    drop = FALSE
+  ]
+  expect_equal(nrow(unstable), 1L)
+  expect_true(unstable$admissible_before_stability)
+  expect_false(unstable$infeasible_rate_pass)
+  expect_false(unstable$min_candidate_feasible_count_pass)
+  expect_false(unstable$admissible)
+})
+
+test_that("adaptive MTI-ECM policy builder supports median width ranking", {
+  script <- test_path(
+    "..", "..", "scripts", "82_build_mti_ecm_adaptive_policy.R"
+  )
+  skip_if_not(file.exists(script), "policy builder is outside package build")
+
+  rows <- list()
+  idx <- 0L
+  add_rows <- function(method_id, widths, screen) {
+    for (rr in seq_along(widths)) {
+      idx <<- idx + 1L
+      rows[[idx]] <<- data.frame(
+        method_id = method_id,
+        dgp_id = "regular_cell",
+        n = 100L,
+        guaranteed_content = 0.90,
+        tolerance_confidence = 0.80,
+        replication = rr,
+        success = TRUE,
+        infeasible = FALSE,
+        width = widths[[rr]],
+        effective_posterior_confidence = screen,
+        candidate_feasible_count = 2L,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  add_rows("mti_ecm_adaptive_refine_screen_p996", c(rep(1, 19), 20), 0.996)
+  add_rows("mti_ecm_adaptive_refine_screen_p998", rep(1.5, 20), 0.998)
+
+  input <- tempfile("adaptive-objective-input-", fileext = ".csv")
+  output <- tempfile("adaptive-objective-output-", fileext = ".csv")
+  write.csv(do.call(rbind, rows), input, row.names = FALSE)
+
+  status <- system2(
+    "Rscript",
+    c(
+      script,
+      paste0("--results=", input),
+      paste0("--output=", output),
+      "--policy-id=objective_policy",
+      "--selection=cell",
+      "--method-pattern=^mti_ecm_adaptive_refine_screen_",
+      "--bound-method=wilson",
+      "--bound-confidence=0.50",
+      "--margin=0",
+      "--width-objective=median-q975"
+    ),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  exit_status <- attr(status, "status")
+  if (is.null(exit_status)) exit_status <- 0L
+  expect_equal(exit_status, 0L, info = paste(status, collapse = "\n"))
+
+  out <- read.csv(output)
+  expect_equal(out$source_method_id, "mti_ecm_adaptive_refine_screen_p996")
+  expect_equal(out$width_objective, "median-q975")
+})

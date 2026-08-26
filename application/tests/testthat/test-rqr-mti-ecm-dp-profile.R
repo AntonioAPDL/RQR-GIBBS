@@ -538,6 +538,50 @@ test_that("strict adaptive MTI-ECM calibration config freezes retuning scope", {
   )
 })
 
+test_that("targeted MTI-ECM refinement config freezes the dense screen menu", {
+  path <- test_path(
+    "..", "..", "config",
+    "rqr_bayes_uq_validation_mti_ecm_adaptive_targeted_refinement_20260826.json"
+  )
+  skip_if_not(file.exists(path), "validation config is outside package build")
+  config <- jsonlite::read_json(path, simplifyVector = FALSE)
+  methods <- vapply(config$methods, `[[`, character(1L), "method_id")
+  screens <- vapply(config$methods, function(x) {
+    as.numeric(x$profile_config$posterior_confidence)
+  }, numeric(1L))
+
+  expect_equal(
+    config$study_id,
+    "rqr_bayes_uq_validation_mti_ecm_adaptive_targeted_refinement_20260826"
+  )
+  expect_equal(length(methods), 10L)
+  expect_true(all(grepl("^mti_ecm_adaptive_refine_screen_p", methods)))
+  expect_false(any(grepl("p9995$", methods)))
+  expect_equal(
+    screens,
+    c(0.995, 0.996, 0.9965, 0.997, 0.99725,
+      0.9975, 0.998, 0.9985, 0.999, 0.99925)
+  )
+  expect_equal(config$diagnostics$policy_builder_selection_rule, "cell")
+  expect_equal(config$diagnostics$policy_builder_width_objective,
+               "median-q975")
+  expect_true(config$claim_scope$strict_policy_selection_required_before_promotion)
+  expect_equal(config$modes$confirmatory$replications, 1000)
+  expect_equal(length(config$modes$confirmatory$design_cells), 9L)
+  expect_equal(length(config$modes$confirmatory$dgp_ids), 8L)
+  expect_equal(config$modes$confirmatory$method_ids, as.list(methods))
+  expect_true(all(config$modes$smoke$method_ids %in% methods))
+  boundary_q <- as.numeric(
+    config$engine_defaults$mti_ecm_dp_profile$boundary_q_values
+  )
+  expect_true(all(screens %in% boundary_q))
+  expect_gte(config$engine_defaults$mti_ecm_dp_profile$q_max, 0.9995)
+  expect_equal(
+    config$engine_defaults$mti_ecm_dp_profile$adaptive_policy_id,
+    "mti_ecm_adaptive_cell_targeted_refinement"
+  )
+})
+
 test_that("adaptive MTI-ECM selected config freezes deployed cell policy", {
   path <- test_path(
     "..", "..", "config",

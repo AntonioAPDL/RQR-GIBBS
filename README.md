@@ -167,6 +167,14 @@ The selected MTI-ECM source run is
 `application/runs/rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825/wave_confirmatory_20260825T072935Z`,
 with the frozen cell policy in
 `application/config/mti_ecm_adaptive_cell_policy_20260825.csv`.
+The targeted MTI-ECM refinement screen is configured in
+`application/config/rqr_bayes_uq_validation_mti_ecm_adaptive_targeted_refinement_20260826.json`.
+It is a calibration study for a possible later frozen policy, with explicit
+delivery, infeasible-rate, and width-tail diagnostics. Use
+`make mti-ecm-targeted-refinement-smoke` before
+`make launch-mti-ecm-targeted-refinement`; pass
+`RQR_BAYES_UQ_MTI_ECM_REFINEMENT_RUN_DIR=<run_dir>` to the matching health,
+collect, stop, and policy targets.
 Use `make rqr-bayes-uq-skewstress-smoke` before
 `make launch-rqr-bayes-uq-skewstress`; pass
 `RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR=<run_dir>` to the matching health, collect,
