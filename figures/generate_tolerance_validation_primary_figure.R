@@ -95,7 +95,7 @@ method_lty <- c(
   tcsp_mc = 1,
   mti_ecm_adaptive_cell = 1,
   young_mathew = 1,
-  wilks_minmax = 2
+  wilks_minmax = 1
 )
 
 num <- function(x) suppressWarnings(as.numeric(x))
