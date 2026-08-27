@@ -12,6 +12,7 @@ row <- function(dgp, n, content, rep, method, success = TRUE,
     dgp_id = dgp,
     n = n,
     guaranteed_content = content,
+    tolerance_confidence = 0.95,
     method_id = method,
     success = success,
     infeasible = infeasible,
@@ -51,7 +52,7 @@ mti <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
     do.call(rbind, lapply(c(0.90, 0.95, 0.99), function(content) {
       do.call(rbind, lapply(1:4, function(rep) {
         row(dgp, n, content, rep,
-            "mti_ecm_adaptive_cell",
+            "mti_ecm_adaptive_screen_p995",
             success = rep != 1L || dgp == "normal",
             width = 1.7 + content + rep / 10)
       }))
@@ -62,15 +63,35 @@ mti <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
 primary_path <- file.path(work_dir, "primary.csv")
 young_path <- file.path(work_dir, "young.csv")
 mti_path <- file.path(work_dir, "mti.csv")
+policy_path <- file.path(work_dir, "policy.csv")
 utils::write.csv(primary, primary_path, row.names = FALSE)
 utils::write.csv(young, young_path, row.names = FALSE)
 utils::write.csv(mti, mti_path, row.names = FALSE)
+utils::write.csv(expand.grid(
+  n = c(500L, 1000L),
+  content = c(0.90, 0.95, 0.99),
+  KEEP.OUT.ATTRS = FALSE
+), policy_path, row.names = FALSE)
+policy <- utils::read.csv(policy_path, stringsAsFactors = FALSE)
+policy <- transform(
+  policy,
+  policy_id = "test_adaptive_policy",
+  method_id = "mti_ecm_adaptive_cell",
+  source_method_id = "mti_ecm_adaptive_screen_p995",
+  tolerance_confidence = 0.95
+)
+policy <- policy[, c(
+  "policy_id", "method_id", "source_method_id", "n", "content",
+  "tolerance_confidence"
+)]
+utils::write.csv(policy, policy_path, row.names = FALSE)
 out_dir <- file.path(work_dir, "figures")
 
 status <- system2(
   "Rscript",
   c(script, paste0("--primary-results=", primary_path),
     paste0("--mti-ecm-results=", mti_path),
+    paste0("--mti-ecm-policy-csv=", policy_path),
     paste0("--young-mathew-results=", young_path),
     paste0("--output-dir=", out_dir)),
   stdout = TRUE,
@@ -94,6 +115,7 @@ stopifnot(any(grepl("fig04_tolerance_validation_primary.png",
                     manifest$relative_path, fixed = TRUE)))
 stopifnot(any(grepl("primary.csv", manifest$relative_path, fixed = TRUE)))
 stopifnot(any(grepl("mti.csv", manifest$relative_path, fixed = TRUE)))
+stopifnot(any(grepl("policy.csv", manifest$relative_path, fixed = TRUE)))
 stopifnot(any(grepl("young.csv", manifest$relative_path, fixed = TRUE)))
 
 cat("Tolerance validation primary figure test passed.\n")

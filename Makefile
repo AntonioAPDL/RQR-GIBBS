@@ -100,9 +100,19 @@ RQR_BAYES_UQ_ARTICLE_COMPOSITE_DIR ?= application/outputs/rqr_bayes_uq_validatio
 RQR_BAYES_UQ_PRIMARY_SUMMARY ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/bayes_uq_validation_summary.csv
 RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/bayes_uq_validation_summary.csv
 RQR_BAYES_UQ_PRIMARY_RESULTS ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/bayes_uq_validation_results.csv
-RQR_BAYES_UQ_MTI_ECM_RUN_DIR ?= application/runs/rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825/wave_confirmatory_20260825T072935Z
+RQR_BAYES_UQ_MTI_ECM_RUN_DIR ?= application/runs/rqr_bayes_uq_validation_mti_ecm_adaptive_targeted_refinement_20260826/wave_confirmatory_mti_ecm_refinement_20260826T184038Z
 RQR_BAYES_UQ_MTI_ECM_RESULTS ?= $(RQR_BAYES_UQ_MTI_ECM_RUN_DIR)/bayes_uq_validation_results.csv
-RQR_BAYES_UQ_MTI_ECM_POLICY ?= application/config/mti_ecm_adaptive_cell_policy_20260825.csv
+RQR_BAYES_UQ_MTI_ECM_POLICY ?= application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv
+RQR_BAYES_UQ_MTI_ECM_POLICY_DIAGNOSTICS ?= application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827_diagnostics.csv
+RQR_BAYES_UQ_MTI_ECM_REFERENCE_RESULTS ?= $(RQR_BAYES_UQ_PRIMARY_RESULTS)
+RQR_BAYES_UQ_MTI_ECM_FALLBACK_METHOD ?= mti_ecm_adaptive_refine_screen_p995
+RQR_BAYES_UQ_MTI_ECM_MAX_INFEASIBLE_RATE ?= 0
+RQR_BAYES_UQ_MTI_ECM_MAX_WIDTH_Q975_TO_MEDIAN ?= 10
+RQR_BAYES_UQ_MTI_ECM_MAX_MEAN_WIDTH_RATIO_TO_MEDIAN ?= 10
+RQR_BAYES_UQ_MTI_ECM_MAX_MEDIAN_WIDTH_TO_REFERENCE_MEDIAN ?= 2
+RQR_BAYES_UQ_MTI_ECM_MAX_WIDTH_Q975_TO_REFERENCE_Q975 ?= 2
+RQR_BAYES_UQ_MTI_ECM_MIN_MEAN_FEASIBLE_CANDIDATES ?= 1
+RQR_BAYES_UQ_MTI_ECM_MIN_MIN_FEASIBLE_CANDIDATES ?= 1
 RQR_BAYES_UQ_MTI_ECM_STRICT_CONFIG ?= application/config/rqr_bayes_uq_validation_mti_ecm_adaptive_strict_calibration_20260825.json
 RQR_BAYES_UQ_MTI_ECM_STRICT_DIR ?= application/outputs/rqr_bayes_uq_validation_mti_ecm_adaptive_strict_calibration_20260825
 RQR_BAYES_UQ_MTI_ECM_STRICT_SMOKE_DIR ?= $(RQR_BAYES_UQ_MTI_ECM_STRICT_DIR)/smoke_$(shell date -u +%Y%m%dT%H%M%SZ)
@@ -168,7 +178,7 @@ RQR_DLM_M02_CANARY_OUTPUT_ROOT ?=
 .PHONY: test-oracle-mean-tilt-validation oracle-mean-tilt-validation-preflight oracle-mean-tilt-validation-reference oracle-mean-tilt-validation-benchmark oracle-mean-tilt-validation-sentinel oracle-mean-tilt-validation-execute-wave oracle-mean-tilt-validation-collect oracle-mean-tilt-validation-precision oracle-mean-tilt-validation-package
 .PHONY: test-ecm test-tcsp test-tcsp-validation test-tcsp-validation-audit test-bayes-uq test-tolerance-adjudication test-mpi-mti-naming rqr-ecm-validation-smoke tcsp-split-exact-validation-smoke rqr-bayes-uq-validation-smoke rqr-bayes-uq-validation-moderate launch-rqr-bayes-uq-overnight health-rqr-bayes-uq-validation rqr-bayes-uq-main-smoke prepare-rqr-bayes-uq-main-waves launch-rqr-bayes-uq-main launch-rqr-bayes-uq-main-dpm-companion health-rqr-bayes-uq-main collect-rqr-bayes-uq-main stop-rqr-bayes-uq-main rqr-bayes-uq-refined-smoke prepare-rqr-bayes-uq-refined-waves launch-rqr-bayes-uq-refined health-rqr-bayes-uq-refined collect-rqr-bayes-uq-refined stop-rqr-bayes-uq-refined rqr-bayes-uq-skewstress-smoke prepare-rqr-bayes-uq-skewstress-waves launch-rqr-bayes-uq-skewstress health-rqr-bayes-uq-skewstress collect-rqr-bayes-uq-skewstress stop-rqr-bayes-uq-skewstress rqr-bayes-uq-followup-smoke prepare-rqr-bayes-uq-followup-waves launch-rqr-bayes-uq-followup health-rqr-bayes-uq-followup collect-rqr-bayes-uq-followup stop-rqr-bayes-uq-followup tolerance-validation-adjudication tolerance-mti-gibbs-diagnostics mti-ecm-trace-diagnostics mti-ecm-trace-diagnostic-figures mti-ecm-trace-report test-mti-ecm-trace-diagnostics mti-bayes-uq-main-smoke prepare-mti-bayes-uq-main-waves launch-mti-bayes-uq-main health-mti-bayes-uq-main collect-mti-bayes-uq-main stop-mti-bayes-uq-main tcsp-validation-preflight tcsp-validation-tiny tcsp-validation-pilot tcsp-validation-full-pilot tcsp-validation-health tcsp-validation-audit
 .PHONY: mti-ecm-strict-calibration-smoke prepare-mti-ecm-strict-calibration-waves launch-mti-ecm-strict-calibration health-mti-ecm-strict-calibration collect-mti-ecm-strict-calibration stop-mti-ecm-strict-calibration build-mti-ecm-strict-policy
-.PHONY: mti-ecm-targeted-refinement-smoke prepare-mti-ecm-targeted-refinement-waves launch-mti-ecm-targeted-refinement health-mti-ecm-targeted-refinement collect-mti-ecm-targeted-refinement stop-mti-ecm-targeted-refinement build-mti-ecm-targeted-refinement-policy
+.PHONY: mti-ecm-targeted-refinement-smoke prepare-mti-ecm-targeted-refinement-waves launch-mti-ecm-targeted-refinement health-mti-ecm-targeted-refinement collect-mti-ecm-targeted-refinement stop-mti-ecm-targeted-refinement build-mti-ecm-targeted-refinement-policy build-mti-ecm-guarded-policy
 .PHONY: validate-dlm-m02-diagnostic-canary
 
 tolerance-validation-adaptive-article-inputs:
@@ -176,7 +186,7 @@ tolerance-validation-adaptive-article-inputs:
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
-	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_RESULTS) --mti-ecm-policy-csv=$(RQR_BAYES_UQ_MTI_ECM_POLICY) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
 
 theory-tables:
@@ -486,6 +496,9 @@ stop-mti-ecm-targeted-refinement:
 build-mti-ecm-targeted-refinement-policy: package-install
 	@test -n "$(strip $(RQR_BAYES_UQ_MTI_ECM_REFINEMENT_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MTI_ECM_REFINEMENT_RUN_DIR to one completed targeted MTI-ECM refinement wave run." >&2; exit 64; }
 	$(R) application/scripts/82_build_mti_ecm_adaptive_policy.R --results=$(RQR_BAYES_UQ_MTI_ECM_REFINEMENT_RESULTS) --output=$(RQR_BAYES_UQ_MTI_ECM_REFINEMENT_POLICY) --diagnostics-output=$(RQR_BAYES_UQ_MTI_ECM_REFINEMENT_POLICY_DIAGNOSTICS) --policy-id=mti_ecm_adaptive_cell_targeted_refinement_20260826 --selection=cell --method-pattern=^mti_ecm_adaptive_refine_screen_ --width-objective=median-q975 --max-infeasible-rate=$(RQR_BAYES_UQ_MTI_ECM_REFINEMENT_MAX_INFEASIBLE_RATE) --max-width-q975-to-median=$(RQR_BAYES_UQ_MTI_ECM_REFINEMENT_MAX_WIDTH_Q975_TO_MEDIAN) --max-mean-width-ratio-to-median=$(RQR_BAYES_UQ_MTI_ECM_REFINEMENT_MAX_MEAN_WIDTH_RATIO_TO_MEDIAN) --min-mean-candidate-feasible-count=$(RQR_BAYES_UQ_MTI_ECM_REFINEMENT_MIN_MEAN_FEASIBLE_CANDIDATES) --min-min-candidate-feasible-count=$(RQR_BAYES_UQ_MTI_ECM_REFINEMENT_MIN_MIN_FEASIBLE_CANDIDATES)
+
+build-mti-ecm-guarded-policy: package-install
+	$(R) application/scripts/82_build_mti_ecm_adaptive_policy.R --results=$(RQR_BAYES_UQ_MTI_ECM_RESULTS) --output=$(RQR_BAYES_UQ_MTI_ECM_POLICY) --diagnostics-output=$(RQR_BAYES_UQ_MTI_ECM_POLICY_DIAGNOSTICS) --policy-id=mti_ecm_adaptive_cell_guarded_p995_20260827 --selection=cell --method-pattern=^mti_ecm_adaptive_refine_screen_ --fallback-method-id=$(RQR_BAYES_UQ_MTI_ECM_FALLBACK_METHOD) --width-objective=median-q975 --max-infeasible-rate=$(RQR_BAYES_UQ_MTI_ECM_MAX_INFEASIBLE_RATE) --max-width-q975-to-median=$(RQR_BAYES_UQ_MTI_ECM_MAX_WIDTH_Q975_TO_MEDIAN) --max-mean-width-ratio-to-median=$(RQR_BAYES_UQ_MTI_ECM_MAX_MEAN_WIDTH_RATIO_TO_MEDIAN) --min-mean-candidate-feasible-count=$(RQR_BAYES_UQ_MTI_ECM_MIN_MEAN_FEASIBLE_CANDIDATES) --min-min-candidate-feasible-count=$(RQR_BAYES_UQ_MTI_ECM_MIN_MIN_FEASIBLE_CANDIDATES) --reference-results=$(RQR_BAYES_UQ_MTI_ECM_REFERENCE_RESULTS) --reference-method-id=tcsp_mc --max-median-width-to-reference-median=$(RQR_BAYES_UQ_MTI_ECM_MAX_MEDIAN_WIDTH_TO_REFERENCE_MEDIAN) --max-width-q975-to-reference-q975=$(RQR_BAYES_UQ_MTI_ECM_MAX_WIDTH_Q975_TO_REFERENCE_Q975)
 
 tcsp-validation-preflight: package-install
 	$(R) application/scripts/64_run_tcsp_validation_study.R --mode=preflight --config=$(TCSP_VALIDATION_CONFIG) --output-dir=$(TCSP_VALIDATION_DIR)/preflight

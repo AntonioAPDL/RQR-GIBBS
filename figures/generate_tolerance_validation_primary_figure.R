@@ -25,8 +25,12 @@ default_primary_dir <- file.path(
 )
 default_mti_ecm_dir <- file.path(
   "application", "runs",
-  "rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825",
-  "wave_confirmatory_20260825T072935Z"
+  "rqr_bayes_uq_validation_mti_ecm_adaptive_targeted_refinement_20260826",
+  "wave_confirmatory_mti_ecm_refinement_20260826T184038Z"
+)
+default_mti_ecm_policy <- file.path(
+  "application", "config",
+  "mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv"
 )
 primary_results <- arg_value(
   "--primary-results=",
@@ -39,6 +43,11 @@ mti_ecm_results <- arg_value(
   Sys.getenv("RQR_BAYES_UQ_MTI_ECM_RESULTS",
              unset = file.path(default_mti_ecm_dir,
                                "bayes_uq_validation_results.csv"))
+)
+mti_ecm_policy_csv <- arg_value(
+  "--mti-ecm-policy-csv=",
+  Sys.getenv("RQR_BAYES_UQ_MTI_ECM_POLICY",
+             unset = default_mti_ecm_policy)
 )
 young_mathew_results <- arg_value(
   "--young-mathew-results=",
@@ -152,15 +161,71 @@ read_result_file <- function(path, label) {
   out
 }
 
+read_mti_ecm_policy <- function(path) {
+  if (!nzchar(path) || !file.exists(path)) return(data.frame())
+  policy <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+  required <- c(
+    "policy_id", "method_id", "source_method_id", "n", "content",
+    "tolerance_confidence"
+  )
+  missing <- setdiff(required, names(policy))
+  if (length(missing)) {
+    stopf("MTI-ECM policy CSV is missing column(s): ",
+          paste(missing, collapse = ", "))
+  }
+  policy$n <- as.integer(policy$n)
+  policy$content <- num(policy$content)
+  policy$tolerance_confidence <- num(policy$tolerance_confidence)
+  policy[policy$method_id == selected_mti_ecm_method, , drop = FALSE]
+}
+
+apply_mti_ecm_policy <- function(results, policy_path, selected_method) {
+  if (!nrow(results) || any(results$method_id == selected_method)) {
+    return(results)
+  }
+  policy <- read_mti_ecm_policy(policy_path)
+  if (!nrow(policy)) {
+    stopf("MTI-ECM figure input has raw candidates but no selected ",
+          "calibration rule: ", policy_path)
+  }
+  rows <- lapply(seq_len(nrow(policy)), function(ii) {
+    rule <- policy[ii, , drop = FALSE]
+    n_match <- as.integer(results$n) == as.integer(rule$n[[1L]])
+    content_match <- abs(num(results$guaranteed_content) -
+                           num(rule$content[[1L]])) < 1e-12
+    if ("tolerance_confidence" %in% names(results)) {
+      confidence_match <- abs(num(results$tolerance_confidence) -
+                                num(rule$tolerance_confidence[[1L]])) < 1e-12
+    } else {
+      confidence_match <- rep(TRUE, nrow(results))
+    }
+    hit <- results[
+      results$method_id == rule$source_method_id[[1L]] &
+        n_match & content_match & confidence_match,
+      ,
+      drop = FALSE
+    ]
+    if (!nrow(hit)) return(hit)
+    hit$adaptive_source_method_id <- hit$method_id
+    hit$adaptive_policy_id <- rule$policy_id[[1L]]
+    hit$method_id <- selected_method
+    hit
+  })
+  selected <- do.call(bind_fill, rows)
+  if (!nrow(selected)) {
+    stopf("MTI-ECM calibration rule did not match any raw candidate rows.")
+  }
+  selected
+}
+
 derive_ranges_from_raw <- function(primary_path, ym_path) {
   primary <- read_result_file(primary_path, "Primary validation results")
   frames <- list(primary)
   if (has_mti_ecm_input) {
     mti <- read_result_file(mti_ecm_results, "Selected MTI-ECM results")
-    if (!any(mti$method_id == selected_mti_ecm_method)) {
-      stopf("MTI-ECM figure input does not contain selected method: ",
-            selected_mti_ecm_method)
-    }
+    mti <- apply_mti_ecm_policy(
+      mti, mti_ecm_policy_csv, selected_mti_ecm_method
+    )
     frames <- c(frames, list(mti[mti$method_id == selected_mti_ecm_method,
                                  , drop = FALSE]))
   }
@@ -250,6 +315,7 @@ if (file.exists(primary_results)) {
   data <- derive_ranges_from_raw(primary_results, young_mathew_results)
   input_paths <- c(primary_results,
                    mti_ecm_results[file.exists(mti_ecm_results)],
+                   mti_ecm_policy_csv[file.exists(mti_ecm_policy_csv)],
                    young_mathew_results[file.exists(young_mathew_results)])
 } else if (file.exists(scenario_range_csv)) {
   data <- read_range_table(scenario_range_csv)
@@ -356,7 +422,7 @@ legend("center", legend = unname(method_labels[method_order]),
        col = unname(method_colors[method_order]),
        lty = unname(method_lty[method_order]), lwd = 2.4,
        ncol = length(method_order), bty = "n", xpd = NA, cex = 0.9)
-mtext("Iid tolerance validation at 95% tolerance confidence",
+mtext("Independent-sample tolerance validation at 95% tolerance confidence",
       outer = TRUE, cex = 1.05, font = 2)
 
 par(old_par)

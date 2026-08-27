@@ -32,7 +32,7 @@ optional_numeric_arg <- function(prefix, default) {
   out
 }
 
-for (package in c("rqrgibbs", "digest")) {
+for (package in c("rqrgibbs", "digest", "data.table")) {
   if (!requireNamespace(package, quietly = TRUE)) {
     stopf("Required package is not installed: ", package)
   }
@@ -70,6 +70,8 @@ method_pattern <- arg_value(
   "--method-pattern=",
   "^(mti_ecm_dp_profile_tune_|mti_ecm_adaptive_screen_)"
 )
+reference_results_arg <- arg_value("--reference-results=", "")
+reference_method_id <- arg_value("--reference-method-id=", "tcsp_mc")
 width_objective <- tolower(gsub(
   "_", "-", arg_value("--width-objective=", "mean-median")
 ))
@@ -79,6 +81,12 @@ max_width_q975_to_median <- optional_numeric_arg(
 )
 max_mean_width_ratio_to_median <- optional_numeric_arg(
   "--max-mean-width-ratio-to-median=", Inf
+)
+max_width_q975_to_reference_q975 <- optional_numeric_arg(
+  "--max-width-q975-to-reference-q975=", Inf
+)
+max_median_width_to_reference_median <- optional_numeric_arg(
+  "--max-median-width-to-reference-median=", Inf
 )
 min_mean_candidate_feasible_count <- optional_numeric_arg(
   "--min-mean-candidate-feasible-count=", -Inf
@@ -117,6 +125,16 @@ if (!is.infinite(max_mean_width_ratio_to_median) &&
     (!is.finite(max_mean_width_ratio_to_median) ||
      max_mean_width_ratio_to_median <= 0)) {
   stopf("--max-mean-width-ratio-to-median must be positive or Inf.")
+}
+if (!is.infinite(max_width_q975_to_reference_q975) &&
+    (!is.finite(max_width_q975_to_reference_q975) ||
+     max_width_q975_to_reference_q975 < 1)) {
+  stopf("--max-width-q975-to-reference-q975 must be at least 1 or Inf.")
+}
+if (!is.infinite(max_median_width_to_reference_median) &&
+    (!is.finite(max_median_width_to_reference_median) ||
+     max_median_width_to_reference_median < 1)) {
+  stopf("--max-median-width-to-reference-median must be at least 1 or Inf.")
 }
 if (!is.infinite(min_mean_candidate_feasible_count) &&
     (!is.finite(min_mean_candidate_feasible_count) ||
@@ -207,10 +225,20 @@ repo_relative_path <- function(path) {
   }
 }
 
-results <- utils::read.csv(results_path, stringsAsFactors = FALSE)
 required <- c("method_id", "dgp_id", "n", "guaranteed_content",
               "tolerance_confidence", "replication", "success", "infeasible",
               "width")
+results_header <- names(data.table::fread(
+  results_path, nrows = 0L, showProgress = FALSE
+))
+results_columns <- intersect(
+  unique(c(required, "effective_posterior_confidence",
+           "candidate_feasible_count")),
+  results_header
+)
+results <- as.data.frame(data.table::fread(
+  results_path, select = results_columns, showProgress = FALSE
+))
 missing <- setdiff(required, names(results))
 if (length(missing)) {
   stopf("Results input is missing required column(s): ",
@@ -234,174 +262,395 @@ results$cell_key <- cell_key(
   results$n, results$guaranteed_content, results$tolerance_confidence
 )
 
-summarise_raw <- function(df, scope, dgp_id = NA_character_) {
-  successes <- sum(df$delivered, na.rm = TRUE)
-  reps <- nrow(df)
-  target <- as.numeric(df$tolerance_confidence[[1L]])
-  lower <- rqrgibbs::rqr_delivery_lower_bound(
-    successes = successes,
-    replications = reps,
+pass_upper_vec <- function(value, limit) {
+  if (is.infinite(limit)) rep(TRUE, length(value))
+  else is.finite(value) & value <= limit
+}
+pass_lower_vec <- function(value, limit) {
+  if (is.infinite(limit) && limit < 0) rep(TRUE, length(value))
+  else is.finite(value) & value >= limit
+}
+safe_ratio_vec <- function(numerator, denominator) {
+  out <- rep(NA_real_, length(numerator))
+  ok <- is.finite(numerator) & is.finite(denominator) & denominator > 0
+  out[ok] <- numerator[ok] / denominator[ok]
+  out
+}
+max_finite <- function(x) {
+  x <- num(x)
+  x <- x[is.finite(x)]
+  if (length(x)) max(x) else NA_real_
+}
+max_median_width_reference_limit <- max_median_width_to_reference_median
+max_width_q975_reference_limit <- max_width_q975_to_reference_q975
+delivery_min_successes_fast <- function(replications, target) {
+  replications <- as.integer(replications)
+  target <- as.numeric(target)
+  threshold <- target + margin
+  if (!is.finite(threshold) || threshold >= 1) return(NA_integer_)
+  if (rqrgibbs::rqr_delivery_lower_bound(
+    replications, replications,
     confidence = bound_confidence,
     method = bound_method
-  )
-  required_successes <- rqrgibbs::rqr_delivery_min_successes(
-    replications = reps,
-    target = target,
-    confidence = bound_confidence,
-    method = bound_method,
-    margin = margin
-  )
-  success_margin <- if (is.na(required_successes)) {
-    NA_integer_
-  } else {
-    as.integer(successes - required_successes)
+  ) < threshold) {
+    return(NA_integer_)
   }
-  width <- df$width_num[!df$infeasible_bool & is.finite(df$width_num)]
-  mean_width <- mean_or_na(width)
-  median_width <- median_or_na(width)
-  width_q025 <- quantile_or_na(width, 0.025)
-  width_q975 <- quantile_or_na(width, 0.975)
-  width_q975_to_median <- safe_ratio(width_q975, median_width)
-  mean_width_to_median_width <- safe_ratio(mean_width, median_width)
-  infeasible_rate <- mean(df$infeasible_bool, na.rm = TRUE)
-  if (!is.finite(infeasible_rate)) infeasible_rate <- NA_real_
-  feasible_counts <- if ("candidate_feasible_count" %in% names(df)) {
-    num(df$candidate_feasible_count)
-  } else {
-    numeric()
-  }
-  mean_candidate_feasible_count <- mean_or_na(feasible_counts)
-  min_candidate_feasible_count <- min_or_na(feasible_counts)
-  max_candidate_feasible_count <- max_or_na(feasible_counts)
-  admissible_before_stability <- is.finite(lower) && lower >= target + margin
-  infeasible_rate_pass <- pass_upper(infeasible_rate, max_infeasible_rate)
-  width_q975_to_median_pass <- pass_upper(
-    width_q975_to_median, max_width_q975_to_median
-  )
-  mean_width_ratio_pass <- pass_upper(
-    mean_width_to_median_width, max_mean_width_ratio_to_median
-  )
-  mean_candidate_feasible_count_pass <- pass_lower(
-    mean_candidate_feasible_count, min_mean_candidate_feasible_count
-  )
-  min_candidate_feasible_count_pass <- pass_lower(
-    min_candidate_feasible_count, min_min_candidate_feasible_count
-  )
-  width_stability_pass <-
-    width_q975_to_median_pass && mean_width_ratio_pass
-  candidate_feasible_count_pass <-
-    mean_candidate_feasible_count_pass && min_candidate_feasible_count_pass
-  data.frame(
-    source_method_id = df$method_id[[1L]],
-    calibration_scope = scope,
-    dgp_id = dgp_id,
-    n = as.integer(df$n[[1L]]),
-    content = as.numeric(df$guaranteed_content[[1L]]),
-    tolerance_confidence = as.numeric(target),
-    delivery_target = as.numeric(target),
-    cell_key = df$cell_key[[1L]],
-    dgp_cells = length(unique(df$dgp_id)),
-    passing_dgp_cells = NA_integer_,
-    calibration_replications = as.integer(reps),
-    calibration_successes = as.integer(successes),
-    minimum_successes_required = as.integer(required_successes),
-    success_margin_to_requirement = success_margin,
-    observed_delivery = successes / reps,
-    delivery_lower_bound = lower,
-    min_observed_delivery = NA_real_,
-    min_delivery_lower_bound = NA_real_,
-    min_success_margin_to_requirement = NA_integer_,
-    all_dgp_cells_admissible = NA,
-    admissible_before_stability = admissible_before_stability,
-    infeasible_rate = infeasible_rate,
-    max_infeasible_rate = max_infeasible_rate,
-    infeasible_rate_pass = infeasible_rate_pass,
-    mean_candidate_feasible_count = mean_candidate_feasible_count,
-    min_candidate_feasible_count = min_candidate_feasible_count,
-    max_candidate_feasible_count = max_candidate_feasible_count,
-    min_mean_candidate_feasible_count =
-      min_mean_candidate_feasible_count,
-    min_min_candidate_feasible_count =
-      min_min_candidate_feasible_count,
-    mean_candidate_feasible_count_pass =
-      mean_candidate_feasible_count_pass,
-    min_candidate_feasible_count_pass =
-      min_candidate_feasible_count_pass,
-    candidate_feasible_count_pass = candidate_feasible_count_pass,
-    admissible = admissible_before_stability &&
-      infeasible_rate_pass &&
-      candidate_feasible_count_pass &&
-      width_stability_pass,
-    mean_width = mean_width,
-    median_width = median_width,
-    width_q025 = width_q025,
-    width_q975 = width_q975,
-    width_q975_to_median = width_q975_to_median,
-    max_width_q975_to_median = max_width_q975_to_median,
-    width_q975_to_median_pass = width_q975_to_median_pass,
-    mean_width_to_median_width = mean_width_to_median_width,
-    max_mean_width_ratio_to_median = max_mean_width_ratio_to_median,
-    mean_width_ratio_pass = mean_width_ratio_pass,
-    width_stability_pass = width_stability_pass,
-    screen = mean_or_na(df$screen),
-    posterior_confidence = mean_or_na(df$screen),
-    stringsAsFactors = FALSE
-  )
-}
-
-split_summary <- function(df, keys, scope, dgp = FALSE) {
-  split_key <- do.call(paste, c(df[keys], sep = "\r"))
-  rows <- lapply(split(df, split_key), function(dd) {
-    summarise_raw(
-      dd,
-      scope = scope,
-      dgp_id = if (isTRUE(dgp)) dd$dgp_id[[1L]] else NA_character_
+  lo <- 0L
+  hi <- replications
+  while (lo < hi) {
+    mid <- as.integer(floor((lo + hi) / 2L))
+    lower <- rqrgibbs::rqr_delivery_lower_bound(
+      mid, replications,
+      confidence = bound_confidence,
+      method = bound_method
     )
-  })
-  do.call(rbind, rows)
+    if (lower >= threshold) hi <- mid else lo <- mid + 1L
+  }
+  as.integer(lo)
 }
 
-dgp_cell_summary <- split_summary(
-  results, c("method_id", "dgp_id", "cell_key"),
-  scope = "distribution_cell",
-  dgp = TRUE
+results_dt <- data.table::as.data.table(results)
+if ("candidate_feasible_count" %in% names(results_dt)) {
+  results_dt[, candidate_feasible_count_num := num(candidate_feasible_count)]
+} else {
+  results_dt[, candidate_feasible_count_num := NA_real_]
+}
+
+reference_results_path <- ""
+reference_results_digest <- NA_character_
+reference_cell_summary <- data.table::data.table()
+reference_constraints_active <- FALSE
+reference_method_label <- reference_method_id
+if (nzchar(reference_results_arg)) {
+  reference_results_path <- normalizePath(
+    reference_results_arg, winslash = "/", mustWork = TRUE
+  )
+  reference_results_digest <- digest::digest(
+    reference_results_path, algo = "sha256", file = TRUE
+  )
+  reference_required <- c(
+    "method_id", "dgp_id", "n", "guaranteed_content",
+    "tolerance_confidence", "replication", "infeasible", "width"
+  )
+  reference_header <- names(data.table::fread(
+    reference_results_path, nrows = 0L, showProgress = FALSE
+  ))
+  reference_columns <- intersect(reference_required, reference_header)
+  reference <- data.table::fread(
+    reference_results_path, select = reference_columns, showProgress = FALSE
+  )
+  reference_missing <- setdiff(reference_required, names(reference))
+  if (length(reference_missing)) {
+    stopf("Reference results input is missing required column(s): ",
+          paste(reference_missing, collapse = ", "))
+  }
+  reference <- reference[method_id == reference_method_label]
+  if (!nrow(reference)) {
+    stopf("No reference rows matched --reference-method-id: ",
+          reference_method_label)
+  }
+  reference[, `:=`(
+    n = as.integer(n),
+    content = num(guaranteed_content),
+    tolerance_confidence = num(tolerance_confidence),
+    width_num = num(width),
+    infeasible_bool = truthy(infeasible)
+  )]
+  reference_cell_summary <- reference[, {
+    width <- width_num[!infeasible_bool & is.finite(width_num)]
+    .(
+      reference_method_id = reference_method_label,
+      reference_replications = as.integer(.N),
+      reference_width_count = as.integer(length(width)),
+      reference_median_width = median_or_na(width),
+      reference_width_q975 = quantile_or_na(width, 0.975)
+    )
+  }, by = .(dgp_id, n, content, tolerance_confidence)]
+  reference_constraints_active <-
+    !is.infinite(max_median_width_to_reference_median) ||
+    !is.infinite(max_width_q975_to_reference_q975)
+}
+
+summarise_grouped <- function(dt, by, scope) {
+  out <- dt[, {
+    width <- width_num[!infeasible_bool & is.finite(width_num)]
+    feasible_counts <- candidate_feasible_count_num
+    .(
+      calibration_scope = scope,
+      n = as.integer(n[[1L]]),
+      content = as.numeric(guaranteed_content[[1L]]),
+      tolerance_confidence = as.numeric(tolerance_confidence[[1L]]),
+      delivery_target = as.numeric(tolerance_confidence[[1L]]),
+      cell_key_value = cell_key[[1L]],
+      dgp_cells = as.integer(data.table::uniqueN(dgp_id)),
+      passing_dgp_cells = NA_integer_,
+      calibration_replications = as.integer(.N),
+      calibration_successes = as.integer(sum(delivered, na.rm = TRUE)),
+      observed_delivery = mean(delivered, na.rm = TRUE),
+      min_observed_delivery = NA_real_,
+      min_delivery_lower_bound = NA_real_,
+      min_success_margin_to_requirement = NA_integer_,
+      all_dgp_cells_admissible = NA,
+      infeasible_rate = mean(infeasible_bool, na.rm = TRUE),
+      max_infeasible_rate = max_infeasible_rate,
+      mean_candidate_feasible_count = mean_or_na(feasible_counts),
+      min_candidate_feasible_count = min_or_na(feasible_counts),
+      max_candidate_feasible_count = max_or_na(feasible_counts),
+      min_mean_candidate_feasible_count =
+        min_mean_candidate_feasible_count,
+      min_min_candidate_feasible_count =
+        min_min_candidate_feasible_count,
+      mean_width = mean_or_na(width),
+      median_width = median_or_na(width),
+      width_q025 = quantile_or_na(width, 0.025),
+      width_q975 = quantile_or_na(width, 0.975),
+      screen = mean_or_na(screen),
+      posterior_confidence = mean_or_na(screen)
+    )
+  }, by = by]
+  if ("method_id" %in% names(out)) {
+    data.table::setnames(out, "method_id", "source_method_id")
+  }
+  if ("cell_key" %in% names(out)) {
+    out[, cell_key_value := NULL]
+  } else {
+    data.table::setnames(out, "cell_key_value", "cell_key")
+  }
+  if (!"dgp_id" %in% names(out)) out[, dgp_id := NA_character_]
+  out
+}
+
+add_reference_defaults <- function(out) {
+  out[, `:=`(
+    reference_method_id = NA_character_,
+    reference_cells = 0L,
+    reference_missing_cells = 0L,
+    reference_width_cells = 0L,
+    observed_max_median_width_to_reference_median = NA_real_,
+    max_median_width_to_reference_median =
+      max_median_width_to_reference_median,
+    median_width_to_reference_median_pass = TRUE,
+    observed_max_width_q975_to_reference_q975 = NA_real_,
+    max_width_q975_to_reference_q975 =
+      max_width_q975_to_reference_q975,
+    width_q975_to_reference_q975_pass = TRUE,
+    reference_missing_pass = TRUE
+  )]
+  out
+}
+
+add_reference_to_distribution <- function(out) {
+  if (!nrow(reference_cell_summary)) return(add_reference_defaults(out))
+  out <- merge(
+    out,
+    reference_cell_summary,
+    by = c("dgp_id", "n", "content", "tolerance_confidence"),
+    all.x = TRUE,
+    sort = FALSE
+  )
+  out[, reference_missing := is.na(reference_width_count)]
+  out[, `:=`(
+    reference_method_id = ifelse(reference_missing, NA_character_,
+                                 reference_method_id),
+    reference_cells = 1L,
+    reference_missing_cells = as.integer(reference_missing),
+    reference_width_cells = as.integer(
+      !reference_missing &
+        is.finite(reference_median_width) &
+        is.finite(reference_width_q975)
+    ),
+    observed_max_median_width_to_reference_median = safe_ratio_vec(
+      median_width, reference_median_width
+    ),
+    max_median_width_to_reference_median =
+      max_median_width_to_reference_median,
+    observed_max_width_q975_to_reference_q975 = safe_ratio_vec(
+      width_q975, reference_width_q975
+    ),
+    max_width_q975_to_reference_q975 =
+      max_width_q975_to_reference_q975
+  )]
+  out
+}
+
+reference_rollup <- function(distribution_summary, by) {
+  if (!nrow(reference_cell_summary)) return(data.table::data.table())
+  distribution_summary[, .(
+    reference_method_id = reference_method_id[[1L]],
+    reference_cells = as.integer(.N),
+    reference_missing_cells = as.integer(sum(reference_missing_cells > 0L)),
+    reference_width_cells = as.integer(sum(reference_width_cells > 0L)),
+    observed_max_median_width_to_reference_median =
+      max_finite(observed_max_median_width_to_reference_median),
+    max_median_width_to_reference_median =
+      max_median_width_reference_limit,
+    observed_max_width_q975_to_reference_q975 =
+      max_finite(observed_max_width_q975_to_reference_q975),
+    max_width_q975_to_reference_q975 =
+      max_width_q975_reference_limit
+  ), by = by]
+}
+
+add_reference_from_rollup <- function(out, rollup, by) {
+  if (!nrow(reference_cell_summary)) return(add_reference_defaults(out))
+  out <- merge(out, rollup, by = by, all.x = TRUE, sort = FALSE)
+  missing_reference_row <- is.na(out$reference_cells)
+  out[missing_reference_row, `:=`(
+    reference_method_id = NA_character_,
+    reference_cells = 0L,
+    reference_missing_cells = 1L,
+    reference_width_cells = 0L,
+    observed_max_median_width_to_reference_median = NA_real_,
+    observed_max_width_q975_to_reference_q975 = NA_real_
+  )]
+  out
+}
+
+finish_summary <- function(out) {
+  out$minimum_successes_required <- as.integer(mapply(
+    delivery_min_successes_fast,
+    replications = out$calibration_replications,
+    target = out$tolerance_confidence
+  ))
+  out$delivery_lower_bound <- as.numeric(mapply(
+    rqrgibbs::rqr_delivery_lower_bound,
+    successes = out$calibration_successes,
+    replications = out$calibration_replications,
+    MoreArgs = list(confidence = bound_confidence, method = bound_method)
+  ))
+  out$success_margin_to_requirement <-
+    as.integer(out$calibration_successes - out$minimum_successes_required)
+  out$admissible_before_stability <-
+    is.finite(out$delivery_lower_bound) &
+    out$delivery_lower_bound >= out$tolerance_confidence + margin
+  out$infeasible_rate[!is.finite(out$infeasible_rate)] <- NA_real_
+  out$infeasible_rate_pass <- pass_upper_vec(
+    out$infeasible_rate, max_infeasible_rate
+  )
+  out$width_q975_to_median <- safe_ratio_vec(out$width_q975,
+                                             out$median_width)
+  out$width_q975_to_median_pass <- pass_upper_vec(
+    out$width_q975_to_median, max_width_q975_to_median
+  )
+  out$max_width_q975_to_median <- max_width_q975_to_median
+  out$mean_width_to_median_width <- safe_ratio_vec(out$mean_width,
+                                                   out$median_width)
+  out$mean_width_ratio_pass <- pass_upper_vec(
+    out$mean_width_to_median_width, max_mean_width_ratio_to_median
+  )
+  out$max_mean_width_ratio_to_median <- max_mean_width_ratio_to_median
+  out$reference_missing_pass <-
+    !reference_constraints_active | out$reference_missing_cells == 0L
+  out$median_width_to_reference_median_pass <-
+    !reference_constraints_active |
+    pass_upper_vec(
+      out$observed_max_median_width_to_reference_median,
+      max_median_width_to_reference_median
+    )
+  out$width_q975_to_reference_q975_pass <-
+    !reference_constraints_active |
+    pass_upper_vec(
+      out$observed_max_width_q975_to_reference_q975,
+      max_width_q975_to_reference_q975
+    )
+  out$mean_candidate_feasible_count_pass <- pass_lower_vec(
+    out$mean_candidate_feasible_count, min_mean_candidate_feasible_count
+  )
+  out$min_candidate_feasible_count_pass <- pass_lower_vec(
+    out$min_candidate_feasible_count, min_min_candidate_feasible_count
+  )
+  out$candidate_feasible_count_pass <-
+    out$mean_candidate_feasible_count_pass &
+    out$min_candidate_feasible_count_pass
+  out$width_stability_pass <-
+    out$width_q975_to_median_pass &
+    out$mean_width_ratio_pass &
+    out$reference_missing_pass &
+    out$median_width_to_reference_median_pass &
+    out$width_q975_to_reference_q975_pass
+  out$admissible <-
+    out$admissible_before_stability &
+    out$infeasible_rate_pass &
+    out$candidate_feasible_count_pass &
+    out$width_stability_pass
+  as.data.frame(out)
+}
+
+dgp_cell_summary <- summarise_grouped(
+  results_dt,
+  by = c("method_id", "dgp_id", "cell_key"),
+  scope = "distribution_cell"
 )
-pooled_cell_summary <- split_summary(
-  results, c("method_id", "cell_key"),
-  scope = "pooled_cell",
-  dgp = FALSE
+dgp_cell_summary <- add_reference_to_distribution(dgp_cell_summary)
+dgp_cell_summary <- finish_summary(dgp_cell_summary)
+
+pooled_cell_summary <- summarise_grouped(
+  results_dt,
+  by = c("method_id", "cell_key"),
+  scope = "pooled_cell"
 )
-global_summary <- split_summary(
-  results, "method_id",
-  scope = "global",
-  dgp = FALSE
+pooled_reference <- reference_rollup(
+  data.table::as.data.table(dgp_cell_summary),
+  by = c("source_method_id", "cell_key")
 )
+pooled_cell_summary <- add_reference_from_rollup(
+  pooled_cell_summary, pooled_reference,
+  by = c("source_method_id", "cell_key")
+)
+pooled_cell_summary <- finish_summary(pooled_cell_summary)
+
+global_summary <- summarise_grouped(
+  results_dt,
+  by = "method_id",
+  scope = "global"
+)
+global_reference <- reference_rollup(
+  data.table::as.data.table(dgp_cell_summary),
+  by = "source_method_id"
+)
+global_summary <- add_reference_from_rollup(
+  global_summary, global_reference,
+  by = "source_method_id"
+)
+global_summary <- finish_summary(global_summary)
 global_summary$n <- NA_integer_
 global_summary$content <- NA_real_
 global_summary$tolerance_confidence <- NA_real_
 global_summary$cell_key <- NA_character_
 
-all_dgp_cell_candidates <- do.call(rbind, lapply(
-  split(dgp_cell_summary, paste(dgp_cell_summary$source_method_id,
-                                dgp_cell_summary$cell_key, sep = "\r")),
-  function(mm) {
-    raw <- results[
-      results$method_id == mm$source_method_id[[1L]] &
-        results$cell_key == mm$cell_key[[1L]],
-      ,
-      drop = FALSE
-    ]
-    pooled <- summarise_raw(raw, scope = "all_distribution_cell")
-    pooled$passing_dgp_cells <- sum(mm$admissible, na.rm = TRUE)
-    pooled$min_observed_delivery <- min_or_na(mm$observed_delivery)
-    pooled$min_delivery_lower_bound <- min_or_na(mm$delivery_lower_bound)
-    pooled$min_success_margin_to_requirement <-
-      integer_min_or_na(mm$success_margin_to_requirement)
-    pooled$all_dgp_cells_admissible <- all(mm$admissible)
-    pooled$admissible <- pooled$all_dgp_cells_admissible
-    pooled
+all_dgp_cell_candidates <- as.data.frame(pooled_cell_summary)
+all_dgp_cell_candidates$calibration_scope <- "all_distribution_cell"
+distribution_status <- data.table::as.data.table(dgp_cell_summary)[, .(
+  passing_dgp_cells = as.integer(sum(admissible, na.rm = TRUE)),
+  min_observed_delivery = min_or_na(observed_delivery),
+  min_delivery_lower_bound = min_or_na(delivery_lower_bound),
+  min_success_margin_to_requirement =
+    integer_min_or_na(success_margin_to_requirement),
+  all_dgp_cells_admissible = all(admissible)
+), by = .(source_method_id, cell_key)]
+all_dgp_cell_candidates <- merge(
+  all_dgp_cell_candidates,
+  as.data.frame(distribution_status),
+  by = c("source_method_id", "cell_key"),
+  all.x = TRUE,
+  suffixes = c("", ".distribution"),
+  sort = FALSE
+)
+for (col in c("passing_dgp_cells", "min_observed_delivery",
+              "min_delivery_lower_bound", "min_success_margin_to_requirement",
+              "all_dgp_cells_admissible")) {
+  replacement <- paste0(col, ".distribution")
+  if (replacement %in% names(all_dgp_cell_candidates)) {
+    all_dgp_cell_candidates[[col]] <- all_dgp_cell_candidates[[replacement]]
+    all_dgp_cell_candidates[[replacement]] <- NULL
   }
-))
+}
+all_dgp_cell_candidates$admissible <-
+  all_dgp_cell_candidates$all_dgp_cells_admissible &
+  all_dgp_cell_candidates$admissible_before_stability &
+  all_dgp_cell_candidates$infeasible_rate_pass &
+  all_dgp_cell_candidates$candidate_feasible_count_pass &
+  all_dgp_cell_candidates$width_stability_pass
 
 choose_candidate <- function(candidates) {
   candidates <- candidates[is.finite(candidates$screen), , drop = FALSE]
@@ -507,6 +756,10 @@ out$max_infeasible_rate_configured <- max_infeasible_rate
 out$max_width_q975_to_median_configured <- max_width_q975_to_median
 out$max_mean_width_ratio_to_median_configured <-
   max_mean_width_ratio_to_median
+out$max_median_width_to_reference_median_configured <-
+  max_median_width_to_reference_median
+out$max_width_q975_to_reference_q975_configured <-
+  max_width_q975_to_reference_q975
 out$min_mean_candidate_feasible_count_configured <-
   min_mean_candidate_feasible_count
 out$min_min_candidate_feasible_count_configured <-
@@ -514,6 +767,12 @@ out$min_min_candidate_feasible_count_configured <-
 out$input_results_path <- repo_relative_path(results_path)
 out$input_results_digest <- digest::digest(results_path, algo = "sha256",
                                            file = TRUE)
+out$reference_results_path <- if (nzchar(reference_results_path)) {
+  repo_relative_path(reference_results_path)
+} else {
+  NA_character_
+}
+out$reference_results_digest <- reference_results_digest
 out$created_at_utc <- format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
 
 front_cols <- c(
@@ -528,6 +787,11 @@ front_cols <- c(
   "candidate_feasible_count_pass", "width_stability_pass",
   "mean_width", "median_width", "width_q025", "width_q975",
   "width_q975_to_median", "mean_width_to_median_width",
+  "reference_method_id", "reference_cells", "reference_missing_cells",
+  "observed_max_median_width_to_reference_median",
+  "observed_max_width_q975_to_reference_q975",
+  "median_width_to_reference_median_pass",
+  "width_q975_to_reference_q975_pass",
   "dgp_cells", "passing_dgp_cells", "min_observed_delivery",
   "min_delivery_lower_bound", "min_success_margin_to_requirement",
   "all_dgp_cells_admissible", "width_objective"
@@ -553,11 +817,17 @@ diagnostics$max_infeasible_rate_configured <- max_infeasible_rate
 diagnostics$max_width_q975_to_median_configured <- max_width_q975_to_median
 diagnostics$max_mean_width_ratio_to_median_configured <-
   max_mean_width_ratio_to_median
+diagnostics$max_median_width_to_reference_median_configured <-
+  max_median_width_to_reference_median
+diagnostics$max_width_q975_to_reference_q975_configured <-
+  max_width_q975_to_reference_q975
 diagnostics$min_mean_candidate_feasible_count_configured <-
   min_mean_candidate_feasible_count
 diagnostics$min_min_candidate_feasible_count_configured <-
   min_min_candidate_feasible_count
 diagnostics$input_results_digest <- out$input_results_digest[[1L]]
+diagnostics$reference_results_path <- out$reference_results_path[[1L]]
+diagnostics$reference_results_digest <- out$reference_results_digest[[1L]]
 diagnostics <- diagnostics[order(
   diagnostics$calibration_scope,
   diagnostics$n,
@@ -587,6 +857,14 @@ cat("  max_infeasible_rate=", max_infeasible_rate, "\n", sep = "")
 cat("  max_width_q975_to_median=", max_width_q975_to_median, "\n", sep = "")
 cat("  max_mean_width_ratio_to_median=", max_mean_width_ratio_to_median,
     "\n", sep = "")
+cat("  reference_method_id=", reference_method_id, "\n", sep = "")
+cat("  reference_results=",
+    if (nzchar(reference_results_path)) reference_results_path else "",
+    "\n", sep = "")
+cat("  max_median_width_to_reference_median=",
+    max_median_width_to_reference_median, "\n", sep = "")
+cat("  max_width_q975_to_reference_q975=",
+    max_width_q975_to_reference_q975, "\n", sep = "")
 cat("  min_mean_candidate_feasible_count=",
     min_mean_candidate_feasible_count, "\n", sep = "")
 cat("  min_min_candidate_feasible_count=",

@@ -331,6 +331,114 @@ test_that("adaptive MTI-ECM policy builder rejects unstable width tails", {
   expect_false(unstable$admissible)
 })
 
+test_that("adaptive MTI-ECM policy builder rejects reference-wide candidates", {
+  script <- test_path(
+    "..", "..", "scripts", "82_build_mti_ecm_adaptive_policy.R"
+  )
+  skip_if_not(file.exists(script), "policy builder is outside package build")
+
+  candidate_rows <- list()
+  reference_rows <- list()
+  candidate_idx <- 0L
+  reference_idx <- 0L
+  add_candidate <- function(method_id, dgp_id, widths, screen) {
+    for (rr in seq_along(widths)) {
+      candidate_idx <<- candidate_idx + 1L
+      candidate_rows[[candidate_idx]] <<- data.frame(
+        method_id = method_id,
+        dgp_id = dgp_id,
+        n = 100L,
+        guaranteed_content = 0.95,
+        tolerance_confidence = 0.95,
+        replication = rr,
+        success = TRUE,
+        infeasible = FALSE,
+        width = widths[[rr]],
+        effective_posterior_confidence = screen,
+        candidate_feasible_count = 4L,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  add_reference <- function(dgp_id, widths) {
+    for (rr in seq_along(widths)) {
+      reference_idx <<- reference_idx + 1L
+      reference_rows[[reference_idx]] <<- data.frame(
+        method_id = "tcsp_mc",
+        dgp_id = dgp_id,
+        n = 100L,
+        guaranteed_content = 0.95,
+        tolerance_confidence = 0.95,
+        replication = rr,
+        success = TRUE,
+        infeasible = FALSE,
+        width = widths[[rr]],
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  for (dgp_id in c("normal", "skewed")) {
+    add_reference(dgp_id, rep(5, 20))
+    add_candidate("mti_ecm_adaptive_refine_screen_p995", dgp_id,
+                  rep(5.5, 20), 0.995)
+    add_candidate("mti_ecm_adaptive_refine_screen_p9985", dgp_id,
+                  rep(50, 20), 0.9985)
+  }
+
+  input <- tempfile("adaptive-reference-input-", fileext = ".csv")
+  reference <- tempfile("adaptive-reference-results-", fileext = ".csv")
+  output <- tempfile("adaptive-reference-output-", fileext = ".csv")
+  diagnostics <- tempfile("adaptive-reference-diagnostics-", fileext = ".csv")
+  write.csv(do.call(rbind, candidate_rows), input, row.names = FALSE)
+  write.csv(do.call(rbind, reference_rows), reference, row.names = FALSE)
+
+  status <- system2(
+    "Rscript",
+    c(
+      script,
+      paste0("--results=", input),
+      paste0("--reference-results=", reference),
+      "--reference-method-id=tcsp_mc",
+      paste0("--output=", output),
+      paste0("--diagnostics-output=", diagnostics),
+      "--policy-id=reference_stability_policy",
+      "--selection=cell",
+      "--method-pattern=^mti_ecm_adaptive_refine_screen_",
+      "--bound-method=wilson",
+      "--bound-confidence=0.50",
+      "--margin=0",
+      "--width-objective=median-q975",
+      "--max-width-q975-to-reference-q975=2",
+      "--max-median-width-to-reference-median=2"
+    ),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  exit_status <- attr(status, "status")
+  if (is.null(exit_status)) exit_status <- 0L
+  expect_equal(exit_status, 0L, info = paste(status, collapse = "\n"))
+
+  out <- read.csv(output)
+  expect_equal(out$source_method_id, "mti_ecm_adaptive_refine_screen_p995")
+  expect_true(out$admissible)
+  expect_true("reference_results_digest" %in% names(out))
+  expect_true(nzchar(out$reference_results_digest))
+
+  diag <- read.csv(diagnostics)
+  reference_wide <- diag[
+    diag$calibration_scope == "all_distribution_cell" &
+      diag$source_method_id == "mti_ecm_adaptive_refine_screen_p9985",
+    ,
+    drop = FALSE
+  ]
+  expect_equal(nrow(reference_wide), 1L)
+  expect_true(reference_wide$admissible_before_stability)
+  expect_false(reference_wide$median_width_to_reference_median_pass)
+  expect_false(reference_wide$width_q975_to_reference_q975_pass)
+  expect_false(reference_wide$width_stability_pass)
+  expect_false(reference_wide$admissible)
+})
+
 test_that("adaptive MTI-ECM policy builder applies infeasible-rate limits", {
   script <- test_path(
     "..", "..", "scripts", "82_build_mti_ecm_adaptive_policy.R"

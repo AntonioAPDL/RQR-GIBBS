@@ -205,7 +205,7 @@ legend("center", legend = c(unname(method_labels[method_order]), "Mean width"),
        pch = c(unname(method_pch[method_order]), 4),
        lwd = c(rep(2, length(method_order)), NA),
        ncol = length(method_order) + 1L, bty = "n", xpd = NA, cex = 0.95)
-mtext("Returned interval-width ranges by distribution",
+mtext("Interval-width ranges by distribution",
       outer = TRUE, cex = 1.05, font = 2)
 
 par(old_par)

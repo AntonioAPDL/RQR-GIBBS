@@ -27,13 +27,14 @@ default_primary_results <- file.path(default_primary_dir,
                                      "bayes_uq_validation_results.csv")
 default_mti_ecm_dir <- file.path(
   "application", "runs",
-  "rqr_bayes_uq_validation_mti_ecm_adaptive_selected_20260825",
-  "wave_confirmatory_20260825T072935Z"
+  "rqr_bayes_uq_validation_mti_ecm_adaptive_targeted_refinement_20260826",
+  "wave_confirmatory_mti_ecm_refinement_20260826T184038Z"
 )
 default_mti_ecm_results <- file.path(default_mti_ecm_dir,
                                      "bayes_uq_validation_results.csv")
 default_mti_ecm_policy <- file.path(
-  "application", "config", "mti_ecm_adaptive_cell_policy_20260825.csv"
+  "application", "config",
+  "mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv"
 )
 default_young_mathew_results <- ""
 default_small_results <- ""
@@ -713,6 +714,40 @@ read_mti_ecm_policy <- function(path) {
   policy[policy$method_id == selected_mti_ecm_method, , drop = FALSE]
 }
 
+apply_mti_ecm_policy <- function(results, policy_path, selected_method) {
+  if (!nrow(results) || any(results$method_id == selected_method)) {
+    return(results)
+  }
+  policy <- read_mti_ecm_policy(policy_path)
+  if (!nrow(policy)) {
+    stopf("MTI-ECM input has raw candidates but no selected calibration rule: ",
+          policy_path)
+  }
+  rows <- lapply(seq_len(nrow(policy)), function(ii) {
+    rule <- policy[ii, , drop = FALSE]
+    hit <- results[
+      results$method_id == rule$source_method_id[[1L]] &
+        as.integer(results$n) == as.integer(rule$n[[1L]]) &
+        abs(num(results$guaranteed_content) - num(rule$content[[1L]])) <
+          1e-12 &
+        abs(num(results$tolerance_confidence) -
+              num(rule$tolerance_confidence[[1L]])) < 1e-12,
+      ,
+      drop = FALSE
+    ]
+    if (!nrow(hit)) return(hit)
+    hit$adaptive_source_method_id <- hit$method_id
+    hit$adaptive_policy_id <- rule$policy_id[[1L]]
+    hit$method_id <- selected_method
+    hit
+  })
+  selected <- do.call(bind_fill, rows)
+  if (!nrow(selected)) {
+    stopf("MTI-ECM calibration rule did not match any raw candidate rows.")
+  }
+  selected
+}
+
 mti_ecm_policy_summary <- function(detail, policy_path, method) {
   detail <- detail[detail$method_id == method, , drop = FALSE]
   if (!nrow(detail)) {
@@ -777,7 +812,7 @@ write_mti_ecm_policy_tex <- function(summary, path) {
       ">{\\centering\\arraybackslash}p{0.19\\textwidth}@{}}"
     ),
     paste0(
-      "\\caption{\\textbf{Selected adaptive MTI-ECM calibration policy.} ",
+      "\\caption{\\textbf{Selected adaptive MTI-ECM calibration rule.} ",
       "The direct-DP content screen is fixed by a separate calibration run ",
       "within each sample-size/content cell before the independent validation ",
       "summaries are computed. Validation attainment is reported as the range ",
@@ -813,7 +848,7 @@ write_mti_ecm_policy_tex <- function(summary, path) {
   if (!nrow(summary)) {
     writeLines(c(
       lines,
-      "\\multicolumn{6}{@{}l@{}}{No selected MTI-ECM policy input was provided.}\\\\",
+      "\\multicolumn{6}{@{}l@{}}{No selected MTI-ECM calibration rule was provided.}\\\\",
       "\\bottomrule", "\\end{longtable}", "\\endgroup"
     ), path)
     return(invisible(path))
@@ -852,10 +887,10 @@ mti_ecm <- if (has_mti_ecm_input) {
 } else {
   primary[0L, , drop = FALSE]
 }
-if (has_mti_ecm_input &&
-    !any(mti_ecm$method_id == selected_mti_ecm_method)) {
-  stopf("MTI-ECM input does not contain selected method: ",
-        selected_mti_ecm_method)
+if (has_mti_ecm_input) {
+  mti_ecm <- apply_mti_ecm_policy(
+    mti_ecm, mti_ecm_policy_path, selected_mti_ecm_method
+  )
 }
 primary <- first_ordered_replicate_rows(bind_fill(
   primary,

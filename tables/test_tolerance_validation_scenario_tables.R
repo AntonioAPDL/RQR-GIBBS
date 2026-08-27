@@ -55,14 +55,9 @@ young <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
 mti <- do.call(rbind, lapply(c("normal", "student_t3"), function(dgp) {
   do.call(rbind, lapply(c(500L, 1000L), function(n) {
     do.call(rbind, lapply(1:2, function(rep) {
-      rbind(
-        row(dgp, n, 0.90, rep,
-            "mti_ecm_adaptive_cell",
-            success = TRUE, width = 1.85),
-        row(dgp, n, 0.90, rep,
-            "mti_ecm_adaptive_screen_p985",
-            success = dgp == "normal", width = 1.75)
-      )
+      row(dgp, n, 0.90, rep,
+          "mti_ecm_adaptive_screen_p985",
+          success = dgp == "normal", width = 1.75)
     }))
   }))
 }))
@@ -202,6 +197,13 @@ stopifnot(all(is.finite(primary_widths$mean_width)))
 stopifnot(any(primary_widths$method_id == "young_mathew"))
 stopifnot(!any(primary_widths$method_id == "tcsp_dkw"))
 
+primary_detail <- read.csv(
+  file.path(out_dir, "tolerance_validation_article_scenario_details.csv"),
+  stringsAsFactors = FALSE
+)
+stopifnot(any(primary_detail$method_id == "mti_ecm_adaptive_cell"))
+stopifnot(!any(primary_detail$method_id == "mti_ecm_adaptive_screen_p985"))
+
 small_boundary <- read.csv(
   file.path(out_dir, "tolerance_validation_article_small_sample_boundary.csv"),
   stringsAsFactors = FALSE
@@ -264,7 +266,7 @@ policy_tex <- paste(readLines(
   file.path(out_dir, "tolerance_validation_mti_ecm_selected_policy_summary.tex"),
   warn = FALSE
 ), collapse = "\n")
-stopifnot(grepl("Selected adaptive MTI-ECM calibration policy", policy_tex,
+stopifnot(grepl("Selected adaptive MTI-ECM calibration rule", policy_tex,
                 fixed = TRUE))
 stopifnot(grepl("0.985", policy_tex, fixed = TRUE))
 stopifnot(grepl("Validation range", policy_tex, fixed = TRUE))
