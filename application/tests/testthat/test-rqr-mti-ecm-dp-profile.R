@@ -774,3 +774,49 @@ test_that("validation worker consumes frozen adaptive MTI-ECM policy", {
   expect_true(nzchar(results$adaptive_menu_digest))
   expect_true(results$adaptive_q_grid_size >= 1)
 })
+
+test_that("independent guarded MTI-ECM validation freezes selected policy", {
+  config_path <- test_path(
+    "..", "..", "config",
+    "rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827.json"
+  )
+  policy_path <- test_path(
+    "..", "..", "config",
+    "mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv"
+  )
+  diagnostics_path <- test_path(
+    "..", "..", "config",
+    "mti_ecm_adaptive_cell_guarded_p995_policy_20260827_diagnostics.csv"
+  )
+  skip_if_not(
+    file.exists(config_path) &&
+      file.exists(policy_path) &&
+      file.exists(diagnostics_path),
+    "independent validation config and policy are outside package build"
+  )
+
+  config <- jsonlite::read_json(config_path, simplifyVector = FALSE)
+  policy <- read.csv(policy_path, stringsAsFactors = FALSE)
+  method_ids <- vapply(config$methods, `[[`, character(1L), "method_id")
+  confirmatory_ids <- as.character(unlist(
+    config$modes$confirmatory$method_ids, use.names = FALSE
+  ))
+
+  expect_true(isTRUE(config$execution$confirmatory_authorized))
+  expect_equal(as.integer(config$execution$confirmatory_max_concurrent), 50L)
+  expect_identical(confirmatory_ids, "mti_ecm_adaptive_cell")
+  expect_false(any(grepl("^mti_ecm_adaptive_refine_screen_", confirmatory_ids)))
+  expect_identical(
+    config$adaptive_mti_ecm$frozen_policy_path,
+    "application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv"
+  )
+  expect_identical(
+    config$adaptive_mti_ecm$policy_id,
+    "mti_ecm_adaptive_cell_guarded_p995_20260827"
+  )
+  expect_true(all(policy$method_id == "mti_ecm_adaptive_cell"))
+  expect_true(all(policy$source_method_id %in% method_ids))
+  expect_equal(as.integer(config$modes$confirmatory$replications), 1000L)
+  expect_equal(as.integer(config$base_seed), 1982700L)
+  expect_false(isTRUE(config$posterior_predictive_response_draws))
+})
