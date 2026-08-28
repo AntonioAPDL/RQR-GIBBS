@@ -10,7 +10,7 @@ repo_root <- if (length(root_arg)) {
 repo_root <- normalizePath(repo_root, mustWork = TRUE)
 
 manuscripts <- c("main.tex", "rqr-gibbs-supplement.tex")
-included_text <- c("figures/rqr_dlm_blocked_state_schematic.tex")
+included_text <- character()
 source_files <- c(manuscripts, included_text)
 paths <- file.path(repo_root, source_files)
 if (any(!file.exists(paths))) {
@@ -90,22 +90,23 @@ for (label in names(main_only_forbidden)) {
 
 required <- list(
   "main.tex" = c(
-    "The loss is built from",
     "mean-preserving interval (MPI)",
-    "mean-tilted interval (MTI) family",
-    "Tolerance confidence is supplied by scan calibration",
-    "posterior credibility describes the fitted generalized posterior",
-    "direct Dirichlet-process response-distribution layer gives exact fixed-interval Beta",
+    "mean-tilted interval (MTI)",
+    "TCSP denotes the tolerance-calibrated shortest-path action",
+    "finite-sample content--confidence certificate",
+    "fixed-target MTI-ECM calculation",
+    "direct Dirichlet-process fixed-interval content screen",
     "The pointwise MPI loss is",
     "The familiar check-loss notation gives an equivalent compact representation",
     "The check loss therefore acts on the scalar product residual",
-    "Thus the prior is updated by the cumulative interval loss",
-    "augmented generalized posterior",
-    "Gaussian full conditional",
-    "any sampling model for \\(Y\\) belongs to a separate response-distribution layer",
-    "response-predictive draws require a response-distribution layer",
+    "learning rate controls the strength of the loss update rather than the population content",
+    "loss-based generalized posterior for a fixed interval target",
+    "sampling model for responses",
+    "content-attainment rate",
+    "known simulation distribution",
+    "Widths are reported as distribution-level empirical",
     "Calibrated Minimum-Width Tolerance Intervals",
-    "The available theory is deliberately narrower than the computational procedures",
+    "Regression-family and dynamic tolerance calibration require additional theory",
     "L_q'=\\frac{b_q}{\\lambda_q(a_q-b_q)}<0",
     "U_q'=\\frac{a_q}{\\lambda_q(a_q-b_q)}>0"
   ),
@@ -113,12 +114,14 @@ required <- list(
     "mean-preserving interval (MPI)",
     "Mean-Preserving Interval Scores",
     "The check function is applied to the product residual",
-    "Pseudo-AL Augmentation and Full Conditionals",
-    "augmented generalized posterior",
-    "generalized-posterior distributions for endpoint functions",
-    "density in the abstract pseudo-residual",
-    "Response likelihoods belong to a separately specified response-distribution model",
-    "exact blocked Gibbs sampler"
+    "Empirical Balance",
+    "Fixed-Target MTI-ECM Calculation",
+    "Direct DP Content Screen",
+    "Direct DP fixed-interval content law",
+    "The direct DP screen is used only",
+    "Tolerance-Validation Protocol and Feasibility",
+    "Full-range feasibility thresholds",
+    "The validation evidence is confined"
   )
 )
 
