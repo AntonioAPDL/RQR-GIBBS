@@ -1,6 +1,6 @@
 Package: rqrgibbs
 Type: Package
-Title: Mean-Tilted Interval Regression and Bayesian Shortest-Interval Inference
+Title: Mean-Tilted Intervals for Short Tolerance Intervals
 Version: 0.1.0.9036
 Authors@R: c(
     person("Antonio", "De Leon", role = c("aut", "cre"),

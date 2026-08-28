@@ -1,4 +1,4 @@
-# MTI-INTERVALS
+# Mean-Tilted Intervals: Short Tolerance Intervals
 
 This repository contains the tolerance-interval manuscript and companion R
 implementation for mean-preserving intervals (MPI), mean-tilted intervals (MTI),

@@ -25,7 +25,7 @@
   linkcolor=black,
   citecolor=black,
   urlcolor=black,
-  pdftitle={Mean-Tilted Intervals: Fixed-Content Geometry and Scan-Calibrated Tolerance Actions},
+  pdftitle={Mean-Tilted Intervals: Short Tolerance Intervals},
   pdfauthor={Antonio De Leon, Raquel Prado, and Bruno Sanso}
 }
 
@@ -54,8 +54,7 @@
 }
 
 \title{\vspace{-0.6cm}Mean-Tilted Intervals:\\
-Fixed-Content Geometry and\\
-Scan-Calibrated Tolerance Actions}
+Short Tolerance Intervals}
 \author{Antonio De Leon$^{1}$ \and Raquel Prado$^{1}$ \and Bruno Sans\'o$^{1}$}
 \date{\small $^{1}$ Department of Statistics, University of California, Santa Cruz\\
 \vspace{0.25em}July 2026}
@@ -67,34 +66,26 @@ Scan-Calibrated Tolerance Actions}
 \begin{abstract}
 \noindent
 Intervals with the same probability content can have different endpoint
-placements and widths. This ambiguity matters for tolerance inference because a
-central equal-tailed interval, a mean-preserving interval, and a shortest
-contiguous interval answer different statistical questions. We study the
-residual-product criterion introduced by Pouplin et al. under the name Relaxed
-Quantile Regression. Under regularity conditions, its unrestricted regular
-population minimizer is the unique fixed-content interval whose retained mean
-equals the population mean; we call this target the mean-preserving interval
-(MPI). The mean-tilted interval (MTI) family generalizes MPI by replacing zero
-retained-mean balance with a fixed retained-mean offset. Thus \(\delta=0\)
-recovers MPI, and nonzero tilts index the remaining admissible contiguous
-fixed-content windows, including distribution-specific equal-tailed and
-shortest-contiguous intervals.
+placements and widths. This matters for tolerance inference, where a reported
+interval must also satisfy a repeated-sampling content--confidence statement.
+We develop mean-tilted intervals (MTIs), a fixed-content family indexed by
+retained-mean balance. The zero-tilt member is the mean-preserving interval
+(MPI) induced by the residual-product criterion of Pouplin et al.; nonzero
+tilts move through admissible contiguous windows, including
+distribution-specific central and shortest intervals.
 
-The shortest-contiguous member motivates a calibrated tolerance action. We use
-TCSP for the tolerance-calibrated shortest-path action: a retained count is
-chosen from the distribution-free uniform scan statistic, and the reported set
-is the shortest closed order-statistic window at that count. This separates the
-finite-sample content--confidence certificate from generalized-posterior
-endpoint summaries. A fixed-target MTI-ECM calculation is included as a
-calibrated generalized-Bayes comparator: it profiles fitted content and
-retained-mean tilt over a prespecified grid and applies a direct
-Dirichlet-process fixed-interval content-probability check selected in a separate
-calibration run. A prespecified iid validation study at tolerance confidence
-\(0.95\) compares TCSP, the calibrated MTI-ECM comparator, Young--Mathew
-interpolation, and Wilks intervals across feasible content--sample-size cells
-and eight continuous distributions. The design excludes cells where even the
-full sample range cannot support the requested two-sided distribution-free
-statement.
+For tolerance inference, we introduce TCSP, a tolerance-calibrated shortest-path
+action. TCSP chooses the retained order-statistic count by distribution-free
+scan calibration and reports the shortest closed window at that count. This
+keeps the certified interval action separate from generalized-posterior endpoint
+summaries. We also study a calibrated MTI-ECM comparator that profiles fitted
+content and tilt over a prespecified grid and applies an independent
+Dirichlet-process content-probability check. In iid simulations at tolerance
+confidence \(0.95\), we compare TCSP, MTI-ECM, Young--Mathew interpolation, and
+Wilks intervals across feasible content--sample-size cells and eight continuous
+distributions. The study emphasizes skewed distributions, where placement
+matters most, and excludes cells where the sample range cannot support the
+requested two-sided distribution-free statement.
 \end{abstract}
 
 

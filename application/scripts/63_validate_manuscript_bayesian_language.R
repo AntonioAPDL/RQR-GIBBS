@@ -98,7 +98,7 @@ required <- list(
     "mean-preserving interval (MPI)",
     "mean-tilted interval (MTI)",
     "TCSP denotes the tolerance-calibrated shortest-path action",
-    "finite-sample content--confidence certificate",
+    "repeated-sampling content--confidence statement",
     "fixed-target MTI-ECM calculation",
     "direct Dirichlet-process fixed-interval content-probability check",
     "The pointwise MPI loss is",
