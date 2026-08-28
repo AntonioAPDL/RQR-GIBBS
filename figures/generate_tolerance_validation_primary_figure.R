@@ -25,8 +25,8 @@ default_primary_dir <- file.path(
 )
 default_mti_ecm_dir <- file.path(
   "application", "runs",
-  "rqr_bayes_uq_validation_mti_ecm_adaptive_targeted_refinement_20260826",
-  "wave_confirmatory_mti_ecm_refinement_20260826T184038Z"
+  "rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827",
+  "wave_confirmatory_mti_ecm_independent_guarded_20260828T005711Z"
 )
 default_mti_ecm_policy <- file.path(
   "application", "config",
@@ -40,9 +40,14 @@ primary_results <- arg_value(
 )
 mti_ecm_results <- arg_value(
   "--mti-ecm-results=",
-  Sys.getenv("RQR_BAYES_UQ_MTI_ECM_RESULTS",
-             unset = file.path(default_mti_ecm_dir,
-                               "bayes_uq_validation_results.csv"))
+  Sys.getenv(
+    "RQR_BAYES_UQ_MTI_ECM_ARTICLE_RESULTS",
+    unset = Sys.getenv(
+      "RQR_BAYES_UQ_MTI_ECM_RESULTS",
+      unset = file.path(default_mti_ecm_dir,
+                        "bayes_uq_validation_results.csv")
+    )
+  )
 )
 mti_ecm_policy_csv <- arg_value(
   "--mti-ecm-policy-csv=",

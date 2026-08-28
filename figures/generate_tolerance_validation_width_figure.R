@@ -202,7 +202,8 @@ par(mar = c(0, 0, 0, 0))
 plot.new()
 legend("center", legend = c(unname(method_labels[method_order]), "Mean width"),
        col = c(unname(method_colors[method_order]), "gray20"),
-       pch = c(unname(method_pch[method_order]), 4),
+       lty = c(rep(1L, length(method_order)), NA),
+       pch = c(rep(NA_integer_, length(method_order)), 4),
        lwd = c(rep(2, length(method_order)), NA),
        ncol = length(method_order) + 1L, bty = "n", xpd = NA, cex = 0.95)
 mtext("Interval-width ranges by distribution",

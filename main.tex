@@ -1594,20 +1594,21 @@ the values remain raw interval lengths.}
 \end{figure}
 
 In the completed run, TCSP content-attainment ranges from 95.3\% to 99.6\% across
-distribution-level cells, compared with 95.1\% to 99.7\% for MTI-ECM,
+distribution-level cells, compared with 95.1\% to 99.9\% for MTI-ECM,
 94.1\% to 97.2\% for Young--Mathew, and 95.3\% to 100.0\% for Wilks.
 Figures~\ref{fig:tolerance-validation-primary}
 and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
 pooling widths across distributional scenarios. The calibrated scan action
-targets the requested finite-sample statement directly. The adaptive
-calibration preserves empirical content attainment above the nominal tolerance confidence
-in every distribution-level cell. MTI-ECM provides a less conservative
+targets the requested finite-sample statement directly. In the independent
+validation run, the selected adaptive MTI-ECM rule has observed content
+attainment above the nominal tolerance confidence in every distribution-level
+cell. MTI-ECM provides a less conservative
 width-seeking comparison tied to the generalized-Bayes interval construction:
 it also stays above nominal tolerance confidence in all 72 distribution-level
-cells and has a smaller cellwise median width than TCSP in 44 cells. Its two
-closest calibration cells are \(n=100,c=0.95\) and \(n=500,c=0.99\), where
-the distribution-level one-sided calibration lower bounds are below 0.95 even
-though the independent validation ranges remain above nominal. Young--Mathew is
+cells and has a smaller cellwise median width than TCSP in 38 cells. The closest
+independent validation cells remain near the nominal boundary, so this evidence
+should be read as repeated-sampling validation of the selected MTI-ECM rule
+rather than as a distribution-free finite-sample certificate. Young--Mathew is
 a strong nonparametric comparator and is slightly
 shorter on the symmetric reference distributions, but it falls below nominal
 tolerance confidence in nine skewed or heavy-tailed cells. In the six
@@ -1616,7 +1617,7 @@ Young--Mathew in 36 of 54 cells. Wilks is simple and reliable, but it is often
 much wider when the scan calibration does not force the full sample range.
 
 The supplement gives the distribution-level content-attainment and width tables behind these
-summaries, the selected MTI-ECM calibration-rule summary, the TCSP retained counts,
+summaries, the selected MTI-ECM calibration summary, the TCSP retained counts,
 and the full-range feasibility thresholds used to choose the simulation design.
 The excluded small-sample cells fall outside the region where a two-sided
 distribution-free tolerance statement can be certified at confidence \(0.95\).
