@@ -816,7 +816,7 @@ write_mti_ecm_policy_tex <- function(summary, path) {
     ),
     paste0(
       "\\caption{\\textbf{Selected adaptive MTI-ECM calibration rule.} ",
-      "The direct-DP content screen is fixed by a separate calibration run ",
+      "The direct-DP content-probability check is fixed by a separate calibration run ",
       "within each sample-size/content cell before the independent validation ",
       "summaries are computed. Validation attainment is reported as the range ",
       "across the eight simulation distributions.}\\label{tab:supp-mti-ecm-policy}\\\\"
@@ -824,7 +824,7 @@ write_mti_ecm_policy_tex <- function(summary, path) {
     "\\toprule",
     paste(
       "Cell",
-      "DP screen",
+      "DP content level",
       "Calibration lower probability",
       "Validation range (\\%)",
       "Cells below 95\\%",
@@ -837,7 +837,7 @@ write_mti_ecm_policy_tex <- function(summary, path) {
     "\\toprule",
     paste(
       "Cell",
-      "DP screen",
+      "DP content level",
       "Calibration lower probability",
       "Validation range (\\%)",
       "Cells below 95\\%",

@@ -88,7 +88,7 @@ finite-sample content--confidence certificate from generalized-posterior
 endpoint summaries. A fixed-target MTI-ECM calculation is included as a
 calibrated generalized-Bayes comparator: it profiles fitted content and
 retained-mean tilt over a prespecified grid and applies a direct
-Dirichlet-process fixed-interval content screen selected in a separate
+Dirichlet-process fixed-interval content-probability check selected in a separate
 calibration run. A prespecified iid validation study at tolerance confidence
 \(0.95\) compares TCSP, the calibrated MTI-ECM comparator, Young--Mathew
 interpolation, and Wilks intervals across feasible content--sample-size cells
@@ -140,16 +140,16 @@ calibrate a retained count from the uniform scan statistic, then report the
 shortest closed order-statistic window at that count. The scan calibration
 supplies the tolerance statement. Any generalized-posterior calculation after
 \((c,\delta)\), or after a selected retained count, describes endpoint
-uncertainty for a fixed target rather than creating a response-predictive or
-finite-sample tolerance guarantee.
+uncertainty for a fixed target; the finite-sample tolerance guarantee still
+comes from the calibrated action.
 
 A fixed-target MTI-ECM calculation is included to connect the tolerance study to
 the MTI generalized-Bayes construction. For each validation cell, a
 prespecified adaptive rule profiles fitted content and retained-mean tilt,
-keeps candidates that satisfy a direct Dirichlet-process fixed-interval content
-screen, and applies a width-stability restriction relative to TCSP. This makes
-MTI-ECM a calibrated empirical comparator tied to the MTI loss. It does not
-replace the distribution-free scan certificate attached to TCSP. A companion
+keeps candidates that satisfy a direct Dirichlet-process fixed-interval
+content-probability check, and applies a width-stability restriction relative
+to TCSP. This makes MTI-ECM a calibrated empirical comparator tied to the MTI
+loss. The distribution-free scan certificate remains attached to TCSP. A companion
 manuscript develops generalized-Bayes endpoint regression, fixed-feature
 readouts, and time-varying endpoint models; the present paper keeps only the
 parts needed for fixed-content geometry and iid tolerance validation.
@@ -163,12 +163,12 @@ the calibrated MTI-ECM comparator, Young--Mathew interpolation, and Wilks
 intervals across feasible sample-size/content cells and a distributional panel
 chosen to include symmetric, heavy-tailed, and strongly skewed cases.
 
-The scope is intentionally bounded. The formal tolerance statement in this
+The formal setting is intentionally bounded. The tolerance statement in this
 paper concerns iid continuous univariate samples and the closed order-statistic
 window convention used by TCSP. Regression-family and dynamic tolerance
 calibration require additional theory. Generalized-posterior endpoint summaries
-are loss-based summaries of interval-root functionals, not posterior-predictive
-response draws. Proper scoring rules remain useful when their target matches the
+are loss-based summaries of interval-root functionals; response prediction would
+require a separate response-distribution model. Proper scoring rules remain useful when their target matches the
 forecast object \citep{GneitingRaftery2007,Gneiting2011,GneitingKatzfuss2014};
 the usual interval score targets an equal-tailed interval and is secondary here
 \citep{BrehmerGneiting2021Intervals}.
@@ -545,7 +545,7 @@ population law and then displayed after mean/standard-deviation
 standardization. The top row shows standardized densities with equal-tailed
   (ET), MPI, and shortest-contiguous (SH) intervals; the bottom row
   shows the standardized width profile along the MTI family. In the
-Normal benchmark the three targets coincide at
+Normal reference case the three targets coincide at
 \(\delta/\operatorname{SD}(Y)=0\). Under skewness, ET and SH generally require
   nonzero, distribution-specific recovery tilts, while MPI remains the
 zero-tilt retained-mean-balance target. The deterministic display is a
@@ -668,9 +668,10 @@ interval roots through the cumulative loss,
 \]
 In the intercept-only tolerance validation, \(\theta=(a,b)\) and ordered
 endpoints are obtained by sorting the two raw roots. This distribution is a
-loss-based generalized posterior for a fixed interval target. It is not a
-sampling model for responses, and \(\delta\) is fixed before computation rather
-than sampled as an ordinary response parameter.
+loss-based generalized posterior for a fixed interval target. Response
+prediction would require a separate response-distribution model. The tilt
+\(\delta\) is fixed before computation or selected by the external calibration
+rule described below.
 
 The deterministic MTI-ECM calculation used in the validation study is the mode
 calculation associated with this fixed-target update. A pseudo-asymmetric-Laplace
@@ -683,11 +684,12 @@ selection. The supplement gives the full fixed-target equations. Broader Gibbs,
 regression, fixed-feature, and time-varying endpoint models are developed in the
 companion computation paper.
 
-\paragraph{Direct content screen.}
-The MTI-ECM comparator also uses a response-distribution content screen during
-calibration. For a fixed interval \(I\), a direct Dirichlet-process posterior for
+\paragraph{Direct content-probability check.}
+The MTI-ECM comparator also uses a response-distribution content-probability
+check during calibration. For a fixed interval \(I\), a direct
+Dirichlet-process posterior for
 \(F\) gives an exact Beta law for \(F(I)\) conditional on the observed sample
-\citep{Ferguson1973DP}. This screen is used to select eligible MTI-ECM
+\citep{Ferguson1973DP}. This check is used to select eligible MTI-ECM
 candidates in a separate calibration run. It is a model-based calibration device
 for the comparator, while the formal distribution-free tolerance certificate in
 this paper remains attached to the TCSP scan action.
@@ -858,11 +860,13 @@ These derivative calculations motivate numerical continuation and diagnose
 its behavior. Full regularity, boundary, and nonuniqueness arguments are
 reserved for a formal shortest-path theorem.
 
-The continuation calculation starts from a globally solved content, predicts each next
-window by nested expansion of the previous window, applies local correction in
-a neighborhood of the current solution, expands the neighborhood when the local optimum lands on its
-boundary, and finally verifies the formal action by an exhaustive empirical scan. The exhaustive
-scan, not the continuation approximation, defines the selected window. The continuation argument does not cover infeasible calibration
+The continuation calculation starts from a globally solved content, predicts
+each next window by nested expansion of the previous window, applies local
+correction in a neighborhood of the current solution, expands the neighborhood
+when the local optimum lands on its boundary, and finally verifies the formal
+action by an exhaustive empirical scan. The exhaustive scan, not the
+continuation approximation, defines the selected window. The continuation
+argument does not cover infeasible calibration
 \((k>n)\), ties or atoms that violate the continuous-sample convention,
 nonunique shortest windows, response-scale dependence of geometric width, and
 unsupported attempts to attach the scan certificate to posterior summaries.
@@ -930,9 +934,9 @@ order-statistic windows satisfying the calibrated retained-count rule.
 The MTI-ECM comparator links the validation study to the generalized-Bayes
 interval construction. It uses a prespecified adaptive calibration rule indexed
 by sample size and requested content. Within each cell, the rule fixes a direct
-Dirichlet-process content screen from an independent calibration run, profiles
+Dirichlet-process content-probability check from an independent calibration run, profiles
 fixed-target MTI-ECM endpoint fits over fitted content and retained-mean tilt,
-and keeps the shortest candidate satisfying the content screen and a
+and keeps the shortest candidate satisfying the content-probability check and a
 same-cell width-stability restriction against TCSP. This empirical validation is
 separate from the distribution-free scan theorem that supports TCSP.
 Young--Mathew interpolation

@@ -73,8 +73,8 @@ the tolerance-interval article. It first develops the fixed-content interval
 class, the mean-preserving interval (MPI), and the mean-tilted interval (MTI)
 family. It then records the finite-sample score balance used to interpret
 fixed-target fits, the pseudo-asymmetric-Laplace construction used by the
-MTI-ECM mode calculation, the direct Dirichlet-process fixed-interval content
-screen, and the iid tolerance-validation protocol. Endpoint regression,
+MTI-ECM mode calculation, the direct Dirichlet-process fixed-interval
+content-probability check, and the iid tolerance-validation protocol. Endpoint regression,
 fixed-feature readouts, time-varying endpoint models, and broader Gibbs
 computation are deferred to a companion computation paper.
 \end{abstract}
@@ -109,9 +109,9 @@ Symbol & Meaning & Use\\
 \(\delta\) & fixed retained-mean tilt & MTI placement family\\
 \(q,k\) & fitted content and retained order-statistic count & MTI-ECM and TCSP\\
 \(\alpha\) & tolerance error probability & scan calibration\\
-\(\gamma\) & posterior content-screen error probability & direct DP screen\\
+\(\gamma\) & posterior content-probability threshold & direct DP content check\\
 \(\omega_{\mathrm R}\) & fixed generalized-Bayes learning rate & fixed-target MTI-ECM\\
-\(F,H,a\) & response distribution, DP base measure, and DP concentration & content screening\\
+\(F,H,a\) & response distribution, DP base measure, and DP concentration & content checking\\
 \(L,U,M,W\) & lower endpoint, upper endpoint, midpoint, and width & reported interval functionals\\
 MPI, MTI, TCSP & mean-preserving interval, mean-tilted interval, and tolerance-calibrated shortest path & main methods\\
 \bottomrule
@@ -142,7 +142,7 @@ Empirical score balance
 Fixed-target MTI-ECM
 & Section~\ref{sec:supp-mti-ecm}
 & Gives the mode calculation used by the MTI-ECM comparator\\
-Direct DP content screen
+Direct DP content check
 & Section~\ref{sec:supp-direct-dp-screen}
 & Gives exact fixed-interval posterior content probabilities for calibration\\
 Tolerance validation
@@ -953,16 +953,16 @@ additive constant. This explains both the form of RQR-W and why its path does
 not generally coincide with the shortest-contiguous path.
 
 
-\section*{Part III. Fixed-Target Computation and Content Screening}
+\section*{Part III. Fixed-Target Computation and Content Checking}
 
 \section{Fixed-Target MTI-ECM Calculation}
 \label{sec:supp-mti-ecm}
 
 The MTI-ECM calculation used in the validation study is a deterministic mode
 calculation for a fixed loss-defined target. It is included because it links the
-tolerance comparison to the MTI generalized-Bayes construction. It is not a
-response-likelihood EM algorithm and it does not supply the distribution-free
-tolerance certificate attached to TCSP.
+tolerance comparison to the MTI generalized-Bayes construction. The calculation
+updates an interval-root target under a loss; the distribution-free tolerance
+certificate remains attached to TCSP.
 
 For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the fixed-target MTI loss is
 \[
@@ -1036,10 +1036,10 @@ parameters inside the generalized posterior. The validation study profiles over
 a prespecified grid in a separate calibration step and then applies the selected
 rule unchanged to independent replications.
 
-\section{Direct DP Content Screen}
+\section{Direct DP Content Check}
 \label{sec:supp-direct-dp-screen}
 
-The MTI-ECM comparator uses a model-based content screen during calibration.
+The MTI-ECM comparator uses a model-based content-probability check during calibration.
 For a fixed closed interval \(I=[l,u]\), let \(N_n(I)=\sum_{i=1}^n\ind(Y_i\in I)\).
 Under the direct Dirichlet-process model
 \[
@@ -1073,7 +1073,7 @@ Dirichlet process is Dirichlet with parameters
 Beta distribution.
 \end{proof}
 
-The direct DP screen is used only to choose eligible MTI-ECM candidates in the
+The direct DP check is used only to choose eligible MTI-ECM candidates in the
 calibration run. Distribution-free tolerance certification in this paper comes
 from the TCSP retained-count calibration.
 
@@ -1138,11 +1138,11 @@ distribution-level cell as reproducibility information.
 
 The MTI-ECM comparator reported in the main article uses a prespecified adaptive
 calibration rule indexed by \((n,c,1-\alpha)\). The rule chooses a
-direct Dirichlet-process content screen from a separate calibration run,
+direct Dirichlet-process content-probability check from a separate calibration run,
 requires width stability relative to TCSP within the same distribution-level
 cells, and then applies that choice unchanged to fresh paired replications in
 the independent validation
-run. Table~\ref{tab:supp-mti-ecm-policy} records the selected screen, calibration
+run. Table~\ref{tab:supp-mti-ecm-policy} records the selected content-probability check, calibration
 lower bound, independent validation range, and width span for each cell.
 
 \begingroup
@@ -1228,7 +1228,7 @@ construction, and repeated-sampling evidence. The proofs above support the
 population MPI and MTI identities, the fractional empirical score balance, and
 the direct DP fixed-interval content law under their stated assumptions. The
 TCSP retained counts are calibrated before the replicated samples are analyzed.
-The MTI-ECM content screen and stability rule are selected in a separate
+The MTI-ECM content-probability check and stability rule are selected in a separate
 calibration run and then applied unchanged in the independent validation run.
 
 The validation evidence is confined to iid continuous univariate samples from
