@@ -1,4 +1,4 @@
-"n","content","tolerance_confidence","retained_count","retained_fraction","content_buffer","certified_lower_probability"
+"n","content","tolerance_confidence","retained_count","retained_fraction","content_buffer","lower_confidence_bound"
 50,0.9,0.95,50,1,0.1,0.966214140307568
 100,0.9,0.95,98,0.98,0.08,0.978777527605841
 100,0.95,0.95,100,1,0.05,0.962918790672645

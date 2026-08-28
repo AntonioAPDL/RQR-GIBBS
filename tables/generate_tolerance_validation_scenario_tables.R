@@ -593,26 +593,33 @@ scan_calibration_table <- function(path) {
     return(data.frame(
       n = integer(), content = numeric(), tolerance_confidence = numeric(),
       retained_count = integer(), retained_fraction = numeric(),
-      content_buffer = numeric(), certified_lower_probability = numeric(),
+      content_buffer = numeric(), lower_confidence_bound = numeric(),
       stringsAsFactors = FALSE
     ))
   }
   scan <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
   required <- c(
     "n", "guaranteed_content", "tolerance_confidence", "retained_count",
-    "content_buffer", "certified_lower_probability"
+    "content_buffer"
   )
   missing <- setdiff(required, names(scan))
   if (length(missing)) {
     stopf("Scan calibration CSV is missing column(s): ",
           paste(missing, collapse = ", "))
   }
+  lower_bound_col <- intersect(
+    c("lower_confidence_bound", "certified_lower_probability"),
+    names(scan)
+  )
+  if (!length(lower_bound_col)) {
+    stopf("Scan calibration CSV is missing column: lower_confidence_bound")
+  }
   scan$n <- as.integer(scan$n)
   scan$content <- num(scan$guaranteed_content)
   scan$tolerance_confidence <- num(scan$tolerance_confidence)
   scan$retained_count <- as.integer(scan$retained_count)
   scan$content_buffer <- num(scan$content_buffer)
-  scan$certified_lower_probability <- num(scan$certified_lower_probability)
+  scan$lower_confidence_bound <- num(scan[[lower_bound_col[[1L]]]])
   if ("infeasible" %in% names(scan)) {
     scan$infeasible_bool <- truthy(scan$infeasible)
   } else {
@@ -622,7 +629,7 @@ scan_calibration_table <- function(path) {
   scan$retained_fraction <- scan$retained_count / scan$n
   out <- unique(scan[, c(
     "n", "content", "tolerance_confidence", "retained_count",
-    "retained_fraction", "content_buffer", "certified_lower_probability"
+    "retained_fraction", "content_buffer", "lower_confidence_bound"
   ), drop = FALSE])
   out <- out[order(out$n, out$content, out$tolerance_confidence), ]
   rownames(out) <- NULL
@@ -647,7 +654,7 @@ write_scan_calibration_tex <- function(scan, path) {
   lines <- c(
     "\\begin{tabular}{@{}rrrrrr@{}}",
     "\\toprule",
-    "\\(n\\) & \\(c\\) & Retained count \\(k\\) & \\(k/n\\) & Buffer \\(k/n-c\\) & Certified lower probability\\\\",
+    "\\(n\\) & \\(c\\) & Retained count \\(k\\) & \\(k/n\\) & Buffer \\(k/n-c\\) & Lower confidence bound\\\\",
     "\\midrule"
   )
   if (!nrow(scan)) {
@@ -667,7 +674,7 @@ write_scan_calibration_tex <- function(scan, path) {
       as.integer(scan$retained_count[[ii]]),
       format_prob3(scan$retained_fraction[[ii]]),
       format_prob3(scan$content_buffer[[ii]]),
-      format_prob3(scan$certified_lower_probability[[ii]])
+      format_prob3(scan$lower_confidence_bound[[ii]])
     )
   }, character(1L))
   writeLines(c(lines, body, "\\bottomrule", "\\end{tabular}"), path)

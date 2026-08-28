@@ -71,7 +71,12 @@ main_only_forbidden <- c(
   "placeholder latent scales" = "placeholder latent scales",
   "repository-facing audit design" = "audit design|audit domain",
   "ambiguous static scan" = "static scan",
-  "ambiguous Gibbs scan order" = "transition and scan order"
+  "ambiguous Gibbs scan order" = "transition and scan order",
+  "certified interval action" = "certified interval action",
+  "tolerance-action wording" = "tolerance action",
+  "scan-action wording" = "scan action",
+  "content-confidence action wording" = "content-confidence action",
+  "formal-action wording" = "formal action"
 )
 for (label in names(main_only_forbidden)) {
   hit <- grep(
@@ -97,7 +102,7 @@ required <- list(
   "main.tex" = c(
     "mean-preserving interval (MPI)",
     "mean-tilted interval (MTI)",
-    "TCSP denotes the tolerance-calibrated shortest-path action",
+    "TCSP denotes the tolerance-calibrated shortest-path procedure",
     "repeated-sampling content--confidence statement",
     "fixed-target MTI-ECM calculation",
     "direct Dirichlet-process fixed-interval content-probability check",

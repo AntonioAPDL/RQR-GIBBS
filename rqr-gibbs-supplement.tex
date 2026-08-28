@@ -75,7 +75,7 @@ mean-tilted interval (MTI) family. It then records the finite-sample score
 balance used to interpret fixed-target fits, the pseudo-asymmetric-Laplace
 construction used by the MTI-ECM mode calculation, the direct
 Dirichlet-process content-probability check, and the iid tolerance-validation
-protocol. Endpoint regression, fixed-feature readouts, time-varying endpoint
+protocol. Endpoint regression, basis-expansion endpoint models, time-varying endpoint
 models, and broader Gibbs computation are treated in a companion computation
 paper.
 \end{abstract}
@@ -90,7 +90,7 @@ recoverable derivations, fixed-target computational identities, and validation
 records needed to support the tolerance claims. Throughout, MPI denotes the
 zero-tilt retained-mean target and MTI denotes the fixed-content placement
 family indexed by retained-mean tilt. TCSP denotes the scan-calibrated shortest
-path tolerance action. The generalized posterior is always a loss-based update
+path tolerance procedure. The generalized posterior is always a loss-based update
 for a fixed interval target; it is distinct from a response-distribution model
 for \(F\).
 
@@ -104,7 +104,7 @@ for \(F\).
 \toprule
 Symbol & Meaning & Use\\
 \midrule
-\(c\) & requested population content & fixed-content targets and tolerance actions\\
+\(c\) & requested population content & fixed-content targets and tolerance procedures\\
 \(u\) & lower probability index for a content-\(c\) population window & interval paths\\
 \(m,h\) & midpoint and half-width & MPI and MTI score equations\\
 \(\delta\) & fixed retained-mean tilt & MTI placement family\\
@@ -963,7 +963,7 @@ The MTI-ECM calculation used in the validation study is a deterministic mode
 calculation for a fixed loss-defined target. It is included because it links the
 tolerance comparison to the MTI generalized-Bayes construction. The calculation
 updates an interval-root target under a loss; the distribution-free tolerance
-certificate remains attached to TCSP.
+guarantee comes from the TCSP scan calibration.
 
 For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the fixed-target MTI loss is
 \[
@@ -1075,7 +1075,7 @@ Beta distribution.
 \end{proof}
 
 The direct DP check is used only to choose eligible MTI-ECM candidates in the
-calibration run. Distribution-free tolerance certification in this paper comes
+calibration run. The distribution-free tolerance guarantee in this paper comes
 from the TCSP retained-count calibration.
 
 \section*{Part IV. Validation Details and Reproducibility}
@@ -1084,10 +1084,10 @@ from the TCSP retained-count calibration.
 \label{sec:supp-tolerance-validation-protocol}
 
 The primary tolerance validation is restricted to iid continuous univariate
-samples. This is the setting in which the scan-calibrated empirical action,
+samples. This is the setting in which the scan-calibrated empirical procedure,
 the stability-restricted MTI-ECM profile rule, Young--Mathew interpolation, and
 Wilks-style full-range intervals can be compared on the same target. TCSP
-is the primary calibrated action
+is the primary calibrated tolerance procedure
 because it selects the shortest closed order-statistic window at the calibrated
 retained count. The reported TCSP calculations use adaptive Clopper--Pearson scan
 calibration directly. The MTI-ECM comparator
@@ -1122,7 +1122,7 @@ completed independent validation run. The reported rows contribute 288,000
 replication-level method evaluations over the 72 distribution-level cells used in the main
 comparison. The broader MTI-ECM refinement run is retained as calibration
 evidence, with only the selected rule evaluated under the MTI-ECM label in the
-independent validation run. All simulations completed, and all four reported methods returned
+independent validation run. All simulations completed, and all four reported methods produced
 an interval in every replication. The manuscript tables and figures are
 computed directly from these replication-level simulation outputs and the
 corresponding scan-calibration outputs. The scenario-range table in the main
@@ -1133,7 +1133,7 @@ Table~\ref{tab:supp-primary-dgp-delivery} gives the distribution-level
 content-attainment percentages before aggregation, and
 Table~\ref{tab:supp-primary-dgp-width-ranges} reports the corresponding
 distribution-level 2.5\%--97.5\% ranges of interval lengths. The
-replication-level data file retains interval-return indicators,
+replication-level data file records indicators of interval production,
 infeasibility indicators, and raw width summaries for each
 distribution-level cell as reproducibility information.
 
@@ -1154,19 +1154,19 @@ lower bound, independent validation range, and width span for each cell.
 \input{tables/tolerance_validation_article_dgp_width_ranges.tex}
 
 These results are empirical repeated-sampling evidence for the selected
-profile rule; the finite-sample distribution-free certificate remains attached
-to TCSP.
+profile rule; the finite-sample distribution-free guarantee comes from the TCSP
+scan calibration.
 
 \input{tables/tolerance_validation_mti_ecm_selected_policy_summary.tex}
 
 The TCSP calibration chooses the retained count \(k\) before seeing the
 replicated samples. Table~\ref{tab:supp-tcsp-scan-calibration} records the
-retained counts, retained fractions, content buffers, and certified lower
-probabilities used in the simulation design. Adaptive Clopper--Pearson calibration
-certifies the retained count for each feasible sample-size/content cell before
+retained counts, retained fractions, content buffers, and lower confidence
+bounds used in the simulation design. Adaptive Clopper--Pearson calibration
+selects the retained count for each feasible sample-size/content cell before
 any distribution-specific replications are evaluated. When \(k=n\), TCSP is forced to
-use the full sample range and therefore coincides with Wilks at the
-formal-action level. This occurs for \((n,c)=(50,0.90),(100,0.95)\), and
+use the full sample range and therefore coincides with Wilks as a reported
+interval. This occurs for \((n,c)=(50,0.90),(100,0.95)\), and
 \((500,0.99)\).
 
 \begin{table}[H]

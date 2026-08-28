@@ -75,11 +75,12 @@ tilts move through admissible contiguous windows, including
 distribution-specific central and shortest intervals.
 
 For tolerance inference, we introduce TCSP, a tolerance-calibrated shortest-path
-action. TCSP chooses the retained order-statistic count by distribution-free
-scan calibration and reports the shortest closed window at that count. This
-keeps the certified interval action separate from generalized-posterior endpoint
-summaries. We also study a calibrated MTI-ECM comparator that profiles fitted
-content and tilt over a prespecified grid and applies an independent
+procedure. TCSP chooses the retained order-statistic count by distribution-free
+scan calibration and reports the shortest closed window at that count. The
+tolerance guarantee applies to the reported empirical interval;
+generalized-posterior endpoint summaries are treated separately. We also study
+a calibrated MTI-ECM comparator that profiles fitted content and tilt over a
+prespecified grid and applies an independent
 Dirichlet-process content-probability check. In iid simulations at tolerance
 confidence \(0.95\), we compare TCSP, MTI-ECM, Young--Mathew interpolation, and
 Wilks intervals across feasible content--sample-size cells and eight continuous
@@ -123,16 +124,16 @@ distribution-specific tilts. The tilt is therefore part of the target
 specification, or it is selected by a separate calibration rule before empirical
 claims are made.
 
-This target geometry leads to a calibrated tolerance action. The shortest
+This target geometry leads to a calibrated tolerance procedure. The shortest
 contiguous interval is the minimum-width member of the fixed-content class, but
 a sample shortest window must still satisfy a content--confidence requirement.
-TCSP denotes the tolerance-calibrated shortest-path action used here: first
+TCSP denotes the tolerance-calibrated shortest-path procedure used here: first
 calibrate a retained count from the uniform scan statistic, then report the
 shortest closed order-statistic window at that count. The scan calibration
 supplies the tolerance statement. Any generalized-posterior calculation after
 \((c,\delta)\), or after a selected retained count, describes endpoint
 uncertainty for a fixed target; the finite-sample tolerance guarantee still
-comes from the calibrated action.
+comes from the calibrated empirical interval.
 
 A fixed-target MTI-ECM calculation is included to connect the tolerance study to
 the MTI generalized-Bayes construction. For each validation cell, a
@@ -140,15 +141,15 @@ prespecified adaptive rule profiles fitted content and retained-mean tilt,
 keeps candidates that satisfy a direct Dirichlet-process fixed-interval
 content-probability check, and applies a width-stability restriction relative
 to TCSP. This makes MTI-ECM a calibrated empirical comparator tied to the MTI
-loss. The distribution-free scan certificate remains attached to TCSP. A companion
-manuscript develops generalized-Bayes endpoint regression, fixed-feature
-readouts, and time-varying endpoint models; the present paper keeps only the
+loss. The distribution-free tolerance guarantee comes from TCSP. A companion
+manuscript develops generalized-Bayes endpoint regression, basis-expansion
+endpoint models, and time-varying endpoint models; the present paper keeps only the
 parts needed for fixed-content geometry and iid tolerance validation.
 
 The contributions are threefold. First, the residual-product loss is shown to
 target MPI, and MTI is shown to generalize MPI by indexing admissible contiguous
 fixed-content windows through retained-mean tilt. Second, this geometry is used
-to define TCSP, a scan-calibrated minimum-width empirical tolerance action for
+to define TCSP, a scan-calibrated minimum-width empirical tolerance procedure for
 iid continuous samples. Third, a prespecified validation study compares TCSP,
 the calibrated MTI-ECM comparator, Young--Mathew interpolation, and Wilks
 intervals across feasible sample-size/content cells and a distributional panel
@@ -169,7 +170,7 @@ the fixed-content interval class. Sections~\ref{sec:mpi-loss}
 and~\ref{sec:mti-loss} identify the MPI target and the MTI placement family.
 Section~\ref{sec:static-theory-statements} records the empirical balance
 identity and the fixed-target MTI-ECM bridge used in the validation study.
-Section~\ref{sec:tcsp} defines the scan-calibrated tolerance action and its
+Section~\ref{sec:tcsp} defines the scan-calibrated tolerance procedure and its
 finite-sample feasibility condition. Section~\ref{sec:evaluation} gives the confirmatory
 validation design, and Section~\ref{sec:discussion} concludes.
 
@@ -672,7 +673,7 @@ conditional maximization step; alternating the two root updates gives an ECM
 algorithm \citep{DempsterLairdRubin1977EM,MengRubin1993ECM}. The numerical
 implementation uses objective backtracking and deterministic multi-start
 selection. The supplement gives the full fixed-target equations. Broader Gibbs,
-regression, fixed-feature, and time-varying endpoint models are developed in the
+regression, basis-expansion, and time-varying endpoint models are developed in the
 companion computation paper.
 
 \paragraph{Direct content-probability check.}
@@ -682,8 +683,8 @@ Dirichlet-process posterior for
 \(F\) gives an exact Beta law for \(F(I)\) conditional on the observed sample
 \citep{Ferguson1973DP}. This check is used to select eligible MTI-ECM
 candidates in a separate calibration run. It is a model-based calibration device
-for the comparator, while the formal distribution-free tolerance certificate in
-this paper remains attached to the TCSP scan action.
+for the comparator, while the distribution-free tolerance guarantee in this
+paper comes from the TCSP scan calibration.
 
 \section{Calibrated Minimum-Width Tolerance Intervals}
 \label{sec:tcsp}
@@ -704,11 +705,11 @@ generalized-Bayes learning rate is \(\omega_{\mathrm R}\). When a separate
 response-distribution model for \(F\) is used, \(1-\gamma\) denotes a posterior
 content-probability threshold for eligible intervals. Neither \(\omega_{\mathrm R}\) nor
 \(1-\gamma\) determines the tolerance confidence.
-In this article, TCSP denotes the tolerance-calibrated shortest-path action:
+In this article, TCSP denotes the tolerance-calibrated shortest-path procedure:
 first calibrate a retained count by the scan statistic, then report the
 shortest closed empirical window at that count.
 
-\paragraph{Scan-calibrated empirical action.}
+\paragraph{Scan-calibrated empirical procedure.}
 Let \(Y_{(1)}\le\cdots\le Y_{(n)}\). For content \(c\), define the uniform scan
 statistic
 \[
@@ -720,8 +721,8 @@ The calibrated retained count is
 k_{n,c,\alpha}
 =\min\{k:\Pr(M_n(c)<k)\ge 1-\alpha\}.
 \]
-This count is fixed before any endpoint model is fit. The formal empirical
-action is the formal closed order-statistic window
+This count is fixed before any endpoint model is fit. The reported empirical
+interval is the closed order-statistic window
 \[
 \widehat T_n=
 [Y_{(\widehat j)},Y_{(\widehat j+k-1)}],
@@ -757,8 +758,8 @@ model with parameter block \(\theta\) uses the loss-based update
 \exp\{-\omega_{\mathrm R}L_{q,\delta,n}(\theta)\}\pi_0(\theta).
 \]
 This generalized posterior quantifies uncertainty about a fixed interval-root
-functional after the target has been specified. The formal tolerance action
-remains the empirical order-statistic window \(\widehat T_n\). Because
+functional after the target has been specified. The tolerance interval remains
+the empirical order-statistic window \(\widehat T_n\). Because
 \(\widehat\delta_{\mathrm{SH}}\) is computed from the same sample, these
 posterior summaries are conditional on the selected target and do not propagate
 shortest-window selection uncertainty. An unconditional interpretation requires
@@ -767,49 +768,49 @@ a plug-in stability theorem or a separate target-selection sample.
 \paragraph{Supplementary extensions.}
 Response-distribution Bayesian shortest-interval calculations and sample-split spacing constructions
 are useful extensions, but they answer different evidentiary questions from the
-primary TCSP action. A response-distribution model gives posterior
+primary TCSP procedure. A response-distribution model gives posterior
 content probabilities under a model for \(F\), whereas TCSP supplies a
-distribution-free scan-calibrated empirical action. A split-spacing construction
+distribution-free scan-calibrated empirical interval. A split-spacing construction
 uses independent target-selection and calibration samples, whereas TCSP uses the full
 sample to choose the minimum-width calibrated order-statistic window. These
 extensions remain available as separate methodological and proof directions;
 they are not part of the main validation comparison.
 
-\paragraph{Numerical certification and proof guarantees.}
+\paragraph{Numerical calibration and proof guarantees.}
 Numerical evaluation of \(k_{n,c,\alpha}\) is consequential because it sets the
 reported interval. The calculation uses adaptive Monte Carlo
 calibration of the uniform scan distribution. At each look, one-sided
 Clopper--Pearson lower bounds are Bonferroni-adjusted over feasible retained
-counts and adaptive looks, and the first retained count whose certified lower
-probability reaches \(1-\alpha\) is selected. The full-range interval
+counts and adaptive looks, and the first retained count whose lower confidence
+bound reaches \(1-\alpha\) is selected. The full-range interval
 uses its exact order-statistic probability. A more conservative
 Massart--DKW empirical-CDF lower band remains available as a conservative
 alternative
 \citep{Massart1990DKW}. Exact scan recursion remains an open numerical task.
 Accordingly, exact critical-count calculation and the finite-sample theorem for
-this closed-window action are treated as open proof and certification tasks.
+this closed-window rule are treated as open proof and numerical-calibration
+tasks.
 
 The available theory is deliberately narrower than the computational procedures.
 Theorems~\ref{thm:quantile-window}--\ref{thm:profiled-mean-tilt} identify
 the fixed-content MTI family and its admissible tilt coordinate. For tolerance
-inference, the empirical closed order-statistic window is the formal action;
+inference, the empirical closed order-statistic window is the reported interval;
 generalized-posterior summaries for fixed \((q,\delta)\) describe endpoint-root
 uncertainty after a target has been specified and do not serve as the
-content--confidence certificate. Split exact-spacing calibration has an exact
-conditional iid univariate Beta law. The scan count is certified by the
+content--confidence guarantee. Split exact-spacing calibration has an exact
+conditional iid univariate Beta law. The scan count is selected by the
 adaptive Clopper--Pearson numerical procedure above, with numerical confidence
 distinguished from tolerance confidence. Direct DP and Gaussian DPM
 intervals are ordinary
 response-distribution Bayesian alternatives, not MTI generalized posteriors.
-Exact scan recursion, an action-matched finite-sample proof for the closed
-window convention, selected-action asymptotics, posterior-to-action transfer,
-and regression-family tolerance calibration remain separate certification
-tasks.
+Exact scan recursion, a finite-sample proof matched to the closed-window
+convention, selected-interval asymptotics, posterior-to-interval transfer,
+and regression-family tolerance calibration remain separate open problems.
 
 \paragraph{Shortest-path continuation.}
 The population shortest-window path gives useful continuation geometry for
 moving across contents. This geometry helps initialize and check numerical
-paths; it is not the scan certificate. Suppose that the density is
+paths; it is not the scan calibration. Suppose that the density is
 differentiable and strictly unimodal,
 and that the shortest window
 \(I_q=[L_q,U_q]=[Q(u_q),Q(u_q+q)]\) is unique and interior over a range of
@@ -854,23 +855,23 @@ reserved for a formal shortest-path theorem.
 The continuation calculation starts from a globally solved content, predicts
 each next window by nested expansion of the previous window, applies local
 correction in a neighborhood of the current solution, expands the neighborhood
-when the local optimum lands on its boundary, and finally verifies the formal
-action by an exhaustive empirical scan. The exhaustive scan, not the
+when the local optimum lands on its boundary, and finally verifies the selected
+interval by an exhaustive empirical scan. The exhaustive scan, not the
 continuation approximation, defines the selected window. The continuation
 argument does not cover infeasible calibration
 \((k>n)\), ties or atoms that violate the continuous-sample convention,
 nonunique shortest windows, response-scale dependence of geometric width, and
-unsupported attempts to attach the scan certificate to posterior summaries.
+unsupported attempts to attach the scan guarantee to posterior summaries.
 
-The construction therefore retains three distinct outputs: an empirical scan
-tolerance action, a full-distribution Bayesian shortest-interval uncertainty
-quantification action, and fixed-target MTI generalized-posterior summaries.
-Finite-sample scan
-validity requires an action-matched proof and certified critical count;
+The construction therefore separates three quantities: the empirical scan
+tolerance interval, the full-distribution Bayesian shortest-interval
+uncertainty summaries, and the fixed-target MTI generalized-posterior summaries.
+Finite-sample scan validity requires a proof matched to the closed-window rule
+and a calibrated critical count;
 first-order tolerance or population-reference width statements additionally require
 same-sample shortest-window asymptotics. Any transfer from posterior content
 probabilities to endpoint coverage, or from fixed-target MTI summaries to
-the selected shortest action, requires a separate action-equivalence or
+the selected shortest interval, requires a separate equivalence or
 direct-calibration result. Tolerance confidence comes from the scan calibration,
 and \(\omega_{\mathrm R}\) remains the generalized-Bayes learning rate.
 
@@ -913,14 +914,14 @@ interval, even the full sample range reaches content \(c\) with confidence
 The corresponding minimum sample sizes are \(46\), \(93\), and \(473\) for
 \(c=0.90\), \(0.95\), and \(0.99\), respectively. Thus
 \(n=50,c=0.95\) and \(n=100,c=0.99\) are excluded from the confirmatory
-comparison because no two-sided distribution-free method can certify the
+comparison because no two-sided distribution-free method can support the
 requested statement in those cells. The \(c=0.99\) rows begin at \(n=500\), the
 nearest rounded sample size above the \(n=473\) threshold.
 
-The comparison is deliberately narrow. TCSP is the formal scan-calibrated
-shortest empirical action and is therefore the primary tolerance action. The
-reported TCSP calculations use the adaptive Clopper--Pearson scan calibration described
-above. Its optimality is class-specific: it minimizes width among closed
+The comparison is deliberately narrow. TCSP is the primary scan-calibrated
+shortest empirical tolerance procedure. The reported TCSP calculations use the
+adaptive Clopper--Pearson scan calibration described above. Its optimality is
+class-specific: it minimizes width among closed
 order-statistic windows satisfying the calibrated retained-count rule.
 The MTI-ECM comparator links the validation study to the generalized-Bayes
 interval construction. It uses a prespecified adaptive calibration rule indexed
@@ -948,7 +949,7 @@ different scales and tail behavior.
 \caption{\textbf{Independent-sample tolerance validation.} Results are shown by
 feasible sample-size/content cell and method. Each row summarizes the range
 across eight simulation distributions at tolerance confidence \(0.95\). All four
-reported methods returned an interval in every replication in this run.}
+reported methods produced an interval in every replication in this run.}
 \label{tab:tolerance-validation-primary}
 \TableStyle
 \input{tables/tolerance_validation_article_scenario_ranges.tex}
@@ -982,7 +983,7 @@ distribution-level cells, compared with 95.1\% to 99.9\% for MTI-ECM,
 94.1\% to 97.2\% for Young--Mathew, and 95.3\% to 100.0\% for Wilks.
 Figures~\ref{fig:tolerance-validation-primary}
 and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
-pooling widths across distributional scenarios. The calibrated scan action
+pooling widths across distributional scenarios. The calibrated scan procedure
 targets the requested finite-sample statement directly. In the independent
 validation run, the selected adaptive MTI-ECM rule has observed content
 attainment above the nominal tolerance confidence in every distribution-level
@@ -992,7 +993,7 @@ it also stays above nominal tolerance confidence in all 72 distribution-level
 cells and has a smaller cellwise median width than TCSP in 38 cells. The closest
 independent validation cells remain near the nominal boundary, so this evidence
 should be read as repeated-sampling validation of the selected MTI-ECM rule
-rather than as a distribution-free finite-sample certificate. Young--Mathew is
+rather than as a distribution-free finite-sample guarantee. Young--Mathew is
 a strong nonparametric comparator and is slightly
 shorter on the symmetric reference distributions, but it falls below nominal
 tolerance confidence in nine skewed or heavy-tailed cells. In the six
@@ -1004,7 +1005,7 @@ The supplement gives the distribution-level content-attainment and width tables 
 summaries, the selected MTI-ECM calibration summary, the TCSP retained counts,
 and the full-range feasibility thresholds used to choose the simulation design.
 The excluded small-sample cells fall outside the region where a two-sided
-distribution-free tolerance statement can be certified at confidence \(0.95\).
+distribution-free tolerance statement can be supported at confidence \(0.95\).
 Other variants are kept outside the primary comparison.
 
 
@@ -1020,8 +1021,8 @@ therefore distribution-specific members of the same placement family.
 
 The tolerance contribution is a separate frequentist layer. A scan statistic
 chooses an empirical retained count, after which the shortest closed
-order-statistic window at that count is reported. This makes TCSP the formal
-tolerance action and gives a class-specific minimum-width property within the
+order-statistic window at that count is reported. This makes TCSP the primary
+tolerance procedure and gives a class-specific minimum-width property within the
 calibrated empirical scan class. The validation study shows that TCSP gives
 reliable content attainment across the feasible design cells while avoiding much
 of the width inflation of full-range Wilks intervals. The calibrated MTI-ECM
@@ -1029,7 +1030,7 @@ comparator links the empirical study to the MTI loss and can be shorter in many
 cells, but its evidence is repeated-sampling validation of a selected rule
 rather than a distribution-free finite-sample theorem.
 
-The separation between target, computation, and certification is essential. MTI
+The separation between target, computation, and tolerance guarantees is essential. MTI
 identifies which fixed-content interval is being estimated. A generalized
 posterior describes uncertainty for a fixed loss-defined target. A response
 model, such as a direct Dirichlet-process posterior for \(F\), gives
@@ -1037,15 +1038,15 @@ model-based content probabilities. Tolerance confidence in TCSP comes from the
 scan calibration. Moving a guarantee from one layer to another requires a
 separate theorem or direct validation study.
 
-Several limitations remain. The formal TCSP statement is iid, continuous, and
+Several limitations remain. The TCSP statement is iid, continuous, and
 univariate, and it uses the closed order-statistic convention stated in the
 paper. Boundary tilts can lead to one-sided limits or inactive roots, and tilts
 outside the admissible range do not define a finite unrestricted target.
-Regression-family and dynamic tolerance calibration, selected-action
-asymptotics, exact scan recursion, and posterior-to-action transfer remain open
+Regression-family and dynamic tolerance calibration, selected-interval
+asymptotics, exact scan recursion, and posterior-to-interval transfer remain open
 problems. These topics are better treated in a companion development focused on
 endpoint regression and dynamic computation, where the evidence standards differ
-from the finite-sample tolerance action studied here.
+from the finite-sample tolerance procedure studied here.
 
 \clearpage
 \bibliographystyle{plainnat}

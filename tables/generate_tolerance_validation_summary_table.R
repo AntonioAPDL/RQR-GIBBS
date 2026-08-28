@@ -65,7 +65,7 @@ labels <- c(
   wilks_minmax = "Wilks min--max"
 )
 roles <- c(
-  tcsp_mc = "Shortest empirical scan action",
+  tcsp_mc = "Shortest empirical scan procedure",
   young_mathew = "Classical interpolated comparator",
   wilks_minmax = "Classical full-range comparator"
 )
