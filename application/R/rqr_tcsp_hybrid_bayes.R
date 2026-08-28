@@ -2,9 +2,9 @@
 #'
 #' Fits a full-distribution Bayesian posterior for `F` and reports the
 #' minimum-width closed order-statistic interval satisfying both the scan count
-#' and a posterior content-probability constraint.  The direct-DP engine is the
-#' authoritative initial engine; the Gaussian DPM engine is a smooth posterior
-#' UQ option with Monte Carlo content probabilities.
+#' and a posterior content-probability constraint.  The direct-DP option is the
+#' default model-based content check; the Gaussian DPM option provides smooth
+#' posterior uncertainty summaries through Monte Carlo content probabilities.
 #'
 #' @param y Numeric univariate responses.
 #' @param guaranteed_content Required population content `c`.

@@ -370,7 +370,7 @@ readme <- c(
   "fit Young-Mathew, Wilks, MTI, Gibbs, ECM, DP, or DPM interval models.",
   "",
   "Promotion requires certified lower probabilities, stable retained counts,",
-  "and a material retained-count change in article-facing cells."
+  "and a material retained-count change in manuscript cells."
 )
 writeLines(readme, file.path(output_dir, "README.md"))
 

@@ -45,7 +45,7 @@ test_that("split exact TCSP keeps pilot and main indices disjoint and reproducib
   expect_equal(fit1$contract$upper_endpoint, fit2$contract$upper_endpoint)
   expect_true(fit1$contract$main_sample_not_used_for_pilot_placement)
   expect_identical(fit1$contract$formal_action_source,
-                   "independent_pilot_fixed_spacing")
+                   "independent_target_selection_fixed_spacing")
 })
 
 test_that("split exact ECM pilot reserves target arguments and can fit fixed tilt", {

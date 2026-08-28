@@ -280,7 +280,7 @@ compose_adaptive_tcsp_article_inputs <- function(
   writeLines(c(
     "# Adaptive TCSP Article Composite",
     "",
-    "This ignored local artifact composes article-facing tolerance validation inputs.",
+    "This ignored local record assembles manuscript tolerance-validation inputs.",
     "It starts from the completed 3-method confirmatory run and replaces only",
     "the TCSP rows for cells where adaptive Clopper-Pearson scan calibration",
     "sharpened the retained count.",

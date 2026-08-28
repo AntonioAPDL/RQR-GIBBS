@@ -2,7 +2,7 @@
 % Please edit documentation in R/rqr_mean_tilt_init.R
 \name{rqr_mt_tilt_empirical_shortest}
 \alias{rqr_mt_tilt_empirical_shortest}
-\title{Empirical shortest-window fixed mean-tilt pilot}
+\title{Empirical shortest-window fixed mean-tilt anchor}
 \usage{
 rqr_mt_tilt_empirical_shortest(y, coverage_level, na_rm = FALSE)
 }
@@ -12,7 +12,7 @@ rqr_mt_tilt_empirical_shortest(y, coverage_level, na_rm = FALSE)
 \item{coverage_level}{Target interval coverage in `(0, 1)`.}
 
 \item{na_rm}{If `TRUE`, remove nonfinite observations before computing the
-pilot.  If `FALSE`, nonfinite observations are an error.}
+anchor.  If `FALSE`, nonfinite observations are an error.}
 }
 \value{
 An `rqr_mt_tilt_pilot` object.
@@ -21,6 +21,6 @@ An `rqr_mt_tilt_pilot` object.
 Finds the shortest adjacent order-statistic window retaining
 `ceiling(coverage_level * n)` observations and reports its retained-mean
 displacement from the full training mean.  This is a shape-robust
-diagnostic anchor for fixed-tilt screening, especially when the
+diagnostic anchor for fixed-tilt calibration, especially when the
 Cornish--Fisher near-Normal approximation is suspect.
 }

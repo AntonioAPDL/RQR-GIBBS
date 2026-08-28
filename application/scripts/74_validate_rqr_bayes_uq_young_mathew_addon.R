@@ -75,7 +75,7 @@ on.exit({
 config <- jsonlite::read_json(config_path, simplifyVector = FALSE)
 if (!mode %in% names(config$modes)) stopf("Mode not found in config: ", mode)
 if (!isTRUE(config$execution[[paste0(mode, "_authorized")]])) {
-  stopf("Bayesian UQ validation mode is not authorized: ", mode)
+  stopf("Bayesian uncertainty-validation mode is not authorized: ", mode)
 }
 mode_cfg <- config$modes[[mode]]
 dgp_by_id <- setNames(config$dgps, vapply(config$dgps, `[[`,
@@ -512,7 +512,7 @@ write.csv(summary, file.path(staging, "bayes_uq_validation_summary.csv"),
           row.names = FALSE)
 
 readme <- c(
-  "# Young-Mathew Bayesian-UQ Add-On",
+  "# Young-Mathew Bayesian Uncertainty Add-On",
   "",
   paste0("- Main run directory: `", main_run_dir, "`"),
   paste0("- Mode: `", mode, "`"),
@@ -523,7 +523,7 @@ readme <- c(
   paste0("- Summary rows: `", nrow(summary), "`"),
   paste0("- Workers: `", workers, "`"),
   "",
-  "This add-on uses the frozen Bayesian-UQ confirmatory grid and the same paired dataset seed rule as the main validator.",
+  "This add-on uses the frozen Bayesian uncertainty confirmatory grid and the same paired dataset seed rule as the main validator.",
   "The Young-Mathew interval is treated as an external nonparametric tolerance comparator.",
   "Its package-level nominal construction is recorded as validation evidence, not as an independently audited finite-sample scan theorem."
 )

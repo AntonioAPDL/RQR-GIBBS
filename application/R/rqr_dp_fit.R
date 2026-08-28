@@ -104,7 +104,7 @@ rqr_dp_content_probability <- function(fit, lower, upper, content) {
 print.rqr_dp_fit <- function(x, ...) {
   cat(
     sprintf(
-      "Direct DP shortest-UQ fit: n=%d, concentration=%s, base=%s\n",
+      "Direct DP shortest-interval fit: n=%d, concentration=%s, base=%s\n",
       x$sample_size,
       format(x$concentration, digits = 4),
       x$base_measure$name

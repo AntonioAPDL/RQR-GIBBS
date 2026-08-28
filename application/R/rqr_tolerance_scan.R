@@ -1174,8 +1174,8 @@ rqr_tcsp_fractional_tilt <- function(y, target_content, na_rm = FALSE) {
 #' ECM and/or intercept-only fixed-rate ridge generalized posterior summaries.
 #' The scan action is the tolerance object; ECM and posterior summaries are
 #' separate loss-based fixed-target plug-in summaries.  Use
-#' [tcsp_hybrid_bayes_fit()] for the authoritative full-distribution
-#' Bayesian UQ action.
+#' [tcsp_hybrid_bayes_fit()] for a full-distribution Bayesian
+#' content-probability action.
 #'
 #' @param y Response sample.
 #' @param guaranteed_content Minimum population content `c`.
@@ -1228,8 +1228,8 @@ rqr_tcsp_fit_univariate <- function(
       (isTRUE(fit_mcmc) || isTRUE(fit_ecm))) {
     warning(
       paste(
-        "TCSP-MTI MCMC/ECM summaries are fixed-target plug-in UQ.",
-        "They are not unconditional Bayesian UQ for the population shortest interval;",
+        "TCSP-MTI MCMC/ECM summaries are fixed-target plug-in uncertainty summaries.",
+        "They are not unconditional Bayesian uncertainty summaries for the population shortest interval;",
         "use tcsp_hybrid_bayes_fit() for that role."
       ),
       call. = FALSE

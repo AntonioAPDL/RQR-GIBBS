@@ -42,6 +42,6 @@ A versioned `rqr_interval_oracle` certificate, including the
 Constructs a population certificate for the ordinary mean-preserving RQR
 interval, the equal-tailed interval, or the shortest contiguous interval.
 The recovery tilt is the conditional retained mean minus the population
-mean. It is fixed target metadata for a generalized-Bayes loss update, not a
+mean. It is fixed target information for a generalized-Bayes loss update, not a
 response-likelihood parameter.
 }

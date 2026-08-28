@@ -202,7 +202,7 @@ plot_title_page <- function() {
   text(
     0.06, 0.12,
     paste(
-      "Report scope: selected-candidate ECM paths for the interval that the",
+      "Diagnostic contents: selected-candidate ECM paths for the interval that the",
       "adaptive MTI-ECM rule returned in each diagnostic replay."
     ),
     adj = 0, cex = 0.82

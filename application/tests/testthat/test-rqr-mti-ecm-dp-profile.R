@@ -1,4 +1,4 @@
-test_that("MTI-ECM DP profile selects only candidates passing DP screen", {
+test_that("MTI-ECM DP profile selects only candidates passing DP content checks", {
   y <- sort(c(-2.2, -1.5, -0.9, -0.4, 0.1, 0.5, 0.9, 1.4, 2.1, 3.2))
   action <- rqr_mti_ecm_dp_profile_action(
     y = y,

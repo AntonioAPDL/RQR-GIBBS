@@ -199,4 +199,4 @@ write.csv(
   file.path(output_dir, "oracle_tilt_c095_figure_manifest.csv"),
   row.names = FALSE
 )
-message("[oracle-tilt-figures] rendered ", length(written), " artifact(s).")
+message("[oracle-tilt-figures] rendered ", length(written), " file(s).")

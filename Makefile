@@ -312,7 +312,7 @@ launch-rqr-bayes-uq-overnight: package-install
 	bash application/scripts/70_launch_rqr_bayes_uq_overnight.sh
 
 health-rqr-bayes-uq-validation:
-	@test -n "$(strip $(RQR_BAYES_UQ_VALIDATION_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_VALIDATION_RUN_DIR to one completed Bayesian UQ validation run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_VALIDATION_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_VALIDATION_RUN_DIR to one completed Bayesian uncertainty-validation run." >&2; exit 64; }
 	$(R) application/scripts/69_validate_rqr_bayes_uq.R --mode=health-check-read-only --run-dir=$(RQR_BAYES_UQ_VALIDATION_RUN_DIR)
 
 rqr-bayes-uq-main-smoke: package-install
@@ -336,15 +336,15 @@ launch-rqr-bayes-uq-main-dpm-companion: package-install
 	bash application/scripts/70_launch_rqr_bayes_uq_overnight.sh
 
 health-rqr-bayes-uq-main:
-	@test -n "$(strip $(RQR_BAYES_UQ_MAIN_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MAIN_RUN_DIR to one completed Bayesian UQ main run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_MAIN_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MAIN_RUN_DIR to one completed Bayesian uncertainty main run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=health --run-dir=$(RQR_BAYES_UQ_MAIN_RUN_DIR)
 
 collect-rqr-bayes-uq-main:
-	@test -n "$(strip $(RQR_BAYES_UQ_MAIN_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MAIN_RUN_DIR to one Bayesian UQ wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_MAIN_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MAIN_RUN_DIR to one Bayesian uncertainty wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=collect --run-dir=$(RQR_BAYES_UQ_MAIN_RUN_DIR)
 
 stop-rqr-bayes-uq-main:
-	@test -n "$(strip $(RQR_BAYES_UQ_MAIN_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MAIN_RUN_DIR to one Bayesian UQ wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_MAIN_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_MAIN_RUN_DIR to one Bayesian uncertainty wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=stop --run-dir=$(RQR_BAYES_UQ_MAIN_RUN_DIR)
 
 rqr-bayes-uq-refined-smoke: package-install
@@ -367,15 +367,15 @@ launch-rqr-bayes-uq-refined: package-install
 	bash application/scripts/72_launch_rqr_bayes_uq_main_waves.sh
 
 health-rqr-bayes-uq-refined:
-	@test -n "$(strip $(RQR_BAYES_UQ_REFINED_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_REFINED_RUN_DIR to one refined Bayesian UQ wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_REFINED_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_REFINED_RUN_DIR to one refined Bayesian uncertainty wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=health --run-dir=$(RQR_BAYES_UQ_REFINED_RUN_DIR)
 
 collect-rqr-bayes-uq-refined:
-	@test -n "$(strip $(RQR_BAYES_UQ_REFINED_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_REFINED_RUN_DIR to one refined Bayesian UQ wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_REFINED_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_REFINED_RUN_DIR to one refined Bayesian uncertainty wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=collect --run-dir=$(RQR_BAYES_UQ_REFINED_RUN_DIR)
 
 stop-rqr-bayes-uq-refined:
-	@test -n "$(strip $(RQR_BAYES_UQ_REFINED_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_REFINED_RUN_DIR to one refined Bayesian UQ wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_REFINED_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_REFINED_RUN_DIR to one refined Bayesian uncertainty wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=stop --run-dir=$(RQR_BAYES_UQ_REFINED_RUN_DIR)
 
 rqr-bayes-uq-skewstress-smoke: package-install
@@ -398,15 +398,15 @@ launch-rqr-bayes-uq-skewstress: package-install
 	bash application/scripts/72_launch_rqr_bayes_uq_main_waves.sh
 
 health-rqr-bayes-uq-skewstress:
-	@test -n "$(strip $(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR to one skew-stress Bayesian UQ wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR to one skew-stress Bayesian uncertainty wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=health --run-dir=$(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR)
 
 collect-rqr-bayes-uq-skewstress:
-	@test -n "$(strip $(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR to one skew-stress Bayesian UQ wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR to one skew-stress Bayesian uncertainty wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=collect --run-dir=$(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR)
 
 stop-rqr-bayes-uq-skewstress:
-	@test -n "$(strip $(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR to one skew-stress Bayesian UQ wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR to one skew-stress Bayesian uncertainty wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=stop --run-dir=$(RQR_BAYES_UQ_SKEWSTRESS_RUN_DIR)
 
 rqr-bayes-uq-followup-smoke: package-install
@@ -424,15 +424,15 @@ launch-rqr-bayes-uq-followup: package-install
 	bash application/scripts/72_launch_rqr_bayes_uq_main_waves.sh
 
 health-rqr-bayes-uq-followup:
-	@test -n "$(strip $(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_FOLLOWUP_RUN_DIR to one Bayesian UQ follow-up wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_FOLLOWUP_RUN_DIR to one Bayesian uncertainty follow-up wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=health --mode=$(RQR_BAYES_UQ_FOLLOWUP_WAVE_MODE) --config=$(RQR_BAYES_UQ_FOLLOWUP_CONFIG) --run-dir=$(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR)
 
 collect-rqr-bayes-uq-followup:
-	@test -n "$(strip $(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_FOLLOWUP_RUN_DIR to one Bayesian UQ follow-up wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_FOLLOWUP_RUN_DIR to one Bayesian uncertainty follow-up wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=collect --mode=$(RQR_BAYES_UQ_FOLLOWUP_WAVE_MODE) --config=$(RQR_BAYES_UQ_FOLLOWUP_CONFIG) --run-dir=$(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR)
 
 stop-rqr-bayes-uq-followup:
-	@test -n "$(strip $(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_FOLLOWUP_RUN_DIR to one Bayesian UQ follow-up wave run." >&2; exit 64; }
+	@test -n "$(strip $(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR))" || { echo "Set RQR_BAYES_UQ_FOLLOWUP_RUN_DIR to one Bayesian uncertainty follow-up wave run." >&2; exit 64; }
 	$(R) application/scripts/71_manage_rqr_bayes_uq_main_waves.R --action=stop --mode=$(RQR_BAYES_UQ_FOLLOWUP_WAVE_MODE) --config=$(RQR_BAYES_UQ_FOLLOWUP_CONFIG) --run-dir=$(RQR_BAYES_UQ_FOLLOWUP_RUN_DIR)
 
 mti-bayes-uq-main-smoke: rqr-bayes-uq-main-smoke

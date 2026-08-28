@@ -2,7 +2,7 @@
 % Please edit documentation in R/rqr_mean_tilt_init.R
 \name{rqr_mt_tilt_empirical_equal_tailed}
 \alias{rqr_mt_tilt_empirical_equal_tailed}
-\title{Empirical equal-tailed-window fixed mean-tilt pilot}
+\title{Empirical equal-tailed-window fixed mean-tilt anchor}
 \usage{
 rqr_mt_tilt_empirical_equal_tailed(y, coverage_level, na_rm = FALSE)
 }
@@ -12,7 +12,7 @@ rqr_mt_tilt_empirical_equal_tailed(y, coverage_level, na_rm = FALSE)
 \item{coverage_level}{Target interval coverage in `(0, 1)`.}
 
 \item{na_rm}{If `TRUE`, remove nonfinite observations before computing the
-pilot.  If `FALSE`, nonfinite observations are an error.}
+anchor.  If `FALSE`, nonfinite observations are an error.}
 }
 \value{
 An `rqr_mt_tilt_pilot` object.

@@ -810,7 +810,8 @@ rqr_dpm_bayes_tolerance_action <- function(
 #' Deterministic ECM fit for a truncated Gaussian DPM
 #'
 #' Fits a smooth Gaussian-mixture MAP surrogate.  This path is useful for
-#' initialization and diagnostics; it is not a substitute for posterior UQ.
+#' initialization and diagnostics; it is not a substitute for posterior
+#' uncertainty summaries.
 #'
 #' @inheritParams rqr_dpm_fit
 #' @param optimize_concentration Reserved deterministic concentration update.
@@ -947,7 +948,7 @@ rqr_dpm_ecm_fit <- function(y, truncation_level = 10L, concentration = 1,
 print.rqr_dpm_mcmc <- function(x, ...) {
   cat(
     sprintf(
-      "Gaussian DPM shortest-UQ fit: n=%d, K=%d, retained_draws=%d\n",
+      "Gaussian DPM shortest-interval fit: n=%d, K=%d, retained_draws=%d\n",
       x$sample_size, x$truncation_level, length(x$parameters)
     )
   )

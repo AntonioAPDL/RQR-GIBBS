@@ -184,7 +184,7 @@ rqr_desn_article_congruent_simulation_config <- list(
       lambda_prior = list(shape = 4, rate = 4, power = 1),
       prior_type = "rqr_rhs_ns",
       chain_count = 3L,
-      adapter_note = "Production learned inverse RQR loss scale: Gamma(4,4) prior and lambda^T generalized-Bayes target on the standardized RQR loss scale."
+      adapter_note = "Confirmatory learned inverse RQR loss scale: Gamma(4,4) prior and lambda^T generalized-Bayes target on the standardized RQR loss scale."
     ),
     list(
       method_id = "independent_al_qdesn_rhs_mcmc",
@@ -209,7 +209,7 @@ rqr_desn_article_congruent_simulation_config <- list(
       learning_rate_mode = "fixed",
       prior_type = "qvp_rhs",
       chain_count = 2L,
-      adapter_note = "Article-side joint QVP kernel is not an exported package API; package runner records this method as an external-adapter contract until wired."
+      adapter_note = "The joint QVP kernel is outside the exported package API; the package runner records this method as an external-adapter specification until available."
     )
   ),
   output_contract = list(

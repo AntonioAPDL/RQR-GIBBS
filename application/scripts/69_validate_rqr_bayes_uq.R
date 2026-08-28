@@ -108,7 +108,7 @@ scan_calibration_cache_path <- arg_value("--scan-calibration-cache=", NULL)
 oracle_cache_path <- arg_value("--oracle-cache=", NULL)
 
 if (!mode %in% c(names(config$modes), "health-check-read-only")) {
-  stopf("Unsupported Bayesian UQ validation mode: ", mode)
+  stopf("Unsupported Bayesian uncertainty-validation mode: ", mode)
 }
 
 if (identical(mode, "health-check-read-only")) {
@@ -123,12 +123,12 @@ if (identical(mode, "health-check-read-only")) {
   )
   missing <- required[!file.exists(file.path(run_dir, required))]
   if (length(missing)) {
-    stopf("Bayesian UQ run is missing artifact(s): ",
+    stopf("Bayesian uncertainty-validation run is missing file(s): ",
           paste(missing, collapse = ", "))
   }
   manifest <- jsonlite::read_json(file.path(run_dir, "manifest.json"),
                                   simplifyVector = TRUE)
-  cat("Bayesian UQ validation health check passed:", run_dir, "\n")
+  cat("Bayesian uncertainty-validation health check passed:", run_dir, "\n")
   cat("Study:", manifest$study_id, "\n")
   cat("Mode:", manifest$mode, "\n")
   cat("Rows:", manifest$n_result_rows, "\n")
@@ -139,7 +139,7 @@ if (!mode %in% names(config$modes)) {
   stopf("Mode not found in config: ", mode)
 }
 if (!isTRUE(config$execution[[paste0(mode, "_authorized")]])) {
-  stopf("Bayesian UQ validation mode is not authorized: ", mode)
+  stopf("Bayesian uncertainty-validation mode is not authorized: ", mode)
 }
 
 default_output <- file.path(
@@ -2887,7 +2887,7 @@ jsonlite::write_json(
 )
 
 if (!file.rename(staging, output_dir)) {
-  stopf("Could not publish Bayesian UQ validation output.")
+  stopf("Could not publish Bayesian uncertainty-validation output.")
 }
 published <- TRUE
-cat("Bayesian UQ validation", mode, "completed:", output_dir, "\n")
+cat("Bayesian uncertainty validation", mode, "completed:", output_dir, "\n")

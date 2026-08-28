@@ -83,7 +83,7 @@
 \alias{dpm_bayes_tolerance_action}
 \alias{bayesian_bootstrap_shortest_draws}
 \alias{weighted_shortest_interval}
-\title{Canonical MPI and MTI naming API}
+\title{MPI and MTI naming API}
 \usage{
 interval_check_loss(u, content = NULL, coverage_level = NULL)
 interval_residual_product(y, eta1, eta2)
@@ -111,10 +111,10 @@ mti_posterior_draws(object, nd = NULL, seed = NULL, ...)
 \item{...}{Arguments passed to the corresponding legacy implementation.}
 }
 \description{
-The MPI/MTI naming layer provides canonical public names for the mean-preserving
+The MPI and MTI naming layer provides standard public names for the mean-preserving
 interval loss, the mean-tilted interval loss, fixed-target generalized-Bayes
 fitters, TCSP helpers, and response-distribution Bayesian shortest-interval
-engines.
+procedures.
 }
 \details{
 \code{mpi_loss()} is the zero-tilt specialization of \code{mti_loss()}.

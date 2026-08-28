@@ -19,7 +19,7 @@ mkdir -p "${run_root}" "${log_root}"
 git_commit="$(git rev-parse HEAD)"
 git_status="$(git status --short)"
 if [[ -n "${git_status}" ]]; then
-  echo "Refusing to launch overnight Bayesian UQ validation run from a dirty source tree." >&2
+  echo "Refusing to launch overnight Bayesian uncertainty-validation run from a dirty source tree." >&2
   echo "${git_status}" >&2
   exit 65
 fi
@@ -40,13 +40,13 @@ pid="$!"
 echo "${pid}" > "${pid_file}"
 sleep 2
 if ! kill -0 "${pid}" >/dev/null 2>&1; then
-  printf 'Bayesian UQ validation run failed to remain active.\n' >&2
+  printf 'Bayesian uncertainty-validation run failed to remain active.\n' >&2
   printf '  pid: %s\n' "${pid}" >&2
   printf '  log_file: %s\n' "${log_file}" >&2
   exit 66
 fi
 
-printf 'Launched Bayesian UQ validation run\n'
+printf 'Launched Bayesian uncertainty-validation run\n'
 printf '  mode: %s\n' "${mode}"
 printf '  git_commit: %s\n' "${git_commit}"
 printf '  pid: %s\n' "${pid}"

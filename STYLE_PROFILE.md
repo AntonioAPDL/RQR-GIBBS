@@ -1,7 +1,7 @@
 # Academic Writing Style Profile for AI-Assisted Statistical Writing
 
 **Version:** 0.2 repo-ready draft  
-**Purpose:** This document is the source-of-truth style manual for drafting, revising, auditing, and improving statistics manuscripts with AI assistance. It is designed to be placed in a manuscript repository and read by Codex, ChatGPT, Claude, Gemini, local LLMs, or any other AI assistant before editing a paper.  
+**Purpose:** This document is the primary style reference for drafting, revising, auditing, and improving statistics manuscripts with AI assistance. It is designed to be placed in a manuscript repository and read by Codex, ChatGPT, Claude, Gemini, local LLMs, or any other AI assistant before editing a paper.
 **Primary field:** Bayesian statistics, quantile regression, echo state networks, deep echo state networks, spatio-temporal modeling, probabilistic forecasting, MCMC, variational Bayes, regularized shrinkage priors, exAL and GAL likelihoods, calibration, and Q-DESN models.  
 **Core voice:** Precise, restrained, mathematically clear, statistically mature, technically rigorous, explanatory, and non-promotional.
 
@@ -114,10 +114,10 @@ This map records the current exemplar corpus. Roles should be updated as new fil
 | `Statistics in Medicine - 2007 - Gelman - Scaling regression inputs...pdf` | *Scaling regression inputs by dividing by two standard deviations* | Gelman | 2008, Statistics in Medicine | Regression scaling | Short applied-methods exemplar |
 | `jrsssb_46_3_440.pdf` | *Multinomial Goodness-of-fit Tests* | Cressie, Read | 1984, JRSSB | Goodness-of-fit, divergence statistics | Theory and recommendation exemplar |
 | `Download (1).pdf` | *Inference from Iterative Simulation Using Multiple Sequences* | Gelman, Rubin | 1992, Statistical Science | MCMC diagnostics | Computational workflow exemplar |
-| `A Statistician s Overview of Physics-Informed Neural Networks for Spatio-Temporal Data.pdf` | *A Statistician’s Overview of Physics-Informed Neural Networks for Spatio-Temporal Data* | Wikle, North, Gopalan, Yoo | 2026, JASA accepted manuscript | BHM, PINNs, UQ | Primary Wikle-style overview exemplar |
+| `A Statistician s Overview of Physics-Informed Neural Networks for Spatio-Temporal Data.pdf` | *A Statistician’s Overview of Physics-Informed Neural Networks for Spatio-Temporal Data* | Wikle, North, Gopalan, Yoo | 2026, JASA accepted manuscript | BHM, PINNs, uncertainty quantification | Primary Wikle-style overview exemplar |
 | `Gelman-POSTERIORPREDICTIVEASSESSMENT-1996.pdf` | *Posterior Predictive Assessment of Model Fitness via Realized Discrepancies* | Gelman, Meng, Stern | 1996, Statistica Sinica | Bayesian model checking | Model-assessment exemplar |
 | `BF01032109.pdf` | *Fitting Variogram Models by Weighted Least Squares* | Cressie | 1985, Mathematical Geology | Variogram fitting | Workflow and geostatistical modeling exemplar |
-| `2507.14336v2.pdf` | *A Statistician’s Overview of Physics-Informed Neural Networks for Spatio-Temporal Data* | Wikle, North, Gopalan, Yoo | 2025, arXiv | BHM, PINNs, UQ | Preprint/formatting duplicate |
+| `2507.14336v2.pdf` | *A Statistician’s Overview of Physics-Informed Neural Networks for Spatio-Temporal Data* | Wikle, North, Gopalan, Yoo | 2025, arXiv | BHM, PINNs, uncertainty quantification | Preprint/formatting duplicate |
 | `FRK_intro.pdf` | *Introduction to Fixed Rank Kriging: The R package* | Zammit-Mangion, Cressie | 2026, R package vignette | FRK software | Reproducible software/tutorial exemplar |
 
 No uploaded file has yet been clearly identified as the user’s own draft. When user-authored drafts are added, classify them separately and compare them to this corpus.

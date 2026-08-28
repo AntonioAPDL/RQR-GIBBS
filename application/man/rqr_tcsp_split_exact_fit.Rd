@@ -1,7 +1,7 @@
 \name{rqr_tcsp_split_exact_fit}
 \alias{rqr_tcsp_split_exact_fit}
 \alias{rqr_tcsp_exact_spacing_gap}
-\title{Pilot-selected exact-spacing TCSP}
+\title{Target-selected exact-spacing TCSP}
 \usage{
 rqr_tcsp_exact_spacing_gap(main_n, guaranteed_content, tolerance_confidence)
 
@@ -24,11 +24,11 @@ rqr_tcsp_split_exact_fit(
 \item{tolerance_confidence}{Repeated-sample tolerance confidence.}
 \item{y}{Response sample.}
 \item{pilot_fraction}{Fraction of observations assigned to the independent
-pilot sample.}
-\item{pilot_method}{Pilot placement method.}
-\item{split_seed}{Integer seed fixing the pilot/main split before fitting.}
-\item{pilot_args}{Optional pilot controls.}
-\item{ecm_args}{Optional ECM controls for ECM pilot methods.  Target-defining
+target-selection sample.}
+\item{pilot_method}{Target-selection placement method.}
+\item{split_seed}{Integer seed fixing the target-selection/main split before fitting.}
+\item{pilot_args}{Optional target-selection controls.}
+\item{ecm_args}{Optional ECM controls for ECM target-selection methods.  Target-defining
 arguments are reserved by the wrapper.}
 \item{na_rm}{Remove nonfinite observations before splitting.}
 }
@@ -37,14 +37,14 @@ arguments are reserved by the wrapper.}
 \eqn{d=s-r} whose Beta survival probability
 \eqn{P\{Beta(d,N+1-d)\ge c\}} reaches the requested confidence.
 
-\code{rqr_tcsp_split_exact_fit()} uses an independent pilot sample to choose a
+\code{rqr_tcsp_split_exact_fit()} uses an independent target-selection sample to choose a
 lower-tail placement and an independent main sample to form the fixed
 order-statistic interval \eqn{[Z_{(\hat r)}, Z_{(\hat r+d)}]}.
 }
 \details{
 The indexing convention is explicit: \eqn{d=s-r} is the probability-spacing
 parameter, while the closed order-statistic interval contains \eqn{d+1}
-observed positions.  Conditional on the independent pilot-selected placement,
+observed positions.  Conditional on the independently chosen placement,
 the main-sample spacing has the recorded exact Beta law under iid continuity.
 The first implementation is continuous-iid-univariate and intercept-only for
 the formal action.

@@ -19,7 +19,8 @@ rqr_evolution_fixed <- function(W) {
 #' Construct an adaptive working-discount evolution specification
 #'
 #' This constructor preserves the exdqlm component-discount matrix interface
-#' while making the non-joint-target status explicit in its name and metadata.
+#' while making the non-joint-target status explicit in its name and recorded
+#' information.
 #'
 #' @param df Component discounts in `(0,1]`.
 #' @param component_dims Positive state-block dimensions.

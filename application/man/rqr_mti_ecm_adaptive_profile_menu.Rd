@@ -37,10 +37,11 @@ rqr_delivery_min_successes(
 \item{scan_target_content}{Optional scan-calibrated retained fraction used as
 the fitted-content anchor.}
 \item{policy}{Adaptive policy label.}
-\item{policy_config}{List of fitted-content grid, screen, tilt-grid, and
-direct-DP settings.}
+\item{policy_config}{List of fitted-content grid, posterior-probability
+threshold, tilt-grid, and direct-DP settings.}
 \item{calibration_rule}{Optional frozen calibration rule. When supplied, its
-screen, grid, and concentration fields override the default menu.}
+\code{screen} field, fitted-content grid, and concentration fields override
+the default menu.}
 \item{na_rm}{Remove missing observations.}
 \item{successes}{Number of successful calibration or validation replications.}
 \item{replications}{Number of calibration or validation replications.}
@@ -51,14 +52,14 @@ screen, grid, and concentration fields override the default menu.}
 }
 \value{
 \code{rqr_mti_ecm_adaptive_profile_menu()} returns a list with fitted-content
-grid, direct-DP screen, tilt-grid controls, direct-DP concentration, observable
+grid, direct-DP content-probability check, tilt-grid controls, direct-DP concentration, observable
 sample diagnostics, and a provenance digest. \code{rqr_delivery_lower_bound()}
 returns a numeric lower bound. \code{rqr_delivery_min_successes()} returns the
 minimum success count implied by the configured calibration rule.
 }
 \description{
 These helpers support calibrated adaptive MTI-ECM tolerance-interval studies.
-The menu helper constructs candidate grids and direct-DP screens before the
+The menu helper constructs candidate grids and direct-DP content-probability checks before the
 MTI-ECM endpoint action is fit. The delivery helpers compute calibration
 requirements from user-specified confidence-bound settings rather than from a
 hard-coded observed-delivery cutoff.

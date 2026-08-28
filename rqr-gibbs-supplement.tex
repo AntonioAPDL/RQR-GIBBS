@@ -144,12 +144,12 @@ Fixed-target MTI-ECM
 & Section~\ref{sec:supp-mti-ecm}
 & Gives the mode calculation used by the MTI-ECM comparator\\
 Direct DP content check
-& Section~\ref{sec:supp-direct-dp-screen}
+& Section~\ref{sec:supp-direct-dp-check}
 & Gives exact fixed-interval posterior content probabilities for calibration\\
 Tolerance validation
 & Section~\ref{sec:supp-tolerance-validation-protocol}
-& Lists feasible cells, distributional scenarios, calibration choices, and table sources\\
-Evidence boundaries
+& Lists feasible cells, distributional scenarios, calibration choices, and numerical summaries\\
+Validation limits
 & Section~\ref{sec:supp-reproducibility}
 & Separates proved identities, repeated-sampling validation, and open extensions\\
 \bottomrule
@@ -1038,7 +1038,7 @@ a prespecified grid in a separate calibration step and then applies the selected
 rule unchanged to independent replications.
 
 \section{Direct DP Content Check}
-\label{sec:supp-direct-dp-screen}
+\label{sec:supp-direct-dp-check}
 
 The MTI-ECM comparator uses a model-based content-probability check during calibration.
 For a fixed closed interval \(I=[l,u]\), let \(N_n(I)=\sum_{i=1}^n\ind(Y_i\in I)\).
@@ -1133,7 +1133,7 @@ Table~\ref{tab:supp-primary-dgp-delivery} gives the distribution-level
 content-attainment percentages before aggregation, and
 Table~\ref{tab:supp-primary-dgp-width-ranges} reports the corresponding
 distribution-level 2.5\%--97.5\% ranges of interval lengths. The
-replication-level data file retains interval-production indicators,
+replication-level data file retains interval-return indicators,
 infeasibility indicators, and raw width summaries for each
 distribution-level cell as reproducibility information.
 
@@ -1221,7 +1221,7 @@ run used \texttt{tolerance} version 3.0.0, and the package version is included
 in the method reproducibility record.
 
 
-\section{Reproducibility and Evidence Boundaries}
+\section{Reproducibility and Validation Limits}
 \label{sec:supp-reproducibility}
 
 The reproducibility materials separate mathematical statements, numerical

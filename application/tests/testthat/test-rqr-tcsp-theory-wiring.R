@@ -23,7 +23,7 @@ test_that("TCSP-MTI proof ledger exposes report3 theorem gates", {
   expect_match(text, "the Monte Carlo scan calibration is exact", fixed = TRUE)
 })
 
-test_that("TCSP manuscript exposes publication-facing claim boundaries", {
+test_that("TCSP manuscript exposes reader-facing claim limits", {
   repo_root <- normalizePath(testthat::test_path("..", "..", ".."),
                              winslash = "/", mustWork = TRUE)
   main <- paste(readLines(file.path(repo_root, "main.tex"), warn = FALSE),
@@ -39,14 +39,13 @@ test_that("TCSP manuscript exposes publication-facing claim boundaries", {
   expect_match(main, "Calibrated Minimum-Width Tolerance Intervals",
                fixed = TRUE)
   expect_match(main,
-               "The theoretical scope is deliberately narrower",
+               "The formal setting is intentionally bounded",
                fixed = TRUE)
   expect_false(grepl("\\\\texttt\\{T[-]", main, perl = TRUE))
   expect_match(main, "posterior-to-action transfer", fixed = TRUE)
   expect_match(main, "Tolerance confidence comes from the scan calibration",
                fixed = TRUE)
-  expect_match(supplement, "Scan-calibrated shortest-window tolerance",
-               fixed = TRUE)
+  expect_match(supplement, "TCSP denotes the scan-calibrated shortest\\s+path")
   expect_match(registry, "smallest_nonparametric_tolerance_regions",
                fixed = TRUE)
   expect_match(registry, "cal_gibbs_tolerance_gibbsTI", fixed = TRUE)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/rqr_mean_tilt_init.R
 \name{rqr_mt_tilt_screen}
 \alias{rqr_mt_tilt_screen}
-\title{Build a compact fixed mean-tilt screening grid}
+\title{Build a compact fixed mean-tilt calibration grid}
 \usage{
 rqr_mt_tilt_screen(
   y = NULL,
@@ -20,17 +20,17 @@ rqr_mt_tilt_screen(
 )
 }
 \arguments{
-\item{y}{Optional training responses.  When supplied, missing pilot objects
+\item{y}{Optional training responses.  When supplied, missing anchor objects
 are computed from `y`.}
 
 \item{coverage_level}{Target interval coverage in `(0, 1)`.}
 
-\item{cf_shortest, cf_equal_tailed, empirical_shortest}{Optional pilot objects
+\item{cf_shortest, cf_equal_tailed, empirical_shortest}{Optional anchor objects
 or numeric standardized tilts.}
 
 \item{extra_candidates}{Optional numeric standardized tilts to include.}
 
-\item{include_half_shortest}{Include one-half of the CF shortest pilot.}
+\item{include_half_shortest}{Include one-half of the CF shortest anchor.}
 
 \item{expansion_points}{Number of equally spaced expansion-grid points.}
 
@@ -41,7 +41,7 @@ or numeric standardized tilts.}
 \item{clip_to_empirical}{If `TRUE`, clip candidates to the empirical
 feasible standardized-tilt range when that range is available.}
 
-\item{na_rm}{Passed to pilot constructors when `y` is supplied.}
+\item{na_rm}{Passed to anchor constructors when `y` is supplied.}
 }
 \value{
 An `rqr_mt_tilt_screen` object.
@@ -49,9 +49,9 @@ An `rqr_mt_tilt_screen` object.
 \description{
 Builds a deterministic grid of fixed standardized tilts for later external
 validation.  The grid includes zero, the supplied or computed
-Cornish--Fisher equal-tailed pilot, one-half of the Cornish--Fisher
-shortest pilot, the full Cornish--Fisher shortest pilot, the empirical
-shortest-window pilot, optional extra candidates, and a small expansion
+Cornish--Fisher equal-tailed anchor, one-half of the Cornish--Fisher
+shortest anchor, the full Cornish--Fisher shortest anchor, the empirical
+shortest-window anchor, optional extra candidates, and a small expansion
 around the anchor range.  Each candidate is a separate fixed target; the
 grid does not sample or learn the tilt inside an RQR chain.
 }

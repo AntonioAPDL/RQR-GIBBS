@@ -17,13 +17,13 @@ Description: Research implementation of mean-preserving interval (MPI) and
     scan-calibrated and split exact-spacing tolerance actions, and Bayesian
     nonparametric shortest-interval uncertainty. The normal-exponential
     construction augments an exponentiated interval loss and is not a response
-    likelihood. Deterministic Cornish-Fisher and empirical pilots provide fixed
-    mean-tilt initialization anchors without sampling the tilt. Fixed-target
+    likelihood. Deterministic Cornish-Fisher and empirical calibration summaries
+    provide fixed mean-tilt initialization anchors without sampling the tilt. Fixed-target
     ECM computes deterministic generalized-posterior modes from exact inverse
     latent-scale moments while remaining separate from posterior sampling.
     Direct Dirichlet-process and truncated Gaussian DPM response-distribution
-    engines provide the authoritative Bayesian UQ layer for shortest-interval
-    content and hybrid Bayesian-scan tolerance actions.
+    models provide Bayesian uncertainty summaries for shortest-interval content
+    and hybrid Bayesian-scan tolerance actions.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1.0)

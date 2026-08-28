@@ -209,7 +209,7 @@
 #' DP-calibrated MTI-ECM profile action
 #'
 #' Searches fixed-target MTI-ECM endpoint candidates over a grid of fitted
-#' contents and mean tilts, then screens the resulting intervals with the exact
+#' contents and mean tilts, then checks the resulting intervals with the exact
 #' direct-DP posterior content probability for fixed intervals.  The MTI-ECM
 #' layer is a loss-based generalized-Bayes endpoint construction.  The DP layer
 #' is an ordinary response-distribution model used only to evaluate interval
@@ -238,7 +238,7 @@
 #' @param ecm_control ECM control list.  For iid validation, use
 #'   `ecm_backend = "cpp"`.
 #' @param expand_if_empty Expand the profile grid once if no candidate passes
-#'   the DP screen.
+#'   the DP content-probability check.
 #' @param return_candidate_traces Return per-iteration ECM traces for every
 #'   fitted profile candidate. This is intended for focused diagnostics and is
 #'   `FALSE` by default to keep validation outputs compact.

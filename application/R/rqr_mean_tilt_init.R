@@ -196,15 +196,15 @@ rqr_mt_cf_constant <- function(coverage_level) {
   q_c * stats::dnorm(q_c) / coverage_level
 }
 
-#' Cornish--Fisher fixed mean-tilt pilot
+#' Cornish--Fisher fixed mean-tilt anchor
 #'
 #' Estimates a fixed mean-tilt anchor for mean-tilted RQR from the adjusted
-#' Fisher--Pearson sample skewness.  The shortest-oriented pilot uses the
+#' Fisher--Pearson sample skewness.  The shortest-oriented anchor uses the
 #' first-order approximation
 #' \deqn{\hat d_{\mathrm{SH}}^{\mathrm{CF}} =
 #' -\hat\gamma_1 q_c\phi(q_c)/c,}
-#' and the equal-tailed pilot is one third of that value.  These pilots are
-#' initialization and screening anchors.  They are not posterior draws, do not
+#' and the equal-tailed anchor is one third of that value.  These anchors are
+#' initialization and calibration anchors.  They are not posterior draws, do not
 #' sample the tilt, and do not propagate tilt-estimation uncertainty through an
 #' RQR generalized posterior.  The returned moment, boundary, and bootstrap
 #' fields are diagnostics for the approximation, not validity guarantees.
@@ -213,7 +213,7 @@ rqr_mt_cf_constant <- function(coverage_level) {
 #' @param coverage_level Target interval coverage in `(0, 1)`.
 #' @param target Either `"shortest"` or `"equal_tailed"`.
 #' @param na_rm If `TRUE`, remove nonfinite observations before computing the
-#'   pilot.  If `FALSE`, nonfinite observations are an error.
+#'   anchor.  If `FALSE`, nonfinite observations are an error.
 #' @param bootstrap Optional nonnegative number of training-sample bootstrap
 #'   replicates for a diagnostic uncertainty sidecar.
 #' @param seed Optional seed used only for the bootstrap diagnostic.
@@ -350,7 +350,7 @@ rqr_mt_tilt_cf <- function(
     fixed_tilt = TRUE,
     sampled_tilt = FALSE,
     interpretation = paste(
-      "Cornish--Fisher fixed mean-tilt pilot for initialization or screening;",
+      "Cornish--Fisher fixed mean-tilt anchor for initialization or calibration;",
       "not a posterior draw, not a finite-sample empirical optimizer, and",
       "not an automatic shortest-interval guarantee."
     )
@@ -359,12 +359,12 @@ rqr_mt_tilt_cf <- function(
   out
 }
 
-#' Empirical shortest-window fixed mean-tilt pilot
+#' Empirical shortest-window fixed mean-tilt anchor
 #'
 #' Finds the shortest adjacent order-statistic window retaining
 #' `ceiling(coverage_level * n)` observations and reports its retained-mean
 #' displacement from the full training mean.  This is a shape-robust
-#' diagnostic anchor for fixed-tilt screening, especially when the
+#' diagnostic anchor for fixed-tilt calibration, especially when the
 #' Cornish--Fisher near-Normal approximation is suspect.
 #'
 #' @inheritParams rqr_mt_tilt_cf
@@ -423,15 +423,15 @@ rqr_mt_tilt_empirical_shortest <- function(
     fixed_tilt = TRUE,
     sampled_tilt = FALSE,
     interpretation = paste(
-      "Empirical shortest-window fixed mean-tilt pilot for initialization",
-      "or screening; discontinuous and not a posterior draw."
+      "Empirical shortest-window fixed mean-tilt anchor for initialization",
+      "or calibration; discontinuous and not a posterior draw."
     )
   )
   class(out) <- c("rqr_mt_tilt_pilot", "list")
   out
 }
 
-#' Empirical equal-tailed-window fixed mean-tilt pilot
+#' Empirical equal-tailed-window fixed mean-tilt anchor
 #'
 #' Retains the central `ceiling(coverage_level * n)` order statistics after
 #' splitting the omitted observations as evenly as possible between the lower
@@ -483,37 +483,37 @@ rqr_mt_tilt_empirical_equal_tailed <- function(
     fixed_tilt = TRUE,
     sampled_tilt = FALSE,
     interpretation = paste(
-      "Empirical equal-tailed fixed mean-tilt pilot for initialization",
-      "or screening; not a posterior draw."
+      "Empirical equal-tailed fixed mean-tilt anchor for initialization",
+      "or calibration; not a posterior draw."
     )
   )
   class(out) <- c("rqr_mt_tilt_pilot", "list")
   out
 }
 
-#' Build a compact fixed mean-tilt screening grid
+#' Build a compact fixed mean-tilt calibration grid
 #'
 #' Builds a deterministic grid of fixed standardized tilts for later external
 #' validation.  The grid includes zero, the supplied or computed
-#' Cornish--Fisher equal-tailed pilot, one-half of the Cornish--Fisher
-#' shortest pilot, the full Cornish--Fisher shortest pilot, the empirical
-#' shortest-window pilot, optional extra candidates, and a small expansion
+#' Cornish--Fisher equal-tailed anchor, one-half of the Cornish--Fisher
+#' shortest anchor, the full Cornish--Fisher shortest anchor, the empirical
+#' shortest-window anchor, optional extra candidates, and a small expansion
 #' around the anchor range.  Each candidate is a separate fixed target; the
 #' grid does not sample or learn the tilt inside an RQR chain.
 #'
-#' @param y Optional training responses.  When supplied, missing pilot objects
+#' @param y Optional training responses.  When supplied, missing anchor objects
 #'   are computed from `y`.
 #' @param coverage_level Target interval coverage in `(0, 1)`.
-#' @param cf_shortest,cf_equal_tailed,empirical_shortest Optional pilot objects
+#' @param cf_shortest,cf_equal_tailed,empirical_shortest Optional anchor objects
 #'   or numeric standardized tilts.
 #' @param extra_candidates Optional numeric standardized tilts to include.
-#' @param include_half_shortest Include one-half of the CF shortest pilot.
+#' @param include_half_shortest Include one-half of the CF shortest anchor.
 #' @param expansion_points Number of equally spaced expansion-grid points.
 #' @param expansion_fraction Fraction of the anchor range used as padding.
 #' @param min_radius Minimum padding on the standardized-tilt scale.
 #' @param clip_to_empirical If `TRUE`, clip candidates to the empirical
 #'   feasible standardized-tilt range when that range is available.
-#' @param na_rm Passed to pilot constructors when `y` is supplied.
+#' @param na_rm Passed to anchor constructors when `y` is supplied.
 #' @return An `rqr_mt_tilt_screen` object.
 #' @export
 rqr_mt_tilt_screen <- function(
@@ -626,7 +626,7 @@ rqr_mt_tilt_screen <- function(
       "held-out width subject to held-out coverage."
     ),
     interpretation = paste(
-      "Screening grid for fixed mean tilts; not an in-chain tilt sampler",
+      "Calibration grid for fixed mean tilts; not an in-chain tilt sampler",
       "and not an automatic shortest-interval guarantee."
     )
   )

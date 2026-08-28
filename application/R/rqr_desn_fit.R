@@ -228,7 +228,7 @@ predict_interval.rqr_desn_fit <- function(object, X_new = NULL, nd = NULL,
                                           draws = NULL, seed = NULL, ...) {
   if (is.null(X_new)) {
     stop(
-      "predict_interval.rqr_desn_fit requires X_new. Recursive DESN feature construction is handled by forecast_paths.rqr_desn_fit with an explicit driver contract.",
+      "predict_interval.rqr_desn_fit requires X_new. Recursive DESN feature construction is handled by forecast_paths.rqr_desn_fit with an explicit forecast-driver specification.",
       call. = FALSE
     )
   }

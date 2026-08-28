@@ -83,7 +83,7 @@ library(rqrgibbs)
 action <- tolower(arg_value("--action=", "health"))
 allowed_actions <- c("prepare", "launch", "health", "collect", "stop")
 if (!action %in% allowed_actions) {
-  stopf("Unsupported Bayesian UQ wave action: ", action)
+  stopf("Unsupported Bayesian uncertainty-validation wave action: ", action)
 }
 mode <- tolower(arg_value("--mode=", "confirmatory"))
 run_dir_arg <- arg_value("--run-dir=", NULL)
@@ -628,7 +628,7 @@ write_health <- function(run_dir) {
   jsonlite::write_json(health, file.path(run_dir, "health.json"),
                        pretty = TRUE, auto_unbox = TRUE)
   cat(sprintf(
-    "Bayesian UQ waves: complete=%d running=%d pending=%d failed=%d rows=%d/%d\n",
+    "Bayesian uncertainty waves: complete=%d running=%d pending=%d failed=%d rows=%d/%d\n",
     health$waves_complete, health$waves_running, health$waves_pending,
     health$waves_failed, health$rows_completed, health$rows_expected
   ))
@@ -992,7 +992,7 @@ collect_run <- function(run_dir) {
   jsonlite::write_json(manifest, file.path(run_dir, "manifest.json"),
                        pretty = TRUE, auto_unbox = TRUE)
   write_health(run_dir)
-  cat("Collected Bayesian UQ wave run:", run_dir, "\n")
+  cat("Collected Bayesian uncertainty wave run:", run_dir, "\n")
 }
 
 stop_run <- function(run_dir) {
@@ -1036,16 +1036,16 @@ stop_run <- function(run_dir) {
   jsonlite::write_json(note, file.path(run_dir, "superseded.json"),
                        pretty = TRUE, auto_unbox = TRUE)
   writeLines(c(
-    "# Superseded Bayesian UQ Wave Run",
+    "# Superseded Bayesian Uncertainty Wave Run",
     "",
     paste0("Stopped at UTC: `", stopped_at, "`"),
     "",
     "Reason: this run was superseded by the corrected method grid with explicit MTI Gibbs and MTI ECM competitor rows.",
     "",
-    "Do not collect or promote these partial artifacts as final confirmatory evidence."
+    "Do not collect or promote these partial files as final confirmatory evidence."
   ), file.path(run_dir, "SUPERSEDED.md"))
   write_health(run_dir)
-  cat(sprintf("Stopped Bayesian UQ wave run: %s; alive_after_stop=%d\n",
+  cat(sprintf("Stopped Bayesian uncertainty wave run: %s; alive_after_stop=%d\n",
               run_dir, length(alive)))
   invisible(note)
 }
@@ -1063,7 +1063,7 @@ launch_run <- function(run_dir) {
     status <- wave_status(run_dir)
     if (any(status$status == "failed")) {
       write_health(run_dir)
-      stopf("At least one Bayesian UQ wave failed; inspect wave_status.csv.")
+      stopf("At least one Bayesian uncertainty wave failed; inspect wave_status.csv.")
     }
     if (all(status$status == "complete")) {
       collect_run(run_dir)

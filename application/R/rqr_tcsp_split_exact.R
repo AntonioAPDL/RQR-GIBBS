@@ -79,7 +79,7 @@ rqr_tcsp_exact_spacing_gap <- function(main_n, guaranteed_content,
   pilot_n <- as.integer(floor(n * pilot_fraction))
   pilot_n <- min(max(pilot_n, 3L), n - 2L)
   if (pilot_n < 3L || n - pilot_n < 2L) {
-    stop("The requested split leaves too few pilot or main observations.",
+    stop("The requested split leaves too few target-selection or main observations.",
          call. = FALSE)
   }
   pilot_indices <- sort(sample.int(n, size = pilot_n, replace = FALSE))
@@ -221,18 +221,18 @@ rqr_tcsp_exact_spacing_gap <- function(main_n, guaranteed_content,
 
 #' Split-sample exact-spacing TCSP fit
 #'
-#' Uses an independent pilot sample to choose placement and an independent main
-#' sample to form a fixed order-statistic spacing.  Conditional on the pilot,
+#' Uses an independent target-selection sample to choose placement and an independent main
+#' sample to form a fixed order-statistic spacing.  Conditional on the selected placement,
 #' the main-sample spacing has an exact Beta law under iid continuity.
 #'
 #' @param y Response sample.
 #' @param guaranteed_content Minimum population content `c`.
 #' @param tolerance_confidence Repeated-sample tolerance confidence.
-#' @param pilot_fraction Fraction of observations assigned to the pilot.
-#' @param pilot_method Pilot placement method.
+#' @param pilot_fraction Fraction of observations assigned to the target-selection sample.
+#' @param pilot_method Target-selection placement method.
 #' @param split_seed Integer seed fixing the split before fitting.
-#' @param pilot_args Optional pilot controls.
-#' @param ecm_args Optional ECM controls for ECM pilot methods.
+#' @param pilot_args Optional target-selection controls.
+#' @param ecm_args Optional ECM controls for ECM target-selection methods.
 #' @param na_rm Remove nonfinite observations before splitting.
 #' @return An `rqr_tcsp_split_exact_fit` object.
 #' @export
@@ -245,7 +245,7 @@ rqr_tcsp_split_exact_fit <- function(
   y <- clean$y
   n <- length(y)
   if (missing(split_seed) || is.null(split_seed)) {
-    stop("split_seed must be supplied to fix pilot/main independence.",
+    stop("split_seed must be supplied to fix target-selection/main independence.",
          call. = FALSE)
   }
   if (!is.list(pilot_args)) stop("pilot_args must be a list.", call. = FALSE)
@@ -297,8 +297,8 @@ rqr_tcsp_split_exact_fit <- function(
       gap$exact_beta_survival_probability,
     conditional_tolerance_confidence = gap$tolerance_confidence,
     formal_tolerance_action =
-      "[Z_(r_hat), Z_(r_hat+d)] on the independent main sample with pilot-fixed r_hat",
-    formal_action_source = "independent_pilot_fixed_spacing",
+      "[Z_(r_hat), Z_(r_hat+d)] on the independent main sample with fixed r_hat",
+    formal_action_source = "independent_target_selection_fixed_spacing",
     posterior_summary_action = "not_formal_tolerance_action",
     interval_endpoint_convention = "closed_order_statistic_spacing",
     lower_endpoint = lower_endpoint,
@@ -309,7 +309,7 @@ rqr_tcsp_split_exact_fit <- function(
     assumptions_passed = c("iid_continuous_required_by_theory_not_tested_by_code"),
     response_scale_description = "original response scale",
     guarantee_statement =
-      "Conditional on the independent pilot-selected placement, the main-sample probability spacing has the recorded Beta survival probability.",
+      "Conditional on the independently selected placement, the main-sample probability spacing has the recorded Beta survival probability.",
     index_convention = gap$index_convention,
     main_sample_not_used_for_pilot_placement = TRUE,
     n_removed = clean$n_removed

@@ -207,7 +207,7 @@ rqr_mti_ecm_sample_diagnostics <- function(y) {
 
 #' Build an adaptive MTI-ECM profile menu
 #'
-#' Constructs the fitted-content grid and direct-DP screen for an adaptive
+#' Constructs the fitted-content grid and direct-DP content-probability check for an adaptive
 #' MTI-ECM profile action. The function is deterministic for fixed inputs and
 #' does not select a final interval.
 #'
@@ -220,8 +220,9 @@ rqr_mti_ecm_sample_diagnostics <- function(y) {
 #'   rules, while `"diagnostic"` records observable diagnostics for future
 #'   calibrated rules.
 #' @param policy_config List of menu parameters.
-#' @param calibration_rule Optional one-row calibration rule with `screen`,
-#'   `q_grid`, or `menu_config` fields.
+#' @param calibration_rule Optional one-row calibration rule with `screen`
+#'   (the stored posterior-probability threshold), `q_grid`, or `menu_config`
+#'   fields.
 #' @param na_rm Remove missing responses.
 #' @return A list containing `q_grid`, `posterior_confidence`,
 #'   `tilt_grid_control`, `dp_concentration`, diagnostics, and provenance.

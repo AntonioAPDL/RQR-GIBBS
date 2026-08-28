@@ -50,7 +50,7 @@ missing_main <- required_main[
 ]
 if (length(missing_main)) {
   stopf(
-    "Main Bayesian-UQ run is not collected yet; missing: ",
+    "Main Bayesian uncertainty run is not collected yet; missing: ",
     paste(missing_main, collapse = ", ")
   )
 }
@@ -261,7 +261,7 @@ write.csv(summary, file.path(staging, "bayes_uq_validation_summary.csv"),
           row.names = FALSE)
 
 readme <- c(
-  "# Bayesian-UQ Validation Combined with Young-Mathew",
+  "# Bayesian Uncertainty Validation Combined with Young-Mathew",
   "",
   paste0("- Main run directory: `", main_run_dir, "`"),
   paste0("- Young-Mathew add-on directory: `", ym_run_dir, "`"),
@@ -307,7 +307,7 @@ jsonlite::write_json(manifest, file.path(staging, "manifest.json"),
                      pretty = TRUE, auto_unbox = TRUE)
 
 if (!file.rename(staging, output_dir)) {
-  stopf("Could not publish combined Bayesian-UQ validation output.")
+  stopf("Could not publish combined Bayesian uncertainty-validation output.")
 }
 published <- TRUE
-cat("Combined Bayesian-UQ validation completed:", output_dir, "\n")
+cat("Combined Bayesian uncertainty validation completed:", output_dir, "\n")

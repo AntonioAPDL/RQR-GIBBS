@@ -435,7 +435,7 @@ dev.off()
 device_open <- FALSE
 
 if (!requireNamespace("digest", quietly = TRUE)) {
-  stopf("Package 'digest' is required for validation-figure manifests.")
+  stopf("Package 'digest' is required for validation-figure hash records.")
 }
 sha256 <- function(path) digest::digest(file = path, algo = "sha256",
                                         serialize = FALSE)
@@ -460,4 +460,4 @@ utils::write.csv(manifest, manifest_path, row.names = FALSE)
 
 cat("Wrote tolerance validation primary figure:\n")
 cat("  figure: ", figure_path, "\n", sep = "")
-cat("  manifest: ", manifest_path, "\n", sep = "")
+cat("  hash record: ", manifest_path, "\n", sep = "")

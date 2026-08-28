@@ -15,7 +15,7 @@ run_dir="${RQR_BAYES_UQ_MAIN_RUN_DIR:-}"
 
 git_status="$(git status --short)"
 if [[ -n "${git_status}" ]]; then
-  echo "Refusing to launch Bayesian UQ waves from a dirty source tree." >&2
+  echo "Refusing to launch Bayesian uncertainty waves from a dirty source tree." >&2
   echo "${git_status}" >&2
   exit 65
 fi
@@ -34,7 +34,7 @@ if [[ -z "${run_dir}" ]]; then
 fi
 
 if [[ -z "${run_dir}" || ! -d "${run_dir}" ]]; then
-  echo "Could not resolve prepared Bayesian UQ wave run directory." >&2
+  echo "Could not resolve prepared Bayesian uncertainty wave run directory." >&2
   exit 66
 fi
 
@@ -69,12 +69,12 @@ scheduler_pid="$!"
 echo "${scheduler_pid}" > "${scheduler_pid_file}"
 sleep 2
 if ! kill -0 "${scheduler_pid}" >/dev/null 2>&1; then
-  echo "Bayesian UQ wave scheduler failed to remain active." >&2
+  echo "Bayesian uncertainty wave scheduler failed to remain active." >&2
   echo "  log_file: ${scheduler_log}" >&2
   exit 67
 fi
 
-printf 'Launched Bayesian UQ wave scheduler\n'
+printf 'Launched Bayesian uncertainty wave scheduler\n'
 printf '  mode: %s\n' "${mode}"
 printf '  run_dir: %s\n' "${run_dir}"
 printf '  scheduler_pid: %s\n' "${scheduler_pid}"

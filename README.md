@@ -19,7 +19,7 @@ attribution to the original residual-product criterion of Pouplin et al.
 
 - `main.tex`: main tolerance-interval article.
 - `rqr-gibbs-supplement.tex`: proofs, fixed-target MTI-ECM details, direct DP
-  content screening, feasibility thresholds, and validation tables.
+  content-probability checks, feasibility thresholds, and validation tables.
 - `refs.bib`: bibliography.
 - `figures/` and `tables/`: figure and table generators plus tracked manuscript
   inputs.
@@ -55,5 +55,5 @@ make supplement
 ```
 
 Package checks are available through the `application/` targets in the
-`Makefile`. Heavy simulation runs should record the Git commit and write their
-outputs under ignored run or output directories.
+`Makefile`. Heavy simulations should record the Git commit and write their
+outputs under ignored simulation-output directories.

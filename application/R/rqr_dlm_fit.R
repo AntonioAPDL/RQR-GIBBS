@@ -1007,7 +1007,7 @@ rqr_dlm_fit <- function(
       component_scale_joint_elliptical_iteration[[iter]] <-
         do.call(rbind, joint_rows)
       # The joint path move changes the sufficient innovation energies. Keep
-      # retained inverse-Gamma conditional metadata synchronized with the
+      # retained inverse-Gamma conditional information synchronized with the
       # final path state even though q itself is unchanged by this block.
       q_update <- list(
         draw = q_evolution,
@@ -1650,7 +1650,7 @@ rqr_dlm_fit <- function(
 #' @param store_state_draws,store_latent_draws Storage choices for new draws.
 #' @param allow_environment_mismatch If `TRUE`, continue after an explicit
 #'   warning when package, R, platform, BLAS/LAPACK, dependency, or source-commit
-#'   metadata differ. Schema, checkpoint, data, model, target, and evolution
+#'   recorded settings differ. Schema, checkpoint, data, model, target, and evolution
 #'   digest mismatches always stop. The override is persisted and removes
 #'   reproducibility and promotion eligibility from the returned segment.
 #' @return A new `rqr_dlm_mcmc` segment beginning at the checkpoint.

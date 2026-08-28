@@ -75,7 +75,7 @@ if (length(missing_inputs)) {
                                  winslash = "/", mustWork = TRUE))) {
       file.copy(committed_outputs, target_outputs, overwrite = TRUE)
     }
-    cat("Using committed tolerance follow-up tables; provide run paths to regenerate.\n")
+    cat("Using committed tolerance follow-up tables; provide result paths to regenerate.\n")
     quit(status = 0)
   }
   stopf("Missing follow-up result file(s): ",

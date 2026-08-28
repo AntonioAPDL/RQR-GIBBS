@@ -163,7 +163,7 @@ source_state <- function(declared_commit = NA_character_,
 
 sha256_file <- function(path) {
   if (!requireNamespace("digest", quietly = TRUE)) {
-    fail("Package 'digest' is required for SHA-256 manifests.")
+    fail("Package 'digest' is required for SHA-256 hash records.")
   }
   digest::digest(file = path, algo = "sha256", serialize = FALSE)
 }
@@ -1634,7 +1634,7 @@ write_figure_manifest <- function(records, out_dir, content, state) {
       output_sha256 = paste(output_hashes, collapse = ";"),
       byte_reproducibility = paste(
         "CSV and PNG bytes are tested across repeated runs;",
-        "base-R PDF metadata contains generation timestamps"
+        "base-R PDF file information contains generation timestamps"
       ),
       evidence_class = paste(
         "deterministic population illustration;",
@@ -1732,7 +1732,7 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
     records, out_dir, state, content, ILLUSTRATION_AL_TAU
   )
   message("Generated deterministic population figures under: ", out_dir)
-  message("Manifest: ", manifest)
+  message("Hash record: ", manifest)
   message("Publication receipt: ", receipt)
   invisible(list(
     output_dir = out_dir, records = records, manifest = manifest,

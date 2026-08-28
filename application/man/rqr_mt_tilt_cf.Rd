@@ -2,7 +2,7 @@
 % Please edit documentation in R/rqr_mean_tilt_init.R
 \name{rqr_mt_tilt_cf}
 \alias{rqr_mt_tilt_cf}
-\title{Cornish--Fisher fixed mean-tilt pilot}
+\title{Cornish--Fisher fixed mean-tilt anchor}
 \usage{
 rqr_mt_tilt_cf(
   y,
@@ -21,7 +21,7 @@ rqr_mt_tilt_cf(
 \item{target}{Either `"shortest"` or `"equal_tailed"`.}
 
 \item{na_rm}{If `TRUE`, remove nonfinite observations before computing the
-pilot.  If `FALSE`, nonfinite observations are an error.}
+anchor.  If `FALSE`, nonfinite observations are an error.}
 
 \item{bootstrap}{Optional nonnegative number of training-sample bootstrap
 replicates for a diagnostic uncertainty sidecar.}
@@ -33,12 +33,12 @@ An `rqr_mt_tilt_pilot` object.
 }
 \description{
 Estimates a fixed mean-tilt anchor for mean-tilted RQR from the adjusted
-Fisher--Pearson sample skewness.  The shortest-oriented pilot uses the
+Fisher--Pearson sample skewness.  The shortest-oriented anchor uses the
 first-order approximation
 \deqn{\hat d_{\mathrm{SH}}^{\mathrm{CF}} =
 -\hat\gamma_1 q_c\phi(q_c)/c,}
-and the equal-tailed pilot is one third of that value.  These pilots are
-initialization and screening anchors.  They are not posterior draws, do not
+and the equal-tailed anchor is one third of that value.  These anchors are
+initialization and calibration anchors.  They are not posterior draws, do not
 sample the tilt, and do not propagate tilt-estimation uncertainty through an
 RQR generalized posterior.  The returned moment, boundary, and bootstrap
 fields are diagnostics for the approximation, not validity guarantees.

@@ -89,15 +89,15 @@ Current claim gates:
 - ECM wording requires `T-ECM-MOMENT` and `T-ECM-MONO` and must describe
   deterministic fixed-target mode computation only.
 
-## 2026-08-12 Bayesian UQ Cross-Reference
+## 2026-08-12 Bayesian Uncertainty Cross-Reference
 
-Report6 adds a separate full-distribution Bayesian UQ layer. The new ledger is
+Report6 adds a separate full-distribution Bayesian uncertainty layer. The new ledger is
 `docs/theory/full_bayes_shortest_uq_theory_ledger_20260812.md`.
 
 The TCSP-MTI MCMC/ECM attachment remains valid only as fixed-target plug-in
-UQ after the scan window freezes `q` and `delta`. It is now explicitly marked
+uncertainty after the scan window freezes `q` and `delta`. It is now explicitly marked
 `uq_scope = "fixed_target_plugin"` and is superseded for unconditional
-shortest-interval Bayesian UQ by `tcsp_hybrid_bayes_fit()`.
+shortest-interval Bayesian uncertainty by `tcsp_hybrid_bayes_fit()`.
 
 This cross-reference does not resolve `T-SCAN-1`, `T-SCAN-2`, `T-GB-PLUGIN`, or
 `T-GB-ACTION`. The hybrid Bayesian-scan action fixes the scan count and adds a

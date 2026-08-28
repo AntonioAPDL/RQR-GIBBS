@@ -16,5 +16,6 @@ An experimental working/sequential `rqr_evolution` specification.
 }
 \description{
 This constructor preserves the exdqlm component-discount matrix interface
-while making the non-joint-target status explicit in its name and metadata.
+while making the non-joint-target status explicit in its name and recorded
+information.
 }

@@ -17,7 +17,7 @@
 #' @param coverage_level Target interval coverage in `(0, 1)`.
 #' @param params Optional family parameters.
 #' @param tol Numerical tolerance for the scalar root search.
-#' @return A list with roots, coverage/moment residuals, and family metadata.
+#' @return A list with roots, coverage/moment residuals, and family information.
 #' @export
 rqr_oracle_roots <- function(family, coverage_level, params = list(), tol = 1e-8) {
   `%||%` <- function(a, b) if (is.null(a)) b else a
@@ -102,7 +102,7 @@ rqr_oracle_endpoints <- function(mu, sigma = 1, family, coverage_level, params =
 #' Constructs a population certificate for the ordinary mean-preserving RQR
 #' interval, the equal-tailed interval, or the shortest contiguous interval.
 #' The recovery tilt is the conditional retained mean minus the population
-#' mean. It is fixed target metadata for a generalized-Bayes loss update, not a
+#' mean. It is fixed target information for a generalized-Bayes loss update, not a
 #' response-likelihood parameter.
 #'
 #' @param target One of `"RQR"`, `"ET"`, or `"SH"`.

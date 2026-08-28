@@ -12,7 +12,7 @@ make test-theory-figures
 ```
 
 Generate the article-ready PDF figures, PNG previews, panel-level CSV files,
-and the hash manifest with:
+and the hash record with:
 
 ```bash
 make theory-figures
@@ -25,7 +25,7 @@ application/cache/rqr_theory_figures/
 ```
 
 That root is intentionally ignored. `make pdf` and `make supplement` regenerate
-the complete figure-audit bundle before compiling the documents.
+the complete figure-check bundle before compiling the documents.
 
 The TeX sources use the publication PNGs tracked under:
 
@@ -58,17 +58,17 @@ state.
 
 The nested `.gitignore` retains the deterministic publication PNGs, the
 compact supplemental diagnostic assets, and lightweight provenance receipts.
-Redundant PDF, panel CSV, and full-manifest outputs remain ignored. The theory
+Redundant PDF, panel CSV, and full hash-record outputs remain ignored. The theory
 receipt records each deterministic publication PNG's byte count and SHA-256,
 the generator hash, and the detected and declared source identities. The full
 local audit bundle remains under `application/cache/`, and the repository also
 retains the generator, tests, and vector-native TikZ schematics.
 
 To keep the statistical comparison separate from an arbitrary illustrative
-distribution choice, the publication-facing figures and captions call the
+distribution choice, the manuscript figures and captions call the
 example only an illustrative continuous left-skewed population benchmark. Its
 exact law remains documented below and in the generator, tests, panel data,
-manifest, and publication provenance receipt.
+hash records, and publication provenance receipt.
 
 The generator uses analytic truncated first moments for its declared
 distributions and independent response-space integration in the tests. The
@@ -77,7 +77,7 @@ parameterization
 `(mu_AL, s_AL, tau_AL) = (0, 1, 0.65)`, denoted internally by
 `AL_0.65(0, 1)`. Under this convention it is left-skewed and `mu_AL` is its
 0.65 quantile. The distributional index `tau_AL=0.65` and interval content
-`c=0.80` are separate inputs. Reader-facing figure labels intentionally
+`c=0.80` are separate inputs. Figure labels intentionally
 describe only the illustrative shape and content; the publication receipt
 records both numerical inputs separately. Interval targets are solved on the
 raw response scale and only then mapped to mean/standard-deviation standardized
@@ -85,7 +85,7 @@ coordinates. This population benchmark is distinct from the
 pseudo-asymmetric-Laplace loss-kernel augmentation applied to the MTI
 pseudo-residual.
 
-The manifest records the source revision, generator hash, configuration,
+The hash record stores the source revision, generator hash, configuration,
 numerical tolerances, dependencies, panel-data hashes, and output hashes. CSV
 and PNG bytes are checked across two independent runs. Base-R PDF devices embed
 generation timestamps, so PDF byte identity is not claimed.
@@ -99,7 +99,7 @@ from deterministic quantiles, all target endpoints, the population mean,
 density knots, and label extents; generation fails rather than silently
 clipping required geometry.
 
-Figure 2 uses an explicit annotation contract: `MPI 0.00` is centered below
+Figure 2 uses an explicit annotation rule: `MPI 0.00` is centered below
 the blue zero-tilt marker in the window-to-tilt panel, and the orange `SH`
 label is centered above its marker in the width panel. The remaining labels
 retain fixed target-specific positions and colors, and the oracle test checks
@@ -115,7 +115,7 @@ bounded-support, and support-boundary population laws.
 
 The current base-R vector PDFs use unembedded device fonts, so TeX deliberately
 continues to use the audited 300-dpi PNGs. A future vector transition must use
-an embedded-font device and pass the same font and provenance gates before the
+an embedded-font device and pass the same font and provenance checks before the
 TeX inputs change.
 
 Every generated panel is explicitly classified as a deterministic population
