@@ -34,11 +34,23 @@ rows$returned_success <- 0.95
 
 width_csv <- file.path(work_dir, "widths.csv")
 utils::write.csv(rows, width_csv, row.names = FALSE)
+oracle_rows <- unique(rows[, c("dgp_id", "dgp", "content"), drop = FALSE])
+oracle_rows$dgp_label <- oracle_rows$dgp
+oracle_rows$lower_probability <- ifelse(oracle_rows$content < 0.95, 0.05, 0.005)
+oracle_rows$upper_probability <- oracle_rows$lower_probability + oracle_rows$content
+oracle_rows$lower <- -oracle_rows$content
+oracle_rows$upper <- oracle_rows$content
+oracle_rows$width <- 2 * oracle_rows$content
+oracle_rows$mean_tilt <- 0
+oracle_rows$status <- "ok"
+oracle_csv <- file.path(work_dir, "population_shortest.csv")
+utils::write.csv(oracle_rows, oracle_csv, row.names = FALSE)
 out_dir <- file.path(work_dir, "figures")
 
 status <- system2(
   "Rscript",
   c(script, paste0("--width-csv=", width_csv),
+    paste0("--oracle-width-csv=", oracle_csv),
     paste0("--output-dir=", out_dir)),
   stdout = TRUE,
   stderr = TRUE
@@ -59,5 +71,7 @@ manifest <- utils::read.csv(manifest_path, stringsAsFactors = FALSE)
 stopifnot(any(grepl("fig05_tolerance_validation_width_ranges.png",
                     manifest$relative_path, fixed = TRUE)))
 stopifnot(any(grepl("widths.csv", manifest$relative_path, fixed = TRUE)))
+stopifnot(any(grepl("population_shortest.csv", manifest$relative_path,
+                    fixed = TRUE)))
 
 cat("Tolerance validation width figure test passed.\n")

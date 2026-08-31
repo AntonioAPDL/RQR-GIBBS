@@ -1153,6 +1153,24 @@ lower bound, independent validation range, and width span for each cell.
 
 \input{tables/tolerance_validation_article_dgp_width_ranges.tex}
 
+The population benchmark used in the main width figure is shown in
+Figure~\ref{fig:supp-tolerance-population-shortest}. For each simulation law
+and content level, this interval is the shortest interval with population
+content \(c\) under the known distribution after centering and scaling. It
+provides a lower width reference for the empirical intervals, rather than a
+sample-based tolerance procedure.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS03_tolerance_population_shortest_intervals.png}
+\caption{\textbf{Population shortest-content intervals for the simulation
+distributions.} Horizontal intervals show the shortest population content-\(c\)
+intervals for the centered and scaled simulation laws. The figure supplies the
+width benchmarks used to interpret the empirical width ranges in the main
+article.}
+\label{fig:supp-tolerance-population-shortest}
+\end{figure}
+
 These results are empirical repeated-sampling evidence for the selected
 profile rule; the finite-sample distribution-free guarantee comes from the TCSP
 scan calibration.

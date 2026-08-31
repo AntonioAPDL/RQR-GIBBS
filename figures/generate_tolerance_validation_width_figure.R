@@ -22,6 +22,13 @@ width_csv <- arg_value(
   "--width-csv=",
   file.path("tables", "tolerance_validation_article_dgp_width_ranges.csv")
 )
+oracle_width_default <- Sys.getenv(
+  "RQR_TOLERANCE_POPULATION_ORACLE_WIDTHS",
+  unset = file.path("figures", "data", "tolerance_population_shortest_content_oracle.csv")
+)
+oracle_width_csv <- arg_value("--oracle-width-csv=", oracle_width_default)
+oracle_width_csv_specified <- any(startsWith(args, "--oracle-width-csv=")) ||
+  nzchar(Sys.getenv("RQR_TOLERANCE_POPULATION_ORACLE_WIDTHS", unset = ""))
 output_dir <- normalizePath(arg_value("--output-dir=", "figures/generated"),
                             winslash = "/", mustWork = FALSE)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -123,6 +130,34 @@ data <- data[is.finite(data$width_q025) & is.finite(data$width_q975) &
 if (!nrow(data)) stopf("Width-range figure has no finite selected rows.")
 method_order <- method_order[method_order %in% unique(data$method_id)]
 
+oracle_data <- data.frame()
+if (nzchar(oracle_width_csv)) {
+  oracle_exists <- file.exists(oracle_width_csv)
+  if (!oracle_exists && oracle_width_csv_specified) {
+    stopf("Missing population shortest-content width CSV: ", oracle_width_csv)
+  }
+  if (oracle_exists) {
+    oracle_data <- utils::read.csv(oracle_width_csv, stringsAsFactors = FALSE,
+                                   check.names = FALSE)
+    oracle_required <- c("dgp_id", "content", "width")
+    oracle_missing <- setdiff(oracle_required, names(oracle_data))
+    if (length(oracle_missing)) {
+      stopf(
+        "Population shortest-content width CSV is missing column(s): ",
+        paste(oracle_missing, collapse = ", ")
+      )
+    }
+    if ("status" %in% names(oracle_data)) {
+      oracle_data <- oracle_data[oracle_data$status == "ok", , drop = FALSE]
+    }
+    oracle_data$content <- num(oracle_data$content)
+    oracle_data$width <- num(oracle_data$width)
+    oracle_data <- oracle_data[is.finite(oracle_data$content) &
+                                 is.finite(oracle_data$width) &
+                                 oracle_data$width > 0, , drop = FALSE]
+  }
+}
+
 cells <- unique(data[, c("n", "content"), drop = FALSE])
 cells <- cells[order(cells$n, cells$content), , drop = FALSE]
 dgp_rows <- unique(data[, c("dgp_id", "dgp"), drop = FALSE])
@@ -162,10 +197,15 @@ for (ii in seq_len(nrow(cells))) {
   nn <- cells$n[[ii]]
   cc <- cells$content[[ii]]
   panel <- data[data$n == nn & abs(data$content - cc) < 1e-12, , drop = FALSE]
+  panel_oracle <- oracle_data[
+    abs(oracle_data$content - cc) < 1e-12 &
+      oracle_data$dgp_id %in% panel$dgp_id,
+    , drop = FALSE
+  ]
   positive_mean <- panel$mean_width[is.finite(panel$mean_width) &
                                       panel$mean_width > 0]
-  x_range <- range(c(panel$width_q025, panel$width_q975, positive_mean),
-                   finite = TRUE)
+  x_range <- range(c(panel$width_q025, panel$width_q975, positive_mean,
+                     panel_oracle$width), finite = TRUE)
   xlim <- log10(x_range)
   pad <- 0.04 * diff(xlim)
   if (!is.finite(pad) || pad <= 0) pad <- 0.05
@@ -180,6 +220,18 @@ for (ii in seq_len(nrow(cells))) {
   axis(1, at = ticks, labels = format_width_tick(10^ticks), cex.axis = 0.86)
   axis(2, at = y_base, labels = dgp_levels, las = 1, cex.axis = 0.82)
   abline(h = y_base, col = "gray92", lwd = 0.7)
+  if (nrow(panel_oracle)) {
+    for (jj in seq_len(nrow(panel_oracle))) {
+      label <- dgp_rows$dgp[match(panel_oracle$dgp_id[[jj]], dgp_rows$dgp_id)]
+      y <- match(label, dgp_levels)
+      if (is.finite(y) && is.finite(panel_oracle$width[[jj]]) &&
+          panel_oracle$width[[jj]] > 0) {
+        x <- log10(panel_oracle$width[[jj]])
+        segments(x, y - 0.42, x, y + 0.42, col = "gray35",
+                 lwd = 1.5, lty = 2)
+      }
+    }
+  }
   for (method in method_order) {
     block <- panel[panel$method_id == method, , drop = FALSE]
     for (jj in seq_len(nrow(block))) {
@@ -200,12 +252,16 @@ for (ii in seq_len(nrow(cells))) {
 
 par(mar = c(0, 0, 0, 0))
 plot.new()
-legend("center", legend = c(unname(method_labels[method_order]), "Mean width"),
-       col = c(unname(method_colors[method_order]), "gray20"),
-       lty = c(rep(1L, length(method_order)), NA),
-       pch = c(rep(NA_integer_, length(method_order)), 4),
-       lwd = c(rep(2, length(method_order)), NA),
-       ncol = length(method_order) + 1L, bty = "n", xpd = NA, cex = 0.95)
+legend(
+  "center",
+  legend = c(unname(method_labels[method_order]), "Mean width",
+             "Shortest population interval"),
+  col = c(unname(method_colors[method_order]), "gray20", "gray35"),
+  lty = c(rep(1L, length(method_order)), NA, 2),
+  pch = c(rep(NA_integer_, length(method_order)), 4, NA),
+  lwd = c(rep(2, length(method_order)), NA, 1.5),
+  ncol = length(method_order) + 2L, bty = "n", xpd = NA, cex = 0.86
+)
 mtext("Interval-width ranges by distribution",
       outer = TRUE, cex = 1.05, font = 2)
 
@@ -228,6 +284,9 @@ rel_path <- function(path) {
   }
 }
 manifest_inputs <- c(figure_path, width_csv)
+if (nrow(oracle_data)) {
+  manifest_inputs <- c(manifest_inputs, oracle_width_csv)
+}
 manifest <- data.frame(
   relative_path = vapply(manifest_inputs, rel_path, character(1L)),
   sha256 = vapply(manifest_inputs, sha256, character(1L)),

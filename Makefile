@@ -9,6 +9,7 @@ RQR_PACKAGE_LIBRARY ?=
 RQR_PACKAGE_INSTALL_LIBRARY_ARG := $(if $(strip $(RQR_PACKAGE_LIBRARY)),--library=$(RQR_PACKAGE_LIBRARY),)
 THEORY_FIGURE_DIR ?= figures/generated
 THEORY_TABLE_DIR ?= tables
+TOLERANCE_POPULATION_ORACLE_WIDTHS ?= figures/data/tolerance_population_shortest_content_oracle.csv
 ORACLE_TILT_ILLUSTRATION_CONFIG ?= application/config/oracle_tilt_illustrations_20260728.json
 ORACLE_TILT_ILLUSTRATION_DIR ?= application/outputs/oracle_tilt_illustrations
 ORACLE_TILT_FORENSIC_CONFIG ?= application/config/oracle_tilt_forensics_20260730.json
@@ -199,7 +200,8 @@ tolerance-validation-adaptive-article-inputs:
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_ARTICLE_RESULTS) --mti-ecm-policy-csv=$(RQR_BAYES_UQ_MTI_ECM_POLICY) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
-	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_population_oracle_figure.R --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
 
 theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
@@ -216,6 +218,7 @@ test-theory-figures:
 	$(R) figures/test_rqr_theory_figure_oracles.R
 	$(R) figures/test_tolerance_validation_primary_figure.R
 	$(R) figures/test_tolerance_validation_width_figure.R
+	$(R) figures/test_tolerance_population_oracle_figure.R
 
 test-mti-ecm-trace-diagnostics:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-mti-ecm-profile-trace.R

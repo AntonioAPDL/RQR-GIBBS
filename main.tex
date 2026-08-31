@@ -940,9 +940,13 @@ content-attainment rate: the Monte Carlo estimate of
 \(C_F([L,U])=F(U)-F(L)\). For each replication, this content check uses the
 known simulation distribution rather than the fraction of sampled observations
 inside the produced interval. If a method produced no interval in a replication,
-that replication would be counted as nonattainment. Widths are reported as distribution-level empirical
-2.5\%--97.5\% ranges, avoiding width averages across distributions with
-different scales and tail behavior.
+that replication would be counted as nonattainment. Widths are reported as
+distribution-level empirical 2.5\%--97.5\% ranges, avoiding width averages
+across distributions with different scales and tail behavior.
+Figure~\ref{fig:tolerance-validation-width-ranges} also marks the population
+shortest content-\(c\) interval for each simulation law. This benchmark uses
+the known distribution and serves as a lower width reference rather than as a
+sample-based tolerance procedure.
 
 \begin{table}[!htbp]
 \centering
@@ -972,9 +976,11 @@ Dashed reference lines mark nominal tolerance confidence \(0.95\).}
 \caption{\textbf{Interval-width ranges by distribution.} Horizontal intervals show empirical
 2.5\%--97.5\% ranges of interval lengths within each distribution,
 sample-size/content cell, and method. Crosses mark the mean interval width
-across the 1000 paired replications. The horizontal axis is logarithmic to
-display light-tailed, heavy-tailed, and strongly skewed cases in one figure;
-the values remain raw interval lengths.}
+across the 1000 paired replications. Dashed gray markers show the corresponding
+population shortest content-\(c\) interval widths under the known simulation
+laws. The horizontal axis is logarithmic to display light-tailed, heavy-tailed,
+and strongly skewed cases in one figure; the values remain raw interval
+lengths.}
 \label{fig:tolerance-validation-width-ranges}
 \end{figure}
 
