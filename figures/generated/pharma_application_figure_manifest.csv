@@ -1,0 +1,3 @@
+"relative_path","source_summary","sha256","bytes","generator"
+"figures/generated/fig06_pharma_application_tensile_intervals.png","tables/pharma_application_summary.csv","95542b6c82712e53abf540344f3db1c8609825f3061c02876f3dc96299d209db",48689,"figures/generate_pharma_application_figures.R"
+"figures/generated/figS04_pharma_application_rsd_intervals.png","tables/pharma_application_summary.csv","b84f9062b16569f5d3776c68671ae259ec12c49eb14819a1eb0c68a071b98c6c",51990,"figures/generate_pharma_application_figures.R"

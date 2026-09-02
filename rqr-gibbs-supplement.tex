@@ -149,6 +149,9 @@ Direct DP content check
 Tolerance validation
 & Section~\ref{sec:supp-tolerance-validation-protocol}
 & Lists feasible cells, distributional scenarios, calibration choices, and numerical summaries\\
+Pharmaceutical application details
+& Section~\ref{sec:supp-pharma-application}
+& Records data provenance, response diagnostics, supplementary RSD results, and held-out sensitivity checks\\
 Validation limits
 & Section~\ref{sec:supp-reproducibility}
 & Separates proved identities, repeated-sampling validation, and open extensions\\
@@ -1237,6 +1240,77 @@ The Young--Mathew comparator is evaluated through the \texttt{tolerance}
 package's \texttt{nptol.int(..., method = "YM")} function. The completed
 run used \texttt{tolerance} version 3.0.0, and the package version is included
 in the method reproducibility record.
+
+\section{Pharmaceutical Application Details}
+\label{sec:supp-pharma-application}
+
+The pharmaceutical application uses the public manufacturing data described by
+\citet{ZagarMihelic2022PharmaManufacturing}. The analysis file is
+\texttt{Laboratory.csv}, version 1 on Figshare
+\citep{ZagarMihelic2021LaboratoryCsv}. The downloaded file contains 1005
+batches and 55 recorded fields. The analysis script verifies the byte count and
+MD5 digest before restricting the analysis to product code 23. This restriction
+leaves 187 batches with recorded strength \(20\)M and size 960000.
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Application response diagnostics for product code 23.}
+The tensile-strength measure is used in the main article. The weight-RSD
+response is reported here because it is more strongly right-skewed but has a
+mainly upper-adverse quality interpretation. Film-coated-tablet hardness is not
+used because the recorded values have more ties on the observed scale.}
+\label{tab:supp-pharma-response-diagnostics}
+\TableStyle
+\input{tables/pharma_application_response_diagnostics.tex}
+\end{table}
+
+For each of 1000 paired splits, all four methods use the same 100 training
+batches and the same 87 held-out batches. TCSP uses the retained count
+\(k=98\) from the adaptive scan calibration for \(n=100\), \(c=0.90\), and
+tolerance confidence \(0.95\). MTI-ECM uses the frozen selected calibration
+policy from the independent simulation validation, with direct
+Dirichlet-process content-probability threshold \(0.995\). The fitted content
+and tilt are selected by the prespecified MTI-ECM rule within each training
+sample; the rule itself is not tuned on these pharmaceutical responses.
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Supplementary weight-RSD application.} Intervals are fit on
+100 code-23 batches and evaluated on the 87 held-out batches over 1000 paired
+splits. Width and held-out content summaries report medians with empirical
+2.5\%--97.5\% ranges across splits.}
+\label{tab:supp-pharma-rsd}
+\TableStyle
+\input{tables/pharma_application_supplement_summary.tex}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS04_pharma_application_rsd_intervals.png}
+\caption{\textbf{Endpoint placement for tablet-core weight RSD.} Thick
+segments show median endpoints across paired splits; pale segments show the
+empirical 95\% endpoint envelope. The response is strongly right-skewed, so the
+two-sided interval is interpreted as a placement analysis rather than as a
+direct quality-control rule.}
+\label{fig:supp-pharma-rsd}
+\end{figure}
+
+Held-out content was also summarized within production month, API batch, and
+batch-order quartile whenever a held-out group contained at least three
+observations. These checks are descriptive because the splits are drawn from a
+finite historical data set rather than from a controlled independent
+experiment. The summaries in Table~\ref{tab:supp-pharma-dependence} indicate
+how much held-out content varies across recorded batch groupings.
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Held-out grouping sensitivity in the pharmaceutical
+application.} Entries summarize, across paired splits, the within-split range
+of empirical content across groups with at least three held-out batches.}
+\label{tab:supp-pharma-dependence}
+\TableStyle
+\input{tables/pharma_application_dependence_sensitivity.tex}
+\end{table}
 
 
 \section{Reproducibility and Validation Limits}

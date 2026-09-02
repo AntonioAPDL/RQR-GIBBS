@@ -1,0 +1,5 @@
+"method_id","method","splits","interval_return_rate","median_interval","width_summary","heldout_content_summary","lower_upper_omitted"
+"tcsp_mc","TCSP",1000,1,"[0.600, 2.610]","2.000 [1.527, 2.370]","96.6 [89.7, 100.0]","0.0 / 2.3"
+"mti_ecm_adaptive_cell","MTI-ECM",1000,1,"[0.600, 2.610]","2.000 [1.527, 2.370]","96.6 [89.7, 100.0]","0.0 / 2.3"
+"young_mathew","Young--Mathew",1000,1,"[0.700, 2.970]","2.260 [1.572, 2.589]","95.4 [87.4, 98.9]","3.4 / 1.1"
+"wilks_minmax","Wilks",1000,1,"[0.600, 4.050]","3.370 [1.818, 3.450]","98.9 [93.1, 100.0]","0.0 / 0.0"

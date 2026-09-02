@@ -87,6 +87,8 @@ Wilks intervals across feasible content--sample-size cells and eight continuous
 distributions. The study emphasizes skewed distributions, where placement
 matters most, and excludes cells where the sample range cannot support the
 requested two-sided distribution-free statement.
+A pharmaceutical batch-level application then illustrates how the same methods
+place endpoints on observed manufacturing data.
 \end{abstract}
 
 
@@ -146,7 +148,7 @@ manuscript develops generalized-Bayes endpoint regression, basis-expansion
 endpoint models, and time-varying endpoint models; the present paper keeps only the
 parts needed for fixed-content geometry and iid tolerance validation.
 
-The contributions are threefold. First, the residual-product loss is shown to
+The contributions are as follows. First, the residual-product loss is shown to
 target MPI, and MTI is shown to generalize MPI by indexing admissible contiguous
 fixed-content windows through retained-mean tilt. Second, this geometry is used
 to define TCSP, a scan-calibrated minimum-width empirical tolerance procedure for
@@ -154,6 +156,9 @@ iid continuous samples. Third, a prespecified validation study compares TCSP,
 the calibrated MTI-ECM comparator, Young--Mathew interpolation, and Wilks
 intervals across feasible sample-size/content cells and a distributional panel
 chosen to include symmetric, heavy-tailed, and strongly skewed cases.
+Finally, a pharmaceutical-manufacturing application shows how these procedures
+behave on a real batch-level response where endpoint placement has a direct
+scientific interpretation.
 
 The formal setting is intentionally bounded. The tolerance statement in this
 paper concerns iid continuous univariate samples and the closed order-statistic
@@ -172,7 +177,8 @@ Section~\ref{sec:static-theory-statements} records the empirical balance
 identity and the fixed-target MTI-ECM bridge used in the validation study.
 Section~\ref{sec:tcsp} defines the scan-calibrated tolerance procedure and its
 finite-sample feasibility condition. Section~\ref{sec:evaluation} gives the confirmatory
-validation design, and Section~\ref{sec:discussion} concludes.
+validation design, Section~\ref{sec:pharma-application} gives the
+pharmaceutical application, and Section~\ref{sec:discussion} concludes.
 
 \section{Fixed-Content Interval Targets}
 \label{sec:interval-functionals}
@@ -1013,6 +1019,72 @@ and the full-range feasibility thresholds used to choose the simulation design.
 The excluded small-sample cells fall outside the region where a two-sided
 distribution-free tolerance statement can be supported at confidence \(0.95\).
 Other variants are kept outside the primary comparison.
+
+
+\section{Pharmaceutical Batch Application}
+\label{sec:pharma-application}
+
+We next apply the four reported procedures to the pharmaceutical-manufacturing
+data of \citet{ZagarMihelic2022PharmaManufacturing}, using the public
+\texttt{Laboratory.csv} file \citep{ZagarMihelic2021LaboratoryCsv}. One
+observation corresponds to one manufacturing batch. We restrict attention to
+product code 23, which gives 187 batches with a common recorded strength and
+batch size. This restriction reduces heterogeneity before comparing
+distribution-free two-sided intervals.
+
+The main response is the reported film-coated-tablet tensile-strength measure.
+The public file does not give product-specific acceptance criteria or a
+resolved physical unit for this derived field, so the fitted intervals are
+interpreted as statistical summaries of historical batch-to-batch variation.
+They are not regulatory specifications, release limits, or process-control
+limits. A content-defined two-sided interval is appropriate for this example
+because unusually low and unusually high tablet strength may both be relevant
+to handling and performance.
+
+The application uses \(c=0.90\) and tolerance confidence \(0.95\). For each of
+1000 paired splits, all methods are fitted to the same \(n=100\) training
+batches and evaluated on the remaining 87 batches. TCSP uses the same
+adaptive Clopper--Pearson scan convention as the simulation study; for this
+cell the retained count is \(k=98\). MTI-ECM uses the frozen selected policy
+from the simulation calibration, with no tuning on the pharmaceutical data.
+Young--Mathew and Wilks are evaluated with the same endpoint conventions as in
+Section~\ref{sec:evaluation}. Held-out empirical content is a finite-data
+stability check on the withheld batches; it is not a verification of the
+nominal tolerance-confidence statement.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Pharmaceutical tensile-strength application.} Intervals are
+fit on 100 code-23 batches and evaluated on the 87 held-out batches over 1000
+paired splits. Width and held-out content summaries report medians with
+empirical 2.5\%--97.5\% ranges across splits. Omitted below/above gives the
+median held-out percentage below the lower endpoint and above the upper
+endpoint.}
+\label{tab:pharma-application-primary}
+\TableStyle
+\input{tables/pharma_application_primary_summary.tex}
+\end{table}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/fig06_pharma_application_tensile_intervals.png}
+\caption{\textbf{Endpoint placement in the pharmaceutical application.} Thick
+segments show median endpoints across paired splits; pale segments show the
+empirical 95\% endpoint envelope. TCSP and the frozen MTI-ECM rule coincide to
+the displayed precision for this response, Young--Mathew shifts the median
+interval upward, and Wilks uses a wider range.}
+\label{fig:pharma-application-primary}
+\end{figure}
+
+For the tensile-strength measure, TCSP and the frozen MTI-ECM rule produce the
+same displayed median interval, \([1.101,1.618]\), with median width \(0.552\).
+Young--Mathew is slightly shorter in median width but shifts the interval
+upward and has the same median held-out content. Wilks has higher held-out
+content because it uses the full sample range more often, but its median width
+is larger. The supplement repeats the analysis for tablet-core weight relative
+standard deviation, a strongly right-skewed response for which the two-sided
+analysis is useful for studying placement but an upper tolerance limit would be
+more natural for a direct quality-control decision.
 
 
 \section{Discussion}

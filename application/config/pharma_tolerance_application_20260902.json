@@ -1,0 +1,64 @@
+{
+  "schema_version": "rqrgibbs_pharma_tolerance_application/1.0.0",
+  "study_id": "pharma_tolerance_application_20260902",
+  "data_source": {
+    "name": "Laboratory.csv",
+    "description": "Laboratory analysed data for selected cholesterol-lowering film-coated tablet medicine",
+    "figshare_item_url": "https://figshare.com/articles/dataset/Laboratory_csv/16676263",
+    "download_url": "https://ndownloader.figshare.com/files/30966250",
+    "doi": "10.6084/m9.figshare.16676263.v1",
+    "license": "CC BY 4.0",
+    "expected_bytes": 293492,
+    "expected_md5": "74b091a88dc88e0fed44f79877b22b66"
+  },
+  "analysis": {
+    "product_code": 23,
+    "primary_response": "fct_tensile",
+    "supplement_response": "tbl_rsd_weight",
+    "excluded_response": "fct_av_hardness",
+    "training_size": 100,
+    "heldout_size": 87,
+    "content": 0.90,
+    "tolerance_confidence": 0.95,
+    "confirmatory_splits": 1000,
+    "smoke_splits": 12,
+    "base_seed": 9020902
+  },
+  "paths": {
+    "cache_dir": "application/cache/pharma_application_20260902",
+    "raw_file": "application/cache/pharma_application_20260902/Laboratory.csv",
+    "clean_file": "application/cache/pharma_application_20260902/code23_laboratory.csv",
+    "output_root": "application/outputs/pharma_tolerance_application_20260902",
+    "table_dir": "tables",
+    "figure_data_dir": "figures/data",
+    "figure_dir": "figures/generated"
+  },
+  "tcsp": {
+    "scan_method": "monte_carlo_cp_adaptive",
+    "scan_calibration_csv": "tables/tolerance_validation_article_scan_calibration.csv",
+    "expected_retained_count": 98,
+    "expected_retained_fraction": 0.98,
+    "expected_lower_confidence_bound_min": 0.95
+  },
+  "mti_ecm": {
+    "method_id": "mti_ecm_adaptive_cell",
+    "source_method_id": "mti_ecm_adaptive_refine_screen_p995",
+    "validation_config": "application/config/rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827.json",
+    "policy_csv": "application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv",
+    "policy_id": "mti_ecm_adaptive_cell_guarded_p995_20260827",
+    "required_screen": 0.995,
+    "required_delivery_lower_bound_min": 0.95
+  },
+  "methods": [
+    "tcsp_mc",
+    "mti_ecm_adaptive_cell",
+    "young_mathew",
+    "wilks_minmax"
+  ],
+  "method_labels": {
+    "tcsp_mc": "TCSP",
+    "mti_ecm_adaptive_cell": "MTI-ECM",
+    "young_mathew": "Young--Mathew",
+    "wilks_minmax": "Wilks"
+  }
+}

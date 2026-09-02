@@ -38,6 +38,7 @@ LinkingTo:
 Suggests:
     coda,
     exdqlm,
+    jsonlite,
     posterior (>= 1.7.0),
     pracma,
     testthat (>= 3.0.0),
