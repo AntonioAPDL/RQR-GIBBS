@@ -151,7 +151,7 @@ Tolerance validation
 & Lists feasible cells, distributional scenarios, calibration choices, and numerical summaries\\
 Pharmaceutical application details
 & Section~\ref{sec:supp-pharma-application}
-& Records data provenance, response diagnostics, supplementary RSD results, and held-out sensitivity checks\\
+& Records source verification, response diagnostics, supplementary RSD results, and held-out sensitivity checks\\
 Validation limits
 & Section~\ref{sec:supp-reproducibility}
 & Separates proved identities, repeated-sampling validation, and open extensions\\
@@ -1251,6 +1251,10 @@ The pharmaceutical application uses the public manufacturing data described by
 batches and 55 recorded fields. The analysis script verifies the byte count and
 MD5 digest before restricting the analysis to product code 23. This restriction
 leaves 187 batches with recorded strength \(20\)M and size 960000.
+The analysis is descriptive and uses procedures fixed before examining these
+responses. It illustrates endpoint placement on observed manufacturing batches;
+the tolerance-confidence evidence in the paper comes from the controlled
+simulation study.
 
 \begin{table}[H]
 \centering
@@ -1271,7 +1275,10 @@ tolerance confidence \(0.95\). MTI-ECM uses the frozen selected calibration
 policy from the independent simulation validation, with direct
 Dirichlet-process content-probability threshold \(0.995\). The fitted content
 and tilt are selected by the prespecified MTI-ECM rule within each training
-sample; the rule itself is not tuned on these pharmaceutical responses.
+sample; the rule itself is not tuned on these pharmaceutical responses. The
+held-out empirical summaries describe stability within the finite historical
+data set, with repeated-sampling tolerance assessment left to the simulation
+study.
 
 \begin{table}[H]
 \centering
