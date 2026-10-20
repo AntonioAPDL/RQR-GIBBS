@@ -154,6 +154,10 @@ pta_download_data <- function(config, repo_root, overwrite = FALSE) {
   if (!identical(tolower(actual_md5), tolower(expected_md5))) {
     pta_stop("Downloaded file has unexpected MD5: ", actual_md5)
   }
+  if (!is.null(config$data_source$expected_sha256) &&
+      !identical(pta_file_sha256(raw_path), config$data_source$expected_sha256)) {
+    pta_stop("Downloaded file has unexpected SHA256.")
+  }
   raw_path
 }
 

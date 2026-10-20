@@ -1,0 +1,99 @@
+{
+  "schema_version": "rqrgibbs_pharma_mti_application/2.0.0",
+  "study_id": "pharma_mti_application_20261020",
+  "data_source": {
+    "name": "Laboratory.csv",
+    "figshare_item_id": 16676263,
+    "figshare_file_id": 30966250,
+    "figshare_collection_id": 5645578,
+    "collection_doi": "10.6084/m9.figshare.c.5645578.v1",
+    "figshare_item_url": "https://figshare.com/articles/dataset/Laboratory_csv/16676263",
+    "download_url": "https://ndownloader.figshare.com/files/30966250",
+    "doi": "10.6084/m9.figshare.16676263.v1",
+    "license": "CC BY 4.0",
+    "expected_bytes": 293492,
+    "expected_md5": "74b091a88dc88e0fed44f79877b22b66",
+    "expected_sha256": "a3b0f16c7c3fa8052b38d767e38fda731a751acc4ec139b52d01577b32dc6483",
+    "expected_rows": 1005,
+    "expected_columns": 55
+  },
+  "analysis": {
+    "product_code": 23,
+    "primary_response": "fct_tensile",
+    "supplement_response": "tbl_rsd_weight",
+    "excluded_response": "fct_av_hardness",
+    "product_rows": 187,
+    "training_size": 100,
+    "heldout_size": 87,
+    "content": 0.90,
+    "tolerance_confidence": 0.95,
+    "confirmatory_splits": 1000,
+    "smoke_splits": 4,
+    "base_seed": 9020902,
+    "random_seed_offset": 101,
+    "random_seed_rule": "base_seed + random_seed_offset + split_id",
+    "endpoint_convention": "closed"
+  },
+  "methods": ["mti_ecm_adaptive_cell", "young_mathew", "wilks_minmax"],
+  "method_labels": {
+    "mti_ecm_adaptive_cell": "MTI-ECM",
+    "young_mathew": "Young--Mathew",
+    "wilks_minmax": "Wilks"
+  },
+  "method_roles": {
+    "mti_ecm_adaptive_cell": "proposed",
+    "young_mathew": "benchmark",
+    "wilks_minmax": "benchmark"
+  },
+  "method_seed_offsets": {
+    "mti_ecm_adaptive_cell": 200000,
+    "young_mathew": 300000,
+    "wilks_minmax": 400000
+  },
+  "scan_reference": {
+    "scan_method": "monte_carlo_cp_adaptive",
+    "scan_calibration_csv": "tables/tolerance_validation_article_scan_calibration.csv",
+    "expected_sha256": "53d4f403888c28362bbb07fdce40328278c7f969a8865406073dcf9960b0d3b0",
+    "expected_retained_count": 98,
+    "expected_retained_fraction": 0.98,
+    "expected_lower_confidence_bound_min": 0.95
+  },
+  "mti_ecm": {
+    "method_id": "mti_ecm_adaptive_cell",
+    "source_method_id": "mti_ecm_adaptive_refine_screen_p995",
+    "validation_config": "application/config/rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827.json",
+    "validation_config_sha256": "c630d04dad2e45b2ea9cca4d01ce00f9e7132f74fd23f27108d2e341ae961aa7",
+    "policy_csv": "application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv",
+    "policy_sha256": "9942e5c9aad8701e125b4caf0c84df292a69886b7d1e176e44f512e6ea99b773",
+    "policy_id": "mti_ecm_adaptive_cell_guarded_p995_20260827",
+    "required_screen": 0.995,
+    "required_delivery_lower_bound_min": 0.95
+  },
+  "sensitivity": {
+    "chronological_forward": true,
+    "chronological_reverse": true,
+    "order_variables": ["batch", ".source_row"],
+    "grouped_variables": {"month_grouped": "start", "api_grouped": "api_batch"},
+    "requested_unique_splits": 250,
+    "smoke_grouped_splits": 2,
+    "training_size_min": 100,
+    "training_size_max": 100,
+    "minimum_training_groups": 2,
+    "minimum_heldout_groups": 2,
+    "maximum_partition_draws": 250000,
+    "seed_offsets": {"chronological_forward": 1000000, "chronological_reverse": 2000000, "month_grouped": 3000000, "api_grouped": 4000000},
+    "representative_rule": "minimum_squared_median_MAD_distance_then_smallest_split_id",
+    "quantile_type": 8
+  },
+  "execution": {"workers": 40, "checkpoint_tasks": 100, "threads_per_worker": 1},
+  "paths": {
+    "cache_dir": "application/cache/pharma_application_20261020",
+    "raw_file": "application/cache/pharma_application_20261020/Laboratory.csv",
+    "clean_file": "application/cache/pharma_application_20261020/code23_laboratory.csv",
+    "output_root": "application/outputs/pharma_mti_application_20261020",
+    "canonical_dir": "figures/data/pharma_mti_application_20261020",
+    "table_dir": "tables",
+    "figure_data_dir": "figures/data",
+    "figure_dir": "figures/generated"
+  }
+}
