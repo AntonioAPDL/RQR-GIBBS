@@ -187,3 +187,51 @@ test_that("cached public data pass the full provenance check when available", {
   expect_equal(context$scan$retained_count, 98L)
   expect_false(anyNA(context$data[, c("fct_tensile", "tbl_rsd_weight")]))
 })
+
+test_that("application language preserves the distinct statistical quantities", {
+  e <- new.env(parent = globalenv())
+  sys.source(testthat::test_path("..", "..", "scripts", "lib", "pharma_manuscript_language.R"), envir = e)
+  bad <- c("Held-out empirical content is tolerance confidence.",
+    "Posterior content probability guarantees nominal tolerance confidence.",
+    "Generalized-posterior endpoint summaries are posterior predictive intervals.",
+    "The fitted intervals are specification limits.",
+    "The proposed Young--Mathew method is used.",
+    "TCSP is also fitted.", "Overlapping splits are independent replications.")
+  expect_true(all(vapply(bad, function(x) length(e$pma_language_findings(x)) > 0, logical(1))))
+  expect_length(e$pma_language_findings(paste(
+    "Held-out empirical content describes the finite dataset.",
+    "Nominal tolerance confidence concerns the procedure under its assumptions.",
+    "These intervals are not specification limits.")), 0L)
+})
+
+test_that("task seeds make evaluation independent of worker count and ordering", {
+  e <- pma_test_env()
+  f <- pma_test_results(e)
+  tasks <- lapply(1:2, function(i) list(split=f$splits[[i]], response="fct_tensile", role="primary"))
+  run <- function(task) e$pma_run_task(task, f$context, fit_function=f$fake)
+  serial <- do.call(rbind, lapply(tasks, run))
+  reverse <- do.call(rbind, lapply(rev(tasks), run))
+  canonical <- function(z) {
+    z <- z[order(z$split_id,z$method_id), setdiff(names(z),"elapsed_sec")]
+    rownames(z) <- NULL
+    z
+  }
+  expect_equal(canonical(serial), canonical(reverse))
+  if (.Platform$OS.type != "windows") {
+    parallel <- do.call(rbind, parallel::mclapply(tasks, run, mc.cores=2, mc.set.seed=FALSE))
+    expect_equal(canonical(serial), canonical(parallel))
+  }
+})
+test_that("portable endpoints preserve ties and double precision", {
+  e <- pma_test_env()
+  endpoint <- 1.503652687 - .Machine$double.eps
+  x <- data.frame(lower = c(1, NA_real_), upper = c(endpoint, 2),
+                  label = c("interval", "failed"))
+  path <- tempfile(fileext = ".csv")
+  on.exit(unlink(path))
+  e$pma_write_csv(x, path)
+  y <- e$pta_read_csv(path)
+  expect_identical(y$upper, x$upper)
+  expect_true(is.na(y$lower[2]))
+  expect_true(y$upper[1] < 1.503652687)
+})

@@ -482,6 +482,19 @@ pma_file_record <- function(paths) {
              bytes = as.numeric(file.info(paths)$size), stringsAsFactors = FALSE)
 }
 
+pma_write_csv <- function(x, path) {
+  # Preserve double precision: rounding an endpoint onto a tie changes membership.
+  portable <- x
+  for (name in names(portable)) {
+    if (is.double(portable[[name]])) {
+      value <- portable[[name]]
+      portable[[name]] <- sprintf("%.17g", value)
+      portable[[name]][is.na(value)] <- NA_character_
+    }
+  }
+  pta_atomic_write_csv(portable, path)
+}
+
 pma_write_membership <- function(membership, path) {
   con <- gzfile(path, "wt")
   on.exit(close(con))
@@ -507,7 +520,7 @@ pma_run <- function(context, mode, output_dir, workers) {
   pma_write_membership(membership, file.path(output_dir, "split_membership.csv.gz"))
   observed <- context$data[, c(".analysis_row", ".source_row", "batch", "start",
     "api_batch", config$analysis$primary_response, config$analysis$supplement_response)]
-  pta_atomic_write_csv(observed, file.path(output_dir, "observed_batches.csv"))
+  pma_write_csv(observed, file.path(output_dir, "observed_batches.csv"))
   responses <- c(primary = config$analysis$primary_response,
                  supplement = config$analysis$supplement_response)
   tasks <- unlist(lapply(splits, function(s) lapply(names(responses), function(role)
@@ -528,7 +541,7 @@ pma_run <- function(context, mode, output_dir, workers) {
     }
     blocks <- c(blocks, rows)
     results <- do.call(rbind, blocks)
-    pta_atomic_write_csv(results, file.path(output_dir, "results.csv"))
+    pma_write_csv(results, file.path(output_dir, "results.csv"))
     pta_atomic_write_json(list(completed_tasks = length(blocks), total_tasks = length(tasks),
       result_rows = nrow(results)), file.path(output_dir, "progress.json"))
   }
@@ -584,7 +597,10 @@ pma_run <- function(context, mode, output_dir, workers) {
     }),
     return_counts = as.list(tapply(results$interval_returned, results$method_id, sum)),
     failure_counts = as.list(tapply(!results$interval_returned, results$method_id, sum)),
-    ecm_convergence_counts = as.list(table(results$mti_ecm_converged, useNA = "ifany")),
+    ecm_convergence_counts = list(converged = sum(results$mti_ecm_converged, na.rm = TRUE),
+      not_converged = sum(!results$mti_ecm_converged, na.rm = TRUE),
+      not_applicable = sum(results$method_id != pma_methods[1]),
+      missing_mti_flag = sum(results$method_id == pma_methods[1] & is.na(results$mti_ecm_converged))),
     package_versions = as.list(versions), R_version = R.version.string,
     operating_system = Sys.info(), rng_kind = RNGkind(), base_seed = config$analysis$base_seed,
     workers = workers, threads_per_worker = 1L, started_utc = started,
