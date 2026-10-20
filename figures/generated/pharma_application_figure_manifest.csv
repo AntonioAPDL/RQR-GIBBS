@@ -1,3 +1,3 @@
-"relative_path","source_summary","sha256","bytes","generator"
-"figures/generated/fig06_pharma_application_tensile_intervals.png","tables/pharma_application_summary.csv","95542b6c82712e53abf540344f3db1c8609825f3061c02876f3dc96299d209db",48689,"figures/generate_pharma_application_figures.R"
-"figures/generated/figS04_pharma_application_rsd_intervals.png","tables/pharma_application_summary.csv","b84f9062b16569f5d3776c68671ae259ec12c49eb14819a1eb0c68a071b98c6c",51990,"figures/generate_pharma_application_figures.R"
+"relative_path","source_summary","sha256","bytes","generator","method_ids"
+"figures/generated/fig06_pharma_application_tensile_intervals.png","tables/pharma_application_summary.csv","7ed5761cb60bce873af0b297829c8e2fb3e337e16e3f49418d70f2fab2a66175",45227,"figures/generate_pharma_application_figures.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"
+"figures/generated/figS04_pharma_application_rsd_intervals.png","tables/pharma_application_summary.csv","cca8f838389d39d3e1fb7eabba591ca2ff3b6c8caa33fc5a81cb60142b88cac8",48318,"figures/generate_pharma_application_figures.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"

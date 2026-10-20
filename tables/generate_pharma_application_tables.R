@@ -76,11 +76,11 @@ if (length(missing)) {
         paste(missing, collapse = ", "))
 }
 
+method_order <- c("mti_ecm_adaptive_cell",
+                  "young_mathew", "wilks_minmax")
+results <- results[results$method_id %in% method_order, , drop = FALSE]
 summary <- pta_summarize_results(results)
 pta_atomic_write_csv(summary, summary_csv)
-
-method_order <- c("tcsp_mc", "mti_ecm_adaptive_cell",
-                  "young_mathew", "wilks_minmax")
 format_interval <- function(lower, upper) {
   paste0("[", pta_format_num(lower, 3), ", ", pta_format_num(upper, 3), "]")
 }
@@ -144,7 +144,7 @@ write_method_table <- function(rows, csv_path, tex_path, caption_label) {
 primary <- summary[summary$response_role == "primary", , drop = FALSE]
 supp <- summary[summary$response_role == "supplement", , drop = FALSE]
 if (nrow(primary) != length(method_order) || nrow(supp) != length(method_order)) {
-  stopf("Expected four methods for both application responses.")
+  stopf("Expected three methods for both application responses.")
 }
 write_method_table(primary, primary_csv, primary_tex, "primary")
 write_method_table(supp, supp_csv, supp_tex, "supplement")
@@ -158,6 +158,8 @@ sensitivity_path <- arg_value(
 )
 if (nzchar(sensitivity_path) && file.exists(sensitivity_path)) {
   sensitivity <- pta_read_csv(sensitivity_path)
+  sensitivity <- sensitivity[sensitivity$method_id %in% method_order,
+                              , drop = FALSE]
   pta_atomic_write_csv(sensitivity, sens_csv)
   group_labels <- c(
     start = "Production month",
@@ -181,13 +183,13 @@ if (nzchar(sensitivity_path) && file.exists(sensitivity_path)) {
     )
   }, character(1L))
   lines <- c(
-    "\\begin{tabularx}{\\textwidth}{@{}lllrr@{}}",
+    "\\begin{tabular}{@{}lllrr@{}}",
     "\\toprule",
     "Response & Grouping & Method & Median range & 97.5\\% range\\\\",
     "\\midrule",
     body,
     "\\bottomrule",
-    "\\end{tabularx}"
+    "\\end{tabular}"
   )
   writeLines(lines, sens_tex)
 }

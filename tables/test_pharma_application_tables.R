@@ -96,13 +96,20 @@ required <- file.path(out_dir, c(
 stopifnot(all(file.exists(required)))
 tab <- read.csv(file.path(out_dir, "pharma_application_primary_summary.csv"),
                 stringsAsFactors = FALSE)
-stopifnot(nrow(tab) == 4L)
-stopifnot(all(methods %in% tab$method_id))
+reported_methods <- setdiff(methods, "tcsp_mc")
+stopifnot(nrow(tab) == 3L)
+stopifnot(setequal(reported_methods, tab$method_id))
+summary <- read.csv(file.path(out_dir, "pharma_application_summary.csv"))
+stopifnot(!any(summary$method_id == "tcsp_mc"))
+sens <- read.csv(file.path(out_dir,
+                           "pharma_application_dependence_sensitivity.csv"))
+stopifnot(!any(sens$method_id == "tcsp_mc"))
 tex <- paste(readLines(file.path(out_dir,
                                  "pharma_application_primary_summary.tex"),
                        warn = FALSE), collapse = "\n")
 stopifnot(grepl("Held-out content median", tex, fixed = TRUE))
 stopifnot(grepl("Omitted below/above", tex, fixed = TRUE))
+stopifnot(!grepl("TCSP", tex, fixed = TRUE))
 stopifnot(!grepl("metadata", tex, ignore.case = TRUE))
 stopifnot(!grepl("pipeline", tex, ignore.case = TRUE))
 cat("Pharmaceutical application table test passed.\n")

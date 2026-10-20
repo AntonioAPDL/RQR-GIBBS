@@ -41,17 +41,22 @@ if (length(missing)) {
         paste(missing, collapse = ", "))
 }
 
-method_order <- c("tcsp_mc", "mti_ecm_adaptive_cell",
+method_order <- c("mti_ecm_adaptive_cell",
                   "young_mathew", "wilks_minmax")
 method_colors <- c(
-  tcsp_mc = "#0072B2",
   mti_ecm_adaptive_cell = "#009E73",
   young_mathew = "#CC79A7",
   wilks_minmax = "#000000"
 )
 
 draw_response <- function(rows, path, x_label, title) {
+  rows <- rows[rows$method_id %in% method_order, , drop = FALSE]
+  if (anyDuplicated(rows$method_id) ||
+      !setequal(rows$method_id, method_order)) {
+    stopf("Expected MTI-ECM, Young--Mathew, and Wilks for each response.")
+  }
   rows <- rows[order(match(rows$method_id, method_order)), , drop = FALSE]
+  rows$method <- sub("Young--Mathew", "Young-Mathew", rows$method, fixed = TRUE)
   png(path, width = 1800, height = 980, res = 180)
   on.exit(dev.off(), add = TRUE)
   op <- par(mar = c(4.6, 8.8, 2.0, 1.4), xaxs = "i")
@@ -100,13 +105,13 @@ draw_response(
   summary[summary$response_role == "primary", , drop = FALSE],
   primary_path,
   "Reported film-coated-tablet tensile-strength measure",
-  "Held-out interval placement for code-23 tensile strength"
+  "Interval placement for code-23 tensile strength"
 )
 draw_response(
   summary[summary$response_role == "supplement", , drop = FALSE],
   supp_path,
   "Tablet-core weight relative standard deviation",
-  "Held-out interval placement for code-23 weight RSD"
+  "Interval placement for code-23 weight RSD"
 )
 
 manifest <- data.frame(
@@ -118,6 +123,7 @@ manifest <- data.frame(
   sha256 = c(pta_file_sha256(primary_path), pta_file_sha256(supp_path)),
   bytes = c(file.info(primary_path)$size, file.info(supp_path)$size),
   generator = "figures/generate_pharma_application_figures.R",
+  method_ids = paste(method_order, collapse = ";"),
   stringsAsFactors = FALSE
 )
 pta_atomic_write_csv(

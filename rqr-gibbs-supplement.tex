@@ -89,8 +89,9 @@ The main article presents the statistical argument. This supplement gives the
 recoverable derivations, fixed-target computational identities, and validation
 records needed to support the tolerance claims. Throughout, MPI denotes the
 zero-tilt retained-mean target and MTI denotes the fixed-content placement
-family indexed by retained-mean tilt. TCSP denotes the scan-calibrated shortest
-path tolerance procedure. The generalized posterior is always a loss-based update
+family indexed by retained-mean tilt. MTI-ECM is the proposed procedure evaluated
+against Young--Mathew and Wilks. The scan reference is retained only to explain
+the fitted-content grid and calibration choices. The generalized posterior is a loss-based update
 for a fixed interval target; it is distinct from a response-distribution model
 for \(F\).
 
@@ -108,13 +109,14 @@ Symbol & Meaning & Use\\
 \(u\) & lower probability index for a content-\(c\) population window & interval paths\\
 \(m,h\) & midpoint and half-width & MPI and MTI score equations\\
 \(\delta\) & fixed retained-mean tilt & MTI placement family\\
-\(q,k\) & fitted content and retained order-statistic count & MTI-ECM and TCSP\\
-\(\alpha\) & tolerance error probability & scan calibration\\
+\(q,k\) & fitted MTI content and scan-reference retained count & fitted-content search\\
+\(\alpha\) & tolerance error probability & repeated-sampling content requirement\\
 \(\gamma\) & posterior content-probability threshold & direct DP content check\\
 \(\omega_{\mathrm R}\) & fixed generalized-Bayes learning rate & fixed-target MTI-ECM\\
 \(F,H,a\) & response distribution, DP base measure, and DP concentration & content checking\\
 \(L,U,M,W\) & lower endpoint, upper endpoint, midpoint, and width & reported interval functionals\\
-MPI, MTI, TCSP & mean-preserving interval, mean-tilted interval, and tolerance-calibrated shortest path & main methods\\
+MPI, MTI & mean-preserving interval and mean-tilted interval & population targets\\
+MTI-ECM & MTI estimation by expectation/conditional maximization & calibrated tolerance procedure\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -142,7 +144,7 @@ Empirical score balance
 & Records the exact fractional training-sample identities for fixed-target fits\\
 Fixed-target MTI-ECM
 & Section~\ref{sec:supp-mti-ecm}
-& Gives the mode calculation used by the MTI-ECM comparator\\
+& Gives the mode calculation used by the MTI-ECM procedure\\
 Direct DP content check
 & Section~\ref{sec:supp-direct-dp-check}
 & Gives exact fixed-interval posterior content probabilities for calibration\\
@@ -962,11 +964,12 @@ not generally coincide with the shortest-contiguous path.
 \section{Fixed-Target MTI-ECM Calculation}
 \label{sec:supp-mti-ecm}
 
-The MTI-ECM calculation used in the validation study is a deterministic mode
-calculation for a fixed loss-defined target. It is included because it links the
-tolerance comparison to the MTI generalized-Bayes construction. The calculation
-updates an interval-root target under a loss; the distribution-free tolerance
-guarantee comes from the TCSP scan calibration.
+The MTI-ECM calculation used in the validation study computes a numerical mode
+for each fixed loss-defined target. Profiling these fits over content and tilt
+produces the candidates used by the calibrated tolerance procedure. The
+fixed-target calculation updates an interval-root parameter under a loss;
+the tolerance performance of the selected interval is assessed on independent
+simulation samples.
 
 For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the fixed-target MTI loss is
 \[
@@ -1019,8 +1022,10 @@ For \(e_i\ne0\),
 \tau_i=E(v_i^{-1}\mid\cdot)=\frac{1}{q(1-q)|e_i|}.
 \]
 The numerical ECM calculation uses a small response-product scale floor when
-\(e_i\) is near zero, objective backtracking after each accepted cycle, and
-deterministic multi-start selection by the exact penalized objective.
+\(e_i\) is near zero and objective backtracking after each accepted cycle.
+The reported profile calculation uses one deterministic initialization for
+each candidate, derived from the empirical shortest-window endpoints and
+shifted by the candidate tilt. The software also permits multiple starts.
 
 \begin{algorithmblock}{Fixed-target MTI-ECM mode}
 \item Fix \(q\), \(\delta\), \(\omega_{\mathrm R}\), the ridge prior precision,
@@ -1031,14 +1036,15 @@ moments \(\tau_i\), using the prespecified numerical floor only when needed.
 the other root. Repeat with the roles exchanged.
 \item Accept a full cycle only if the exact penalized objective decreases,
 using backtracking if necessary.
-\item Return the best deterministic mode over the prespecified starting values,
-then sort the two raw roots to report the interval.
+\item Return the final numerical mode and sort the two raw roots to report the
+candidate interval. If multiple starts are requested, select the fit with the
+smallest exact penalized objective.
 \end{algorithmblock}
 
-The fitted content \(q\) and tilt \(\delta\) are not estimated as ordinary
-parameters inside the generalized posterior. The validation study profiles over
-a prespecified grid in a separate calibration step and then applies the selected
-rule unchanged to independent replications.
+The fitted content \(q\) and tilt \(\delta\) index fixed-target generalized
+posteriors. The procedure profiles over their grid on each training sample.
+Grid settings and the DP probability threshold are calibrated separately and
+then applied unchanged to independent validation replications.
 
 \section{Direct DP Content Check}
 \label{sec:supp-direct-dp-check}
@@ -1077,9 +1083,11 @@ Dirichlet process is Dirichlet with parameters
 Beta distribution.
 \end{proof}
 
-The direct DP check is used only to choose eligible MTI-ECM candidates in the
-calibration run. The distribution-free tolerance guarantee in this paper comes
-from the TCSP retained-count calibration.
+The direct DP check determines eligible MTI-ECM candidates for each training
+sample. Its threshold is chosen in a separate calibration run and fixed before
+independent validation. The Beta identity is a posterior probability statement
+under the DP response-distribution model. The repeated-sampling behavior of
+the selected interval is assessed empirically.
 
 \section*{Part IV. Validation Details and Reproducibility}
 
@@ -1087,16 +1095,12 @@ from the TCSP retained-count calibration.
 \label{sec:supp-tolerance-validation-protocol}
 
 The primary tolerance validation is restricted to iid continuous univariate
-samples. This is the setting in which the scan-calibrated empirical procedure,
-the stability-restricted MTI-ECM profile rule, Young--Mathew interpolation, and
-Wilks-style full-range intervals can be compared on the same target. TCSP
-is the primary calibrated tolerance procedure
-because it selects the shortest closed order-statistic window at the calibrated
-retained count. The reported TCSP calculations use adaptive Clopper--Pearson scan
-calibration directly. The MTI-ECM comparator
+samples. The comparison includes the calibrated MTI-ECM rule, Young--Mathew
+interpolation, and Wilks full-range intervals. MTI-ECM
 profiles fixed-target endpoint fits over fitted content and retained-mean tilt,
 then applies a direct Dirichlet-process fixed-interval content probability
-threshold and a width-stability restriction. Young--Mathew and Wilks are included as classical order-statistic
+threshold. Its calibration includes a width-stability restriction relative to
+the scan reference described below. Young--Mathew and Wilks are classical order-statistic
 comparators. Regression and dynamic tolerance calibration require additional
 results because the fitted intervals vary with covariates or time.
 
@@ -1116,16 +1120,18 @@ Gaussian and Student \(t_3\). The asymmetric simulation distributions are
 exponential, asymmetric Laplace with \(\tau=0.10\), two-piece Normal with scale
 ratio \(1{:}12\), Beta\((1,8)\), Gamma\((0.5,1)\), and log-normal with
 log-scale standard deviation \(1.25\). All laws are centered and scaled before
-sampling. Each cell uses paired random samples across methods. The
+sampling. Within each cell, Young--Mathew and Wilks use common random samples.
+MTI-ECM uses fresh samples from the same distributions under the independent
+validation seed sequence. The
 reproducibility materials include the code version, simulation settings,
 package versions, random seeds, calibration files, and numerical summaries.
-The article comparison combines the completed TCSP, Young--Mathew, and Wilks
-confirmatory run with the stability-restricted adaptive MTI-ECM profile rule applied to the
-completed independent validation run. The reported rows contribute 288,000
+The article comparison uses the Young--Mathew and Wilks results from the
+completed comparator run and the selected MTI-ECM rule from the independent
+validation run. The reported rows contribute 216,000
 replication-level method evaluations over the 72 distribution-level cells used in the main
 comparison. The broader MTI-ECM refinement run is retained as calibration
 evidence, with only the selected rule evaluated under the MTI-ECM label in the
-independent validation run. All simulations completed, and all four reported methods produced
+independent validation run. All simulations completed, and all three reported methods produced
 an interval in every replication. The manuscript tables and figures are
 computed directly from these replication-level simulation outputs and the
 corresponding scan-calibration outputs. The scenario-range table in the main
@@ -1143,8 +1149,8 @@ distribution-level cell as reproducibility information.
 The MTI-ECM comparator reported in the main article uses a prespecified adaptive
 calibration rule indexed by \((n,c,1-\alpha)\). The rule chooses a
 direct Dirichlet-process content-probability check from a separate calibration run,
-requires width stability relative to TCSP within the same distribution-level
-cells, and then applies that choice unchanged to fresh paired replications in
+requires width stability relative to the shortest scan-reference window within the same distribution-level
+cells, and then applies that choice unchanged to fresh replications in
 the independent validation
 run. Table~\ref{tab:supp-mti-ecm-policy} records the selected content-probability check, calibration
 lower bound, independent validation range, and width span for each cell.
@@ -1174,28 +1180,54 @@ article.}
 \label{fig:supp-tolerance-population-shortest}
 \end{figure}
 
-These results are empirical repeated-sampling evidence for the selected
-profile rule; the finite-sample distribution-free guarantee comes from the TCSP
-scan calibration.
+These results provide empirical repeated-sampling evidence for the selected
+profile rule. A distribution-free tolerance theorem for MTI-ECM remains to be
+established.
 
 \input{tables/tolerance_validation_mti_ecm_selected_policy_summary.tex}
 
-The TCSP calibration chooses the retained count \(k\) before seeing the
-replicated samples. Table~\ref{tab:supp-tcsp-scan-calibration} records the
+\paragraph{Scan reference for the fitted-content search.}
+The reference retained count \(k\) is chosen before seeing the replicated
+samples. For independent \(U_i\sim\mathrm{Unif}(0,1)\), define
+\[
+M_n(c)=\max_{0\le s\le1-c}\#\{i:U_i\in[s,s+c]\},\qquad
+k_{n,c,\alpha}=\min\{k:\Pr(M_n(c)<k)\ge1-\alpha\}.
+\]
+For ordered observations \(Y_{(1)}\le\cdots\le Y_{(n)}\), the scan-reference
+window is
+\[
+I^{\mathrm{ref}}_n=[Y_{(j_0)},Y_{(j_0+k-1)}],\qquad
+j_0=\min\argmin_{1\le j\le n-k+1}\{Y_{(j+k-1)}-Y_{(j)}\}.
+\]
+This reference provides \(k/n\) for the fitted-content search and width summaries for the
+calibration stability criterion. The reported MTI-ECM endpoints are obtained
+from the selected ECM fit. In particular, its fitted content can differ from
+\(k/n\), and its interval does not inherit the scan reference's tolerance
+argument.
+
+Table~\ref{tab:supp-scan-reference} records the
 retained counts, retained fractions, content buffers, and lower confidence
 bounds used in the simulation design. Adaptive Clopper--Pearson calibration
 selects the retained count for each feasible sample-size/content cell before
-any distribution-specific replications are evaluated. When \(k=n\), TCSP is forced to
-use the full sample range and therefore coincides with Wilks as a reported
-interval. This occurs for \((n,c)=(50,0.90),(100,0.95)\), and
-\((500,0.99)\).
+any distribution-specific replications are evaluated. The numerical calculation
+adjusts one-sided Clopper--Pearson lower bounds over retained counts and
+adaptive looks; numerical confidence is distinct from tolerance confidence.
+The full-range probability is evaluated analytically. Exact evaluation of the
+scan distribution remains a numerical problem.
+
+When \(k=n\), the reference window is the full sample range. This occurs for
+\((n,c)=(50,0.90),(100,0.95)\), and \((500,0.99)\). The MTI-ECM search still
+uses fitted contents strictly below one, including fractional contents between
+\((n-1)/n\) and one. The closed-window reference contains \(k\) observations
+under continuity; the alternative half-open convention
+\((Y_{(j)},Y_{(j+k)}]\) has different indices and requires its own calibration.
 
 \begin{table}[H]
 \centering
-\caption{\textbf{TCSP scan calibration for the simulation design.} The retained
+\caption{\textbf{Scan reference for the MTI-ECM fitted-content search.} The retained
 count \(k\) is selected by adaptive Clopper--Pearson Monte Carlo scan
 calibration. The content buffer is \(k/n-c\).}
-\label{tab:supp-tcsp-scan-calibration}
+\label{tab:supp-scan-reference}
 \TableStyle
 \input{tables/tolerance_validation_article_scan_calibration.tex}
 \end{table}
@@ -1203,8 +1235,7 @@ calibration. The content buffer is \(k/n-c\).}
 Small-sample feasibility is governed by the full-range two-sided order-statistic
 coverage probability
 \[
-  \Pr\{Y_{(1)}\le Y_{\mathrm{new}}\le Y_{(n)}
-       \text{ for at least content } c\}
+  \Pr_F^n\{F(Y_{(n)})-F(Y_{(1)})\ge c\}
   =
   1-n(1-c)c^{n-1}-c^n .
 \]
@@ -1215,7 +1246,7 @@ thresholds used to design the simulation study.
 \begin{table}[H]
 \centering
 \caption{\textbf{Full-range feasibility thresholds.} Entries are the smallest
-sample sizes for which the full-sample interval \([Y_{(1)},Y_{(n)}]\) reaches
+sample sizes for which the sample-range interval \([Y_{(1)},Y_{(n)}]\) reaches
 the stated two-sided distribution-free content/confidence pair.}
 \label{tab:supp-full-range-thresholds}
 \TableStyle
@@ -1235,7 +1266,9 @@ This distinction matters for interpreting the small sample sizes in
 \(95\%\)-confidence design needs the larger thresholds \((46,93,473)\). The
 simulation design therefore lists the feasible cells explicitly instead of
 forming a Cartesian product of sample sizes and contents. This prevents the
-comparison from treating structural infeasibility as a method failure.
+comparison from treating structural infeasibility of the sample-bounded
+order-statistic procedures as a method failure. It does not establish the
+same feasibility boundary for the model-based MTI-ECM procedure.
 The Young--Mathew comparator is evaluated through the \texttt{tolerance}
 package's \texttt{nptol.int(..., method = "YM")} function. The completed
 run used \texttt{tolerance} version 3.0.0, and the package version is included
@@ -1268,14 +1301,14 @@ used because the recorded values have more ties on the observed scale.}
 \input{tables/pharma_application_response_diagnostics.tex}
 \end{table}
 
-For each of 1000 paired splits, all four methods use the same 100 training
-batches and the same 87 held-out batches. TCSP uses the retained count
-\(k=98\) from the adaptive scan calibration for \(n=100\), \(c=0.90\), and
-tolerance confidence \(0.95\). MTI-ECM uses the frozen selected calibration
-policy from the independent simulation validation, with direct
+For each of 1000 paired splits, all three methods use the same 100 training
+batches and the same 87 held-out batches. MTI-ECM uses the calibration rule
+fixed before the independent simulation validation, with direct
 Dirichlet-process content-probability threshold \(0.995\). The fitted content
 and tilt are selected by the prespecified MTI-ECM rule within each training
 sample; the rule itself is not tuned on these pharmaceutical responses. The
+fitted-content search uses the scan-reference retained count \(k=98\) for
+\(n=100\), \(c=0.90\), and tolerance confidence \(0.95\). The
 held-out empirical summaries describe stability within the finite historical
 data set, with repeated-sampling tolerance assessment left to the simulation
 study.
@@ -1327,7 +1360,7 @@ The reproducibility materials separate mathematical statements, numerical
 construction, and repeated-sampling evidence. The proofs above support the
 population MPI and MTI identities, the fractional empirical score balance, and
 the direct DP fixed-interval content law under their stated assumptions. The
-TCSP retained counts are calibrated before the replicated samples are analyzed.
+scan-reference retained counts are calibrated before the replicated samples are analyzed.
 The MTI-ECM content-probability check and stability rule are selected in a separate
 calibration run and then applied unchanged in the independent validation run.
 

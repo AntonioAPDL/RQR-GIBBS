@@ -135,29 +135,24 @@ if (!file.exists(primary_path)) {
 }
 
 primary_supp_method_order <- c(
-  "tcsp_mc",
   if (has_mti_ecm_input) selected_mti_ecm_method,
   "young_mathew",
   "wilks_minmax"
 )
 primary_main_method_order <- c(
-  "tcsp_mc",
   if (has_mti_ecm_input) selected_mti_ecm_method,
   "young_mathew",
   "wilks_minmax"
 )
 small_supp_method_order <- c(
-  "tcsp_mc",
   "young_mathew",
   "wilks_minmax"
 )
 small_main_method_order <- c(
-  "tcsp_mc",
   "young_mathew",
   "wilks_minmax"
 )
 method_labels <- c(
-  tcsp_mc = "TCSP",
   mti_ecm_adaptive_cell = "MTI-ECM",
   young_mathew = "Young--Mathew",
   wilks_minmax = "Wilks"
@@ -1015,7 +1010,7 @@ write_wide_delivery_tex(
 write_dgp_width_tex(
   primary_dgp_widths,
   file.path(output_dir, "tolerance_validation_article_dgp_width_ranges.tex"),
-  "\\textbf{Distribution-level tolerance-validation width ranges.} Width intervals are empirical 2.5\\%--97.5\\% ranges over the paired Monte Carlo replications within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.",
+  "\\textbf{Distribution-level tolerance-validation width ranges.} Width intervals are empirical 2.5\\%--97.5\\% ranges over Monte Carlo replications within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.",
   "tab:supp-primary-dgp-width-ranges"
 )
 write_scan_calibration_tex(

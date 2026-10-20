@@ -56,4 +56,8 @@ stopifnot(all(file.exists(pngs)))
 stopifnot(all(file.info(pngs)$size > 10000))
 manifest <- file.path(out_dir, "pharma_application_figure_manifest.csv")
 stopifnot(file.exists(manifest))
+record <- read.csv(manifest, stringsAsFactors = FALSE)
+stopifnot("method_ids" %in% names(record), nrow(record) == 2L)
+stopifnot(all(record$method_ids ==
+                "mti_ecm_adaptive_cell;young_mathew;wilks_minmax"))
 cat("Pharmaceutical application figure test passed.\n")

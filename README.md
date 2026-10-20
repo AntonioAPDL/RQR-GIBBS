@@ -2,11 +2,11 @@
 
 This repository contains the tolerance-interval manuscript and companion R
 implementation for mean-preserving intervals (MPI), mean-tilted intervals (MTI),
-and tolerance-calibrated shortest-path (TCSP) intervals.
+and calibrated MTI-ECM tolerance intervals.
 
 The manuscript in `main.tex` is now focused on fixed-content interval geometry,
-the MPI and MTI targets, the TCSP tolerance procedure, the calibrated MTI-ECM
-comparator, and iid tolerance validation. The broader endpoint-regression,
+the MPI and MTI targets, the calibrated MTI-ECM procedure, and iid tolerance
+validation against Young--Mathew and Wilks. The broader endpoint-regression,
 basis-expansion, Gibbs, ECM, and dynamic endpoint development is split into the
 companion manuscript repository `AntonioAPDL/MTI-EXTENSIONS`.
 
@@ -37,12 +37,19 @@ MPI and MTI are loss-defined interval targets. Endpoint summaries from a
 generalized posterior describe uncertainty for the specified interval-root
 functional. They are not posterior predictive response draws.
 
-TCSP is the primary tolerance procedure in the article. It calibrates a retained
-order-statistic count from the uniform scan statistic and then reports the
-shortest closed order-statistic window at that count. The iid tolerance
-confidence statement comes from this scan calibration. The MTI-ECM comparator is
-a calibrated fixed-target generalized-Bayes mode calculation evaluated by
-independent repeated-sampling validation.
+MTI-ECM is the proposed tolerance procedure reported in the article. It profiles
+fixed-target generalized-Bayes endpoint modes over fitted content and tilt,
+then selects the shortest fitted interval meeting a direct Dirichlet-process
+posterior content check. Its calibration rule is fixed before independent
+repeated-sampling validation. The simulation and pharmaceutical results report
+MTI-ECM, Young--Mathew, and Wilks.
+
+The scan reference (TCSP in the code) is retained for constructing the
+fitted-content grid and for the calibration width-stability criterion. It is
+not a reported comparator. Scan algorithms, original simulation configurations,
+and historical analysis outputs remain available for reproducibility. The
+selected MTI-ECM interval has empirical tolerance validation; a
+distribution-free theorem for this selection rule remains open.
 
 ## Build and Checks
 

@@ -166,7 +166,9 @@ primary_range <- read.csv(
 )
 stopifnot(nrow(primary_range) ==
             length(unique(primary_range$n)) *
-            length(unique(primary_range$content)) * 4L)
+            length(unique(primary_range$content)) * 3L)
+stopifnot(setequal(primary_range$method_id,
+                   c("mti_ecm_adaptive_cell", "young_mathew", "wilks_minmax")))
 stopifnot(!"hdp_s_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_mti_gibbs_median_mc" %in% primary_range$method_id)
 stopifnot(!"tcsp_mti_ecm_map_mc" %in% primary_range$method_id)
@@ -196,6 +198,7 @@ stopifnot(all(primary_widths$replications == 2L))
 stopifnot(all(is.finite(primary_widths$mean_width)))
 stopifnot(any(primary_widths$method_id == "young_mathew"))
 stopifnot(!any(primary_widths$method_id == "tcsp_dkw"))
+stopifnot(!any(primary_widths$method_id == "tcsp_mc"))
 
 primary_detail <- read.csv(
   file.path(out_dir, "tolerance_validation_article_scenario_details.csv"),
@@ -203,6 +206,7 @@ primary_detail <- read.csv(
 )
 stopifnot(any(primary_detail$method_id == "mti_ecm_adaptive_cell"))
 stopifnot(!any(primary_detail$method_id == "mti_ecm_adaptive_screen_p985"))
+stopifnot(!any(primary_detail$method_id == "tcsp_mc"))
 
 small_boundary <- read.csv(
   file.path(out_dir, "tolerance_validation_article_small_sample_boundary.csv"),
@@ -211,6 +215,7 @@ small_boundary <- read.csv(
 stopifnot(all(small_boundary$n %in% c(50L, 100L)))
 stopifnot(!"tcsp_mti_ecm_map_mc" %in% small_boundary$method_id)
 stopifnot(!"tcsp_dkw" %in% small_boundary$method_id)
+stopifnot(!"tcsp_mc" %in% small_boundary$method_id)
 stopifnot(any(small_boundary$method_id == "wilks_minmax"))
 
 tex <- paste(readLines(
@@ -223,6 +228,7 @@ stopifnot(grepl("\\begin{tabular}{@{}l@{\\hspace{0.75em}}l",
 stopifnot(!grepl("\\begin{tabularx}", tex, fixed = TRUE))
 stopifnot(grepl("Young--Mathew", tex, fixed = TRUE))
 stopifnot(grepl("MTI-ECM", tex, fixed = TRUE))
+stopifnot(!grepl("TCSP", tex, fixed = TRUE))
 stopifnot(!grepl("Width 95\\% range", tex, fixed = TRUE))
 stopifnot(!grepl("MTI ECM", tex, fixed = TRUE))
 stopifnot(!grepl("DKW", tex, fixed = TRUE))
@@ -239,6 +245,7 @@ stopifnot(grepl("MTI-ECM", supp_tex, fixed = TRUE))
 stopifnot(!grepl("Hybrid DP--scan", supp_tex, fixed = TRUE))
 stopifnot(!grepl("MTI ECM", supp_tex, fixed = TRUE))
 stopifnot(!grepl("DKW", supp_tex, fixed = TRUE))
+stopifnot(!grepl("TCSP", supp_tex, fixed = TRUE))
 
 width_tex <- paste(readLines(
   file.path(out_dir, "tolerance_validation_article_dgp_width_ranges.tex"),
@@ -249,6 +256,7 @@ stopifnot(grepl("Content-attainment (\\%)", width_tex, fixed = TRUE))
 stopifnot(grepl("summarized within, rather than pooled across, distributions",
                 width_tex, fixed = TRUE))
 stopifnot(!grepl("Returned (\\%)", width_tex, fixed = TRUE))
+stopifnot(!grepl("TCSP", width_tex, fixed = TRUE))
 
 scan_tex <- paste(readLines(
   file.path(out_dir, "tolerance_validation_article_scan_calibration.tex"),

@@ -68,6 +68,9 @@ stopifnot(file.exists(png_path), file.exists(manifest_path))
 stopifnot(file.info(png_path)$size > 10000)
 
 manifest <- utils::read.csv(manifest_path, stringsAsFactors = FALSE)
+stopifnot("method_ids" %in% names(manifest))
+stopifnot(all(manifest$method_ids ==
+                "mti_ecm_adaptive_cell;young_mathew;wilks_minmax"))
 stopifnot(any(grepl("fig05_tolerance_validation_width_ranges.png",
                     manifest$relative_path, fixed = TRUE)))
 stopifnot(any(grepl("widths.csv", manifest$relative_path, fixed = TRUE)))

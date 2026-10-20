@@ -1,4 +1,4 @@
-"relative_path","sha256","bytes","generator"
-"figures/generated/fig05_tolerance_validation_width_ranges.png","ad19294e108c3ab44750a55a802cd84c82462484fbc5614dcca517e1a1ba2078",464604,"figures/generate_tolerance_validation_width_figure.R"
-"tables/tolerance_validation_article_dgp_width_ranges.csv","e988129f5663cf0bf85afe8c11e8bfbb5b6296313b7ecebfaa2dcf27981dd365",39056,"figures/generate_tolerance_validation_width_figure.R"
-"figures/data/tolerance_population_shortest_content_oracle.csv","946fc574dae08978c05ee30e69f59b0cac16d1c2b963aca007b18fc5ce7242bf",4045,"figures/generate_tolerance_validation_width_figure.R"
+"relative_path","sha256","bytes","generator","method_ids"
+"figures/generated/fig05_tolerance_validation_width_ranges.png","4704af936e7f8716db7cec7562337034baadb008e7ddbef00956fac89671b480",422812,"figures/generate_tolerance_validation_width_figure.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"
+"tables/tolerance_validation_article_dgp_width_ranges.csv","fd83c4f293189d004787ebe380c3151c3516b9cbf69c8c70ffbb556105c0c3c8",29914,"figures/generate_tolerance_validation_width_figure.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"
+"figures/data/tolerance_population_shortest_content_oracle.csv","946fc574dae08978c05ee30e69f59b0cac16d1c2b963aca007b18fc5ce7242bf",4045,"figures/generate_tolerance_validation_width_figure.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"

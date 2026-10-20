@@ -40,25 +40,21 @@ manifest_path <- file.path(
 
 selected_mti_ecm_method <- "mti_ecm_adaptive_cell"
 method_order <- c(
-  "tcsp_mc",
   selected_mti_ecm_method,
   "young_mathew",
   "wilks_minmax"
 )
 method_labels <- c(
-  tcsp_mc = "TCSP",
   mti_ecm_adaptive_cell = "MTI-ECM",
-  young_mathew = "Young--Mathew",
+  young_mathew = "Young-Mathew",
   wilks_minmax = "Wilks"
 )
 method_colors <- c(
-  tcsp_mc = "#0072B2",
   mti_ecm_adaptive_cell = "#009E73",
   young_mathew = "#CC79A7",
   wilks_minmax = "#000000"
 )
 method_pch <- c(
-  tcsp_mc = 16,
   mti_ecm_adaptive_cell = 17,
   young_mathew = 16,
   wilks_minmax = 1
@@ -292,6 +288,7 @@ manifest <- data.frame(
   sha256 = vapply(manifest_inputs, sha256, character(1L)),
   bytes = as.numeric(file.info(manifest_inputs)$size),
   generator = "figures/generate_tolerance_validation_width_figure.R",
+  method_ids = paste(method_order, collapse = ";"),
   stringsAsFactors = FALSE
 )
 utils::write.csv(manifest, manifest_path, row.names = FALSE)
