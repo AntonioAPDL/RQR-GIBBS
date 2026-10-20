@@ -153,7 +153,7 @@ Tolerance validation
 & Lists feasible cells, distributional scenarios, calibration choices, and numerical summaries\\
 Pharmaceutical application details
 & Section~\ref{sec:supp-pharma-application}
-& Records source verification, response diagnostics, supplementary RSD results, and held-out sensitivity checks\\
+& Records source verification, response diagnostics, interval-placement comparisons, and partition sensitivities\\
 Validation limits
 & Section~\ref{sec:supp-reproducibility}
 & Separates proved identities, repeated-sampling validation, and open extensions\\
@@ -1276,49 +1276,83 @@ in the method reproducibility record.
 
 \section{Pharmaceutical Application Details}
 \label{sec:supp-pharma-application}
+\input{tables/pharma_application_numbers.tex}
 
-The pharmaceutical application uses the public manufacturing data described by
-\citet{ZagarMihelic2022PharmaManufacturing}. The analysis file is
-\texttt{Laboratory.csv}, version 1 on Figshare
-\citep{ZagarMihelic2021LaboratoryCsv}. The downloaded file contains 1005
-batches and 55 recorded fields. The analysis script verifies the byte count and
-MD5 digest before restricting the analysis to product code 23. This restriction
-leaves 187 batches with recorded strength \(20\)M and size 960000.
-The analysis is descriptive and uses procedures fixed before examining these
-responses. It illustrates endpoint placement on observed manufacturing batches;
-the tolerance-confidence evidence in the paper comes from the controlled
-simulation study.
+\paragraph{Data and paired partitions.}
+The application uses the manufacturing data described by
+\citet{ZagarMihelic2022PharmaManufacturing} and version 1 of the public
+\texttt{Laboratory.csv} file \citep{ZagarMihelic2021LaboratoryCsv}. The source
+contains \PharmaRawBatches{} batches and \PharmaRawFields{} recorded fields.
+File size, MD5, and SHA256 are verified before extracting product code
+\PharmaProductCode{}, which gives \PharmaBatches{} batches. The main response
+is the reported film-coated-tablet tensile-strength measure. Tablet-core
+weight relative standard deviation (RSD) provides a more asymmetric
+supplementary example. The recorded active pharmaceutical ingredient (API)
+batch identifier defines one grouping used below. The file contains ties,
+and the batch records may be dependent.
 
 \begin{table}[H]
 \centering
-\caption{\textbf{Application response diagnostics for product code 23.}
-The tensile-strength measure is used in the main article. The weight-RSD
-response is reported here because it is more strongly right-skewed but has a
-mainly upper-adverse quality interpretation. Film-coated-tablet hardness is not
-used because the recorded values have more ties on the observed scale.}
+\caption{\textbf{Response diagnostics for product code \PharmaProductCode{}.}
+The tensile-strength measure is used in the main article. Weight RSD has a
+stronger asymmetric-placement interpretation. Film-coated-tablet hardness has
+more ties and is excluded.}
 \label{tab:supp-pharma-response-diagnostics}
 \TableStyle
 \input{tables/pharma_application_response_diagnostics.tex}
 \end{table}
 
-For each of 1000 paired splits, all three methods use the same 100 training
-batches and the same 87 held-out batches. MTI-ECM uses the calibration rule
-fixed before the independent simulation validation, with direct
-Dirichlet-process content-probability threshold \(0.995\). The fitted content
-and tilt are selected by the prespecified MTI-ECM rule within each training
-sample; the rule itself is not tuned on these pharmaceutical responses. The
-fitted-content search uses the scan-reference retained count \(k=98\) for
-\(n=100\), \(c=0.90\), and tolerance confidence \(0.95\). The
-held-out empirical summaries describe stability within the finite historical
-data set, with repeated-sampling tolerance assessment left to the simulation
-study.
+For each primary random split, every method uses the same \PharmaTrain{}
+training batches and \PharmaHeldout{} withheld batches. The two responses use
+identical partitions. Each split is generated from its recorded seed; changing
+worker order leaves its membership unchanged. The requested population
+content is \(c=\PharmaContent\), and nominal tolerance confidence is
+\(\PharmaConfidence\). The selected MTI-ECM rule uses posterior content
+probability threshold \(\PharmaScreen\) and internal retained-count reference
+\(k=\PharmaRetained\). This internal calibration anchor is used to construct
+the fitted-content search. Fitted content and tilt vary within each sample
+under the preassigned rule; fitting settings and the calibration rule are
+unchanged across responses and partitions.
+
+\paragraph{Representative split.}
+The displayed intervals come from an actual random split chosen separately
+for each response by a prespecified median-distance rule. For every split in
+which all three methods return intervals, collect each method's lower and
+upper endpoints, width, held-out empirical content, and two tail-omission
+fractions as components \(x_{sj}\). Let \(m_j\) be the across-split median
+of component \(j\), and let \(d_j\) be its median absolute deviation (MAD). A zero
+MAD is replaced by the interquartile range; a remaining zero scale is replaced
+by one. The selected split minimizes
+\[
+  \sum_j \left\{(x_{sj}-m_j)/d_j\right\}^2,
+\]
+with ties resolved by the smallest split identifier. Training and held-out
+indices and the selection score are retained with the results. This rule
+selects split \PharmaTensileRepresentative{} for tensile strength and
+split \PharmaRsdRepresentative{} for weight RSD.
+
+\paragraph{Interval placement for weight RSD.}
+The RSD response has sample skewness \PharmaRsdSkewness{}. MTI-ECM has median
+width \PharmaRsdMtiWidth{}, compared with \PharmaRsdYmWidth{} for
+Young--Mathew and \PharmaRsdWilksWidth{} for Wilks. The median paired width
+difference against Young--Mathew is \PharmaRsdPairedYmWidthDifference{}.
+The tail allocation explains part of this difference: MTI-ECM omits median
+fractions \PharmaRsdMtiLowerOmitted\% below and
+\PharmaRsdMtiUpperOmitted\% above, while Young--Mathew omits
+\PharmaRsdYmLowerOmitted\% and \PharmaRsdYmUpperOmitted\%, respectively.
+A shorter interval can exclude more of the scientifically adverse upper
+tail. An upper one-sided tolerance limit would be more natural for a direct
+quality-control decision; the present two-sided analysis describes placement
+on the historical data.
 
 \begin{table}[H]
 \centering
-\caption{\textbf{Supplementary weight-RSD application.} Intervals are fit on
-100 code-23 batches and evaluated on the 87 held-out batches over 1000 paired
-splits. Width and held-out content summaries report medians with empirical
-2.5\%--97.5\% ranges across splits.}
+\caption{\textbf{Weight-RSD application.} Intervals use \PharmaTrain{}
+training and \PharmaHeldout{} held-out batches over \PharmaSplits{} paired
+random splits. Bracketed ranges are empirical 2.5\%--97.5\% quantiles.
+Held-out \(\ge c\) is the percentage of all splits with empirical content at
+least \(c\). The splits reuse one finite dataset and are not independent
+sampling replications.}
 \label{tab:supp-pharma-rsd}
 \TableStyle
 \input{tables/pharma_application_supplement_summary.tex}
@@ -1327,30 +1361,105 @@ splits. Width and held-out content summaries report medians with empirical
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/figS04_pharma_application_rsd_intervals.png}
-\caption{\textbf{Endpoint placement for tablet-core weight RSD.} Thick
-segments show median endpoints across paired splits; pale segments show the
-empirical 95\% endpoint envelope. The response is strongly right-skewed, so the
-two-sided interval is interpreted as a placement analysis rather than as a
-direct quality-control rule.}
+\caption{\textbf{Interval placement and held-out comparisons for weight RSD.}
+The panels follow the main application figure. The representative split
+\PharmaRsdRepresentative{} is selected by the same median-distance rule.
+Thick and thin tail-omission segments show interquartile and empirical 95\%
+ranges, with median markers. The response is strongly right-skewed, but an
+upper one-sided tolerance limit would be more natural for a direct
+quality-control decision.}
 \label{fig:supp-pharma-rsd}
 \end{figure}
 
-Held-out content was also summarized within production month, API batch, and
-batch-order quartile whenever a held-out group contained at least three
-observations. These checks are descriptive because the splits are drawn from a
-finite historical data set rather than from a controlled independent
-experiment. The summaries in Table~\ref{tab:supp-pharma-dependence} indicate
-how much held-out content varies across recorded batch groupings.
+The paired comparisons below use MTI-ECM minus the named benchmark for endpoint,
+width, content, and omission differences. The width ratio divides MTI-ECM
+width by benchmark width. They summarize the observed paired split
+distributions without treating overlapping splits as independent observations.
+
+\input{tables/pharma_application_primary_paired_summary.tex}
+\input{tables/pharma_application_rsd_paired_summary.tex}
+
+\paragraph{Partition sensitivities.}
+Forward chronology trains on the first \PharmaTrain{} batches in recorded
+batch order, with original row order breaking ties, and holds out the final
+\PharmaHeldout{}. Reverse chronology trains on the final \PharmaTrain{} and
+holds out the first \PharmaHeldout{}. Each is a single labeled partition.
+Production-month and API-batch sensitivities keep whole groups on one side of
+the training boundary. Response-independent allocation conditional on exactly
+\PharmaTrain{} training batches gives up to \PharmaGroupedSplits{} unique
+partitions for each grouping. Fixed seeds and removal of duplicate
+partitions determine the reported sets before fitting. Exact training size
+preserves the sample-size cell of the fixed calibration rule.
+
+Tables~\ref{tab:supp-pharma-primary-sensitivity}
+and~\ref{tab:supp-pharma-rsd-sensitivity} give actual split counts and
+summaries for each design. The chronological cases show that partition choice
+can materially change held-out empirical content. For MTI-ECM, reverse
+chronology gives tensile-strength content \PharmaTensileReverseContent\%;
+forward chronology gives RSD content \PharmaRsdForwardContent\%.
+These comparisons describe variation across the recorded batches and are
+insufficient to distinguish dependence from changes in the batch distribution.
+
+\input{tables/pharma_application_primary_sensitivity.tex}
+\input{tables/pharma_application_rsd_sensitivity.tex}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS05_pharma_application_partition_sensitivity.png}
+\caption{\textbf{Sensitivity to training and held-out partitions.} Points show
+median widths or held-out empirical content within each labeled design.
+Segments give empirical 95\% ranges for random and grouped splits. The two
+chronological designs each contain one partition and are shown as individual
+points. Dashed lines mark the requested content \(c=\PharmaContent\).
+The plots describe historical partition sensitivity.}
+\label{fig:supp-pharma-partition-sensitivity}
+\end{figure}
+
+\paragraph{Numerical diagnostics.}
+Every selected MTI-ECM fit retains its fitted content, tilt, posterior content
+probability, candidate counts, convergence flag, iterations, and final
+stationarity diagnostic. The preassigned iteration cap is \PharmaMaxIter{},
+with stationarity threshold \(\PharmaStationarityThreshold\).
+Stationarity is summarized by the largest absolute component of the
+penalized-objective gradient, using the midpoint of the subgradient interval
+at an exactly zero residual product. The convergence flag also requires
+relative objective and parameter stability.
+The selected-fit convergence flag is met in \PharmaTensileConverged{} of
+\PharmaTensileReturned{} returned tensile-strength fits and
+\PharmaRsdConverged{} of \PharmaRsdReturned{} returned RSD fits.
+The primary summaries retain the outputs of the unchanged rule.
+Table~\ref{tab:supp-pharma-convergence} restricts attention to partitions with
+a returned MTI-ECM interval and a positive convergence flag, retaining the
+same partitions for both benchmarks. Its small, data-dependent subset warrants
+a conditional descriptive interpretation.
 
 \begin{table}[H]
 \centering
-\caption{\textbf{Held-out grouping sensitivity in the pharmaceutical
-application.} Entries summarize, across paired splits, the within-split range
-of empirical content across groups with at least three held-out batches.}
-\label{tab:supp-pharma-dependence}
+\caption{\textbf{MTI-ECM numerical diagnostics for primary random splits.}
+Numerical summaries are medians with empirical 95\% ranges among returned
+fits. Return counts and the convergence flag are reported separately.}
+\label{tab:supp-pharma-numerical}
 \TableStyle
-\input{tables/pharma_application_dependence_sensitivity.tex}
+\input{tables/pharma_application_numerical_diagnostics.tex}
 \end{table}
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Sensitivity restricted to selected-fit convergence.} All
+methods are summarized on the same included partitions for each response.
+The denominator gives the original number of random splits. These
+conditional summaries do not form an independent validation sample.}
+\label{tab:supp-pharma-convergence}
+\TableStyle
+\input{tables/pharma_application_convergence_sensitivity.tex}
+\end{table}
+
+Failed interval calculations, if any, remain in the results and count as
+nonattainment; endpoint and width summaries condition on interval return.
+The recorded posterior content probability is a calculation under the DP
+model. Held-out empirical content is evaluated on finite withheld batches,
+and the nominal tolerance-confidence assessment remains the separate
+simulation study.
 
 
 \section{Reproducibility and Validation Limits}

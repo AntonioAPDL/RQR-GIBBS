@@ -64,3 +64,51 @@ make supplement
 Package checks are available through the `application/` targets in the
 `Makefile`. Heavy simulations should record the Git commit and write their
 outputs under ignored simulation-output directories.
+
+## Pharmaceutical Application
+
+The revised application uses
+`application/config/pharma_tolerance_application_mti_only_20261020.json`.
+MTI-ECM is the sole proposed procedure; Young--Mathew and Wilks are external
+benchmarks. The frozen calibration is unchanged. Both responses share 1000
+random partitions, two chronological cases, 250 production-month partitions,
+and 250 API-batch partitions. All partitions use 100 training and 87 held-out
+batches. Grouped partitions keep whole groups together.
+
+The complete, portable reporting inputs are tracked under
+`figures/data/pharma_mti_application_20261020/`. Rebuild the report without
+fitting any models:
+
+```bash
+make pharma-mti-application-report
+make test-pharma-mti-application
+make test-manuscript-language
+make all-pdf
+```
+
+For a new analysis, use fresh output directories and run these stages in order:
+
+```bash
+make pharma-mti-application-runtime
+make pharma-mti-application-data
+make pharma-mti-application-preflight
+make pharma-mti-application-smoke PHARMA_MTI_RUN_DIR=application/outputs/pharma_mti_application_20261020/smoke_new
+make pharma-mti-application-confirmatory PHARMA_MTI_WORKERS=40 PHARMA_MTI_RUN_DIR=application/outputs/pharma_mti_application_20261020/confirmatory_new
+make pharma-mti-application-health PHARMA_MTI_RUN_DIR=application/outputs/pharma_mti_application_20261020/confirmatory_new
+```
+
+The runtime target installs this repository's package in its ignored local
+library. It does not install or load the external exdqlm checkout. Raw source
+data are downloaded only when absent and must pass byte-count, MD5, and SHA256
+checks. Method seeds do not depend on worker scheduling; each worker uses one
+BLAS/OpenMP thread. Never replace the tracked canonical directory silently.
+The explicit `pharma-mti-application-publish` target requires a verified,
+complete run and an absent destination.
+
+Held-out empirical content describes these finite, overlapping partitions; it
+does not estimate tolerance confidence from independent replications. Selected
+ECM convergence flags are retained and reported, including conditional
+comparisons on the same convergence-flagged partitions for all methods.
+See [the implementation record](docs/implementation_notes/pharma_mti_application_revision_20261020.md)
+for provenance, diagnostics, endpoint-precision recovery, and all commands.
+Historical `pharma-application-*` targets retain the previous analysis.

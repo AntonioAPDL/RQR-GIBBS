@@ -10,7 +10,8 @@ repo_root <- if (length(root_arg)) {
 repo_root <- normalizePath(repo_root, mustWork = TRUE)
 
 manuscripts <- c("main.tex", "rqr-gibbs-supplement.tex")
-included_text <- character()
+included_text <- file.path("tables", list.files(file.path(repo_root, "tables"),
+  pattern = "^pharma_application_.*\\.tex$"))
 source_files <- c(manuscripts, included_text)
 paths <- file.path(repo_root, source_files)
 if (any(!file.exists(paths))) {
@@ -37,6 +38,17 @@ forbidden <- c(
 )
 
 failures <- character()
+source(file.path(repo_root, "application", "scripts", "lib", "pharma_manuscript_language.R"))
+for (file in manuscripts) {
+  start <- grep("\\\\section\\{Pharmaceutical", lines[[file]])
+  if (length(start) != 1L) stop("Expected one pharmaceutical section in ", file)
+  later <- grep("^\\\\section\\{", lines[[file]])
+  end <- later[later > start][1L]
+  if (is.na(end)) end <- length(lines[[file]]) + 1L
+  application <- paste(lines[[file]][seq.int(start, end - 1L)], collapse = " ")
+  findings <- pma_language_findings(application)
+  if (length(findings)) failures <- c(failures, paste(file, findings, sep = ": "))
+}
 for (file in source_files) {
   for (label in names(forbidden)) {
     hit <- grep(forbidden[[label]], lines[[file]], ignore.case = TRUE, perl = TRUE)

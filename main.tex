@@ -86,8 +86,8 @@ Wilks intervals across feasible content--sample-size cells and eight continuous
 distributions. The study emphasizes skewed distributions, where placement
 matters most, and excludes cells where the sample range cannot support the
 requested two-sided distribution-free statement.
-A pharmaceutical batch-level application provides a descriptive real-data
-illustration of endpoint placement on historical manufacturing batches.
+A pharmaceutical batch application illustrates endpoint placement, held-out
+empirical content, and sensitivity to partitioning historical batches.
 \end{abstract}
 
 
@@ -948,47 +948,52 @@ Other variants are kept outside the primary comparison.
 
 \section{Pharmaceutical Batch Application}
 \label{sec:pharma-application}
+\input{tables/pharma_application_numbers.tex}
 
-We next apply the three reported procedures to the pharmaceutical-manufacturing
-data of \citet{ZagarMihelic2022PharmaManufacturing}, using the public
-\texttt{Laboratory.csv} file \citep{ZagarMihelic2021LaboratoryCsv}. The
-application is descriptive: the simulation study above provides the controlled
-evidence about tolerance performance. Here the goal is to show how the
-prespecified interval rules place endpoints on observed batch-level data.
+Pharmaceutical batch records provide an illustration of interval placement
+and its empirical stability. We compare the proposed MTI-ECM procedure with
+the Young--Mathew and Wilks benchmarks using the public manufacturing data of
+\citet{ZagarMihelic2022PharmaManufacturing} and the associated
+\texttt{Laboratory.csv} file \citep{ZagarMihelic2021LaboratoryCsv}.
 
-One observation corresponds to one manufacturing batch. We restrict attention
-to product code 23, which gives 187 batches with a common recorded strength and
-batch size. This restriction reduces heterogeneity before applying two-sided
-interval procedures.
+Each observation represents one batch. Product code \PharmaProductCode{}
+provides \PharmaBatches{} batches with a common recorded strength and batch
+size. The response is the reported film-coated-tablet tensile-strength
+measure. Its sample skewness is \PharmaTensileSkewness{}, making it a
+moderately skewed example alongside the more asymmetric simulation laws.
+The public file does not resolve the physical unit of this derived measure
+or supply product-specific acceptance criteria. The analysis therefore
+describes historical batch variation and endpoint placement.
 
-The main response is the reported film-coated-tablet tensile-strength measure.
-The public file does not give product-specific acceptance criteria or a
-resolved physical unit for this derived field, so the fitted intervals are
-interpreted as statistical summaries of historical batch-to-batch variation.
-They are not regulatory specifications, release limits, or process-control
-limits. A content-defined two-sided interval is a reasonable descriptive
-summary for this example because unusually low and unusually high tablet
-strength may both be relevant to handling and performance.
+The primary analysis uses \PharmaSplits{} paired random splits, each with
+\PharmaTrain{} training and \PharmaHeldout{} held-out batches. Every method
+uses the same observations within a split, and both responses considered here
+use the same partition definitions. The requested population content is
+\(c=\PharmaContent\), with nominal tolerance confidence
+\(\PharmaConfidence\). The MTI-ECM calibration rule, posterior content
+criterion, candidate grids, prior, and optimizer settings are fixed before
+examining these responses. Young--Mathew and Wilks use the conventions in
+Section~\ref{sec:evaluation}. All intervals are closed, so held-out values
+equal to an endpoint count as included.
 
-The application uses \(c=0.90\) and tolerance confidence \(0.95\). For each of
-1000 paired splits, all methods are fitted to the same \(n=100\) training
-batches and evaluated on the remaining 87 batches. MTI-ECM uses the fixed calibration rule
-from the simulation calibration, with no tuning on the pharmaceutical data.
-Young--Mathew and Wilks are evaluated with the same endpoint conventions as in
-Section~\ref{sec:evaluation}. The split exercise is not used to choose or tune
-a method. Recorded ties and possible dependence among historical batches limit
-the iid continuous interpretation. Held-out empirical content describes
-stability on the withheld batches. Repeated-sampling tolerance evidence
-for MTI-ECM comes from the independent simulation study.
+Held-out empirical content is the fraction of withheld batches inside the
+fitted interval. Lower- and upper-tail omission are the fractions below and
+above its endpoints. These summaries describe the finite dataset. Overlapping
+splits do not provide independent sampling replications, and recorded ties
+and possible batch dependence limit an iid continuous interpretation.
+The controlled repeated-sampling tolerance evidence remains the simulation
+study in Section~\ref{sec:evaluation}.
 
 \begin{table}[!htbp]
 \centering
 \caption{\textbf{Pharmaceutical tensile-strength application.} Intervals are
-fit on 100 code-23 batches and evaluated on the 87 held-out batches over 1000
-paired splits. Width and held-out content summaries report medians with
-empirical 2.5\%--97.5\% ranges across splits. Omitted below/above gives the
-median held-out percentage below the lower endpoint and above the upper
-endpoint.}
+fit on \PharmaTrain{} batches and evaluated on \PharmaHeldout{} withheld
+batches over \PharmaSplits{} paired random splits. These splits reuse one
+finite dataset and are not independent sampling replications. Bracketed ranges
+are empirical 2.5\%--97.5\% quantiles. Lower and upper endpoints are summarized
+separately. Held-out \(\ge c\) gives the percentage of all splits with
+held-out empirical content at least \(c\); returned intervals and tail
+omissions are reported separately.}
 \label{tab:pharma-application-primary}
 \TableStyle
 \input{tables/pharma_application_primary_summary.tex}
@@ -997,24 +1002,43 @@ endpoint.}
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig06_pharma_application_tensile_intervals.png}
-\caption{\textbf{Endpoint placement in the pharmaceutical application.} Thick
-segments show median endpoints across paired splits; pale segments show the
-empirical 95\% endpoint envelope. Young--Mathew shifts the median interval
-upward relative to MTI-ECM, and Wilks uses a wider range.}
+\caption{\textbf{Interval placement and held-out comparisons for tensile
+strength.} Panel A shows the empirical distribution of all \PharmaBatches{}
+batches and actual fitted intervals from split
+\PharmaTensileRepresentative{}, selected by the prespecified median-distance
+rule. The interval rows below the CDF are positioned for display. Panels B
+and C show paired width and held-out-content differences, MTI-ECM minus each
+benchmark, with crosses marking paired medians. Panel D shows median tail
+omission, interquartile ranges (thick segments), and empirical 95\% ranges
+(thin segments) across random splits.}
 \label{fig:pharma-application-primary}
 \end{figure}
 
-For the tensile-strength measure, MTI-ECM produces the median interval
-\([1.101,1.618]\), with median width \(0.552\).
-Young--Mathew is slightly shorter in median width but shifts the interval
-upward and has the same median held-out content. Wilks has higher held-out
-content because it spans the training sample range, but its median width
-is larger. These patterns support the application's role as an interpretability
-check, with method comparisons remaining anchored in the controlled simulation
-study. The supplement repeats the analysis for tablet-core weight relative
-standard deviation, a strongly right-skewed response for which the two-sided
-analysis is useful for studying placement but an upper tolerance limit would be
-more natural for a direct quality-control decision.
+MTI-ECM has median width \PharmaTensileMtiWidth{}, compared with
+\PharmaTensileYmWidth{} for Young--Mathew and \PharmaTensileWilksWidth{} for
+Wilks. The median paired width difference against Young--Mathew is
+\PharmaTensilePairedYmWidthDifference{}, so MTI-ECM offers no median width
+gain on this response. Median held-out empirical content is
+\PharmaTensileMtiContent\% for MTI-ECM and \PharmaTensileYmContent\% for
+Young--Mathew. Their tail allocations differ: MTI-ECM omits median fractions
+\PharmaTensileMtiLowerOmitted\% below and
+\PharmaTensileMtiUpperOmitted\% above, whereas Young--Mathew allocates
+\PharmaTensileYmLowerOmitted\% and \PharmaTensileYmUpperOmitted\%,
+respectively. Width and empirical content should therefore be read together
+with endpoint placement.
+
+The supplement examines forward and reverse chronological partitions and
+\PharmaGroupedSplits{} unique partitions that keep either production months
+or active pharmaceutical ingredient (API) batches intact. All retain the same
+training size. For example, reverse chronology gives MTI-ECM held-out content
+of \PharmaTensileReverseContent\%, illustrating sensitivity to the partition.
+The preassigned ECM convergence criterion is met in
+\PharmaTensileConverged{} of \PharmaTensileReturned{} returned tensile-strength
+fits. Numerical diagnostics and summaries restricted to those splits are
+reported in the supplement. The supplementary tablet-core weight relative
+standard deviation (RSD) example illustrates stronger asymmetry; its
+upper-adverse interpretation would favor a one-sided
+upper tolerance limit for a direct quality-control decision.
 
 
 \section{Discussion}
