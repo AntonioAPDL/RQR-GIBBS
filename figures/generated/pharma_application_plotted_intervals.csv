@@ -1,0 +1,7 @@
+"response_id","method_id","method_role","split_id","lower","upper","width"
+"fct_tensile","mti_ecm_adaptive_cell","proposed",479,"1.10088857039448","1.68954634837889","0.588657777984402"
+"fct_tensile","young_mathew","benchmark",479,"1.1366099037524999","1.689546335","0.55293643124750003"
+"fct_tensile","wilks_minmax","benchmark",479,"1.0403397029999999","1.7479962490000001","0.70765654600000005"
+"tbl_rsd_weight","mti_ecm_adaptive_cell","proposed",540,"0.59999999338568699","2.6100000024719501","2.01000000908626"
+"tbl_rsd_weight","young_mathew","benchmark",540,"0.69999999999999996","2.9700000000000002","2.27"
+"tbl_rsd_weight","wilks_minmax","benchmark",540,"0.59999999999999998","4.0499999999999998","3.4500000000000002"

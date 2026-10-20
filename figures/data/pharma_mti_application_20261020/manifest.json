@@ -1,0 +1,435 @@
+{
+  "schema_version": "rqrgibbs_pharma_mti_application/2.0.0",
+  "study_id": "pharma_mti_application_20261020",
+  "mode": "confirmatory",
+  "repository_commit": "9524e80bb4c62085113739d291a6c9c7a88eb186",
+  "branch": "codex/pharma-mti-application-revision-20261020",
+  "repository_clean": false,
+  "git_status": ["?? application/scripts/lib/pharma_mti_reporting.R", "?? figures/generate_pharma_mti_application_figures.R", "?? tables/generate_pharma_mti_application_tables.R"],
+  "calculation_sources": [
+    {
+      "path": "application/scripts/lib/pharma_tolerance_application.R",
+      "sha256": "8f5c404e46b7cb6609fe165492ca48981ccf24cf866045a7f342714455bd6128",
+      "bytes": 35935,
+      "_row": "application/scripts/lib/pharma_tolerance_application.R"
+    },
+    {
+      "path": "application/scripts/lib/pharma_mti_application.R",
+      "sha256": "ba7c2e09a1cfa0e638ad61a9e89c4b7995c72b2aa0b889cc50d1d8e12e43e279",
+      "bytes": 31980,
+      "_row": "application/scripts/lib/pharma_mti_application.R"
+    },
+    {
+      "path": "application/scripts/86_run_pharma_mti_application.R",
+      "sha256": "66dc2e89cfdad4d8c74714be54171cac84acab17b94c4e693995151161d17063",
+      "bytes": 1679,
+      "_row": "application/scripts/86_run_pharma_mti_application.R"
+    }
+  ],
+  "source_files": [
+    {
+      "path": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/config/pharma_tolerance_application_mti_only_20261020.json",
+      "sha256": "ec8bdff272e6be464a9bece534ab2f6971eb4209cfbf0c3afd2feb115290d977",
+      "bytes": 4105,
+      "_row": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/config/pharma_tolerance_application_mti_only_20261020.json"
+    },
+    {
+      "path": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/cache/pharma_application_20261020/Laboratory.csv",
+      "sha256": "a3b0f16c7c3fa8052b38d767e38fda731a751acc4ec139b52d01577b32dc6483",
+      "bytes": 293492,
+      "_row": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/cache/pharma_application_20261020/Laboratory.csv"
+    },
+    {
+      "path": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/cache/pharma_application_20261020/code23_laboratory.csv",
+      "sha256": "f477137b952d23234aef63057cde2bb20bbc8969f72420ed1eadf7dcdc09ac99",
+      "bytes": 54197,
+      "_row": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/cache/pharma_application_20261020/code23_laboratory.csv"
+    },
+    {
+      "path": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv",
+      "sha256": "9942e5c9aad8701e125b4caf0c84df292a69886b7d1e176e44f512e6ea99b773",
+      "bytes": 11888,
+      "_row": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv"
+    },
+    {
+      "path": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/config/rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827.json",
+      "sha256": "c630d04dad2e45b2ea9cca4d01ce00f9e7132f74fd23f27108d2e341ae961aa7",
+      "bytes": 18062,
+      "_row": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/config/rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827.json"
+    },
+    {
+      "path": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/tables/tolerance_validation_article_scan_calibration.csv",
+      "sha256": "53d4f403888c28362bbb07fdce40328278c7f969a8865406073dcf9960b0d3b0",
+      "bytes": 540,
+      "_row": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/tables/tolerance_validation_article_scan_calibration.csv"
+    }
+  ],
+  "expected_result_rows": 9012,
+  "observed_result_rows": 9012,
+  "split_counts": {
+    "api_grouped": 250,
+    "chronological_forward": 1,
+    "chronological_reverse": 1,
+    "month_grouped": 250,
+    "random": 1000
+  },
+  "available_group_partitions": {
+    "month_grouped": 8287,
+    "api_grouped": 220304429328877
+  },
+  "return_counts": {
+    "mti_ecm_adaptive_cell": 3004,
+    "wilks_minmax": 3004,
+    "young_mathew": 3004
+  },
+  "failure_counts": {
+    "mti_ecm_adaptive_cell": 0,
+    "wilks_minmax": 0,
+    "young_mathew": 0
+  },
+  "ecm_convergence_counts": {
+    "converged": 170,
+    "not_converged": 2834,
+    "not_applicable": 6008,
+    "missing_mti_flag": 0
+  },
+  "package_versions": {
+    "rqrgibbs": "0.1.0.9036",
+    "tolerance": "3.0.0",
+    "Rcpp": "1.1.1.1.1",
+    "RcppArmadillo": "15.2.6.1",
+    "digest": "0.6.39",
+    "jsonlite": "2.0.0"
+  },
+  "R_version": "R version 4.5.3 (2026-03-11)",
+  "operating_system": ["Linux", "4.18.0-553.120.1.el8_10.x86_64", "#1 SMP Mon Apr 20 18:04:27 EDT 2026", "jerez.be.ucsc.edu", "x86_64", "jaguir26", "jaguir26", "jaguir26"],
+  "rng_kind": ["Mersenne-Twister", "Inversion", "Rejection"],
+  "base_seed": 9020902,
+  "workers": 40,
+  "threads_per_worker": 1,
+  "started_utc": "2026-10-20T22:30:16Z",
+  "completed_utc": "2026-10-20T22:36:32Z",
+  "elapsed_sec": 376.043,
+  "compiler": "g++",
+  "BLAS_LAPACK": ["1.2.11", "1.0.6, 6-Sept-2010", "5.2.4", "1.9", "10.32 2018-09-10", "60.3", "TRE 0.8.0 (BSD)", "glibc 2.28", "7.0", "/usr/lib64/libopenblaso-r0.3.15.so"],
+  "LAPACK_library": "/usr/lib64/libopenblaso-r0.3.15.so",
+  "rqrgibbs_library": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/cache/pharma_mti_library/rqrgibbs",
+  "rqrgibbs_shared_library_sha256": "bb53714add88bebb50dde64d011d94db0cdbc810706b7dd9506d7b52222aaac5",
+  "pinned_exdqlm_commit": "dffb71ee70b597d6a716ee74be1cbc99731cd453",
+  "exdqlm_loaded": false,
+  "artifacts": [
+    {
+      "path": "config_frozen.json",
+      "sha256": "ec8bdff272e6be464a9bece534ab2f6971eb4209cfbf0c3afd2feb115290d977",
+      "bytes": 4105,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/config_frozen.json"
+    },
+    {
+      "path": "convergence_sensitivity.csv",
+      "sha256": "35c62735f08cd2a3d7d8565bd5803d2ba83f04a96c13922f05101555bc46e24b",
+      "bytes": 9435,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/convergence_sensitivity.csv"
+    },
+    {
+      "path": "endpoint_precision_recovery.csv",
+      "sha256": "f81ac9568592d65a9a3acaefec1053e015429c70d7e26ef6720e5baad7ff70bf",
+      "bytes": 945,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/endpoint_precision_recovery.csv"
+    },
+    {
+      "path": "failures.csv",
+      "sha256": "52dbd2a9999262da4d01637c9dc7dc62a4e33788969e4743af29fcd97b7c414a",
+      "bytes": 58,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/failures.csv"
+    },
+    {
+      "path": "method_summary.csv",
+      "sha256": "c7786390c72c29bced1c709bc1254317c6334d2bef0135dbd127bebc0822b4ea",
+      "bytes": 10685,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/method_summary.csv"
+    },
+    {
+      "path": "numerical_diagnostics.csv",
+      "sha256": "a02a5f1212cafd30cacace7caf02bc97313bd5e64ed0fb147784c9b7b4183c9b",
+      "bytes": 11940,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/numerical_diagnostics.csv"
+    },
+    {
+      "path": "observed_batches.csv",
+      "sha256": "1553e9c92474fdc65822df30503b7779c9b3ec56374085458ea7964325ea46cf",
+      "bytes": 7725,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/observed_batches.csv"
+    },
+    {
+      "path": "paired_summary.csv",
+      "sha256": "5a254e153e94936c91125e8c2bc1c432632f56812d110c03b46c6a67f7a70b7e",
+      "bytes": 31267,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/paired_summary.csv"
+    },
+    {
+      "path": "progress.json",
+      "sha256": "35b44e33b6f91fa9a3e5f5154970dc6cf08fc26e7a76cce00cf5da1a7aca8311",
+      "bytes": 76,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/progress.json"
+    },
+    {
+      "path": "representative_splits.csv",
+      "sha256": "f3299764d46cc935b730db4e1078543cf9dd194ab55f4d0935f1569849102bfc",
+      "bytes": 310,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/representative_splits.csv"
+    },
+    {
+      "path": "representative_splits.json",
+      "sha256": "0affb4fa5007ece680ab0ecca82f388d317ba8bc61a91d9b85b3425d2d471610",
+      "bytes": 2621,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/representative_splits.json"
+    },
+    {
+      "path": "results.csv",
+      "sha256": "223eeab04e8acd4dcda8657a4012f7413b81ad0f7e3cc83bada7e6e7c9e89e3c",
+      "bytes": 3653124,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/results.csv"
+    },
+    {
+      "path": "sessionInfo.txt",
+      "sha256": "22117cf772879a8f2482096663d0cfcc9a537e8fc32812dfd2c76f4f77247679",
+      "bytes": 1564,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/sessionInfo.txt"
+    },
+    {
+      "path": "split_membership.csv.gz",
+      "sha256": "d832db1189395d0f3650482b2ea0ea9e2f6e3e117510b8cceea141f637505a8c",
+      "bytes": 994871,
+      "_row": "application/outputs/pharma_mti_application_20261020/confirmatory_precision_final_20261020/split_membership.csv.gz"
+    }
+  ],
+  "derived_tables_and_figures": [
+    {
+      "path": "tables/pharma_application_convergence_sensitivity.csv",
+      "sha256": "adcb15932a7dc03d5c18ac3f46115ac2fff68c2262a67389fcc1c978b4fbea3b",
+      "bytes": 7965,
+      "_row": "tables/pharma_application_convergence_sensitivity.csv"
+    },
+    {
+      "path": "tables/pharma_application_convergence_sensitivity.tex",
+      "sha256": "4583a8f418cb3d4432d30b31dad70ae347ffef5262ca509284ded7097b2b75a1",
+      "bytes": 458,
+      "_row": "tables/pharma_application_convergence_sensitivity.tex"
+    },
+    {
+      "path": "tables/pharma_application_dependence_sensitivity.csv",
+      "sha256": "4c78a9bb2ecc9040c7437ad9e2cfcdeaa452dbda3039949424331c4e7c2067c2",
+      "bytes": 8350,
+      "_row": "tables/pharma_application_dependence_sensitivity.csv"
+    },
+    {
+      "path": "tables/pharma_application_failure_categories.csv",
+      "sha256": "d2ca0986f4cc33784f796bb52b20414ab28520562b7c2d9ece8111d3373bd392",
+      "bytes": 66,
+      "_row": "tables/pharma_application_failure_categories.csv"
+    },
+    {
+      "path": "tables/pharma_application_numbers.csv",
+      "sha256": "5b2f24e8a9b47f8969017db5fa442a50523a7592f097beb9b45a8f09933cf61d",
+      "bytes": 2264,
+      "_row": "tables/pharma_application_numbers.csv"
+    },
+    {
+      "path": "tables/pharma_application_numbers.tex",
+      "sha256": "090bb4ca972a4f41d569217fa0c92aa4b6f0d0707bf51909f533d490e95be77c",
+      "bytes": 3038,
+      "_row": "tables/pharma_application_numbers.tex"
+    },
+    {
+      "path": "tables/pharma_application_numerical_diagnostics.csv",
+      "sha256": "d26930235bc0e60704623f9f6d1b34f34135c30bcf02e6ac27741a11b17ee01a",
+      "bytes": 9618,
+      "_row": "tables/pharma_application_numerical_diagnostics.csv"
+    },
+    {
+      "path": "tables/pharma_application_numerical_diagnostics.tex",
+      "sha256": "1dae59d64d632c9ba771218fa19cdbcf4a1cd0bb9aef0dbac147d01d6c4efff3",
+      "bytes": 1090,
+      "_row": "tables/pharma_application_numerical_diagnostics.tex"
+    },
+    {
+      "path": "tables/pharma_application_paired_summary.csv",
+      "sha256": "5afd1a0e60edde586001f55188691f782bdf9f313dacc9622d5a82748d69af04",
+      "bytes": 28191,
+      "_row": "tables/pharma_application_paired_summary.csv"
+    },
+    {
+      "path": "tables/pharma_application_primary_paired_summary.csv",
+      "sha256": "34bf9295ce7f5b28423da6e64965d2a17e66e10dea547426b68cbe097313c5f3",
+      "bytes": 2976,
+      "_row": "tables/pharma_application_primary_paired_summary.csv"
+    },
+    {
+      "path": "tables/pharma_application_primary_paired_summary.tex",
+      "sha256": "99e742d51033310979039f4788dd4fef280c51876c15010591db8d5089a53e75",
+      "bytes": 1830,
+      "_row": "tables/pharma_application_primary_paired_summary.tex"
+    },
+    {
+      "path": "tables/pharma_application_primary_sensitivity.tex",
+      "sha256": "e2407d05a77832ff6672c7084da320fa542496ae89f66930d267ea5c778e962a",
+      "bytes": 2072,
+      "_row": "tables/pharma_application_primary_sensitivity.tex"
+    },
+    {
+      "path": "tables/pharma_application_primary_summary.csv",
+      "sha256": "c84f11bee809381759a87bba630e55c75e457fbe3a343aff617a8d006e08426c",
+      "bytes": 1160,
+      "_row": "tables/pharma_application_primary_summary.csv"
+    },
+    {
+      "path": "tables/pharma_application_primary_summary.tex",
+      "sha256": "630e880f9f056646c1e322d23cd406bde72236e854393e71998d404d4e21ec0b",
+      "bytes": 856,
+      "_row": "tables/pharma_application_primary_summary.tex"
+    },
+    {
+      "path": "tables/pharma_application_response_diagnostics.csv",
+      "sha256": "8c6b866f7ebc1ac5bfbfbbf1e842ca9d0a86c8d8b5f4b1e3855353a378580009",
+      "bytes": 537,
+      "_row": "tables/pharma_application_response_diagnostics.csv"
+    },
+    {
+      "path": "tables/pharma_application_response_diagnostics.tex",
+      "sha256": "291876c7fe9dbe004acd46c60e9315c03e28022c175ed3496e6af66e71859ee3",
+      "bytes": 359,
+      "_row": "tables/pharma_application_response_diagnostics.tex"
+    },
+    {
+      "path": "tables/pharma_application_rsd_paired_summary.csv",
+      "sha256": "9ce0d0f72428f80e1d13859a03d4c948770823b98bb1a4f4bb1252cde7bb5470",
+      "bytes": 2997,
+      "_row": "tables/pharma_application_rsd_paired_summary.csv"
+    },
+    {
+      "path": "tables/pharma_application_rsd_paired_summary.tex",
+      "sha256": "8c0b855d87113633db75d5f35ef12e4d2cd676d9be44317ec470fd35065b6879",
+      "bytes": 1824,
+      "_row": "tables/pharma_application_rsd_paired_summary.tex"
+    },
+    {
+      "path": "tables/pharma_application_rsd_sensitivity.tex",
+      "sha256": "a2d506b41cd87c859ee8a69f96f49a862ba0e4a39cb20e0f601ea3fc11411b52",
+      "bytes": 2061,
+      "_row": "tables/pharma_application_rsd_sensitivity.tex"
+    },
+    {
+      "path": "tables/pharma_application_runtime_summary.csv",
+      "sha256": "4710cedb6dcd32c5565a18f83d8a85551302c5f69ed83849e9c1e1aac1b39e51",
+      "bytes": 3512,
+      "_row": "tables/pharma_application_runtime_summary.csv"
+    },
+    {
+      "path": "tables/pharma_application_summary.csv",
+      "sha256": "4c78a9bb2ecc9040c7437ad9e2cfcdeaa452dbda3039949424331c4e7c2067c2",
+      "bytes": 8350,
+      "_row": "tables/pharma_application_summary.csv"
+    },
+    {
+      "path": "tables/pharma_application_supplement_summary.csv",
+      "sha256": "3e4cba0cf14444913c87a9089138909242b02dd0311898a010aa1f141ec52865",
+      "bytes": 1102,
+      "_row": "tables/pharma_application_supplement_summary.csv"
+    },
+    {
+      "path": "tables/pharma_application_supplement_summary.tex",
+      "sha256": "9610439f119db5ba19518f44c77a4b043d8b1e1085aff68e22430e0c0c3891d7",
+      "bytes": 856,
+      "_row": "tables/pharma_application_supplement_summary.tex"
+    },
+    {
+      "path": "figures/generated/fig06_pharma_application_tensile_intervals.png",
+      "sha256": "fe1a1430fb8610582c454098b881de6ca9c08adb0ce598a4cedfeb4988ebc2fc",
+      "bytes": 274754,
+      "_row": "figures/generated/fig06_pharma_application_tensile_intervals.png"
+    },
+    {
+      "path": "figures/generated/figS04_pharma_application_rsd_intervals.png",
+      "sha256": "fd41d9acdccea6f434ccda51a04a1385acf61980f5f0f63e3d8996bca2363634",
+      "bytes": 281023,
+      "_row": "figures/generated/figS04_pharma_application_rsd_intervals.png"
+    },
+    {
+      "path": "figures/generated/figS05_pharma_application_partition_sensitivity.png",
+      "sha256": "27aaa7392b82a2a0f2b20e9000e76ebe7f4a0f072c699f359440091208e2b1c6",
+      "bytes": 148162,
+      "_row": "figures/generated/figS05_pharma_application_partition_sensitivity.png"
+    },
+    {
+      "path": "figures/generated/pharma_application_figure_manifest.csv",
+      "sha256": "2f40bb32c9a37708b8141c26546153acf7214a9b8235ee023241441eb4e99ecc",
+      "bytes": 2413,
+      "_row": "figures/generated/pharma_application_figure_manifest.csv"
+    },
+    {
+      "path": "figures/generated/pharma_application_plotted_intervals.csv",
+      "sha256": "3613561cf1b99774855aa07310ef76798ca09e085eff2b458920d7aba0d3ad2c",
+      "bytes": 725,
+      "_row": "figures/generated/pharma_application_plotted_intervals.csv"
+    },
+    {
+      "path": "figures/data/pharma_application_data_provenance.csv",
+      "sha256": "7058c56cf2e8004b0f763a47f661d9611f37e000dc924debbf97893b8037190b",
+      "bytes": 437,
+      "_row": "figures/data/pharma_application_data_provenance.csv"
+    }
+  ],
+  "csv_precision_recovery": {
+    "original_run": "/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020/application/outputs/pharma_mti_application_20261020/confirmatory_20261020",
+    "original_manifest_sha256": "6e1b73bef794a47b6cc2160e51aed1b548356c02efb9dcf59f4718019f835e22",
+    "original_results_sha256": "80dd488cbca42ef5cc5cd2c27ae9fa798df07a857fb41d811fb8a8bad286dafe",
+    "changed_rows": 5,
+    "methods": "young_mathew",
+    "mti_fits_repeated": 0,
+    "empirical_evaluations_changed": 0,
+    "tolerance_version": "3.0.0",
+    "explanation": "Restore original endpoint precision by reproducing only affected deterministic benchmark fits; retain every original empirical evaluation and MTI result.",
+    "sources": [
+      {
+        "path": "application/scripts/88_recover_pharma_application_csv_precision.R",
+        "sha256": "fcc5a1dcda381e970c245486e2be74daa0990ca0ed0785335106e4481bc89542",
+        "bytes": 5466,
+        "_row": "application/scripts/88_recover_pharma_application_csv_precision.R"
+      },
+      {
+        "path": "application/scripts/lib/pharma_mti_application.R",
+        "sha256": "893f7d0c122118848a32476ddd9c6dd27983367957b1943a912ebc9fc165f4ea",
+        "bytes": 32603,
+        "_row": "application/scripts/lib/pharma_mti_application.R"
+      }
+    ]
+  },
+  "reporting_sources": [
+    {
+      "path": "application/scripts/lib/pharma_mti_reporting.R",
+      "sha256": "7887a8a27b95f97f62661d3f4e3d3567d1f194554babc9789976f2944e602b6b",
+      "bytes": 16860,
+      "_row": "application/scripts/lib/pharma_mti_reporting.R"
+    },
+    {
+      "path": "tables/generate_pharma_mti_application_tables.R",
+      "sha256": "d7af08a53a35c8f8b519df1c0bc3deef1d785a27517ef854155a5528a15071e7",
+      "bytes": 1679,
+      "_row": "tables/generate_pharma_mti_application_tables.R"
+    },
+    {
+      "path": "figures/generate_pharma_mti_application_figures.R",
+      "sha256": "c112215c67881aed6e7d2a9862caa06b6ff05448a98a37100eba18db1a0ac5bd",
+      "bytes": 9458,
+      "_row": "figures/generate_pharma_mti_application_figures.R"
+    },
+    {
+      "path": "application/scripts/87_finalize_pharma_mti_report.R",
+      "sha256": "85b4f84274e1b96c5f57c50d1f4933fdc99fe7e4ad13da43abb5642efeb975f4",
+      "bytes": 2020,
+      "_row": "application/scripts/87_finalize_pharma_mti_report.R"
+    }
+  ],
+  "reporting_commit": "5bdeaa589d1b887d7d50c274d2f6aae48d5a5190",
+  "reporting_status": [" M Makefile", " M README.md", " M application/scripts/63_validate_manuscript_bayesian_language.R", " M figures/generated/.gitignore", " M figures/generated/fig06_pharma_application_tensile_intervals.png", " M figures/generated/figS04_pharma_application_rsd_intervals.png", " M figures/generated/pharma_application_figure_manifest.csv", " M figures/generated/rqr_theory_figure_provenance.csv", " M figures/generated/tolerance_validation_primary_figure_manifest.csv", " M main.tex", " M rqr-gibbs-supplement.tex", " M tables/pharma_application_dependence_sensitivity.csv", " D tables/pharma_application_dependence_sensitivity.tex", " M tables/pharma_application_primary_summary.csv", " M tables/pharma_application_primary_summary.tex", " M tables/pharma_application_summary.csv", " M tables/pharma_application_supplement_summary.csv", " M tables/pharma_application_supplement_summary.tex", "?? application/scripts/87_finalize_pharma_mti_report.R", "?? application/scripts/lib/pharma_manuscript_language.R", "?? application/scripts/lib/pharma_mti_reporting.R", "?? docs/implementation_notes/pharma_mti_application_revision_20261020.md", "?? figures/data/pharma_mti_application_20261020/", "?? figures/generate_pharma_mti_application_figures.R", "?? figures/generated/figS05_pharma_application_partition_sensitivity.png", "?? figures/generated/pharma_application_plotted_intervals.csv", "?? figures/test_pharma_mti_application_figures.R", "?? tables/generate_pharma_mti_application_tables.R", "?? tables/pharma_application_convergence_sensitivity.csv", "?? tables/pharma_application_convergence_sensitivity.tex", "?? tables/pharma_application_failure_categories.csv", "?? tables/pharma_application_numbers.csv", "?? tables/pharma_application_numbers.tex", "?? tables/pharma_application_numerical_diagnostics.csv", "?? tables/pharma_application_numerical_diagnostics.tex", "?? tables/pharma_application_paired_summary.csv", "?? tables/pharma_application_primary_paired_summary.csv", "?? tables/pharma_application_primary_paired_summary.tex", "?? tables/pharma_application_primary_sensitivity.tex", "?? tables/pharma_application_rsd_paired_summary.csv", "?? tables/pharma_application_rsd_paired_summary.tex", "?? tables/pharma_application_rsd_sensitivity.tex", "?? tables/pharma_application_runtime_summary.csv", "?? tables/test_pharma_mti_application_tables.R"]
+}

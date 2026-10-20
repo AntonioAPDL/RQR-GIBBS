@@ -1,0 +1,15 @@
+"response_id","response_role","split_scheme","comparator_id","comparator","metric","splits","paired_returns","finite_pairs","median","q025","q25","q75","q975","iqr"
+"tbl_rsd_weight","supplement","random","wilks_minmax","Wilks","width_difference",1000,1000,1000,-1.07999999218219,-1.83608332118079,-1.43999999034871,-0.659999990854541,-0.329999986738609,0.779999999494167
+"tbl_rsd_weight","supplement","random","wilks_minmax","Wilks","width_ratio",1000,1000,1000,0.659176033829354,0.464550078962103,0.582608698301798,0.741525428149504,0.848101269667857,0.158916729847706
+"tbl_rsd_weight","supplement","random","wilks_minmax","Wilks","lower_difference",1000,1000,1000,-6.61045851391151e-09,-8.60469834459051e-09,-7.57687829144871e-09,-5.88456906351157e-09,-2.83486070451477e-09,1.69230922793714e-09
+"tbl_rsd_weight","supplement","random","wilks_minmax","Wilks","upper_difference",1000,1000,1000,-1.07999999789552,-1.82924999433265,-1.43999999741311,-0.659999997515894,-0.309999996951567,0.779999999897217
+"tbl_rsd_weight","supplement","random","wilks_minmax","Wilks","heldout_empirical_content_difference",1000,1000,1000,-0.011494252873564,-0.06896551724138,-0.0344827586206891,0,0,0.0344827586206891
+"tbl_rsd_weight","supplement","random","wilks_minmax","Wilks","heldout_lower_omitted_difference",1000,1000,1000,0,0,0,0,0,0
+"tbl_rsd_weight","supplement","random","wilks_minmax","Wilks","heldout_upper_omitted_difference",1000,1000,1000,0.0114942528735632,0,0,0.0344827586206897,0.0689655172413793,0.0344827586206897
+"tbl_rsd_weight","supplement","random","young_mathew","Young--Mathew","width_difference",1000,1000,1000,-0.2105933087814,-0.823710222909566,-0.362237317073473,-0.0999999911301142,0.0347609361777456,0.262237325943359
+"tbl_rsd_weight","supplement","random","young_mathew","Young--Mathew","width_ratio",1000,1000,1000,0.915429283142432,0.67977156343257,0.85138372153866,0.952385721855953,1.02091604534068,0.101002000317294
+"tbl_rsd_weight","supplement","random","young_mathew","Young--Mathew","lower_difference",1000,1000,1000,-0.087762680037357,-0.131050699158743,-0.0977626800576126,-0.073288026145377,-0.0177626807866142,0.0244746539122356
+"tbl_rsd_weight","supplement","random","young_mathew","Young--Mathew","upper_difference",1000,1000,1000,-0.29999999790399,-0.909999997160231,-0.449999997762333,-0.14999999776264,3.19853791970933e-09,0.299999999999693
+"tbl_rsd_weight","supplement","random","young_mathew","Young--Mathew","heldout_empirical_content_difference",1000,1000,1000,0.0114942528735631,-0.0344827586206901,0,0.0344827586206899,0.080459770114943,0.0344827586206899
+"tbl_rsd_weight","supplement","random","young_mathew","Young--Mathew","heldout_lower_omitted_difference",1000,1000,1000,-0.0229885057471264,-0.0919540229885057,-0.0344827586206897,-0.0114942528735632,0,0.0229885057471265
+"tbl_rsd_weight","supplement","random","young_mathew","Young--Mathew","heldout_upper_omitted_difference",1000,1000,1000,0,0,0,0.0114942528735633,0.0459770114942529,0.0114942528735633

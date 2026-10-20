@@ -163,6 +163,12 @@ PHARMA_APPLICATION_RUN_DIR ?=
 PHARMA_APPLICATION_RESULTS ?= $(if $(strip $(PHARMA_APPLICATION_RUN_DIR)),$(PHARMA_APPLICATION_RUN_DIR)/pharma_application_results.csv,)
 PHARMA_APPLICATION_SENSITIVITY ?= $(if $(strip $(PHARMA_APPLICATION_RUN_DIR)),$(PHARMA_APPLICATION_RUN_DIR)/pharma_application_dependence_sensitivity.csv,)
 PHARMA_APPLICATION_WORKERS ?= 8
+PHARMA_MTI_CONFIG ?= application/config/pharma_tolerance_application_mti_only_20261020.json
+PHARMA_MTI_LIBRARY ?= application/cache/pharma_mti_library
+PHARMA_MTI_RESULTS ?= figures/data/pharma_mti_application_20261020/results.csv
+PHARMA_MTI_RUN_DIR ?=
+PHARMA_MTI_WORKERS ?= 40
+PHARMA_MTI_R = R_LIBS=$(PHARMA_MTI_LIBRARY) OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 RQR_BAYES_UQ_PRIMARY_YM_RESULTS ?=
 RQR_BAYES_UQ_SMALL95_RESULTS ?=
 RQR_BAYES_UQ_SCAN_CALIBRATION ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/scan_calibration_summary.csv
@@ -208,7 +214,7 @@ theory-figures:
 	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_ARTICLE_RESULTS) --mti-ecm-policy-csv=$(RQR_BAYES_UQ_MTI_ECM_POLICY) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) figures/generate_tolerance_population_oracle_figure.R --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
-	$(R) figures/generate_pharma_application_figures.R --summary-csv=$(THEORY_TABLE_DIR)/pharma_application_summary.csv --output-dir=$(THEORY_FIGURE_DIR)
+	$(PHARMA_MTI_R) figures/generate_pharma_mti_application_figures.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_FIGURE_DIR)
 
 theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
@@ -217,7 +223,7 @@ theory-tables:
 	$(R) tables/generate_tolerance_validation_followup_tables.R --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_scenario_tables.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_ARTICLE_RESULTS) --mti-ecm-policy-csv=$(RQR_BAYES_UQ_MTI_ECM_POLICY) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --small95-results=$(RQR_BAYES_UQ_SMALL95_RESULTS) --scan-calibration-csv=$(RQR_BAYES_UQ_SCAN_CALIBRATION) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_gibbs_diagnostic_table.R --diagnostics-csv=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_SOURCE) --output-dir=$(THEORY_TABLE_DIR)
-	$(R) tables/generate_pharma_application_tables.R --results-csv=$(PHARMA_APPLICATION_RESULTS) --sensitivity-csv=$(PHARMA_APPLICATION_SENSITIVITY) --output-dir=$(THEORY_TABLE_DIR)
+	$(PHARMA_MTI_R) tables/generate_pharma_mti_application_tables.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
 
 model-illustration-figures:
 	$(R) figures/generate_oracle_tilt_model_figures.R --evidence-dir=$(ORACLE_TILT_EVIDENCE_DIR) --output-dir=$(THEORY_FIGURE_DIR) --table-dir=$(THEORY_TABLE_DIR)
@@ -228,6 +234,7 @@ test-theory-figures:
 	$(R) figures/test_tolerance_validation_width_figure.R
 	$(R) figures/test_tolerance_population_oracle_figure.R
 	$(R) figures/test_pharma_application_figures.R
+	$(PHARMA_MTI_R) figures/test_pharma_mti_application_figures.R
 
 test-mti-ecm-trace-diagnostics:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-rqr-mti-ecm-profile-trace.R
@@ -251,6 +258,44 @@ test-theory-tables:
 	$(R) tables/test_tolerance_validation_scenario_tables.R
 	$(R) tables/test_tolerance_validation_gibbs_diagnostic_table.R
 	$(R) tables/test_pharma_application_tables.R
+	$(PHARMA_MTI_R) tables/test_pharma_mti_application_tables.R
+
+.PHONY: pharma-mti-application-runtime pharma-mti-application-data pharma-mti-application-preflight pharma-mti-application-smoke pharma-mti-application-confirmatory pharma-mti-application-publish pharma-mti-application-health pharma-mti-application-tables pharma-mti-application-figures pharma-mti-application-report test-pharma-mti-application
+
+pharma-mti-application-runtime:
+	$(MAKE) package-install RQR_PACKAGE_LIBRARY=$(PHARMA_MTI_LIBRARY)
+
+pharma-mti-application-data:
+	$(PHARMA_MTI_R) application/scripts/86_run_pharma_mti_application.R --config=$(PHARMA_MTI_CONFIG) --mode=data
+
+pharma-mti-application-preflight:
+	$(PHARMA_MTI_R) application/scripts/86_run_pharma_mti_application.R --config=$(PHARMA_MTI_CONFIG) --mode=preflight
+
+pharma-mti-application-smoke: pharma-mti-application-runtime
+	$(PHARMA_MTI_R) application/scripts/86_run_pharma_mti_application.R --config=$(PHARMA_MTI_CONFIG) --mode=smoke --workers=$(PHARMA_MTI_WORKERS) $(if $(strip $(PHARMA_MTI_RUN_DIR)),--output-dir=$(PHARMA_MTI_RUN_DIR),)
+
+pharma-mti-application-confirmatory: pharma-mti-application-runtime
+	$(PHARMA_MTI_R) application/scripts/86_run_pharma_mti_application.R --config=$(PHARMA_MTI_CONFIG) --mode=confirmatory --workers=$(PHARMA_MTI_WORKERS) $(if $(strip $(PHARMA_MTI_RUN_DIR)),--output-dir=$(PHARMA_MTI_RUN_DIR),)
+
+pharma-mti-application-publish:
+	$(PHARMA_MTI_R) application/scripts/86_run_pharma_mti_application.R --config=$(PHARMA_MTI_CONFIG) --mode=publish --run-dir="$(PHARMA_MTI_RUN_DIR)"
+
+pharma-mti-application-health:
+	$(PHARMA_MTI_R) application/scripts/86_run_pharma_mti_application.R --config=$(PHARMA_MTI_CONFIG) --mode=health --run-dir="$(PHARMA_MTI_RUN_DIR)"
+
+pharma-mti-application-tables:
+	$(PHARMA_MTI_R) tables/generate_pharma_mti_application_tables.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
+
+pharma-mti-application-figures:
+	$(PHARMA_MTI_R) figures/generate_pharma_mti_application_figures.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_FIGURE_DIR)
+
+pharma-mti-application-report: pharma-mti-application-tables pharma-mti-application-figures
+	$(PHARMA_MTI_R) application/scripts/87_finalize_pharma_mti_report.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS)
+
+test-pharma-mti-application:
+	$(PHARMA_MTI_R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-pharma-mti-application.R
+	$(PHARMA_MTI_R) tables/test_pharma_mti_application_tables.R
+	$(PHARMA_MTI_R) figures/test_pharma_mti_application_figures.R
 
 pharma-application-data:
 	$(R) application/scripts/84_prepare_pharma_application_data.R --config=$(PHARMA_APPLICATION_CONFIG) --mode=prepare
@@ -611,7 +656,7 @@ pdf: theory-figures theory-tables
 		$(PDFLATEX) -interaction=nonstopmode main.tex; \
 	fi
 
-supplement: theory-figures model-illustration-figures
+supplement: theory-figures
 	@if command -v $(LATEXMK) >/dev/null 2>&1; then \
 		$(LATEXMK) -pdf -interaction=nonstopmode rqr-gibbs-supplement.tex; \
 	else \
