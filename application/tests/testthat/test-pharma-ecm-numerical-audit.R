@@ -73,3 +73,20 @@ test_that("case selection uses only design, original flag, and split ID", {
   expect_equal(nrow(a),16L)
   expect_true(all(a$split_id %in% 1:2))
 })
+
+test_that("independent loss matches the frozen package objective", {
+  e <- pea_env()
+  objective <- getFromNamespace(".rqr_ecm_objective","rqrgibbs")
+  set.seed(1600)
+  y <- round(rexp(20),1)
+  for(q in c(.9,.9775)) for(delta in c(-.1,.1)) {
+    ref <- e$pea_reference(y,q,delta)
+    for(z in list(range(y),c(-2,3),c(ref$lower,ref$upper))) {
+      package <- objective(y,matrix(1,length(y),1),z[1],z[2],
+        rqrgibbs::rqr_constants(q,1),rep(delta,length(y)),1e-4,1e-4)
+      expect_equal(e$pea_objective(y,z[1],z[2],q,delta),package$total,tolerance=1e-10)
+    }
+    stationary <- e$pea_stationarity(y,ref$lower,ref$upper,q,delta)
+    expect_lte(stationary$distance,1e-6)
+  }
+})

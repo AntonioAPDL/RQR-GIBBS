@@ -1,0 +1,87 @@
+{
+  "source_run_manifest_sha256": "91fbe66d94058fb9c00ce09d154feb125714e3ed7c80c45b730747a4513ac052",
+  "source_run": "application/outputs/pharma_ecm_numerical_audit_20261020/diagnostic_20261020",
+  "files": [
+    {
+      "path": "all_saved_diagnostics.csv",
+      "sha256": "1557d10a08ce9f300be9dc042e7f958a7315d6f7da11c4374b960ee8bfb9099d",
+      "bytes": 817455,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/all_saved_diagnostics.csv"
+    },
+    {
+      "path": "candidates.csv",
+      "sha256": "86ceef2293b2176b0328ab348676797dae1bfd46f29f4babe448bf319bbbb322",
+      "bytes": 1021324,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/candidates.csv"
+    },
+    {
+      "path": "config_frozen.json",
+      "sha256": "3f21c7110c7aefdbba82b1db01fc994d72840365f4091c4b2fd981b15ada4b78",
+      "bytes": 791,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/config_frozen.json"
+    },
+    {
+      "path": "iteration_traces.csv.gz",
+      "sha256": "642b3be043323d44596c92ca18d6142655986752754364271ca1fe4a71ab23ca",
+      "bytes": 2464241,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/iteration_traces.csv.gz"
+    },
+    {
+      "path": "references.csv",
+      "sha256": "4df12c2f60680ee932ba6f6d92cf40bea0c8c5971c2782f351784fc8afaca91f",
+      "bytes": 766264,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/references.csv"
+    },
+    {
+      "path": "selected_cases.csv",
+      "sha256": "fa177d02c78f3c4aecbf0e34fa8995df859c2bc4d3b866054b8df54a16802900",
+      "bytes": 14835,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/selected_cases.csv"
+    },
+    {
+      "path": "sessionInfo.txt",
+      "sha256": "a7f9919999d01c92f8ad7e7c40a47b41aacd44446c1e07dccfe03c6e08aa75c4",
+      "bytes": 871,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/sessionInfo.txt"
+    },
+    {
+      "path": "summary.csv",
+      "sha256": "1d462214195442b55d7de89abeb2a28319d899c26bd7c42a2bcac79f99bd5533",
+      "bytes": 67733,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/summary.csv"
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "91fbe66d94058fb9c00ce09d154feb125714e3ed7c80c45b730747a4513ac052",
+      "bytes": 17091,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/manifest.json"
+    },
+    {
+      "path": "case_decisions.csv",
+      "sha256": "3db11f76c23f0b2f4e68aaf397fcf78ba6d2a36dec9c62abc6725873a5a545ed",
+      "bytes": 14851,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/case_decisions.csv"
+    },
+    {
+      "path": "findings.md",
+      "sha256": "837eabc9013dec081b9818334d22b8c04d4ac3c010501d438ee3cfa53f5d88c9",
+      "bytes": 1528,
+      "_row": "figures/data/pharma_ecm_numerical_audit_20261020/findings.md"
+    }
+  ],
+  "reporting_sources": [
+    {
+      "path": "application/scripts/lib/pharma_ecm_audit_reporting.R",
+      "sha256": "0e67e526b7495172ba159748a7348ffc418cbc1af8cd3b20eaf129db0553214f",
+      "bytes": 11377,
+      "_row": "application/scripts/lib/pharma_ecm_audit_reporting.R"
+    },
+    {
+      "path": "figures/generate_pharma_ecm_numerical_audit_report.R",
+      "sha256": "7e56b29e708ff9cf55b37ef004bd1737771a66df8a31e59b032ff14206f8a964",
+      "bytes": 1438,
+      "_row": "figures/generate_pharma_ecm_numerical_audit_report.R"
+    }
+  ],
+  "article_results_replaced": false
+}

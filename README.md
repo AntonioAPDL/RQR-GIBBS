@@ -112,3 +112,26 @@ comparisons on the same convergence-flagged partitions for all methods.
 See [the implementation record](docs/implementation_notes/pharma_mti_application_revision_20261020.md)
 for provenance, diagnostics, endpoint-precision recovery, and all commands.
 Historical `pharma-application-*` targets retain the previous analysis.
+
+## ECM Numerical Diagnostics
+
+The separate diagnostic study compares the frozen pharmaceutical fits with
+longer fixed-target ECM runs and an independent piecewise-quadratic objective
+reference. It does not replace article results or retune calibration.
+Portable evidence covers all 3004 saved MTI intervals and 28 prespecified
+replay cases, including their complete candidate menus and iteration traces.
+
+```bash
+make pharma-ecm-audit-report
+make test-pharma-ecm-audit
+```
+
+These commands reuse tracked evidence without fitting models. The generated
+29-page PDF is under
+`application/outputs/pharma_ecm_numerical_audit_20261020/review/`.
+For new diagnostics, prepare the local library with
+`make pharma-mti-application-runtime`, then use
+`make pharma-ecm-audit-preflight`, `make pharma-ecm-audit-smoke`, and
+`make pharma-ecm-audit-run`. Each run requires a fresh output directory.
+See [the numerical diagnostic record](docs/implementation_notes/pharma_ecm_numerical_diagnostics_20261020.md)
+for assumptions, numerical checks, findings, and limits.

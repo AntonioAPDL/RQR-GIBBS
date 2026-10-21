@@ -164,6 +164,11 @@ PHARMA_APPLICATION_RESULTS ?= $(if $(strip $(PHARMA_APPLICATION_RUN_DIR)),$(PHAR
 PHARMA_APPLICATION_SENSITIVITY ?= $(if $(strip $(PHARMA_APPLICATION_RUN_DIR)),$(PHARMA_APPLICATION_RUN_DIR)/pharma_application_dependence_sensitivity.csv,)
 PHARMA_APPLICATION_WORKERS ?= 8
 PHARMA_MTI_CONFIG ?= application/config/pharma_tolerance_application_mti_only_20261020.json
+PHARMA_ECM_AUDIT_CONFIG ?= application/config/pharma_ecm_numerical_audit_20261020.json
+PHARMA_ECM_AUDIT_WORKERS ?= 8
+PHARMA_ECM_AUDIT_RUN_DIR ?=
+PHARMA_ECM_AUDIT_EVIDENCE ?= figures/data/pharma_ecm_numerical_audit_20261020
+PHARMA_ECM_AUDIT_REPORT_DIR ?= application/outputs/pharma_ecm_numerical_audit_20261020/review
 PHARMA_MTI_LIBRARY ?= application/cache/pharma_mti_library
 PHARMA_MTI_RESULTS ?= figures/data/pharma_mti_application_20261020/results.csv
 PHARMA_MTI_RUN_DIR ?=
@@ -267,6 +272,24 @@ pharma-mti-application-runtime:
 
 pharma-mti-application-data:
 	$(PHARMA_MTI_R) application/scripts/86_run_pharma_mti_application.R --config=$(PHARMA_MTI_CONFIG) --mode=data
+
+.PHONY: pharma-ecm-audit-preflight pharma-ecm-audit-smoke pharma-ecm-audit-run pharma-ecm-audit-report test-pharma-ecm-audit
+
+pharma-ecm-audit-preflight:
+	$(PHARMA_MTI_R) application/scripts/89_run_pharma_ecm_numerical_audit.R --config=$(PHARMA_ECM_AUDIT_CONFIG) --mode=preflight
+
+pharma-ecm-audit-smoke:
+	$(PHARMA_MTI_R) application/scripts/89_run_pharma_ecm_numerical_audit.R --config=$(PHARMA_ECM_AUDIT_CONFIG) --mode=smoke --workers=2 $(if $(strip $(PHARMA_ECM_AUDIT_RUN_DIR)),--output-dir=$(PHARMA_ECM_AUDIT_RUN_DIR),)
+
+pharma-ecm-audit-run:
+	$(PHARMA_MTI_R) application/scripts/89_run_pharma_ecm_numerical_audit.R --config=$(PHARMA_ECM_AUDIT_CONFIG) --mode=run --workers=$(PHARMA_ECM_AUDIT_WORKERS) $(if $(strip $(PHARMA_ECM_AUDIT_RUN_DIR)),--output-dir=$(PHARMA_ECM_AUDIT_RUN_DIR),)
+
+pharma-ecm-audit-report:
+	$(PHARMA_MTI_R) figures/generate_pharma_ecm_numerical_audit_report.R --run-dir=$(if $(strip $(PHARMA_ECM_AUDIT_RUN_DIR)),$(PHARMA_ECM_AUDIT_RUN_DIR),$(PHARMA_ECM_AUDIT_EVIDENCE)) --output-pdf=$(PHARMA_ECM_AUDIT_REPORT_DIR)/pharma_ecm_numerical_diagnostics.pdf --output-dir=$(PHARMA_ECM_AUDIT_REPORT_DIR)
+
+test-pharma-ecm-audit:
+	$(PHARMA_MTI_R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-pharma-ecm-numerical-audit.R
+	$(PHARMA_MTI_R) application/scripts/90_test_pharma_ecm_numerical_audit.R --run-dir=$(if $(strip $(PHARMA_ECM_AUDIT_RUN_DIR)),$(PHARMA_ECM_AUDIT_RUN_DIR),$(PHARMA_ECM_AUDIT_EVIDENCE))
 
 pharma-mti-application-preflight:
 	$(PHARMA_MTI_R) application/scripts/86_run_pharma_mti_application.R --config=$(PHARMA_MTI_CONFIG) --mode=preflight

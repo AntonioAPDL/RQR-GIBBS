@@ -1,2 +1,3 @@
 # Keep R's verbatim, hashed sessionInfo output, including formatter padding.
 figures/data/pharma_mti_application_20261020/sessionInfo.txt whitespace=-blank-at-eol
+figures/data/pharma_ecm_numerical_audit_20261020/sessionInfo.txt whitespace=-blank-at-eol
