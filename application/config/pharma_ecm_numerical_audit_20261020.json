@@ -1,0 +1,18 @@
+{
+  "schema_version": "pharma_ecm_numerical_audit/1.0.0",
+  "application_config": "application/config/pharma_tolerance_application_mti_only_20261020.json",
+  "canonical_directory": "figures/data/pharma_mti_application_20261020",
+  "selection": {"per_response_scheme_flag": 2, "rule": "smallest_split_ids"},
+  "iteration_multipliers": [1, 5, 20],
+  "workers": 8,
+  "threads_per_worker": 1,
+  "reference": {"common_prior_precision_required": true, "direct_check_candidates": 32},
+  "comparisons": {
+    "reproduction_absolute_tolerance": 1e-11,
+    "objective_relative_tolerance": 1e-8,
+    "endpoint_training_sd_tolerance": 1e-5,
+    "probability_absolute_tolerance": 1e-10
+  },
+  "output_root": "application/outputs/pharma_ecm_numerical_audit_20261020",
+  "promote_article_results": false
+}
