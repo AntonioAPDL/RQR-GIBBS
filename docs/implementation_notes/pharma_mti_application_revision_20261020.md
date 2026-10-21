@@ -7,7 +7,9 @@ a clean checkout. Work was isolated on the local branch
 `codex/pharma-mti-application-revision-20261020` in
 `/data/muscat_data/jaguir26/.rqr_gibbs_worktrees/pharma_mti_application_revision_20261020`.
 The original checkout and the companion MTI-EXTENSIONS checkout were left
-unchanged. No push, pull request, or merge is authorized for this revision.
+unchanged. The initial instructions required local review without pushing,
+opening a pull request, or merging; publication was deferred until separate
+authorization.
 The companion remains at `f345d946aa5a81b94795838bec58d874a0fdd0c9`;
 its before/after status includes the same ignored TeX artifacts. Its older
 README framing was noted but not revised in this read-only task.
@@ -17,6 +19,14 @@ The calculation sources were tested and committed as
 reporting work at launch is listed in the run manifest. Calculation-source
 hashes were checked before and after the run. Subsequent changes add portable
 endpoint precision and reporting; they do not change fitted MTI intervals.
+
+Following local review, the user authorized publication on October 20, 2026.
+The tested revision `e9bdfcd0d810aae78a74fa249c44bc3de7ed3214` was pushed to
+the revision branch and integrated into GitHub `main` by a fast-forward from
+the audited baseline. No conflicting remote changes were present. No forced
+push, pull request, or direct Overleaf write was used. This documentation-only
+follow-up records publication; the tested calculations and manuscript inputs
+are unchanged. Overleaf can obtain the revision by pulling from GitHub.
 
 ## Statistical Decisions
 
