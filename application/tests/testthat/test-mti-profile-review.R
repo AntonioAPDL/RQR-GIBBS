@@ -45,6 +45,15 @@ test_that("reporting settings cannot override the frozen study configuration", {
   expect_error(e$mpr_check_study_config(path,identity),"frozen study")
 })
 
+test_that("an empty successful Git status is recorded as one true value", {
+  e <- review_env()
+  expect_identical(e$mpr_git_clean(character()),TRUE)
+  expect_identical(e$mpr_git_clean(""),TRUE)
+  expect_identical(e$mpr_git_clean(" M source.R"),FALSE)
+  expect_identical(e$mpr_git_clean(NA_character_),FALSE)
+  expect_identical(e$mpr_git_clean(structure(character(),status=128L)),FALSE)
+})
+
 test_that("review separates fitted datasets from completed statistical assessment", {
   e <- review_env(); path <- tempfile("review_states_")
   dir.create(file.path(path,"calibration"),recursive=TRUE)

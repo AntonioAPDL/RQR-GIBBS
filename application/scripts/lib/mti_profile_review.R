@@ -6,6 +6,11 @@ mpr_read_json <- function(path) {
   if(file.exists(path)) jsonlite::read_json(path,simplifyVector=TRUE) else NULL
 }
 
+mpr_git_clean <- function(status) {
+  code <- attr(status,"status")
+  (is.null(code) || identical(as.integer(code),0L)) && !anyNA(status) && all(!nzchar(status))
+}
+
 mpr_design <- function(frozen) {
   families <- unlist(frozen$modes$confirmatory$dgp_ids,use.names=FALSE)
   rows <- list()
@@ -624,7 +629,7 @@ mpr_build_report <- function(run,output,cfg,review,repo,config_path,review_path)
   report_sources <- pma_file_record(c("application/scripts/95_review_mti_profile_revision.R",
     "application/scripts/lib/mti_profile_review.R",review_path,config_path))
   status <- list(decision="pending",article_inputs_replaced=FALSE,
-    report_source_clean=!nzchar(pma_git("status","--porcelain")),R_version=R.version.string,
+    report_source_clean=mpr_git_clean(pma_git("status","--porcelain")),R_version=R.version.string,
     checked_utc=format(Sys.time(),"%Y-%m-%dT%H:%M:%SZ",tz="UTC"))
   stages <- data.frame(stage=c("calibration","validation"),completed_datasets=0L,
     expected_datasets=NA_integer_,remaining_fits=NA_integer_,status="not_audited")
