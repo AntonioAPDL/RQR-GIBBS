@@ -55,12 +55,14 @@ fixed tilts for \code{rqr_ecm_path()}.}
 along the path.}
 }
 \description{
-\code{rqr_ecm_fit()} computes a deterministic generalized-posterior mode for a
+\code{rqr_ecm_fit()} computes deterministic endpoint estimates for a
 fixed RQR content, fixed response-scale tilt, and fixed learning rate.  The
 algorithm uses an expectation/conditional-maximization structure: the E-step
 uses the exact inverse latent-scale moment
 \eqn{E(V_i^{-1}\mid\cdot)=1/[q(1-q)|e_i|]} away from zero residual products,
 and the two CM steps solve weighted Gaussian root systems.
+Residual flooring and a finite iteration budget define the numerical
+approximation; local or global mode attainment requires separate assessment.
 }
 \details{
 The ECM objective is the negative log generalized-posterior kernel defined by

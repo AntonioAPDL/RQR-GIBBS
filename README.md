@@ -38,7 +38,7 @@ generalized posterior describe uncertainty for the specified interval-root
 functional. They are not posterior predictive response draws.
 
 MTI-ECM is the proposed tolerance procedure reported in the article. It profiles
-fixed-target generalized-Bayes endpoint modes over fitted content and tilt,
+fixed-target endpoint estimates under a generalized-Bayes criterion over fitted content and tilt,
 then selects the shortest fitted interval meeting a direct Dirichlet-process
 posterior content check. Its calibration rule is fixed before independent
 repeated-sampling validation. The simulation and pharmaceutical results report
@@ -133,5 +133,35 @@ For new diagnostics, prepare the local library with
 `make pharma-mti-application-runtime`, then use
 `make pharma-ecm-audit-preflight`, `make pharma-ecm-audit-smoke`, and
 `make pharma-ecm-audit-run`. Each run requires a fresh output directory.
+
+## Profiled Intercept Revision
+
+The opt-in `rqr_mti_intercept_fit()` minimizes the fixed-content, fixed-tilt
+intercept criterion using a convex midpoint profile, with R and C++
+implementations and an objective lower-bound check. It is restricted to a
+fixed learning rate and equal positive Gaussian root precisions with a common
+fixed prior mean. `rqr_mti_fractional_window()` constructs a mass-consistent
+empirical tilt; `rqr_mti_dp_profile()` searches the specified fitted-content
+and tilt menu and applies a separate direct DP posterior content check.
+
+These functions do not replace the historical ECM algorithm, its defaults,
+calibration, or article results. A DP posterior probability alone does not
+establish a frequentist tolerance guarantee. The separate revision study
+first checks numerical accuracy and then develops and assesses a new
+calibration on independent data. Fresh validation starts only after the
+prespecified checks pass. No manuscript replacement is automatic.
+
+```bash
+make test-mti-profile
+make mti-profile-runtime
+make mti-profile-preflight
+make launch-mti-profile-revision MTI_PROFILE_WORKERS=24
+make health-mti-profile-revision
+```
+
+Runtime preparation and launching require a clean committed checkout. Output,
+checkpoints, logs, and trace PDFs are local-only. See
+[the numerical specification](docs/implementation_notes/mti_intercept_profile_20261021.md)
+for the method, study stages, interpretation, and resumption commands.
 See [the numerical diagnostic record](docs/implementation_notes/pharma_ecm_numerical_diagnostics_20261020.md)
 for assumptions, numerical checks, findings, and limits.

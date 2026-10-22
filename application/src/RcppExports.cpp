@@ -111,6 +111,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rqr_mti_profile_intercept_cpp
+Rcpp::List rqr_mti_profile_intercept_cpp(const Rcpp::NumericVector& observations, double q, double delta, double omega, double precision, double center, int max_iter, double parameter_tolerance, bool store_trace);
+RcppExport SEXP _rqrgibbs_rqr_mti_profile_intercept_cpp(SEXP observationsSEXP, SEXP qSEXP, SEXP deltaSEXP, SEXP omegaSEXP, SEXP precisionSEXP, SEXP centerSEXP, SEXP max_iterSEXP, SEXP parameter_toleranceSEXP, SEXP store_traceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type observations(observationsSEXP);
+    Rcpp::traits::input_parameter< double >::type q(qSEXP);
+    Rcpp::traits::input_parameter< double >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< double >::type omega(omegaSEXP);
+    Rcpp::traits::input_parameter< double >::type precision(precisionSEXP);
+    Rcpp::traits::input_parameter< double >::type center(centerSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< double >::type parameter_tolerance(parameter_toleranceSEXP);
+    Rcpp::traits::input_parameter< bool >::type store_trace(store_traceSEXP);
+    rcpp_result_gen = Rcpp::wrap(rqr_mti_profile_intercept_cpp(observations, q, delta, omega, precision, center, max_iter, parameter_tolerance, store_trace));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rqrgibbs_rqr_ecm_intercept_run_cpp", (DL_FUNC) &_rqrgibbs_rqr_ecm_intercept_run_cpp, 20},
@@ -118,6 +137,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rqrgibbs_rqr_filter_log_marginal_cpp", (DL_FUNC) &_rqrgibbs_rqr_filter_log_marginal_cpp, 7},
     {"_rqrgibbs_rqr_ffbs_cpp", (DL_FUNC) &_rqrgibbs_rqr_ffbs_cpp, 14},
     {"_rqrgibbs_rqr_noncentered_basis_cpp", (DL_FUNC) &_rqrgibbs_rqr_noncentered_basis_cpp, 5},
+    {"_rqrgibbs_rqr_mti_profile_intercept_cpp", (DL_FUNC) &_rqrgibbs_rqr_mti_profile_intercept_cpp, 9},
     {NULL, NULL, 0}
 };
 

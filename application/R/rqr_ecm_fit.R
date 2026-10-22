@@ -370,10 +370,11 @@
 
 #' Fit fixed-target MT-RQR by expectation/conditional-maximization
 #'
-#' Computes a deterministic mode/M-estimator for the fixed content, fixed
-#' response-scale tilt, fixed learning-rate RQR generalized-Bayes target.  ECM
-#' is an optimizer for that loss-defined target; it is not a response-likelihood
-#' EM algorithm and does not return posterior draws or a tolerance guarantee.
+#' Computes deterministic endpoint estimates for a fixed content, response-scale
+#' tilt, and learning-rate RQR generalized-Bayes criterion. Residual flooring
+#' and a finite iteration budget define the numerical approximation. The
+#' calculation returns neither posterior draws nor a tolerance guarantee;
+#' attainment of a local or global mode requires separate assessment.
 #'
 #' @param y Response vector.
 #' @param X Fixed design matrix.

@@ -37,3 +37,7 @@ rqr_noncentered_basis_cpp <- function(theta, theta0, GG, component_dims, q) {
     .Call(`_rqrgibbs_rqr_noncentered_basis_cpp`, theta, theta0, GG, component_dims, q)
 }
 
+.rqr_mti_profile_intercept_cpp <- function(observations, q, delta, omega, precision, center, max_iter, parameter_tolerance, store_trace) {
+    .Call(`_rqrgibbs_rqr_mti_profile_intercept_cpp`, observations, q, delta, omega, precision, center, max_iter, parameter_tolerance, store_trace)
+}
+

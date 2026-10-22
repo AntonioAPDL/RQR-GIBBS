@@ -174,6 +174,10 @@ PHARMA_MTI_RESULTS ?= figures/data/pharma_mti_application_20261020/results.csv
 PHARMA_MTI_RUN_DIR ?=
 PHARMA_MTI_WORKERS ?= 40
 PHARMA_MTI_R = R_LIBS=$(PHARMA_MTI_LIBRARY) OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
+MTI_PROFILE_WORKERS ?= 24
+MTI_PROFILE_RUN_DIR ?= application/outputs/mti_profile_revision_20261021/revision_20261021
+MTI_PROFILE_RUNTIME = application/cache/mti_profile_runtime_$(shell git rev-parse HEAD)
+MTI_PROFILE_R = R_LIBS=$(MTI_PROFILE_RUNTIME)/library OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 RQR_BAYES_UQ_PRIMARY_YM_RESULTS ?=
 RQR_BAYES_UQ_SMALL95_RESULTS ?=
 RQR_BAYES_UQ_SCAN_CALIBRATION ?= $(RQR_BAYES_UQ_PRIMARY_RUN_DIR)/scan_calibration_summary.csv
@@ -274,6 +278,23 @@ pharma-mti-application-data:
 	$(PHARMA_MTI_R) application/scripts/86_run_pharma_mti_application.R --config=$(PHARMA_MTI_CONFIG) --mode=data
 
 .PHONY: pharma-ecm-audit-preflight pharma-ecm-audit-smoke pharma-ecm-audit-run pharma-ecm-audit-report test-pharma-ecm-audit
+
+.PHONY: test-mti-profile mti-profile-runtime mti-profile-preflight launch-mti-profile-revision health-mti-profile-revision
+
+test-mti-profile:
+	$(R) -e 'pkgload::load_all("application",quiet=TRUE); for(f in c("test-rqr-mti-intercept-profile.R","test-mti-profile-revision-study.R")) testthat::test_file(file.path("application/tests/testthat",f),reporter="summary",stop_on_failure=TRUE)'
+
+mti-profile-runtime:
+	bash application/scripts/93_manage_mti_profile_revision.sh prepare
+
+mti-profile-preflight:
+	$(MTI_PROFILE_R) application/scripts/92_run_mti_profile_revision.R --stage=preflight
+
+launch-mti-profile-revision:
+	bash application/scripts/93_manage_mti_profile_revision.sh launch $(MTI_PROFILE_WORKERS) $(MTI_PROFILE_RUN_DIR)
+
+health-mti-profile-revision:
+	bash application/scripts/93_manage_mti_profile_revision.sh health $(MTI_PROFILE_WORKERS) $(MTI_PROFILE_RUN_DIR)
 
 pharma-ecm-audit-preflight:
 	$(PHARMA_MTI_R) application/scripts/89_run_pharma_ecm_numerical_audit.R --config=$(PHARMA_ECM_AUDIT_CONFIG) --mode=preflight

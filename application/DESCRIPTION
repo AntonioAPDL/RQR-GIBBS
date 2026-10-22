@@ -1,7 +1,7 @@
 Package: rqrgibbs
 Type: Package
 Title: Mean-Tilted Intervals for Short Tolerance Intervals
-Version: 0.1.0.9036
+Version: 0.1.0.9037
 Authors@R: c(
     person("Antonio", "De Leon", role = c("aut", "cre"),
            email = "jaguir26@ucsc.edu"),
@@ -19,8 +19,10 @@ Description: Research implementation of mean-preserving interval (MPI) and
     construction augments an exponentiated interval loss and is not a response
     likelihood. Deterministic Cornish-Fisher and empirical calibration summaries
     provide fixed mean-tilt initialization anchors without sampling the tilt. Fixed-target
-    ECM computes deterministic generalized-posterior modes from exact inverse
-    latent-scale moments while remaining separate from posterior sampling.
+    ECM produces deterministic endpoint estimates using safeguarded inverse
+    latent-scale calculations. An opt-in intercept profile calculation supplies
+    a separate fixed-target minimization reference. Both remain separate from
+    posterior sampling.
     Direct Dirichlet-process and truncated Gaussian DPM response-distribution
     models provide Bayesian uncertainty summaries for shortest-interval content
     and hybrid Bayesian-scan tolerance actions.

@@ -73,7 +73,7 @@ This supplement gives the mathematical details and validation records for
 fixed-content interval class, the mean-preserving interval (MPI), and the
 mean-tilted interval (MTI) family. It then records the finite-sample score
 balance used to interpret fixed-target fits, the pseudo-asymmetric-Laplace
-construction used by the MTI-ECM mode calculation, the direct
+construction used by the MTI-ECM endpoint calculation, the direct
 Dirichlet-process content-probability check, and the iid tolerance-validation
 protocol. Endpoint regression, basis-expansion endpoint models, time-varying endpoint
 models, and broader Gibbs computation are treated in a companion computation
@@ -144,7 +144,7 @@ Empirical score balance
 & Records the exact fractional training-sample identities for fixed-target fits\\
 Fixed-target MTI-ECM
 & Section~\ref{sec:supp-mti-ecm}
-& Gives the mode calculation used by the MTI-ECM procedure\\
+& Gives the endpoint iteration used by the MTI-ECM procedure\\
 Direct DP content check
 & Section~\ref{sec:supp-direct-dp-check}
 & Gives exact fixed-interval posterior content probabilities for calibration\\
@@ -964,7 +964,7 @@ not generally coincide with the shortest-contiguous path.
 \section{Fixed-Target MTI-ECM Calculation}
 \label{sec:supp-mti-ecm}
 
-The MTI-ECM calculation used in the validation study computes a numerical mode
+The MTI-ECM calculation used in the validation study computes endpoint estimates
 for each fixed loss-defined target. Profiling these fits over content and tilt
 produces the candidates used by the calibrated tolerance procedure. The
 fixed-target calculation updates an interval-root parameter under a loss;
@@ -1027,16 +1027,16 @@ The reported profile calculation uses one deterministic initialization for
 each candidate, derived from the empirical shortest-window endpoints and
 shifted by the candidate tilt. The software also permits multiple starts.
 
-\begin{algorithmblock}{Fixed-target MTI-ECM mode}
+\begin{algorithmblock}{Fixed-target MTI-ECM endpoint calculation}
 \item Fix \(q\), \(\delta\), \(\omega_{\mathrm R}\), the ridge prior precision,
 and deterministic starting roots.
 \item At the current roots, compute product residuals \(e_i\) and inverse-scale
 moments \(\tau_i\), using the prespecified numerical floor only when needed.
 \item Holding one root fixed, solve the Gaussian conditional maximization for
 the other root. Repeat with the roles exchanged.
-\item Accept a full cycle only if the exact penalized objective decreases,
-using backtracking if necessary.
-\item Return the final numerical mode and sort the two raw roots to report the
+\item Accept a full cycle when the exact penalized objective does not increase
+beyond the prespecified numerical allowance, using backtracking if necessary.
+\item Return the final endpoint estimates and sort the two raw roots to report the
 candidate interval. If multiple starts are requested, select the fit with the
 smallest exact penalized objective.
 \end{algorithmblock}
@@ -1045,6 +1045,94 @@ The fitted content \(q\) and tilt \(\delta\) index fixed-target generalized
 posteriors. The procedure profiles over their grid on each training sample.
 Grid settings and the DP probability threshold are calibrated separately and
 then applied unchanged to independent validation replications.
+
+\subsection{The Penalized Intercept Criterion}
+\label{sec:supp-profiled-intercept}
+
+An independent characterization helps assess what the endpoint iteration has
+computed. Let the two roots have independent zero-mean Gaussian priors with
+common precision \(\lambda>0\), and fix \(q\), \(\delta\), and
+\(\omega_{\mathrm R}>0\). Their negative log generalized-posterior criterion,
+up to a constant, is
+\[
+J(a,b)=\omega_{\mathrm R}\sum_i
+\left[\rho_q\{(y_i-a)(y_i-b)\}-q\delta(a+b-2y_i)\right]
++\frac{\lambda}{2}(a^2+b^2).
+\]
+Write \(m=(a+b)/2\), \(t=(b-a)^2/4\), and
+\(s=nq-\lambda/\omega_{\mathrm R}\). The variable \(t\) is a squared
+half-width used to minimize this same criterion; no transformed-density mode
+is introduced.
+
+\begin{proposition}[Convex midpoint profile]
+\label{prop:supp-convex-intercept-profile}
+Suppose \(0<s<n\), and put
+\(W_s=\{w\in[0,1]^n:\sum_iw_i=s\}\). For a fixed midpoint, a minimizing
+\(t\ge0\) is an empirical \(s/n\) quantile of the squared distances
+\((y_i-m)^2\). The profiled criterion has the representation
+\begin{align*}
+\min_{t\ge0}J(m,t)
+={}&2\lambda m^2+\max_{w\in W_s}\{A(w)+B(w)m\},\\
+A(w)={}&\omega_{\mathrm R}
+\left[q\sum_i y_i^2-\sum_iw_i y_i^2+2q\delta\sum_i y_i\right],\\
+B(w)={}&2\omega_{\mathrm R}
+\left[\sum_iw_i y_i-q\sum_i y_i-nq\delta\right].
+\end{align*}
+It is strongly convex in \(m\), so its minimizing midpoint is unique.
+The minimizing squared half-width can be nonunique at an empirical quantile.
+\end{proposition}
+
+\begin{proof}
+For \(z_i=(y_i-m)^2\), write
+\(\rho_q(z_i-t)=qz_i-qt+(t-z_i)_+\). Minimization in \(t\) gives
+\[
+\min_{t\ge0}\left\{\sum_i(t-z_i)_+-st\right\}
+=-\min_{w\in W_s}\sum_iw_i z_i.
+\]
+To verify the identity, order the \(z_i\), assign weight one to the smallest
+\(\lfloor s\rfloor\) values, and assign the remaining mass at the next value.
+The one-sided derivatives in \(t\) bracket zero at the corresponding quantile.
+Expansion of the squared distances gives the displayed profile because
+\(\omega_{\mathrm R}(nq-s)=\lambda\). A maximum of affine functions is
+convex; adding \(2\lambda m^2\) gives strong convexity. If \(s\le0\),
+zero is a minimizing squared half-width and the midpoint follows from a
+scalar quadratic.
+\end{proof}
+
+At a distinct-root joint subgradient-stationary point, the penalized equations
+give fractional allocations satisfying
+\[
+\sum_iw_i=nq-\lambda/\omega_{\mathrm R},\qquad
+\sum_iw_i y_i=nq(\overline y+\delta)
+-\frac{\lambda}{\omega_{\mathrm R}}(a+b).
+\]
+These equations explain the prior contributions to empirical balance.
+They also supply a global optimality check for this intercept criterion:
+\(\rho_q(e_i)\ge(q-w_i)e_i\) is exact at a compatible stationary pair
+\((a_0,b_0)\), and substitution gives
+\[
+J(a,b)\ge J(a_0,b_0)+\frac{\lambda}{2}
+\{(a+b)-(a_0+b_0)\}^2.
+\]
+This argument requires distinct roots and a joint compatible subgradient
+selection. At collapsed roots, the squared-radius boundary condition must
+also be checked. Unequal prior precisions and regression require separate
+arguments.
+
+\paragraph{Numerical assessment of the reported ECM estimates.}
+A separate calculation reconstructed all 3004 saved pharmaceutical MTI fits
+and selected 28 cases by response, partition, original convergence flag,
+and the smallest split identifiers. The selected fitted content and tilt
+were held fixed while the iteration budget increased from 100 to 500 and
+2000. The largest endpoint change was approximately
+\(2.15\times10^{-5}\) training standard deviations, and no selected-target
+posterior eligibility decision changed. Independent minimization of the
+same fixed-target criterion found lower objective values in 26 of the 28
+cases, with the discrepancies persisting at the larger budget. Thus the
+reported numerical stability does not establish mode attainment. The
+validation results concern the specified initialization, residual floor,
+stopping rule, and finite iteration budget. The profiled characterization
+above provides a separate numerical reference for assessing those estimates.
 
 \section{Direct DP Content Check}
 \label{sec:supp-direct-dp-check}

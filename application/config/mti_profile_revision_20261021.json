@@ -1,0 +1,42 @@
+{
+  "schema_version": "mti_profile_revision/1.0.0",
+  "study_id": "mti_profile_revision_20261021",
+  "application_config": "application/config/pharma_tolerance_application_mti_only_20261020.json",
+  "application_evidence": "figures/data/pharma_mti_application_20261020",
+  "diagnostic_evidence": "figures/data/pharma_ecm_numerical_audit_20261020",
+  "validation_config": "application/config/rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827.json",
+  "historical_policy": "application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv",
+  "expected_application_results_sha256": "223eeab04e8acd4dcda8657a4012f7413b81ad0f7e3cc83bada7e6e7c9e89e3c",
+  "observed_case_ids": ["case_025", "case_011", "case_027", "case_013"],
+  "synthetic_cases": [
+    {"case_id": "synthetic_normal", "seed": 202610211, "family": "normal", "n": 100, "q": 0.98},
+    {"case_id": "synthetic_exponential", "seed": 202610212, "family": "exponential", "n": 100, "q": 0.9775}
+  ],
+  "profile": {
+    "allocation": "balanced",
+    "tilt_position_count": 7,
+    "learning_rate": 1,
+    "prior_precision": 0.0001,
+    "prior_mean": 0,
+    "objective_tolerance": 1e-8,
+    "backend": "cpp"
+  },
+  "calibration": {
+    "replications": 1000,
+    "threshold_development_replications": 32,
+    "threshold_quantile_count": 25,
+    "familywise_confidence": 0.95,
+    "seed_base": 202610210,
+    "cell_seed_stride": 100000,
+    "dataset_alpha_allocation": "bonferroni_over_cells_families_thresholds"
+  },
+  "validation": {
+    "replications": 1000,
+    "seed_base": 222610210,
+    "cell_seed_stride": 100000,
+    "methods": ["mti_profile_fractional_admissible_v1", "mti_ecm_historical", "young_mathew", "wilks"]
+  },
+  "execution": {"workers": 24, "threads_per_worker": 1, "checkpoint_batch": 100},
+  "publication": {"replace_article_results": false, "allow_historical_policy_transfer": false},
+  "output_root": "application/outputs/mti_profile_revision_20261021"
+}

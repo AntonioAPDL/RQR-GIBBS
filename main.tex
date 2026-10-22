@@ -76,8 +76,8 @@ distribution-specific central and shortest intervals.
 
 For tolerance inference, we develop a calibrated MTI procedure that profiles
 fitted content and tilt over a prespecified grid. An expectation/conditional
-maximization algorithm computes generalized-Bayes endpoint modes, and a
-Dirichlet-process posterior content check determines eligible candidates. The
+maximization-type iteration estimates endpoints under a penalized MTI criterion.
+A Dirichlet-process posterior content check determines eligible candidates. The
 shortest eligible fitted interval is reported. Calibration settings are fixed
 before independent validation; their repeated-sampling performance is assessed
 empirically. In iid simulations at tolerance
@@ -127,8 +127,8 @@ claims are made.
 
 This target geometry suggests a tolerance procedure that searches over fitted
 content and interval placement. For each candidate content \(q>c\) and tilt
-\(\delta\), expectation/conditional maximization (ECM) computes a numerical
-mode of the MTI generalized posterior. A separate Dirichlet-process (DP)
+\(\delta\), an expectation/conditional maximization (ECM)-type iteration
+estimates endpoints under the MTI generalized-posterior criterion. A separate Dirichlet-process (DP)
 response-distribution posterior supplies a content-probability check, and the
 shortest eligible fitted interval is reported. We call this procedure MTI-ECM.
 The fitted content \(q\) allows for sampling uncertainty about the required
@@ -648,13 +648,16 @@ at fitted roots, such that
 \]
 Thus the fitted training interval has exact fractional content and exact
 fractional retained-mean balance in its empirical estimating equations.
+These identities concern the unpenalized criterion. Gaussian root penalties
+contribute additional terms to the estimating equations used in computation;
+the supplement gives the corresponding penalized identities.
 Population content requires a probability argument beyond this score identity.
 In the iid intercept-only case, the Dvoretzky--Kiefer--Wolfowitz inequality gives
 a conservative high-probability population-content bound
 \citep{Massart1990DKW}; the supplement records
 the explicit display.
 
-\paragraph{Fixed-target generalized-Bayes mode.}
+\paragraph{Fixed-target generalized-Bayes computation.}
 For a fixed fitted content \(q\), tilt \(\delta\), and learning rate
 \(\omega_{\mathrm R}\), an MTI generalized posterior updates a prior over
 interval roots through the cumulative loss,
@@ -670,14 +673,16 @@ prediction would require a separate response-distribution model. The tilt
 \(\delta\) is fixed within each candidate fit; the profiled selection rule
 described below chooses among these fits.
 
-The deterministic MTI-ECM calculation used in the validation study is the mode
-calculation associated with this fixed-target update. A pseudo-asymmetric-Laplace
-normal--exponential augmentation of the product-residual loss gives exact inverse
+The deterministic MTI-ECM calculation used in the validation study seeks
+endpoint estimates under this fixed-target criterion. A pseudo-asymmetric-Laplace
+normal--exponential augmentation of the product-residual loss gives inverse
 latent-scale moments. Conditional on these moments, each root has a Gaussian
-conditional maximization step; alternating the two root updates gives an ECM
-algorithm \citep{DempsterLairdRubin1977EM,MengRubin1993ECM}. The numerical
-implementation uses objective backtracking and deterministic initializations
-for each candidate target. The supplement gives the full fixed-target equations. Broader Gibbs,
+conditional maximization step \citep{DempsterLairdRubin1977EM,MengRubin1993ECM}.
+The implemented ECM-type iteration uses a residual-product floor, objective
+backtracking, and a deterministic initialization and iteration budget for each
+candidate. These choices specify the estimates evaluated below. The supplement
+gives the equations, numerical diagnostics, and an independent convex-profile
+characterization of the intercept criterion. Broader Gibbs,
 regression, basis-expansion, and time-varying endpoint models are developed in the
 companion computation paper.
 
@@ -715,8 +720,8 @@ selection rule.
 
 \paragraph{Fitted-content and tilt search.}
 For a training sample, construct candidate pairs
-\(\{(q_j,\delta_j):j=1,\ldots,J\}\). For each pair, ECM computes numerical
-generalized-posterior endpoint modes
+\(\{(q_j,\delta_j):j=1,\ldots,J\}\). For each pair, the specified ECM-type
+iteration computes endpoint estimates
 \(\widehat I_j=[\widehat a_j,\widehat b_j]\) using the fixed-target update
 in Section~\ref{sec:static-theory-statements}. A direct DP posterior for \(F\)
 then gives
@@ -1052,13 +1057,13 @@ content-\(c\) windows. Equal-tailed and shortest-contiguous intervals are
 therefore distribution-specific members of the same placement family.
 
 MTI-ECM uses this placement family to search for short tolerance intervals.
-Fixed-target generalized-Bayes mode calculations are combined with a DP
+Fixed-target endpoint estimates under the generalized-Bayes criterion are combined with a DP
 posterior content check, and a separate calibration run fixes the selection
 rule before validation. The independent study finds content attainment above
 nominal tolerance confidence in all reported cells, with smaller median widths
 than Young--Mathew in two thirds of the asymmetric cells. These findings are
 specific to the calibrated rule and the simulation design. The finite grid,
-numerical mode calculation, and empirical calibration limit any broader
+finite numerical calculation, and empirical calibration limit any broader
 optimality or distribution-free interpretation.
 
 The separation between target, computation, and tolerance guarantees is essential. MTI
