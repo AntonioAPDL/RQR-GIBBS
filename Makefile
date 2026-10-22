@@ -177,6 +177,10 @@ PHARMA_MTI_R = R_LIBS=$(PHARMA_MTI_LIBRARY) OMP_NUM_THREADS=1 OPENBLAS_NUM_THREA
 MTI_PROFILE_WORKERS ?= 24
 MTI_PROFILE_RUN_DIR ?= application/outputs/mti_profile_revision_20261021/revision_20261021
 MTI_PROFILE_REVIEW_DIR ?= application/outputs/mti_profile_review_20261021/final
+MTI_FIXED_CALIBRATION_RUN ?=
+MTI_FIXED_CALIBRATION_REVIEW ?=
+MTI_FIXED_RUN_DIR ?= application/outputs/mti_fixed_policy_evaluation_20261021/independent_20261021
+MTI_FIXED_WORKERS ?= 1
 MTI_PROFILE_RUNTIME = application/cache/mti_profile_runtime_$(shell git rev-parse HEAD)
 MTI_PROFILE_R = R_LIBS=$(MTI_PROFILE_RUNTIME)/library OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 RQR_BAYES_UQ_PRIMARY_YM_RESULTS ?=
@@ -282,6 +286,26 @@ pharma-mti-application-data:
 
 .PHONY: test-mti-profile mti-profile-runtime mti-profile-preflight launch-mti-profile-revision health-mti-profile-revision
 .PHONY: test-mti-profile-review review-mti-profile-revision queue-mti-profile-review health-mti-profile-review
+.PHONY: test-mti-fixed-policy preflight-mti-fixed-policy launch-mti-fixed-policy health-mti-fixed-policy report-mti-fixed-policy
+.PHONY: test-mti-fixed-policy-runtime
+
+test-mti-fixed-policy:
+	$(R) -e 'testthat::test_file("application/tests/testthat/test-mti-fixed-policy-evaluation.R",reporter="summary",stop_on_failure=TRUE)'
+
+test-mti-fixed-policy-runtime:
+	$(R) -e 'testthat::test_file("application/tests/testthat/test-mti-fixed-policy-runtime.R",reporter="summary",stop_on_failure=TRUE)'
+
+preflight-mti-fixed-policy:
+	bash application/scripts/98_manage_mti_fixed_policy_evaluation.sh preflight "$(MTI_FIXED_CALIBRATION_RUN)" "$(MTI_FIXED_CALIBRATION_REVIEW)" "$(MTI_FIXED_RUN_DIR)" $(MTI_FIXED_WORKERS)
+
+launch-mti-fixed-policy:
+	bash application/scripts/98_manage_mti_fixed_policy_evaluation.sh launch "$(MTI_FIXED_CALIBRATION_RUN)" "$(MTI_FIXED_CALIBRATION_REVIEW)" "$(MTI_FIXED_RUN_DIR)" $(MTI_FIXED_WORKERS)
+
+health-mti-fixed-policy:
+	bash application/scripts/98_manage_mti_fixed_policy_evaluation.sh health "$(MTI_FIXED_CALIBRATION_RUN)" "$(MTI_FIXED_CALIBRATION_REVIEW)" "$(MTI_FIXED_RUN_DIR)" $(MTI_FIXED_WORKERS)
+
+report-mti-fixed-policy:
+	bash application/scripts/98_manage_mti_fixed_policy_evaluation.sh report "$(MTI_FIXED_CALIBRATION_RUN)" "$(MTI_FIXED_CALIBRATION_REVIEW)" "$(MTI_FIXED_RUN_DIR)" $(MTI_FIXED_WORKERS)
 
 test-mti-profile-review:
 	$(R) -e 'testthat::test_file("application/tests/testthat/test-mti-profile-review.R",reporter="summary",stop_on_failure=TRUE)'

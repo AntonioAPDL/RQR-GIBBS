@@ -1,0 +1,26 @@
+{
+  "schema_version": "mti_fixed_policy_evaluation/1.0.0",
+  "study_id": "mti_fixed_policy_evaluation_20261021",
+  "purpose": "independent_empirical_comparison_not_original_calibration_pass",
+  "revision_config": "application/config/mti_profile_revision_20261021.json",
+  "revision_config_sha256": "54578c28e4a7fc88f003b3d61ac6dd578720095be14bcf732009761106ed3086",
+  "review_config": "application/config/mti_profile_review_20261021.json",
+  "policy_csv": "application/config/mti_profile_fixed_policy_20261021.csv",
+  "threshold_evidence_csv": "application/config/mti_profile_fixed_policy_thresholds_20261021.csv",
+  "policy_receipt": "application/config/mti_profile_fixed_policy_provenance_20261021.json",
+  "upstream_study_commit": "5798cca1e322f5757b1c0bb5f65b56f823f65d4e",
+  "upstream_review_commit": "565b980ee63e477600efeb775795eef1bf3725c0",
+  "upstream_inputs": {
+    "assessment.json": "24ba815350f43e1828de796151a7dc7a9bc16e6dbabadcd597e110134c1bab03",
+    "calibration_cell_assessment.csv": "444696cb1a0e3b6146adffc5d4bbaa6d02fe6f72e86745f1ffde659c879429b1",
+    "calibration_threshold_assessment.csv": "005c032b3a368a3d02c25f2f8af3f5ec6a0ec44bb41e70f4388219aa8659c742"
+  },
+  "policy_rule": "preserve_passed_else_maximum_worst_family_bound_among_full_return_thresholds_then_smallest_threshold",
+  "replications_source": "revision.validation.replications",
+  "seed_source": "revision.validation_unused_independent_schedule",
+  "execution": {"maximum_workers": 40, "threads_per_worker": 1},
+  "automatic_article_replacement": false,
+  "automatic_application_rerun": false,
+  "original_calibration_reclassified": false,
+  "output_root": "application/outputs/mti_fixed_policy_evaluation_20261021"
+}

@@ -187,3 +187,21 @@ for statistical definitions, uncertainty, integrity checks, and precision
 planning. Manuscript inputs are unchanged until a separate scientific decision.
 See [the numerical diagnostic record](docs/implementation_notes/pharma_ecm_numerical_diagnostics_20261020.md)
 for assumptions, numerical checks, findings, and limits.
+
+## Fixed-Policy Independent Evaluation
+
+The original revision calibration passed six of nine design cells. A separate
+empirical comparison preserves those six settings and freezes three explicitly
+exploratory settings from the completed calibration. It uses 72000 fresh
+datasets shared by revised MTI, historical MTI-ECM, Young--Mathew, and Wilks.
+The original stopping decision and all manuscript/application inputs remain
+unchanged. No statistical or numerical result is automatically promoted.
+
+Set `MTI_FIXED_CALIBRATION_RUN` and `MTI_FIXED_CALIBRATION_REVIEW` to the explicit
+upstream directories, then use `make preflight-mti-fixed-policy`,
+`make launch-mti-fixed-policy MTI_FIXED_WORKERS=16`, and
+`make health-mti-fixed-policy`. Completed checkpoints can be resumed with the
+same policy and source identity. Summaries and a diagnostic PDF are produced
+once when fitting ends, without continuous monitoring. See
+[the evaluation specification](docs/implementation_notes/mti_fixed_policy_evaluation_20261021.md)
+for selection, seeds, uncertainty, tests, reproduction, and adoption criteria.

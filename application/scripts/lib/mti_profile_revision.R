@@ -265,7 +265,7 @@ mp_calibration_policy <- function(values,cfg,output) {
   policy
 }
 
-mp_simulation_stage <- function(cfg,stage,output,run_root,workers) {
+mp_simulation_stage <- function(cfg,stage,output,run_root,workers,validation_policy_path=NULL) {
   profile <- mp_frozen_profile(cfg)
   settings <- cfg[[stage]]
   validation <- profile$validation
@@ -275,7 +275,8 @@ mp_simulation_stage <- function(cfg,stage,output,run_root,workers) {
   dgps <- setNames(dgps,vapply(dgps,`[[`,character(1),"dgp_id"))[ids]
   generators <- mp_dgp_environment()
   if(stage=="validation") {
-    policy_path <- file.path(run_root,"calibration","policy.csv")
+    policy_path <- if(is.null(validation_policy_path))
+      file.path(run_root,"calibration","policy.csv") else validation_policy_path
     if(!file.exists(policy_path)) stop("A frozen new calibration policy is required.")
     policy <- read.csv(policy_path)
     if(any(!is.finite(policy$threshold))) stop("Calibration is unresolved; validation cannot start.")
@@ -312,7 +313,8 @@ mp_simulation_stage <- function(cfg,stage,output,run_root,workers) {
     if(nrow(row)!=1L) stop("Ambiguous new policy cell.")
     selected <- mp_select(candidates,row$threshold)
     interval <- function(method,l=NA_real_,u=NA_real_,status="returned",selected=NULL,
-                         numerical_failures=0L,candidate_count=NA_integer_) {
+                         numerical_failures=0L,candidate_count=NA_integer_,
+                         ecm_candidate_nonconvergence=NA_integer_) {
       returned <- is.finite(l) && is.finite(u) && l<=u
       content <- if(returned)dgp$p(u)-dgp$p(l) else NA_real_
       quantity <- function(name) {
@@ -325,6 +327,10 @@ mp_simulation_stage <- function(cfg,stage,output,run_root,workers) {
         selected_q=quantity("target_content"),selected_tilt=quantity("mean_tilt"),
         posterior_content_probability=quantity("posterior_content_probability"),
         relative_objective_gap=quantity("relative_objective_gap"),
+        ecm_converged=as.logical(quantity("ecm_converged")),
+        ecm_iterations=quantity("ecm_iterations"),
+        ecm_final_stationarity=quantity("ecm_final_stationarity"),
+        ecm_candidate_nonconvergence=ecm_candidate_nonconvergence,
         numerical_failure_candidates=numerical_failures,candidate_count=candidate_count)
     }
     rows <- list(interval("mti_profile_fractional_admissible_v1",
@@ -347,7 +353,9 @@ mp_simulation_stage <- function(cfg,stage,output,run_root,workers) {
       rows[[length(rows)+1L]] <- interval("mti_ecm_historical",
         if(nrow(s))s$lower else NA_real_,if(nrow(s))s$upper else NA_real_,
         if(nrow(s))"returned" else "no_eligible_interval",selected=s,
-        candidate_count=nrow(old$candidates))
+        numerical_failures=sum(!old$candidates$finite_interval),
+        candidate_count=nrow(old$candidates),
+        ecm_candidate_nonconvergence=sum(!old$candidates$ecm_converged))
     }
     if("young_mathew" %in% unlist(settings$methods)) {
       ym <- pta_fit_young_mathew(y,task$content,task$tolerance_confidence)
