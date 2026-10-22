@@ -76,7 +76,7 @@ figure_path <- file.path(output_dir, "fig04_tolerance_validation_primary.png")
 manifest_path <- file.path(output_dir,
                            "tolerance_validation_primary_figure_manifest.csv")
 
-selected_mti_ecm_method <- "mti_ecm_adaptive_cell"
+selected_mti_ecm_method <- arg_value("--mti-method-id=", "mti_ecm_adaptive_cell")
 has_mti_ecm_input <- nzchar(mti_ecm_results) && file.exists(mti_ecm_results)
 method_order <- c(
   selected_mti_ecm_method,
@@ -98,6 +98,12 @@ method_lty <- c(
   young_mathew = 1,
   wilks_minmax = 1
 )
+for(name in c("method_labels","method_colors","method_lty")) {
+  x <- get(name)
+  names(x)[names(x)=="mti_ecm_adaptive_cell"] <- selected_mti_ecm_method
+  assign(name,x)
+}
+method_labels[selected_mti_ecm_method] <- arg_value("--mti-label=", "MTI-ECM")
 
 num <- function(x) suppressWarnings(as.numeric(x))
 truthy <- function(x) {

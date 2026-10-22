@@ -225,3 +225,33 @@ validation require separate commands and complete upstream evidence; neither
 large runs nor manuscript replacement is automatic. See
 [the refinement specification](docs/implementation_notes/mti_q_grid_refinement_20261022.md)
 for the derivation, data roles, commands, and statistical limitations.
+
+## Final Calibration and Independent Comparison
+
+The final, fixed-budget study uses 24,000 calibration assessments and 32
+independent threshold-development samples per distribution/design case.
+The completed 72-sample numerical screen is reused after checking its source,
+configuration, numerical package, and recorded results. All nine design
+settings must pass the simultaneous binomial calibration requirement before
+the frozen rule is evaluated on 1,000 fresh samples per case. An unresolved
+setting stops the study; there is no automatic budget increase or resampling.
+
+Set `MTI_Q_BASELINE_RUN` and `MTI_Q_SCREEN_RUN` to the preserved comparison and
+screen directories. From a clean committed checkout, run:
+
+```bash
+make prepare-mti-q-grid
+make test-mti-final-study
+make preflight-mti-final-study
+make precision-mti-final-study
+make launch-mti-final-study MTI_Q_FINAL_WORKERS=40
+make health-mti-final-study
+```
+
+The launch checks available resources, uses one thread per worker, and retains
+every completed batch. Calibration assessment reads one batch at a time.
+Independent comparison tables and figures are written only to the new run's
+`review/` directory. Existing article results, application results, and both
+manuscripts remain unchanged until a separate scientific review. See
+[the final study specification](docs/implementation_notes/mti_final_study_20261022.md)
+for the fixed design, decision rules, reproducibility records, and limitations.

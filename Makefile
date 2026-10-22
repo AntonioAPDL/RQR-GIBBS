@@ -184,6 +184,10 @@ MTI_FIXED_WORKERS ?= 1
 MTI_Q_BASELINE_RUN ?=
 MTI_Q_RUN_DIR ?= application/outputs/mti_q_grid_refinement_20261022/prepared_20261022
 MTI_Q_WORKERS ?= 4
+MTI_Q_FINAL_CONFIG ?= application/config/mti_q_grid_refinement_final_20261022.json
+MTI_Q_SCREEN_RUN ?=
+MTI_Q_FINAL_RUN_DIR ?= application/outputs/mti_q_grid_refinement_20261022/final_20261022
+MTI_Q_FINAL_WORKERS ?= 40
 MTI_Q_RUNTIME = application/cache/mti_q_grid_runtime_$(shell git rev-parse HEAD)
 MTI_Q_R = R_LIBS=$(MTI_Q_RUNTIME)/library OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 MTI_PROFILE_RUNTIME = application/cache/mti_profile_runtime_$(shell git rev-parse HEAD)
@@ -294,6 +298,22 @@ pharma-mti-application-data:
 .PHONY: test-mti-fixed-policy preflight-mti-fixed-policy launch-mti-fixed-policy health-mti-fixed-policy report-mti-fixed-policy
 .PHONY: test-mti-fixed-policy-runtime
 .PHONY: test-mti-q-grid prepare-mti-q-grid preflight-mti-q-grid precision-mti-q-grid queue-mti-q-grid-screen health-mti-q-grid
+.PHONY: test-mti-final-study preflight-mti-final-study precision-mti-final-study launch-mti-final-study health-mti-final-study
+
+test-mti-final-study:
+	$(MTI_Q_R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-mti-final-study.R",reporter="summary",stop_on_failure=TRUE); testthat::test_file("application/tests/testthat/test-mti-final-reporting.R",reporter="summary",stop_on_failure=TRUE)'
+
+preflight-mti-final-study:
+	bash application/scripts/100_manage_mti_q_grid_study.sh preflight "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FINAL_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FINAL_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)"
+
+precision-mti-final-study:
+	bash application/scripts/100_manage_mti_q_grid_study.sh precision "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FINAL_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FINAL_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)"
+
+launch-mti-final-study:
+	bash application/scripts/100_manage_mti_q_grid_study.sh final "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FINAL_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FINAL_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)" --acknowledge-new-calibration --acknowledge-precision --authorize-fixed-final-study --rationale="Prospectively fixed 24000-assessment calibration following the completed numerical screen and exact-binomial precision review; independent validation only on passing all settings."
+
+health-mti-final-study:
+	bash application/scripts/100_manage_mti_q_grid_study.sh health "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FINAL_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FINAL_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)"
 
 test-mti-q-grid:
 	$(MTI_Q_R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-mti-content-grid.R",reporter="summary",stop_on_failure=TRUE); testthat::test_file("application/tests/testthat/test-mti-q-grid-study.R",reporter="summary",stop_on_failure=TRUE)'

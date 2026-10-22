@@ -2,7 +2,8 @@ q_study_env <- function() {
   e <- new.env(parent=globalenv())
   e$repo <- normalizePath(testthat::test_path("..","..",".."))
   for(file in c("pharma_tolerance_application.R","pharma_mti_application.R",
-    "mti_profile_revision.R","mti_profile_review.R","mti_fixed_policy_evaluation.R","mti_q_grid_study.R"))
+    "mti_profile_revision.R","mti_profile_review.R","mti_fixed_policy_evaluation.R","mti_q_grid_study.R",
+    "mti_final_study.R","mti_final_reporting.R"))
     sys.source(file.path(e$repo,"application/scripts/lib",file),e)
   e
 }

@@ -38,7 +38,7 @@ manifest_path <- file.path(
   output_dir, "tolerance_validation_width_figure_manifest.csv"
 )
 
-selected_mti_ecm_method <- "mti_ecm_adaptive_cell"
+selected_mti_ecm_method <- arg_value("--mti-method-id=", "mti_ecm_adaptive_cell")
 method_order <- c(
   selected_mti_ecm_method,
   "young_mathew",
@@ -59,6 +59,12 @@ method_pch <- c(
   young_mathew = 16,
   wilks_minmax = 1
 )
+for(name in c("method_labels","method_colors","method_pch")) {
+  x <- get(name)
+  names(x)[names(x)=="mti_ecm_adaptive_cell"] <- selected_mti_ecm_method
+  assign(name,x)
+}
+method_labels[selected_mti_ecm_method] <- arg_value("--mti-label=", "MTI-ECM")
 dgp_order <- c(
   "normal",
   "student_t3",

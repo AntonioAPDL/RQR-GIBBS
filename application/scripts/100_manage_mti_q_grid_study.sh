@@ -8,9 +8,10 @@ run=${3:-application/outputs/mti_q_grid_refinement_20261022/prepared_20261022}
 workers=${4:-4}
 extra=("${@:5}")
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export GIT_OPTIONAL_LOCKS=0
 runner=application/scripts/99_run_mti_q_grid_study.R
 if [[ "$mode" == health ]]; then
-  Rscript "$runner" --mode=health --run-dir="$run"
+  Rscript "$runner" --mode=health --run-dir="$run" "${extra[@]}"
   if [[ -f "$run/launcher.pid" ]]; then ps -p "$(<"$run/launcher.pid")" -o pid,etime,stat,args || true; fi
   exit 0
 fi
@@ -41,16 +42,16 @@ fi
 [[ -f "$runtime/ready" && "$(<"$runtime/ready")" == "$commit" ]]
 [[ "$workers" =~ ^[0-9]+$ && "$workers" -ge 1 && "$workers" -le 40 ]]
 sha256sum --check "$runtime/SHA256SUMS"
-Rscript "$runner" --mode=preflight --baseline-run="$baseline" --run-dir="$run" --workers="$workers"
+Rscript "$runner" --mode=preflight --baseline-run="$baseline" --run-dir="$run" --workers="$workers" "${extra[@]}"
 if [[ "$mode" == preflight ]]; then exit 0; fi
-[[ "$mode" == queue-screen || "$mode" == screen || "$mode" == calibration || "$mode" == validation || "$mode" == precision ]]
+[[ "$mode" == queue-screen || "$mode" == screen || "$mode" == calibration || "$mode" == validation || "$mode" == precision || "$mode" == final ]]
 run=$(Rscript -e 'source("application/scripts/lib/mti_profile_review.R");cat(mpr_output_path(commandArgs(TRUE)[1]))' "$run")
 [[ "$run" == "$root/application/outputs/mti_q_grid_refinement_20261022/"* ]]
 mkdir -p "$run"
 exec 8>"$run/launch.lock"
 if ! flock -n 8; then printf '%s\n' 'Another grid stage holds the study lock.' >&2; exit 1; fi
 if [[ "$mode" == precision ]]; then
-  Rscript "$runner" --mode=precision --baseline-run="$baseline" --run-dir="$run" --workers="$workers"
+  Rscript "$runner" --mode=precision --baseline-run="$baseline" --run-dir="$run" --workers="$workers" "${extra[@]}"
   exit 0
 fi
 stage=$mode
