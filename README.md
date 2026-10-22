@@ -163,5 +163,27 @@ Runtime preparation and launching require a clean committed checkout. Output,
 checkpoints, logs, and trace PDFs are local-only. See
 [the numerical specification](docs/implementation_notes/mti_intercept_profile_20261021.md)
 for the method, study stages, interpretation, and resumption commands.
+
+## Independent Revision Assessment
+
+The separate review reports fitting progress and statistical decisions without
+changing the active study. It verifies checkpoint identities, numerical
+diagnostics, independently reconstructed threshold decisions, and eventual
+paired validation results. Inconclusive calibration also produces a complete
+report; it cannot silently authorize validation or article replacement.
+
+```bash
+make test-mti-profile-review
+make health-mti-profile-review MTI_PROFILE_RUN_DIR=/absolute/path/to/frozen/run
+make review-mti-profile-revision MTI_PROFILE_RUN_DIR=/absolute/path/to/frozen/run
+```
+
+Use `make queue-mti-profile-review` with the same explicit run argument to
+produce one report after a still-running study exits. This job waits on the
+study lock without polling or fitting. Reports, CSVs, and the diagnostic PDF
+remain under ignored `application/outputs/`. See
+[the assessment specification](docs/implementation_notes/mti_profile_independent_assessment_20261021.md)
+for statistical definitions, uncertainty, integrity checks, and precision
+planning. Manuscript inputs are unchanged until a separate scientific decision.
 See [the numerical diagnostic record](docs/implementation_notes/pharma_ecm_numerical_diagnostics_20261020.md)
 for assumptions, numerical checks, findings, and limits.

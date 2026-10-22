@@ -1,0 +1,14 @@
+{
+  "schema_version": "mti_profile_review/1.0.0",
+  "primary_method": "mti_profile_fractional_admissible_v1",
+  "confidence_source": "calibration.familywise_confidence",
+  "simultaneous_bounds": "two_sided_bonferroni_over_primary_family_design_cells",
+  "required_observed_return_rate": 1,
+  "numerical_tolerance_source": "profile.objective_tolerance",
+  "noninferiority_margin": null,
+  "historical_reference_threshold": 0.995,
+  "width_summary": "within_family_design_raw_mean_and_type8_025_975_quantiles",
+  "paired_comparisons": "identical_dataset_keys_and_seeds_only",
+  "automatic_promotion": false,
+  "modify_study_or_article_inputs": false
+}

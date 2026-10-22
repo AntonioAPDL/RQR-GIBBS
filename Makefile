@@ -176,6 +176,7 @@ PHARMA_MTI_WORKERS ?= 40
 PHARMA_MTI_R = R_LIBS=$(PHARMA_MTI_LIBRARY) OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 MTI_PROFILE_WORKERS ?= 24
 MTI_PROFILE_RUN_DIR ?= application/outputs/mti_profile_revision_20261021/revision_20261021
+MTI_PROFILE_REVIEW_DIR ?= application/outputs/mti_profile_review_20261021/final
 MTI_PROFILE_RUNTIME = application/cache/mti_profile_runtime_$(shell git rev-parse HEAD)
 MTI_PROFILE_R = R_LIBS=$(MTI_PROFILE_RUNTIME)/library OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 RQR_BAYES_UQ_PRIMARY_YM_RESULTS ?=
@@ -280,6 +281,19 @@ pharma-mti-application-data:
 .PHONY: pharma-ecm-audit-preflight pharma-ecm-audit-smoke pharma-ecm-audit-run pharma-ecm-audit-report test-pharma-ecm-audit
 
 .PHONY: test-mti-profile mti-profile-runtime mti-profile-preflight launch-mti-profile-revision health-mti-profile-revision
+.PHONY: test-mti-profile-review review-mti-profile-revision queue-mti-profile-review health-mti-profile-review
+
+test-mti-profile-review:
+	$(R) -e 'testthat::test_file("application/tests/testthat/test-mti-profile-review.R",reporter="summary",stop_on_failure=TRUE)'
+
+review-mti-profile-revision:
+	$(R) application/scripts/95_review_mti_profile_revision.R --run-dir=$(MTI_PROFILE_RUN_DIR) --output-dir=$(MTI_PROFILE_REVIEW_DIR)
+
+health-mti-profile-review:
+	$(R) application/scripts/95_review_mti_profile_revision.R --health-only --run-dir=$(MTI_PROFILE_RUN_DIR) --output-dir=$(MTI_PROFILE_REVIEW_DIR)
+
+queue-mti-profile-review:
+	bash application/scripts/96_review_mti_profile_when_ready.sh $(MTI_PROFILE_RUN_DIR) $(MTI_PROFILE_REVIEW_DIR)
 
 test-mti-profile:
 	$(R) -e 'pkgload::load_all("application",quiet=TRUE); for(f in c("test-rqr-mti-intercept-profile.R","test-mti-profile-revision-study.R")) testthat::test_file(file.path("application/tests/testthat",f),reporter="summary",stop_on_failure=TRUE)'
