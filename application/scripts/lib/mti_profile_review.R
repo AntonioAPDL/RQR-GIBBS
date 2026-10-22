@@ -405,8 +405,14 @@ mpr_health <- function(run,cfg,frozen) {
   rows
 }
 
-mpr_provenance <- function(run,cfg,repo) {
+mpr_check_study_config <- function(path,identity) {
+  mpr_require(identical(mp_sha(path),identity$config_sha256),
+    "Reporting configuration does not match the frozen study configuration.")
+}
+
+mpr_provenance <- function(run,cfg,repo,config_path) {
   identity <- readRDS(file.path(run,"identity.rds"))
+  mpr_check_study_config(config_path,identity)
   manifest <- mpr_read_json(file.path(run,"manifest.json"))
   mpr_require(identical(identity$commit,manifest$commit),"Run source identities disagree.")
   sources <- identity$sources
@@ -624,7 +630,7 @@ mpr_build_report <- function(run,output,cfg,review,repo,config_path,review_path)
     expected_datasets=NA_integer_,remaining_fits=NA_integer_,status="not_audited")
   calibration <- assessment <- summary <- NULL
   tryCatch({
-    status$provenance <- mpr_provenance(run,cfg,repo)
+    status$provenance <- mpr_provenance(run,cfg,repo,config_path)
     frozen <- jsonlite::read_json(cfg$validation_config,simplifyVector=FALSE)
     design <- mpr_design(frozen)
     calibration_completion <- mpr_read_json(file.path(run,"calibration","completion.json"))

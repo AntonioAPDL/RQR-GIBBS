@@ -35,6 +35,16 @@ test_that("review binomial bounds agree with the exact binomial test", {
   }
 })
 
+test_that("reporting settings cannot override the frozen study configuration", {
+  e <- review_env();path <- tempfile("review_config_")
+  on.exit(unlink(path),add=TRUE)
+  jsonlite::write_json(list(objective_tolerance=1e-8),path,auto_unbox=TRUE)
+  identity <- list(config_sha256=e$mp_sha(path))
+  expect_silent(e$mpr_check_study_config(path,identity))
+  jsonlite::write_json(list(objective_tolerance=1e-3),path,auto_unbox=TRUE)
+  expect_error(e$mpr_check_study_config(path,identity),"frozen study")
+})
+
 test_that("review separates fitted datasets from completed statistical assessment", {
   e <- review_env(); path <- tempfile("review_states_")
   dir.create(file.path(path,"calibration"),recursive=TRUE)
