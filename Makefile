@@ -181,6 +181,11 @@ MTI_FIXED_CALIBRATION_RUN ?=
 MTI_FIXED_CALIBRATION_REVIEW ?=
 MTI_FIXED_RUN_DIR ?= application/outputs/mti_fixed_policy_evaluation_20261021/independent_20261021
 MTI_FIXED_WORKERS ?= 1
+MTI_Q_BASELINE_RUN ?=
+MTI_Q_RUN_DIR ?= application/outputs/mti_q_grid_refinement_20261022/prepared_20261022
+MTI_Q_WORKERS ?= 4
+MTI_Q_RUNTIME = application/cache/mti_q_grid_runtime_$(shell git rev-parse HEAD)
+MTI_Q_R = R_LIBS=$(MTI_Q_RUNTIME)/library OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 MTI_PROFILE_RUNTIME = application/cache/mti_profile_runtime_$(shell git rev-parse HEAD)
 MTI_PROFILE_R = R_LIBS=$(MTI_PROFILE_RUNTIME)/library OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 RQR_BAYES_UQ_PRIMARY_YM_RESULTS ?=
@@ -288,6 +293,25 @@ pharma-mti-application-data:
 .PHONY: test-mti-profile-review review-mti-profile-revision queue-mti-profile-review health-mti-profile-review
 .PHONY: test-mti-fixed-policy preflight-mti-fixed-policy launch-mti-fixed-policy health-mti-fixed-policy report-mti-fixed-policy
 .PHONY: test-mti-fixed-policy-runtime
+.PHONY: test-mti-q-grid prepare-mti-q-grid preflight-mti-q-grid precision-mti-q-grid queue-mti-q-grid-screen health-mti-q-grid
+
+test-mti-q-grid:
+	$(MTI_Q_R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-mti-content-grid.R",reporter="summary",stop_on_failure=TRUE); testthat::test_file("application/tests/testthat/test-mti-q-grid-study.R",reporter="summary",stop_on_failure=TRUE)'
+
+prepare-mti-q-grid:
+	bash application/scripts/100_manage_mti_q_grid_study.sh prepare
+
+preflight-mti-q-grid:
+	bash application/scripts/100_manage_mti_q_grid_study.sh preflight "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_RUN_DIR)" $(MTI_Q_WORKERS)
+
+precision-mti-q-grid:
+	bash application/scripts/100_manage_mti_q_grid_study.sh precision "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_RUN_DIR)" $(MTI_Q_WORKERS)
+
+queue-mti-q-grid-screen:
+	bash application/scripts/100_manage_mti_q_grid_study.sh queue-screen "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_RUN_DIR)" $(MTI_Q_WORKERS)
+
+health-mti-q-grid:
+	bash application/scripts/100_manage_mti_q_grid_study.sh health "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_RUN_DIR)" $(MTI_Q_WORKERS)
 
 test-mti-fixed-policy:
 	$(R) -e 'testthat::test_file("application/tests/testthat/test-mti-fixed-policy-evaluation.R",reporter="summary",stop_on_failure=TRUE)'

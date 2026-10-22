@@ -205,3 +205,23 @@ same policy and source identity. Summaries and a diagnostic PDF are produced
 once when fitting ends, without continuous monitoring. See
 [the evaluation specification](docs/implementation_notes/mti_fixed_policy_evaluation_20261021.md)
 for selection, seeds, uncertainty, tests, reproduction, and adoption criteria.
+
+## Content-Grid Refinement
+
+The optional `rqr_mti_refine_content_grid()` function retains the original fitted
+contents and adds targets according to the observation count, learning rate,
+and root prior precision. Existing fitting defaults and manuscript results are
+unchanged. A separate study compares this finite-grid refinement with the
+frozen profiled MTI method, Young--Mathew, and Wilks on paired samples.
+
+Use `make prepare-mti-q-grid` and `make test-mti-q-grid` from a clean committed
+checkout. With `MTI_Q_BASELINE_RUN` set to the original comparison directory,
+`make preflight-mti-q-grid` checks the isolated specification and
+`make precision-mti-q-grid` writes hypothetical calibration power curves.
+`make queue-mti-q-grid-screen` waits for the original study to finish before
+running 72 numerical test samples with four single-threaded workers. This
+screen provides no tolerance-performance evidence. New calibration and
+validation require separate commands and complete upstream evidence; neither
+large runs nor manuscript replacement is automatic. See
+[the refinement specification](docs/implementation_notes/mti_q_grid_refinement_20261022.md)
+for the derivation, data roles, commands, and statistical limitations.

@@ -1,0 +1,32 @@
+{
+  "schema_version": "mti_q_grid_refinement/1.0.0",
+  "study_id": "mti_q_grid_refinement_20261022",
+  "revision_config": "application/config/mti_profile_revision_20261021.json",
+  "baseline_policy": "application/config/mti_profile_fixed_policy_20261021.csv",
+  "baseline_commit": "2d2fcb098a0a4e4b10f46c954921aa7d42b7703c",
+  "baseline_policy_sha256": "3e046a220b870708c4c1c90c8323a941b3f0fb76c1fcb8ba7cded463ce1716c1",
+  "primary_method": "mti_profile_mass_cells_v1",
+  "refinement_rule": "one_target_per_unrepresented_positive_effective_mass_cell",
+  "threshold_rule": "independent_development_quantiles_and_requested_confidence",
+  "threshold_quantile_count": 25,
+  "screen": {"replications": 1, "seed_base": 32102200, "cell_seed_stride": 100000},
+  "calibration": {
+    "replications": 1000,
+    "threshold_development_replications": 32,
+    "familywise_confidence": 0.95,
+    "seed_base": 622610220,
+    "cell_seed_stride": 100000
+  },
+  "validation": {
+    "replications": 1000,
+    "seed_base": 922610220,
+    "cell_seed_stride": 100000,
+    "methods": ["mti_profile_mass_cells_v1", "mti_profile_fractional_admissible_v1", "young_mathew", "wilks"]
+  },
+  "retired_validation_seed_base": 822610220,
+  "execution": {"screen_workers": 4, "maximum_workers": 40, "threads_per_worker": 1, "checkpoint_batch": 24},
+  "automatic_large_launch": false,
+  "automatic_promotion": false,
+  "modify_baseline_or_article": false,
+  "output_root": "application/outputs/mti_q_grid_refinement_20261022"
+}

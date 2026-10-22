@@ -161,7 +161,8 @@ mpr_binomial_bounds <- function(successes,trials,alpha) {
     upper=if(successes==trials)1 else stats::qbeta(1-alpha,successes+1,trials-successes))
 }
 
-mpr_validate_results <- function(z,design,cfg,cdf_by_family=NULL) {
+mpr_validate_results <- function(z,design,cfg,cdf_by_family=NULL,
+                                 primary_method="mti_profile_fractional_admissible_v1") {
   required <- c("method","returned","status","lower","upper","width","true_content",
     "content_attained","numerical_failure_candidates","relative_objective_gap")
   mpr_require(all(required %in% names(z)),"Validation result fields are missing.")
@@ -187,7 +188,7 @@ mpr_validate_results <- function(z,design,cfg,cdf_by_family=NULL) {
   mpr_require(all(z$content_attained==(good & !is.na(z$true_content) &
     z$true_content>=z$content)),"Content attainment uses the wrong event or denominator.")
   mpr_require(all((z$status=="returned")==good),"Return status conflicts with returned flag.")
-  primary <- z$method=="mti_profile_fractional_admissible_v1"
+  primary <- z$method==primary_method
   mpr_require(all(is.finite(z$numerical_failure_candidates) & z$numerical_failure_candidates>=0),
     "Missing numerical failure counts.")
   valid_primary <- primary & good
@@ -440,7 +441,8 @@ mpr_provenance <- function(run,cfg,repo,config_path) {
     shared_library_sha256=identity$shared_library_sha256,verified=TRUE)
 }
 
-mpr_report_pdf <- function(output,status,calibration=NULL,assessment=NULL,summary=NULL) {
+mpr_report_pdf <- function(output,status,calibration=NULL,assessment=NULL,summary=NULL,
+                           method_labels=NULL,method_colors=NULL) {
   grDevices::pdf(file.path(output,"mti_profile_assessment.pdf"),width=12,height=8.5)
   on.exit(grDevices::dev.off(),add=TRUE)
   plot.new(); title("MTI revision: independent assessment")
@@ -495,6 +497,8 @@ mpr_report_pdf <- function(output,status,calibration=NULL,assessment=NULL,summar
       mti_ecm_historical="Historical MTI-ECM",young_mathew="Young-Mathew",wilks="Wilks")
     colors <- c(mti_profile_fractional_admissible_v1="#0072B2",mti_ecm_historical="#CC79A7",
       young_mathew="#D55E00",wilks="black")
+    labels[names(method_labels)] <- method_labels
+    colors[names(method_colors)] <- method_colors
     for(family in unique(summary$dgp_id)) {
       s <- summary[summary$dgp_id==family,]
       cells <- unique(s[c("cell_index","n","content")]); cells <- cells[order(cells$n,cells$content),]
