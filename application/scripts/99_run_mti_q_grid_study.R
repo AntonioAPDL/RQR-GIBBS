@@ -88,6 +88,7 @@ guard <- function() {
   mpr_require(identical(identity$sources,pma_file_record(identity$sources$path)),"Grid study source changed.")
   mpr_require(identical(identity$protected_inputs,pma_file_record(identity$protected_inputs$path)),"Historical article inputs changed.")
   mpq_baseline_check(baseline,spec)
+  invisible(TRUE)
 }
 guard()
 if(mode=="precision") {
