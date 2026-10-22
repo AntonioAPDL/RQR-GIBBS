@@ -122,3 +122,17 @@ bracket does not obscure late numerical behavior. Saved-case,
 calibration, and validation summaries remain local-only. Plans and audits
 remain under ignored `.codex_work/`; this document records the implemented
 method and reproduction instructions.
+
+## Portable Package Tests
+
+The package tarball intentionally excludes repository scripts and study
+configurations. Its intercept tests therefore use 46 small fixed-target
+references in `application/tests/testthat/fixtures/mti_intercept_profile/`.
+These are numerical reference values, not fitted application objects. To
+regenerate them, run `application/scripts/94_generate_mti_profile_test_reference.R`
+with the profile package installed. The generator uses the independent
+piecewise-quadratic cell calculation and checks its direct-loss evaluation.
+Both R and C++ estimates are compared with these references during package
+checks. Repository-script tests for checkpoint resumption, independent
+threshold development, and failed candidate searches run separately through
+`make test-mti-profile`.

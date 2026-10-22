@@ -1,23 +1,16 @@
-profile_reference_env <- function() {
-  e <- new.env(parent = globalenv())
-  roots <- c(testthat::test_path("..",".."),
-    testthat::test_path("..","..","00_pkg_src","rqrgibbs"))
-  paths <- file.path(roots,"scripts","lib","pharma_ecm_numerical_audit.R")
-  if(!any(file.exists(paths))) stop("Missing independent objective reference source.")
-  sys.source(paths[file.exists(paths)][1L], e)
-  e
+profile_reference_data <- function() {
+  directory <- testthat::test_path("fixtures","mti_intercept_profile")
+  list(observations=read.csv(file.path(directory,"observations.csv")),
+    references=read.csv(file.path(directory,"references.csv")))
 }
 
 test_that("profiled intercept estimates agree with independent cell minima", {
-  e <- profile_reference_env()
-  set.seed(20261021)
-  examples <- list(c(0,0,1,1,2), c(-3,-1,.2,2,4), rep(2,5),
-    rnorm(12), rexp(15))
-  for (y in examples) for (q in c(.6,.9,.9775)) for (delta in c(-.1,0,.1)) {
-    ref <- e$pea_reference(y,q,delta,precision=.01,
-      direct_checks=.Machine$integer.max)
+  data <- profile_reference_data()
+  for (i in seq_len(nrow(data$references))) {
+    ref <- data$references[i,]
+    y <- data$observations$y[data$observations$sample_id==ref$sample_id]
     fits <- lapply(c("R","cpp"), function(backend)
-      rqr_mti_intercept_fit(y,q,delta,prior_precision=.01,backend=backend))
+      rqr_mti_intercept_fit(y,ref$q,ref$delta,prior_precision=ref$precision,backend=backend))
     for (fit in fits) {
       expect_true(fit$converged)
       expect_equal(fit$objective,ref$objective,tolerance=1e-8)
@@ -53,11 +46,11 @@ test_that("fractional shortest support has coherent mass and conventional endpoi
 })
 
 test_that("boundary tilts retain legitimate prior-centered exterior solutions", {
-  e <- profile_reference_env()
+  data <- profile_reference_data()
   y <- c(0,1,2,10)
   delta <- rqr_mti_empirical_tilt_bounds(y,.625)$delta_lower
   fit <- rqr_mti_intercept_fit(y,.625,delta)
-  ref <- e$pea_reference(y,.625,delta)
+  ref <- data$references[data$references$sample_id=="boundary",]
   expect_equal(fit$objective,ref$objective,tolerance=1e-8)
   extreme <- rqr_mti_intercept_fit(y,.625,delta-.05)
   expect_lt(extreme$lower,min(y)-100)
