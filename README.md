@@ -248,6 +248,19 @@ make launch-mti-final-study MTI_Q_FINAL_WORKERS=40
 make health-mti-final-study
 ```
 
+The focused threshold follow-up is specified in
+`application/config/mti_threshold_followup_20261024.json` and documented in
+`docs/implementation_notes/mti_threshold_followup_20261024.md`. It preserves
+the completed study, tightens the simultaneous bounds for seven retained
+policies, and freshly assesses only the two unresolved settings with a finer
+development-only probability menu. Set `MTI_Q_PARENT_RUN` in addition to the
+preserved baseline and screen paths, then use
+`make preflight-mti-threshold-followup`, `make precision-mti-threshold-followup`,
+and `make launch-mti-threshold-followup`. The launcher uses at most 40
+single-threaded workers and starts the full independent comparison only if
+both settings pass. `make health-mti-threshold-followup` reports progress.
+Neither run replaces the application or manuscript automatically.
+
 The launch checks available resources, uses one thread per worker, and retains
 every completed batch. Calibration assessment reads one batch at a time.
 Independent comparison tables and figures are written only to the new run's

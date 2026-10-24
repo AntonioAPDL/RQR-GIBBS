@@ -2,8 +2,13 @@ mpq_config <- function(spec) {
   integer_count <- function(x,minimum=1L)is.numeric(x) && length(x)==1L &&
     is.finite(x) && x>=minimum && x==floor(x)
   mpr_require(identical(spec$refinement_rule,"one_target_per_unrepresented_positive_effective_mass_cell") &&
-    identical(spec$threshold_rule,"independent_development_quantiles_and_requested_confidence") &&
+    spec$threshold_rule %in% c("independent_development_quantiles_and_requested_confidence",
+      "independent_development_logit_gap_refinement") &&
     integer_count(spec$threshold_quantile_count,2L),"Unsupported grid or threshold specification.")
+  if(identical(spec$threshold_rule,"independent_development_logit_gap_refinement"))
+    mpr_require(integer_count(spec$threshold_gap_levels) && spec$threshold_gap_levels<=4 &&
+      !is.null(spec$followup) && identical(as.numeric(spec$followup$original_error_fraction),.5),
+      "Invalid predeclared follow-up menu or error split.")
   for(stage in c("screen","calibration","validation")) {
     x <- spec[[stage]]
     mpr_require(integer_count(x$replications) && integer_count(x$cell_seed_stride) &&
@@ -24,6 +29,44 @@ mpq_config <- function(spec) {
   cfg$execution$checkpoint_batch <- spec$execution$checkpoint_batch
   cfg$retired_validation_seed_base <- spec$retired_validation_seed_base
   cfg
+}
+
+mpq_threshold_menu <- function(probabilities,confidence,spec,ceilings=numeric()) {
+  mpr_require(is.numeric(confidence) && length(confidence)==1L && is.finite(confidence) &&
+    confidence>0 && confidence<1,"Invalid requested posterior confidence.")
+  p <- probabilities[is.finite(probabilities) & probabilities>0 & probabilities<1]
+  mpr_require(length(p)>0,"No independent development probabilities.")
+  knots <- sort(unique(c(confidence,as.numeric(stats::quantile(p,
+    seq(0,1,length.out=spec$threshold_quantile_count),type=8,names=FALSE)))))
+  if(identical(spec$threshold_rule,"independent_development_logit_gap_refinement")) {
+    levels <- spec$threshold_gap_levels
+    mpr_require(is.numeric(levels) && length(levels)==1L && is.finite(levels) &&
+      levels>=1 && levels<=4 && levels==floor(levels),"Invalid threshold gap resolution.")
+    mpr_require(length(ceilings)>0 && all(is.finite(ceilings) & ceilings>=0 & ceilings<=1),
+      "Development eligibility probabilities are missing or invalid.")
+    ceiling <- min(ceilings)
+    if(ceiling>0 && ceiling<1)knots <- sort(unique(c(knots,ceiling)))
+    fractions <- seq_len(2^levels-1L)/2^levels
+    logits <- stats::qlogis(knots)
+    extra <- unlist(lapply(seq_len(length(knots)-1L),function(i)
+      stats::plogis(logits[i]+fractions*(logits[i+1L]-logits[i]))),use.names=FALSE)
+    knots <- sort(unique(c(knots,extra)))
+    maximum <- (spec$threshold_quantile_count+1L)*2^levels+1L
+    mpr_require(length(knots)<=maximum && all(knots>0 & knots<1),"Invalid refined threshold menu.")
+  }
+  knots
+}
+
+mpq_calibration_alpha <- function(cfg,spec,cells,families,menu_size) {
+  error <- 1-cfg$calibration$familywise_confidence
+  if(identical(spec$threshold_rule,"independent_development_logit_gap_refinement")) {
+    fraction <- spec$followup$original_error_fraction
+    mpr_require(is.numeric(fraction) && length(fraction)==1L &&
+      identical(as.numeric(fraction),.5),"Follow-up requires the fixed equal error split.")
+    error <- error*(1-fraction)
+    return(error/(cells*families*menu_size))
+  }
+  error/(cells*families*(spec$threshold_quantile_count+1L))
 }
 
 mpq_tasks <- function(design,cfg,stage) {
@@ -203,17 +246,15 @@ mpq_calibrate <- function(values,cfg,spec,output) {
   tasks <- do.call(rbind,lapply(values,`[[`,"identity"))
   cells <- unique(tasks[c("n","content","tolerance_confidence")])
   families <- unique(tasks$dgp_id)
-  alpha <- (1-cfg$calibration$familywise_confidence)/
-    (nrow(cells)*length(families)*(spec$threshold_quantile_count+1L))
   policies <- assessments <- list()
   for(i in seq_len(nrow(cells))) {
     cell <- cells[i,]; use <- which(mpr_cell_key(tasks)==mpr_cell_key(cell))
     dev <- use[tasks$role[use]=="threshold_development"]
     p <- unlist(lapply(values[dev],function(x)x$candidates$posterior_content_probability),use.names=FALSE)
     p <- p[is.finite(p) & p>0 & p<1]
-    mpr_require(length(p)>0,"No independent development probabilities.")
-    thresholds <- sort(unique(c(cell$tolerance_confidence,as.numeric(stats::quantile(p,
-      seq(0,1,length.out=spec$threshold_quantile_count),type=8,names=FALSE)))))
+    ceilings <- vapply(values[dev],function(x)max(x$candidates$posterior_content_probability),numeric(1))
+    thresholds <- mpq_threshold_menu(p,cell$tolerance_confidence,spec,ceilings)
+    alpha <- mpq_calibration_alpha(cfg,spec,nrow(cells),length(families),length(thresholds))
     rows <- lapply(families,function(family) {
       idx <- use[tasks$role[use]=="calibration_assessment" & tasks$dgp_id[use]==family]
       mpr_require(length(idx)==cfg$calibration$replications,"Incomplete calibration family.")
@@ -368,8 +409,14 @@ mpq_precision_reference <- function(design,cfg,spec) {
   for(cell in split(unique(design[c("n","content","tolerance_confidence")]),
     mpr_cell_key(unique(design[c("n","content","tolerance_confidence")])))) {
     probabilities <- seq(cell$tolerance_confidence,1,length.out=spec$threshold_quantile_count)
-    alpha <- (1-cfg$calibration$familywise_confidence)/
-      (nrow(design)*(spec$threshold_quantile_count+1L))
+    menu_size <- if(identical(spec$threshold_rule,"independent_development_logit_gap_refinement"))
+      (spec$threshold_quantile_count+1L)*2^spec$threshold_gap_levels+1L else
+      spec$threshold_quantile_count+1L
+    alpha <- if(identical(spec$threshold_rule,"independent_development_logit_gap_refinement"))
+      mpq_calibration_alpha(cfg,spec,
+        nrow(unique(design[c("n","content","tolerance_confidence")])),
+        length(unique(design$dgp_id)),menu_size) else
+      (1-cfg$calibration$familywise_confidence)/(nrow(design)*(spec$threshold_quantile_count+1L))
     budgets <- if(is.null(spec$precision_replications))cfg$calibration$replications*2^(0:4) else
       unlist(spec$precision_replications,use.names=FALSE)
     for(n in budgets) {

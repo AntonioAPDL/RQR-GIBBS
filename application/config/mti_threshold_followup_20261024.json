@@ -1,0 +1,42 @@
+{
+  "schema_version": "mti_q_grid_refinement/1.0.0",
+  "study_id": "mti_threshold_followup_20261024",
+  "revision_config": "application/config/mti_profile_revision_20261021.json",
+  "baseline_policy": "application/config/mti_profile_fixed_policy_20261021.csv",
+  "baseline_commit": "2d2fcb098a0a4e4b10f46c954921aa7d42b7703c",
+  "baseline_policy_sha256": "3e046a220b870708c4c1c90c8323a941b3f0fb76c1fcb8ba7cded463ce1716c1",
+  "primary_method": "mti_profile_mass_cells_v1",
+  "refinement_rule": "one_target_per_unrepresented_positive_effective_mass_cell",
+  "threshold_rule": "independent_development_logit_gap_refinement",
+  "threshold_quantile_count": 25,
+  "threshold_gap_levels": 2,
+  "followup": {
+    "parent_commit": "7135928ce8969d106d5f7497cd5ddddb3fda8270",
+    "parent_config": "application/config/mti_q_grid_refinement_final_20261022.json",
+    "parent_config_sha256": "4a8535edb685ec797b6bf880caef347beb679fa8f9dc6efb42ab5f514908224b",
+    "parent_policy_sha256": "54815cb1e33a0365ed083135c2c00fa816def233f1e9151ff2463c93a71cb25d",
+    "parent_completion_sha256": "4a2c0a3d8859ceea90e6ff3d6528ef78382530e80c6caf85d6f1e6b989208e39",
+    "original_error_fraction": 0.5,
+    "retained_settings": 7,
+    "reassess_cells": [{"n": 50, "content": 0.9}, {"n": 100, "content": 0.95}]
+  },
+  "screen": {"replications": 1, "seed_base": 32102200, "cell_seed_stride": 100000},
+  "screen_reference": {
+    "commit": "8748e9e1bbc2d20c0a7368932d973b99c8bdf78f",
+    "config": "application/config/mti_q_grid_refinement_20261022.json",
+    "config_sha256": "17993f3a10a5ae93515e800ac5831a969157eff16b733d75ba98e6eb71be31b4"
+  },
+  "calibration": {"replications": 24000, "threshold_development_replications": 32,
+    "familywise_confidence": 0.95, "seed_base": 1122610240, "cell_seed_stride": 100000},
+  "validation": {"replications": 1000, "seed_base": 1322610240, "cell_seed_stride": 100000,
+    "methods": ["mti_profile_mass_cells_v1", "mti_profile_fractional_admissible_v1", "young_mathew", "wilks"]},
+  "retired_validation_seed_base": 822610220,
+  "execution": {"screen_workers": 4, "maximum_workers": 40, "threads_per_worker": 1, "checkpoint_batch": 400},
+  "final_study": {"validation_after_passing_calibration": true, "automatic_adoption": false},
+  "precision_replications": [24000],
+  "resource_requirements": {"disk_reserve_factor": 3, "minimum_available_memory_gib": 16},
+  "automatic_large_launch": false,
+  "automatic_promotion": false,
+  "modify_baseline_or_article": false,
+  "output_root": "application/outputs/mti_q_grid_refinement_20261022"
+}

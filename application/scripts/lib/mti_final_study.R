@@ -11,8 +11,10 @@ mpq_screen_reference <- function(run,spec,cfg,design) {
       "Preserved screen inputs changed.")
   old <- jsonlite::read_json(old_path,simplifyVector=FALSE)
   for(field in c("primary_method","refinement_rule","threshold_rule","threshold_quantile_count",
-    "baseline_commit","baseline_policy_sha256","screen"))
+    "baseline_commit","baseline_policy_sha256","screen")) {
+    if(field=="threshold_rule" && !is.null(spec$followup))next
     mpr_require(identical(spec[[field]],old[[field]]),"Screen and final numerical specifications differ.")
+  }
   old_cfg <- jsonlite::read_json(file.path(root,old$revision_config),simplifyVector=FALSE)
   mpr_require(identical(cfg$profile,old_cfg$profile) &&
     identical(mp_sha(cfg$validation_config),mp_sha(file.path(root,old_cfg$validation_config))),
@@ -90,6 +92,7 @@ mpq_calibrate_checkpoints <- function(tasks,cfg,spec,path,context) {
   cell_keys <- mpr_cell_key(cells)
   cases <- unique(tasks[c("cell_index","n","content","tolerance_confidence","dgp_id")])
   development <- setNames(vector("list",nrow(cells)),cell_keys)
+  development_ceilings <- setNames(vector("list",nrow(cells)),cell_keys)
   failures <- 0L
   records <- mpq_visit_calibration(tasks,cfg,path,function(value) {
     task <- value$identity; z <- value$candidates
@@ -115,17 +118,14 @@ mpq_calibrate_checkpoints <- function(tasks,cfg,spec,path,context) {
       key <- mpr_cell_key(task)
       p <- z$posterior_content_probability
       development[[key]] <<- c(development[[key]],p[is.finite(p) & p>0 & p<1])
+      development_ceilings[[key]] <<- c(development_ceilings[[key]],max(p))
     }
   })
   pma_write_csv(records,file.path(path,"checkpoint_manifest.csv"))
   thresholds <- setNames(lapply(seq_len(nrow(cells)),function(i) {
     p <- development[[cell_keys[i]]]
-    mpr_require(length(p)>0,"No independent development probabilities.")
-    sort(unique(c(cells$tolerance_confidence[i],as.numeric(stats::quantile(p,
-      seq(0,1,length.out=spec$threshold_quantile_count),type=8,names=FALSE)))))
+    mpq_threshold_menu(p,cells$tolerance_confidence[i],spec,development_ceilings[[cell_keys[i]]])
   }),cell_keys)
-  alpha <- (1-cfg$calibration$familywise_confidence)/
-    (nrow(cells)*length(families)*(spec$threshold_quantile_count+1L))
   sums <- setNames(lapply(seq_len(nrow(cases)),function(i) {
     task <- cases[i,,drop=FALSE]
     t <- thresholds[[mpr_cell_key(task)]]
@@ -145,6 +145,7 @@ mpq_calibrate_checkpoints <- function(tasks,cfg,spec,path,context) {
   policies <- assessments <- list()
   for(i in seq_len(nrow(cells))) {
     cell <- cells[i,,drop=FALSE]
+    alpha <- mpq_calibration_alpha(cfg,spec,nrow(cells),length(families),length(thresholds[[cell_keys[i]]]))
     a <- do.call(rbind,lapply(families,function(family) {
       key <- cases$cell_index[mpr_cell_key(cases)==cell_keys[i] & cases$dgp_id==family]
       mpr_require(length(key)==1L,"No unique calibration distribution case.")
@@ -181,7 +182,7 @@ mpq_resource_check <- function(baseline_identity,cfg,spec,design,screen,workers)
   rows <- read.csv(file.path(screen$run,"screen","results.csv"))
   rows <- rows[rows$method==spec$primary_method,,drop=FALSE]
   estimates <- lapply(seq_len(nrow(design)),function(i) {
-    b <- floor((i-1L)*per_case/old_batch)+1L
+    b <- floor((design$cell_index[i]-1L)*per_case/old_batch)+1L
     file <- file.path(old_run,"calibration","checkpoints",sprintf("batch_%05d.rds",b))
     saved <- readRDS(file)
     mpr_require(nrow(saved$tasks)>0 && length(saved$values)==nrow(saved$tasks),"Invalid reference calibration batch.")

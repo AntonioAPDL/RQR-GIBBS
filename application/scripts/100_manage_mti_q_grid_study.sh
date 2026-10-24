@@ -44,7 +44,7 @@ fi
 sha256sum --check "$runtime/SHA256SUMS"
 Rscript "$runner" --mode=preflight --baseline-run="$baseline" --run-dir="$run" --workers="$workers" "${extra[@]}"
 if [[ "$mode" == preflight ]]; then exit 0; fi
-[[ "$mode" == queue-screen || "$mode" == screen || "$mode" == calibration || "$mode" == validation || "$mode" == precision || "$mode" == final ]]
+[[ "$mode" == queue-screen || "$mode" == screen || "$mode" == calibration || "$mode" == validation || "$mode" == precision || "$mode" == final || "$mode" == followup ]]
 run=$(Rscript -e 'source("application/scripts/lib/mti_profile_review.R");cat(mpr_output_path(commandArgs(TRUE)[1]))' "$run")
 [[ "$run" == "$root/application/outputs/mti_q_grid_refinement_20261022/"* ]]
 mkdir -p "$run"

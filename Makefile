@@ -188,6 +188,9 @@ MTI_Q_FINAL_CONFIG ?= application/config/mti_q_grid_refinement_final_20261022.js
 MTI_Q_SCREEN_RUN ?=
 MTI_Q_FINAL_RUN_DIR ?= application/outputs/mti_q_grid_refinement_20261022/final_20261022
 MTI_Q_FINAL_WORKERS ?= 40
+MTI_Q_FOLLOWUP_CONFIG ?= application/config/mti_threshold_followup_20261024.json
+MTI_Q_PARENT_RUN ?=
+MTI_Q_FOLLOWUP_RUN_DIR ?= application/outputs/mti_q_grid_refinement_20261022/threshold_followup_20261024
 MTI_Q_RUNTIME = application/cache/mti_q_grid_runtime_$(shell git rev-parse HEAD)
 MTI_Q_R = R_LIBS=$(MTI_Q_RUNTIME)/library OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 MTI_PROFILE_RUNTIME = application/cache/mti_profile_runtime_$(shell git rev-parse HEAD)
@@ -299,6 +302,22 @@ pharma-mti-application-data:
 .PHONY: test-mti-fixed-policy-runtime
 .PHONY: test-mti-q-grid prepare-mti-q-grid preflight-mti-q-grid precision-mti-q-grid queue-mti-q-grid-screen health-mti-q-grid
 .PHONY: test-mti-final-study preflight-mti-final-study precision-mti-final-study launch-mti-final-study health-mti-final-study
+.PHONY: test-mti-threshold-followup preflight-mti-threshold-followup precision-mti-threshold-followup launch-mti-threshold-followup health-mti-threshold-followup
+
+test-mti-threshold-followup:
+	$(MTI_Q_R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-mti-threshold-followup.R",reporter="summary",stop_on_failure=TRUE)'
+
+preflight-mti-threshold-followup:
+	bash application/scripts/100_manage_mti_q_grid_study.sh preflight "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FOLLOWUP_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FOLLOWUP_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)" --parent-run="$(MTI_Q_PARENT_RUN)"
+
+precision-mti-threshold-followup:
+	bash application/scripts/100_manage_mti_q_grid_study.sh precision "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FOLLOWUP_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FOLLOWUP_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)" --parent-run="$(MTI_Q_PARENT_RUN)"
+
+launch-mti-threshold-followup:
+	bash application/scripts/100_manage_mti_q_grid_study.sh followup "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FOLLOWUP_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FOLLOWUP_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)" --parent-run="$(MTI_Q_PARENT_RUN)" --acknowledge-new-calibration --acknowledge-precision --authorize-threshold-followup --rationale="One prospective two-setting threshold-menu follow-up; tightened retained evidence and fresh assessment share the total error allowance; independent validation only after all combined settings pass."
+
+health-mti-threshold-followup:
+	bash application/scripts/100_manage_mti_q_grid_study.sh health "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FOLLOWUP_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FOLLOWUP_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)" --parent-run="$(MTI_Q_PARENT_RUN)"
 
 test-mti-final-study:
 	$(MTI_Q_R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-mti-final-study.R",reporter="summary",stop_on_failure=TRUE); testthat::test_file("application/tests/testthat/test-mti-final-reporting.R",reporter="summary",stop_on_failure=TRUE)'
