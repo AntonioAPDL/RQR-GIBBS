@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "calculation_commit": "4dd8ae716b1539e3738bd94119627d96d39564fc",
+  "results_sha256": "529331c30894d64955010fef0c89d98bb8b1bce2e00a86bfb698963b162e259b",
+  "policy_sha256": "a4fdeafb5b9a1be267a64f765e340ac89cd8e0f4085f80a0a8fd1aba24a75d3d",
+  "split_membership_matches_historical": true,
+  "paired_benchmark_results_unchanged": true,
+  "empirical_content_rows_recomputed": 9012,
+  "fixed_target_profiles_recomputed": 3004,
+  "maximum_endpoint_error": 0,
+  "maximum_recomputed_relative_objective_gap": 9.94026759478661e-14,
+  "maximum_all_candidate_objective_gap": 1.38422676937145e-13,
+  "posterior_probabilities_recomputed": true
+}

@@ -128,6 +128,33 @@ mpa_application_context <- function(config) {
   list(config=config,data=data,repo_root=getwd(),scan=scan,adopted=adopted)
 }
 
+mpa_check_runtime <- function(adopted) {
+  mpr_require(as.character(packageVersion("rqrgibbs"))=="0.1.0.9038",
+    "Install the frozen numerical package version before evaluation.")
+  reference <- new.env(parent=asNamespace("rqrgibbs"))
+  files <- c(rqr_mti_intercept_fit="rqr_mti_intercept_profile.R",
+    rqr_mti_dp_profile="rqr_mti_profile_selection.R",
+    rqr_mti_refine_content_grid="rqr_mti_content_grid.R")
+  for(name in names(files)) {
+    sys.source(file.path("application/R",files[[name]]),reference)
+    installed <- getFromNamespace(name,"rqrgibbs")
+    expected <- get(name,reference)
+    mpr_require(identical(formals(installed),formals(expected)) &&
+      identical(deparse(body(installed)),deparse(body(expected))),
+      "Installed numerical R code differs from the frozen source.")
+  }
+  # A rebuilt native binary need not have the original machine's byte hash.
+  for(y in list(seq(-2,2,length.out=50),-log(seq(.01,.99,length.out=100)))) {
+    fits <- lapply(c("R","cpp"),function(backend)
+      rqrgibbs::rqr_mti_intercept_fit(y,.98,0,backend=backend))
+    mpr_require(all(vapply(fits,function(f)isTRUE(f$converged),logical(1))) &&
+      abs(fits[[1]]$objective-fits[[2]]$objective)<=
+        adopted$cfg$profile$objective_tolerance*(1+abs(fits[[1]]$objective)),
+      "Rebuilt native and R profile calculations disagree.")
+  }
+  invisible(TRUE)
+}
+
 mpa_application_fit <- function(y,context) {
   a <- context$adopted; cfg <- context$config
   fit <- mpq_frozen_action(y,cfg$analysis$content,cfg$analysis$tolerance_confidence,

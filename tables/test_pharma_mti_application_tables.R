@@ -3,16 +3,15 @@
 for (name in c("pharma_tolerance_application.R", "pharma_mti_application.R", "pharma_mti_reporting.R")) {
   source(file.path("application/scripts/lib", name))
 }
-config <- pma_read_config()
+config <- pma_read_config("application/config/pharma_tolerance_application_profiled_20261025.json")
 stopifnot(pma_number(-1e-12) == "0.000", pma_number(-.001) == "-0.001")
-inputs <- pma_read_report_inputs(config, file.path(pma_canonical_dir, "results.csv"))
+results_path <- file.path(config$paths$canonical_dir,"results.csv")
+inputs <- pma_read_report_inputs(config,results_path)
 expected_splits <- pma_make_splits(inputs$observed, config, "confirmatory")
 expected_membership <- pma_membership(expected_splits, inputs$observed)
 stopifnot(isTRUE(all.equal(expected_membership, inputs$membership, check.attributes = FALSE)))
-profile <- pta_mti_profile_config(config, getwd())
-policy <- pta_mti_policy_row(config, getwd())
-concentration <- as.numeric(policy$dp_concentration %||% profile$config$dp_concentration %||% 1)
-base <- profile$direct_dp$base
+concentration <- 1
+base <- list(mean=0,sd=4)
 # Recompute every empirical evaluation and DP probability from the stored endpoints.
 for (s in expected_splits) {
   if (s$scheme %in% names(config$sensitivity$grouped_variables)) {
@@ -48,11 +47,12 @@ output <- tempfile("pharma-mti-table-test-")
 dir.create(output)
 on.exit(unlink(output, recursive = TRUE), add = TRUE)
 run <- function(extra) {
-  status <- suppressWarnings(system2("Rscript", c("tables/generate_pharma_mti_application_tables.R", extra),
+  status <- suppressWarnings(system2("Rscript", c("tables/generate_pharma_mti_application_tables.R",
+    paste0("--config=",attr(config,"config_path")),extra),
                                     stdout = TRUE, stderr = TRUE))
   list(status = attr(status, "status") %||% 0L, output = status)
 }
-generated <- run(paste0("--output-dir=", output))
+generated <- run(c(paste0("--results-csv=",results_path),paste0("--output-dir=",output)))
 if (generated$status != 0L) stop(paste(generated$output, collapse = "\n"))
 summary <- read.csv(file.path(output, "pharma_application_summary.csv"))
 timing <- read.csv(file.path(output, "pharma_application_runtime_summary.csv"))
@@ -101,14 +101,14 @@ for (response in c("fct_tensile", "tbl_rsd_weight")) {
   got <- commands$value[commands$command == paste0(prefix,"MtiWidth")]
   stopifnot(identical(got, expect))
   got <- commands$value[commands$command == paste0(prefix,"Converged")]
-  stopifnot(as.integer(got) == sum(a$interval_returned & a$mti_ecm_converged, na.rm = TRUE))
+  stopifnot(as.integer(got) == sum(a$interval_returned & pma_fit_converged(a), na.rm = TRUE))
 }
 tex_paths <- list.files(output, "\\.tex$", full.names = TRUE)
 tex <- paste(unlist(lapply(tex_paths, readLines, warn = FALSE)), collapse = "\n")
 stopifnot(!grepl("TCSP|tcsp_mc|TSCP", tex),
   grepl("(proposed)", tex, fixed = TRUE), grepl("(benchmark)", tex, fixed = TRUE),
-  grepl("not independent sampling replications", tex, fixed = TRUE),
-  grepl("MTI-ECM minus the benchmark", tex, fixed = TRUE))
+  grepl("paired random splits of one finite dataset", tex, fixed = TRUE),
+  grepl("MTI minus the benchmark", tex, fixed = TRUE))
 missing <- run(c("--results-csv=/definitely/absent/results.csv", "--use-committed-inputs=true", paste0("--output-dir=",output)))
 stopifnot(missing$status != 0L,
           any(grepl("Expected canonical application results are absent", missing$output)))

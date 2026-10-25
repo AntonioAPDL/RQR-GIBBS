@@ -51,8 +51,11 @@ and calculation source hashes. The printed label is MTI.
 
 ## Reproduction
 
-Use the verified archived rqrgibbs 0.1.0.9038 numerical runtime from the completed
-study. No external source checkout is compiled or loaded. Point
+The completed evaluation used the archived rqrgibbs 0.1.0.9038 numerical runtime.
+A rebuilt installation must preserve the frozen numerical source, exported R
+functions, and R/C++ objective parity. Its binary hash is recorded separately;
+cross-machine byte identity is not required. No external source checkout is
+compiled or loaded. Point
 `MTI_ADOPTED_LIBRARY` and `PHARMA_MTI_LIBRARY` to that installed library:
 
 ```bash
@@ -62,6 +65,9 @@ make evaluate-mti-profile-application \
   MTI_ADOPTED_LIBRARY=/absolute/path/to/library \
   PHARMA_MTI_RUN_DIR=application/outputs/pharma_mti_profile_application_20261025/confirmatory \
   PHARMA_MTI_WORKERS=32
+make validate-mti-profile-application \
+  MTI_ADOPTED_LIBRARY=/absolute/path/to/library \
+  PHARMA_MTI_RUN_DIR=application/outputs/pharma_mti_profile_application_20261025/confirmatory
 ```
 
 Calculation source must be committed before evaluation. One thread is used
@@ -99,3 +105,30 @@ rejection, historical application behavior, and three-method unpooled reports.
 Package numerical source is unchanged from the completed study. Manuscript
 changes distinguish ECM as an alternative calculation, the profiled method
 actually evaluated, and the separate finite-panel tolerance assessment.
+
+## Completed Application Evaluation
+
+Calculation commit: `4dd8ae716b1539e3738bd94119627d96d39564fc`.
+The fixed application completed 1502 partitions for each of two responses,
+3004 MTI fits, and 9012 method evaluations with 32 single-threaded workers
+in 245.7 seconds. Every interval was returned. All candidate objective gaps
+passed; the largest absolute relative gap was 1.384227e-13.
+
+`102_validate_mti_profile_application.R` independently recalculated all 3004
+selected profiles with zero endpoint discrepancy, all DP posterior content
+probabilities, and all 9012 held-out empirical contents. Membership matches
+the historical partitions exactly; Young--Mathew and Wilks results are
+unchanged. Publication requires this matching independent validation record.
+
+Across random splits, tensile-strength median widths are .514392 for MTI,
+.533259 for Young--Mathew, and .665456 for Wilks. Weight-RSD medians are
+1.690000, 2.262237, and 3.400000, respectively. MTI and Young--Mathew both
+have median held-out empirical content .954023 for each response. These
+overlapping historical partitions support descriptive comparisons, not a
+new tolerance-confidence claim. Absolute objective gaps are summarized in
+the reporting tables; raw signed roundoff values remain in the result file.
+
+The main and supplement now describe the profile solver and paired validation,
+use gamma consistently as the probability cutoff, and retain ECM as an
+alternative calculation only. They include independent uncertainty and
+near-boundary limitations. Historical method records remain reproducible.

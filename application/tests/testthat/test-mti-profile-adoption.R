@@ -11,6 +11,7 @@ adoption_env <- function() {
 test_that("adopted policy preserves all nine independently assessed settings", {
   e <- adoption_env(); old <- getwd(); setwd(e$repo); on.exit(setwd(old))
   a <- e$mpa_read()
+  expect_silent(e$mpa_check_runtime(a))
   expect_equal(nrow(a$policy),9L)
   expect_true(all(a$policy$decision=="passed_new_calibration"))
   selected <- read.csv(file.path(a$adoption$evidence_dir,"selected_calibration.csv"))
@@ -56,6 +57,7 @@ test_that("profile application records its own diagnostics on unchanged splits",
   expect_error(e$pma_validate_results(bad),"profiled MTI")
   diagnostics <- e$pma_diagnostics(rows)
   expect_true("mti_relative_objective_gap" %in% diagnostics$metric)
+  expect_true(all(diagnostics$median[diagnostics$metric=="mti_relative_objective_gap"]>=0))
   expect_false("mti_ecm_final_stationarity" %in% diagnostics$metric)
 })
 
@@ -74,4 +76,27 @@ test_that("adopted reporting contains three methods and unpooled widths", {
   expect_true(any(grepl("tab:supp-primary-dgp-delivery",tex,fixed=TRUE)))
   width <- readLines(file.path(out,"tolerance_validation_article_dgp_width_ranges.tex"))
   expect_true(any(grepl("tab:supp-primary-dgp-width-ranges",width,fixed=TRUE)))
+})
+
+test_that("adoption rejects changed policy files and unaudited application publication", {
+  e <- adoption_env(); old <- getwd(); setwd(e$repo); on.exit(setwd(old))
+  directory <- tempfile("adoption_guard_"); dir.create(directory)
+  on.exit(unlink(directory,recursive=TRUE),add=TRUE)
+  a <- e$mpr_read_json(e$mpa_default)
+  policy <- read.csv(a$policy_csv); policy$threshold[1] <- .5
+  a$policy_csv <- file.path(directory,"altered_policy.csv")
+  e$pma_write_csv(policy,a$policy_csv)
+  path <- file.path(directory,"altered_adoption.json")
+  e$pta_atomic_write_json(a,path)
+  expect_error(e$mpa_read(path),"hash mismatch")
+  # This fixture tests the publication boundary only, not scientific acceptance.
+  e$pma_verify_run <- function(...)list(mode="confirmatory",policy_sha256="test_only",
+    return_counts=list(mti_ecm_adaptive_cell=2L))
+  cfg <- list(mti_profile=list(),paths=list(canonical_dir="published"))
+  e$pma_write_csv(data.frame(test_only=TRUE),file.path(directory,"results.csv"))
+  expect_error(e$pma_publish(directory,cfg,directory),"Independently validate")
+  audit <- list(passed=TRUE,results_sha256="altered",policy_sha256="test_only",
+    fixed_target_profiles_recomputed=2L)
+  e$pta_atomic_write_json(audit,file.path(directory,"profile_validation.json"))
+  expect_error(e$pma_publish(directory,cfg,directory),"does not match")
 })

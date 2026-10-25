@@ -256,7 +256,7 @@ historical-tolerance-tables:
 	$(R) tables/generate_tolerance_validation_scenario_tables.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_ARTICLE_RESULTS) --mti-ecm-policy-csv=$(RQR_BAYES_UQ_MTI_ECM_POLICY) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --small95-results=$(RQR_BAYES_UQ_SMALL95_RESULTS) --scan-calibration-csv=$(RQR_BAYES_UQ_SCAN_CALIBRATION) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_gibbs_diagnostic_table.R --diagnostics-csv=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_SOURCE) --output-dir=$(THEORY_TABLE_DIR)
 
-.PHONY: test-mti-profile-adoption verify-mti-profile-adoption evaluate-mti-profile-application historical-tolerance-tables
+.PHONY: test-mti-profile-adoption verify-mti-profile-adoption evaluate-mti-profile-application validate-mti-profile-application historical-tolerance-tables
 test-mti-profile-adoption:
 	$(MTI_ADOPTED_R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-mti-profile-adoption.R",reporter="summary",stop_on_failure=TRUE)'
 
@@ -265,6 +265,9 @@ verify-mti-profile-adoption:
 
 evaluate-mti-profile-application:
 	$(MTI_ADOPTED_R) application/scripts/101_adopt_mti_profile.R --mode=application --workers=$(PHARMA_MTI_WORKERS) $(if $(strip $(PHARMA_MTI_RUN_DIR)),--output-dir=$(PHARMA_MTI_RUN_DIR),)
+
+validate-mti-profile-application:
+	$(MTI_ADOPTED_R) application/scripts/102_validate_mti_profile_application.R $(if $(strip $(PHARMA_MTI_RUN_DIR)),--run-dir=$(PHARMA_MTI_RUN_DIR),)
 
 model-illustration-figures:
 	$(R) figures/generate_oracle_tilt_model_figures.R --evidence-dir=$(ORACLE_TILT_EVIDENCE_DIR) --output-dir=$(THEORY_FIGURE_DIR) --table-dir=$(THEORY_TABLE_DIR)

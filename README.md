@@ -2,10 +2,10 @@
 
 This repository contains the tolerance-interval manuscript and companion R
 implementation for mean-preserving intervals (MPI), mean-tilted intervals (MTI),
-and calibrated MTI-ECM tolerance intervals.
+and calibrated profiled MTI tolerance intervals.
 
 The manuscript in `main.tex` is now focused on fixed-content interval geometry,
-the MPI and MTI targets, the calibrated MTI-ECM procedure, and iid tolerance
+the MPI and MTI targets, the calibrated MTI procedure, and iid tolerance
 validation against Young--Mathew and Wilks. The broader endpoint-regression,
 basis-expansion, Gibbs, ECM, and dynamic endpoint development is split into the
 companion manuscript repository `AntonioAPDL/MTI-EXTENSIONS`.
@@ -18,7 +18,7 @@ attribution to the original residual-product criterion of Pouplin et al.
 ## Repository Contents
 
 - `main.tex`: main tolerance-interval article.
-- `rqr-gibbs-supplement.tex`: proofs, fixed-target MTI-ECM details, direct DP
+- `rqr-gibbs-supplement.tex`: proofs, fixed-target profile and alternative ECM details, direct DP
   content-probability checks, feasibility thresholds, and validation tables.
 - `refs.bib`: bibliography.
 - `figures/` and `tables/`: figure and table generators plus tracked manuscript
@@ -37,18 +37,18 @@ MPI and MTI are loss-defined interval targets. Endpoint summaries from a
 generalized posterior describe uncertainty for the specified interval-root
 functional. They are not posterior predictive response draws.
 
-MTI-ECM is the proposed tolerance procedure reported in the article. It profiles
+MTI is the proposed tolerance procedure reported in the article. It profiles
 fixed-target endpoint estimates under a generalized-Bayes criterion over fitted content and tilt,
 then selects the shortest fitted interval meeting a direct Dirichlet-process
 posterior content check. Its calibration rule is fixed before independent
 repeated-sampling validation. The simulation and pharmaceutical results report
-MTI-ECM, Young--Mathew, and Wilks.
+MTI, Young--Mathew, and Wilks.
 
 The scan reference (TCSP in the code) is retained for constructing the
-fitted-content grid and for the calibration width-stability criterion. It is
+initial fitted-content grid. It is
 not a reported comparator. Scan algorithms, original simulation configurations,
 and historical analysis outputs remain available for reproducibility. The
-selected MTI-ECM interval has empirical tolerance validation; a
+selected MTI interval has finite-panel empirical tolerance validation; a
 distribution-free theorem for this selection rule remains open.
 
 ## Build and Checks
@@ -67,16 +67,17 @@ outputs under ignored simulation-output directories.
 
 ## Pharmaceutical Application
 
-The revised application uses
-`application/config/pharma_tolerance_application_mti_only_20261020.json`.
-MTI-ECM is the sole proposed procedure; Young--Mathew and Wilks are external
-benchmarks. The frozen calibration is unchanged. Both responses share 1000
+The current application uses
+`application/config/pharma_tolerance_application_profiled_20261025.json`.
+Profiled MTI is the sole proposed procedure; Young--Mathew and Wilks are external
+benchmarks. It uses the adopted simulation policy without application tuning.
+Both responses share 1000
 random partitions, two chronological cases, 250 production-month partitions,
 and 250 API-batch partitions. All partitions use 100 training and 87 held-out
 batches. Grouped partitions keep whole groups together.
 
 The complete, portable reporting inputs are tracked under
-`figures/data/pharma_mti_application_20261020/`. Rebuild the report without
+`figures/data/pharma_mti_profile_application_20261025/`. Rebuild the report without
 fitting any models:
 
 ```bash
@@ -92,9 +93,8 @@ For a new analysis, use fresh output directories and run these stages in order:
 make pharma-mti-application-runtime
 make pharma-mti-application-data
 make pharma-mti-application-preflight
-make pharma-mti-application-smoke PHARMA_MTI_RUN_DIR=application/outputs/pharma_mti_application_20261020/smoke_new
-make pharma-mti-application-confirmatory PHARMA_MTI_WORKERS=40 PHARMA_MTI_RUN_DIR=application/outputs/pharma_mti_application_20261020/confirmatory_new
-make pharma-mti-application-health PHARMA_MTI_RUN_DIR=application/outputs/pharma_mti_application_20261020/confirmatory_new
+make evaluate-mti-profile-application MTI_ADOPTED_LIBRARY=/path/to/verified/library PHARMA_MTI_WORKERS=32 PHARMA_MTI_RUN_DIR=application/outputs/pharma_mti_profile_application_20261025/confirmatory_new
+make pharma-mti-application-health PHARMA_MTI_RUN_DIR=application/outputs/pharma_mti_profile_application_20261025/confirmatory_new
 ```
 
 The runtime target installs this repository's package in its ignored local
@@ -107,10 +107,12 @@ complete run and an absent destination.
 
 Held-out empirical content describes these finite, overlapping partitions; it
 does not estimate tolerance confidence from independent replications. Selected
-ECM convergence flags are retained and reported, including conditional
-comparisons on the same convergence-flagged partitions for all methods.
-See [the implementation record](docs/implementation_notes/pharma_mti_application_revision_20261020.md)
-for provenance, diagnostics, endpoint-precision recovery, and all commands.
+Profile convergence and objective gaps are recorded explicitly; historical
+ECM fields are not used as profile diagnostics. All 3004 selected profiles,
+posterior content probabilities, and 9012 held-out contents were independently
+recomputed. See [the adoption record](docs/implementation_notes/mti_profile_adoption_20261025.md)
+for provenance, checks, and commands. The original application remains under
+`figures/data/pharma_mti_application_20261020/`.
 Historical `pharma-application-*` targets retain the previous analysis.
 
 ## ECM Numerical Diagnostics
@@ -144,8 +146,9 @@ fixed prior mean. `rqr_mti_fractional_window()` constructs a mass-consistent
 empirical tilt; `rqr_mti_dp_profile()` searches the specified fitted-content
 and tilt menu and applies a separate direct DP posterior content check.
 
-These functions do not replace the historical ECM algorithm, its defaults,
-calibration, or article results. A DP posterior probability alone does not
+These functions preserve the historical ECM API and its defaults. After
+separate calibration and validation, the profiled calculation now supplies
+the article's simulation and application results. A DP posterior probability alone does not
 establish a frequentist tolerance guarantee. The separate revision study
 first checks numerical accuracy and then develops and assesses a new
 calibration on independent data. Fresh validation starts only after the

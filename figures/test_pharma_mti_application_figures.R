@@ -3,12 +3,15 @@
 for (name in c("pharma_tolerance_application.R", "pharma_mti_application.R", "pharma_mti_reporting.R")) {
   source(file.path("application/scripts/lib", name))
 }
-config <- pma_read_config()
-inputs <- pma_read_report_inputs(config, file.path(pma_canonical_dir, "results.csv"))
+config <- pma_read_config("application/config/pharma_tolerance_application_profiled_20261025.json")
+results <- file.path(config$paths$canonical_dir,"results.csv")
+inputs <- pma_read_report_inputs(config,results)
 output <- tempfile("pharma-mti-figure-test-")
 dir.create(output)
 on.exit(unlink(output, recursive = TRUE), add = TRUE)
 status <- system2("Rscript", c("figures/generate_pharma_mti_application_figures.R",
+                               paste0("--config=",attr(config,"config_path")),
+                               paste0("--results-csv=",results),
                                paste0("--output-dir=", output)), stdout = TRUE, stderr = TRUE)
 if (!is.null(attr(status,"status"))) stop(paste(status, collapse = "\n"))
 manifest <- read.csv(file.path(output,"pharma_application_figure_manifest.csv"))

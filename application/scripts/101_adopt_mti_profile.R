@@ -16,8 +16,7 @@ if(mode=="import") {
   cfg <- pma_read_config(pta_arg_value(args,"--config=",mpa_application_default))
   mpr_require(mpr_git_clean(pma_git("status","--porcelain")),"Commit calculation source before application evaluation.")
   adopted <- mpa_read(cfg$mti_profile$adoption_config)
-  mpr_require(identical(mp_sha(file.path(find.package("rqrgibbs"),"libs/rqrgibbs.so")),
-    adopted$adoption$native_sha256),"Use the verified archived numerical runtime.")
+  mpa_check_runtime(adopted)
   context <- mpa_application_context(cfg)
   output <- pta_arg_value(args,"--output-dir=",file.path(cfg$paths$output_root,"confirmatory"))
   workers <- as.integer(pta_arg_value(args,"--workers=","32"))

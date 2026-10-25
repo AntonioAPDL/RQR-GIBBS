@@ -1,0 +1,3 @@
+"response_id","response_role","split_id","score","eligible_splits","rule"
+"fct_tensile","primary",665,1.37317390010256,1000,"minimum_squared_median_MAD_distance_then_smallest_split_id"
+"tbl_rsd_weight","supplement",364,1.93836093323276,1000,"minimum_squared_median_MAD_distance_then_smallest_split_id"

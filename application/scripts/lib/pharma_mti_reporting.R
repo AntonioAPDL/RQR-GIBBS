@@ -135,7 +135,7 @@ pma_numerical_table <- function(diagnostics, path) {
     mti_posterior_content_probability = "Posterior content probability",
     mti_ecm_iterations = "ECM iterations", mti_ecm_final_stationarity = "Final stationarity")
   labels <- c(labels,mti_profile_iterations="Profile iterations",
-    mti_relative_objective_gap="Relative objective gap")
+    mti_relative_objective_gap="Absolute relative objective gap")
   lines <- c("\\begin{tabularx}{\\textwidth}{@{}ll>{\\raggedright\\arraybackslash}X@{}}",
     "\\toprule", "Response & Diagnostic & Summary\\\\", "\\midrule")
   for (response in names(pma_response_labels)) {

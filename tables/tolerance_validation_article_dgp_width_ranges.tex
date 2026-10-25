@@ -1,232 +1,312 @@
 \begingroup
 \scriptsize
-\setlength{\tabcolsep}{2pt}
-\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.24\textwidth}rr>{\raggedright\arraybackslash}p{0.20\textwidth}rr@{}}
-\caption{\textbf{Distribution-level tolerance-validation width ranges.} Width intervals are empirical 2.5\%--97.5\% ranges over Monte Carlo replications within each distribution, sample size, content, and method. Widths are summarized within, rather than pooled across, distributions.}\label{tab:supp-primary-dgp-width-ranges}\\
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}rrlrr@{}}
+\caption{\textbf{Interval widths by distribution and design.} Width ranges are empirical 2.5\%--97.5\% quantiles within each case and method.}\label{tab:supp-primary-dgp-width-ranges}\\
 \toprule
-Distribution & \(n\) & \(c\) & Method & Content-attainment (\%) & Width 95\% range\\
+\(n\) & \(c\) & Method & Attainment (\%) & Width 95\% range\\
 \midrule
 \endfirsthead
 \toprule
-Distribution & \(n\) & \(c\) & Method & Content-attainment (\%) & Width 95\% range\\
+\(n\) & \(c\) & Method & Attainment (\%) & Width 95\% range\\
 \midrule
 \endhead
-Gaussian & 50 & 0.90 & MTI-ECM & 97.1 & 3.4--5.82 \\
-Gaussian & 50 & 0.90 & Young--Mathew & 96.0 & 3.33--5.7 \\
-Gaussian & 50 & 0.90 & Wilks & 97.1 & 3.4--5.97 \\
-Student t(3) & 50 & 0.90 & MTI-ECM & 95.8 & 2.81--12.39 \\
-Student t(3) & 50 & 0.90 & Young--Mathew & 96.7 & 2.81--11.64 \\
-Student t(3) & 50 & 0.90 & Wilks & 97.1 & 2.89--13.27 \\
-Exponential & 50 & 0.90 & MTI-ECM & 97.4 & 2.68--7.54 \\
-Exponential & 50 & 0.90 & Young--Mathew & 96.4 & 2.62--7.15 \\
-Exponential & 50 & 0.90 & Wilks & 96.7 & 2.67--7.9 \\
-Asymmetric Laplace (tau=0.10) & 50 & 0.90 & MTI-ECM & 96.9 & 2.7--7.21 \\
-Asymmetric Laplace (tau=0.10) & 50 & 0.90 & Young--Mathew & 95.5 & 2.58--7 \\
-Asymmetric Laplace (tau=0.10) & 50 & 0.90 & Wilks & 95.9 & 2.63--7.71 \\
-Two-piece Normal (1:12) & 50 & 0.90 & MTI-ECM & 96.1 & 2.99--5.8 \\
-Two-piece Normal (1:12) & 50 & 0.90 & Young--Mathew & 95.9 & 2.97--5.43 \\
-Two-piece Normal (1:12) & 50 & 0.90 & Wilks & 96.6 & 3--5.79 \\
-Beta(1,8) & 50 & 0.90 & MTI-ECM & 97.8 & 2.8--6.1 \\
-Beta(1,8) & 50 & 0.90 & Young--Mathew & 97.0 & 2.75--5.74 \\
-Beta(1,8) & 50 & 0.90 & Wilks & 97.7 & 2.81--6.11 \\
-Gamma(0.5,1) & 50 & 0.90 & MTI-ECM & 97.6 & 2.37--8.5 \\
-Gamma(0.5,1) & 50 & 0.90 & Young--Mathew & 94.6 & 2.19--7.6 \\
-Gamma(0.5,1) & 50 & 0.90 & Wilks & 95.6 & 2.22--8.37 \\
-Log-normal (log sd 1.25) & 50 & 0.90 & MTI-ECM & 96.6 & 1.53--13.76 \\
-Log-normal (log sd 1.25) & 50 & 0.90 & Young--Mathew & 96.1 & 1.34--12.42 \\
-Log-normal (log sd 1.25) & 50 & 0.90 & Wilks & 96.4 & 1.41--14.4 \\
-Gaussian & 100 & 0.90 & MTI-ECM & 98.6 & 3.44--4.62 \\
-Gaussian & 100 & 0.90 & Young--Mathew & 96.9 & 3.37--4.87 \\
-Gaussian & 100 & 0.90 & Wilks & 100.0 & 3.95--6.24 \\
-Student t(3) & 100 & 0.90 & MTI-ECM & 98.5 & 3.03--5.75 \\
-Student t(3) & 100 & 0.90 & Young--Mathew & 96.3 & 2.92--6.53 \\
-Student t(3) & 100 & 0.90 & Wilks & 100.0 & 3.86--17.44 \\
-Exponential & 100 & 0.90 & MTI-ECM & 99.0 & 2.65--4.78 \\
-Exponential & 100 & 0.90 & Young--Mathew & 95.2 & 2.86--5.85 \\
-Exponential & 100 & 0.90 & Wilks & 100.0 & 3.3--8.24 \\
-Asymmetric Laplace (tau=0.10) & 100 & 0.90 & MTI-ECM & 99.4 & 2.85--4.79 \\
-Asymmetric Laplace (tau=0.10) & 100 & 0.90 & Young--Mathew & 95.9 & 2.96--6.13 \\
-Asymmetric Laplace (tau=0.10) & 100 & 0.90 & Wilks & 100.0 & 3.5--8.54 \\
-Two-piece Normal (1:12) & 100 & 0.90 & MTI-ECM & 98.9 & 3.05--4.35 \\
-Two-piece Normal (1:12) & 100 & 0.90 & Young--Mathew & 96.0 & 3.15--5.02 \\
-Two-piece Normal (1:12) & 100 & 0.90 & Wilks & 99.9 & 3.52--6.24 \\
-Beta(1,8) & 100 & 0.90 & MTI-ECM & 99.1 & 2.86--4.48 \\
-Beta(1,8) & 100 & 0.90 & Young--Mathew & 96.1 & 3.02--5.38 \\
-Beta(1,8) & 100 & 0.90 & Wilks & 99.9 & 3.43--6.43 \\
-Gamma(0.5,1) & 100 & 0.90 & MTI-ECM & 99.7 & 2.39--4.9 \\
-Gamma(0.5,1) & 100 & 0.90 & Young--Mathew & 96.8 & 2.66--6.43 \\
-Gamma(0.5,1) & 100 & 0.90 & Wilks & 100.0 & 3.19--9.84 \\
-Log-normal (log sd 1.25) & 100 & 0.90 & MTI-ECM & 99.3 & 1.5--4.96 \\
-Log-normal (log sd 1.25) & 100 & 0.90 & Young--Mathew & 96.4 & 1.71--7.92 \\
-Log-normal (log sd 1.25) & 100 & 0.90 & Wilks & 100.0 & 2.21--18.36 \\
-Gaussian & 100 & 0.95 & MTI-ECM & 97.5 & 4.04--6.34 \\
-Gaussian & 100 & 0.95 & Young--Mathew & 95.5 & 3.91--6.18 \\
-Gaussian & 100 & 0.95 & Wilks & 96.2 & 3.97--6.42 \\
-Student t(3) & 100 & 0.95 & MTI-ECM & 96.8 & 3.82--16.18 \\
-Student t(3) & 100 & 0.95 & Young--Mathew & 96.0 & 3.73--15.28 \\
-Student t(3) & 100 & 0.95 & Wilks & 96.8 & 3.8--16.99 \\
-Exponential & 100 & 0.95 & MTI-ECM & 95.2 & 3.24--8.08 \\
-Exponential & 100 & 0.95 & Young--Mathew & 96.7 & 3.2--7.95 \\
-Exponential & 100 & 0.95 & Wilks & 97.1 & 3.25--8.44 \\
-Asymmetric Laplace (tau=0.10) & 100 & 0.95 & MTI-ECM & 97.4 & 3.57--8.51 \\
-Asymmetric Laplace (tau=0.10) & 100 & 0.95 & Young--Mathew & 96.6 & 3.5--8.1 \\
-Asymmetric Laplace (tau=0.10) & 100 & 0.95 & Wilks & 97.2 & 3.56--8.56 \\
-Two-piece Normal (1:12) & 100 & 0.95 & MTI-ECM & 95.1 & 3.5--6.15 \\
-Two-piece Normal (1:12) & 100 & 0.95 & Young--Mathew & 96.7 & 3.53--5.83 \\
-Two-piece Normal (1:12) & 100 & 0.95 & Wilks & 97.3 & 3.57--6.08 \\
-Beta(1,8) & 100 & 0.95 & MTI-ECM & 96.9 & 3.33--6.29 \\
-Beta(1,8) & 100 & 0.95 & Young--Mathew & 96.8 & 3.43--6.21 \\
-Beta(1,8) & 100 & 0.95 & Wilks & 97.3 & 3.46--6.56 \\
-Gamma(0.5,1) & 100 & 0.95 & MTI-ECM & 96.2 & 3.19--9.26 \\
-Gamma(0.5,1) & 100 & 0.95 & Young--Mathew & 96.5 & 3.07--8.56 \\
-Gamma(0.5,1) & 100 & 0.95 & Wilks & 96.8 & 3.11--9.07 \\
-Log-normal (log sd 1.25) & 100 & 0.95 & MTI-ECM & 96.8 & 2.28--17.68 \\
-Log-normal (log sd 1.25) & 100 & 0.95 & Young--Mathew & 96.3 & 2.24--15.35 \\
-Log-normal (log sd 1.25) & 100 & 0.95 & Wilks & 96.7 & 2.3--16.67 \\
-Gaussian & 500 & 0.90 & MTI-ECM & 97.3 & 3.31--3.86 \\
-Gaussian & 500 & 0.90 & Young--Mathew & 95.6 & 3.26--3.84 \\
-Gaussian & 500 & 0.90 & Wilks & 100.0 & 5.17--7.28 \\
-Student t(3) & 500 & 0.90 & MTI-ECM & 97.6 & 2.76--3.6 \\
-Student t(3) & 500 & 0.90 & Young--Mathew & 95.8 & 2.69--3.54 \\
-Student t(3) & 500 & 0.90 & Wilks & 100.0 & 6.91--25.85 \\
-Exponential & 500 & 0.90 & MTI-ECM & 99.3 & 2.4--3.03 \\
-Exponential & 500 & 0.90 & Young--Mathew & 94.5 & 2.83--3.71 \\
-Exponential & 500 & 0.90 & Wilks & 100.0 & 4.87--10.39 \\
-Asymmetric Laplace (tau=0.10) & 500 & 0.90 & MTI-ECM & 98.8 & 2.59--3.29 \\
-Asymmetric Laplace (tau=0.10) & 500 & 0.90 & Young--Mathew & 96.1 & 2.87--3.76 \\
-Asymmetric Laplace (tau=0.10) & 500 & 0.90 & Wilks & 100.0 & 5.32--10.34 \\
-Two-piece Normal (1:12) & 500 & 0.90 & MTI-ECM & 98.5 & 2.91--3.39 \\
-Two-piece Normal (1:12) & 500 & 0.90 & Young--Mathew & 95.1 & 3.09--3.67 \\
-Two-piece Normal (1:12) & 500 & 0.90 & Wilks & 100.0 & 4.6--6.83 \\
-Beta(1,8) & 500 & 0.90 & MTI-ECM & 99.0 & 2.59--3.17 \\
-Beta(1,8) & 500 & 0.90 & Young--Mathew & 94.4 & 2.96--3.71 \\
-Beta(1,8) & 500 & 0.90 & Wilks & 100.0 & 4.55--7.18 \\
-Gamma(0.5,1) & 500 & 0.90 & MTI-ECM & 99.7 & 2.03--2.77 \\
-Gamma(0.5,1) & 500 & 0.90 & Young--Mathew & 94.8 & 2.54--3.64 \\
-Gamma(0.5,1) & 500 & 0.90 & Wilks & 100.0 & 5.06--11.23 \\
-Log-normal (log sd 1.25) & 500 & 0.90 & MTI-ECM & 99.4 & 1.25--1.91 \\
-Log-normal (log sd 1.25) & 500 & 0.90 & Young--Mathew & 95.1 & 1.68--2.8 \\
-Log-normal (log sd 1.25) & 500 & 0.90 & Wilks & 100.0 & 5.03--29.37 \\
-Gaussian & 500 & 0.95 & MTI-ECM & 97.0 & 3.94--4.69 \\
-Gaussian & 500 & 0.95 & Young--Mathew & 96.0 & 3.9--4.66 \\
-Gaussian & 500 & 0.95 & Wilks & 100.0 & 5.19--7.3 \\
-Student t(3) & 500 & 0.95 & MTI-ECM & 97.8 & 3.74--5.45 \\
-Student t(3) & 500 & 0.95 & Young--Mathew & 96.6 & 3.7--5.34 \\
-Student t(3) & 500 & 0.95 & Wilks & 100.0 & 6.9--26.52 \\
-Exponential & 500 & 0.95 & MTI-ECM & 99.0 & 3.12--4.15 \\
-Exponential & 500 & 0.95 & Young--Mathew & 96.2 & 3.56--4.92 \\
-Exponential & 500 & 0.95 & Wilks & 100.0 & 4.96--9.51 \\
-Asymmetric Laplace (tau=0.10) & 500 & 0.95 & MTI-ECM & 97.9 & 3.37--4.48 \\
-Asymmetric Laplace (tau=0.10) & 500 & 0.95 & Young--Mathew & 95.1 & 3.58--4.98 \\
-Asymmetric Laplace (tau=0.10) & 500 & 0.95 & Wilks & 100.0 & 5.28--10.08 \\
-Two-piece Normal (1:12) & 500 & 0.95 & MTI-ECM & 98.5 & 3.46--4.15 \\
-Two-piece Normal (1:12) & 500 & 0.95 & Young--Mathew & 94.4 & 3.61--4.44 \\
-Two-piece Normal (1:12) & 500 & 0.95 & Wilks & 100.0 & 4.62--6.81 \\
-Beta(1,8) & 500 & 0.95 & MTI-ECM & 98.1 & 3.19--4.1 \\
-Beta(1,8) & 500 & 0.95 & Young--Mathew & 96.1 & 3.61--4.6 \\
-Beta(1,8) & 500 & 0.95 & Wilks & 100.0 & 4.64--7.19 \\
-Gamma(0.5,1) & 500 & 0.95 & MTI-ECM & 98.7 & 2.84--4.15 \\
-Gamma(0.5,1) & 500 & 0.95 & Young--Mathew & 95.7 & 3.4--5.11 \\
-Gamma(0.5,1) & 500 & 0.95 & Wilks & 100.0 & 5.01--11.23 \\
-Log-normal (log sd 1.25) & 500 & 0.95 & MTI-ECM & 99.2 & 1.99--3.53 \\
-Log-normal (log sd 1.25) & 500 & 0.95 & Young--Mathew & 94.2 & 2.49--5.18 \\
-Log-normal (log sd 1.25) & 500 & 0.95 & Wilks & 100.0 & 4.91--30.5 \\
-Gaussian & 500 & 0.99 & MTI-ECM & 96.5 & 5.21--7.21 \\
-Gaussian & 500 & 0.99 & Young--Mathew & 95.8 & 5.17--7.17 \\
-Gaussian & 500 & 0.99 & Wilks & 96.4 & 5.18--7.28 \\
-Student t(3) & 500 & 0.99 & MTI-ECM & 95.5 & 6.9--27.77 \\
-Student t(3) & 500 & 0.99 & Young--Mathew & 96.7 & 6.93--25.28 \\
-Student t(3) & 500 & 0.99 & Wilks & 96.7 & 7.01--26.46 \\
-Exponential & 500 & 0.99 & MTI-ECM & 97.1 & 5.01--9.53 \\
-Exponential & 500 & 0.99 & Young--Mathew & 96.3 & 4.92--9.61 \\
-Exponential & 500 & 0.99 & Wilks & 96.6 & 4.96--9.98 \\
-Asymmetric Laplace (tau=0.10) & 500 & 0.99 & MTI-ECM & 97.4 & 5.29--10.29 \\
-Asymmetric Laplace (tau=0.10) & 500 & 0.99 & Young--Mathew & 95.6 & 5.21--10.17 \\
-Asymmetric Laplace (tau=0.10) & 500 & 0.99 & Wilks & 96.1 & 5.23--10.66 \\
-Two-piece Normal (1:12) & 500 & 0.99 & MTI-ECM & 96.9 & 4.56--6.75 \\
-Two-piece Normal (1:12) & 500 & 0.99 & Young--Mathew & 95.9 & 4.52--6.65 \\
-Two-piece Normal (1:12) & 500 & 0.99 & Wilks & 96.2 & 4.55--6.84 \\
-Beta(1,8) & 500 & 0.99 & MTI-ECM & 95.2 & 4.54--7.14 \\
-Beta(1,8) & 500 & 0.99 & Young--Mathew & 95.1 & 4.57--6.9 \\
-Beta(1,8) & 500 & 0.99 & Wilks & 95.5 & 4.58--7.05 \\
-Gamma(0.5,1) & 500 & 0.99 & MTI-ECM & 97.4 & 5.2--12.01 \\
-Gamma(0.5,1) & 500 & 0.99 & Young--Mathew & 95.1 & 5.1--11.36 \\
-Gamma(0.5,1) & 500 & 0.99 & Wilks & 95.3 & 5.13--11.93 \\
-Log-normal (log sd 1.25) & 500 & 0.99 & MTI-ECM & 95.4 & 4.84--28.5 \\
-Log-normal (log sd 1.25) & 500 & 0.99 & Young--Mathew & 95.9 & 4.84--31.39 \\
-Log-normal (log sd 1.25) & 500 & 0.99 & Wilks & 96.3 & 4.93--32.87 \\
-Gaussian & 1000 & 0.90 & MTI-ECM & 97.7 & 3.31--3.67 \\
-Gaussian & 1000 & 0.90 & Young--Mathew & 95.3 & 3.27--3.65 \\
-Gaussian & 1000 & 0.90 & Wilks & 100.0 & 5.63--7.6 \\
-Student t(3) & 1000 & 0.90 & MTI-ECM & 97.9 & 2.76--3.28 \\
-Student t(3) & 1000 & 0.90 & Young--Mathew & 94.2 & 2.69--3.24 \\
-Student t(3) & 1000 & 0.90 & Wilks & 100.0 & 8.88--34.51 \\
-Exponential & 1000 & 0.90 & MTI-ECM & 98.8 & 2.36--2.78 \\
-Exponential & 1000 & 0.90 & Young--Mathew & 96.1 & 2.85--3.44 \\
-Exponential & 1000 & 0.90 & Wilks & 100.0 & 5.58--10.42 \\
-Asymmetric Laplace (tau=0.10) & 1000 & 0.90 & MTI-ECM & 98.9 & 2.58--3.06 \\
-Asymmetric Laplace (tau=0.10) & 1000 & 0.90 & Young--Mathew & 95.2 & 2.88--3.45 \\
-Asymmetric Laplace (tau=0.10) & 1000 & 0.90 & Wilks & 100.0 & 6.02--11.23 \\
-Two-piece Normal (1:12) & 1000 & 0.90 & MTI-ECM & 98.0 & 2.88--3.22 \\
-Two-piece Normal (1:12) & 1000 & 0.90 & Young--Mathew & 95.4 & 3.11--3.52 \\
-Two-piece Normal (1:12) & 1000 & 0.90 & Wilks & 100.0 & 5.04--7.03 \\
-Beta(1,8) & 1000 & 0.90 & MTI-ECM & 99.2 & 2.58--2.97 \\
-Beta(1,8) & 1000 & 0.90 & Young--Mathew & 94.5 & 3--3.48 \\
-Beta(1,8) & 1000 & 0.90 & Wilks & 100.0 & 5.1--7.47 \\
-Gamma(0.5,1) & 1000 & 0.90 & MTI-ECM & 98.8 & 1.97--2.49 \\
-Gamma(0.5,1) & 1000 & 0.90 & Young--Mathew & 96.1 & 2.56--3.32 \\
-Gamma(0.5,1) & 1000 & 0.90 & Wilks & 100.0 & 5.99--12.61 \\
-Log-normal (log sd 1.25) & 1000 & 0.90 & MTI-ECM & 99.5 & 1.24--1.63 \\
-Log-normal (log sd 1.25) & 1000 & 0.90 & Young--Mathew & 96.6 & 1.71--2.4 \\
-Log-normal (log sd 1.25) & 1000 & 0.90 & Wilks & 100.0 & 6.5--40.48 \\
-Gaussian & 1000 & 0.95 & MTI-ECM & 96.7 & 3.93--4.42 \\
-Gaussian & 1000 & 0.95 & Young--Mathew & 95.6 & 3.9--4.4 \\
-Gaussian & 1000 & 0.95 & Wilks & 100.0 & 5.6--7.68 \\
-Student t(3) & 1000 & 0.95 & MTI-ECM & 98.2 & 3.74--4.73 \\
-Student t(3) & 1000 & 0.95 & Young--Mathew & 95.4 & 3.63--4.69 \\
-Student t(3) & 1000 & 0.95 & Wilks & 100.0 & 8.66--37.39 \\
-Exponential & 1000 & 0.95 & MTI-ECM & 99.5 & 3.1--3.8 \\
-Exponential & 1000 & 0.95 & Young--Mathew & 95.5 & 3.56--4.42 \\
-Exponential & 1000 & 0.95 & Wilks & 100.0 & 5.6--10.99 \\
-Asymmetric Laplace (tau=0.10) & 1000 & 0.95 & MTI-ECM & 97.9 & 3.36--4.06 \\
-Asymmetric Laplace (tau=0.10) & 1000 & 0.95 & Young--Mathew & 96.3 & 3.63--4.5 \\
-Asymmetric Laplace (tau=0.10) & 1000 & 0.95 & Wilks & 100.0 & 5.97--11.07 \\
-Two-piece Normal (1:12) & 1000 & 0.95 & MTI-ECM & 98.7 & 3.45--3.89 \\
-Two-piece Normal (1:12) & 1000 & 0.95 & Young--Mathew & 95.1 & 3.62--4.16 \\
-Two-piece Normal (1:12) & 1000 & 0.95 & Wilks & 100.0 & 5.01--7.21 \\
-Beta(1,8) & 1000 & 0.95 & MTI-ECM & 99.2 & 3.2--3.77 \\
-Beta(1,8) & 1000 & 0.95 & Young--Mathew & 95.1 & 3.59--4.3 \\
-Beta(1,8) & 1000 & 0.95 & Wilks & 100.0 & 5.1--7.35 \\
-Gamma(0.5,1) & 1000 & 0.95 & MTI-ECM & 99.9 & 2.85--3.66 \\
-Gamma(0.5,1) & 1000 & 0.95 & Young--Mathew & 95.1 & 3.38--4.55 \\
-Gamma(0.5,1) & 1000 & 0.95 & Wilks & 100.0 & 6--12.25 \\
-Log-normal (log sd 1.25) & 1000 & 0.95 & MTI-ECM & 99.3 & 1.96--2.84 \\
-Log-normal (log sd 1.25) & 1000 & 0.95 & Young--Mathew & 95.5 & 2.56--4.03 \\
-Log-normal (log sd 1.25) & 1000 & 0.95 & Wilks & 100.0 & 6.84--40.05 \\
-Gaussian & 1000 & 0.99 & MTI-ECM & 97.9 & 5.26--6.44 \\
-Gaussian & 1000 & 0.99 & Young--Mathew & 96.9 & 5.19--6.42 \\
-Gaussian & 1000 & 0.99 & Wilks & 99.9 & 5.61--7.65 \\
-Student t(3) & 1000 & 0.99 & MTI-ECM & 98.8 & 7.13--12.42 \\
-Student t(3) & 1000 & 0.99 & Young--Mathew & 96.9 & 7.17--14.7 \\
-Student t(3) & 1000 & 0.99 & Wilks & 100.0 & 8.8--34.22 \\
-Exponential & 1000 & 0.99 & MTI-ECM & 99.3 & 4.96--7.4 \\
-Exponential & 1000 & 0.99 & Young--Mathew & 97.2 & 5.28--8.18 \\
-Exponential & 1000 & 0.99 & Wilks & 100.0 & 5.6--10.39 \\
-Asymmetric Laplace (tau=0.10) & 1000 & 0.99 & MTI-ECM & 99.1 & 5.37--7.83 \\
-Asymmetric Laplace (tau=0.10) & 1000 & 0.99 & Young--Mathew & 96.8 & 5.48--8.38 \\
-Asymmetric Laplace (tau=0.10) & 1000 & 0.99 & Wilks & 100.0 & 5.98--10.87 \\
-Two-piece Normal (1:12) & 1000 & 0.99 & MTI-ECM & 98.9 & 4.62--5.81 \\
-Two-piece Normal (1:12) & 1000 & 0.99 & Young--Mathew & 95.1 & 4.64--6.15 \\
-Two-piece Normal (1:12) & 1000 & 0.99 & Wilks & 100.0 & 4.89--7.11 \\
-Beta(1,8) & 1000 & 0.99 & MTI-ECM & 98.7 & 4.62--6.03 \\
-Beta(1,8) & 1000 & 0.99 & Young--Mathew & 95.3 & 4.76--6.43 \\
-Beta(1,8) & 1000 & 0.99 & Wilks & 99.9 & 5.04--7.29 \\
-Gamma(0.5,1) & 1000 & 0.99 & MTI-ECM & 99.2 & 5.07--8.11 \\
-Gamma(0.5,1) & 1000 & 0.99 & Young--Mathew & 96.4 & 5.49--9.84 \\
-Gamma(0.5,1) & 1000 & 0.99 & Wilks & 99.9 & 6.02--12.3 \\
-Log-normal (log sd 1.25) & 1000 & 0.99 & MTI-ECM & 99.4 & 4.93--13.31 \\
-Log-normal (log sd 1.25) & 1000 & 0.99 & Young--Mathew & 94.1 & 5.52--17.47 \\
-Log-normal (log sd 1.25) & 1000 & 0.99 & Wilks & 100.0 & 6.37--39.88 \\
+\multicolumn{5}{@{}l}{\textit{Gaussian}}\\
+50 & 0.90 & MTI & 96.6 & 3.360--5.870 \\
+ &  & Young--Mathew & 96.0 & 3.309--5.674 \\
+ &  & Wilks & 96.6 & 3.360--5.870 \\
+\addlinespace[0.25em]
+100 & 0.90 & MTI & 96.4 & 3.283--4.424 \\
+ &  & Young--Mathew & 97.9 & 3.396--4.905 \\
+ &  & Wilks & 100.0 & 3.961--6.404 \\
+\addlinespace[0.25em]
+100 & 0.95 & MTI & 95.6 & 3.929--6.244 \\
+ &  & Young--Mathew & 95.4 & 3.893--6.041 \\
+ &  & Wilks & 95.6 & 3.929--6.244 \\
+\addlinespace[0.25em]
+500 & 0.90 & MTI & 96.0 & 3.298--3.833 \\
+ &  & Young--Mathew & 96.3 & 3.278--3.826 \\
+ &  & Wilks & 100.0 & 5.213--7.221 \\
+\addlinespace[0.25em]
+500 & 0.95 & MTI & 98.1 & 3.972--4.651 \\
+ &  & Young--Mathew & 98.3 & 3.949--4.679 \\
+ &  & Wilks & 100.0 & 5.200--7.185 \\
+\addlinespace[0.25em]
+500 & 0.99 & MTI & 96.3 & 5.197--7.229 \\
+ &  & Young--Mathew & 96.0 & 5.169--7.116 \\
+ &  & Wilks & 96.3 & 5.197--7.229 \\
+\addlinespace[0.25em]
+1000 & 0.90 & MTI & 96.8 & 3.292--3.665 \\
+ &  & Young--Mathew & 95.6 & 3.281--3.654 \\
+ &  & Wilks & 100.0 & 5.595--7.611 \\
+\addlinespace[0.25em]
+1000 & 0.95 & MTI & 95.9 & 3.919--4.407 \\
+ &  & Young--Mathew & 96.4 & 3.913--4.415 \\
+ &  & Wilks & 100.0 & 5.661--7.570 \\
+\addlinespace[0.25em]
+1000 & 0.99 & MTI & 97.5 & 5.217--6.452 \\
+ &  & Young--Mathew & 96.8 & 5.196--6.399 \\
+ &  & Wilks & 100.0 & 5.620--7.584 \\
+\addlinespace[0.25em]
+\multicolumn{5}{@{}l}{\textit{Student t(3)}}\\
+50 & 0.90 & MTI & 97.5 & 2.923--10.067 \\
+ &  & Young--Mathew & 96.9 & 2.873--9.893 \\
+ &  & Wilks & 97.5 & 2.923--11.022 \\
+\addlinespace[0.25em]
+100 & 0.90 & MTI & 96.0 & 2.740--4.989 \\
+ &  & Young--Mathew & 97.3 & 2.936--6.661 \\
+ &  & Wilks & 100.0 & 3.833--14.128 \\
+\addlinespace[0.25em]
+100 & 0.95 & MTI & 96.4 & 3.839--13.513 \\
+ &  & Young--Mathew & 96.1 & 3.761--14.242 \\
+ &  & Wilks & 96.4 & 3.839--15.599 \\
+\addlinespace[0.25em]
+500 & 0.90 & MTI & 96.4 & 2.730--3.544 \\
+ &  & Young--Mathew & 96.6 & 2.708--3.541 \\
+ &  & Wilks & 100.0 & 6.818--30.103 \\
+\addlinespace[0.25em]
+500 & 0.95 & MTI & 98.5 & 3.779--5.276 \\
+ &  & Young--Mathew & 97.2 & 3.718--5.466 \\
+ &  & Wilks & 100.0 & 6.812--30.956 \\
+\addlinespace[0.25em]
+500 & 0.99 & MTI & 95.1 & 6.765--18.982 \\
+ &  & Young--Mathew & 95.0 & 6.694--23.511 \\
+ &  & Wilks & 95.1 & 6.765--25.143 \\
+\addlinespace[0.25em]
+1000 & 0.90 & MTI & 95.7 & 2.704--3.251 \\
+ &  & Young--Mathew & 94.1 & 2.683--3.236 \\
+ &  & Wilks & 100.0 & 8.945--32.926 \\
+\addlinespace[0.25em]
+1000 & 0.95 & MTI & 96.9 & 3.689--4.633 \\
+ &  & Young--Mathew & 96.6 & 3.675--4.641 \\
+ &  & Wilks & 100.0 & 9.055--33.163 \\
+\addlinespace[0.25em]
+1000 & 0.99 & MTI & 98.5 & 7.301--13.402 \\
+ &  & Young--Mathew & 97.9 & 7.246--14.926 \\
+ &  & Wilks & 99.9 & 8.938--34.261 \\
+\addlinespace[0.25em]
+\multicolumn{5}{@{}l}{\textit{Exponential}}\\
+50 & 0.90 & MTI & 98.0 & 2.609--7.609 \\
+ &  & Young--Mathew & 96.9 & 2.590--6.962 \\
+ &  & Wilks & 98.0 & 2.609--7.609 \\
+\addlinespace[0.25em]
+100 & 0.90 & MTI & 97.3 & 2.414--4.441 \\
+ &  & Young--Mathew & 95.1 & 2.852--6.079 \\
+ &  & Wilks & 100.0 & 3.297--8.354 \\
+\addlinespace[0.25em]
+100 & 0.95 & MTI & 96.5 & 3.260--8.146 \\
+ &  & Young--Mathew & 95.7 & 3.223--7.672 \\
+ &  & Wilks & 96.5 & 3.260--8.146 \\
+\addlinespace[0.25em]
+500 & 0.90 & MTI & 98.2 & 2.344--3.009 \\
+ &  & Young--Mathew & 96.1 & 2.830--3.752 \\
+ &  & Wilks & 100.0 & 4.933--9.447 \\
+\addlinespace[0.25em]
+500 & 0.95 & MTI & 98.0 & 3.090--4.114 \\
+ &  & Young--Mathew & 95.8 & 3.537--4.883 \\
+ &  & Wilks & 100.0 & 4.880--9.954 \\
+\addlinespace[0.25em]
+500 & 0.99 & MTI & 97.3 & 5.021--9.801 \\
+ &  & Young--Mathew & 97.2 & 4.976--9.388 \\
+ &  & Wilks & 97.3 & 5.021--9.801 \\
+\addlinespace[0.25em]
+1000 & 0.90 & MTI & 98.5 & 2.337--2.763 \\
+ &  & Young--Mathew & 94.9 & 2.855--3.453 \\
+ &  & Wilks & 100.0 & 5.581--10.284 \\
+\addlinespace[0.25em]
+1000 & 0.95 & MTI & 99.0 & 3.074--3.709 \\
+ &  & Young--Mathew & 95.7 & 3.564--4.400 \\
+ &  & Wilks & 100.0 & 5.603--10.517 \\
+\addlinespace[0.25em]
+1000 & 0.99 & MTI & 98.6 & 4.917--7.377 \\
+ &  & Young--Mathew & 95.0 & 5.133--8.330 \\
+ &  & Wilks & 100.0 & 5.615--10.540 \\
+\addlinespace[0.25em]
+\multicolumn{5}{@{}l}{\textit{Asymmetric Laplace (tau=0.10)}}\\
+50 & 0.90 & MTI & 96.1 & 2.793--7.789 \\
+ &  & Young--Mathew & 95.6 & 2.722--7.100 \\
+ &  & Wilks & 96.1 & 2.793--7.789 \\
+\addlinespace[0.25em]
+100 & 0.90 & MTI & 96.7 & 2.615--4.577 \\
+ &  & Young--Mathew & 97.2 & 2.993--6.044 \\
+ &  & Wilks & 100.0 & 3.590--8.542 \\
+\addlinespace[0.25em]
+100 & 0.95 & MTI & 96.1 & 3.554--8.688 \\
+ &  & Young--Mathew & 95.6 & 3.522--8.174 \\
+ &  & Wilks & 96.1 & 3.554--8.688 \\
+\addlinespace[0.25em]
+500 & 0.90 & MTI & 97.9 & 2.572--3.272 \\
+ &  & Young--Mathew & 95.5 & 2.847--3.745 \\
+ &  & Wilks & 100.0 & 5.231--10.159 \\
+\addlinespace[0.25em]
+500 & 0.95 & MTI & 97.5 & 3.337--4.470 \\
+ &  & Young--Mathew & 94.6 & 3.590--4.982 \\
+ &  & Wilks & 100.0 & 5.181--10.425 \\
+\addlinespace[0.25em]
+500 & 0.99 & MTI & 96.9 & 5.338--10.028 \\
+ &  & Young--Mathew & 96.5 & 5.314--9.680 \\
+ &  & Wilks & 96.9 & 5.338--10.028 \\
+\addlinespace[0.25em]
+1000 & 0.90 & MTI & 96.9 & 2.546--2.997 \\
+ &  & Young--Mathew & 95.1 & 2.869--3.445 \\
+ &  & Wilks & 100.0 & 6.020--10.797 \\
+\addlinespace[0.25em]
+1000 & 0.95 & MTI & 98.7 & 3.364--4.013 \\
+ &  & Young--Mathew & 96.2 & 3.625--4.562 \\
+ &  & Wilks & 100.0 & 5.896--11.031 \\
+\addlinespace[0.25em]
+1000 & 0.99 & MTI & 98.1 & 5.251--7.799 \\
+ &  & Young--Mathew & 95.9 & 5.371--8.424 \\
+ &  & Wilks & 99.9 & 5.965--10.970 \\
+\addlinespace[0.25em]
+\multicolumn{5}{@{}l}{\textit{Two-piece Normal (1:12)}}\\
+50 & 0.90 & MTI & 97.0 & 2.996--5.747 \\
+ &  & Young--Mathew & 96.1 & 2.953--5.423 \\
+ &  & Wilks & 97.0 & 2.996--5.747 \\
+\addlinespace[0.25em]
+100 & 0.90 & MTI & 95.5 & 2.893--4.203 \\
+ &  & Young--Mathew & 96.6 & 3.123--4.820 \\
+ &  & Wilks & 100.0 & 3.495--5.927 \\
+\addlinespace[0.25em]
+100 & 0.95 & MTI & 97.1 & 3.576--6.207 \\
+ &  & Young--Mathew & 96.9 & 3.559--5.904 \\
+ &  & Wilks & 97.1 & 3.576--6.207 \\
+\addlinespace[0.25em]
+500 & 0.90 & MTI & 97.2 & 2.880--3.379 \\
+ &  & Young--Mathew & 95.3 & 3.085--3.707 \\
+ &  & Wilks & 100.0 & 4.551--6.900 \\
+\addlinespace[0.25em]
+500 & 0.95 & MTI & 97.1 & 3.453--4.139 \\
+ &  & Young--Mathew & 95.0 & 3.588--4.417 \\
+ &  & Wilks & 100.0 & 4.535--6.725 \\
+\addlinespace[0.25em]
+500 & 0.99 & MTI & 95.5 & 4.563--6.729 \\
+ &  & Young--Mathew & 95.1 & 4.556--6.591 \\
+ &  & Wilks & 95.5 & 4.563--6.729 \\
+\addlinespace[0.25em]
+1000 & 0.90 & MTI & 96.9 & 2.863--3.189 \\
+ &  & Young--Mathew & 94.2 & 3.085--3.493 \\
+ &  & Wilks & 100.0 & 4.943--7.014 \\
+\addlinespace[0.25em]
+1000 & 0.95 & MTI & 98.2 & 3.427--3.852 \\
+ &  & Young--Mathew & 95.3 & 3.588--4.137 \\
+ &  & Wilks & 100.0 & 4.957--7.089 \\
+\addlinespace[0.25em]
+1000 & 0.99 & MTI & 98.5 & 4.620--5.823 \\
+ &  & Young--Mathew & 96.4 & 4.679--6.098 \\
+ &  & Wilks & 100.0 & 4.942--7.109 \\
+\addlinespace[0.25em]
+\multicolumn{5}{@{}l}{\textit{Beta(1,8)}}\\
+50 & 0.90 & MTI & 96.4 & 2.812--6.282 \\
+ &  & Young--Mathew & 95.4 & 2.776--5.847 \\
+ &  & Wilks & 96.4 & 2.812--6.282 \\
+\addlinespace[0.25em]
+100 & 0.90 & MTI & 97.5 & 2.647--4.313 \\
+ &  & Young--Mathew & 96.4 & 3.051--5.230 \\
+ &  & Wilks & 100.0 & 3.451--6.521 \\
+\addlinespace[0.25em]
+100 & 0.95 & MTI & 95.7 & 3.355--6.551 \\
+ &  & Young--Mathew & 95.1 & 3.309--6.255 \\
+ &  & Wilks & 95.7 & 3.355--6.551 \\
+\addlinespace[0.25em]
+500 & 0.90 & MTI & 98.4 & 2.561--3.145 \\
+ &  & Young--Mathew & 95.7 & 2.992--3.755 \\
+ &  & Wilks & 100.0 & 4.582--7.215 \\
+\addlinespace[0.25em]
+500 & 0.95 & MTI & 98.8 & 3.228--4.059 \\
+ &  & Young--Mathew & 94.8 & 3.574--4.603 \\
+ &  & Wilks & 100.0 & 4.551--7.030 \\
+\addlinespace[0.25em]
+500 & 0.99 & MTI & 96.2 & 4.551--7.224 \\
+ &  & Young--Mathew & 95.7 & 4.536--6.976 \\
+ &  & Wilks & 96.2 & 4.551--7.224 \\
+\addlinespace[0.25em]
+1000 & 0.90 & MTI & 99.0 & 2.547--2.924 \\
+ &  & Young--Mathew & 95.3 & 3.004--3.498 \\
+ &  & Wilks & 100.0 & 5.056--7.383 \\
+\addlinespace[0.25em]
+1000 & 0.95 & MTI & 99.1 & 3.212--3.712 \\
+ &  & Young--Mathew & 94.8 & 3.595--4.283 \\
+ &  & Wilks & 100.0 & 5.115--7.492 \\
+\addlinespace[0.25em]
+1000 & 0.99 & MTI & 99.0 & 4.650--6.098 \\
+ &  & Young--Mathew & 95.0 & 4.824--6.499 \\
+ &  & Wilks & 99.9 & 5.094--7.399 \\
+\addlinespace[0.25em]
+\multicolumn{5}{@{}l}{\textit{Gamma(0.5,1)}}\\
+50 & 0.90 & MTI & 96.5 & 2.265--8.769 \\
+ &  & Young--Mathew & 96.0 & 2.221--7.820 \\
+ &  & Wilks & 96.5 & 2.265--8.769 \\
+\addlinespace[0.25em]
+100 & 0.90 & MTI & 98.3 & 2.143--4.475 \\
+ &  & Young--Mathew & 96.2 & 2.631--6.586 \\
+ &  & Wilks & 100.0 & 3.057--9.288 \\
+\addlinespace[0.25em]
+100 & 0.95 & MTI & 97.3 & 3.123--9.137 \\
+ &  & Young--Mathew & 96.9 & 3.086--8.534 \\
+ &  & Wilks & 97.3 & 3.123--9.137 \\
+\addlinespace[0.25em]
+500 & 0.90 & MTI & 98.8 & 1.980--2.745 \\
+ &  & Young--Mathew & 94.5 & 2.591--3.631 \\
+ &  & Wilks & 100.0 & 5.129--11.966 \\
+\addlinespace[0.25em]
+500 & 0.95 & MTI & 98.9 & 2.877--4.163 \\
+ &  & Young--Mathew & 95.7 & 3.367--5.117 \\
+ &  & Wilks & 100.0 & 5.021--11.575 \\
+\addlinespace[0.25em]
+500 & 0.99 & MTI & 97.1 & 5.166--11.597 \\
+ &  & Young--Mathew & 96.9 & 5.103--11.090 \\
+ &  & Wilks & 97.1 & 5.166--11.597 \\
+\addlinespace[0.25em]
+1000 & 0.90 & MTI & 99.3 & 1.971--2.438 \\
+ &  & Young--Mathew & 95.4 & 2.612--3.297 \\
+ &  & Wilks & 100.0 & 5.872--13.143 \\
+\addlinespace[0.25em]
+1000 & 0.95 & MTI & 98.7 & 2.794--3.623 \\
+ &  & Young--Mathew & 94.7 & 3.393--4.479 \\
+ &  & Wilks & 100.0 & 5.976--12.422 \\
+\addlinespace[0.25em]
+1000 & 0.99 & MTI & 98.7 & 5.127--8.043 \\
+ &  & Young--Mathew & 94.5 & 5.441--9.550 \\
+ &  & Wilks & 99.9 & 5.935--12.524 \\
+\addlinespace[0.25em]
+\multicolumn{5}{@{}l}{\textit{Log-normal (log sd 1.25)}}\\
+50 & 0.90 & MTI & 96.5 & 1.460--12.904 \\
+ &  & Young--Mathew & 95.9 & 1.408--11.343 \\
+ &  & Wilks & 96.5 & 1.460--12.904 \\
+\addlinespace[0.25em]
+100 & 0.90 & MTI & 98.0 & 1.311--4.216 \\
+ &  & Young--Mathew & 96.8 & 1.769--8.254 \\
+ &  & Wilks & 100.0 & 2.416--20.774 \\
+\addlinespace[0.25em]
+100 & 0.95 & MTI & 96.7 & 2.284--18.586 \\
+ &  & Young--Mathew & 96.3 & 2.237--16.347 \\
+ &  & Wilks & 96.7 & 2.284--18.586 \\
+\addlinespace[0.25em]
+500 & 0.90 & MTI & 99.1 & 1.229--1.884 \\
+ &  & Young--Mathew & 95.9 & 1.702--2.810 \\
+ &  & Wilks & 100.0 & 4.847--30.903 \\
+\addlinespace[0.25em]
+500 & 0.95 & MTI & 98.6 & 1.994--3.535 \\
+ &  & Young--Mathew & 95.4 & 2.496--5.104 \\
+ &  & Wilks & 100.0 & 4.725--33.280 \\
+\addlinespace[0.25em]
+500 & 0.99 & MTI & 95.8 & 4.853--32.132 \\
+ &  & Young--Mathew & 95.2 & 4.778--29.133 \\
+ &  & Wilks & 95.8 & 4.853--32.132 \\
+\addlinespace[0.25em]
+1000 & 0.90 & MTI & 99.2 & 1.215--1.609 \\
+ &  & Young--Mathew & 95.1 & 1.734--2.409 \\
+ &  & Wilks & 100.0 & 6.548--35.265 \\
+\addlinespace[0.25em]
+1000 & 0.95 & MTI & 98.6 & 1.921--2.809 \\
+ &  & Young--Mathew & 95.1 & 2.556--4.058 \\
+ &  & Wilks & 100.0 & 6.540--38.831 \\
+\addlinespace[0.25em]
+1000 & 0.99 & MTI & 99.3 & 4.983--13.534 \\
+ &  & Young--Mathew & 94.7 & 5.438--19.472 \\
+ &  & Wilks & 100.0 & 6.849--38.381 \\
+\addlinespace[0.25em]
 \bottomrule
 \end{longtable}
 \endgroup

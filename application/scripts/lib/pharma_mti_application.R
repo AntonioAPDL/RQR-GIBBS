@@ -437,15 +437,19 @@ pma_diagnostics <- function(results) {
   key <- interaction(mti$response_id, mti$split_scheme, drop = TRUE)
   do.call(rbind, lapply(split(mti, key), function(z) {
     r <- z[z$interval_returned, , drop = FALSE]
-    do.call(rbind, lapply(metrics, function(v) data.frame(
+    do.call(rbind, lapply(metrics, function(v) {
+      value <- r[[v]]
+      if(v=="mti_relative_objective_gap")value <- abs(value)
+      data.frame(
       response_id = z$response_id[1], response_role = z$response_role[1],
       split_scheme = z$split_scheme[1], metric = v, splits = nrow(z),
       returned = nrow(r), return_rate = mean(z$interval_returned),
       convergence_count = sum(z$interval_returned & pma_fit_converged(z), na.rm = TRUE),
       convergence_rate = if (nrow(r)) mean(pma_fit_converged(r)) else NA_real_,
-      median = pta_median(r[[v]]), q025 = pta_quantile(r[[v]], .025),
-      q25 = pta_quantile(r[[v]], .25), q75 = pta_quantile(r[[v]], .75),
-      q975 = pta_quantile(r[[v]], .975), stringsAsFactors = FALSE)))
+      median = pta_median(value), q025 = pta_quantile(value, .025),
+      q25 = pta_quantile(value, .25), q75 = pta_quantile(value, .75),
+      q975 = pta_quantile(value, .975), stringsAsFactors = FALSE)
+    }))
   }))
 }
 
@@ -677,6 +681,15 @@ pma_verify_run <- function(run_dir, config) {
 pma_publish <- function(run_dir, config, repo_root) {
   manifest <- pma_verify_run(run_dir, config)
   if (manifest$mode != "confirmatory") pta_stop("Only a confirmatory run can supply the article.")
+  if(!is.null(config$mti_profile)) {
+    audit_path <- file.path(run_dir,"profile_validation.json")
+    if(!file.exists(audit_path))pta_stop("Independently validate the profiled application before publication.")
+    audit <- jsonlite::read_json(audit_path,simplifyVector=TRUE)
+    if(!isTRUE(audit$passed) || audit$results_sha256!=pta_file_sha256(file.path(run_dir,"results.csv")) ||
+      audit$policy_sha256!=manifest$policy_sha256 ||
+      audit$fixed_target_profiles_recomputed!=sum(manifest$return_counts[[pma_methods[1]]]))
+      pta_stop("Profile application validation does not match the completed results.")
+  }
   destination <- pta_path(repo_root, config$paths$canonical_dir)
   if (dir.exists(destination)) pta_stop("Canonical destination already exists; preserve its history.")
   dir.create(destination, recursive = TRUE)
