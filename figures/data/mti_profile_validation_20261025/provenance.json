@@ -1,0 +1,55 @@
+{
+  "study_commit": "5b329e597d12826b05019306f1ab0d19e439c97c",
+  "policy_sha256": "a4fdeafb5b9a1be267a64f765e340ac89cd8e0f4085f80a0a8fd1aba24a75d3d",
+  "results_sha256": "ab35f42859136da372d342b2234c822f041a3786c4e5f92688d6117aeb491234",
+  "assessment_sha256": "1b99899ace4a760a4def669aa2ec8b75f3f2ed4b7ec093c1f7a73c5acd50551c",
+  "datasets": 72000,
+  "reported_method_evaluations": 216000,
+  "full_method_evaluations": 288000,
+  "calibration_familywise_error": 0.05,
+  "independent_validation": true,
+  "paired_comparison": true,
+  "primary_evidence": {
+    "inconclusive": 34,
+    "strong_panel_evidence": 38
+  },
+  "distribution_free_tolerance_theorem": false,
+  "artifacts": [
+    {
+      "path": "figures/data/mti_profile_validation_20261025/assessment.csv",
+      "sha256": "1b99899ace4a760a4def669aa2ec8b75f3f2ed4b7ec093c1f7a73c5acd50551c",
+      "bytes": 593371,
+      "_row": "figures/data/mti_profile_validation_20261025/assessment.csv"
+    },
+    {
+      "path": "figures/data/mti_profile_validation_20261025/family_case_summary.csv",
+      "sha256": "db20e4d02cc8683ab8ca48162f4c72948635a8ca3c4e1c6371bda0710aea2ed8",
+      "bytes": 78033,
+      "_row": "figures/data/mti_profile_validation_20261025/family_case_summary.csv"
+    },
+    {
+      "path": "figures/data/mti_profile_validation_20261025/paired_comparisons.csv",
+      "sha256": "fe111cf44672db2df565fa5691516664c248807ff7849ab0150cb36ddf26d251",
+      "bytes": 33192,
+      "_row": "figures/data/mti_profile_validation_20261025/paired_comparisons.csv"
+    },
+    {
+      "path": "figures/data/mti_profile_validation_20261025/policy_sources.csv",
+      "sha256": "dea0c02b4a63bb97c500941fe4650a14dc4497e3aab4459c3c9d2b60b7f9be62",
+      "bytes": 726,
+      "_row": "figures/data/mti_profile_validation_20261025/policy_sources.csv"
+    },
+    {
+      "path": "figures/data/mti_profile_validation_20261025/policy.csv",
+      "sha256": "a4fdeafb5b9a1be267a64f765e340ac89cd8e0f4085f80a0a8fd1aba24a75d3d",
+      "bytes": 1181,
+      "_row": "figures/data/mti_profile_validation_20261025/policy.csv"
+    },
+    {
+      "path": "figures/data/mti_profile_validation_20261025/selected_calibration.csv",
+      "sha256": "39a5d5755d46879d5e0ceb906493df13edd5cd2b95c56ebdad515fa5af783dce",
+      "bytes": 13994,
+      "_row": "figures/data/mti_profile_validation_20261025/selected_calibration.csv"
+    }
+  ]
+}

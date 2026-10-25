@@ -1,4 +1,4 @@
-mpq_frozen_action <- function(y,content,confidence,policy,cfg) {
+mpq_frozen_action <- function(y,content,confidence,policy,cfg,context=NULL) {
   task <- data.frame(n=length(y),content=content,tolerance_confidence=confidence)
   required <- c("n","content","tolerance_confidence","threshold","method_id","decision")
   mpr_require(all(required %in% names(policy)),"Incomplete frozen MTI policy.")
@@ -6,7 +6,7 @@ mpq_frozen_action <- function(y,content,confidence,policy,cfg) {
   mpr_require(nrow(chosen)==1L && chosen$method_id=="mti_profile_mass_cells_v1" &&
     chosen$decision=="passed_new_calibration" && is.finite(chosen$threshold) &&
     chosen$threshold>0 && chosen$threshold<1,"No calibrated policy for this application setting.")
-  context <- list(profile=mp_frozen_profile(cfg),
+  if(is.null(context))context <- list(profile=mp_frozen_profile(cfg),
     scan=read.csv("tables/tolerance_validation_article_scan_calibration.csv"))
   fit <- mpq_fit(y,task,cfg,context)
   selected <- mp_select(fit$candidates,chosen$threshold)
@@ -58,7 +58,7 @@ mpq_preview_tables <- function(summary,spec,output) {
   writeLines(c(lines,"\\bottomrule","\\end{tabular}"),file.path(output,"scenario_ranges.tex"))
   lines <- c("\\begingroup","\\scriptsize","\\setlength{\\tabcolsep}{3pt}",
     "\\begin{longtable}{@{}rrlrr@{}}",
-    "\\caption{\\textbf{Interval widths by distribution and design.} Width ranges are empirical 2.5\\%--97.5\\% quantiles within each case and method.}\\\\",
+    "\\caption{\\textbf{Interval widths by distribution and design.} Width ranges are empirical 2.5\\%--97.5\\% quantiles within each case and method.}\\label{tab:supp-primary-dgp-width-ranges}\\\\",
     "\\toprule","\\(n\\) & \\(c\\) & Method & Attainment (\\%) & Width 95\\% range\\\\",
     "\\midrule","\\endfirsthead","\\toprule",
     "\\(n\\) & \\(c\\) & Method & Attainment (\\%) & Width 95\\% range\\\\",

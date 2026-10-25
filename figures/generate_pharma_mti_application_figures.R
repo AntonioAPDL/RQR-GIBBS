@@ -14,7 +14,8 @@ inputs <- pma_read_report_inputs(config, source_path)
 output_dir <- pta_arg_value(args, "--output-dir=", "figures/generated")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 colors <- c(mti_ecm_adaptive_cell = "#009E73", young_mathew = "#CC79A7", wilks_minmax = "#000000")
-labels <- c(mti_ecm_adaptive_cell = "MTI-ECM", young_mathew = "Young-Mathew", wilks_minmax = "Wilks")
+labels <- unlist(config$method_labels)[pma_methods]
+labels <- sub("Young--Mathew","Young-Mathew",labels,fixed=TRUE)
 paired <- pma_paired_values(inputs$results)
 plotted_intervals <- list()
 
@@ -63,7 +64,7 @@ draw_application <- function(response, path) {
       plot(x, difference, pch = 16, cex = .55,
         col = grDevices::adjustcolor(colors[comparator], .16),
         xlim = range(c(x, 0)), ylim = range(c(difference, 0)),
-        xlab = "Width difference\n(MTI-ECM minus benchmark)",
+        xlab = paste0("Width difference\n(",labels[1]," minus benchmark)"),
         ylab = "Held-out content difference\n(percentage points)",
         main = paste0(LETTERS[i+1], ". Paired comparison\nwith ", labels[comparator]), bty = "l")
       abline(h = 0, v = 0, col = "gray55", lty = 2)
@@ -103,7 +104,7 @@ draw_application <- function(response, path) {
         outer = TRUE, line = .7, font = 2, cex = 1.05)
   par(mar = c(0,0,0,0))
   plot.new()
-  legend("center", c("MTI-ECM (proposed)", "Young-Mathew (benchmark)", "Wilks (benchmark)"),
+  legend("center", paste0(labels,c(" (proposed)"," (benchmark)"," (benchmark)")),
          col = colors[pma_methods], lwd = 3, bty = "n", ncol = 3, cex = .84)
 }
 

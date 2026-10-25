@@ -3,8 +3,14 @@ pma_read_report_inputs <- function(config, results_path) {
     pta_stop("Expected canonical application results are absent: ", results_path)
   }
   directory <- dirname(results_path)
-  pma_verify_hash(config$mti_ecm$policy_csv, config$mti_ecm$policy_sha256)
-  pma_verify_hash(config$mti_ecm$validation_config, config$mti_ecm$validation_config_sha256)
+  if(is.null(config$mti_profile)) {
+    pma_verify_hash(config$mti_ecm$policy_csv, config$mti_ecm$policy_sha256)
+    pma_verify_hash(config$mti_ecm$validation_config, config$mti_ecm$validation_config_sha256)
+  } else {
+    pma_verify_hash(config$mti_profile$adoption_config,config$mti_profile$adoption_sha256)
+    a <- pta_read_config(config$mti_profile$adoption_config)
+    pma_verify_hash(a$policy_csv,a$policy_sha256)
+  }
   manifest <- pma_verify_run(directory, config)
   if (manifest$mode != "confirmatory") pta_stop("Article inputs require a confirmatory run.")
   results <- pta_read_csv(results_path)
@@ -73,11 +79,11 @@ pma_method_table <- function(rows, path) {
   pma_write_tex(path, c(lines, "\\bottomrule", "\\end{tabularx}"))
 }
 
-pma_paired_table <- function(rows, path, label, response_label) {
+pma_paired_table <- function(rows, path, label, response_label,proposed_label="MTI-ECM") {
   lines <- c("\\begingroup", "\\footnotesize", "\\setlength{\\tabcolsep}{3pt}",
     "\\begin{longtable}{@{}llrrrr@{}}",
     paste0("\\caption{\\textbf{Paired comparisons for ", response_label,
-      ".} Differences are MTI-ECM minus the benchmark; the width ratio is MTI-ECM divided by the benchmark. Content and omission differences are percentage points. Entries describe paired random splits of one finite dataset; they are not independent sampling replications. IQR is the interquartile range.}\\label{", label, "}\\\\"),
+      ".} Differences are ",proposed_label," minus the benchmark; the width ratio divides the corresponding widths. Content and omission differences are percentage points. Entries describe paired random splits of one finite dataset. IQR is the interquartile range.}\\label{", label, "}\\\\"),
     "\\toprule", "Quantity & Benchmark & Pairs & Median & IQR & 95\\% range\\\\",
     "\\midrule", "\\endfirsthead", "\\toprule",
     "Quantity & Benchmark & Pairs & Median & IQR & 95\\% range\\\\", "\\midrule", "\\endhead")
@@ -128,6 +134,8 @@ pma_numerical_table <- function(diagnostics, path) {
     mti_selected_q = "Selected fitted content", mti_selected_tilt = "Selected tilt",
     mti_posterior_content_probability = "Posterior content probability",
     mti_ecm_iterations = "ECM iterations", mti_ecm_final_stationarity = "Final stationarity")
+  labels <- c(labels,mti_profile_iterations="Profile iterations",
+    mti_relative_objective_gap="Relative objective gap")
   lines <- c("\\begin{tabularx}{\\textwidth}{@{}ll>{\\raggedright\\arraybackslash}X@{}}",
     "\\toprule", "Response & Diagnostic & Summary\\\\", "\\midrule")
   for (response in names(pma_response_labels)) {
@@ -141,8 +149,9 @@ pma_numerical_table <- function(diagnostics, path) {
       digits <- switch(r$metric, mti_candidates_evaluated = 0,
         mti_feasible_count = 1, mti_ecm_iterations = 0,
         mti_ecm_final_stationarity = 6, 4)
-      lines <- c(lines, sprintf(" & %s & %s \\\\", labels[r$metric],
-        pma_median_range(r$median, r$q025, r$q975, digits)))
+      value <- if(r$metric=="mti_relative_objective_gap")sprintf("%.2e [%.2e, %.2e]",
+        r$median,r$q025,r$q975) else pma_median_range(r$median,r$q025,r$q975,digits)
+      lines <- c(lines, sprintf(" & %s & %s \\\\", labels[r$metric],value))
     }
     lines <- c(lines, "\\addlinespace")
   }
@@ -169,8 +178,18 @@ pma_convergence_table <- function(rows, path) {
 
 pma_numeric_macros <- function(inputs, summary, paired, diagnostics) {
   cfg <- inputs$config
-  validation <- pta_read_config(cfg$mti_ecm$validation_config)
-  controls <- validation$engine_defaults$mti_ecm_dp_profile$ecm_control
+  profiled <- !is.null(cfg$mti_profile)
+  if(profiled) {
+    a <- pta_read_config(cfg$mti_profile$adoption_config)
+    policy <- read.csv(a$policy_csv)
+    cutoff <- policy$threshold[policy$n==cfg$analysis$training_size &
+      abs(policy$content-cfg$analysis$content)<1e-12]
+    if(length(cutoff)!=1L)pta_stop("No unique application cutoff.")
+  } else {
+    validation <- pta_read_config(cfg$mti_ecm$validation_config)
+    controls <- validation$engine_defaults$mti_ecm_dp_profile$ecm_control
+    cutoff <- cfg$mti_ecm$required_screen
+  }
   values <- c(PharmaBatches = as.character(nrow(inputs$observed)),
     PharmaRawBatches = as.character(cfg$data_source$expected_rows),
     PharmaRawFields = as.character(cfg$data_source$expected_columns),
@@ -179,11 +198,17 @@ pma_numeric_macros <- function(inputs, summary, paired, diagnostics) {
     PharmaSplits = as.character(cfg$analysis$confirmatory_splits),
     PharmaContent = sprintf("%.2f", cfg$analysis$content),
     PharmaConfidence = sprintf("%.2f", cfg$analysis$tolerance_confidence),
-    PharmaScreen = sprintf("%.3f", cfg$mti_ecm$required_screen),
+    PharmaScreen = sprintf(if(profiled)"%.6f" else "%.3f",cutoff),
     PharmaRetained = as.character(cfg$scan_reference$expected_retained_count),
     PharmaGroupedSplits = as.character(cfg$sensitivity$requested_unique_splits))
-  values["PharmaStationarityThreshold"] <- pma_number(controls$tol_stationarity, 3)
-  values["PharmaMaxIter"] <- as.character(controls$max_iter)
+  if(profiled) {
+    values["PharmaObjectiveTolerance"] <- "10^{-8}"
+    values["PharmaMaxObjectiveGap"] <- sprintf("%.2e",
+      max(abs(inputs$results$mti_relative_objective_gap),na.rm=TRUE))
+  } else {
+    values["PharmaStationarityThreshold"] <- pma_number(controls$tol_stationarity, 3)
+    values["PharmaMaxIter"] <- as.character(controls$max_iter)
+  }
   for (response in names(pma_response_labels)) {
     prefix <- if(response == "fct_tensile") "PharmaTensile" else "PharmaRsd"
     z <- summary[summary$response_id == response & summary$split_scheme == "random", ]
@@ -249,7 +274,8 @@ pma_generate_tables <- function(inputs, output_dir) {
     p <- paired[paired$response_id == response & paired$split_scheme == "random", ]
     pta_atomic_write_csv(p, file.path(output_dir, paste0("pharma_application_", suffix, "_paired_summary.csv")))
     pma_paired_table(p, file.path(output_dir, paste0("pharma_application_", suffix, "_paired_summary.tex")),
-      paste0("tab:supp-pharma-", suffix, "-paired"), pma_response_labels[response])
+      paste0("tab:supp-pharma-", suffix, "-paired"), pma_response_labels[response],
+      inputs$config$method_labels[[pma_methods[1]]])
     pma_sensitivity_table(summary[summary$response_id == response, ],
       file.path(output_dir, paste0("pharma_application_", suffix, "_sensitivity.tex")),
       paste0("tab:supp-pharma-", suffix, "-sensitivity"), pma_response_labels[response])

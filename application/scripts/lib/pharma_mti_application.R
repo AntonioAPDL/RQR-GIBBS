@@ -203,6 +203,7 @@ pma_fit <- function(method, y, context, seed) {
   config <- context$config
   set.seed(seed)
   if (method == "mti_ecm_adaptive_cell") {
+    if (!is.null(context$adopted)) return(mpa_application_fit(y, context))
     return(pta_fit_mti_ecm(y, config$analysis$content,
       config$analysis$tolerance_confidence, context$scan, context$policy,
       context$profile, seed))
@@ -271,6 +272,11 @@ pma_run_task <- function(task, context, fit_function = pma_fit) {
       mti_ecm_converged = fit$ecm_converged %||% NA,
       mti_ecm_iterations = fit$ecm_iterations %||% NA_integer_,
       mti_ecm_final_stationarity = fit$ecm_final_stationarity %||% NA_real_,
+      mti_computation = if(method == pma_methods[1]) fit$computation %||% "ecm" else NA_character_,
+      mti_profile_converged = fit$profile_converged %||% NA,
+      mti_profile_iterations = fit$profile_iterations %||% NA_integer_,
+      mti_relative_objective_gap = fit$relative_objective_gap %||% NA_real_,
+      mti_maximum_candidate_objective_gap = fit$maximum_candidate_objective_gap %||% NA_real_,
       benchmark_package_version = if (method == "young_mathew")
         fit$source_version %||% NA_character_ else NA_character_,
       failure_reason = reason, elapsed_sec = elapsed, stringsAsFactors = FALSE)
@@ -320,14 +326,34 @@ pma_validate_results <- function(results, splits = NULL) {
     pta_stop("Held-out content and tail omissions do not sum to one.")
   }
   mti <- results$method_id == "mti_ecm_adaptive_cell" & ok
-  if (anyNA(results$mti_ecm_converged[mti]) ||
-      any(!is.finite(results$mti_ecm_final_stationarity[mti])) ||
-      any(results$mti_ecm_iterations[mti] < 1L) ||
+  profiled <- if("mti_computation" %in% names(results))
+    mti & !is.na(results$mti_computation) & results$mti_computation=="fixed_target_profile" else rep(FALSE,nrow(results))
+  if(any(profiled) && !all(c("mti_profile_converged","mti_profile_iterations",
+    "mti_relative_objective_gap") %in% names(results)))pta_stop("Missing profile diagnostics.")
+  ecm <- mti & !profiled
+  if (anyNA(results$mti_ecm_converged[ecm]) ||
+      any(!is.finite(results$mti_ecm_final_stationarity[ecm])) ||
+      any(results$mti_ecm_iterations[ecm] < 1L) ||
       any(results$mti_posterior_content_probability[mti] + 1e-12 <
             results$mti_posterior_confidence[mti])) {
     pta_stop("Incomplete MTI-ECM diagnostics or unsatisfied posterior content check.")
   }
+  if(any(profiled) && (anyNA(results$mti_profile_converged[profiled]) ||
+    any(!results$mti_profile_converged[profiled]) ||
+    any(!is.finite(results$mti_relative_objective_gap[profiled])) ||
+    any(abs(results$mti_relative_objective_gap[profiled])>1e-8) ||
+    any(!is.na(results$mti_ecm_converged[profiled]))))
+    pta_stop("Invalid profiled MTI numerical diagnostics.")
   invisible(TRUE)
+}
+
+pma_fit_converged <- function(results) {
+  flag <- results$mti_ecm_converged
+  if("mti_computation" %in% names(results)) {
+    profile <- !is.na(results$mti_computation) & results$mti_computation=="fixed_target_profile"
+    flag[profile] <- results$mti_profile_converged[profile]
+  }
+  flag
 }
 
 pma_summary <- function(results) {
@@ -405,6 +431,9 @@ pma_diagnostics <- function(results) {
   metrics <- c("mti_candidates_evaluated", "mti_feasible_count", "mti_selected_q",
     "mti_selected_tilt", "mti_posterior_content_probability",
     "mti_ecm_iterations", "mti_ecm_final_stationarity")
+  if("mti_computation" %in% names(mti) &&
+    all(mti$mti_computation=="fixed_target_profile"))
+    metrics <- c(head(metrics,-2L),"mti_profile_iterations","mti_relative_objective_gap")
   key <- interaction(mti$response_id, mti$split_scheme, drop = TRUE)
   do.call(rbind, lapply(split(mti, key), function(z) {
     r <- z[z$interval_returned, , drop = FALSE]
@@ -412,8 +441,8 @@ pma_diagnostics <- function(results) {
       response_id = z$response_id[1], response_role = z$response_role[1],
       split_scheme = z$split_scheme[1], metric = v, splits = nrow(z),
       returned = nrow(r), return_rate = mean(z$interval_returned),
-      convergence_count = sum(z$interval_returned & z$mti_ecm_converged, na.rm = TRUE),
-      convergence_rate = if (nrow(r)) mean(r$mti_ecm_converged) else NA_real_,
+      convergence_count = sum(z$interval_returned & pma_fit_converged(z), na.rm = TRUE),
+      convergence_rate = if (nrow(r)) mean(pma_fit_converged(r)) else NA_real_,
       median = pta_median(r[[v]]), q025 = pta_quantile(r[[v]], .025),
       q25 = pta_quantile(r[[v]], .25), q75 = pta_quantile(r[[v]], .75),
       q975 = pta_quantile(r[[v]], .975), stringsAsFactors = FALSE)))
@@ -422,8 +451,9 @@ pma_diagnostics <- function(results) {
 
 pma_convergence_sensitivity <- function(results) {
   k <- function(z) paste(z$response_id, z$split_scheme, z$split_id, sep = "|")
+  flag <- pma_fit_converged(results)
   keep <- results$method_id == pma_methods[1] & results$interval_returned &
-    !is.na(results$mti_ecm_converged) & results$mti_ecm_converged
+    !is.na(flag) & flag
   included <- k(results) %in% k(results[keep, , drop = FALSE])
   out <- pma_summary(results[included, , drop = FALSE])
   all <- pma_summary(results)
@@ -513,6 +543,8 @@ pma_run <- function(context, mode, output_dir, workers) {
   launch_status <- pma_git("status", "--porcelain")
   calculation_paths <- c("application/scripts/lib/pharma_tolerance_application.R",
     "application/scripts/lib/pharma_mti_application.R", "application/scripts/86_run_pharma_mti_application.R")
+  if(!is.null(context$adopted))calculation_paths <- unique(c(calculation_paths,
+    context$adopted$calculation_paths))
   calculation_hashes <- pma_file_record(calculation_paths)
   RNGkind("Mersenne-Twister", "Inversion", "Rejection")
   splits <- pma_make_splits(context$data, config, mode)
@@ -575,7 +607,8 @@ pma_run <- function(context, mode, output_dir, workers) {
   if (!identical(calculation_hashes, pma_file_record(calculation_paths))) {
     pta_stop("Calculation sources changed during the run; preserve outputs for review.")
   }
-  source_paths <- c(attr(config, "config_path"),
+  source_paths <- if(!is.null(context$adopted))c(attr(config,"config_path"),
+    context$adopted$input_paths) else c(attr(config, "config_path"),
     pta_path(context$repo_root, config$paths$raw_file),
     pta_path(context$repo_root, config$paths$clean_file),
     pta_path(context$repo_root, config$mti_ecm$policy_csv),
@@ -615,6 +648,14 @@ pma_run <- function(context, mode, output_dir, workers) {
     exdqlm_loaded = "exdqlm" %in% loadedNamespaces(),
     artifacts = artifact_record,
     derived_tables_and_figures = list(status = "pending_reporting"))
+  if(!is.null(context$adopted)) {
+    manifest$computation <- "fixed_target_profile"
+    manifest$scientific_method_id <- context$adopted$spec$primary_method
+    manifest$policy_sha256 <- context$adopted$adoption$policy_sha256
+    manifest$profile_convergence_count <- sum(results$mti_profile_converged,na.rm=TRUE)
+    manifest$maximum_relative_objective_gap <- max(abs(results$mti_relative_objective_gap),na.rm=TRUE)
+    manifest$ecm_convergence_counts <- NULL
+  }
   pta_atomic_write_json(manifest, file.path(output_dir, "manifest.json"))
   output_dir
 }
