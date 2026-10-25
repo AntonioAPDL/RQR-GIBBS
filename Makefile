@@ -163,14 +163,14 @@ PHARMA_APPLICATION_RUN_DIR ?=
 PHARMA_APPLICATION_RESULTS ?= $(if $(strip $(PHARMA_APPLICATION_RUN_DIR)),$(PHARMA_APPLICATION_RUN_DIR)/pharma_application_results.csv,)
 PHARMA_APPLICATION_SENSITIVITY ?= $(if $(strip $(PHARMA_APPLICATION_RUN_DIR)),$(PHARMA_APPLICATION_RUN_DIR)/pharma_application_dependence_sensitivity.csv,)
 PHARMA_APPLICATION_WORKERS ?= 8
-PHARMA_MTI_CONFIG ?= application/config/pharma_tolerance_application_mti_only_20261020.json
+PHARMA_MTI_CONFIG ?= application/config/pharma_tolerance_application_profiled_20261025.json
 PHARMA_ECM_AUDIT_CONFIG ?= application/config/pharma_ecm_numerical_audit_20261020.json
 PHARMA_ECM_AUDIT_WORKERS ?= 8
 PHARMA_ECM_AUDIT_RUN_DIR ?=
 PHARMA_ECM_AUDIT_EVIDENCE ?= figures/data/pharma_ecm_numerical_audit_20261020
 PHARMA_ECM_AUDIT_REPORT_DIR ?= application/outputs/pharma_ecm_numerical_audit_20261020/review
 PHARMA_MTI_LIBRARY ?= application/cache/pharma_mti_library
-PHARMA_MTI_RESULTS ?= figures/data/pharma_mti_application_20261020/results.csv
+PHARMA_MTI_RESULTS ?= figures/data/pharma_mti_profile_application_20261025/results.csv
 PHARMA_MTI_RUN_DIR ?=
 PHARMA_MTI_WORKERS ?= 40
 PHARMA_MTI_R = R_LIBS=$(PHARMA_MTI_LIBRARY) OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
@@ -184,8 +184,17 @@ MTI_FIXED_WORKERS ?= 1
 MTI_Q_BASELINE_RUN ?=
 MTI_Q_RUN_DIR ?= application/outputs/mti_q_grid_refinement_20261022/prepared_20261022
 MTI_Q_WORKERS ?= 4
+MTI_Q_FINAL_CONFIG ?= application/config/mti_q_grid_refinement_final_20261022.json
+MTI_Q_SCREEN_RUN ?=
+MTI_Q_FINAL_RUN_DIR ?= application/outputs/mti_q_grid_refinement_20261022/final_20261022
+MTI_Q_FINAL_WORKERS ?= 40
+MTI_Q_FOLLOWUP_CONFIG ?= application/config/mti_threshold_followup_20261024.json
+MTI_Q_PARENT_RUN ?=
+MTI_Q_FOLLOWUP_RUN_DIR ?= application/outputs/mti_q_grid_refinement_20261022/threshold_followup_20261024
 MTI_Q_RUNTIME = application/cache/mti_q_grid_runtime_$(shell git rev-parse HEAD)
 MTI_Q_R = R_LIBS=$(MTI_Q_RUNTIME)/library OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
+MTI_ADOPTED_LIBRARY ?= $(PHARMA_MTI_LIBRARY)
+MTI_ADOPTED_R = R_LIBS=$(MTI_ADOPTED_LIBRARY) OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 MTI_PROFILE_RUNTIME = application/cache/mti_profile_runtime_$(shell git rev-parse HEAD)
 MTI_PROFILE_R = R_LIBS=$(MTI_PROFILE_RUNTIME)/library OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
 RQR_BAYES_UQ_PRIMARY_YM_RESULTS ?=
@@ -230,19 +239,35 @@ tolerance-validation-adaptive-article-inputs:
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
-	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_ARTICLE_RESULTS) --mti-ecm-policy-csv=$(RQR_BAYES_UQ_MTI_ECM_POLICY) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --output-dir=$(THEORY_FIGURE_DIR)
-	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results= --mti-ecm-results= --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --mti-method-id=mti_profile_mass_cells_v1 --mti-label=MTI --delivery-y-min=.85 --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --mti-method-id=mti_profile_mass_cells_v1 --mti-label=MTI --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) figures/generate_tolerance_population_oracle_figure.R --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
 	$(PHARMA_MTI_R) figures/generate_pharma_mti_application_figures.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_FIGURE_DIR)
 
 theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
+	$(MTI_ADOPTED_R) application/scripts/101_adopt_mti_profile.R --mode=tables --output-dir=$(THEORY_TABLE_DIR)
+	$(PHARMA_MTI_R) tables/generate_pharma_mti_application_tables.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
+
+historical-tolerance-tables:
 	$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --results-csv=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_stratified_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_BY_N_CONTENT) --results-csv=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_followup_tables.R --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_scenario_tables.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_ARTICLE_RESULTS) --mti-ecm-policy-csv=$(RQR_BAYES_UQ_MTI_ECM_POLICY) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --small95-results=$(RQR_BAYES_UQ_SMALL95_RESULTS) --scan-calibration-csv=$(RQR_BAYES_UQ_SCAN_CALIBRATION) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_gibbs_diagnostic_table.R --diagnostics-csv=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_SOURCE) --output-dir=$(THEORY_TABLE_DIR)
-	$(PHARMA_MTI_R) tables/generate_pharma_mti_application_tables.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
+
+.PHONY: test-mti-profile-adoption verify-mti-profile-adoption evaluate-mti-profile-application validate-mti-profile-application historical-tolerance-tables
+test-mti-profile-adoption:
+	$(MTI_ADOPTED_R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-mti-profile-adoption.R",reporter="summary",stop_on_failure=TRUE)'
+
+verify-mti-profile-adoption:
+	$(MTI_ADOPTED_R) application/scripts/101_adopt_mti_profile.R --mode=verify
+
+evaluate-mti-profile-application:
+	$(MTI_ADOPTED_R) application/scripts/101_adopt_mti_profile.R --mode=application --workers=$(PHARMA_MTI_WORKERS) $(if $(strip $(PHARMA_MTI_RUN_DIR)),--output-dir=$(PHARMA_MTI_RUN_DIR),)
+
+validate-mti-profile-application:
+	$(MTI_ADOPTED_R) application/scripts/102_validate_mti_profile_application.R $(if $(strip $(PHARMA_MTI_RUN_DIR)),--run-dir=$(PHARMA_MTI_RUN_DIR),)
 
 model-illustration-figures:
 	$(R) figures/generate_oracle_tilt_model_figures.R --evidence-dir=$(ORACLE_TILT_EVIDENCE_DIR) --output-dir=$(THEORY_FIGURE_DIR) --table-dir=$(THEORY_TABLE_DIR)
@@ -294,6 +319,38 @@ pharma-mti-application-data:
 .PHONY: test-mti-fixed-policy preflight-mti-fixed-policy launch-mti-fixed-policy health-mti-fixed-policy report-mti-fixed-policy
 .PHONY: test-mti-fixed-policy-runtime
 .PHONY: test-mti-q-grid prepare-mti-q-grid preflight-mti-q-grid precision-mti-q-grid queue-mti-q-grid-screen health-mti-q-grid
+.PHONY: test-mti-final-study preflight-mti-final-study precision-mti-final-study launch-mti-final-study health-mti-final-study
+.PHONY: test-mti-threshold-followup preflight-mti-threshold-followup precision-mti-threshold-followup launch-mti-threshold-followup health-mti-threshold-followup
+
+test-mti-threshold-followup:
+	$(MTI_Q_R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-mti-threshold-followup.R",reporter="summary",stop_on_failure=TRUE)'
+
+preflight-mti-threshold-followup:
+	bash application/scripts/100_manage_mti_q_grid_study.sh preflight "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FOLLOWUP_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FOLLOWUP_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)" --parent-run="$(MTI_Q_PARENT_RUN)"
+
+precision-mti-threshold-followup:
+	bash application/scripts/100_manage_mti_q_grid_study.sh precision "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FOLLOWUP_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FOLLOWUP_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)" --parent-run="$(MTI_Q_PARENT_RUN)"
+
+launch-mti-threshold-followup:
+	bash application/scripts/100_manage_mti_q_grid_study.sh followup "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FOLLOWUP_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FOLLOWUP_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)" --parent-run="$(MTI_Q_PARENT_RUN)" --acknowledge-new-calibration --acknowledge-precision --authorize-threshold-followup --rationale="One prospective two-setting threshold-menu follow-up; tightened retained evidence and fresh assessment share the total error allowance; independent validation only after all combined settings pass."
+
+health-mti-threshold-followup:
+	bash application/scripts/100_manage_mti_q_grid_study.sh health "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FOLLOWUP_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FOLLOWUP_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)" --parent-run="$(MTI_Q_PARENT_RUN)"
+
+test-mti-final-study:
+	$(MTI_Q_R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-mti-final-study.R",reporter="summary",stop_on_failure=TRUE); testthat::test_file("application/tests/testthat/test-mti-final-reporting.R",reporter="summary",stop_on_failure=TRUE)'
+
+preflight-mti-final-study:
+	bash application/scripts/100_manage_mti_q_grid_study.sh preflight "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FINAL_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FINAL_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)"
+
+precision-mti-final-study:
+	bash application/scripts/100_manage_mti_q_grid_study.sh precision "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FINAL_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FINAL_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)"
+
+launch-mti-final-study:
+	bash application/scripts/100_manage_mti_q_grid_study.sh final "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FINAL_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FINAL_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)" --acknowledge-new-calibration --acknowledge-precision --authorize-fixed-final-study --rationale="Prospectively fixed 24000-assessment calibration following the completed numerical screen and exact-binomial precision review; independent validation only on passing all settings."
+
+health-mti-final-study:
+	bash application/scripts/100_manage_mti_q_grid_study.sh health "$(MTI_Q_BASELINE_RUN)" "$(MTI_Q_FINAL_RUN_DIR)" $(MTI_Q_FINAL_WORKERS) --config="$(MTI_Q_FINAL_CONFIG)" --screen-run="$(MTI_Q_SCREEN_RUN)"
 
 test-mti-q-grid:
 	$(MTI_Q_R) -e 'library(rqrgibbs); testthat::test_file("application/tests/testthat/test-rqr-mti-content-grid.R",reporter="summary",stop_on_failure=TRUE); testthat::test_file("application/tests/testthat/test-mti-q-grid-study.R",reporter="summary",stop_on_failure=TRUE)'

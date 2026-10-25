@@ -1,0 +1,115 @@
+{
+  "schema_version": "rqrgibbs_pharma_mti_application/3.0.0",
+  "study_id": "pharma_mti_profile_application_20261025",
+  "data_source": {
+    "name": "Laboratory.csv",
+    "figshare_item_id": 16676263,
+    "figshare_file_id": 30966250,
+    "figshare_collection_id": 5645578,
+    "collection_doi": "10.6084/m9.figshare.c.5645578.v1",
+    "figshare_item_url": "https://figshare.com/articles/dataset/Laboratory_csv/16676263",
+    "download_url": "https://ndownloader.figshare.com/files/30966250",
+    "doi": "10.6084/m9.figshare.16676263.v1",
+    "license": "CC BY 4.0",
+    "expected_bytes": 293492,
+    "expected_md5": "74b091a88dc88e0fed44f79877b22b66",
+    "expected_sha256": "a3b0f16c7c3fa8052b38d767e38fda731a751acc4ec139b52d01577b32dc6483",
+    "expected_rows": 1005,
+    "expected_columns": 55
+  },
+  "analysis": {
+    "product_code": 23,
+    "primary_response": "fct_tensile",
+    "supplement_response": "tbl_rsd_weight",
+    "excluded_response": "fct_av_hardness",
+    "product_rows": 187,
+    "training_size": 100,
+    "heldout_size": 87,
+    "content": 0.9,
+    "tolerance_confidence": 0.95,
+    "confirmatory_splits": 1000,
+    "smoke_splits": 4,
+    "base_seed": 9020902,
+    "random_seed_offset": 101,
+    "random_seed_rule": "base_seed + random_seed_offset + split_id",
+    "endpoint_convention": "closed"
+  },
+  "methods": [
+    "mti_ecm_adaptive_cell",
+    "young_mathew",
+    "wilks_minmax"
+  ],
+  "method_labels": {
+    "mti_ecm_adaptive_cell": "MTI",
+    "young_mathew": "Young--Mathew",
+    "wilks_minmax": "Wilks"
+  },
+  "method_roles": {
+    "mti_ecm_adaptive_cell": "proposed",
+    "young_mathew": "benchmark",
+    "wilks_minmax": "benchmark"
+  },
+  "method_seed_offsets": {
+    "mti_ecm_adaptive_cell": 200000,
+    "young_mathew": 300000,
+    "wilks_minmax": 400000
+  },
+  "scan_reference": {
+    "scan_method": "monte_carlo_cp_adaptive",
+    "scan_calibration_csv": "tables/tolerance_validation_article_scan_calibration.csv",
+    "expected_sha256": "53d4f403888c28362bbb07fdce40328278c7f969a8865406073dcf9960b0d3b0",
+    "expected_retained_count": 98,
+    "expected_retained_fraction": 0.98,
+    "expected_lower_confidence_bound_min": 0.95
+  },
+  "sensitivity": {
+    "chronological_forward": true,
+    "chronological_reverse": true,
+    "order_variables": [
+      "batch",
+      ".source_row"
+    ],
+    "grouped_variables": {
+      "month_grouped": "start",
+      "api_grouped": "api_batch"
+    },
+    "requested_unique_splits": 250,
+    "smoke_grouped_splits": 2,
+    "training_size_min": 100,
+    "training_size_max": 100,
+    "minimum_training_groups": 2,
+    "minimum_heldout_groups": 2,
+    "maximum_partition_draws": 250000,
+    "seed_offsets": {
+      "chronological_forward": 1000000,
+      "chronological_reverse": 2000000,
+      "month_grouped": 3000000,
+      "api_grouped": 4000000
+    },
+    "representative_rule": "minimum_squared_median_MAD_distance_then_smallest_split_id",
+    "quantile_type": 8
+  },
+  "execution": {
+    "workers": 40,
+    "checkpoint_tasks": 100,
+    "threads_per_worker": 1
+  },
+  "paths": {
+    "cache_dir": "application/cache/pharma_application_20261020",
+    "raw_file": "application/cache/pharma_application_20261020/Laboratory.csv",
+    "clean_file": "application/cache/pharma_application_20261020/code23_laboratory.csv",
+    "output_root": "application/outputs/pharma_mti_profile_application_20261025",
+    "canonical_dir": "figures/data/pharma_mti_profile_application_20261025",
+    "table_dir": "tables",
+    "figure_data_dir": "figures/data",
+    "figure_dir": "figures/generated"
+  },
+  "mti_profile": {
+    "adoption_config": "application/config/mti_profile_adopted_20261025.json",
+    "adoption_sha256": "ba114373e41a0fb44b254e95daff7c0d098d3a1a3fa9ef2f03abdedc2e7bb67f"
+  },
+  "historical_evidence": "figures/data/pharma_mti_application_20261020",
+  "historical_results_sha256": "223eeab04e8acd4dcda8657a4012f7413b81ad0f7e3cc83bada7e6e7c9e89e3c",
+  "observed_sha256": "1553e9c92474fdc65822df30503b7779c9b3ec56374085458ea7964325ea46cf",
+  "membership_sha256": "d832db1189395d0f3650482b2ea0ea9e2f6e3e117510b8cceea141f637505a8c"
+}

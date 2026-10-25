@@ -412,14 +412,19 @@ mp_collect <- function(cfg,output) {
     file.path(output,"study_completion.json"))
 }
 
-mp_checkpoint_jobs <- function(tasks,one,directory,workers,batch_size=100L) {
+mp_checkpoint_jobs <- function(tasks,one,directory,workers,batch_size=100L,collect=TRUE,
+                               stop_on_task_error=FALSE) {
   dir.create(directory,recursive=TRUE,showWarnings=FALSE)
+  task_errors <- function(values)any(vapply(values,function(x)is.null(x) ||
+    inherits(x,"try-error") || (is.list(x) && !is.null(x$error)),logical(1)))
   batches <- split(seq_len(nrow(tasks)),ceiling(seq_len(nrow(tasks))/batch_size))
   for(b in seq_along(batches)) {
     path <- file.path(directory,sprintf("batch_%05d.rds",b))
     if(file.exists(path)) {
       saved <- readRDS(path)
       if(!identical(saved$tasks,tasks[batches[[b]],,drop=FALSE])) stop("Checkpoint task mismatch.")
+      if(stop_on_task_error && (length(saved$values)!=length(batches[[b]]) || task_errors(saved$values)))
+        stop("Task error retained in checkpoint: ",path)
       next
     }
     indices <- batches[[b]]
@@ -430,7 +435,10 @@ mp_checkpoint_jobs <- function(tasks,one,directory,workers,batch_size=100L) {
     mp_atomic_rds(list(tasks=tasks[indices,,drop=FALSE],values=values),path)
     pta_atomic_write_json(list(completed_tasks=max(indices),expected_tasks=nrow(tasks),
       completed_batches=b,expected_batches=length(batches)),file.path(directory,"progress.json"))
+    if(stop_on_task_error && task_errors(values))
+      stop("Task error retained in checkpoint; subsequent batches were not generated: ",path)
   }
+  if(!collect)return(invisible(NULL))
   unlist(lapply(seq_along(batches),function(b) readRDS(file.path(directory,
     sprintf("batch_%05d.rds",b)))$values),recursive=FALSE)
 }

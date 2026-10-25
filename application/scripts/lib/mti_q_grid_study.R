@@ -2,8 +2,13 @@ mpq_config <- function(spec) {
   integer_count <- function(x,minimum=1L)is.numeric(x) && length(x)==1L &&
     is.finite(x) && x>=minimum && x==floor(x)
   mpr_require(identical(spec$refinement_rule,"one_target_per_unrepresented_positive_effective_mass_cell") &&
-    identical(spec$threshold_rule,"independent_development_quantiles_and_requested_confidence") &&
+    spec$threshold_rule %in% c("independent_development_quantiles_and_requested_confidence",
+      "independent_development_logit_gap_refinement") &&
     integer_count(spec$threshold_quantile_count,2L),"Unsupported grid or threshold specification.")
+  if(identical(spec$threshold_rule,"independent_development_logit_gap_refinement"))
+    mpr_require(integer_count(spec$threshold_gap_levels) && spec$threshold_gap_levels<=4 &&
+      !is.null(spec$followup) && identical(as.numeric(spec$followup$original_error_fraction),.5),
+      "Invalid predeclared follow-up menu or error split.")
   for(stage in c("screen","calibration","validation")) {
     x <- spec[[stage]]
     mpr_require(integer_count(x$replications) && integer_count(x$cell_seed_stride) &&
@@ -24,6 +29,44 @@ mpq_config <- function(spec) {
   cfg$execution$checkpoint_batch <- spec$execution$checkpoint_batch
   cfg$retired_validation_seed_base <- spec$retired_validation_seed_base
   cfg
+}
+
+mpq_threshold_menu <- function(probabilities,confidence,spec,ceilings=numeric()) {
+  mpr_require(is.numeric(confidence) && length(confidence)==1L && is.finite(confidence) &&
+    confidence>0 && confidence<1,"Invalid requested posterior confidence.")
+  p <- probabilities[is.finite(probabilities) & probabilities>0 & probabilities<1]
+  mpr_require(length(p)>0,"No independent development probabilities.")
+  knots <- sort(unique(c(confidence,as.numeric(stats::quantile(p,
+    seq(0,1,length.out=spec$threshold_quantile_count),type=8,names=FALSE)))))
+  if(identical(spec$threshold_rule,"independent_development_logit_gap_refinement")) {
+    levels <- spec$threshold_gap_levels
+    mpr_require(is.numeric(levels) && length(levels)==1L && is.finite(levels) &&
+      levels>=1 && levels<=4 && levels==floor(levels),"Invalid threshold gap resolution.")
+    mpr_require(length(ceilings)>0 && all(is.finite(ceilings) & ceilings>=0 & ceilings<=1),
+      "Development eligibility probabilities are missing or invalid.")
+    ceiling <- min(ceilings)
+    if(ceiling>0 && ceiling<1)knots <- sort(unique(c(knots,ceiling)))
+    fractions <- seq_len(2^levels-1L)/2^levels
+    logits <- stats::qlogis(knots)
+    extra <- unlist(lapply(seq_len(length(knots)-1L),function(i)
+      stats::plogis(logits[i]+fractions*(logits[i+1L]-logits[i]))),use.names=FALSE)
+    knots <- sort(unique(c(knots,extra)))
+    maximum <- (spec$threshold_quantile_count+1L)*2^levels+1L
+    mpr_require(length(knots)<=maximum && all(knots>0 & knots<1),"Invalid refined threshold menu.")
+  }
+  knots
+}
+
+mpq_calibration_alpha <- function(cfg,spec,cells,families,menu_size) {
+  error <- 1-cfg$calibration$familywise_confidence
+  if(identical(spec$threshold_rule,"independent_development_logit_gap_refinement")) {
+    fraction <- spec$followup$original_error_fraction
+    mpr_require(is.numeric(fraction) && length(fraction)==1L &&
+      identical(as.numeric(fraction),.5),"Follow-up requires the fixed equal error split.")
+    error <- error*(1-fraction)
+    return(error/(cells*families*menu_size))
+  }
+  error/(cells*families*(spec$threshold_quantile_count+1L))
 }
 
 mpq_tasks <- function(design,cfg,stage) {
@@ -89,10 +132,25 @@ mpq_baseline_check <- function(run,spec,complete=FALSE) {
   identity
 }
 
-mpq_fit <- function(y,task,cfg) {
+mpq_context <- function(cfg) {
   profile <- mp_frozen_profile(cfg)
+  generators <- mp_dgp_environment()
+  meta <- setNames(profile$validation$dgps,
+    vapply(profile$validation$dgps,`[[`,character(1),"dgp_id"))
+  list(profile=profile,laws=lapply(meta,generators$dgp_meta),
+    scan=read.csv("tables/tolerance_validation_article_scan_calibration.csv"))
+}
+
+mpq_fit <- function(y,task,cfg,context=NULL) {
+  profile <- if(is.null(context))mp_frozen_profile(cfg) else context$profile
+  scan_q <- if(is.null(context))mp_scan_fraction(task$n,task$content,task$tolerance_confidence) else {
+    s <- context$scan
+    s <- s[mpr_cell_key(s)==mpr_cell_key(task),,drop=FALSE]
+    mpr_require(nrow(s)==1L,"No unique cached scan-reference cell.")
+    s$retained_count/task$n
+  }
   menu <- mp_menu(y,task$content,task$tolerance_confidence,profile,
-    mp_scan_fraction(task$n,task$content,task$tolerance_confidence))
+    scan_q)
   grid <- rqrgibbs::rqr_mti_refine_content_grid(menu$q_grid,length(y),task$content,
     learning_rate=cfg$profile$learning_rate,prior_precision=cfg$profile$prior_precision)
   fit <- mp_profile(y,grid$q_grid,task$tolerance_confidence,cfg,content=task$content)
@@ -112,18 +170,22 @@ mpq_interval <- function(task,method,candidates,threshold,law,grid) {
     content_attained=returned && content>=task$content,selected_q=value("target_content"),
     selected_tilt=value("mean_tilt"),posterior_content_probability=value("posterior_content_probability"),
     relative_objective_gap=value("relative_objective_gap"),
+    selected_objective=value("objective"),selected_iterations=value("iterations"),
+    selected_observed_count=value("observed_count"),
+    selected_midpoint=if(returned)(s$lower+s$upper)/2 else NA_real_,
+    selected_half_width=if(returned)(s$upper-s$lower)/2 else NA_real_,
     numerical_failure_candidates=sum(!candidates$profile_converged),candidate_count=nrow(candidates),
     original_q_count=length(grid$original_q_grid),added_q_count=length(grid$added_q),
     posterior_threshold=threshold)
 }
 
-mpq_one <- function(task,stage,cfg,spec,baseline_policy,new_policy=NULL) {
-  frozen <- mp_frozen_profile(cfg)$validation
-  meta <- setNames(frozen$dgps,vapply(frozen$dgps,`[[`,character(1),"dgp_id"))
+mpq_one <- function(task,stage,cfg,spec,baseline_policy,new_policy=NULL,context=NULL) {
+  if(is.null(context))context <- mpq_context(cfg)
   set.seed(task$seed)
-  law <- mp_dgp_environment()$dgp_meta(meta[[task$dgp_id]])
+  law <- context$laws[[task$dgp_id]]
+  mpr_require(!is.null(law),"Unknown simulation family.")
   y <- law$r(task$n)
-  fit <- mpq_fit(y,task,cfg)
+  fit <- mpq_fit(y,task,cfg,context)
   if(stage=="calibration") {
     z <- fit$candidates; valid <- z$profile_converged
     z$true_content <- NA_real_
@@ -150,7 +212,10 @@ mpq_one <- function(task,stage,cfg,spec,baseline_policy,new_policy=NULL) {
       z$true_content <- if(returned)law$p(upper)-law$p(lower) else NA_real_
       z$content_attained <- returned && z$true_content>=task$content
       for(field in c("selected_q","selected_tilt","posterior_content_probability",
-        "relative_objective_gap","candidate_count","posterior_threshold"))z[[field]] <- NA_real_
+        "relative_objective_gap","candidate_count","posterior_threshold","selected_objective",
+        "selected_iterations","selected_observed_count"))z[[field]] <- NA_real_
+      z$selected_midpoint <- if(returned)(lower+upper)/2 else NA_real_
+      z$selected_half_width <- if(returned)(upper-lower)/2 else NA_real_
       z$numerical_failure_candidates <- 0L
       z
     }
@@ -181,17 +246,15 @@ mpq_calibrate <- function(values,cfg,spec,output) {
   tasks <- do.call(rbind,lapply(values,`[[`,"identity"))
   cells <- unique(tasks[c("n","content","tolerance_confidence")])
   families <- unique(tasks$dgp_id)
-  alpha <- (1-cfg$calibration$familywise_confidence)/
-    (nrow(cells)*length(families)*(spec$threshold_quantile_count+1L))
   policies <- assessments <- list()
   for(i in seq_len(nrow(cells))) {
     cell <- cells[i,]; use <- which(mpr_cell_key(tasks)==mpr_cell_key(cell))
     dev <- use[tasks$role[use]=="threshold_development"]
     p <- unlist(lapply(values[dev],function(x)x$candidates$posterior_content_probability),use.names=FALSE)
     p <- p[is.finite(p) & p>0 & p<1]
-    mpr_require(length(p)>0,"No independent development probabilities.")
-    thresholds <- sort(unique(c(cell$tolerance_confidence,as.numeric(stats::quantile(p,
-      seq(0,1,length.out=spec$threshold_quantile_count),type=8,names=FALSE)))))
+    ceilings <- vapply(values[dev],function(x)max(x$candidates$posterior_content_probability),numeric(1))
+    thresholds <- mpq_threshold_menu(p,cell$tolerance_confidence,spec,ceilings)
+    alpha <- mpq_calibration_alpha(cfg,spec,nrow(cells),length(families),length(thresholds))
     rows <- lapply(families,function(family) {
       idx <- use[tasks$role[use]=="calibration_assessment" & tasks$dgp_id[use]==family]
       mpr_require(length(idx)==cfg$calibration$replications,"Incomplete calibration family.")
@@ -213,16 +276,21 @@ mpq_calibrate <- function(values,cfg,spec,output) {
       method_id=spec$primary_method,decision=if(any(passing))"passed_new_calibration" else "unresolved")
     assessments[[i]] <- a
   }
-  policy <- do.call(rbind,policies)
+  mpq_write_calibration(do.call(rbind,policies),do.call(rbind,assessments),output)
+}
+
+mpq_write_calibration <- function(policy,assessment,output) {
   pma_write_csv(policy,file.path(output,"policy.csv"))
-  pma_write_csv(do.call(rbind,assessments),file.path(output,"threshold_assessment.csv"))
+  pma_write_csv(assessment,file.path(output,"threshold_assessment.csv"))
   list(passed=all(is.finite(policy$threshold)),calibrated_cells=sum(is.finite(policy$threshold)),
     expected_cells=nrow(policy),policy_sha256=mp_sha(file.path(output,"policy.csv")),
+    assessment_sha256=mp_sha(file.path(output,"threshold_assessment.csv")),
     interpretation="Finite-panel calibration; inconclusive cells remain unresolved.")
 }
 
 mpq_stage <- function(stage,output,cfg,spec,design,workers) {
   tasks <- mpq_tasks(design,cfg,stage)
+  context <- mpq_context(cfg)
   baseline <- read.csv(spec$baseline_policy)
   new_policy <- NULL
   policy_hash <- NULL
@@ -248,22 +316,31 @@ mpq_stage <- function(stage,output,cfg,spec,design,workers) {
   path <- file.path(output,stage); dir.create(path,recursive=TRUE,showWarnings=FALSE)
   old <- mpr_read_json(file.path(path,"completion.json"))
   if(!is.null(old)) {
+    if(stage=="calibration") {
+      files <- c(policy="policy.csv",assessment="threshold_assessment.csv",
+        checkpoint_manifest="checkpoint_manifest.csv")
+      for(name in names(files)) {
+        hash <- old[[paste0(name,"_sha256")]]
+        if(!is.null(hash))mpr_require(identical(hash,mp_sha(file.path(path,files[[name]]))),
+          "Completed calibration evidence changed.")
+      }
+    }
     if(stage=="validation")mpr_require(identical(old$frozen_policy_sha256,policy_hash),"Completed validation policy changed.")
+    if(!is.null(old$results_sha256))mpr_require(identical(old$results_sha256,mp_sha(file.path(path,"results.csv"))),
+      "Completed stage results changed.")
     return(old)
   }
-  values <- mp_checkpoint_jobs(tasks,function(task)mpq_one(task,stage,cfg,spec,baseline,new_policy),
-    file.path(path,"checkpoints"),workers,spec$execution$checkpoint_batch)
-  errors <- vapply(values,function(x)is.list(x) && !is.data.frame(x) && !is.null(x$error),logical(1))
-  if(any(errors)) {
-    mp_atomic_rds(values[errors],file.path(path,"errors.rds"))
-    stop("Grid study has task errors; records retained, no samples replaced.")
-  }
+  values <- mp_checkpoint_jobs(tasks,function(task)mpq_one(task,stage,cfg,spec,baseline,new_policy,context),
+    file.path(path,"checkpoints"),workers,spec$execution$checkpoint_batch,collect=stage!="calibration",
+    stop_on_task_error=TRUE)
   if(stage=="calibration") {
-    result <- mpq_calibrate(values,cfg,spec,path)
-    failures <- sum(vapply(values,function(x)any(!x$candidates$profile_converged),logical(1)))
-    result$passed <- isTRUE(result$passed) && failures==0
-    result$numerical_failure_datasets <- failures
+    result <- mpq_calibrate_checkpoints(tasks,cfg,spec,path,context)
   } else {
+    errors <- vapply(values,function(x)is.list(x) && !is.data.frame(x) && !is.null(x$error),logical(1))
+    if(any(errors)) {
+      mp_atomic_rds(values[errors],file.path(path,"errors.rds"))
+      stop("Grid study has task errors; records retained, no samples replaced.")
+    }
     z <- do.call(rbind,values)
     pma_write_csv(z,file.path(path,"results.csv"))
     if(stage=="screen")result <- mpq_screen_assessment(z,spec) else {
@@ -272,6 +349,12 @@ mpq_stage <- function(stage,output,cfg,spec,design,workers) {
       meta <- setNames(frozen$dgps,vapply(frozen$dgps,`[[`,character(1),"dgp_id"))
       mpr_validate_results(z,design,cfg,lapply(meta,function(x)generators$dgp_meta(x)$p),
         primary_method=spec$primary_method)
+      selected <- z[z$method==spec$primary_method & z$returned,,drop=FALSE]
+      expected <- new_policy$threshold[match(mpr_cell_key(selected),mpr_cell_key(new_policy))]
+      mpr_require(all(is.finite(expected) & selected$posterior_threshold==expected &
+        selected$posterior_content_probability>=expected & selected$selected_q>selected$content &
+        selected$selected_q<1 & is.finite(selected$selected_tilt)),
+        "Returned validation settings disagree with the frozen calibrated rule.")
       review <- list(primary_method=spec$primary_method)
       summary <- mpr_validation_summary(z,design,cfg,review)
       pma_write_csv(summary,file.path(path,"family_case_summary.csv"))
@@ -285,6 +368,7 @@ mpq_stage <- function(stage,output,cfg,spec,design,workers) {
         frozen_policy_sha256=policy_hash,nonreturned=sum(!z$returned),
         primary_numerical_failure_datasets=sum(z$method==spec$primary_method & z$numerical_failure_candidates>0))
     }
+    result$results_sha256 <- mp_sha(file.path(path,"results.csv"))
   }
   result$completed_datasets <- nrow(tasks)
   result$completed_utc <- format(Sys.time(),"%Y-%m-%dT%H:%M:%SZ",tz="UTC")
@@ -325,9 +409,17 @@ mpq_precision_reference <- function(design,cfg,spec) {
   for(cell in split(unique(design[c("n","content","tolerance_confidence")]),
     mpr_cell_key(unique(design[c("n","content","tolerance_confidence")])))) {
     probabilities <- seq(cell$tolerance_confidence,1,length.out=spec$threshold_quantile_count)
-    alpha <- (1-cfg$calibration$familywise_confidence)/
-      (nrow(design)*(spec$threshold_quantile_count+1L))
-    for(n in cfg$calibration$replications*2^(0:4)) {
+    menu_size <- if(identical(spec$threshold_rule,"independent_development_logit_gap_refinement"))
+      (spec$threshold_quantile_count+1L)*2^spec$threshold_gap_levels+1L else
+      spec$threshold_quantile_count+1L
+    alpha <- if(identical(spec$threshold_rule,"independent_development_logit_gap_refinement"))
+      mpq_calibration_alpha(cfg,spec,
+        nrow(unique(design[c("n","content","tolerance_confidence")])),
+        length(unique(design$dgp_id)),menu_size) else
+      (1-cfg$calibration$familywise_confidence)/(nrow(design)*(spec$threshold_quantile_count+1L))
+    budgets <- if(is.null(spec$precision_replications))cfg$calibration$replications*2^(0:4) else
+      unlist(spec$precision_replications,use.names=FALSE)
+    for(n in budgets) {
       required <- stats::qbinom(1-alpha,n,cell$tolerance_confidence)+1
       rows[[length(rows)+1L]] <- data.frame(cell[rep(1L,length(probabilities)),,drop=FALSE],
         replications=n,hypothetical_attainment=probabilities,alpha=alpha,required_successes=required,
