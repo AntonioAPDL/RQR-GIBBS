@@ -716,6 +716,6 @@
       "_row": "application/scripts/87_finalize_pharma_mti_report.R"
     }
   ],
-  "reporting_commit": "58ee177af18998ebd834db7d7ab37af55f39bbf8",
-  "reporting_status": [" M Makefile", " M application/scripts/lib/pharma_manuscript_language.R", " M application/scripts/lib/pharma_mti_reporting.R", " M figures/generate_pharma_mti_application_figures.R", " M figures/generated/fig06_pharma_application_tensile_intervals.png", " M figures/generated/figS05_pharma_application_partition_sensitivity.png", " M figures/generated/pharma_application_figure_manifest.csv", " M main.tex", " M refs.bib", " M rqr-gibbs-supplement.tex", " M tables/pharma_application_convergence_sensitivity.tex", " M tables/pharma_application_numerical_diagnostics.tex", " M tables/pharma_application_primary_paired_summary.tex", " M tables/pharma_application_primary_sensitivity.tex", " M tables/pharma_application_rsd_sensitivity.tex", "?? application/config/pharma_source_structure_20261026.json", "?? application/scripts/103_review_pharma_source_structure.R", "?? application/scripts/lib/pharma_source_structure.R", "?? application/tests/testthat/test-pharma-source-structure.R", "?? docs/implementation_notes/pharma_source_structure_20261026.md", "?? figures/data/pharma_source_structure_20261026/", "?? tables/pharma_campaign_sensitivity.tex", "?? tables/pharma_source_numbers.tex"]
+  "reporting_commit": "77a5bf3f04b655a54016e22b2e105c3697d0c481",
+  "reporting_status": []
 }
