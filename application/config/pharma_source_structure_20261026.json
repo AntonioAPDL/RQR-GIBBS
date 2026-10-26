@@ -1,0 +1,27 @@
+{
+  "study_id": "pharma_source_structure_20261026",
+  "application_config": "application/config/pharma_tolerance_application_profiled_20261025.json",
+  "application_config_sha256": "5262e41eb7333f7cfc30daf2893ff2d6c04fc2c7c110409f485969043cdb5e73",
+  "results_sha256": "529331c30894d64955010fef0c89d98bb8b1bce2e00a86bfb698963b162e259b",
+  "membership_sha256": "d832db1189395d0f3650482b2ea0ea9e2f6e3e117510b8cceea141f637505a8c",
+  "observed_sha256": "54b28a9c03c5cb82ca361b52259dcad615c2f3a24f1e194254920ad092d472bf",
+  "process_source": {
+    "doi": "10.6084/m9.figshare.16676320.v1",
+    "license": "CC BY 4.0",
+    "download_url": "https://ndownloader.figshare.com/files/30874219",
+    "bytes": 29811605,
+    "sha256": "8a401f1c7ac9880c763e3350f595c45c90487c0950db48caa9cda729582f5c25",
+    "member": "Process/23.csv",
+    "member_sha256": "9ae3f52b11e8c41076de2bb56a4d833bf1b527d62d970267cb2f1b66a142ac9a",
+    "rows": 694893
+  },
+  "prepared_design": {
+    "groups": ["campaign", "api_batch"],
+    "training_size": 100,
+    "partitions": 250,
+    "seed": 202610260,
+    "status": "prepared_not_fitted_response_definition_unresolved"
+  },
+  "cache_dir": "application/cache/pharma_source_structure_20261026",
+  "evidence_dir": "figures/data/pharma_source_structure_20261026"
+}

@@ -1399,6 +1399,7 @@ in the method reproducibility record.
 \section{Pharmaceutical Application Details}
 \label{sec:supp-pharma-application}
 \input{tables/pharma_application_numbers.tex}
+\input{tables/pharma_source_numbers.tex}
 
 \paragraph{Data and paired partitions.}
 The application uses the manufacturing data described by
@@ -1407,16 +1408,30 @@ The application uses the manufacturing data described by
 contains \PharmaRawBatches{} batches and \PharmaRawFields{} recorded fields.
 File size, MD5, and SHA256 are verified before extracting product code
 \PharmaProductCode{}, which gives \PharmaBatches{} batches. The main response
-is the reported film-coated-tablet tensile-strength measure. Tablet-core
+is the reported film-coated-tablet tensile metric. Tablet-core
 weight relative standard deviation (RSD) provides a more asymmetric
 supplementary example. The recorded active pharmaceutical ingredient (API)
 batch identifier defines one grouping used below. The file contains ties,
 and the batch records may be dependent.
 
+The source defines tensile strength using average hardness and maximum tablet
+dimensions. Its numerical values reproduce from these batch summaries using
+\(3.14\) in place of \(\pi\), to rounding precision. This ratio of summaries
+need not equal the average of tablet-specific tensile strengths. In product
+code \PharmaProductCode{}, \PharmaFctHardnessQuestions{} film-coated average
+hardness values exceed their recorded maxima, and
+\PharmaCoreHardnessQuestions{} core averages fall below their recorded minima.
+If the summaries concern the same tablets, units, and measurement window,
+these orderings are inconsistent. The public definitions do not establish
+those conditions. We preserve all values and treat the derived response's
+physical interpretation as unresolved. The source describes in-specification
+historical variation and excludes batches without final quality results;
+these records do not represent every attempted production batch.
+
 \begin{table}[H]
 \centering
 \caption{\textbf{Response diagnostics for product code \PharmaProductCode{}.}
-The tensile-strength measure is used in the main article. Weight RSD has a
+The reported tensile metric is used in the main article. Weight RSD has a
 stronger asymmetric-placement interpretation. Film-coated-tablet hardness has
 more ties and is excluded.}
 \label{tab:supp-pharma-response-diagnostics}
@@ -1450,7 +1465,7 @@ by one. The selected split minimizes
 \]
 with ties resolved by the smallest split identifier. Training and held-out
 indices and the selection score are retained with the results. This rule
-selects split \PharmaTensileRepresentative{} for tensile strength and
+selects split \PharmaTensileRepresentative{} for the tensile metric and
 split \PharmaRsdRepresentative{} for weight RSD.
 
 \paragraph{Interval placement for weight RSD.}
@@ -1502,9 +1517,9 @@ distributions without treating overlapping splits as independent observations.
 \input{tables/pharma_application_rsd_paired_summary.tex}
 
 \paragraph{Partition sensitivities.}
-Forward chronology trains on the first \PharmaTrain{} batches in recorded
+Forward recorded order trains on the first \PharmaTrain{} batches in recorded
 batch order, with original row order breaking ties, and holds out the final
-\PharmaHeldout{}. Reverse chronology trains on the final \PharmaTrain{} and
+\PharmaHeldout{}. Reverse recorded order trains on the final \PharmaTrain{} and
 holds out the first \PharmaHeldout{}. Each is a single labeled partition.
 Production-month and API-batch sensitivities keep whole groups on one side of
 the training boundary. Response-independent allocation conditional on exactly
@@ -1512,13 +1527,16 @@ the training boundary. Response-independent allocation conditional on exactly
 partitions for each grouping. Fixed seeds and removal of duplicate
 partitions determine the reported sets before fitting. Exact training size
 preserves the sample-size cell of the fixed calibration rule.
+These orderings use batch identifiers and source rows. Ambiguous process date
+strings and unresolved relationships between production stages prevent a
+verified calendar interpretation.
 
 Tables~\ref{tab:supp-pharma-primary-sensitivity}
 and~\ref{tab:supp-pharma-rsd-sensitivity} give actual split counts and
-summaries for each design. The chronological cases show that partition choice
+summaries for each design. The recorded-order cases show that partition choice
 can materially change held-out empirical content. For MTI, reverse
-chronology gives tensile-strength content \PharmaTensileReverseContent\%;
-forward chronology gives RSD content \PharmaRsdForwardContent\%.
+order gives tensile-metric content \PharmaTensileReverseContent\%;
+forward order gives RSD content \PharmaRsdForwardContent\%.
 These comparisons describe variation across the recorded batches and are
 insufficient to distinguish dependence from changes in the batch distribution.
 
@@ -1531,11 +1549,47 @@ insufficient to distinguish dependence from changes in the batch distribution.
 \caption{\textbf{Sensitivity to training and held-out partitions.} Points show
 median widths or held-out empirical content within each labeled design.
 Segments give empirical 95\% ranges for random and grouped splits. The two
-chronological designs each contain one partition and are shown as individual
+recorded-order designs each contain one partition and are shown as individual
 points. Dashed lines mark the requested content \(c=\PharmaContent\).
 The plots describe historical partition sensitivity.}
 \label{fig:supp-pharma-partition-sensitivity}
 \end{figure}
+
+\paragraph{Production campaigns.}
+The associated process archive \citep{ZagarMihelic2021Process} maps all
+\PharmaBatches{} batches uniquely to \PharmaCampaigns{} manufacturing
+campaigns, containing 2--12 batches each. Campaigns can cross recorded months
+and share API lots. Every random partition shares campaigns; the median number
+of withheld batches in represented campaigns is
+\PharmaRandomSharedHeldout{} of \PharmaHeldout{}. This identifies the
+production groups represented on both sides, without establishing either
+dependence or independence.
+
+As a retrospective sensitivity, we retain every existing month-grouped
+partition with no shared campaign. This response-independent criterion selects
+\PharmaCampaignDisjointMonths{} partitions; all \PharmaGroupedSplits{} original
+month partitions remain in the comparison. Table~\ref{tab:supp-pharma-campaign}
+reports the corresponding widths, empirical content, and omissions together.
+For MTI the selected subset has median held-out content
+\PharmaCampaignTensileContent\% for the tensile metric and
+\PharmaCampaignRsdContent\% for RSD. These are overlapping partitions of one
+historical dataset. Moreover, \PharmaCampaignDisjointApiShared{} selected
+partitions still share API lots. Their content-attainment frequencies do not
+estimate nominal tolerance confidence or isolate a causal campaign effect.
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Retrospective sensitivity to campaign sharing.} Both sets
+use existing month-grouped partitions with \PharmaTrain{} training and
+\PharmaHeldout{} withheld batches; no intervals are refitted. Brackets give
+empirical 2.5\%--97.5\% width quantiles. Content is median held-out empirical
+content; \(\ge c\) is the percentage of partitions meeting the requested
+content. Below/above gives median omitted fractions. Content, attainment, and
+omissions are percentages.
+The subset is retrospective and the partitions are not independent samples.}
+\label{tab:supp-pharma-campaign}
+\input{tables/pharma_campaign_sensitivity.tex}
+\end{table}
 
 \paragraph{Numerical diagnostics.}
 Every selected MTI fit retains its content, tilt, posterior content
@@ -1543,7 +1597,7 @@ probability, candidate counts, profile iterations, and relative objective gap.
 All candidate fits must satisfy the objective-gap tolerance
 \(\PharmaObjectiveTolerance\) before the interval is selected. The
 selected-fit numerical criterion is met in \PharmaTensileConverged{} of
-\PharmaTensileReturned{} returned tensile-strength fits and
+\PharmaTensileReturned{} returned tensile-metric fits and
 \PharmaRsdConverged{} of \PharmaRsdReturned{} returned RSD fits.
 The main summaries retain every split. Independent recalculation verifies
 all 3004 selected fixed-target profiles, posterior content probabilities,

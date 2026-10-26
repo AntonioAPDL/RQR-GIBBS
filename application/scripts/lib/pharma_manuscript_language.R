@@ -14,7 +14,11 @@ pma_language_findings <- function(text) {
       "(our|proposed) (Young[- ]+Mathew|Wilks)",
     "overlapping splits as independent evidence" =
       "(overlapping|repeated|random) splits (are|provide) independent (sampling )?replications",
-    "local analysis terminology" = "\\bmetadata\\b|\\bpipeline\\b|\\bcontract\\b|article[- ]facing"
+    "local analysis terminology" = "\\bmetadata\\b|\\bpipeline\\b|\\bcontract\\b|article[- ]facing",
+    "group separation as proof of independence" =
+      "(campaign|lot|group) separation (establishes|proves|guarantees) independence",
+    "unresolved measurements as corrected data" =
+      "(hardness|tensile) (values|measurements) were (corrected|repaired) automatically"
   )
   names(patterns)[vapply(patterns, grepl, logical(1L), x = text,
                          ignore.case = TRUE, perl = TRUE)]

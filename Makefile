@@ -171,6 +171,10 @@ PHARMA_ECM_AUDIT_EVIDENCE ?= figures/data/pharma_ecm_numerical_audit_20261020
 PHARMA_ECM_AUDIT_REPORT_DIR ?= application/outputs/pharma_ecm_numerical_audit_20261020/review
 PHARMA_MTI_LIBRARY ?= application/cache/pharma_mti_library
 PHARMA_MTI_RESULTS ?= figures/data/pharma_mti_profile_application_20261025/results.csv
+PHARMA_SOURCE_CONFIG ?= application/config/pharma_source_structure_20261026.json
+PHARMA_SOURCE_LAB ?= application/cache/pharma_source_structure_20261026/Laboratory.csv
+PHARMA_SOURCE_ARCHIVE ?= application/cache/pharma_source_structure_20261026/Process.zip
+PHARMA_SOURCE_DOWNLOAD ?= false
 PHARMA_MTI_RUN_DIR ?=
 PHARMA_MTI_WORKERS ?= 40
 PHARMA_MTI_R = R_LIBS=$(PHARMA_MTI_LIBRARY) OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 $(R)
@@ -248,6 +252,7 @@ theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
 	$(MTI_ADOPTED_R) application/scripts/101_adopt_mti_profile.R --mode=tables --output-dir=$(THEORY_TABLE_DIR)
 	$(PHARMA_MTI_R) tables/generate_pharma_mti_application_tables.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
+	$(R) application/scripts/103_review_pharma_source_structure.R --config=$(PHARMA_SOURCE_CONFIG) --mode=tables --output-dir=$(THEORY_TABLE_DIR)
 
 historical-tolerance-tables:
 	$(R) tables/generate_tolerance_validation_summary_table.R --summary-csv=$(RQR_BAYES_UQ_PRIMARY_SUMMARY) --results-csv=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
@@ -255,6 +260,20 @@ historical-tolerance-tables:
 	$(R) tables/generate_tolerance_validation_followup_tables.R --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_scenario_tables.R --primary-results=$(RQR_BAYES_UQ_PRIMARY_RESULTS) --mti-ecm-results=$(RQR_BAYES_UQ_MTI_ECM_ARTICLE_RESULTS) --mti-ecm-policy-csv=$(RQR_BAYES_UQ_MTI_ECM_POLICY) --young-mathew-results=$(RQR_BAYES_UQ_PRIMARY_YM_RESULTS) --small95-results=$(RQR_BAYES_UQ_SMALL95_RESULTS) --scan-calibration-csv=$(RQR_BAYES_UQ_SCAN_CALIBRATION) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) tables/generate_tolerance_validation_gibbs_diagnostic_table.R --diagnostics-csv=$(RQR_TOLERANCE_GIBBS_DIAGNOSTIC_SOURCE) --output-dir=$(THEORY_TABLE_DIR)
+
+.PHONY: pharma-source-prepare pharma-source-tables verify-pharma-source test-pharma-source
+pharma-source-prepare:
+	$(R) application/scripts/103_review_pharma_source_structure.R --config=$(PHARMA_SOURCE_CONFIG) --mode=prepare --laboratory-file=$(PHARMA_SOURCE_LAB) --process-archive=$(PHARMA_SOURCE_ARCHIVE) --download=$(PHARMA_SOURCE_DOWNLOAD)
+
+pharma-source-tables:
+	$(R) application/scripts/103_review_pharma_source_structure.R --config=$(PHARMA_SOURCE_CONFIG) --mode=tables --output-dir=$(THEORY_TABLE_DIR)
+
+verify-pharma-source:
+	$(R) application/scripts/103_review_pharma_source_structure.R --config=$(PHARMA_SOURCE_CONFIG) --mode=verify
+
+test-pharma-source:
+	$(R) -e 'testthat::test_file("application/tests/testthat/test-pharma-source-structure.R",reporter="summary",stop_on_failure=TRUE)'
+	$(R) application/scripts/103_review_pharma_source_structure.R --config=$(PHARMA_SOURCE_CONFIG) --mode=verify
 
 .PHONY: test-mti-profile-adoption verify-mti-profile-adoption evaluate-mti-profile-application validate-mti-profile-application historical-tolerance-tables
 test-mti-profile-adoption:

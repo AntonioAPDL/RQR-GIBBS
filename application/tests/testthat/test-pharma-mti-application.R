@@ -196,12 +196,16 @@ test_that("application language preserves the distinct statistical quantities", 
     "Generalized-posterior endpoint summaries are posterior predictive intervals.",
     "The fitted intervals are specification limits.",
     "The proposed Young--Mathew method is used.",
-    "TCSP is also fitted.", "Overlapping splits are independent replications.")
+    "TCSP is also fitted.", "Overlapping splits are independent replications.",
+    "Campaign separation guarantees independence.",
+    "Hardness values were corrected automatically.")
   expect_true(all(vapply(bad, function(x) length(e$pma_language_findings(x)) > 0, logical(1))))
   expect_length(e$pma_language_findings(paste(
     "Held-out empirical content describes the finite dataset.",
     "Nominal tolerance confidence concerns the procedure under its assumptions.",
-    "These intervals are not specification limits.")), 0L)
+    "These intervals are not specification limits.",
+    "Campaign separation does not establish independence.",
+    "Hardness definitions remain unresolved; source values are preserved.")), 0L)
 })
 
 test_that("task seeds make evaluation independent of worker count and ordering", {

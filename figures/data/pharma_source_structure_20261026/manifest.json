@@ -1,0 +1,97 @@
+{
+  "study_id": "pharma_source_structure_20261026",
+  "source_commit": "58ee177af18998ebd834db7d7ab37af55f39bbf8",
+  "original_application_results_sha256": "529331c30894d64955010fef0c89d98bb8b1bce2e00a86bfb698963b162e259b",
+  "original_membership_sha256": "d832db1189395d0f3650482b2ea0ea9e2f6e3e117510b8cceea141f637505a8c",
+  "config_sha256": "fb5674259ebb92db8e5e4a45e5c76e2926ede9a1bab61e596b7d4ba577e5d7de",
+  "laboratory_sha256": "a3b0f16c7c3fa8052b38d767e38fda731a751acc4ec139b52d01577b32dc6483",
+  "archive_sha256": "8a401f1c7ac9880c763e3350f595c45c90487c0950db48caa9cda729582f5c25",
+  "member_sha256": "9ae3f52b11e8c41076de2bb56a4d833bf1b527d62d970267cb2f1b66a142ac9a",
+  "process_doi": "10.6084/m9.figshare.16676320.v1",
+  "license": "CC BY 4.0",
+  "campaigns": 28,
+  "maximum_tensile_formula_error": 4.98309393748286e-10,
+  "prepared_partitions": 250,
+  "prepared_seed": 202610260,
+  "prepared_status": "prepared_not_fitted_response_definition_unresolved",
+  "new_fits": 0,
+  "source_clarification_received": false,
+  "interpretation": "Retrospective historical partition summaries; no independent tolerance validation.",
+  "R_version": "R version 4.5.3 (2026-03-11)",
+  "rng_kind": ["Mersenne-Twister", "Inversion", "Rejection"],
+  "package_versions": {
+    "igraph": "2.3.0",
+    "jsonlite": "2.0.0",
+    "digest": "0.6.39"
+  },
+  "calculation_sources": [
+    {
+      "path": "application/scripts/103_review_pharma_source_structure.R",
+      "sha256": "e9c01024e22ceb02a3218868a691c97966c3a78e62bdce1da742894060d60208",
+      "bytes": 1284,
+      "_row": "application/scripts/103_review_pharma_source_structure.R"
+    },
+    {
+      "path": "application/scripts/lib/pharma_source_structure.R",
+      "sha256": "5573ae4b067df4525bcca59db6a9e230b43cee890e555401aa4d7773e0409b56",
+      "bytes": 17636,
+      "_row": "application/scripts/lib/pharma_source_structure.R"
+    },
+    {
+      "path": "application/scripts/lib/pharma_tolerance_application.R",
+      "sha256": "8f5c404e46b7cb6609fe165492ca48981ccf24cf866045a7f342714455bd6128",
+      "bytes": 35935,
+      "_row": "application/scripts/lib/pharma_tolerance_application.R"
+    },
+    {
+      "path": "application/scripts/lib/pharma_mti_application.R",
+      "sha256": "f7d12c0d50ba4a541b23a8373c57e1ee3b309963c5cd3bab071d94309c69f30a",
+      "bytes": 35711,
+      "_row": "application/scripts/lib/pharma_mti_application.R"
+    },
+    {
+      "path": "application/scripts/lib/pharma_mti_reporting.R",
+      "sha256": "832ba7c84280e5d4273b8f2992c4adad25431e3724137fb961e79bac795fea6c",
+      "bytes": 18040,
+      "_row": "application/scripts/lib/pharma_mti_reporting.R"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "campaign_mapping.csv",
+      "sha256": "a0da96bfdc8fafafefc1475931e3dd9f4ff0f4730ceb28dab75cc85b9455e115"
+    },
+    {
+      "path": "measurement_counts.csv",
+      "sha256": "dd70eb3fdf1e9270c1721229035c158ec347a5fa3f431463be4efa9748b418c0"
+    },
+    {
+      "path": "measurement_questions.csv",
+      "sha256": "e448b18bc2058f1ff6f14e57f84d1a8a4a1a1a8672abb1d5d89203f564fa23c6"
+    },
+    {
+      "path": "partition_sharing.csv",
+      "sha256": "06497e8d42623ade042b8f9db9caaf84b8b0a321c738d921ea6d322c66fee13b"
+    },
+    {
+      "path": "prepared_campaign_api_membership.csv.gz",
+      "sha256": "5be1fb1d306d7ab5bd07a3dc27698ce14868e59adcfb9f4f63c04ca2151cd39d"
+    },
+    {
+      "path": "retrospective_paired.csv",
+      "sha256": "d2bb7e64d5b92da7b65e0530caa3d06f60800078bfc9db0b5e4f760ac6c4b514"
+    },
+    {
+      "path": "retrospective_partitions.csv",
+      "sha256": "35d55d3156d4eeb6e5af60d8185d8a1458e653cd4adbb19ef8c8ab06c45adf2f"
+    },
+    {
+      "path": "retrospective_summary.csv",
+      "sha256": "32cf64f70a71c9ff378969365e4b8dbe63c26c93c8edb6f82193e1a6d82bc29e"
+    },
+    {
+      "path": "separation_designs.csv",
+      "sha256": "1fce38709f8f1d93de32a0c7bdc64c5bf6177bb67d0f52d538f4e8bf2e610ca2"
+    }
+  ]
+}

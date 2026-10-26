@@ -32,10 +32,10 @@ pma_metric_labels <- c(
   heldout_empirical_content_difference = "Held-out content difference",
   heldout_lower_omitted_difference = "Lower-omission difference",
   heldout_upper_omitted_difference = "Upper-omission difference")
-pma_scheme_labels <- c(random = "Random splits", chronological_forward = "Forward chronology",
-  chronological_reverse = "Reverse chronology", month_grouped = "Production-month groups",
+pma_scheme_labels <- c(random = "Random splits", chronological_forward = "Forward recorded order",
+  chronological_reverse = "Reverse recorded order", month_grouped = "Production-month groups",
   api_grouped = "API-batch groups")
-pma_response_labels <- c(fct_tensile = "Tensile strength", tbl_rsd_weight = "Weight RSD")
+pma_response_labels <- c(fct_tensile = "Reported tensile metric", tbl_rsd_weight = "Weight RSD")
 pma_method_labels <- c(mti_ecm_adaptive_cell = "MTI-ECM", young_mathew = "Young--Mathew",
                        wilks_minmax = "Wilks")
 pma_number <- function(x, digits = 3) {
@@ -107,7 +107,7 @@ pma_sensitivity_table <- function(rows, path, label, response_label) {
   lines <- c("\\begingroup", "\\footnotesize", "\\setlength{\\tabcolsep}{3pt}",
     "\\begin{longtable}{@{}lrrrrr@{}}",
     paste0("\\caption{\\textbf{Partition sensitivities for ", response_label,
-      ".} Each heading gives the number of splits and median training/held-out sizes. Width, content, and omissions are medians within the labeled design. Content, attainment, omissions, and return rates are percentages. The chronological cases each contain one partition.}\\label{", label, "}\\\\"),
+      ".} Each heading gives the number of splits and median training/held-out sizes. Width, content, and omissions are medians within the labeled design. Content, attainment, omissions, and return rates are percentages. The recorded-order cases each contain one partition.}\\label{", label, "}\\\\"),
     "\\toprule", "Method & Width & Held-out content & Held-out $\\ge c$ & Omitted below/above & Returned\\\\",
     "\\midrule", "\\endfirsthead", "\\toprule",
     "Method & Width & Held-out content & Held-out $\\ge c$ & Omitted below/above & Returned\\\\",

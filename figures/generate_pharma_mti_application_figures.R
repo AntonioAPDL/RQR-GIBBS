@@ -130,7 +130,7 @@ draw_sensitivity <- function(path) {
       }
       plot(NA, xlim = xlim, ylim = c(.5, 5.5), yaxt = "n", ylab = "",
            xlab = xlab, main = paste(pma_response_labels[response], "-", quantity), bty = "l")
-      plot_labels <- c("Random splits", "Forward chronology", "Reverse chronology",
+      plot_labels <- c("Random splits", "Forward order", "Reverse order",
                        "Month groups", "API groups")
       axis(2, at = 5:1, labels = plot_labels, las = 1, tick = FALSE, cex.axis = .82)
       if (quantity == "content") abline(v = config$analysis$content, lty = 2, col = "gray50")

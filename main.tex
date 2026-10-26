@@ -86,8 +86,8 @@ Wilks intervals across feasible content--sample-size cells and eight continuous
 distributions. The study emphasizes skewed distributions, where placement
 matters most, and excludes cells where the sample range cannot support the
 requested two-sided distribution-free statement.
-A pharmaceutical batch application illustrates endpoint placement, held-out
-empirical content, and sensitivity to partitioning historical batches.
+A historical pharmaceutical application illustrates endpoint placement for a
+reported batch metric, held-out empirical content, and partition sensitivity.
 \end{abstract}
 
 
@@ -968,21 +968,27 @@ Other variants are kept outside the primary comparison.
 \section{Pharmaceutical Batch Application}
 \label{sec:pharma-application}
 \input{tables/pharma_application_numbers.tex}
+\input{tables/pharma_source_numbers.tex}
 
-Pharmaceutical batch records provide an illustration of interval placement
-and its empirical stability. We compare the proposed MTI procedure with
+Pharmaceutical batch records illustrate interval placement for a reported
+derived measurement. We compare the proposed MTI procedure with
 the Young--Mathew and Wilks benchmarks using the public manufacturing data of
 \citet{ZagarMihelic2022PharmaManufacturing} and the associated
 \texttt{Laboratory.csv} file \citep{ZagarMihelic2021LaboratoryCsv}.
 
 Each observation represents one batch. Product code \PharmaProductCode{}
 provides \PharmaBatches{} batches with a common recorded strength and batch
-size. The response is the reported film-coated-tablet tensile-strength
-measure. Its sample skewness is \PharmaTensileSkewness{}, making it a
+size. The response is the reported film-coated-tablet tensile metric,
+computed from batch summaries of hardness and tablet dimensions.
+Its sample skewness is \PharmaTensileSkewness{}, making it a
 moderately skewed example alongside the more asymmetric simulation laws.
 The public file does not resolve the physical unit of this derived measure
-or supply product-specific acceptance criteria. The analysis therefore
-describes historical batch variation and endpoint placement.
+or supply product-specific acceptance criteria. In
+\PharmaFctHardnessQuestions{} batches, average hardness exceeds its recorded
+maximum. The summaries' measurement windows and units require clarification
+before that ordering can be interpreted. We retain the source values and
+use the derived metric to describe historical batch variation; its physical
+interpretation remains provisional.
 
 The primary analysis uses \PharmaSplits{} paired random splits, each with
 \PharmaTrain{} training and \PharmaHeldout{} held-out batches. Every method
@@ -1003,14 +1009,21 @@ splits do not provide independent sampling replications, and recorded ties
 and possible batch dependence limit an iid continuous interpretation.
 The controlled repeated-sampling tolerance evidence remains the simulation
 study in Section~\ref{sec:evaluation}.
+The associated process records identify \PharmaCampaigns{} production
+campaigns \citep{ZagarMihelic2021Process}. Every random partition shares
+campaigns between training and evaluation; a median
+\PharmaRandomSharedHeldout{} of \PharmaHeldout{} withheld batches belong to
+campaigns represented in training. The random-split results consequently
+describe variation within this historical production setting.
 
 \begin{table}[!htbp]
 \centering
-\caption{\textbf{Pharmaceutical tensile-strength application.} Intervals are
+\caption{\textbf{Reported pharmaceutical tensile metric.} Intervals are
 fit on \PharmaTrain{} batches and evaluated on \PharmaHeldout{} withheld
 batches over \PharmaSplits{} paired random splits. These splits reuse one
 finite dataset and are not independent sampling replications. Bracketed ranges
-are empirical 2.5\%--97.5\% quantiles. Lower and upper endpoints are summarized
+are empirical 2.5\%--97.5\% partition quantiles. The source metric has
+unresolved measurement definitions. Lower and upper endpoints are summarized
 separately. Held-out \(\ge c\) gives the percentage of all splits with
 held-out empirical content at least \(c\); returned intervals and tail
 omissions are reported separately.}
@@ -1022,8 +1035,8 @@ omissions are reported separately.}
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/fig06_pharma_application_tensile_intervals.png}
-\caption{\textbf{Interval placement and held-out comparisons for tensile
-strength.} Panel A shows the empirical distribution of all \PharmaBatches{}
+\caption{\textbf{Interval placement and held-out comparisons for the reported
+tensile metric.} Panel A shows the empirical distribution of all \PharmaBatches{}
 batches and actual fitted intervals from split
 \PharmaTensileRepresentative{}, selected by the prespecified median-distance
 rule. The interval rows below the CDF are positioned for display. Panels B
@@ -1046,13 +1059,13 @@ Young--Mathew. Their tail allocations differ: MTI omits median fractions
 respectively. Width and empirical content should therefore be read together
 with endpoint placement.
 
-The supplement examines forward and reverse chronological partitions and
+The supplement examines forward and reverse recorded-order partitions and
 \PharmaGroupedSplits{} unique partitions that keep either production months
 or active pharmaceutical ingredient (API) batches intact. All retain the same
-training size. For example, reverse chronology gives MTI held-out content
+training size. For example, reverse recorded order gives MTI held-out content
 of \PharmaTensileReverseContent\%, illustrating sensitivity to the partition.
 The profile objective-gap criterion is met in
-\PharmaTensileConverged{} of \PharmaTensileReturned{} returned tensile-strength
+\PharmaTensileConverged{} of \PharmaTensileReturned{} returned tensile-metric
 fits. Numerical diagnostics are reported in the supplement. The supplementary tablet-core weight relative
 standard deviation (RSD) example illustrates stronger asymmetry; its
 upper-adverse interpretation would favor a one-sided
@@ -1092,6 +1105,8 @@ calculation.
 The pharmaceutical application has a narrower role. It demonstrates how the
 precalibrated procedures behave on historical batch data, while the
 repeated-sampling tolerance evidence comes from the simulation design.
+Unresolved measurement definitions and shared production campaigns limit the
+physical and future-production interpretation of these comparisons.
 
 The tolerance evidence is confined to iid continuous univariate simulations;
 the historical pharmaceutical example has a descriptive role. Boundary tilts
