@@ -112,6 +112,28 @@ checkouts are not compiled, installed, or loaded, and no article inputs are
 replaced automatically. See the
 [launch, assessment, and resumption instructions](docs/reproducibility/mti_ecm_recovery_20261111.md#gibbs-study-authorized-staged-launch).
 
+### Practical Fixed-Target Assessment
+
+The original campaign at `44afea3` completed all 696 diagnostic chains with
+zero execution failures or repairs. Twenty of 174 datasets met every original
+diagnostic criterion, so the full stage did not start. The saved targets
+include limiting and outside-range empirical tilts; proper Gaussian priors
+keep their posteriors proper but can strongly influence outward endpoints.
+
+The separate `mti_gibbs_practical_20261112.json` study preserves that evidence.
+It reassesses saved draws, verifies exact Gaussian/GIG continuation, and
+performs one bounded extension for borderline cases. An experimental
+intercept-only marginal slice-within-Gibbs sampler checks the same root
+posterior with latent scales integrated out. It is distinct from the original
+conditionally Gaussian/GIG implementation and does not redefine MTI-ECM.
+The balanced comparison has five replications per simulation cell and ten
+application partitions: 370 datasets. Eighty-six additional diagnostic stress
+datasets make 456 distinct datasets and 1,824 chains, without duplicating
+overlapping cases. The smaller Gibbs study examines computation and
+conditional posterior uncertainty; the 1,000-replication ECM validation is
+unchanged. No Gibbs tolerance-confidence claim or article replacement follows
+automatically. See the [practical assessment description](docs/reproducibility/mti_gibbs_practical_20261112.md).
+
 ## Build and Checks
 
 ```bash

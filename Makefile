@@ -867,6 +867,16 @@ preflight-mti-gibbs:
 .PHONY: test-mti-gibbs launch-mti-gibbs health-mti-gibbs
 test-mti-gibbs: test-mti-ecm-recovery
 
+.PHONY: test-mti-gibbs-practical preflight-mti-gibbs-practical health-mti-gibbs-practical
+test-mti-gibbs-practical: test-mti-gibbs
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-practical.R
+
+preflight-mti-gibbs-practical:
+	$(R) application/scripts/108_assess_mti_gibbs_practical.R --mode=preflight
+
+health-mti-gibbs-practical:
+	$(R) application/scripts/108_assess_mti_gibbs_practical.R --mode=health --output-dir=$(GIBBS_OUTPUT_DIR)
+
 launch-mti-gibbs:
 	bash application/scripts/107_launch_mti_gibbs.sh --confirm-article-commit=$(GIBBS_CONFIRM_COMMIT) --workers=50 --allow-full=true
 

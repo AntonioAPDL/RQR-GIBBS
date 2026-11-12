@@ -1,0 +1,29 @@
+{
+  "study_id": "mti_gibbs_practical_20261112",
+  "parent_commit": "44afea30784540ae913b0a558a5c572790fd7493",
+  "parent_directory": ".codex_work/mti_gibbs_launch_44afea30784540ae913b0a558a5c572790fd7493/application/outputs/mti_gibbs_ecm_comparison_20261111/campaign/diagnostic",
+  "base_config": "application/config/mti_gibbs_ecm_comparison_20261111.json",
+  "output_root": "application/outputs/mti_gibbs_practical_20261112",
+  "maximum_workers": 50,
+  "sampling_time_limit_seconds": 7200,
+  "diagnostic_examples": 12,
+  "replications_per_cell": 5,
+  "continuation_draws": 4000,
+  "seed_offset": 6000000,
+  "conditional_reference_draws": 3000,
+  "conditional_reference_warmup": 500,
+  "conditional_reference_cdf_tolerance": 0.05,
+  "policy": {
+    "exploratory_rhat": 1.05,
+    "exploratory_ess": 100,
+    "exploratory_mcse_ratio": 0.10,
+    "preferred_rhat": 1.01,
+    "preferred_ess": 400,
+    "preferred_mcse_ratio": 0.05,
+    "relative_width_resolution": 0.01
+  },
+  "sampler": "intercept_marginal_slice_within_gibbs",
+  "target_selection": "hold_archived_ecm_selected_q_and_delta_fixed",
+  "new_tolerance_guarantee": false,
+  "automatic_article_replacement": false
+}
