@@ -19,7 +19,7 @@ mpq_frozen_action <- function(y,content,confidence,policy,cfg,context=NULL) {
 mpq_preview_tables <- function(summary,spec,output) {
   source_methods <- c(spec$primary_method,"young_mathew","wilks")
   methods <- c(spec$primary_method,"young_mathew","wilks_minmax")
-  labels <- setNames(c("MTI","Young--Mathew","Wilks"),methods)
+  labels <- setNames(c(spec$primary_label %||% "MTI","Young--Mathew","Wilks"),methods)
   families <- c(normal="Gaussian",student_t3="Student t(3)",exponential="Exponential",
     asym_laplace_tau010="Asymmetric Laplace (tau=0.10)",
     two_piece_normal_1_12="Two-piece Normal (1:12)",beta18="Beta(1,8)",

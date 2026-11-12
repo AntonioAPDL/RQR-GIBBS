@@ -1,0 +1,20 @@
+{
+  "study_id": "mti_ecm_article_20261111",
+  "primary_method": "mti_ecm_adaptive_cell",
+  "primary_label": "MTI-ECM",
+  "computation": "finite_iteration_ecm",
+  "archived_commit": "9462d7342225be50be6f28cccbd5d1f854a705a5",
+  "archived_results": "application/runs/rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827/wave_confirmatory_mti_ecm_independent_guarded_20260828T005711Z/bayes_uq_validation_results.csv",
+  "archived_results_sha256": "602ee3e758a3e288a39c083f9094d53cde9417f46eae903c20bb96349d3b58dc",
+  "validation_config": "application/config/rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827.json",
+  "validation_config_sha256": "c630d04dad2e45b2ea9cca4d01ce00f9e7132f74fd23f27108d2e341ae961aa7",
+  "policy_csv": "application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv",
+  "policy_sha256": "9942e5c9aad8701e125b4caf0c84df292a69886b7d1e176e44f512e6ea99b773",
+  "evidence_dir": "figures/data/mti_ecm_validation_20261111",
+  "cache_dir": "application/cache/mti_ecm_recovery_20261111",
+  "expected_datasets": 72000,
+  "replications": 1000,
+  "tolerance_package_version": "3.0.0",
+  "rng_kind": ["Mersenne-Twister", "Inversion", "Rejection"],
+  "gibbs_launch_requires_confirmation": true
+}
