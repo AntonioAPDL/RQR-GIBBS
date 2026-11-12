@@ -42,8 +42,9 @@ Under proper Gaussian root priors, normal-exponential augmentation gives
 conditionally conjugate Gaussian root and GIG scale updates for MPI and
 fixed-tilt MTI. Gibbs sampling targets that fixed-target generalized posterior;
 ECM uses the same augmentation for mode estimation. Fitted content and tilt are
-selected separately. The manuscripts include empty Gibbs-comparison insertion
-files, with no uncomputed numerical results or agreement claims.
+selected separately. A completed fixed-target computation study compares
+the two samplers and examines posterior uncertainty alongside finite ECM
+estimates. Its findings are reported separately from the tolerance comparison.
 
 MTI-ECM is the proposed tolerance procedure reported in the article. It searches
 finite-iteration endpoint estimates under a generalized-Bayes criterion over fitted content and tilt,
@@ -74,7 +75,7 @@ the diagnostic and full stages. Diagnostics combine base cases with
 deterministic maximum-q and maximum-absolute-tilt stress samples in each
 simulation case. The measured diagnostic design contains 174 datasets:
 82 base cases plus 92 additional deterministic stress cases, giving
-696 independent chains. These are design counts, not completed Gibbs results.
+696 independent chains, all now completed. Their assessment is summarized below.
 Short timing benchmarks use eligible worker counts from 32, 40, and 50 before
 selecting the diagnostic worker count; they are not convergence evidence.
 
@@ -133,6 +134,24 @@ overlapping cases. The smaller Gibbs study examines computation and
 conditional posterior uncertainty; the 1,000-replication ECM validation is
 unchanged. No Gibbs tolerance-confidence claim or article replacement follows
 automatically. See the [practical assessment description](docs/reproducibility/mti_gibbs_practical_20261112.md).
+
+The completed review verifies all 1,824 marginal chains, 696 original chains,
+and 72 continuation segments. All 456 marginal-sampler datasets meet the
+preferred mixing criteria (maximum rank-normalized R-hat 1.0032, minimum bulk
+ESS 1,781). The extra response-unit precision requirement is met for every
+primary summary in 125 datasets; the others retain their Monte Carlo errors.
+Matched original chains with adequate diagnostics agree within Monte Carlo
+uncertainty. Posterior widths can nevertheless be much larger than ECM
+widths near empirical limiting tilts. Independent objective minimization also
+identifies appreciable gaps in 96 finite ECM fits, 94 of them outside the
+empirical tilt limits. The article now explains the marginal sampler, these
+limits, and the distinction between optimization and posterior dispersion.
+
+See the [completed numerical review](docs/reproducibility/mti_gibbs_review_20261112.md).
+`make review-mti-gibbs` reconstructs the assessment from frozen local chains;
+`make verify-mti-gibbs-review` verifies the tracked compact evidence without
+those chains. No full Gibbs tolerance campaign or new calibration is started
+by this analysis.
 
 ## Build and Checks
 

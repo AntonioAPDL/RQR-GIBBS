@@ -1127,8 +1127,46 @@ The sampler fixes \(q,\delta,\omega_{\mathrm R},\lambda\) throughout each
 chain. These draws describe the generalized posterior at the fixed target. Choosing
 \((q,\delta)\) on the same data introduces selection uncertainty beyond this
 conditional distribution. Posterior endpoint means, medians, and modes are
-different summaries and need not agree. The empirical comparisons below use
+different summaries and need not agree. The tolerance comparisons below use
 ECM endpoint estimates.
+
+\subsection{Marginal Root Sampling}
+\label{sec:supp-mti-marginal}
+
+For intercept-only models, the latent scales can be integrated out before
+updating the roots. This gives a second way to sample the generalized
+posterior in \eqref{eq:supp-mti-generalized-posterior}. To describe one root update, fix
+the other root at \(b\), write the sorted observations as
+\(z_1\le\cdots\le z_n\), and let \(h_i=|z_i-b|\). The loss as a function
+of \(a\) is piecewise affine, with an increase of \(h_i\) in its slope at
+each observation. Its initial slope, for \(a<z_1\), is
+\[
+s_0=-q\sum_i(z_i-b)+\sum_i\min(z_i-b,0)-nq\delta.
+\]
+Consequently, up to an additive constant, the conditional negative log
+density is
+\[
+U_b(a)=\frac{\lambda a^2}{2}
++\omega_{\mathrm R}\left\{s_0a+\sum_i h_i(a-z_i)_+\right\},
+\qquad (x)_+=\max(x,0).
+\]
+The positive prior precision makes \(U_b\) strictly convex, so each sublevel
+set is one bounded interval. Given the current root \(a\), draw
+\(E\sim\mathrm{Exp}(1)\), find the two endpoints of
+\(\{t:U_b(t)\le U_b(a)+E\}\), and draw the next root uniformly between
+them. Prefix sums of \(h_i\) and \(h_iz_i\) locate the relevant quadratic
+segments and their boundary roots. The second root uses the same update
+conditional on the newly sampled first root.
+
+Each slice update preserves the corresponding conditional distribution
+\citep{Neal2003SliceSampling}; alternating the updates therefore preserves
+the joint root posterior. This calculation uses the marginal loss directly,
+whereas the Gaussian/GIG sampler retains the latent scales. Their targets
+are identical for fixed \(q,\delta,\omega_{\mathrm R},\lambda\).
+The computational assessment in
+Section~\ref{sec:supp-mti-posterior-assessment} compares their numerical
+behavior. Both methods require convergence assessment, and ordering is
+applied only when summarizing endpoint draws.
 
 \subsection{ECM Conditional Maximizations}
 
@@ -1206,6 +1244,33 @@ establish a global posterior mode. The reported results describe the specified
 finite-iteration ECM calculation with \(\omega_{\mathrm R}=1\),
 \(\lambda=10^{-4}\), and zero prior means; numerical stopping diagnostics
 are recorded separately from interval content and width.
+
+\subsection{Empirical Tilt Limits}
+\label{sec:supp-mti-empirical-limits}
+
+Empirical limiting tilts help explain the effect of the root priors on
+fixed-target posterior uncertainty. Define the two quantile-loss minima
+\[
+A_- = \min_t\sum_i\rho_q(y_i-t),\qquad
+A_+ = \min_t\sum_i\rho_{1-q}(y_i-t),\qquad
+\delta_-=-\frac{A_-}{nq},\quad
+\delta_+=\frac{A_+}{nq}.
+\]
+For a fixed \(b\) minimizing the first quantile loss and a root \(a\)
+below all observations, the unpenalized MTI loss changes at the constant
+rate \(A_-+nq\delta\) as \(a\) moves farther to the left. For a fixed
+\(a\) minimizing the second loss, the corresponding rate as \(b\) moves
+beyond all observations to the right is \(A_+-nq\delta\). These rates
+follow by expanding the product loss on the two outward directions.
+
+At \(\delta_-\) or \(\delta_+\), the corresponding direction is flat
+once the moving endpoint has passed the observations. Outside these
+limits, movement in that direction reduces the unpenalized loss without
+bound. The Gaussian prior retains a proper generalized posterior in both
+cases by adding a quadratic penalty. Posterior propriety alone therefore
+places little restriction on width uncertainty under a diffuse prior.
+The study below records these empirical limits separately from the
+population admissibility conditions and from the tolerance assessment.
 
 \input{tables/mti_gibbs_comparison_supplement.tex}
 

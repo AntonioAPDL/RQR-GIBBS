@@ -1,6 +1,7 @@
 *
 !.gitignore
 !*.png
+!figS_mti_fixed_target_width.pdf
 !rqr_theory_figure_provenance.csv
 !oracle_tilt_c095_figure_manifest.csv
 !pharma_application_figure_manifest.csv

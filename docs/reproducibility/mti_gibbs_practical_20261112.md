@@ -182,3 +182,12 @@ Important outputs under the ignored study directory:
 Provisional and unresolved summaries remain available for diagnosis; neither
 is silently discarded to improve apparent performance. These scripts do not
 change the article or dissertation.
+
+## Completed Assessment
+
+The frozen study at `877366f36ba1490f6e75a8f5bac9471a75e41eec` completed
+all 456 datasets and 1,824 marginal chains, together with 72 original-sampler
+continuation segments. The subsequent [completed numerical review](mti_gibbs_review_20261112.md)
+verifies those records, compares posterior and ECM summaries, examines empirical
+tilt limits and prior sensitivity, and documents the findings now included
+in the manuscripts. The reported tolerance results remain ECM based.

@@ -1,0 +1,17 @@
+\paragraph{Fixed-target posterior assessment.}
+An additional computation study used five samples in each of the 72 simulation settings
+in Section~\ref{sec:evaluation}, ten application training partitions, and 86
+additional samples with extreme fitted contents or tilts. Holding the selected
+\(q,\delta\) and Gaussian priors fixed, we sampled the root posterior with
+the intercept-only marginal slice updates described in the supplement.
+Each of four
+chains retained 4000 draws after 2000 burn-in cycles. Across all 456 samples,
+the largest rank-normalized \(\widehat R\) was 1.003 and the smallest bulk
+effective sample size was 1781 \citep{VehtariEtAl2021Rhat}.
+Posterior width distributions can be broad when the selected tilt is near an
+empirical limiting value. Independent minimization of the same penalized
+loss also reveals objective gaps in some finite-iteration ECM estimates.
+These findings call for prior and optimization sensitivity assessment
+before using posterior summaries to define new tolerance intervals.
+The tolerance comparison below continues
+to use the specified ECM endpoint estimates.

@@ -778,8 +778,10 @@ The reported ECM fits use at most 100 cycles, a stationarity tolerance of
 They are finite-iteration mode estimates; their stopping flags and numerical
 accuracy are assessed separately from interval content.
 The supplement gives the complete derivation, propriety proof, and both
-algorithms. Regression and dynamic extensions are developed in the companion
-paper.
+algorithms. For intercept-only models, integrating out the latent scales
+also permits marginal slice-within-Gibbs updates, described in the
+supplement's marginal root-sampling section. Regression and dynamic
+extensions are developed in the companion paper.
 
 \input{tables/mti_gibbs_comparison_main.tex}
 
@@ -1216,7 +1218,12 @@ updates for MPI and fixed-tilt MTI; ECM uses the same augmented criterion
 for mode estimation. The tilt controls the interval functional, and the
 content--tilt search seeks the shortest eligible fitted candidate. Posterior
 uncertainty at a fixed target and the repeated-sampling performance of this
-selection rule answer different inferential questions.
+selection rule answer different inferential questions. The additional
+fixed-target sampling study finds broad width uncertainty near empirical
+limiting tilts under the specified diffuse root priors. It also identifies
+objective gaps in some finite ECM iterates. Prior sensitivity and
+optimization accuracy therefore deserve separate assessment before a
+posterior endpoint summary is adopted as a tolerance interval.
 
 The separation between target, computation, and tolerance guarantees is essential. MTI
 identifies which fixed-content interval is being estimated. A generalized
