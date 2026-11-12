@@ -72,6 +72,7 @@ for (name in c("datasets", "parameters", "sensitivity", "audit", "agreement")) {
 }
 overview <- mgr_overview(datasets)
 pma_write_csv(overview, file.path(cfg$evidence_dir, "overview.csv"))
+pma_write_csv(mgr_cells(datasets), file.path(cfg$evidence_dir, "cells.csv"))
 figure <- "figures/generated/figS_mti_fixed_target_width.pdf"
 mgr_width_figure(datasets, jobs, directory, cfg$example_case_ids, figure)
 mgr_width_figure(datasets, jobs, directory, cfg$example_case_ids,
@@ -118,7 +119,7 @@ main <- sprintf(paste0("\\paragraph{Fixed-target posterior assessment.}\n",
   "The tolerance comparison below continues\n",
   "to use the specified ECM endpoint estimates.\n"), nrow(datasets),
   summary$maximum_rhat, floor(summary$minimum_bulk_ess))
-writeLines(main, "tables/mti_gibbs_comparison_main.tex")
+writeLines(sub("\n$", "", main), "tables/mti_gibbs_comparison_main.tex")
 supplement <- sprintf(paste0("\\subsection{Fixed-Target Posterior Assessment}\n",
   "\\label{sec:supp-mti-posterior-assessment}\n",
   "The computation study contains 360 simulation samples, with five in each\n",
@@ -192,9 +193,9 @@ supplement <- sprintf(paste0("\\subsection{Fixed-Target Posterior Assessment}\n"
   sum(datasets$ecm_relative_objective_gap > 1e-4 & datasets$target_class == "outside"),
   summary$reliable_original_within_two_mcse,
   summary$reliable_original_maximum_standardized_difference)
-writeLines(supplement, "tables/mti_gibbs_comparison_supplement.tex")
+writeLines(sub("\n$", "", supplement), "tables/mti_gibbs_comparison_supplement.tex")
 artifact_paths <- c(file.path(cfg$evidence_dir, c("datasets.csv", "parameters.csv", "sensitivity.csv",
-  "audit.csv", "agreement.csv", "overview.csv", "summary.json")), figure,
+  "audit.csv", "agreement.csv", "overview.csv", "cells.csv", "summary.json")), figure,
   "tables/mti_gibbs_comparison_main.tex", "tables/mti_gibbs_comparison_supplement.tex")
 code_paths <- c("application/scripts/110_review_mti_gibbs.R",
   "application/scripts/lib/mti_gibbs_review.R", "application/config/mti_gibbs_review_20261112.json")

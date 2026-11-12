@@ -170,6 +170,20 @@ mgr_overview <- function(d) {
     median_ecm_relative_objective_gap = median(z$ecm_relative_objective_gap))))
 }
 
+mgr_cells <- function(d) {
+  d <- d[d$source == "simulation", ]
+  groups <- split(d, interaction(d$diagnostic_role, d$response_id, d$n, d$content, drop = TRUE))
+  do.call(rbind, lapply(groups, function(z) data.frame(diagnostic_role = z$diagnostic_role[1],
+    distribution = z$response_id[1], n = z$n[1], content = z$content[1], datasets = nrow(z),
+    interior = sum(z$target_class == "interior"), boundary = sum(z$target_class == "boundary"),
+    outside = sum(z$target_class == "outside"), maximum_rhat = max(z$maximum_rhat),
+    minimum_bulk_ess = min(z$minimum_bulk_ess),
+    objective_gaps_above_1e_minus4 = sum(z$ecm_relative_objective_gap > 1e-4),
+    ecm_width_mean = mean(z$ecm_width), minimum_reference_width_mean = mean(z$minimum_width),
+    posterior_width_mean_min = min(z$posterior_width_mean),
+    posterior_width_mean_max = max(z$posterior_width_mean))))
+}
+
 mgr_width_figure <- function(datasets, jobs, directory, selected, path) {
   grDevices::pdf(path, width = 9, height = 7.8, onefile = TRUE)
   on.exit(grDevices::dev.off(), add = TRUE)

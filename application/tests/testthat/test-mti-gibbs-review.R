@@ -60,3 +60,55 @@ testthat::test_that("saved summaries are checked numerically and aligned by quan
   bad <- d; bad$mean[1] <- 2
   testthat::expect_error(mgr_compare_saved_summary(d, bad), "Saved summary differs")
 })
+
+testthat::test_that("cell summaries never pool widths across distributions or designs", {
+  d <- data.frame(source = "simulation", diagnostic_role = "balanced",
+    response_id = c("normal", "normal", "lognormal", "normal"),
+    n = c(50, 50, 50, 100), content = .9, target_class = "interior",
+    maximum_rhat = 1, minimum_bulk_ess = 1000, ecm_relative_objective_gap = 0,
+    ecm_width = c(2, 4, 100, 10), minimum_width = c(2, 4, 100, 10),
+    posterior_width_mean = c(3, 5, 120, 11))
+  cells <- mgr_cells(d)
+  testthat::expect_equal(nrow(cells), 3)
+  z <- cells[cells$distribution == "normal" & cells$n == 50, ]
+  testthat::expect_equal(z$datasets, 2)
+  testthat::expect_equal(z$ecm_width_mean, 3)
+  testthat::expect_equal(c(z$posterior_width_mean_min, z$posterior_width_mean_max), c(3, 5))
+})
+
+testthat::test_that("review reads reject changed identity, observations, and objective traces", {
+  testthat::skip_if_not_installed("digest")
+  testthat::skip_if_not_installed("jsonlite")
+  directory <- tempfile("posterior-review-")
+  dir.create(file.path(directory, "chains"), recursive = TRUE)
+  on.exit(unlink(directory, recursive = TRUE))
+  y <- c(-1, .1, 1)
+  task <- data.frame(job_id = 1L, dataset_id = 1L, case_id = "fixture", chain = 1L,
+    q = .9, delta = 0, dataset_sha256 = mgc_hash(y))
+  draws <- cbind(lower = c(-2, -1.8, -1.7), upper = c(2, 1.9, 1.8))
+  fit <- list(task = task, draws = draws, passed = TRUE, repair_count = 0L,
+    sample_sha256 = task$dataset_sha256, elapsed_seconds = 0,
+    retained_objective = mgp_objective(y, draws[, 1], draws[, 2], .9, 0, 1, .1))
+  fit$objective_summary <- range(fit$retained_objective)
+  identity <- list(commit = "fixture")
+  path <- mgc_chain_path(directory, 1L)
+  write_record <- function(value) {
+    saveRDS(value, path)
+    pta_atomic_write_json(list(passed = TRUE, job_id = 1L, task_sha256 = mgc_hash(task),
+      sample_sha256 = task$dataset_sha256, n_mcmc = 3L, sha256 = mgc_file_hash(path),
+      analysis_identity = mgc_hash(identity)), paste0(path, ".json"))
+  }
+  base <- list(learning_rate = 1, prior_variance = 10)
+  write_record(fit)
+  testthat::expect_silent(mgr_read(directory, task, 3L, y, base, 3L, identity))
+  testthat::expect_error(mgr_read(directory, task, 3L, y, base, 3L, list(commit = "changed")),
+    "analysis identity differs")
+  testthat::expect_error(mgr_read(directory, task, 3L, y + 1, base, 3L, identity),
+    "observations differ")
+  bad <- fit; bad$retained_objective <- bad$retained_objective + 1
+  write_record(bad)
+  testthat::expect_error(mgr_read(directory, task, 3L, y, base, 3L, identity),
+    "objective check failed")
+  saveRDS(fit, path)
+  testthat::expect_error(mgr_read(directory, task, 3L, y, base, 3L, identity), "Corrupted")
+})
