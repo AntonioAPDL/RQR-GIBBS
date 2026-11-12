@@ -207,7 +207,9 @@ mgr_width_figure <- function(datasets, jobs, directory, selected, path) {
       col = "#0072B2", lwd = 1.5, ylim = c(0, 1), sub = "")
     abline(v = t$ecm_width, col = "#D55E00", lty = 2, lwd = 1.5)
     abline(v = t$minimum_width, col = "black", lty = 3, lwd = 1.5)
-    mtext(sprintf("q = %.6f; %s tilt", t$q, t$target_class), side = 3, line = .2, cex = .8)
+    tilt_labels <- c(interior = "interior", boundary = "limiting", outside = "outside-range")
+    mtext(sprintf("q = %.6f; %s tilt", t$q, tilt_labels[t$target_class]),
+      side = 3, line = .2, cex = .8)
   }
   par(mar = c(0, 0, 0, 0))
   plot.new()
