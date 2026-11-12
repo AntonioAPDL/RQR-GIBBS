@@ -264,3 +264,27 @@ mre_verify <- function(cfg,full=FALSE) {
   }
   invisible(TRUE)
 }
+
+mre_independence <- function(cfg,archive_root) {
+  path <- file.path(archive_root,cfg$calibration_results)
+  pma_verify_hash(path,cfg$calibration_results_sha256)
+  calibration <- data.table::fread(path,select="seed",nThread=1)$seed
+  path <- file.path(cfg$cache_dir,"results.csv")
+  provenance_path <- file.path(cfg$evidence_dir,"provenance.json")
+  provenance <- jsonlite::read_json(provenance_path,simplifyVector=FALSE)
+  pma_verify_hash(path,provenance$results_sha256)
+  validation <- data.table::fread(path,select="seed",nThread=1)$seed
+  overlap <- intersect(calibration,validation)
+  mpr_require(!length(overlap),"Calibration and validation reuse dataset seeds.")
+  output <- file.path(cfg$evidence_dir,"seed_independence.json")
+  pta_atomic_write_json(list(calibration_results_sha256=cfg$calibration_results_sha256,
+    validation_results_sha256=provenance$results_sha256,
+    calibration_method_rows=length(calibration),calibration_dataset_seeds=length(unique(calibration)),
+    validation_dataset_seeds=length(unique(validation)),overlapping_seeds=length(overlap),
+    checking_commit=pma_git("rev-parse","HEAD")),output)
+  provenance$artifacts <- Filter(function(x)!identical(x$path,output),provenance$artifacts)
+  provenance$artifacts[[length(provenance$artifacts)+1L]] <-
+    list(path=output,sha256=mp_sha(output),bytes=file.info(output)$size)
+  pta_atomic_write_json(provenance,provenance_path)
+  invisible(TRUE)
+}

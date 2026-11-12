@@ -6,6 +6,8 @@
   "archived_commit": "9462d7342225be50be6f28cccbd5d1f854a705a5",
   "archived_results": "application/runs/rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827/wave_confirmatory_mti_ecm_independent_guarded_20260828T005711Z/bayes_uq_validation_results.csv",
   "archived_results_sha256": "602ee3e758a3e288a39c083f9094d53cde9417f46eae903c20bb96349d3b58dc",
+  "calibration_results": "application/runs/rqr_bayes_uq_validation_mti_ecm_adaptive_targeted_refinement_20260826/wave_confirmatory_mti_ecm_refinement_20260826T184038Z/bayes_uq_validation_results.csv",
+  "calibration_results_sha256": "e6902ec840e77ef25eb3bb861e7ba4d5a8d3f85971ff29bde181e64bdad13f9f",
   "validation_config": "application/config/rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827.json",
   "validation_config_sha256": "c630d04dad2e45b2ea9cca4d01ce00f9e7132f74fd23f27108d2e341ae961aa7",
   "policy_csv": "application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv",

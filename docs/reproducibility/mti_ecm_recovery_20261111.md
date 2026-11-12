@@ -18,6 +18,8 @@ OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 Rscript \
   application/scripts/104_recover_mti_ecm_article.R --mode=recover \
   --archive-root=/data/muscat_data/jaguir26/RQR-GIBBS --workers=32
 Rscript application/scripts/104_recover_mti_ecm_article.R --mode=tables
+Rscript application/scripts/104_recover_mti_ecm_article.R --mode=independence \
+  --archive-root=/data/muscat_data/jaguir26/RQR-GIBBS
 Rscript application/scripts/104_recover_mti_ecm_article.R --mode=verify --full=true
 ```
 
@@ -33,6 +35,9 @@ check allows only the change implied by a small floating-point perturbation of
 the saved decimal endpoints. All recorded attainment indicators agree with the
 recomputed CDF classifications. A completed, verified recovery is reused
 without refitting comparators when the recovery command is repeated.
+The calibration archive contains 720,000 method rows on 72,000 dataset seeds;
+none of these seeds occurs among the 72,000 independent validation samples.
+The corresponding source hashes and counts are recorded separately.
 
 Small case summaries, paired differences, convergence summaries, and input
 hashes are committed under `figures/data/mti_ecm_validation_20261111/`. Full

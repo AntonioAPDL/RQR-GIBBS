@@ -992,7 +992,7 @@ two roots are sorted into lower and upper endpoints.
 \subsection{Latent-Scale Representation}
 
 The pseudo-asymmetric-Laplace representation gives a convenient quadratic
-conditional calculation. Define
+conditional calculation \citep{KozumiKobayashi2011Gibbs}. Define
 \[
 \sigma_{\mathrm R}=\omega_{\mathrm R}^{-1},\qquad
 \xi_q=\frac{1-2q}{q(1-q)},\qquad
@@ -1067,6 +1067,8 @@ ECM endpoint estimates; they do not report a new Gibbs comparison.
 
 \subsection{ECM Conditional Maximizations}
 
+The same augmentation gives conditional maximizations within the EM framework
+\citep{DempsterLairdRubin1977EM,MengRubin1993ECM}.
 At the current roots, compute \(\tau_i=E(v_i^{-1}\mid\cdot)\). Holding
 \(b\) fixed, the first conditional maximization solves
 \[

@@ -18,4 +18,7 @@ if(mode=="recover") {
 } else if(mode=="verify") {
   mre_verify(cfg,full=identical(pta_arg_value(args,"--full=","false"),"true"))
   cat("Verified ECM comparison evidence.\n")
-} else stop("Supported modes are recover, tables, and verify; this script does not launch Gibbs sampling.")
+} else if(mode=="independence") {
+  mre_independence(cfg,pta_arg_value(args,"--archive-root=",getwd()))
+  cat("Calibration and independent validation have disjoint dataset seeds.\n")
+} else stop("Supported modes are recover, tables, verify, and independence; this script does not launch Gibbs sampling.")
