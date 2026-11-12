@@ -6,6 +6,61 @@ fixed-target root update is a loss-based generalized posterior. ECM approximates
 its mode; Gibbs sampling targets the full fixed-target distribution. A DP
 content probability is distinct from a generalized-posterior root probability.
 
+## Retained Theory and Algorithms
+
+Main Section 5 and supplement Part III state the normalized fixed-target
+generalized posterior, its normal-exponential augmentation, the Gaussian
+conditional distributions for both roots, and the GIG scale conditional with
+its Gamma limit at a zero residual. The supplement proves propriety and finite
+polynomial moments under proper Gaussian root priors. Fixed nonzero tilt shifts
+the conditional Gaussian means without changing their precisions, so the
+conditional conjugacy applies both to MPI and to fixed-tilt MTI. This does not
+make the joint posterior Gaussian or define a response likelihood.
+
+The ECM E-step and both conditional maximizations are derived from that same
+augmented posterior. The selected empirical fits retain their original finite
+iteration limits, residual flooring, prior precision, and learning rate. The
+population MPI/MTI identification results, empirical score identities, scan
+reference, and direct DP content law are retained. The numerical convex-profile
+solver theorem and its exposition are removed from the manuscripts; their code
+and historical evidence remain in the repository as separate numerical work.
+
+The original RQR article of Pouplin et al. (2024), Section 3.2 and Appendix H.1,
+introduces empirical product-loss minimization and reports Adam optimization.
+Its general discussion of Bayesian methods in Appendix A does not derive the
+present generalized posterior or its Gaussian/GIG full conditionals. The
+manuscript credits that original loss, generalized-Bayes updating, the
+normal-exponential representation, and EM/ECM to their respective sources.
+
+`tables/mti_gibbs_comparison_main.tex` and
+`tables/mti_gibbs_comparison_supplement.tex` are empty inclusion points. They
+print no claims or values. Completed Gibbs results can be incorporated there
+only after checking posterior diagnostics and the matched-target comparison;
+the emptiness check in the manuscript validator must then be revised together
+with the assessed results. No Gibbs/ECM agreement or computing-time claim is
+inferred from the ECM archive alone.
+
+The manuscript revision was checked with:
+
+```sh
+make test-mti-ecm-recovery test-manuscript-language
+make verify-mti-ecm-article test-theory-tables test-theory-figures
+make test-pharma-mti-application test-pharma-source
+Rscript application/scripts/104_recover_mti_ecm_article.R --mode=verify --full=true
+make preflight-mti-gibbs
+make all-pdf
+```
+
+The mathematical tests check both root conditionals at zero and nonzero tilt,
+the GIG/Gamma scale kernels, the integrated normal-exponential identity, and
+the two ECM conditional maximizations with fixed E-step weights. The Gibbs
+preflight creates a design without sampling. Application tests omit their
+optional raw-data provenance check because that check belongs to the separate
+application preflight; the tracked evidence, paired tables, figures, and source
+structure checks pass. The revised main article has 25 pages and the supplement
+41 pages. Their final compilation logs contain no undefined references,
+undefined citations, or overfull boxes.
+
 ## Reproducing the Simulation Comparison
 
 `application/config/mti_ecm_article_20261111.json` identifies the archived

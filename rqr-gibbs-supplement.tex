@@ -113,10 +113,12 @@ Symbol & Meaning & Use\\
 \(\alpha\) & tolerance error probability & repeated-sampling content requirement\\
 \(\gamma\) & posterior content-probability threshold & direct DP content check\\
 \(\omega_{\mathrm R}\) & fixed generalized-Bayes learning rate & fixed-target MTI\\
-\(F,H,a\) & response distribution, DP base measure, and DP concentration & content checking\\
+\(a,b,\lambda\) & raw roots and their common Gaussian prior precision & Gibbs and ECM computation\\
+\(v_i,\tau_i\) & augmented scale and its conditional inverse moment & Gibbs draws and ECM expectations\\
+\(F,H,\alpha_0\) & response distribution, DP base measure, and DP concentration & content checking\\
 \(L,U,M,W\) & lower endpoint, upper endpoint, midpoint, and width & reported interval functionals\\
 MPI, MTI & mean-preserving interval and mean-tilted interval & population targets\\
-ECM & expectation/conditional maximization & alternative fixed-target computation\\
+ECM & expectation/conditional maximization & fixed-target posterior mode estimation\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -144,7 +146,7 @@ Empirical score balance
 & Records the exact fractional training-sample identities for fixed-target fits\\
 Fixed-target computation
 & Section~\ref{sec:supp-mti-ecm}
-& Gives Gibbs and ECM calculations and a numerical reference\\
+& Gives the generalized posterior, full conditional distributions, and ECM equations\\
 Direct DP content check
 & Section~\ref{sec:supp-direct-dp-check}
 & Gives exact fixed-interval posterior content probabilities for calibration\\
@@ -809,6 +811,8 @@ Gaussian root prior, the MPI loss is nonnegative and the tilt is
 linear in the roots. The resulting generalized posterior is proper because a
 Gaussian density has finite exponential moments in every linear direction. This covers
 the initial ridge fixed-design model and finite-horizon Gaussian state model.
+Proposition~\ref{prop:supp-mti-posterior-proper} gives an explicit bound for
+the intercept-only calculation.
 Nonzero tilt under heavier-tailed shrinkage priors requires a separate
 coercivity or propriety result.
 
@@ -968,26 +972,63 @@ For each fixed content and tilt, the generalized posterior defines a
 distribution over interval roots. Gibbs sampling draws from this distribution;
 expectation/conditional maximization (ECM) gives a deterministic mode
 approximation. The reported simulation and application use finite-iteration
-ECM fits. Section~\ref{sec:supp-profiled-intercept} gives an independent
-convex-profile representation for checking the same objective. The complete
-ECM interval-selection rule is assessed on independent simulation samples.
+ECM fits. The derivations below apply to MPI at zero tilt and to MTI at any
+fixed finite tilt under the stated Gaussian priors. The complete ECM
+interval-selection rule is assessed on independent simulation samples.
 
-For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the fixed-target MTI loss is
-\[
-L_{n,q,\delta}
+\subsection{Generalized Posterior and Propriety}
+\label{sec:supp-mti-posterior}
+
+Let \(D_n=(y_1,\ldots,y_n)\), fix \(0<q<1\) and finite \(\delta\), and
+write the two raw roots as \(a,b\). For \(e_i=(y_i-a)(y_i-b)\), the
+fixed-target MTI loss is
+\begin{equation}
+L_{q,\delta,n}(a,b)
 =\sum_{i=1}^n\left[
-\rho_q(e_i)-q\delta(\eta_{1i}+\eta_{2i}-2y_i)
+\rho_q(e_i)-q\delta(a+b-2y_i)
 \right],
 \qquad
 \rho_q(r)=r\{q-\ind(r<0)\}.
-\]
-With fixed learning rate \(\omega_{\mathrm R}\), the generalized-posterior
-kernel is proportional to
+\label{eq:supp-mti-computational-loss}
+\end{equation}
+Use independent \(\Normal(0,\lambda^{-1})\) root priors with
+\(\lambda>0\) and fixed learning rate \(\omega_{\mathrm R}>0\). Then
+\begin{equation}
+\pi_{q,\delta}(a,b\mid D_n)
+=\frac{\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(a,b)\}
+\Normal(a\mid0,\lambda^{-1})\Normal(b\mid0,\lambda^{-1})}
+{Z_{q,\delta}(D_n)}.
+\label{eq:supp-mti-generalized-posterior}
+\end{equation}
+Here \(Z_{q,\delta}(D_n)=E_{\pi_0}
+[\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(a,b)\}]\), with expectation under
+the two independent Gaussian root priors.
+The raw-root labeling is exchangeable. Sorting a draw gives its lower and
+upper endpoints without imposing an ordering constraint on the Gibbs updates.
+
+\begin{proposition}[Proper fixed-target generalized posterior]
+\label{prop:supp-mti-posterior-proper}
+For any finite sample, \(0<q<1\), finite \(\delta\), and positive
+\(\omega_{\mathrm R},\lambda\), the normalizing constant in
+\eqref{eq:supp-mti-generalized-posterior} satisfies
 \[
-\exp\{-\omega_{\mathrm R}L_{n,q,\delta}(\theta)\}\pi_0(\theta).
+0<Z_{q,\delta}(D_n)
+\le\exp\left\{-2\omega_{\mathrm R}q\delta\sum_i y_i
++\frac{(\omega_{\mathrm R}nq\delta)^2}{\lambda}\right\}<\infty.
 \]
-The validation calculations are intercept-only, so \(\theta=(a,b)\) before the
-two roots are sorted into lower and upper endpoints.
+All polynomial moments of the roots are finite.
+\end{proposition}
+
+\begin{proof}
+The check loss is nonnegative. Its exponential factor is therefore bounded
+above by one, leaving a linear exponential tilt of the Gaussian prior.
+Writing \(t=\omega_{\mathrm R}nq\delta\), independence gives
+\(E_{\pi_0}\{\exp(t(a+b))\}=\exp(t^2/\lambda)\), which proves the upper
+bound. The integrand is strictly positive, so the normalizing constant is
+positive. Completing the square gives a Gaussian upper bound for the
+unnormalized posterior; multiplying it by any polynomial in the roots remains
+integrable.
+\end{proof}
 
 \subsection{Latent-Scale Representation}
 
@@ -1007,8 +1048,22 @@ Then
 \Exp\!\left(v_i\mid\mathrm{rate}=1/\sigma_{\mathrm R}\right)\,dv_i.
 \label{eq:supp-pseudo-al-mixture}
 \end{align}
-The latent scale is computational; it augments a loss factor rather than a
-sampling distribution for \(Y_i\).
+The latent scales augment the loss factor. With
+\(v=(v_1,\ldots,v_n)\), the joint generalized posterior is
+\begin{align}
+\pi_{q,\delta}(a,b,v\mid D_n)\propto{}&
+\Normal(a\mid0,\lambda^{-1})\Normal(b\mid0,\lambda^{-1})
+\exp\{\omega_{\mathrm R}nq\delta(a+b)\}\notag\\
+&\times\prod_i v_i^{-1/2}
+\exp\left\{-\frac{(e_i-\xi_qv_i)^2}{2\phi_q\sigma_{\mathrm R}v_i}
+-\frac{v_i}{\sigma_{\mathrm R}}\right\},\quad v_i>0.
+\label{eq:supp-mti-augmented-posterior}
+\end{align}
+Terms depending only on the fixed sample and settings are absorbed into the
+normalizing constant. Integrating \(v\) recovers
+\eqref{eq:supp-mti-generalized-posterior}. The Normal factor in
+\eqref{eq:supp-pseudo-al-mixture} represents the product-residual loss; a
+sampling distribution for \(Y_i\) requires its own model.
 
 Under the generalized inverse Gaussian \(\GIG(\nu,A,B)\) convention proportional to
 \(v^{\nu-1}\exp\{-(Av+B/v)/2\}\), the conditional scale law has
@@ -1031,9 +1086,8 @@ is infinite, which requires special treatment in numerical ECM.
 \subsection{Gibbs Conditional Distributions}
 \label{sec:supp-mti-gibbs}
 
-Let the two raw roots have independent
-\(\Normal(0,\lambda^{-1})\) priors. Conditional on one root and the latent
-scales, the other root has a Gaussian distribution. For the first root, define
+Conditional on one root and the latent scales, the other root has a Gaussian
+distribution. For the first root, define
 \[
 d_i=y_i-b,\qquad r_i=y_i d_i-\xi_qv_i,\qquad
 w_i=(\phi_q\sigma_{\mathrm R}v_i)^{-1}.
@@ -1044,8 +1098,18 @@ Q_a=\lambda+\sum_iw_i d_i^2,\qquad
 H_a=\sum_iw_i d_i r_i+\omega_{\mathrm R}nq\delta,
 \qquad a\mid b,v,D_n\sim\Normal(H_a/Q_a,Q_a^{-1}).
 \]
-The second-root update exchanges \(a\) and \(b\). The linear tilt changes
-the conditional mean through \(H_a\); its precision is unchanged.
+For the second root, put \(\widetilde d_i=y_i-a\) and
+\(\widetilde r_i=y_i\widetilde d_i-\xi_qv_i\). Then
+\[
+Q_b=\lambda+\sum_iw_i\widetilde d_i^2,\qquad
+H_b=\sum_iw_i\widetilde d_i\widetilde r_i+\omega_{\mathrm R}nq\delta,
+\qquad b\mid a,v,D_n\sim\Normal(H_b/Q_b,Q_b^{-1}).
+\]
+The linear tilt changes each conditional mean through \(H_a,H_b\); the
+precisions are unchanged. These Gaussian root distributions and the GIG scale
+law give conditionally conjugate Gibbs updates for MPI and fixed-tilt MTI.
+Although each root conditional is Gaussian, the joint augmented log density
+contains the product \(a^2b^2\) and is generally non-Gaussian.
 
 \begin{algorithmblock}{Fixed-target MTI Gibbs sampler}
 \item Fix \(q\), \(\delta\), the learning rate, and the Gaussian root priors.
@@ -1059,11 +1123,12 @@ endpoint draws. Retain chain identities, objective values, and endpoint widths
 for convergence assessment.
 \end{algorithmblock}
 
-These draws describe the generalized posterior at the fixed target. Choosing
+The sampler fixes \(q,\delta,\omega_{\mathrm R},\lambda\) throughout each
+chain. These draws describe the generalized posterior at the fixed target. Choosing
 \((q,\delta)\) on the same data introduces selection uncertainty beyond this
 conditional distribution. Posterior endpoint means, medians, and modes are
 different summaries and need not agree. The empirical comparisons below use
-ECM endpoint estimates; they do not report a new Gibbs comparison.
+ECM endpoint estimates.
 
 \subsection{ECM Conditional Maximizations}
 
@@ -1078,8 +1143,18 @@ At the current roots, compute \(\tau_i=E(v_i^{-1}\mid\cdot)\). Holding
 \sum_i(y_i-b)\{\tau_i y_i(y_i-b)-\xi_q\}
 +\omega_{\mathrm R}nq\delta.
 \]
-Exchange the root labels for the second conditional maximization while
-retaining the E-step weights for the complete cycle. The numerical calculation
+Writing the updated first root as \(a^+\), the second conditional
+maximization is
+\[
+\left\{\lambda+\frac{1}{\phi_q\sigma_{\mathrm R}}
+\sum_i\tau_i(y_i-a^+)^2\right\}b
+=\frac{1}{\phi_q\sigma_{\mathrm R}}
+\sum_i(y_i-a^+)\{\tau_i y_i(y_i-a^+)-\xi_q\}
++\omega_{\mathrm R}nq\delta.
+\]
+Both maximizations retain the E-step weights computed at the start of the
+cycle. They maximize the expected complete-data log posterior for the two
+roots in turn. The numerical calculation
 uses a response-product floor near zero and objective backtracking.
 Each candidate is initialized from empirical fractional shortest-window
 endpoints shifted by its displacement from the central tilt. The reported
@@ -1102,96 +1177,46 @@ the final roots, stopping flag, objective, and stationarity diagnostic. Sort
 the roots to report the candidate interval.
 \end{algorithmblock}
 
-The fitted content \(q\) and tilt \(\delta\) index fixed-target generalized
-posteriors. The procedure profiles over their grid on each training sample.
-Grid settings and the DP probability threshold are calibrated separately and
-then applied unchanged to independent validation replications.
+\subsection{Posterior Modes and Empirical Balance}
+\label{sec:supp-mti-mode-balance}
 
-\subsection{The Penalized Intercept Criterion}
-\label{sec:supp-profiled-intercept}
-
-The following representation supplies a numerical reference for ECM. Let the two
-roots have independent zero-mean Gaussian priors with
-common precision \(\lambda>0\), and fix \(q\), \(\delta\), and
-\(\omega_{\mathrm R}>0\). Their negative log generalized-posterior criterion,
-up to a constant, is
+The negative log generalized posterior, up to a constant, is
 \[
-J(a,b)=\omega_{\mathrm R}\sum_i
-\left[\rho_q\{(y_i-a)(y_i-b)\}-q\delta(a+b-2y_i)\right]
+J(a,b)=\omega_{\mathrm R}L_{q,\delta,n}(a,b)
 +\frac{\lambda}{2}(a^2+b^2).
 \]
-Write \(m=(a+b)/2\), \(t=(b-a)^2/4\), and
-\(s=nq-\lambda/\omega_{\mathrm R}\). The variable \(t\) is a squared
-half-width used to minimize this same criterion; no transformed-density mode
-is introduced.
-
-\begin{proposition}[Convex midpoint profile]
-\label{prop:supp-convex-intercept-profile}
-Suppose \(0<s<n\), and put
-\(W_s=\{w\in[0,1]^n:\sum_iw_i=s\}\). For a fixed midpoint, a minimizing
-\(t\ge0\) is an empirical \(s/n\) quantile of the squared distances
-\((y_i-m)^2\). The profiled criterion has the representation
+For a joint subgradient selection \(s_i\in\partial\rho_q(e_i)\), its
+distinct-root stationary equations are
 \begin{align*}
-\min_{t\ge0}J(m,t)
-={}&2\lambda m^2+\max_{w\in W_s}\{A(w)+B(w)m\},\\
-A(w)={}&\omega_{\mathrm R}
-\left[q\sum_i y_i^2-\sum_iw_i y_i^2+2q\delta\sum_i y_i\right],\\
-B(w)={}&2\omega_{\mathrm R}
-\left[\sum_iw_i y_i-q\sum_i y_i-nq\delta\right].
+\omega_{\mathrm R}\sum_i s_i(b-y_i)-\omega_{\mathrm R}nq\delta+\lambda a&=0,\\
+\omega_{\mathrm R}\sum_i s_i(a-y_i)-\omega_{\mathrm R}nq\delta+\lambda b&=0.
 \end{align*}
-It is strongly convex in \(m\), so its minimizing midpoint is unique.
-The minimizing squared half-width can be nonunique at an empirical quantile.
-\end{proposition}
-
-\begin{proof}
-For \(z_i=(y_i-m)^2\), write
-\(\rho_q(z_i-t)=qz_i-qt+(t-z_i)_+\). Minimization in \(t\) gives
-\[
-\min_{t\ge0}\left\{\sum_i(t-z_i)_+-st\right\}
-=-\min_{w\in W_s}\sum_iw_i z_i.
-\]
-To verify the identity, order the \(z_i\), assign weight one to the smallest
-\(\lfloor s\rfloor\) values, and assign the remaining mass at the next value.
-The one-sided derivatives in \(t\) bracket zero at the corresponding quantile.
-Expansion of the squared distances gives the displayed profile because
-\(\omega_{\mathrm R}(nq-s)=\lambda\). A maximum of affine functions is
-convex; adding \(2\lambda m^2\) gives strong convexity. If \(s\le0\),
-zero is a minimizing squared half-width and the midpoint follows from a
-scalar quadratic.
-\end{proof}
-
-At a distinct-root joint subgradient-stationary point, the penalized equations
-give fractional allocations satisfying
+Subtracting gives \(\sum_i s_i=\lambda/\omega_{\mathrm R}\). Setting
+\(w_i=q-s_i\) and substituting back into either equation gives
+fractional allocations satisfying
 \[
 \sum_iw_i=nq-\lambda/\omega_{\mathrm R},\qquad
 \sum_iw_i y_i=nq(\overline y+\delta)
 -\frac{\lambda}{\omega_{\mathrm R}}(a+b).
 \]
 These equations explain the prior contributions to empirical balance.
-They also supply a global optimality check for this intercept criterion:
-\(\rho_q(e_i)\ge(q-w_i)e_i\) is exact at a compatible stationary pair
-\((a_0,b_0)\), and substitution gives
-\[
-J(a,b)\ge J(a_0,b_0)+\frac{\lambda}{2}
-\{(a+b)-(a_0+b_0)\}^2.
-\]
-This argument requires distinct roots and a joint compatible subgradient
-selection. At collapsed roots, the squared-radius boundary condition must
-also be checked. Unequal prior precisions and regression require separate
-arguments.
+They reduce to the unpenalized identities as \(\lambda\) decreases to zero.
+An empirical balance equation or a stable numerical sequence alone does not
+establish a global posterior mode. The reported results describe the specified
+finite-iteration ECM calculation with \(\omega_{\mathrm R}=1\),
+\(\lambda=10^{-4}\), and zero prior means; numerical stopping diagnostics
+are recorded separately from interval content and width.
 
-\paragraph{Profile calculation and numerical checks.}
-For each fixed \((q,\delta)\), a reference calculation minimizes the scalar
-midpoint profile and chooses the lower minimizing squared radius at a tie.
-The endpoints are \(m-\sqrt t,m+\sqrt t\). A lower objective bound from the
-convex profile supplies a relative objective-gap check, with tolerance
-\(10^{-8}\) for that reference calculation. The convex profile is used to
-assess the numerical accuracy of ECM. A dedicated numerical study found that
-stable ECM iterates can have a positive
-objective gap, including after longer runs. A stopping flag alone therefore
-does not establish a global mode. The empirical results describe the specified
-finite-iteration algorithm with \(\omega_{\mathrm R}=1\),
-\(\lambda=10^{-4}\), and zero prior means.
+\input{tables/mti_gibbs_comparison_supplement.tex}
+
+\subsection{Fitted-Content and Tilt Selection}
+\label{sec:supp-mti-candidate-selection}
+
+The fitted content \(q\) and tilt \(\delta\) index fixed-target generalized
+posteriors. ECM fits each candidate pair, and the DP content check determines
+eligibility. The procedure selects the shortest eligible candidate on each
+training sample. The grid construction and DP probability threshold are fixed
+before independent validation replications.
 
 The ECM content grid uses offsets
 \(-0.04\), \(-0.02\), \(-0.01\), \(-0.005\), \(-0.0025\),
@@ -1214,19 +1239,19 @@ The MTI comparator uses a model-based content-probability check during calibrati
 For a fixed closed interval \(I=[l,u]\), let \(N_n(I)=\sum_{i=1}^n\ind(Y_i\in I)\).
 Under the direct Dirichlet-process model
 \[
-F\sim\mathrm{DP}(a,H),\qquad
+F\sim\mathrm{DP}(\alpha_0,H),\qquad
 Y_i\mid F\stackrel{\mathrm{iid}}{\sim}F,
 \]
-with fixed \(a>0\) and fixed base distribution \(H\), conjugacy gives an exact
+with fixed \(\alpha_0>0\) and fixed base distribution \(H\), conjugacy gives an exact
 posterior law for the interval content. The reported calculations use
-\(a=1\) and \(H=\Normal(0,4^2)\), fixed on the response scale used for fitting.
+\(\alpha_0=1\) and \(H=\Normal(0,4^2)\), fixed on the response scale used for fitting.
 
 \begin{proposition}[Direct DP fixed-interval content law]
 \label{prop:supp-dp-content-law}
 For fixed \(I=[l,u]\),
 \[
 F(I)\mid D_n\sim
-\mathrm{Beta}\{aH(I)+N_n(I),a(1-H(I))+n-N_n(I)\}.
+\mathrm{Beta}\{\alpha_0 H(I)+N_n(I),\alpha_0(1-H(I))+n-N_n(I)\}.
 \]
 Consequently \(p_n(I;c)=\Pr\{F(I)\ge c\mid D_n\}\) is available from a Beta
 survival probability.
@@ -1235,13 +1260,13 @@ survival probability.
 \begin{proof}
 Dirichlet-process conjugacy gives
 \[
-F\mid D_n\sim \mathrm{DP}(a+n,H_n),\qquad
-H_n=\frac{aH+\sum_{i=1}^n\delta_{Y_i}}{a+n}.
+F\mid D_n\sim \mathrm{DP}(\alpha_0+n,H_n),\qquad
+H_n=\frac{\alpha_0 H+\sum_{i=1}^n\delta_{Y_i}}{\alpha_0+n}.
 \]
 For the partition \((I,I^c)\), the finite-dimensional distribution of a
 Dirichlet process is Dirichlet with parameters
-\((a+n)H_n(I)=aH(I)+N_n(I)\) and
-\((a+n)H_n(I^c)=a\{1-H(I)\}+n-N_n(I)\). The first coordinate is the stated
+\((\alpha_0+n)H_n(I)=\alpha_0 H(I)+N_n(I)\) and
+\((\alpha_0+n)H_n(I^c)=\alpha_0\{1-H(I)\}+n-N_n(I)\). The first coordinate is the stated
 Beta distribution.
 \end{proof}
 

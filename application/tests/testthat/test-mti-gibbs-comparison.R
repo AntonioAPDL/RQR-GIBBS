@@ -32,6 +32,68 @@ testthat::test_that("the pseudo-AL mixture recovers the check-loss factor", {
   }
 })
 
+testthat::test_that("both root conditionals preserve conjugacy at zero and nonzero tilt", {
+  y <- c(-1,.2,1,3); v <- c(.4,.5,.3,.8)
+  omega <- 1.3; lambda <- .01; sigma <- 1/omega
+  for(q in c(.5,.93,.999))for(delta in c(-.2,0,.2))for(other in c(-.7,2)) {
+    xi <- (1-2*q)/(q*(1-q)); phi <- 2/(q*(1-q))
+    d <- y-other; w <- 1/(phi*sigma*v)
+    Q <- lambda+sum(w*d^2)
+    H <- sum(w*d*(y*d-xi*v))+omega*length(y)*q*delta
+    kernel <- function(a,b)sum(dnorm((y-a)*(y-b),xi*v,sqrt(phi*sigma*v),log=TRUE))+
+      omega*length(y)*q*delta*(a+b)-lambda*(a^2+b^2)/2
+    for(value in c(-2,-.1,.8)) {
+      quadratic <- H*value-Q*value^2/2
+      testthat::expect_equal(kernel(value,other)-kernel(0,other),quadratic,tolerance=1e-10)
+      testthat::expect_equal(kernel(other,value)-kernel(other,0),quadratic,tolerance=1e-10)
+    }
+    testthat::expect_gt(Q,0)
+  }
+})
+
+testthat::test_that("the displayed GIG and Gamma laws match the augmented scale density", {
+  sigma <- .7
+  for(q in c(.5,.9,.99))for(e in c(-1,0,.2,2)) {
+    xi <- (1-2*q)/(q*(1-q)); phi <- 2/(q*(1-q))
+    A <- 1/(2*sigma*q*(1-q)); B <- q*(1-q)*e^2/(2*sigma)
+    kernel <- function(v)dnorm(e,xi*v,sqrt(phi*sigma*v),log=TRUE)+dexp(v,1/sigma,log=TRUE)
+    gig <- function(v)-log(v)/2-(A*v+B/v)/2
+    for(v in c(.1,.4,1.5)) {
+      testthat::expect_equal(kernel(v)-kernel(1),gig(v)-gig(1),tolerance=1e-10)
+      if(e==0)testthat::expect_equal(kernel(v)-kernel(1),
+        dgamma(v,shape=.5,rate=A/2,log=TRUE)-dgamma(1,shape=.5,rate=A/2,log=TRUE),
+        tolerance=1e-10)
+    }
+  }
+})
+
+testthat::test_that("the ECM root solves maximize the expected complete-data quadratic", {
+  y <- c(-1,.2,1,3); old_a <- -.5; old_b <- 2
+  omega <- 1.3; lambda <- .01; sigma <- 1/omega
+  for(q in c(.5,.93,.99))for(delta in c(-.2,0,.2)) {
+    xi <- (1-2*q)/(q*(1-q)); phi <- 2/(q*(1-q))
+    tau <- 1/(q*(1-q)*abs((y-old_a)*(y-old_b)))
+    expected <- function(a,b) {
+      e <- (y-a)*(y-b)
+      -sum(tau*e^2-2*xi*e)/(2*phi*sigma)+
+        omega*length(y)*q*delta*(a+b)-lambda*(a^2+b^2)/2
+    }
+    solve_root <- function(other) {
+      d <- y-other
+      Q <- lambda+sum(tau*d^2)/(phi*sigma)
+      H <- sum(d*(tau*y*d-xi))/(phi*sigma)+omega*length(y)*q*delta
+      H/Q
+    }
+    a <- solve_root(old_b); b <- solve_root(a)
+    testthat::expect_gte(expected(a,old_b),expected(old_a,old_b)-1e-10)
+    testthat::expect_gte(expected(a,b),expected(a,old_b)-1e-10)
+    for(shift in c(-.1,.1)) {
+      testthat::expect_gte(expected(a,old_b),expected(a+shift,old_b)-1e-10)
+      testthat::expect_gte(expected(a,b),expected(a,b+shift)-1e-10)
+    }
+  }
+})
+
 testthat::test_that("application sample recovery preserves training membership", {
   context <- list(observed=data.frame(.analysis_row=1:4,x=c(3,6,9,12)),
     membership=data.frame(split_scheme="random",split_id=1,

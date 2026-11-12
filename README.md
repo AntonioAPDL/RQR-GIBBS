@@ -18,8 +18,9 @@ attribution to the original residual-product criterion of Pouplin et al.
 ## Repository Contents
 
 - `main.tex`: main tolerance-interval article.
-- `rqr-gibbs-supplement.tex`: proofs, Gibbs and ECM details, a numerical profile reference, direct DP
-  content-probability checks, feasibility thresholds, and validation tables.
+- `rqr-gibbs-supplement.tex`: population proofs, generalized-posterior propriety,
+  complete Gibbs conditionals, ECM derivations, direct DP content-probability
+  checks, feasibility thresholds, and validation tables.
 - `refs.bib`: bibliography.
 - `figures/` and `tables/`: figure and table generators plus tracked manuscript
   inputs.
@@ -36,6 +37,13 @@ caches, and local literature PDFs are excluded from version control.
 MPI and MTI are loss-defined interval targets. Endpoint summaries from a
 generalized posterior describe uncertainty for the specified interval-root
 functional. They are not posterior predictive response draws.
+
+Under proper Gaussian root priors, normal-exponential augmentation gives
+conditionally conjugate Gaussian root and GIG scale updates for MPI and
+fixed-tilt MTI. Gibbs sampling targets that fixed-target generalized posterior;
+ECM uses the same augmentation for mode estimation. Fitted content and tilt are
+selected separately. The manuscripts include empty Gibbs-comparison insertion
+files, with no uncomputed numerical results or agreement claims.
 
 MTI-ECM is the proposed tolerance procedure reported in the article. It searches
 finite-iteration endpoint estimates under a generalized-Bayes criterion over fitted content and tilt,

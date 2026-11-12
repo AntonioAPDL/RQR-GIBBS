@@ -123,6 +123,7 @@ required <- list(
     "The check loss therefore acts on the scalar product residual",
     "learning rate controls the strength of the loss update rather than the population content",
     "loss-based generalized posterior for a fixed interval target",
+    "conditionally conjugate Gibbs updates",
     "response prediction would require a separate response-distribution model",
     "content-attainment rate",
     "known simulation distribution",
@@ -147,13 +148,36 @@ required <- list(
     "The direct DP check determines eligible MTI candidates",
     "Gibbs Conditional Distributions",
     "ECM Conditional Maximizations",
-    "Profile calculation and numerical checks",
+    "Generalized Posterior and Propriety",
+    "Proper fixed-target generalized posterior",
+    "Posterior Modes and Empirical Balance",
     "216,000",
     "Tolerance-Validation Protocol and Feasibility",
     "Full-range feasibility thresholds",
     "The validation evidence is confined"
   )
 )
+
+removed_solver_material <- c("Convex midpoint profile", "sec:supp-profiled-intercept",
+  "prop:supp-convex-intercept-profile", "Profile calculation and numerical checks")
+for (file in manuscripts) {
+  for (pattern in removed_solver_material) {
+    if (any(grepl(pattern, lines[[file]], fixed = TRUE))) {
+      failures <- c(failures, sprintf("%s: removed numerical solver material: %s", file, pattern))
+    }
+  }
+}
+for (suffix in c("main", "supplement")) {
+  file <- paste0("tables/mti_gibbs_comparison_", suffix, ".tex")
+  path <- file.path(repo_root, file)
+  if (!file.exists(path) || any(nzchar(trimws(readLines(path, warn = FALSE))))) {
+    failures <- c(failures, paste(file, "must remain an empty inclusion point until results are assessed"))
+  }
+  manuscript <- if (suffix == "main") "main.tex" else "rqr-gibbs-supplement.tex"
+  if (!any(grepl(paste0("\\input{", file, "}"), lines[[manuscript]], fixed = TRUE))) {
+    failures <- c(failures, paste(manuscript, "is missing its Gibbs comparison inclusion"))
+  }
+}
 
 for (file in manuscripts) {
   text <- gsub("[[:space:]]+", " ", paste(lines[[file]], collapse = " "))

@@ -74,11 +74,13 @@ retained-mean balance. The zero-tilt member is the mean-preserving interval
 tilts move through admissible contiguous windows, including
 distribution-specific central and shortest intervals.
 
-For tolerance inference, we develop a calibrated MTI procedure that searches
-fitted content and tilt over a prespecified grid. A loss-based generalized
-posterior supports Gibbs sampling and expectation/conditional maximization
-(ECM) for fixed-target endpoint estimation. The reported comparisons use ECM
-estimates under proper Gaussian root priors.
+We construct a loss-based generalized posterior for interval roots. A
+normal--exponential augmentation gives conditionally conjugate Gaussian root
+updates and generalized-inverse-Gaussian scale updates for both MPI and
+fixed-tilt MTI. Gibbs sampling describes fixed-target posterior uncertainty;
+expectation/conditional maximization (ECM) gives deterministic mode estimates.
+For tolerance inference, a calibrated procedure searches fitted content and
+tilt over a prespecified grid using ECM estimates under proper Gaussian priors.
 A Dirichlet-process posterior content check determines eligible candidates. The
 shortest eligible fitted interval is reported. Calibration settings are fixed
 before independent validation; their repeated-sampling performance is assessed
@@ -118,6 +120,14 @@ whose retained mean equals the population mean. We call this target the
 mean-preserving interval (MPI). The terminology is descriptive; the original
 residual-product construction is due to Pouplin et al.
 
+Their approach estimates endpoints by empirical loss minimization. Here we
+use this loss to update a prior on interval roots through generalized Bayes
+\citep{BissiriHolmesWalker2016GeneralBayes}. A normal--exponential augmentation
+gives Gaussian full conditional distributions for the roots and
+generalized-inverse-Gaussian full conditional distributions for latent scales
+\citep{KozumiKobayashi2011Gibbs}. These distributions give a Gibbs sampler
+for interval-root uncertainty and an ECM algorithm for mode estimation.
+
 The same score structure gives a placement family. The mean-tilted interval
 (MTI) loss keeps the MPI content score and replaces retained-mean equality by a
 fixed retained-mean offset \(\delta\). MPI is the \(\delta=0\) member of the
@@ -126,6 +136,10 @@ equal-tailed and shortest-contiguous intervals correspond to
 distribution-specific tilts. The tilt is therefore part of the target
 specification, or it is selected by a separate calibration rule before empirical
 claims are made.
+The linear tilt preserves the conditional conjugacy of the augmented
+calculation under proper Gaussian root priors. Thus MPI and fixed-tilt MTI
+share the same Gibbs and ECM construction; selecting the tilt changes the
+interval target while retaining this computational form.
 
 This target geometry suggests a tolerance procedure that searches over fitted
 content and interval placement. For each candidate content \(q>c\) and tilt
@@ -153,8 +167,10 @@ fixed-content geometry, intercept-only computation, and iid tolerance validation
 The contributions are as follows. First, the residual-product loss is shown to
 target MPI, and MTI is shown to generalize MPI by indexing admissible contiguous
 fixed-content windows through retained-mean tilt. Second, this geometry is used
-to construct a calibrated MTI tolerance procedure that searches over fitted
-content and tilt, with Gibbs and ECM computations for each fixed target.
+to develop a generalized posterior with conditionally conjugate Gibbs updates
+and corresponding ECM calculations for MPI and fixed-tilt MTI. The tolerance
+procedure then searches over fitted content and tilt using these endpoint fits
+and a separate DP content check.
 Third, an independent validation study compares MTI-ECM,
 Young--Mathew interpolation, and Wilks
 intervals across feasible sample-size/content cells and a distributional panel
@@ -663,72 +679,109 @@ a conservative high-probability population-content bound
 the explicit display.
 
 \paragraph{Fixed-target generalized-Bayes computation.}
-For a fixed fitted content \(q\), tilt \(\delta\), and learning rate
-\(\omega_{\mathrm R}\), an MTI generalized posterior updates a prior over
-interval roots through the cumulative loss,
-\[
-\pi_{q,\delta}(\theta\mid D_n)
-\propto
-\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(\theta)\}\pi_0(\theta).
-\]
-In the intercept-only tolerance validation, \(\theta=(a,b)\) and ordered
-endpoints are obtained by sorting the two raw roots. This distribution is a
+For a fixed fitted content \(q\in(0,1)\), tilt \(\delta\), and learning rate
+\(\omega_{\mathrm R}>0\), let \(D_n=(y_1,\ldots,y_n)\) and give the raw
+roots independent \(\Normal(0,\lambda^{-1})\) priors, with \(\lambda>0\).
+Put \(e_i=(y_i-a)(y_i-b)\) and
+\(\rho_q(e)=e\{q-\ind(e<0)\}\). The cumulative loss and generalized
+posterior are
+\begin{align}
+L_{q,\delta,n}(a,b)
+&=\sum_{i=1}^n\left[\rho_q(e_i)-q\delta(a+b-2y_i)\right],
+\label{eq:mti-computational-loss}\\
+\pi_{q,\delta}(a,b\mid D_n)
+&=\frac{\exp\{-\omega_{\mathrm R}L_{q,\delta,n}(a,b)\}
+\Normal(a\mid0,\lambda^{-1})\Normal(b\mid0,\lambda^{-1})}
+{Z_{q,\delta}(D_n)}.
+\label{eq:mti-generalized-posterior}
+\end{align}
+Here \(Z_{q,\delta}(D_n)\) is the finite, positive normalizing constant.
+Propriety follows because \(\rho_q\ge0\) and a Gaussian prior has finite
+exponential moments for the linear tilt. Ordered endpoints are obtained by
+sorting the raw roots. This distribution is a
 loss-based generalized posterior for a fixed interval target. Response
 prediction would require a separate response-distribution model. The tilt
 \(\delta\) is fixed within each candidate fit; the selection rule
 described below chooses among these fits.
 
-For the intercept-only calculation, the two raw roots have independent
-\(\Normal(0,\lambda^{-1})\) priors. The learning rate controls the weight of
-the cumulative loss relative to these priors
-\citep{BissiriHolmesWalker2016GeneralBayes}. We use
-\(\omega_{\mathrm R}=1\) and \(\lambda=10^{-4}\).
-A normal--exponential representation of the product-residual check loss gives
-Gaussian conditional root updates and generalized-inverse-Gaussian latent-scale
-updates \citep{KozumiKobayashi2011Gibbs}. Gibbs sampling alternates these
-conditional draws. ECM replaces latent inverse scales by their conditional
-expectations and alternately maximizes over the two roots
-\citep{DempsterLairdRubin1977EM,MengRubin1993ECM}.
+The learning rate controls the weight of the cumulative loss relative to the
+priors \citep{BissiriHolmesWalker2016GeneralBayes}. The reported calculation
+uses \(\omega_{\mathrm R}=1\) and \(\lambda=10^{-4}\). The negative log
+posterior, up to a constant, is
+\(J(a,b)=\omega_{\mathrm R}L_{q,\delta,n}(a,b)+\lambda(a^2+b^2)/2\).
 
-\paragraph{Gibbs sampling and ECM.}
-Let \(e_i=(y_i-a)(y_i-b)\),
-\(\sigma_{\mathrm R}=\omega_{\mathrm R}^{-1}\),
+\paragraph{Augmentation and Gibbs sampling.}
+Let \(\sigma_{\mathrm R}=\omega_{\mathrm R}^{-1}\),
 \(\xi_q=(1-2q)/\{q(1-q)\}\), and
-\(\phi_q=2/\{q(1-q)\}\). The augmentation uses the kernel
-\[
-\prod_{i=1}^n
+\(\phi_q=2/\{q(1-q)\}\). The augmented posterior is
+\begin{align}
+\pi_{q,\delta}(a,b,v\mid D_n)\propto{}&
+\Normal(a\mid0,\lambda^{-1})\Normal(b\mid0,\lambda^{-1})
+\exp\{\omega_{\mathrm R}nq\delta(a+b)\}\notag\\
+&\times\prod_{i=1}^n
 \Normal(e_i\mid\xi_qv_i,\phi_q\sigma_{\mathrm R}v_i)
-\Exp(v_i\mid\mathrm{rate}=1/\sigma_{\mathrm R})
-\exp\{\omega_{\mathrm R}nq\delta(a+b)\}\pi_0(a,b).
-\]
+\Exp(v_i\mid\mathrm{rate}=1/\sigma_{\mathrm R}),
+\label{eq:mti-augmented-posterior}
+\end{align}
+where \(v=(v_1,\ldots,v_n)\) and each \(v_i>0\).
 Integrating out the positive scales \(v_i\) recovers the fixed-target
-generalized posterior, up to a factor independent of the roots.
-Holding \(b\) fixed, put \(d_i=y_i-b\),
-\(r_i=y_i d_i-\xi_qv_i\), and
-\(w_i=(\phi_q\sigma_{\mathrm R}v_i)^{-1}\). Then
+generalized posterior \citep{KozumiKobayashi2011Gibbs}.
+Put \(d_{ai}=y_i-b\), \(d_{bi}=y_i-a\), and
+\(w_i=(\phi_q\sigma_{\mathrm R}v_i)^{-1}\). For \(j\in\{a,b\}\), define
 \[
-a\mid b,v,D_n\sim\Normal(H_a/Q_a,Q_a^{-1}),\qquad
-Q_a=\lambda+\sum_i w_i d_i^2,\quad
-H_a=\sum_i w_i d_i r_i+\omega_{\mathrm R}nq\delta.
+Q_j=\lambda+\sum_iw_i d_{ji}^2,\qquad
+H_j=\sum_iw_i d_{ji}(y_i d_{ji}-\xi_qv_i)
++\omega_{\mathrm R}nq\delta.
 \]
-Exchanging the root labels gives the update for \(b\). Each Gibbs cycle
-draws the latent scales and then the two roots. Sorting each retained root pair
-gives draws of lower and upper endpoints conditional on \((q,\delta)\).
-These draws quantify uncertainty in the fixed interval target.
+The full conditional distributions are
+\begin{align}
+a\mid b,v,D_n&\sim\Normal(H_a/Q_a,Q_a^{-1}),\qquad
+b\mid a,v,D_n\sim\Normal(H_b/Q_b,Q_b^{-1}),
+\label{eq:mti-root-conditionals}\\
+v_i\mid a,b,D_n
+&\sim\GIG\left(\frac12,
+\frac{1}{2\sigma_{\mathrm R}q(1-q)},
+\frac{q(1-q)e_i^2}{2\sigma_{\mathrm R}}\right).
+\label{eq:mti-scale-conditional}
+\end{align}
+Our \(\GIG(\nu,A,B)\) convention has density proportional to
+\(v^{\nu-1}\exp\{-(Av+B/v)/2\}\). At \(e_i=0\), the scale conditional
+is Gamma with shape \(1/2\) and rate \(1/\{4\sigma_{\mathrm R}q(1-q)\}\).
+A Gibbs cycle draws the scales, then \(a\), then \(b\) conditional on
+the updated \(a\). Sorting each retained pair gives endpoint and width draws.
+The fixed tilt changes the Gaussian conditional means through \(H_j\)
+without changing \(Q_j\). Conditional conjugacy therefore holds for MPI
+at \(\delta=0\) and for fixed-tilt MTI. The joint posterior couples the two
+roots and is generally non-Gaussian.
 
-For ECM, the E-step uses
-\(E(v_i^{-1}\mid a,b,D_n)=\{q(1-q)|e_i|\}^{-1}\) when \(e_i\ne0\).
-The two conditional maximizations are scalar ridge solves with these weights.
+\paragraph{ECM mode estimation.}
+ECM uses the same augmented posterior and replaces random latent inverse
+scales by their conditional expectations
+\citep{DempsterLairdRubin1977EM,MengRubin1993ECM}. For nonzero product residuals,
+the E-step gives \(\tau_i=\{q(1-q)|e_i|\}^{-1}\). Each conditional
+maximization replaces the corresponding root by
+\(\widetilde H_j/\widetilde Q_j\), where
+\[
+\widetilde Q_j=\lambda+
+\frac{\sum_i\tau_i d_{ji}^2}{\phi_q\sigma_{\mathrm R}},\qquad
+\widetilde H_j=
+\frac{\sum_i d_{ji}(\tau_i y_i d_{ji}-\xi_q)}{\phi_q\sigma_{\mathrm R}}
++\omega_{\mathrm R}nq\delta.
+\]
+The second maximization uses the updated first root while retaining the
+same E-step weights. Gibbs draws describe fixed-target posterior uncertainty;
+ECM estimates a mode. Posterior means and medians need not equal that mode.
 The implementation uses a residual-product floor near zero and checks the
 original penalized objective after each cycle, with backtracking as needed.
 The reported ECM fits use at most 100 cycles, a stationarity tolerance of
 \(10^{-3}\), and a single deterministic initialization per candidate.
 They are finite-iteration mode estimates; their stopping flags and numerical
 accuracy are assessed separately from interval content.
-The supplement gives the latent-scale law, both ECM equations, and a convex
-profile that provides an independent numerical reference for the same
-fixed-target objective. Regression and dynamic extensions are developed in
-the companion paper.
+The supplement gives the complete derivation, propriety proof, and both
+algorithms. Regression and dynamic extensions are developed in the companion
+paper.
+
+\input{tables/mti_gibbs_comparison_main.tex}
 
 \paragraph{Direct content-probability check.}
 MTI uses a response-distribution posterior probability to check the content
@@ -1154,9 +1207,16 @@ specific to the calibrated rule and the simulation design. The finite grid,
 finite numerical calculation, and empirical calibration limit any broader
 optimality or distribution-free interpretation. The ECM stopping flags and
 independent objective checks also preclude treating every returned fit as a
-global posterior mode. A Gibbs--ECM comparison should hold content, tilt,
-learning rate, and priors fixed while assessing posterior summaries and
-chain mixing separately from the tolerance selection rule.
+global posterior mode.
+
+The generalized-Bayes construction extends empirical residual-product
+minimization to a distribution over interval roots. Proper Gaussian priors
+and normal--exponential augmentation give conditionally conjugate Gibbs
+updates for MPI and fixed-tilt MTI; ECM uses the same augmented criterion
+for mode estimation. The tilt controls the interval functional, and the
+content--tilt search seeks the shortest eligible fitted candidate. Posterior
+uncertainty at a fixed target and the repeated-sampling performance of this
+selection rule answer different inferential questions.
 
 The separation between target, computation, and tolerance guarantees is essential. MTI
 identifies which fixed-content interval is being estimated. A generalized
