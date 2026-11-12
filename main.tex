@@ -770,8 +770,13 @@ computes endpoint estimates
 in Section~\ref{sec:static-theory-statements}. A direct DP posterior for \(F\)
 then gives
 \[
-P_j=\Pr\{F(\widehat b_j)-F(\widehat a_j)\ge c\mid D_n\}.
+P_j=\Pr\{F(\widehat I_j)\ge c\mid D_n\}.
 \]
+Here \(F(I)\) denotes the probability assigned to the closed interval
+\(I\). The DP posterior can put positive mass at observed endpoints, so its
+content check uses closed-interval observation counts. For the continuous
+population laws in the simulation study, interval content remains
+\(F(U)-F(L)\).
 The selected interval is
 \[
 \widehat T_n=\widehat I_{\widehat j},\qquad
