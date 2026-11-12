@@ -205,3 +205,16 @@ testthat::test_that("full approval binds every identity and completed diagnostic
   testthat::expect_error(gate(NULL,NULL,NULL,out,data.frame(job=1:4)),"not passed")
   testthat::expect_error(mgc_runtime(paste(rep("0",40),collapse="")),"runtime")
 })
+
+testthat::test_that("the frozen source ignores a shared cache symlink", {
+  repo <- tempfile("gibbs-ignore-");dir.create(file.path(repo,"application"),recursive=TRUE)
+  target <- tempfile("gibbs-cache-");dir.create(target)
+  on.exit(unlink(c(repo,target),recursive=TRUE),add=TRUE)
+  file.copy(file.path(root,".gitignore"),file.path(repo,".gitignore"))
+  status <- system2("git",c("-C",shQuote(repo),"init","--quiet"),stdout=TRUE,stderr=TRUE)
+  testthat::expect_null(attr(status,"status"))
+  testthat::expect_true(file.symlink(target,file.path(repo,"application","cache")))
+  ignored <- system2("git",c("--no-optional-locks","-C",shQuote(repo),
+    "check-ignore","application/cache"),stdout=TRUE,stderr=TRUE)
+  testthat::expect_identical(ignored,"application/cache")
+})

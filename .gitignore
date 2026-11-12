@@ -41,7 +41,8 @@ literature/pdf_manifest.csv
 
 # Local-only application outputs.
 application/data_local/
-application/cache/
+# Match both a cache directory and a shared-runtime cache symlink.
+/application/cache
 application/runs/
 application/logs/
 application/outputs/
