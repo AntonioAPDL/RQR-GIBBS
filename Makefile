@@ -877,6 +877,16 @@ preflight-mti-gibbs-practical:
 health-mti-gibbs-practical:
 	$(R) application/scripts/108_assess_mti_gibbs_practical.R --mode=health --output-dir=$(GIBBS_OUTPUT_DIR)
 
+.PHONY: test-mti-gibbs-review review-mti-gibbs verify-mti-gibbs-review
+test-mti-gibbs-review:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-review.R
+
+review-mti-gibbs:
+	$(R) application/scripts/110_review_mti_gibbs.R --mode=analyze
+
+verify-mti-gibbs-review:
+	$(R) application/scripts/110_review_mti_gibbs.R --mode=verify
+
 launch-mti-gibbs:
 	bash application/scripts/107_launch_mti_gibbs.sh --confirm-article-commit=$(GIBBS_CONFIRM_COMMIT) --workers=50 --allow-full=true
 

@@ -1,0 +1,15 @@
+{
+  "study_id": "mti_gibbs_review_20261112",
+  "practical_config": "application/config/mti_gibbs_practical_20261112.json",
+  "practical_commit": "877366f36ba1490f6e75a8f5bac9471a75e41eec",
+  "practical_directory": ".codex_work/mti_gibbs_practical_launch_877366f36ba1490f6e75a8f5bac9471a75e41eec/application/outputs/mti_gibbs_practical_20261112",
+  "evidence_dir": "figures/data/mti_gibbs_review_20261112",
+  "output_dir": "application/outputs/mti_gibbs_review_20261112",
+  "workers": 12,
+  "objective_checks_per_chain": 24,
+  "tighter_prior_variance_factors": [1, 0.5, 0.1],
+  "minimum_importance_ess": 400,
+  "example_case_ids": ["sim_54_1", "sim_38_503", "sim_45_394", "app_fct_tensile_random_1"],
+  "new_tolerance_guarantee": false,
+  "replace_tolerance_results": false
+}
