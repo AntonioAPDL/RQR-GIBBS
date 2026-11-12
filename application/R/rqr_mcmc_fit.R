@@ -33,7 +33,8 @@
 #'   runtime-package attestation information. RHS fits require the executing
 #'   exdqlm namespace to match the pinned source for promotion eligibility.
 #' @param mcmc_control Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
-#'   `verbose`, `progress_every`, `precision_beta`, `store_latent_draws`, and
+#'   `verbose`, `progress_every`, `precision_beta`, `store_latent_draws`,
+#'   `store_warmup_roots` (optional root traces during burn-in), and
 #'   optional `root_label_control`, `kernel_repetitions`, and
 #'   `replica_exchange`. The latter is an opt-in likelihood-tempered,
 #'   alternating-adjacent replica-exchange kernel for fixed-rate ridge RQR;
@@ -143,6 +144,10 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     mcmc_control$replica_exchange %||% list()
   )
   store_latent_draws <- isTRUE(mcmc_control$store_latent_draws %||% FALSE)
+  store_warmup_roots <- isTRUE(mcmc_control$store_warmup_roots %||% FALSE)
+  if (store_warmup_roots && isTRUE(replica_exchange$enabled)) {
+    stop("Warmup root storage requires the ordinary Gibbs sampler.", call. = FALSE)
+  }
   if (isTRUE(replica_exchange$enabled) &&
       (!identical(learning_rate_mode, "fixed_rate") ||
         !identical(beta_prior_type, "ridge") ||
@@ -192,6 +197,8 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
   colnames(beta1_draws) <- colnames(X)
   colnames(beta2_draws) <- colnames(X)
   latent_v_draws <- if (store_latent_draws) matrix(NA_real_, n_keep, n) else NULL
+  warmup_root1 <- if (store_warmup_roots) matrix(NA_real_, n_burn, p) else NULL
+  warmup_root2 <- if (store_warmup_roots) matrix(NA_real_, n_burn, p) else NULL
   lambda_draws <- numeric(n_keep)
   loss_trace <- numeric(n_burn + n_keep * thin)
   mean_tilted_target_loss_trace <- numeric(n_burn + n_keep * thin)
@@ -339,6 +346,10 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
       }
     }
     root_swap_trace[iter] <- root_swap_count_trace[iter] > 0L
+    if (store_warmup_roots && iter <= n_burn) {
+      warmup_root1[iter, ] <- beta1
+      warmup_root2[iter, ] <- beta2
+    }
 
     eta1 <- drop(X %*% beta1)
     eta2 <- drop(X %*% beta2)
@@ -821,6 +832,8 @@ rqr_mcmc_fit <- function(y, X, coverage_level, learning_rate = 1,
     samp.latent_v = latent_v_draws,
     summary = summary,
     diagnostics = list(
+      warmup_root1 = warmup_root1,
+      warmup_root2 = warmup_root2,
       loss_trace = loss_trace,
       ordinary_product_check_loss_trace = loss_trace,
       mean_tilted_target_loss_trace = mean_tilted_target_loss_trace,

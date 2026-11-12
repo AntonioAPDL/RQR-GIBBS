@@ -55,7 +55,9 @@ archived ECM study; its inexpensive comparators are recomputed on exactly the
 same samples. Stopping flags are distinct from interval return and population
 content attainment. See
 [the reproducibility description](docs/reproducibility/mti_ecm_recovery_20261111.md).
-No new Gibbs study is launched before user confirmation of the revised article.
+The user has explicitly authorized the staged fixed-target Gibbs comparison.
+Each launch still requires the exact committed article-source SHA; authorization
+does not establish completed Gibbs results or permit automatic article replacement.
 
 The scan reference (TCSP in the code) is retained for constructing the
 initial fitted-content grid. It is
@@ -63,6 +65,52 @@ not a reported comparator. Scan algorithms, original simulation configurations,
 and historical analysis outputs remain available for reproducibility. The
 selected MTI interval has finite-panel empirical tolerance validation; a
 distribution-free theorem for this selection rule remains open.
+
+## Authorized Gibbs Comparison
+
+`application/config/mti_gibbs_ecm_comparison_20261111.json` specifies four
+dispersed chains with 2000 burn-in cycles and 4000 retained draws per chain for
+the diagnostic and full stages. Diagnostics combine base cases with
+deterministic maximum-q and maximum-absolute-tilt stress samples in each
+simulation case. The measured diagnostic design contains 174 datasets:
+82 base cases plus 92 additional deterministic stress cases, giving
+696 independent chains. These are design counts, not completed Gibbs results.
+Short timing benchmarks use eligible worker counts from 32, 40, and 50 before
+selecting the diagnostic worker count; they are not convergence evidence.
+
+Script 106 creates or reuses the detached exact-commit launch worktree under
+`.codex_work/`, links its cache to the RQR-owned ignored cache, and calls the
+existing `04_prepare_primary_runtime.R` builder. That builder archives, builds,
+and installs the package under `application/cache/mti_gibbs_attested/<commit>/`
+with a full v5 runtime attestation. The compatibility path
+`application/cache/mti_gibbs_runtime_<commit>/library` is a symlink to that
+library; `attestation_path.txt` beside it points to the attestation. The sampler
+receives the attested source root, commit, and attestation, and accepted fits
+must have `reproducibility_eligible = TRUE` as well as numerical eligibility.
+
+The standalone 107 wrapper reuses the frozen worktree and shared cache, sets
+thread limits before R starts, and runs a detached campaign controller.
+From the clean committed checkout, set `commit` to the explicitly approved
+40-character article-source SHA:
+
+```bash
+commit=CONFIRMED_40_CHARACTER_ARTICLE_COMMIT
+make prepare-mti-gibbs-runtime
+bash application/scripts/107_launch_mti_gibbs.sh --dry-run \
+  --confirm-article-commit="$commit" --workers=50 --allow-full=true
+# Launch only when ready; omitting --allow-full=true stops after diagnostics.
+bash application/scripts/107_launch_mti_gibbs.sh \
+  --confirm-article-commit="$commit" --workers=50 --allow-full=true
+```
+
+Full sampling requires a complete, passing diagnostic assessment with matching
+source, settings, design, inputs, and runtime identity. Compact full-stage files
+retain all ordered-endpoint draws and objective summaries; diagnostic files
+also retain warmup roots, loss and objective traces, and the sampler's last
+state. Validated completed chains are reused on resumption. External source
+checkouts are not compiled, installed, or loaded, and no article inputs are
+replaced automatically. See the
+[launch, assessment, and resumption instructions](docs/reproducibility/mti_ecm_recovery_20261111.md#gibbs-study-authorized-staged-launch).
 
 ## Build and Checks
 

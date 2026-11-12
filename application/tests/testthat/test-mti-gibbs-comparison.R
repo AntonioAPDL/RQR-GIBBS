@@ -104,24 +104,38 @@ testthat::test_that("application sample recovery preserves training membership",
   testthat::expect_error(mgc_sample(task,context),"incomplete")
 })
 
-testthat::test_that("assessment and health use completed independent-chain files", {
-  testthat::skip_if_not_installed("posterior")
-  out <- tempfile("gibbs-assessment-");dir.create(file.path(out,"chains"),recursive=TRUE)
-  on.exit(unlink(out,recursive=TRUE),add=TRUE)
-  cfg <- list(n_mcmc=128L,chains=4L,rhat_limit=1.2,minimum_bulk_ess=10,minimum_tail_ess=10)
+mgc_fixture <- function() {
+  out <- tempfile("gibbs-assessment-"); dir.create(file.path(out,"chains"),recursive=TRUE)
+  cfg <- list(n_mcmc=128L,n_burn=0L,chains=4L,rhat_limit=1.2,
+    minimum_bulk_ess=10,minimum_tail_ess=10,maximum_mcse_sd_ratio=.5)
   jobs <- data.frame(job_id=1:4,dataset_id=1L,case_id="fixture",source="simulation",
-    q=.98,delta=.1,ecm_lower=-2,ecm_upper=2,chain=1:4)
-  pma_write_csv(jobs,file.path(out,"jobs.csv"))
-  pta_atomic_write_json(list(commit=paste(rep("a",40),collapse=""),workers=2,settings=cfg),
-    file.path(out,"manifest.json"))
+    response_id="fixture",n=4L,content=.9,q=.98,delta=.1,ecm_lower=-2,ecm_upper=2,
+    chain=1:4,seed=1:4,dataset_sha256=mgc_hash(c(1,2,3,4)))
+  identity <- list(commit=paste(rep("a",40),collapse=""),
+    settings_sha256=mgc_hash(cfg),design_sha256=mgc_hash(jobs))
+  mgc_atomic_rds(jobs,file.path(out,"jobs.rds"))
+  pta_atomic_write_json(list(identity=identity,workers=2,settings=cfg,
+    budget=list(n_mcmc=128L,n_burn=0L),external_guard_passed=TRUE),file.path(out,"manifest.json"))
   for(i in 1:4) {
     set.seed(i);lo <- rnorm(128,-2,.1);hi <- rnorm(128,2,.1)
-    saveRDS(list(task=jobs[i,],draws=cbind(lower=lo,upper=hi,width=hi-lo),elapsed_seconds=2),
-      file.path(out,"chains",sprintf("chain_%06d.rds",i)))
+    path <- mgc_chain_path(out,i)
+    record <- list(task=jobs[i,,drop=FALSE],draws=cbind(lower=lo,upper=hi),
+      elapsed_seconds=2,passed=TRUE,repair_count=0L,objective_summary=c(mean=1,min=0,max=2),
+      sample_sha256=jobs$dataset_sha256[i])
+    mgc_atomic_rds(record,path)
+    pta_atomic_write_json(list(passed=TRUE,job_id=i,n_mcmc=128L,task_sha256=mgc_hash(record$task),
+      sample_sha256=record$sample_sha256,sha256=mgc_file_hash(path),elapsed_seconds=2),paste0(path,".json"))
   }
+  list(out=out,cfg=cfg,jobs=jobs)
+}
+
+testthat::test_that("assessment and health validate completed independent-chain files", {
+  testthat::skip_if_not_installed("posterior")
+  fixture <- mgc_fixture();out <- fixture$out; cfg <- fixture$cfg
+  on.exit(unlink(out,recursive=TRUE),add=TRUE)
   result <- mgc_assess(cfg,out)
-  testthat::expect_setequal(result$variable,c("lower","upper","width"))
-  testthat::expect_equal(result$ecm_value,c(-2,2,4))
+  testthat::expect_setequal(result$variable,c("lower","upper","width","midpoint"))
+  testthat::expect_equal(result$ecm_value,c(-2,2,4,0))
   health <- mgc_health(out)
   testthat::expect_equal(health$completed_chains,4)
   testthat::expect_equal(health$remaining_chains,0)
@@ -130,4 +144,64 @@ testthat::test_that("assessment and health use completed independent-chain files
   assessment <- jsonlite::read_json(file.path(out,"assessment.json"))
   testthat::expect_false(assessment$new_tolerance_guarantee)
   testthat::expect_false(assessment$article_replaced)
+  altered <- cfg;altered$rhat_limit <- 2
+  testthat::expect_error(mgc_assess(altered,out),"settings")
+  before <- mgc_file_hash(mgc_chain_path(out,1))
+  testthat::expect_equal(mgc_assess(cfg,out),result)
+  testthat::expect_identical(mgc_file_hash(mgc_chain_path(out,1)),before)
+})
+
+testthat::test_that("chain reuse rejects corruption, wrong targets, and numerical repairs", {
+  fixture <- mgc_fixture();on.exit(unlink(fixture$out,recursive=TRUE),add=TRUE)
+  path <- mgc_chain_path(fixture$out,1);task <- fixture$jobs[1,,drop=FALSE]
+  budget <- list(n_mcmc=128L)
+  testthat::expect_silent(mgc_receipt(path,task,budget))
+  wrong <- task;wrong$delta <- .2
+  testthat::expect_error(mgc_receipt(path,wrong,budget),"Incompatible")
+  record <- readRDS(path);record$draws[1,1] <- NA_real_
+  testthat::expect_error(mgc_validate_record(record,task,budget),"Incompatible")
+  record <- readRDS(path);record$repair_count <- 1L
+  testthat::expect_error(mgc_validate_record(record,task,budget),"Incompatible")
+  record <- readRDS(path);record$draws <- record$draws[-1,]
+  testthat::expect_error(mgc_validate_record(record,task,budget),"Incompatible")
+  mgc_atomic_rds(record,path)
+  testthat::expect_error(mgc_receipt(path,task,budget),"Corrupted")
+  unlink(paste0(path,".json"))
+  testthat::expect_error(mgc_receipt(path,task,budget),"Incomplete")
+})
+
+testthat::test_that("a live controller lock cannot be overwritten or recovered", {
+  output <- tempfile("gibbs-lock-");lock <- mgc_lock(output)
+  on.exit(unlink(lock,recursive=TRUE),add=TRUE)
+  testthat::expect_error(mgc_lock(output),"locked")
+  testthat::expect_error(mgc_lock(output,recover=TRUE),"live")
+  testthat::expect_true(mgc_alive(Sys.getpid(),mgc_pid_token(Sys.getpid())))
+  owner <- mgc_json(file.path(lock,"owner.json"));owner$pid <- 999999999L
+  pta_atomic_write_json(owner,file.path(lock,"owner.json"))
+  testthat::expect_equal(mgc_lock(output,recover=TRUE),lock)
+})
+
+testthat::test_that("disk planning preserves a reserve before queuing chains", {
+  cfg <- list(full_chain_storage_bytes=78000,disk_overhead_fraction=.25,disk_reserve_gib=16)
+  testthat::expect_error(mgc_storage_check(cfg,300016,tempdir(),"full",available=1024^3),"Insufficient")
+  testthat::expect_equal(mgc_storage_check(cfg,300016,tempdir(),"full",available=100*1024^3),
+    300016*78000*1.25)
+})
+
+testthat::test_that("full approval binds every identity and completed diagnostic count", {
+  out <- tempfile("gibbs-approval-");dir.create(out);on.exit(unlink(out,recursive=TRUE),add=TRUE)
+  identity <- list(commit="commit",settings_sha256="settings",inputs_sha256="inputs",
+    runtime_sha256="runtime",design_sha256="design")
+  gate <- mgc_check_diagnostic
+  environment(gate) <- list2env(list(mgc_identity=function(...)identity),parent=environment(gate))
+  assessment <- c(identity,list(passed=TRUE,complete=TRUE,chains=4L))
+  path <- file.path(out,"assessment.json");pta_atomic_write_json(assessment,path)
+  testthat::expect_silent(gate(NULL,NULL,NULL,out,data.frame(job=1:4)))
+  for(field in names(identity)) {
+    wrong <- assessment;wrong[[field]] <- "changed";pta_atomic_write_json(wrong,path)
+    testthat::expect_error(gate(NULL,NULL,NULL,out,data.frame(job=1:4)),"not passed")
+  }
+  assessment$complete <- FALSE;pta_atomic_write_json(assessment,path)
+  testthat::expect_error(gate(NULL,NULL,NULL,out,data.frame(job=1:4)),"not passed")
+  testthat::expect_error(mgc_runtime(paste(rep("0",40),collapse="")),"runtime")
 })

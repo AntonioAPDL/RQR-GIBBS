@@ -102,69 +102,164 @@ use the true population CDF. An ECM stopping flag is reported separately from
 interval validity or repeated-sampling attainment; a finite iterate is not
 automatically a global mode.
 
-## Gibbs Study: Awaiting Confirmation
+## Gibbs Study: Authorized Staged Launch
 
-No new Gibbs simulation or application study is authorized by the article
-recovery. The user must first confirm the revised article. The next comparison
-will hold data, fitted content, tilt, learning rate, and Gaussian priors fixed
-across Gibbs and ECM. It will assess root posterior summaries, objective values,
-chain mixing, effective sample sizes, and computing cost. Endpoint posterior
-means or medians need not equal an ECM mode. Any new tolerance procedure based
-on these summaries requires its own assessment; a scan guarantee does not
-automatically transfer from an order-statistic interval to different endpoints.
+The user has explicitly authorized the staged Gibbs simulation and application
+comparison. Each launch still requires confirmation of the exact committed
+article source. Authorization does not establish that a stage has run or passed.
+The comparison holds data, fitted content, tilt, learning rate, and Gaussian
+priors fixed across Gibbs and ECM. It assesses root posterior summaries,
+objective values, chain mixing, effective sample sizes, and computing cost.
+Endpoint posterior means or medians need not equal an ECM mode. Any new
+tolerance procedure based on these summaries requires its own assessment; a
+scan guarantee does not automatically transfer from an order-statistic interval
+to different endpoints.
 
-The prepared settings are in
-`application/config/mti_gibbs_ecm_comparison_20261111.json`. Preflight is safe
-before confirmation:
+The launch settings are in
+`application/config/mti_gibbs_ecm_comparison_20261111.json`; the campaign logic is
+in `application/scripts/lib/mti_gibbs_comparison.R`, called by script 105.
+Diagnostic and full stages use four dispersed chains, each with 2000 burn-in
+cycles and 4000 retained draws, with no thinning. Preflight prepares the paired
+design without Gibbs sampling:
 
 ```sh
 make preflight-mti-gibbs
 Rscript application/scripts/105_compare_mti_gibbs_ecm.R --mode=preflight --stage=full
 ```
 
-The diagnostic stage contains 82 datasets and 328 independent chains: one
-replication in each of 72 simulation cases and one partition for each
-response/partition type in the application. Four dispersed chains use 2000
-burn-in cycles and 4000 retained draws each. The full prepared design contains
-75,004 datasets and 300,016 chains. These counts are a design, not completed
-calculations. Its duration must be measured from the diagnostic stage before
-the full run is authorized.
+The diagnostic design includes the base replication in each simulation case
+and base partitions for each application response/partition type. It also adds
+the archived maximum-q and maximum-absolute-tilt samples in each simulation
+case, with deterministic first-occurrence tie breaking. Overlapping selections
+are retained once. The measured diagnostic design contains 174 datasets:
+82 base cases plus 92 additional deterministic stress cases. Four chains per
+dataset give 696 independent chains. Preflight and the frozen
+`jobs.csv`/`jobs.rds` record the design identities. These measured design totals
+are not completed Gibbs calculations or evidence of diagnostic passage.
 
-After explicit user confirmation, freeze the article commit, install this
-repository's package from `git archive` under its ignored cache, and launch
-only the diagnostic stage. Up to 50 workers are supported, with one chain per
-worker and one BLAS/OpenMP thread. Start with 32 or 40 according to current
-server load. No external source checkout is compiled, installed, or loaded.
-The external exdqlm reference commit and an ignored-file-inclusive before/after
-checkout comparison are recorded, even though the ridge sampler does not use
-that package. `EXDQLM_RQR_REPO` can identify its protected checkout.
+The campaign first performs sampler smoke checks, then short timing benchmarks
+at eligible worker counts from 32, 40, and 50, limited by `--workers` and the
+available allocation. The timing design selects up to 36 simulation datasets
+with four chains, 50 burn-in cycles, and 150 retained draws per chain. These
+short runs measure throughput, not convergence or Gibbs/ECM agreement. The
+campaign records `worker_benchmark.csv` and uses the fastest measured worker
+count for the diagnostic and any permitted full stage. Each worker uses one
+BLAS/OpenMP thread; script 107 sets thread limits before R starts.
+
+### Runtime and Frozen Source
+
+`make prepare-mti-gibbs-runtime` calls script 106 from a clean committed source
+checkout. Script 106 creates or reuses a detached worktree at that exact commit
+under the common RQR repository's `.codex_work/mti_gibbs_launch_<commit>/`.
+Its `application/cache` links to the preparing checkout's RQR-owned ignored
+cache, sharing runtime artifacts and recovered ECM inputs. The detached source
+remains fixed while the working checkout can evolve.
+
+From that frozen worktree, script 106 calls the existing
+`application/scripts/04_prepare_primary_runtime.R` with the expected commit,
+explicit detached-launch-source authorization, and the runtime root set to
+`application/cache/mti_gibbs_attested` in the preparing checkout. The builder
+uses `git archive` of the exact committed `application/` subtree, then builds
+and installs only in the isolated cache under
+`application/cache/mti_gibbs_attested/<commit>/`. It writes the full
+`rqrgibbs_runtime_attestation/5.0.0` record at
+`attestations/rqrgibbs_<commit>.rds` within that directory. The attestation binds
+the Git source and archive, built source package, build/install command
+receipts and logs, installed package tree and lineage marker, unchanged frozen
+source, and R/platform identity.
+
+Script 106 exposes
+`application/cache/mti_gibbs_runtime_<commit>/library` as a symlink to the
+attested library and writes the attestation location to
+`application/cache/mti_gibbs_runtime_<commit>/attestation_path.txt`.
+The runner checks the loaded namespace path, attested source commit and runtime
+path, and a fingerprint covering runtime files and the attestation. `mgc_fit`
+passes the attested source root, expected commit, and
+`primary_runtime_attestation` to the sampler. A chain is accepted only when
+`fit$provenance$reproducibility_eligible` is true, in addition to numerical
+eligibility and zero numerical repairs; a commit marker alone is insufficient.
+
+The required `posterior` and `parallelly` packages must also be available.
+No external source checkout is compiled, installed, or loaded. The exact RQR
+commit and pinned external exdqlm commit are recorded before sampling, along
+with an ignored-file-inclusive before/after checkout guard.
+`EXDQLM_RQR_REPO` can identify the protected external checkout.
+
+The standalone `application/scripts/107_launch_mti_gibbs.sh` wrapper also
+requires a clean committed source checkout. It verifies and reuses the same
+detached launch worktree and linked RQR-owned cache, without using an external
+source checkout as a runtime.
+
+Set `commit` below to the explicitly approved 40-character article-source SHA.
+Runtime preparation installs the package but does not sample. The wrapper's
+dry run prints the frozen source, commit, output directory, worker ceiling,
+and full-stage permission without creating a worktree or starting the campaign:
 
 ```sh
+commit=CONFIRMED_40_CHARACTER_ARTICLE_COMMIT
 make prepare-mti-gibbs-runtime
-# Run only after the author has confirmed this article commit.
-commit=$(git rev-parse HEAD)
-R_LIBS="application/cache/mti_gibbs_runtime_$commit/library" \
-  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-  Rscript application/scripts/105_compare_mti_gibbs_ecm.R --mode=run \
-  --stage=diagnostic --workers=40 --confirm-article-commit="$commit"
+bash application/scripts/107_launch_mti_gibbs.sh --dry-run \
+  --confirm-article-commit="$commit" --workers=50 --allow-full=true
 ```
 
-The diagnostic assessment uses rank-normalized split R-hat, bulk effective
-sample size, and tail effective sample size for ordered endpoints and width.
-The settings require R-hat at most 1.01 and both effective sample sizes at
-least 400 in every diagnostic dataset before a full run is allowed. These are
-diagnostic criteria, not a theorem of convergence. Atomic per-chain files
-preserve draws, target-loss traces, retained penalized objectives, sample
-identity, numerical repair records, and elapsed time. An interrupted run can
-resume with `--resume=true` only when its commit, settings, jobs, targets, and
-seeds agree. Completed chains are retained.
+Choose one launch command; do not start competing controllers. Without
+`--allow-full=true`, the campaign stops after diagnostics. With that flag, it
+may proceed to the full comparison only after the diagnostic gate passes:
 
-Use `--mode=health` for progress and a throughput-based remaining-time estimate,
-or `--mode=assess` to regenerate the posterior summary after completion. The
-study never replaces manuscript inputs automatically. Sampling at the
-ECM-selected target isolates numerical computation and conditional posterior
-uncertainty; it is not a fresh search over every content/tilt candidate, and
-the ECM probability cutoff is not assumed to calibrate Gibbs endpoint summaries.
+```sh
+# Smoke checks, timing benchmarks, and diagnostics only.
+bash application/scripts/107_launch_mti_gibbs.sh \
+  --confirm-article-commit="$commit" --workers=50
+
+# Alternatively, permit the identity-gated full stage as well.
+bash application/scripts/107_launch_mti_gibbs.sh \
+  --confirm-article-commit="$commit" --workers=50 --allow-full=true
+```
+
+The wrapper starts a detached controller and prints its PID, campaign directory,
+and log path. An optional `--output-dir` must be absolute. By default, campaign
+outputs are under the frozen worktree's ignored `application/outputs/` tree.
+`controller.log`, `controller.pid`, `controller_exit.json`, and
+`campaign_status.json` record controller progress and exit status. These commands
+document the launch procedure; they are not a record of completed runs.
+
+### Assessment, Storage, and Resumption
+
+The full-stage gate requires a complete, passing diagnostic assessment whose
+commit, settings, diagnostic design, input hashes, and runtime fingerprint
+match the requested study. A successful external-checkout guard is also
+required for assessment passage. For ordered endpoints, width, and midpoint,
+every diagnostic dataset must have rank-normalized split R-hat at most 1.01,
+bulk and tail effective sample sizes at least 400, and Monte Carlo standard
+error of the mean at most 0.05 times its posterior standard deviation. These
+are diagnostic criteria, not a theorem of convergence. A failed diagnostic
+stage stops the campaign without silently increasing the sampling budget.
+
+Compact full-stage records preserve every retained ordered-endpoint draw,
+penalized-objective summaries, sample identity, zero-repair status, and elapsed
+time. Width and midpoint are derived during assessment. Diagnostic records
+add warmup root traces, the full target-loss trace, retained penalized
+objectives, and the sampler's last state, including its RNG state. Full fitted
+objects and latent-draw histories are not saved. Disk projections include an
+overhead allowance and reserve; chains run in bounded batches, with
+incremental dataset assessment.
+
+Repeating the wrapper command for the same frozen campaign resumes its stages.
+The direct script-105 run interface also supports `--resume=true`. Source,
+settings, jobs, inputs, and runtime identity must agree; completed chain files
+and their checksum receipts are validated and reused, and only unfinished
+chains are scheduled. This is completed-chain reuse, not continuation of a
+partially sampled chain. Study locks reject competing controllers.
+
+Use script 105's `--mode=health` with an explicit stage `--output-dir` for
+progress, diagnostic status, disk availability, and a stratified remaining-time
+estimate. `--mode=assess` regenerates summaries from frozen records;
+`--mode=report` writes a convergence PDF, which the campaign produces for
+diagnostics. The study never replaces manuscript inputs automatically.
+Sampling at the ECM-selected target isolates numerical computation and
+conditional posterior uncertainty; it is not a fresh search over every
+content/tilt candidate, and the ECM probability cutoff is not assumed to
+calibrate Gibbs endpoint summaries.
 
 The historical convex-profile calculation and its results are preserved as a
 numerical reference. They are not relabeled as ECM or Gibbs results. External

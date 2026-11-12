@@ -864,6 +864,15 @@ prepare-mti-gibbs-runtime:
 preflight-mti-gibbs:
 	$(R) application/scripts/105_compare_mti_gibbs_ecm.R --mode=preflight
 
+.PHONY: test-mti-gibbs launch-mti-gibbs health-mti-gibbs
+test-mti-gibbs: test-mti-ecm-recovery
+
+launch-mti-gibbs:
+	bash application/scripts/107_launch_mti_gibbs.sh --confirm-article-commit=$(GIBBS_CONFIRM_COMMIT) --workers=50 --allow-full=true
+
+health-mti-gibbs:
+	$(R) application/scripts/105_compare_mti_gibbs_ecm.R --mode=health --output-dir=$(GIBBS_OUTPUT_DIR)
+
 arxiv-source: pdf
 	bash application/scripts/31_prepare_arxiv_source.sh
 

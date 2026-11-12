@@ -65,7 +65,8 @@ runtime-package attestation information. RHS fits require the executing
 exdqlm namespace to match the pinned source for promotion eligibility.}
 
 \item{mcmc_control}{Named list with `n_burn`, `n_mcmc`, `thin`, `seed`,
-`verbose`, `progress_every`, `precision_beta`, `store_latent_draws`, and
+`verbose`, `progress_every`, `precision_beta`, `store_latent_draws`,
+`store_warmup_roots` (optional root traces during burn-in), and
 optional `root_label_control`, `kernel_repetitions`, and
 `replica_exchange`. The latter is an opt-in likelihood-tempered,
 alternating-adjacent replica-exchange kernel for fixed-rate ridge RQR;
