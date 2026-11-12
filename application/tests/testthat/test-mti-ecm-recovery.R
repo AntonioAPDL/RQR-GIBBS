@@ -38,3 +38,11 @@ testthat::test_that("paired comparisons reject different sample seeds", {
     content_attained=TRUE,returned=TRUE,width=4)
   testthat::expect_error(mpr_paired_summary(z,list(primary_method="ecm")),"seeds do not match")
 })
+
+testthat::test_that("CDF checks account only for endpoint storage rounding", {
+  cdf <- function(x) pgamma((x+sqrt(.5))*sqrt(.5),shape=.5)
+  lower <- -sqrt(.5)+1e-10; upper <- 4
+  content <- cdf(upper)-cdf(lower)
+  testthat::expect_true(mre_content_check(lower+1e-15,upper,content,cdf))
+  testthat::expect_false(mre_content_check(lower,upper,content-.001,cdf))
+})

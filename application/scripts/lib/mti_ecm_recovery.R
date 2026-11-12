@@ -44,6 +44,14 @@ mre_frozen_functions <- function(cfg) {
     source_files=pma_file_record(exported))
 }
 
+mre_content_check <- function(lower,upper,content,cdf) {
+  # Decimal endpoint storage is amplified by a density singularity at a boundary.
+  epsilon <- 32*.Machine$double.eps*pmax(1,abs(lower),abs(upper))
+  lo <- cdf(upper-epsilon)-cdf(lower+epsilon)
+  hi <- cdf(upper+epsilon)-cdf(lower-epsilon)
+  all(content>=lo-1e-14 & content<=hi+1e-14)
+}
+
 mre_replay <- function(row,law,diagnostics) {
   set.seed(row$seed)
   y <- law$r(row$n)
@@ -51,7 +59,7 @@ mre_replay <- function(row,law,diagnostics) {
   mpr_require(abs(d$bowley_skewness-row$sample_bowley_skewness)<1e-10 &&
     abs(d$robust_tail_ratio-row$sample_tail_ratio)<1e-10,
     "Replayed sample does not match archived sample diagnostics.")
-  mpr_require(abs(law$p(row$upper)-law$p(row$lower)-row$content)<1e-12,
+  mpr_require(mre_content_check(row$lower,row$upper,row$content,law$p),
     "Archived population content disagrees with the pinned distribution.")
   y
 }
@@ -95,7 +103,7 @@ mre_results <- function(cfg,archive_root,workers=32L) {
       ym <- pta_fit_young_mathew(y,row$guaranteed_content,row$tolerance_confidence)
       mpr_require(isTRUE(ym$returned),paste("Young-Mathew failed:",ym$failure_reason))
       lower <- c(row$lower,ym$lower,min(y)); upper <- c(row$upper,ym$upper,max(y))
-      actual <- law$p(upper)-law$p(lower)
+      actual <- c(row$content,law$p(upper[-1])-law$p(lower[-1]))
       data.frame(cell_index=cell,n=row$n,content=row$guaranteed_content,
         tolerance_confidence=row$tolerance_confidence,dgp_id=row$dgp_id,
         replication=row$replication,seed=row$seed,

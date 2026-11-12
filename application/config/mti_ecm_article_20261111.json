@@ -11,7 +11,7 @@
   "policy_csv": "application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv",
   "policy_sha256": "9942e5c9aad8701e125b4caf0c84df292a69886b7d1e176e44f512e6ea99b773",
   "evidence_dir": "figures/data/mti_ecm_validation_20261111",
-  "cache_dir": "application/cache/mti_ecm_recovery_20261111",
+  "cache_dir": "application/cache/mti_ecm_recovery_20261111_v2",
   "expected_datasets": 72000,
   "replications": 1000,
   "tolerance_package_version": "3.0.0",
