@@ -8,12 +8,16 @@ testthat::test_that("ECM evidence cannot be relabeled from another numerical met
   z <- data.frame(method_id=cfg$primary_method,ecm_backend="cpp",posterior_draws=NA_real_,
     uq_engine="mti_ecm_direct_dp",dgp_id="normal",n=50,guaranteed_content=.9,
     tolerance_confidence=.95,replication=1,infeasible=FALSE,lower=-2,upper=2,
+    selected_interval_source="mti_ecm_adaptive_profile_selected_action",
+    formal_tolerance_action=FALSE,fitted_summary_lower=-2,fitted_summary_upper=2,
     success=TRUE,content=.96)
   testthat::expect_silent(mre_check_identity(z,cfg))
   z$uq_engine <- "fixed_target_profile"
   testthat::expect_error(mre_check_identity(z,cfg),"not the specified ECM")
   z$uq_engine <- "mti_ecm_direct_dp"; z$posterior_draws <- 500
   testthat::expect_error(mre_check_identity(z,cfg),"not the specified ECM")
+  z$posterior_draws <- NA_real_;z$lower <- -3
+  testthat::expect_error(mre_check_identity(z,cfg),"substituted")
 })
 
 testthat::test_that("sample reconstruction checks distribution and sample diagnostics", {

@@ -18,7 +18,11 @@
   ],
   "calculation_commit": "288461cfce8493fe16aac5a778b27ec2b059568b",
   "tolerance_version": "3.0.0",
-  "rng": ["Mersenne-Twister", "Inversion", "Rejection"],
+  "rng": [
+    "Mersenne-Twister",
+    "Inversion",
+    "Rejection"
+  ],
   "datasets": 72000,
   "method_evaluations": 216000,
   "results_sha256": "fad56f8eacc4ddbf72a0f99215830ae06cf19ce87a3fb7b3dcb111f5ec87c461",
@@ -56,6 +60,11 @@
       "sha256": "830619dd4a570b07ab748b2779e97649801d97913bffbede33bd2568a1bfc0d9",
       "bytes": 13217,
       "_row": "figures/data/mti_ecm_validation_20261111/policy.csv"
+    },
+    {
+      "path": "figures/data/mti_ecm_validation_20261111/seed_independence.json",
+      "sha256": "bdc9663aba9c5eaf3c512fbfb60a1d2c3d41c170a1df86e7df301e9042d6e51f",
+      "bytes": 405
     }
   ]
 }

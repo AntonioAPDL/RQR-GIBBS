@@ -14,6 +14,11 @@ mre_check_identity <- function(z,cfg) {
   mpr_require(nrow(z)==cfg$expected_datasets && all(z$method_id==cfg$primary_method) &&
     all(z$ecm_backend=="cpp") && all(is.na(z$posterior_draws) | z$posterior_draws==0) &&
     all(z$uq_engine=="mti_ecm_direct_dp"),"Archived rows are not the specified ECM study.")
+  mpr_require(all(z$selected_interval_source=="mti_ecm_adaptive_profile_selected_action") &&
+    all(!z$formal_tolerance_action) &&
+    all(abs(z$lower-z$fitted_summary_lower)<1e-12 &
+      abs(z$upper-z$fitted_summary_upper)<1e-12),
+    "The reported interval was substituted for the fitted ECM endpoints.")
   key <- paste(z$dgp_id,z$n,z$guaranteed_content,z$tolerance_confidence,z$replication)
   mpr_require(!anyDuplicated(key) && all(table(paste(z$dgp_id,z$n,z$guaranteed_content))==
     cfg$replications),"Archived dataset identities are incomplete or duplicated.")

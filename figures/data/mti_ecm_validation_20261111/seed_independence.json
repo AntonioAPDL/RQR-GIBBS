@@ -1,0 +1,9 @@
+{
+  "calibration_results_sha256": "e6902ec840e77ef25eb3bb861e7ba4d5a8d3f85971ff29bde181e64bdad13f9f",
+  "validation_results_sha256": "fad56f8eacc4ddbf72a0f99215830ae06cf19ce87a3fb7b3dcb111f5ec87c461",
+  "calibration_method_rows": 720000,
+  "calibration_dataset_seeds": 72000,
+  "validation_dataset_seeds": 72000,
+  "overlapping_seeds": 0,
+  "checking_commit": "9d150f22c481f43473d37c9da620401d9b46b072"
+}
