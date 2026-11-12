@@ -12,8 +12,9 @@ cfg <- mgc_json(pta_arg_value(args, "--config=", "application/config/mti_gibbs_r
 mode <- pta_arg_value(args, "--mode=", "verify")
 if (mode == "verify") {
   provenance <- mgc_json(file.path(cfg$evidence_dir, "provenance.json"))
-  for (name in names(provenance$artifacts)) {
-    mpr_require(identical(mgc_file_hash(name), provenance$artifacts[[name]]),
+  for (name in names(c(provenance$artifacts, provenance$analysis_programs))) {
+    expected <- c(provenance$artifacts, provenance$analysis_programs)[[name]]
+    mpr_require(identical(mgc_file_hash(name), expected),
       paste("Review artifact changed:", name))
   }
   summary <- mgc_json(file.path(cfg$evidence_dir, "summary.json"))
@@ -104,14 +105,17 @@ main <- sprintf(paste0("\\paragraph{Fixed-target posterior assessment.}\n",
   "in Section~\\ref{sec:evaluation}, ten application training partitions, and 86\n",
   "additional samples with extreme fitted contents or tilts. Holding the selected\n",
   "\\(q,\\delta\\) and Gaussian priors fixed, we sampled the root posterior with\n",
-  "the intercept-only marginal slice updates in\n",
-  "Supplement~Section~\\ref{sec:supp-mti-marginal}. Each of four\n",
+  "the intercept-only marginal slice updates described in the supplement.\n",
+  "Each of four\n",
   "chains retained 4000 draws after 2000 burn-in cycles. Across all %d samples,\n",
   "the largest rank-normalized \\(\\widehat R\\) was %.3f and the smallest bulk\n",
   "effective sample size was %d \\citep{VehtariEtAl2021Rhat}.\n",
   "Posterior width distributions can be broad when the selected tilt is near an\n",
-  "empirical limiting value. The supplement examines this behavior alongside\n",
-  "the finite-iteration ECM estimates. The tolerance comparison below continues\n",
+  "empirical limiting value. Independent minimization of the same penalized\n",
+  "loss also reveals objective gaps in some finite-iteration ECM estimates.\n",
+  "These findings call for prior and optimization sensitivity assessment\n",
+  "before using posterior summaries to define new tolerance intervals.\n",
+  "The tolerance comparison below continues\n",
   "to use the specified ECM endpoint estimates.\n"), nrow(datasets),
   summary$maximum_rhat, floor(summary$minimum_bulk_ess))
 writeLines(main, "tables/mti_gibbs_comparison_main.tex")
@@ -142,6 +146,15 @@ supplement <- sprintf(paste0("\\subsection{Fixed-Target Posterior Assessment}\n"
   "diagnostics. Comparisons of posterior means are restricted to original\n",
   "chain sets meeting the stated diagnostic criteria. Both samplers use\n",
   "identical observations and fixed targets.\n\n",
+  "The archived ECM objective exceeds the independently minimized value by\n",
+  "more than \\(10^{-4}\\max\\{1,|J_{\\mathrm{ECM}}|\\}\\) in %d samples.\n",
+  "Of these, %d have tilts outside the empirical limits. This comparison\n",
+  "assesses the optimization accuracy of the specified finite iteration;\n",
+  "the independent reference attains a relative objective bound below\n",
+  "\\(5\\times10^{-13}\\) in every sample. Among the 20 original augmented\n",
+  "chain sets meeting their stated diagnostics, %d of 80 posterior-mean\n",
+  "comparisons lie within twice the combined Monte Carlo standard error.\n",
+  "The largest standardized difference is %.2f.\n\n",
   "Figure~\\ref{fig:supp-mti-posterior-width} separates a finite ECM iterate,\n",
   "a separately minimized penalized-loss reference, and posterior uncertainty\n",
   "at the same fixed target. This sample-dependent minimum serves only to\n",
@@ -153,6 +166,13 @@ supplement <- sprintf(paste0("\\subsection{Fixed-Target Posterior Assessment}\n"
   "can reveal substantial width uncertainty even when a short ECM sequence\n",
   "appears stable. A change to the prior, learning rate, or target-selection\n",
   "rule requires a separately specified tolerance calibration.\n\n",
+  "A local prior-sensitivity calculation reweights the saved draws to\n",
+  "Gaussian root variances equal to one half and one tenth of the original\n",
+  "variance. It records weight effective sample size and the Monte Carlo\n",
+  "error of each weighted mean. The results show substantial prior influence\n",
+  "in many limiting-tilt examples. Inadequate importance overlap leaves\n",
+  "some sensitivity estimates unresolved; these estimates are excluded\n",
+  "from substantive comparisons.\n\n",
   "\\begin{figure}[!htbp]\n\\centering\n",
   "\\includegraphics[width=\\textwidth]{figures/generated/figS_mti_fixed_target_width.pdf}\n",
   "\\caption{\\textbf{Posterior interval width at fixed content and tilt.}\n",
@@ -168,7 +188,10 @@ supplement <- sprintf(paste0("\\subsection{Fixed-Target Posterior Assessment}\n"
   "\\label{fig:supp-mti-posterior-width}\n\\end{figure}\n"),
   nrow(datasets), summary$maximum_rhat, floor(summary$minimum_bulk_ess),
   floor(summary$minimum_tail_ess), sum(datasets$mean_precision & datasets$median_precision &
-    datasets$credible_endpoint_precision))
+    datasets$credible_endpoint_precision), summary$ecm_relative_objective_gap_above_1e_minus4,
+  sum(datasets$ecm_relative_objective_gap > 1e-4 & datasets$target_class == "outside"),
+  summary$reliable_original_within_two_mcse,
+  summary$reliable_original_maximum_standardized_difference)
 writeLines(supplement, "tables/mti_gibbs_comparison_supplement.tex")
 artifact_paths <- c(file.path(cfg$evidence_dir, c("datasets.csv", "parameters.csv", "sensitivity.csv",
   "audit.csv", "agreement.csv", "overview.csv", "summary.json")), figure,

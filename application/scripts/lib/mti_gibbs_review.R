@@ -171,9 +171,10 @@ mgr_overview <- function(d) {
 }
 
 mgr_width_figure <- function(datasets, jobs, directory, selected, path) {
-  grDevices::pdf(path, width = 9, height = 7.2, onefile = TRUE)
+  grDevices::pdf(path, width = 9, height = 7.8, onefile = TRUE)
   on.exit(grDevices::dev.off(), add = TRUE)
-  par(mfrow = c(2, 2), mar = c(4, 4, 3, 1), oma = c(0, 0, 0, 0), cex = .85)
+  layout(matrix(c(1, 2, 3, 4, 5, 5), nrow = 3, byrow = TRUE), heights = c(1, 1, .12))
+  par(mar = c(4, 4, 3, 1), cex = .85)
   for (id in selected) {
     t <- datasets[datasets$case_id == id, ]; s <- jobs[jobs$dataset_id == t$dataset_id, ]
     widths <- unlist(lapply(s$job_id, function(k) {
@@ -192,8 +193,11 @@ mgr_width_figure <- function(datasets, jobs, directory, selected, path) {
       col = "#0072B2", lwd = 1.5, ylim = c(0, 1), sub = "")
     abline(v = t$ecm_width, col = "#D55E00", lty = 2, lwd = 1.5)
     abline(v = t$minimum_width, col = "black", lty = 3, lwd = 1.5)
-    legend("bottomright", c("Posterior width", "ECM iterate", "Penalized-loss minimum"),
-      col = c("#0072B2", "#D55E00", "black"), lty = c(1, 2, 3), bty = "n", cex = .75)
     mtext(sprintf("q = %.6f; %s tilt", t$q, t$target_class), side = 3, line = .2, cex = .8)
   }
+  par(mar = c(0, 0, 0, 0))
+  plot.new()
+  legend("center", c("Posterior width", "ECM iterate", "Penalized-loss minimum"),
+    col = c("#0072B2", "#D55E00", "black"), lty = c(1, 2, 3), lwd = 1.5,
+    bty = "n", horiz = TRUE, cex = .85)
 }
