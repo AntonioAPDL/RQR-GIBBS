@@ -163,15 +163,15 @@ PHARMA_APPLICATION_RUN_DIR ?=
 PHARMA_APPLICATION_RESULTS ?= $(if $(strip $(PHARMA_APPLICATION_RUN_DIR)),$(PHARMA_APPLICATION_RUN_DIR)/pharma_application_results.csv,)
 PHARMA_APPLICATION_SENSITIVITY ?= $(if $(strip $(PHARMA_APPLICATION_RUN_DIR)),$(PHARMA_APPLICATION_RUN_DIR)/pharma_application_dependence_sensitivity.csv,)
 PHARMA_APPLICATION_WORKERS ?= 8
-PHARMA_MTI_CONFIG ?= application/config/pharma_tolerance_application_profiled_20261025.json
+PHARMA_MTI_CONFIG ?= application/config/pharma_tolerance_application_mti_only_20261020.json
 PHARMA_ECM_AUDIT_CONFIG ?= application/config/pharma_ecm_numerical_audit_20261020.json
 PHARMA_ECM_AUDIT_WORKERS ?= 8
 PHARMA_ECM_AUDIT_RUN_DIR ?=
 PHARMA_ECM_AUDIT_EVIDENCE ?= figures/data/pharma_ecm_numerical_audit_20261020
 PHARMA_ECM_AUDIT_REPORT_DIR ?= application/outputs/pharma_ecm_numerical_audit_20261020/review
 PHARMA_MTI_LIBRARY ?= application/cache/pharma_mti_library
-PHARMA_MTI_RESULTS ?= figures/data/pharma_mti_profile_application_20261025/results.csv
-PHARMA_SOURCE_CONFIG ?= application/config/pharma_source_structure_20261026.json
+PHARMA_MTI_RESULTS ?= figures/data/pharma_mti_application_20261020/results.csv
+PHARMA_SOURCE_CONFIG ?= application/config/pharma_source_structure_ecm_20261111.json
 PHARMA_SOURCE_LAB ?= application/cache/pharma_source_structure_20261026/Laboratory.csv
 PHARMA_SOURCE_ARCHIVE ?= application/cache/pharma_source_structure_20261026/Process.zip
 PHARMA_SOURCE_DOWNLOAD ?= false
@@ -243,14 +243,14 @@ tolerance-validation-adaptive-article-inputs:
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
-	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results= --mti-ecm-results= --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --mti-method-id=mti_profile_mass_cells_v1 --mti-label=MTI --delivery-y-min=.85 --output-dir=$(THEORY_FIGURE_DIR)
-	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --mti-method-id=mti_profile_mass_cells_v1 --mti-label=MTI --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results= --mti-ecm-results= --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --mti-method-id=mti_ecm_adaptive_cell --mti-label=MTI-ECM --delivery-y-min=.85 --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --mti-method-id=mti_ecm_adaptive_cell --mti-label=MTI-ECM --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) figures/generate_tolerance_population_oracle_figure.R --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
 	$(PHARMA_MTI_R) figures/generate_pharma_mti_application_figures.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_FIGURE_DIR)
 
 theory-tables:
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
-	$(MTI_ADOPTED_R) application/scripts/101_adopt_mti_profile.R --mode=tables --output-dir=$(THEORY_TABLE_DIR)
+	$(R) application/scripts/104_recover_mti_ecm_article.R --mode=tables --output-dir=$(THEORY_TABLE_DIR)
 	$(PHARMA_MTI_R) tables/generate_pharma_mti_application_tables.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) application/scripts/103_review_pharma_source_structure.R --config=$(PHARMA_SOURCE_CONFIG) --mode=tables --output-dir=$(THEORY_TABLE_DIR)
 
@@ -849,6 +849,20 @@ supplement: theory-figures
 	fi
 
 all-pdf: pdf supplement
+
+.PHONY: verify-mti-ecm-article test-mti-ecm-recovery prepare-mti-gibbs-runtime preflight-mti-gibbs
+verify-mti-ecm-article:
+	$(R) application/scripts/104_recover_mti_ecm_article.R --mode=verify
+
+test-mti-ecm-recovery:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-ecm-recovery.R
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-comparison.R
+
+prepare-mti-gibbs-runtime:
+	bash application/scripts/106_prepare_mti_gibbs_runtime.sh
+
+preflight-mti-gibbs:
+	$(R) application/scripts/105_compare_mti_gibbs_ecm.R --mode=preflight
 
 arxiv-source: pdf
 	bash application/scripts/31_prepare_arxiv_source.sh

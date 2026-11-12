@@ -70,6 +70,12 @@ mre_results <- function(cfg,archive_root,workers=32L) {
     "The pinned tolerance package version is required.")
   path <- file.path(archive_root,cfg$archived_results)
   pma_verify_hash(path,cfg$archived_results_sha256)
+  if(file.exists(file.path(cfg$evidence_dir,"provenance.json")) &&
+    file.exists(file.path(cfg$cache_dir,"results.csv"))) {
+    mre_verify(cfg,full=TRUE)
+    message("Verified the complete recovery; no fits were repeated.")
+    return(invisible(read.csv(file.path(cfg$evidence_dir,"family_case_summary.csv"))))
+  }
   z <- as.data.frame(data.table::fread(path,nThread=1))
   mre_check_identity(z,cfg)
   frozen <- mre_frozen_functions(cfg)
@@ -207,4 +213,54 @@ mre_tables <- function(cfg,output="tables") {
   writeLines(c(lines,"\\bottomrule","\\end{tabular}","\\end{table}"),
     file.path(output,"tolerance_validation_mti_profile_policy.tex"))
   invisible(summary)
+}
+
+mre_verify <- function(cfg,full=FALSE) {
+  provenance <- jsonlite::read_json(file.path(cfg$evidence_dir,"provenance.json"),simplifyVector=TRUE)
+  mpr_require(identical(provenance$archived_results_sha256,cfg$archived_results_sha256) &&
+    identical(provenance$validation_config_sha256,cfg$validation_config_sha256) &&
+    identical(provenance$policy_sha256,cfg$policy_sha256) &&
+    isTRUE(provenance$paired_samples) && !provenance$gibbs_run,
+    "Recovery evidence is not the specified ECM comparison.")
+  for(i in seq_len(nrow(provenance$artifacts)))pma_verify_hash(
+    provenance$artifacts$path[i],provenance$artifacts$sha256[i])
+  s <- read.csv(file.path(cfg$evidence_dir,"family_case_summary.csv"))
+  mpr_require(nrow(s)==216L && all(s$replications==cfg$replications) &&
+    all(s$returned==s$replications) && all(s$attainment==s$successes/s$replications) &&
+    all(is.finite(s$width_mean) & s$width_mean>=0 &
+      s$width_q025>=0 & s$width_q025<=s$width_q975),
+    "The distribution-level evidence is incomplete or inconsistent.")
+  if(full) {
+    path <- file.path(cfg$cache_dir,"results.csv")
+    pma_verify_hash(path,provenance$results_sha256)
+    z <- as.data.frame(data.table::fread(path,nThread=1))
+    key <- paste(z$cell_index,z$replication)
+    primary <- z[z$method==cfg$primary_method,]
+    for(method in c("young_mathew","wilks")) {
+      b <- z[z$method==method,]; index <- match(paste(primary$cell_index,primary$replication),
+        paste(b$cell_index,b$replication))
+      mpr_require(!anyNA(index) && !anyDuplicated(index) &&
+        all(primary$seed==b$seed[index]) && all(primary$dataset_sha256==b$dataset_sha256[index]),
+        "A comparator is not paired to the ECM observations.")
+    }
+    mpr_require(nrow(z)==provenance$method_evaluations && all(table(key)==3L) &&
+      !anyDuplicated(paste(key,z$method)),"Replicate/method identities are duplicated or missing.")
+    for(i in seq_len(nrow(s))) {
+      r <- s[i,]; a <- z[z$cell_index==r$cell_index & z$method==r$method,]
+      q <- quantile(a$width,c(.025,.975),type=8,names=FALSE)
+      mpr_require(nrow(a)==r$replications && sum(a$content_attained)==r$successes &&
+        max(abs(q-c(r$width_q025,r$width_q975)))<1e-11,
+        "Published counts or width quantiles disagree with replication-level results.")
+    }
+    frozen <- mre_frozen_functions(cfg)
+    validation <- jsonlite::read_json(cfg$validation_config,simplifyVector=FALSE)
+    for(dgp in validation$dgps) {
+      law <- frozen$laws$dgp_meta(dgp); a <- z[z$dgp_id==dgp$dgp_id,]
+      actual <- law$p(a$upper)-law$p(a$lower)
+      mpr_require(mre_content_check(a$lower,a$upper,a$true_content,law$p) &&
+        all((actual>=a$content)==a$content_attained),
+        "Population-CDF evaluation disagrees with recorded attainment.")
+    }
+  }
+  invisible(TRUE)
 }

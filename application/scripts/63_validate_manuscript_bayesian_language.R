@@ -114,7 +114,7 @@ required <- list(
   "main.tex" = c(
     "mean-preserving interval (MPI)",
     "mean-tilted interval (MTI)",
-    "a deterministic profile calculation estimates endpoints",
+    "ECM estimates endpoints under the MTI generalized-posterior criterion",
     "repeated-sampling content--confidence statement",
     "shortest eligible fitted interval is reported",
     "Dirichlet-process (DP)",
@@ -145,7 +145,8 @@ required <- list(
     "Direct DP Content Check",
     "Direct DP fixed-interval content law",
     "The direct DP check determines eligible MTI candidates",
-    "An Alternative ECM Calculation",
+    "Gibbs Conditional Distributions",
+    "ECM Conditional Maximizations",
     "Profile calculation and numerical checks",
     "216,000",
     "Tolerance-Validation Protocol and Feasibility",

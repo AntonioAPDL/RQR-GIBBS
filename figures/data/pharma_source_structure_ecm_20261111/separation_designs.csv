@@ -1,0 +1,4 @@
+"separation","components","component_batch_sizes","training_size","feasible_training_sets","feasible"
+"campaign",28,"2,3,3,4,4,4,4,5,5,5,5,7,7,7,7,7,8,8,8,8,8,8,9,9,9,9,12,12",100,"5287020",TRUE
+"campaign+api_batch",20,"2,3,4,5,5,5,7,7,7,8,8,9,9,10,12,12,13,16,18,27",100,"15868",TRUE
+"campaign+api_batch+smcc_batch+lactose_batch+starch_batch",4,"36,42,48,61",100,"0",FALSE

@@ -1,0 +1,61 @@
+{
+  "archived_results_sha256": "602ee3e758a3e288a39c083f9094d53cde9417f46eae903c20bb96349d3b58dc",
+  "validation_config_sha256": "c630d04dad2e45b2ea9cca4d01ce00f9e7132f74fd23f27108d2e341ae961aa7",
+  "policy_sha256": "9942e5c9aad8701e125b4caf0c84df292a69886b7d1e176e44f512e6ea99b773",
+  "sources": [
+    {
+      "path": "application/cache/mti_ecm_recovery_20261111_v2/69_validate_rqr_bayes_uq.R",
+      "sha256": "b47ec8764e472e400f3e7ef371c898f0e78ed54fdc7847ed581ed34b651866a3",
+      "bytes": 114214,
+      "_row": "application/cache/mti_ecm_recovery_20261111_v2/69_validate_rqr_bayes_uq.R"
+    },
+    {
+      "path": "application/cache/mti_ecm_recovery_20261111_v2/rqr_mti_ecm_adaptive.R",
+      "sha256": "4ee8166f19c46cbedf916bc512d1c4315127e42beb056743d9e00fc74fd86b00",
+      "bytes": 11708,
+      "_row": "application/cache/mti_ecm_recovery_20261111_v2/rqr_mti_ecm_adaptive.R"
+    }
+  ],
+  "calculation_commit": "288461cfce8493fe16aac5a778b27ec2b059568b",
+  "tolerance_version": "3.0.0",
+  "rng": ["Mersenne-Twister", "Inversion", "Rejection"],
+  "datasets": 72000,
+  "method_evaluations": 216000,
+  "results_sha256": "fad56f8eacc4ddbf72a0f99215830ae06cf19ce87a3fb7b3dcb111f5ec87c461",
+  "all_samples_replayed_and_checked": true,
+  "paired_samples": true,
+  "ecm_refitted": false,
+  "gibbs_run": false,
+  "artifacts": [
+    {
+      "path": "figures/data/mti_ecm_validation_20261111/design.csv",
+      "sha256": "3cc83058cd1434d51917ef07790e511e44c60f5af00960424878d5f990ec7366",
+      "bytes": 4800,
+      "_row": "figures/data/mti_ecm_validation_20261111/design.csv"
+    },
+    {
+      "path": "figures/data/mti_ecm_validation_20261111/ecm_diagnostics.csv",
+      "sha256": "c7593573fb182b364d74aceac90631ef518503383e148f3b7462eb3933d2f840",
+      "bytes": 12968,
+      "_row": "figures/data/mti_ecm_validation_20261111/ecm_diagnostics.csv"
+    },
+    {
+      "path": "figures/data/mti_ecm_validation_20261111/family_case_summary.csv",
+      "sha256": "c66c9525b954d31bf76560274099213358f082724fdfff2a115864a195b32e47",
+      "bytes": 77940,
+      "_row": "figures/data/mti_ecm_validation_20261111/family_case_summary.csv"
+    },
+    {
+      "path": "figures/data/mti_ecm_validation_20261111/paired_comparisons.csv",
+      "sha256": "6e60200f8b9dcc653f974284590aaa23e5b02736ec875e581e710c513cfbb523",
+      "bytes": 35380,
+      "_row": "figures/data/mti_ecm_validation_20261111/paired_comparisons.csv"
+    },
+    {
+      "path": "figures/data/mti_ecm_validation_20261111/policy.csv",
+      "sha256": "830619dd4a570b07ab748b2779e97649801d97913bffbede33bd2568a1bfc0d9",
+      "bytes": 13217,
+      "_row": "figures/data/mti_ecm_validation_20261111/policy.csv"
+    }
+  ]
+}

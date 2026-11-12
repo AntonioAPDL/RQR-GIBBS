@@ -130,9 +130,11 @@ test_that("committed source evidence preserves the frozen method and prepared de
   skip_if_not_installed("igraph")
   e <- psa_test_env()
   root <- normalizePath(testthat::test_path("..", "..", ".."))
-  skip_if_not(file.exists(file.path(root, e$psa_default_config)))
+  current_config <- "application/config/pharma_source_structure_ecm_20261111.json"
+  skip_if_not(file.exists(file.path(root, current_config)))
   previous <- getwd(); setwd(root); on.exit(setwd(previous), add = TRUE)
-  config <- e$pta_read_config(e$psa_default_config)
+  config <- e$pta_read_config(current_config)
+  attr(config,"config_path") <- current_config
   expect_invisible(e$psa_verify(config))
   manifest <- e$pta_read_config(file.path(config$evidence_dir, "manifest.json"))
   expect_equal(manifest$new_fits, 0)
@@ -142,7 +144,7 @@ test_that("committed source evidence preserves the frozen method and prepared de
   expect_lte(manifest$maximum_tensile_formula_error, 5e-10)
   counts <- read.csv(file.path(config$evidence_dir, "measurement_counts.csv"))
   expect_equal(counts$product_questions[match(c("fct", "tbl"), counts$response)], c(36, 55))
-  frozen <- "figures/data/pharma_mti_profile_application_20261025"
+  frozen <- e$pma_read_config(config$application_config)$paths$canonical_dir
   expect_identical(e$pta_file_sha256(file.path(frozen, "results.csv")), config$results_sha256)
   expect_identical(e$pta_file_sha256(file.path(frozen, "split_membership.csv.gz")), config$membership_sha256)
   mapping <- read.csv(file.path(config$evidence_dir, "campaign_mapping.csv"))

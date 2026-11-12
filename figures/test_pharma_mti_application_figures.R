@@ -3,7 +3,7 @@
 for (name in c("pharma_tolerance_application.R", "pharma_mti_application.R", "pharma_mti_reporting.R")) {
   source(file.path("application/scripts/lib", name))
 }
-config <- pma_read_config("application/config/pharma_tolerance_application_profiled_20261025.json")
+config <- pma_read_config(pma_default_config)
 results <- file.path(config$paths$canonical_dir,"results.csv")
 inputs <- pma_read_report_inputs(config,results)
 output <- tempfile("pharma-mti-figure-test-")

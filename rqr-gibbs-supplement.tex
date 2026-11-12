@@ -72,7 +72,7 @@ This supplement gives the mathematical details and validation records for
 \emph{Mean-Tilted Intervals: Short Tolerance Intervals}. It develops the
 fixed-content interval class, the mean-preserving interval (MPI), and the
 mean-tilted interval (MTI) family. It then records the finite-sample score
-balance used to interpret fixed-target fits, the convex-profile endpoint
+balance used to interpret fixed-target fits, the Gibbs and ECM endpoint
 calculation and an alternative pseudo-asymmetric-Laplace augmentation, the direct
 Dirichlet-process content-probability check, and the iid tolerance-validation
 protocol. Endpoint regression, basis-expansion endpoint models, time-varying endpoint
@@ -144,7 +144,7 @@ Empirical score balance
 & Records the exact fractional training-sample identities for fixed-target fits\\
 Fixed-target computation
 & Section~\ref{sec:supp-mti-ecm}
-& Gives the profile calculation and an alternative endpoint iteration\\
+& Gives Gibbs and ECM calculations and a numerical reference\\
 Direct DP content check
 & Section~\ref{sec:supp-direct-dp-check}
 & Gives exact fixed-interval posterior content probabilities for calibration\\
@@ -964,13 +964,13 @@ not generally coincide with the shortest-contiguous path.
 \section{Fixed-Target MTI Computation}
 \label{sec:supp-mti-ecm}
 
-The validation study computes endpoint estimates by minimizing a penalized
-MTI criterion for each fixed content and tilt. Section~\ref{sec:supp-profiled-intercept}
-gives the scalar convex-profile representation used in that calculation.
-We first record an alternative expectation/conditional maximization (ECM)
-derivation, which explains the augmentation but is not used to produce the
-reported candidate endpoints. The complete interval-selection rule is
-assessed on independent simulation samples.
+For each fixed content and tilt, the generalized posterior defines a
+distribution over interval roots. Gibbs sampling draws from this distribution;
+expectation/conditional maximization (ECM) gives a deterministic mode
+approximation. The reported simulation and application use finite-iteration
+ECM fits. Section~\ref{sec:supp-profiled-intercept} gives an independent
+convex-profile representation for checking the same objective. The complete
+ECM interval-selection rule is assessed on independent simulation samples.
 
 For \(e_i=(y_i-\eta_{1i})(y_i-\eta_{2i})\), the fixed-target MTI loss is
 \[
@@ -989,7 +989,7 @@ kernel is proportional to
 The validation calculations are intercept-only, so \(\theta=(a,b)\) before the
 two roots are sorted into lower and upper endpoints.
 
-\subsection{An Alternative ECM Calculation}
+\subsection{Latent-Scale Representation}
 
 The pseudo-asymmetric-Laplace representation gives a convenient quadratic
 conditional calculation. Define
@@ -1010,7 +1010,7 @@ Then
 The latent scale is computational; it augments a loss factor rather than a
 sampling distribution for \(Y_i\).
 
-Under the \(\GIG(\nu,A,B)\) convention proportional to
+Under the generalized inverse Gaussian \(\GIG(\nu,A,B)\) convention proportional to
 \(v^{\nu-1}\exp\{-(Av+B/v)/2\}\), the conditional scale law has
 \[
 v_i\mid\cdot\sim
@@ -1024,13 +1024,69 @@ For \(e_i\ne0\),
 \[
 \tau_i=E(v_i^{-1}\mid\cdot)=\frac{1}{q(1-q)|e_i|}.
 \]
-The numerical ECM calculation uses a small response-product scale floor when
-\(e_i\) is near zero and objective backtracking after each accepted cycle.
-An ECM implementation can initialize each candidate from empirical
-shortest-window endpoints shifted by its tilt. Multiple initializations can
-be compared through the same penalized objective.
+At \(e_i=0\), the latent-scale law reduces to a Gamma law with shape
+\(1/2\) and rate \(1/\{4\sigma_{\mathrm R}q(1-q)\}\). Its inverse moment
+is infinite, which requires special treatment in numerical ECM.
 
-\begin{algorithmblock}{Alternative fixed-target ECM calculation}
+\subsection{Gibbs Conditional Distributions}
+\label{sec:supp-mti-gibbs}
+
+Let the two raw roots have independent
+\(\Normal(0,\lambda^{-1})\) priors. Conditional on one root and the latent
+scales, the other root has a Gaussian distribution. For the first root, define
+\[
+d_i=y_i-b,\qquad r_i=y_i d_i-\xi_qv_i,\qquad
+w_i=(\phi_q\sigma_{\mathrm R}v_i)^{-1}.
+\]
+Expanding the augmented quadratic gives
+\[
+Q_a=\lambda+\sum_iw_i d_i^2,\qquad
+H_a=\sum_iw_i d_i r_i+\omega_{\mathrm R}nq\delta,
+\qquad a\mid b,v,D_n\sim\Normal(H_a/Q_a,Q_a^{-1}).
+\]
+The second-root update exchanges \(a\) and \(b\). The linear tilt changes
+the conditional mean through \(H_a\); its precision is unchanged.
+
+\begin{algorithmblock}{Fixed-target MTI Gibbs sampler}
+\item Fix \(q\), \(\delta\), the learning rate, and the Gaussian root priors.
+Choose dispersed initial raw roots for independent chains.
+\item Draw each latent scale from its generalized-inverse-Gaussian conditional
+law, using the Gamma limit at a zero product residual.
+\item Draw the first root from its Gaussian conditional distribution and then
+draw the second root conditional on the updated first root.
+\item After burn-in, sort each retained raw-root pair to obtain lower and upper
+endpoint draws. Retain chain identities, objective values, and endpoint widths
+for convergence assessment.
+\end{algorithmblock}
+
+These draws describe the generalized posterior at the fixed target. Choosing
+\((q,\delta)\) on the same data introduces selection uncertainty beyond this
+conditional distribution. Posterior endpoint means, medians, and modes are
+different summaries and need not agree. The empirical comparisons below use
+ECM endpoint estimates; they do not report a new Gibbs comparison.
+
+\subsection{ECM Conditional Maximizations}
+
+At the current roots, compute \(\tau_i=E(v_i^{-1}\mid\cdot)\). Holding
+\(b\) fixed, the first conditional maximization solves
+\[
+\left\{\lambda+\frac{1}{\phi_q\sigma_{\mathrm R}}
+\sum_i\tau_i(y_i-b)^2\right\}a
+=\frac{1}{\phi_q\sigma_{\mathrm R}}
+\sum_i(y_i-b)\{\tau_i y_i(y_i-b)-\xi_q\}
++\omega_{\mathrm R}nq\delta.
+\]
+Exchange the root labels for the second conditional maximization while
+retaining the E-step weights for the complete cycle. The numerical calculation
+uses a response-product floor near zero and objective backtracking.
+Each candidate is initialized from empirical fractional shortest-window
+endpoints shifted by its displacement from the central tilt. The reported
+configuration uses one start per candidate, at most 100 cycles, a stationarity
+tolerance of \(10^{-3}\), and a residual-product floor of \(10^{-8}\) times
+the implementation's response-product scale. The numerical floor makes the
+iteration approximate near zero residuals.
+
+\begin{algorithmblock}{Fixed-target MTI-ECM calculation}
 \item Fix \(q\), \(\delta\), \(\omega_{\mathrm R}\), the ridge prior precision,
 and deterministic starting roots.
 \item At the current roots, compute product residuals \(e_i\) and inverse-scale
@@ -1039,9 +1095,9 @@ moments \(\tau_i\), using the prespecified numerical floor only when needed.
 the other root. Repeat with the roles exchanged.
 \item Accept a full cycle when the exact penalized objective does not increase
 beyond the prespecified numerical allowance, using backtracking if necessary.
-\item Return the final endpoint estimates and sort the two raw roots to report the
-candidate interval. If multiple starts are requested, select the fit with the
-smallest exact penalized objective.
+\item Stop at the stated stationarity criterion or iteration limit. Return
+the final roots, stopping flag, objective, and stationarity diagnostic. Sort
+the roots to report the candidate interval.
 \end{algorithmblock}
 
 The fitted content \(q\) and tilt \(\delta\) index fixed-target generalized
@@ -1052,7 +1108,7 @@ then applied unchanged to independent validation replications.
 \subsection{The Penalized Intercept Criterion}
 \label{sec:supp-profiled-intercept}
 
-The reported estimates use the following profile representation. Let the two
+The following representation supplies a numerical reference for ECM. Let the two
 roots have independent zero-mean Gaussian priors with
 common precision \(\lambda>0\), and fix \(q\), \(\delta\), and
 \(\omega_{\mathrm R}>0\). Their negative log generalized-posterior criterion,
@@ -1123,23 +1179,31 @@ also be checked. Unequal prior precisions and regression require separate
 arguments.
 
 \paragraph{Profile calculation and numerical checks.}
-For each fixed \((q,\delta)\), the numerical calculation minimizes the scalar
+For each fixed \((q,\delta)\), a reference calculation minimizes the scalar
 midpoint profile and chooses the lower minimizing squared radius at a tie.
 The endpoints are \(m-\sqrt t,m+\sqrt t\). A lower objective bound from the
 convex profile supplies a relative objective-gap check, with tolerance
-\(10^{-8}\). Every candidate must pass before interval selection. The
-calculation uses \(\omega_{\mathrm R}=1\), \(\lambda=10^{-4}\), and zero
-prior means throughout the reported simulation and application.
+\(10^{-8}\) for that reference calculation. The convex profile is used to
+assess the numerical accuracy of ECM. A dedicated numerical study found that
+stable ECM iterates can have a positive
+objective gap, including after longer runs. A stopping flag alone therefore
+does not establish a global mode. The empirical results describe the specified
+finite-iteration algorithm with \(\omega_{\mathrm R}=1\),
+\(\lambda=10^{-4}\), and zero prior means.
 
-The content grid is refined using \(s=nq-\lambda/\omega_{\mathrm R}\).
-Within its initial range, each interval \((r-1,r)\) of positive effective
-observation mass receives an interior content if none was already present.
-Original contents are retained, and duplicate contents are removed. At each
-content, the tilt candidates are zero, the balanced fractional shortest-window
-tilt, and seven equally spaced positions from the minimum to the maximum
-empirical admissible tilt. These are fixed search rules, rather than choices
-made using validation outcomes. The reported shortest-candidate property
-applies to this finite search.
+The ECM content grid uses offsets
+\(-0.04\), \(-0.02\), \(-0.01\), \(-0.005\), \(-0.0025\),
+\(-0.001\), \(0\), \(0.001\), \(0.0025\), \(0.005\), and \(0.01\)
+from the scan reference, restricted to \((c+10^{-4},0.9999]\), with
+additional prespecified contents near one when the reference is at least
+\(0.990\). At each content, the tilt grid adds
+\(-0.45\), \(-0.30\), \(-0.15\), \(0\), \(0.15\), \(0.30\), and
+\(0.45\) sample standard deviations to the
+empirical fractional shortest-window tilt and includes zero. Candidates with
+absolute tilt above two sample standard deviations are removed. The full
+content grid and the deterministic expansion rule for an initially empty
+eligible set are listed in the computational settings. The shortest-candidate property
+applies to this finite collection of ECM fits.
 
 \section{Direct DP Content Check}
 \label{sec:supp-direct-dp-check}
@@ -1193,10 +1257,10 @@ the selected interval is assessed empirically.
 The primary tolerance validation is restricted to iid continuous univariate
 samples. The comparison includes the calibrated MTI rule, Young--Mathew
 interpolation, and Wilks full-range intervals. MTI
-profiles fixed-target endpoint fits over fitted content and retained-mean tilt,
+searches fixed-target ECM endpoint fits over fitted content and retained-mean tilt,
 then applies a direct Dirichlet-process fixed-interval content probability
-threshold. Its cutoff is determined by simultaneous simulation-calibration
-bounds. The scan reference below initializes the content grid. Young--Mathew and Wilks are classical order-statistic
+threshold. Its cutoff is fixed from separate simulation calibration.
+The scan reference below initializes the content grid. Young--Mathew and Wilks are classical order-statistic
 comparators. Regression and dynamic tolerance calibration require additional
 results because the fitted intervals vary with covariates or time.
 
@@ -1223,8 +1287,10 @@ package versions, random seeds, calibration files, and numerical summaries.
 The article comparison uses the three methods from this paired independent
 validation. The reported rows contribute 216,000
 replication-level method evaluations over the 72 distribution-level cells used in the main
-comparison. A frozen earlier MTI specification is evaluated on the same samples
-as a numerical comparison in the reproducibility materials. All simulations completed, and all three reported methods produced
+comparison. All three procedures are evaluated on identical samples within
+each replication. Distribution definitions, random seeds, and sample-level
+checks are recorded in the reproducibility materials. All simulations
+completed, and all three reported methods produced
 an interval in every replication. The manuscript tables and figures are
 computed directly from these replication-level simulation outputs and the
 corresponding scan-calibration outputs. The scenario-range table in the main
@@ -1240,42 +1306,40 @@ infeasibility indicators, and raw width summaries for each
 distribution-level cell as reproducibility information.
 
 \paragraph{Threshold development and assessment.}
-For each setting, 32 development samples per distribution determine a finite
-cutoff menu from 25 empirical quantiles of candidate posterior probabilities
-and the requested tolerance confidence. A separate 24,000 samples per
-distribution assess every cutoff. We select the smallest cutoff that returns
-every interval and whose one-sided exact binomial lower bound for attainment
-is at least \(0.95\) in every distribution.
+The calibration evaluates 1000 samples per distribution and setting
+for each candidate cutoff, giving 8000 across the distributional panel.
+The selection records empirical attainment, exact one-sided binomial lower
+bounds, interval return, eligible-candidate counts, and width stability.
+The fixed cutoffs are \(0.995\) in eight settings and \(0.996\) at
+\(n=1000,c=0.99\). These posterior probability thresholds differ from the
+requested repeated-sampling confidence of \(0.95\).
 
-Seven of nine settings pass the initial assessment. A fixed follow-up uses
-fresh development and assessment samples for \(n=50,c=0.90\) and
-\(n=100,c=0.95\).
-For these two settings, the development menu also includes the smallest,
-across development samples, of the largest candidate content probability.
-Each gap between adjacent probability knots is subdivided into four intervals
-on the logit scale. This produces 105 assessed cutoffs in each setting.
-The follow-up retains the original seven cutoffs exactly.
-
-The total Monte Carlo error probability is \(0.05\). Half is allocated across
-all original nine settings, eight distributions, and 26 cutoffs, giving
-per-comparison error \(0.025/(9\cdot8\cdot26)\). The retained seven
-cutoffs still pass these tighter bounds. The other half is allocated to the
-two fresh settings, eight distributions, and the \(M\) cutoffs determined by
-independent development, giving \(0.025/(2\cdot8\cdot M)\). The union bound
-controls the combined calibration error. This calculation concerns the fixed
-simulation panel. Table~\ref{tab:supp-mti-profile-policy} records the resulting
-cutoffs, smallest calibration lower bounds, and independent validation ranges.
+The smallest distribution-specific calibration lower bounds are approximately
+\(0.9460\) at \(n=100,c=0.95\) and \(0.9382\) at
+\(n=500,c=0.99\); the other seven settings exceed \(0.95\).
+The pointwise bounds do not adjust for the search over candidate cutoffs.
+Table~\ref{tab:supp-mti-profile-policy} retains these values explicitly.
+Consequently, the calibration is an empirical choice of a fixed rule whose
+performance must be read alongside independent validation, rather than a
+simultaneous finite-panel guarantee.
 
 \paragraph{Independent uncertainty assessment.}
 The cutoff is fixed before the 1000 validation samples per case are generated.
 Pointwise exact 95\% binomial intervals accompany each attainment estimate.
 For MTI, simultaneous two-sided intervals across 72 cases allocate
 \(0.05/(2\cdot72)\) to each tail. Their lower bounds exceed \(0.95\) in
-38 cases; 34 include \(0.95\), and none has an upper bound below it.
-The smallest point estimate, \(951/1000\), occurs for Student \(t_3\) at
-\(n=500,c=0.99\), with pointwise interval approximately
+53 cases; 19 include \(0.95\), and none has an upper bound below it.
+The smallest point estimate, \(951/1000\), occurs for the two-piece Normal at
+\(n=100,c=0.95\), with pointwise interval approximately
 \([0.9357,0.9635]\). Inconclusive validation intervals reflect Monte Carlo
-precision and are reported alongside the larger calibration assessment.
+precision and are reported alongside the separate calibration assessment.
+The ECM stopping criterion is met in 42,116 of 72,000 selected fits; 29,884 reach
+the 100-cycle limit. The latter fits are retained in all attainment and width
+summaries. At \((n,c)=(50,0.90),(100,0.95),(500,0.99)\), every selected
+fit reaches that limit. The reproducibility materials give stopping counts,
+stationarity summaries, and selected-target ranges for every distribution and
+design. These are numerical diagnostics of the implemented estimates, separate
+from whether their intervals attain the requested population content.
 
 \begingroup
 \TableStyle
@@ -1303,7 +1367,7 @@ article.}
 \end{figure}
 
 These results provide empirical repeated-sampling evidence for the selected
-profile rule. A distribution-free tolerance theorem for MTI remains to be
+ECM rule. A distribution-free tolerance theorem for MTI remains to be
 established.
 
 \input{tables/tolerance_validation_mti_profile_policy.tex}
@@ -1322,7 +1386,7 @@ I^{\mathrm{ref}}_n=[Y_{(j_0)},Y_{(j_0+k-1)}],\qquad
 j_0=\min\argmin_{1\le j\le n-k+1}\{Y_{(j+k-1)}-Y_{(j)}\}.
 \]
 This reference provides \(k/n\) for the initial fitted-content search.
-The reported MTI endpoints are obtained from the selected profile fit.
+The reported MTI endpoints are obtained from the selected ECM fit.
 Its fitted content can differ from
 \(k/n\), and its interval does not inherit the scan reference's tolerance
 argument.
@@ -1593,18 +1657,19 @@ The subset is retrospective and the partitions are not independent samples.}
 
 \paragraph{Numerical diagnostics.}
 Every selected MTI fit retains its content, tilt, posterior content
-probability, candidate counts, profile iterations, and relative objective gap.
-All candidate fits must satisfy the objective-gap tolerance
-\(\PharmaObjectiveTolerance\) before the interval is selected. The
-selected-fit numerical criterion is met in \PharmaTensileConverged{} of
+probability, candidate counts, ECM iterations, stopping flag, and final
+stationarity diagnostic. The stopping criterion uses
+\(\PharmaStationarityThreshold\) with at most \PharmaMaxIter{} cycles.
+The selected-fit stopping flag is met in \PharmaTensileConverged{} of
 \PharmaTensileReturned{} returned tensile-metric fits and
 \PharmaRsdConverged{} of \PharmaRsdReturned{} returned RSD fits.
-The main summaries retain every split. Independent recalculation verifies
-all 3004 selected fixed-target profiles, posterior content probabilities,
-and held-out contents; comparator intervals agree with the original analysis
-on the same observations. These numerical checks concern the computed
-criterion and do not remove the application limitations from overlapping
-partitions, ties, and possible dependence.
+The main summaries retain every split. A separate numerical assessment compares
+all 3004 saved ECM intervals with the same fixed-target objective and examines
+longer iterations for 28 prespecified cases. Stable iterates can retain a
+positive objective gap; neither interval return nor a stopping flag proves
+global minimization. The held-out content calculations and the DP probability
+checks remain distinct from these optimization diagnostics. Overlapping
+partitions, ties, and possible dependence also limit the application.
 
 \begin{table}[H]
 \centering

@@ -15,4 +15,7 @@ if(mode=="recover") {
   mre_results(cfg,root,as.integer(pta_arg_value(args,"--workers=","32")))
 } else if(mode=="tables") {
   mre_tables(cfg,pta_arg_value(args,"--output-dir=","tables"))
-} else stop("Supported modes are recover and tables; this script does not launch Gibbs sampling.")
+} else if(mode=="verify") {
+  mre_verify(cfg,full=identical(pta_arg_value(args,"--full=","false"),"true"))
+  cat("Verified ECM comparison evidence.\n")
+} else stop("Supported modes are recover, tables, and verify; this script does not launch Gibbs sampling.")

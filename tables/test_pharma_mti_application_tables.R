@@ -3,7 +3,7 @@
 for (name in c("pharma_tolerance_application.R", "pharma_mti_application.R", "pharma_mti_reporting.R")) {
   source(file.path("application/scripts/lib", name))
 }
-config <- pma_read_config("application/config/pharma_tolerance_application_profiled_20261025.json")
+config <- pma_read_config(pma_default_config)
 stopifnot(pma_number(-1e-12) == "0.000", pma_number(-.001) == "-0.001")
 results_path <- file.path(config$paths$canonical_dir,"results.csv")
 inputs <- pma_read_report_inputs(config,results_path)
@@ -108,7 +108,7 @@ tex <- paste(unlist(lapply(tex_paths, readLines, warn = FALSE)), collapse = "\n"
 stopifnot(!grepl("TCSP|tcsp_mc|TSCP", tex),
   grepl("(proposed)", tex, fixed = TRUE), grepl("(benchmark)", tex, fixed = TRUE),
   grepl("paired random splits of one finite dataset", tex, fixed = TRUE),
-  grepl("MTI minus the benchmark", tex, fixed = TRUE))
+  grepl(paste0(config$method_labels[[pma_methods[1]]]," minus the benchmark"), tex, fixed = TRUE))
 missing <- run(c("--results-csv=/definitely/absent/results.csv", "--use-committed-inputs=true", paste0("--output-dir=",output)))
 stopifnot(missing$status != 0L,
           any(grepl("Expected canonical application results are absent", missing$output)))
