@@ -887,6 +887,27 @@ review-mti-gibbs:
 verify-mti-gibbs-review:
 	$(R) application/scripts/110_review_mti_gibbs.R --mode=verify
 
+.PHONY: test-mti-gibbs-full preflight-mti-gibbs-full launch-mti-gibbs-full health-mti-gibbs-full stop-mti-gibbs-full report-mti-gibbs-full
+test-mti-gibbs-full:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-full-comparison.R
+
+preflight-mti-gibbs-full:
+	$(R) application/scripts/111_run_mti_gibbs_full_comparison.R --mode=preflight
+
+launch-mti-gibbs-full:
+	bash application/scripts/112_launch_mti_gibbs_full_comparison.sh --confirm-article-commit=$(GIBBS_CONFIRM_COMMIT) --allow-full=true --workers=50
+
+health-mti-gibbs-full:
+	@test -n "$(GIBBS_OUTPUT_DIR)" || { echo 'Set GIBBS_OUTPUT_DIR to the full campaign directory.'; exit 64; }
+	$(R) application/scripts/111_run_mti_gibbs_full_comparison.R --mode=health --output-dir=$(GIBBS_OUTPUT_DIR)
+
+stop-mti-gibbs-full:
+	@test -n "$(GIBBS_OUTPUT_DIR)" || { echo 'Set GIBBS_OUTPUT_DIR to the full campaign directory.'; exit 64; }
+	$(R) application/scripts/111_run_mti_gibbs_full_comparison.R --mode=stop --output-dir=$(GIBBS_OUTPUT_DIR)
+
+report-mti-gibbs-full:
+	$(R) application/scripts/111_run_mti_gibbs_full_comparison.R --mode=report --output-dir=$(GIBBS_OUTPUT_DIR)
+
 launch-mti-gibbs:
 	bash application/scripts/107_launch_mti_gibbs.sh --confirm-article-commit=$(GIBBS_CONFIRM_COMMIT) --workers=50 --allow-full=true
 

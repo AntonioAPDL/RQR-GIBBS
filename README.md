@@ -155,6 +155,23 @@ by this analysis.
 
 ## Build and Checks
 
+### Full Fixed-Target Gibbs Comparison
+
+The full comparison now has a separate marginal slice-within-Gibbs controller.
+It preserves archived q/delta and priors, verifies the completed diagnostic
+study, replays 12 integration examples, and automatically proceeds to all
+75,004 datasets (300,016 chains) only after its checks pass. Compact records
+retain all endpoint draws and exact continuation states. One bounded
+continuation is available for datasets failing the practical numerical screen.
+Posterior-mean intervals are evaluated as a separately specified summary;
+they do not inherit the ECM procedure's tolerance calibration.
+
+Use `make test-mti-gibbs-full` and `make preflight-mti-gibbs-full` before the
+explicitly authorized detached launch. The [full comparison instructions](docs/reproducibility/mti_gibbs_full_comparison_20261111.md)
+describe launch, health checks, graceful stop, exact-commit resumption, storage,
+and generated reports. These calculations do not automatically replace article
+results. The original Gaussian/GIG campaign remains reproducible and unchanged.
+
 ```bash
 make test-theory-figures
 make test-theory-tables
