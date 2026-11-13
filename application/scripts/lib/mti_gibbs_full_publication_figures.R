@@ -89,7 +89,7 @@ mgfp_application_table <- function(cells, path) {
   lines <- c("\\begingroup", "\\footnotesize", "\\setlength{\\tabcolsep}{5pt}")
   for (response in names(responses)) {
     label <- if (response == names(responses)[1]) "tab:supp-mti-full-application" else "tab:supp-mti-full-application-rsd"
-    lines <- c(lines, "\\begin{longtable}{@{}lrr@{}}",
+    lines <- c(lines, "\\clearpage", "\\begin{longtable}{@{}lrr@{}}",
       sprintf("\\caption{\\textbf{%s: same-partition comparisons.} Each fit uses 100 training batches at \\(c=0.90\\). Held-out attainment is the percentage of partitions whose empirical held-out content is at least \\(c\\). Ranges are empirical 2.5\\%%--97.5\\%% width quantiles within a partition scheme; single chronological partitions show their actual widths. Overlapping partitions are summarized descriptively.}\\label{%s}\\\\", responses[response], label),
       "\\toprule", "Method & Held-out attainment (\\%) & Width range\\\\", "\\midrule", "\\endfirsthead",
       "\\toprule", "Method & Held-out attainment (\\%) & Width range\\\\", "\\midrule", "\\endhead", "\\bottomrule", "\\endfoot")
@@ -160,7 +160,7 @@ mgfp_attainment_figure <- function(cells) {
   plot(NA, xlim = c(.85, 1), ylim = c(1, max(a$design$center) + 2), axes = FALSE,
     xlab = "Content-attainment proportion", ylab = "")
   axis(1, at = seq(.85, 1, .025)); axis(2, at = a$design$center,
-    labels = sprintf("n = %d, c = %.2f", a$design$n, a$design$content), las = 1, tick = FALSE, cex.axis = .85)
+    labels = sprintf("n = %d\nc = %.2f", a$design$n, a$design$content), las = 1, tick = FALSE, cex.axis = .85)
   abline(h = a$design$center, col = "#EEEEEE"); abline(v = .95, col = "#777777", lty = 2)
   for (i in seq_len(nrow(z))) {
     segments(z$lower[i], a$y[i], z$upper[i], a$y[i], col = mgfp_colors[z$method[i]], lwd = 2)
