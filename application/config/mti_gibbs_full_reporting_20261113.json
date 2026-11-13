@@ -1,0 +1,18 @@
+{
+  "study_id": "mti_gibbs_full_reporting_20261113",
+  "campaign": ".codex_work/mti_gibbs_full_launch_5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3/application/outputs/mti_gibbs_full_comparison_20261111",
+  "sampling_commit": "5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3",
+  "expected_datasets": 75004,
+  "expected_simulation_datasets": 72000,
+  "expected_application_datasets": 3004,
+  "prior_config": "application/config/mti_gibbs_review_20261112.json",
+  "evidence_dir": "figures/data/mti_gibbs_full_20261113",
+  "example_case_ids": ["sim_54_1", "sim_38_503", "sim_45_394", "app_fct_tensile_random_1"],
+  "cdf_points": 513,
+  "trace_display_stride": 4,
+  "rank_bins": 20,
+  "simulation_confidence_family": "72_settings_separately_for_each_method",
+  "primary_summary": "posterior_mean_ordered_endpoints",
+  "new_tolerance_guarantee": false,
+  "replace_ecm_results": false
+}

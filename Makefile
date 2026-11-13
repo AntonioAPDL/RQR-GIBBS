@@ -885,7 +885,7 @@ review-mti-gibbs:
 	$(R) application/scripts/110_review_mti_gibbs.R --mode=analyze
 
 verify-mti-gibbs-review:
-	$(R) application/scripts/110_review_mti_gibbs.R --mode=verify
+	$(R) application/scripts/114_report_mti_gibbs_full_assessment.R --mode=verify-prior
 
 .PHONY: test-mti-gibbs-full preflight-mti-gibbs-full launch-mti-gibbs-full health-mti-gibbs-full stop-mti-gibbs-full report-mti-gibbs-full
 test-mti-gibbs-full:
@@ -915,6 +915,21 @@ test-mti-gibbs-full-report-review:
 review-mti-gibbs-full-report:
 	@test -n "$(GIBBS_OUTPUT_DIR)" || { echo 'Set GIBBS_OUTPUT_DIR to the full campaign directory.'; exit 64; }
 	$(R) application/scripts/113_review_mti_gibbs_full_report.R --output-dir="$(GIBBS_OUTPUT_DIR)"
+
+.PHONY: test-mti-gibbs-full-publication report-mti-gibbs-full-publication render-mti-gibbs-full-publication verify-mti-gibbs-full-publication
+test-mti-gibbs-full-publication:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-full-publication.R
+
+report-mti-gibbs-full-publication:
+	$(R) application/scripts/114_report_mti_gibbs_full_assessment.R --mode=analyze
+
+render-mti-gibbs-full-publication:
+	$(R) application/scripts/114_report_mti_gibbs_full_assessment.R --mode=render
+
+verify-mti-gibbs-full-publication:
+	$(R) application/scripts/114_report_mti_gibbs_full_assessment.R --mode=verify
+
+pdf supplement: verify-mti-gibbs-full-publication
 
 launch-mti-gibbs:
 	bash application/scripts/107_launch_mti_gibbs.sh --confirm-article-commit=$(GIBBS_CONFIRM_COMMIT) --workers=50 --allow-full=true

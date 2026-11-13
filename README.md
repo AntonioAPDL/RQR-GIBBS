@@ -179,6 +179,22 @@ and per-design attainment and width summaries. During sampling it returns
 not reassess chains, restart sampling, or change article results. Its focused
 tests are available through `make test-mti-gibbs-full-report-review`.
 
+The completed run includes all 72,000 simulation samples and 3,004 application
+partitions. Every four-chain dataset meets the preferred recorded diagnostics;
+no continuation was needed. The posterior-mean interval is wider on average
+than ECM in every simulation setting, with higher observed content attainment.
+The article reports this fixed-target posterior assessment separately from
+its calibrated ECM tolerance comparison.
+
+`make verify-mti-gibbs-full-publication` checks the compact numerical evidence
+and the published tables and figures without access to raw chains.
+`make render-mti-gibbs-full-publication` regenerates those displays from the
+compact evidence. `make report-mti-gibbs-full-publication` reconstructs that
+evidence from the completed local study and requires committed reporting
+source. The [publication reproduction instructions](docs/reproducibility/mti_gibbs_full_publication_20261113.md)
+define the summaries, historical checks, and separate computation and
+calibration interpretations. No command starts a new simulation.
+
 ```bash
 make test-theory-figures
 make test-theory-tables
