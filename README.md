@@ -172,6 +172,13 @@ describe launch, health checks, graceful stop, exact-commit resumption, storage,
 and generated reports. These calculations do not automatically replace article
 results. The original Gaussian/GIG campaign remains reproducible and unchanged.
 
+`make review-mti-gibbs-full-report GIBBS_OUTPUT_DIR=/absolute/campaign/directory`
+checks completed report identities, diagnostic summaries, paired comparisons,
+and per-design attainment and width summaries. During sampling it returns
+`pending` without reading unfinished result files. This read-only review does
+not reassess chains, restart sampling, or change article results. Its focused
+tests are available through `make test-mti-gibbs-full-report-review`.
+
 ```bash
 make test-theory-figures
 make test-theory-tables

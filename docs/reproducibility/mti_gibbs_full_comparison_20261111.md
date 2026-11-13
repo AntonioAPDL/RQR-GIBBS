@@ -163,3 +163,64 @@ required. It does not overwrite the current article tables/figures, change
 ECM labels, or modify the dissertation or companion repository. Draw objects,
 logs, and working reports remain ignored. Manuscript integration uses only
 reviewed actual results and follows STYLE_PROFILE.md.
+
+## Independent Review of Completed Reports
+
+The separate report reviewer can be prepared and tested while the frozen
+campaign is running. It reads only the manifest, controller status, and
+progress until the controller reports completion and exits successfully.
+It does not scan or reassess raw chains, load the reference package, write
+inside the campaign, or start an additional process in the background.
+
+```sh
+make test-mti-gibbs-full-report-review
+make review-mti-gibbs-full-report GIBBS_OUTPUT_DIR=/absolute/campaign/directory
+```
+
+For an explicit frozen-source check, use:
+
+```sh
+Rscript application/scripts/113_review_mti_gibbs_full_report.R \
+  --output-dir=/absolute/campaign/directory \
+  --expect-commit=EXACT_FROZEN_LAUNCH_COMMIT --require-complete
+```
+
+Without `--require-complete`, an unfinished campaign returns `pending` and
+exit code 0. With that flag, it returns the same pending description and
+exit code 2. Invalid or inconsistent evidence is an error, with nonzero
+exit status. A completed report that passes consistency checks still
+requires scientific interpretation; it is not automatically accepted for
+the article.
+
+The completed checks verify:
+
+- Successful controller exit, the complete base queue, expected dataset and
+  extension counts, and the frozen design hash.
+- The report's source and manifest identities and every declared report
+  file hash. The frozen writer serializes the eight artifact hashes as an
+  array; the reviewer uses its documented file order rather than assuming
+  those names survived JSON serialization.
+- Fixed fitted content and tilt, dataset identities, endpoint/width
+  relationships, retained-draw counts, and separate posterior width and
+  endpoint-median summaries.
+- Practical and preferred diagnostic flags recomputed from the recorded
+  R-hat, ESS, MCSE ratios, and frozen policy. Unresolved diagnostics remain
+  visible and do not by themselves invalidate report consistency.
+- Complete paired comparisons on the same dataset identities, width
+  differences, raw per-cell width means and .025/.975 quantiles, and
+  attainment counts and proportions. Simulation binomial intervals are
+  independently checked through beta quantiles; application intervals of
+  that kind must remain absent for the overlapping partitions.
+
+These checks verify the consistency of saved summaries, not a second
+independent assessment from raw draws or a proof of tolerance validity.
+They impose no favorable-performance requirement. The 12 saved integration
+examples exercise the completed-report calculations, but are explicitly
+rejected as a completed full campaign by the top-level reviewer.
+
+Manuscript integration remains a separate decision after reviewing actual
+results. Preserve the existing ECM tolerance results and distinguish
+posterior uncertainty, mode estimation, and repeated-sampling content
+attainment. Any changed prior, recalibration, or new target-selection rule
+requires a separately justified study. No new simulation or tuning stage is
+required merely to perform this report review.
