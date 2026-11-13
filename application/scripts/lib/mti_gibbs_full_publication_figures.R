@@ -173,7 +173,8 @@ mgfp_attainment_figure <- function(cells) {
 mgfp_cdf_figure <- function(data) {
   path <- "figures/generated/figS_mti_full_fixed_target_width.pdf"
   grDevices::pdf(path, width = 7.4, height = 6.4, family = "Helvetica", useDingbats = FALSE)
-  par(mfrow = c(2, 2), mar = c(3.5, 3.7, 3.3, .8), oma = c(2, 0, .2, 0), cex = .84)
+  par(mfrow = c(2, 2), mar = c(3.8, 3.7, 3.3, .8), oma = c(2.4, 0, .2, 0),
+    mgp = c(2.1, .65, 0), cex = .84)
   for (i in seq_len(nrow(data$examples))) {
     e <- data$examples[i, ]; z <- data$cdf[data$cdf$case_id == e$case_id, ]
     title <- if (e$source == "application") "Reported tensile metric" else mgfp_families[e$response_id]
@@ -184,7 +185,7 @@ mgfp_cdf_figure <- function(data) {
     abline(v = e$ecm_width, col = "#0072B2", lty = 2, lwd = 1.4)
     abline(v = e$minimum_width, col = "black", lty = 3, lwd = 1.4)
   }
-  mgfp_legend(c("Posterior width", "Finite ECM estimate", "Penalized-loss minimum"),
+  mgfp_legend(c("Posterior width", "Finite ECM estimate", "Width at loss minimum"),
     c("#CC79A7", "#0072B2", "black"), c(1, 2, 3))
   grDevices::dev.off(); path
 }
@@ -196,7 +197,8 @@ mgfp_diagnostic_figures <- function(data) {
   for (type in c("trace", "ranks")) {
     grDevices::pdf(paths[if (type == "trace") 1 else 2], width = 7.4, height = 5.8,
       family = "Helvetica", useDingbats = FALSE)
-    par(mfrow = c(2, 2), mar = c(3.7, 3.8, 2.6, .8), oma = c(2, 0, .4, 0), cex = .82)
+    par(mfrow = c(2, 2), mar = c(3.7, 3.8, 2.6, .8), oma = c(2, 0, .4, 0),
+      mgp = c(2.1, .65, 0), cex = .82)
     for (v in names(labels)) {
       if (type == "trace") {
         z <- data$trace_example
