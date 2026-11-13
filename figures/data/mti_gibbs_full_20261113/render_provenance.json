@@ -1,0 +1,18 @@
+{
+  "data_provenance_sha256": "b5ac94f9fa561be49897e4115cefaa658fc5d84c7490c5e8f5d28e5e542cde3c",
+  "outputs": {
+    "tables/mti_gibbs_full_numbers.tex": "0c24245f304764d14d37a7f1fdfb54673583942e55fcc286db44a7ba6434c325",
+    "tables/mti_gibbs_full_simulation_comparison.tex": "03f1a411ec4fa61d0c068806d723b6cab096a3267cd7f171aa333828daa5aef8",
+    "tables/mti_gibbs_full_application_comparison.tex": "7b61530d3cb99fc4b7254e94e65a79b82fdfa6fbe1d7981cd295dbca18822316",
+    "figures/generated/figS_mti_full_width_ranges_01.pdf": "467e0c66d746ef3cfabadfed0cdeb32939bdf487f8b6fdd2727c15b351defa89",
+    "figures/generated/figS_mti_full_width_ranges_02.pdf": "0120275aa24ccfe7fae8e5f59edd28fd3ae1e3e4b64ff932e46f54b417e73ec2",
+    "figures/generated/figS_mti_full_width_ranges_03.pdf": "24687e4ef8030fe2d314e15645f2f3f15282e73a947d6f8553bc1dc1c5511902",
+    "figures/generated/figS_mti_full_width_ranges_04.pdf": "7cc8576baeb88a43bbd34c3bc18497da1eccb6674a17d3cac65736c8333a7b3d",
+    "figures/generated/figS_mti_full_attainment.pdf": "343dd9b647c5191c3cde98b1728de1ea0bcb81c837897b6aaf2fd85c36476a01",
+    "figures/generated/figS_mti_full_fixed_target_width.pdf": "fbc7087a486c3c8fc1c0c08df6c4cff74573b5c31da4fdd73a2b2ab55a249fb2",
+    "figures/generated/figS_mti_full_trace.pdf": "47e9e9a7e53727fac68545b21feb183be0926e937f7622256627213f89cf30b0",
+    "figures/generated/figS_mti_full_ranks.pdf": "9590097393f95671ace1f13fcc072574952fd9c3a409154255059e25f42b01e4"
+  },
+  "rendered_utc": "2026-11-13 09:32:26 UTC",
+  "session": ["R version 4.5.3 (2026-03-11)", "Platform: x86_64-redhat-linux-gnu", "Running under: AlmaLinux 8.10 (Cerulean Leopard)", "", "Matrix products: default", "BLAS/LAPACK: /usr/lib64/libopenblaso-r0.3.15.so;  LAPACK version 3.9.0", "", "locale:", " [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       ", " [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   ", " [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          ", "[10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   ", "", "time zone: America/Los_Angeles", "tzcode source: system (glibc)", "", "attached base packages:", "[1] stats     graphics  grDevices utils     datasets  methods   base     ", "", "loaded via a namespace (and not attached):", "[1] compiler_4.5.3      data.table_1.18.2.1 digest_0.6.39      ", "[4] jsonlite_2.0.0     "]
+}

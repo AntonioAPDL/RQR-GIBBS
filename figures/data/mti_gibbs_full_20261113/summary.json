@@ -1,0 +1,125 @@
+{
+  "completion": {
+    "datasets": 75004,
+    "simulation_datasets": 72000,
+    "application_datasets": 3004,
+    "preferred_datasets": 75004,
+    "practical_datasets": 75004,
+    "unresolved_datasets": 0,
+    "all_primary_precision_datasets": 22089,
+    "extended_datasets": 0,
+    "maximum_rhat": 1.00610851766173,
+    "minimum_bulk_ess": 1627.78325046541,
+    "minimum_tail_ess": 2343.15153869788
+  },
+  "sampling_commit": "5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3",
+  "chains": 300016,
+  "primary_summary": "posterior_mean_ordered_endpoints",
+  "new_tolerance_guarantee": false,
+  "replace_ecm_results": false,
+  "diagnostic_policy": {
+    "rhat": 1.01,
+    "ess": 400,
+    "mean_mcse_sd": 0.05
+  },
+  "reference_prior_study": {
+    "study": "mti_gibbs_review_20261112",
+    "datasets": 456,
+    "balanced_datasets": 370,
+    "simulation_datasets": 446,
+    "application_datasets": 10,
+    "chains": 1824,
+    "audited_chain_records": 2592,
+    "maximum_rhat": 1.00310331631929,
+    "minimum_bulk_ess": 1781.35947313994,
+    "minimum_tail_ess": 2824.52484233979,
+    "preferred_diagnostics": 456,
+    "means_at_reporting_precision": 229,
+    "medians_at_reporting_precision": 207,
+    "credible_endpoints_at_reporting_precision": 125,
+    "target_classes": [
+      {
+        "Var1": "balanced",
+        "Var2": "application",
+        "Var3": "boundary",
+        "Freq": 1
+      },
+      {
+        "Var1": "stress",
+        "Var2": "application",
+        "Var3": "boundary",
+        "Freq": 0
+      },
+      {
+        "Var1": "balanced",
+        "Var2": "simulation",
+        "Var3": "boundary",
+        "Freq": 129
+      },
+      {
+        "Var1": "stress",
+        "Var2": "simulation",
+        "Var3": "boundary",
+        "Freq": 37
+      },
+      {
+        "Var1": "balanced",
+        "Var2": "application",
+        "Var3": "interior",
+        "Freq": 3
+      },
+      {
+        "Var1": "stress",
+        "Var2": "application",
+        "Var3": "interior",
+        "Freq": 0
+      },
+      {
+        "Var1": "balanced",
+        "Var2": "simulation",
+        "Var3": "interior",
+        "Freq": 170
+      },
+      {
+        "Var1": "stress",
+        "Var2": "simulation",
+        "Var3": "interior",
+        "Freq": 20
+      },
+      {
+        "Var1": "balanced",
+        "Var2": "application",
+        "Var3": "outside",
+        "Freq": 6
+      },
+      {
+        "Var1": "stress",
+        "Var2": "application",
+        "Var3": "outside",
+        "Freq": 0
+      },
+      {
+        "Var1": "balanced",
+        "Var2": "simulation",
+        "Var3": "outside",
+        "Freq": 61
+      },
+      {
+        "Var1": "stress",
+        "Var2": "simulation",
+        "Var3": "outside",
+        "Freq": 29
+      }
+    ],
+    "reliable_original_datasets": 20,
+    "reliable_original_comparisons": 80,
+    "reliable_original_within_two_mcse": 77,
+    "reliable_original_maximum_standardized_difference": 2.46527451605182,
+    "maximum_reference_objective_gap": 4.9470481658233e-13,
+    "ecm_relative_objective_gap_above_1e_minus4": 96,
+    "elapsed_analysis_seconds": 27.078807592392,
+    "new_tolerance_guarantee": false,
+    "replace_tolerance_results": false
+  },
+  "display_stride": 4
+}

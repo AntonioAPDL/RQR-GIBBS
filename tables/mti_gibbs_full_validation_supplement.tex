@@ -1,0 +1,101 @@
+\subsection{Posterior-Mean Interval Comparisons}
+\label{sec:supp-mti-full-validation}
+
+The additional Gibbs comparison uses the same 72,000 simulation datasets
+as the calibrated three-method comparison. For each dataset,
+\(I_{\mathrm G}\) uses the posterior-mean endpoints at its recorded
+ECM-selected \(q,\delta\). The empirical content-attainment proportion
+and the raw width distribution therefore describe a separately specified
+endpoint summary at the same selected target. The DP content check and
+calibrated ECM rule remain unchanged.
+
+Across the 72 settings, posterior-mean interval attainment ranges from
+\MTIFullAttainmentMin\% to \MTIFullAttainmentMax\%.
+Exact binomial intervals adjusted over the 72 settings for this method
+have lower bounds above 0.95 in every setting; the smallest lower bound
+is \MTIFullSimultaneousLower{}. Each tail uses probability
+\(0.05/(2\cdot72)\). These statements quantify Monte Carlo uncertainty
+over the specified simulation panel. They provide empirical evidence for
+these distributions and settings, with the general tolerance question
+retaining the assumptions and limitations stated above.
+
+Mean Gibbs width is greater than ECM and Young--Mathew mean width in
+every setting; it is smaller than Wilks mean width in
+\MTIFullShorterWilks{} settings. At \(n=1000,c=0.90\), Normal mean widths
+are \MTIFullNormalECM{} for ECM and \MTIFullNormalGibbs{} for Gibbs,
+whereas Gamma mean widths are \MTIFullGammaECM{} and
+\MTIFullGammaGibbs{}, respectively. In that Gamma setting, every selected
+tilt is empirically limiting. Outward lower-endpoint dispersion accounts
+for most of the extra width. Thus a large sample can yield a precise
+Monte Carlo calculation of a broad posterior under the specified prior.
+
+The endpoint-median sensitivity summary has attainment between
+\MTIFullMedianAttainmentMin\% and \MTIFullMedianAttainmentMax\%, and its
+mean width also exceeds ECM mean width in all 72 settings. That comparison
+uses the difference of the two endpoint medians. The posterior median of
+width is a different quantity, recorded with its own credible interval.
+
+Figure~\ref{fig:supp-mti-full-attainment} summarizes the content-attainment
+range across distributions for each design. Table~\ref{tab:supp-mti-full-simulation}
+and the following distribution-specific tables give all four methods'
+attainment and raw width ranges. The width figures retain individual
+distribution/design summaries, without averaging lengths across laws.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS_mti_full_attainment.pdf}
+\caption{\textbf{Content attainment including posterior-mean intervals.}
+Each horizontal segment spans the observed attainment proportions across
+the eight simulation distributions for one design and method. These
+segments describe distributional variation; binomial Monte Carlo bounds
+are recorded separately. The dashed line marks tolerance confidence
+0.95. MTI-Gibbs uses the fixed-target posterior-mean endpoints defined
+above.}
+\label{fig:supp-mti-full-attainment}
+\end{figure}
+
+\input{tables/mti_gibbs_full_simulation_comparison.tex}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS_mti_full_width_ranges_01.pdf}
+\caption{\textbf{Raw width ranges for the two symmetric simulation laws.}
+Segments give empirical 2.5\%--97.5\% quantiles across the 1000 samples
+for each distribution, design, and method; crosses mark mean widths.
+The horizontal axes are logarithmic, with values in response units.
+The four intervals in each design group are separated from neighboring
+designs. MTI-Gibbs uses posterior-mean endpoints.}
+\label{fig:supp-mti-full-widths-symmetric}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS_mti_full_width_ranges_02.pdf}
+\caption{\textbf{Raw width ranges for exponential and asymmetric Laplace samples.}
+Segments, crosses, design grouping, and logarithmic axes follow
+Figure~\ref{fig:supp-mti-full-widths-symmetric}. Each width range is
+computed within its own distribution and design.}
+\label{fig:supp-mti-full-widths-exponential-al}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS_mti_full_width_ranges_03.pdf}
+\caption{\textbf{Raw width ranges for two-piece Normal and Beta samples.}
+Segments, crosses, design grouping, and logarithmic axes follow
+Figure~\ref{fig:supp-mti-full-widths-symmetric}. Wider posterior-mean
+intervals remain visible on the original response scale.}
+\label{fig:supp-mti-full-widths-two-piece-beta}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/figS_mti_full_width_ranges_04.pdf}
+\caption{\textbf{Raw width ranges for Gamma and lognormal samples.}
+Segments, crosses, design grouping, and logarithmic axes follow
+Figure~\ref{fig:supp-mti-full-widths-symmetric}. The larger Gibbs width
+ranges accompany the empirical limiting-tilt behavior discussed in
+Section~\ref{sec:supp-mti-posterior-assessment}.}
+\label{fig:supp-mti-full-widths-gamma-lognormal}
+\end{figure}
+\clearpage

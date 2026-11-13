@@ -7,7 +7,8 @@ and calibrated MTI-ECM tolerance intervals.
 The manuscript in `main.tex` is now focused on fixed-content interval geometry,
 the MPI and MTI targets, the calibrated MTI procedure, and iid tolerance
 validation against Young--Mathew and Wilks. It includes fixed-target Gibbs and
-ECM derivations. Broader endpoint-regression, basis-expansion, and dynamic development is in the
+ECM derivations and the completed 75,004-dataset posterior assessment.
+Broader endpoint-regression, basis-expansion, and dynamic development is in the
 companion manuscript repository `AntonioAPDL/MTI-EXTENSIONS`.
 
 Earlier versions used the Relaxed Quantile Regression (RQR) name and the
@@ -42,23 +43,27 @@ Under proper Gaussian root priors, normal-exponential augmentation gives
 conditionally conjugate Gaussian root and GIG scale updates for MPI and
 fixed-tilt MTI. Gibbs sampling targets that fixed-target generalized posterior;
 ECM uses the same augmentation for mode estimation. Fitted content and tilt are
-selected separately. A completed fixed-target computation study compares
-the two samplers and examines posterior uncertainty alongside finite ECM
-estimates. Its findings are reported separately from the tolerance comparison.
+selected separately. The completed fixed-target study examines marginal
+Gibbs posterior uncertainty alongside finite ECM estimates, with a smaller
+supporting comparison to the original augmented sampler. Its findings are
+reported separately from the calibrated tolerance comparison.
 
 MTI-ECM is the proposed tolerance procedure reported in the article. It searches
 finite-iteration endpoint estimates under a generalized-Bayes criterion over fitted content and tilt,
 then selects the shortest fitted interval meeting a direct Dirichlet-process
 posterior content check. Its calibration rule is fixed before independent
-repeated-sampling validation. The simulation and pharmaceutical results report
-MTI-ECM, Young--Mathew, and Wilks. The simulation comparison uses the genuine
+repeated-sampling validation. The primary simulation and pharmaceutical
+results report MTI-ECM, Young--Mathew, and Wilks; complete supplementary
+tables add the Gibbs posterior-mean intervals on the same data.
+The simulation comparison uses the genuine
 archived ECM study; its inexpensive comparators are recomputed on exactly the
 same samples. Stopping flags are distinct from interval return and population
 content attainment. See
 [the reproducibility description](docs/reproducibility/mti_ecm_recovery_20261111.md).
-The user has explicitly authorized the staged fixed-target Gibbs comparison.
-Each launch still requires the exact committed article-source SHA; authorization
-does not establish completed Gibbs results or permit automatic article replacement.
+The authorized full Gibbs study is complete, with zero remaining chains or
+required extensions. Its numerical evidence and manuscript reporting are
+described below. Reproducing a launch still requires its exact committed
+source; no further campaign is required to reproduce the published displays.
 
 The scan reference (TCSP in the code) is retained for constructing the
 initial fitted-content grid. It is
@@ -67,7 +72,7 @@ and historical analysis outputs remain available for reproducibility. The
 selected MTI interval has finite-panel empirical tolerance validation; a
 distribution-free theorem for this selection rule remains open.
 
-## Authorized Gibbs Comparison
+## Earlier Augmented Gibbs Comparison
 
 `application/config/mti_gibbs_ecm_comparison_20261111.json` specifies four
 dispersed chains with 2000 burn-in cycles and 4000 retained draws per chain for
@@ -123,7 +128,7 @@ keep their posteriors proper but can strongly influence outward endpoints.
 
 The separate `mti_gibbs_practical_20261112.json` study preserves that evidence.
 It reassesses saved draws, verifies exact Gaussian/GIG continuation, and
-performs one bounded extension for borderline cases. An experimental
+performs one bounded extension for borderline cases. An initially experimental
 intercept-only marginal slice-within-Gibbs sampler checks the same root
 posterior with latent scales integrated out. It is distinct from the original
 conditionally Gaussian/GIG implementation and does not redefine MTI-ECM.
@@ -157,10 +162,10 @@ by this analysis.
 
 ### Full Fixed-Target Gibbs Comparison
 
-The full comparison now has a separate marginal slice-within-Gibbs controller.
-It preserves archived q/delta and priors, verifies the completed diagnostic
-study, replays 12 integration examples, and automatically proceeds to all
-75,004 datasets (300,016 chains) only after its checks pass. Compact records
+The completed full comparison used a separate marginal slice-within-Gibbs
+controller. It preserved archived q/delta and priors, verified the completed
+diagnostic study, replayed 12 integration examples, and then evaluated all
+75,004 datasets (300,016 chains). Compact records
 retain all endpoint draws and exact continuation states. One bounded
 continuation is available for datasets failing the practical numerical screen.
 Posterior-mean intervals are evaluated as a separately specified summary;
@@ -211,8 +216,10 @@ outputs under ignored simulation-output directories.
 
 The current application uses
 `application/config/pharma_tolerance_application_mti_only_20261020.json`.
-MTI-ECM is the sole proposed procedure; Young--Mathew and Wilks are external
-benchmarks. It uses the adopted simulation policy without application tuning.
+MTI-ECM is the proposed calibrated tolerance procedure; Young--Mathew and
+Wilks are external benchmarks. The separate Gibbs assessment reports
+fixed-target posterior-mean intervals on the same partitions. The ECM
+procedure uses the adopted simulation policy without application tuning.
 Both responses share 1000
 random partitions, two chronological cases, 250 production-month partitions,
 and 250 API-batch partitions. All partitions use 100 training and 87 held-out

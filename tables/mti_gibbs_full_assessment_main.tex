@@ -1,0 +1,26 @@
+\paragraph{Fixed-target posterior assessment.}
+We assessed posterior computation on all \MTIFullSimulations{} simulation
+samples and \MTIFullApplications{} application training partitions used below.
+The selected \(q,\delta\), learning rate, and Gaussian root priors were held
+fixed within each sample. Four marginal slice-within-Gibbs chains retained
+4000 draws after 2000 burn-in cycles. Integrating out the scales gives the
+same root posterior as the augmentation, with the conditional slice updates
+described in the supplement \citep{Neal2003SliceSampling}.
+All \MTIFullDatasets{} samples met the recorded diagnostic criteria for
+ordered endpoints, width, and midpoint. The largest rank-normalized
+\(\widehat R\) was \MTIFullRhat{}, and the smallest bulk and tail effective
+sample sizes were approximately \MTIFullBulkESS{} and \MTIFullTailESS{},
+respectively \citep{VehtariEtAl2021Rhat}.
+
+For a point-interval comparison, let
+\(I_{\mathrm G}=[\bar l,\bar u]\), where
+\(\bar l=\E\{\min(a,b)\mid D_n,q,\delta\}\) and
+\(\bar u=\E\{\max(a,b)\mid D_n,q,\delta\}\) under the generalized posterior.
+Its width is the posterior mean of \(|b-a|\). We approximate these expectations
+by the retained draws. This summary incorporates the spread of the root
+posterior, while the finite ECM calculation estimates a mode. Empirical
+limiting tilts can leave one outward root direction weakly constrained by
+the loss, producing substantial width uncertainty under the diffuse prior.
+Section~\ref{sec:evaluation} compares the resulting intervals on the same
+validation samples; the supplement gives their full posterior and
+repeated-sampling assessments.

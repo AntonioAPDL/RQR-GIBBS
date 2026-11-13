@@ -11,7 +11,7 @@ repo_root <- normalizePath(repo_root, mustWork = TRUE)
 
 manuscripts <- c("main.tex", "rqr-gibbs-supplement.tex")
 included_text <- file.path("tables", list.files(file.path(repo_root, "tables"),
-  pattern = "^(pharma_application_.*|mti_gibbs_comparison_(main|supplement))\\.tex$"))
+  pattern = "^(pharma_application_.*|mti_gibbs_full_.*)\\.tex$"))
 source_files <- c(manuscripts, included_text)
 paths <- file.path(repo_root, source_files)
 if (any(!file.exists(paths))) {
@@ -115,7 +115,7 @@ required <- list(
     "mean-preserving interval (MPI)",
     "mean-tilted interval (MTI)",
     "ECM estimates endpoints under the MTI generalized-posterior criterion",
-    "repeated-sampling content--confidence statement",
+    "tolerance interval adds a repeated-sampling requirement",
     "shortest eligible fitted interval is reported",
     "Dirichlet-process (DP)",
     "The pointwise MPI loss is",
@@ -169,7 +169,7 @@ for (file in manuscripts) {
 }
 has_posterior_assessment <- FALSE
 for (suffix in c("main", "supplement")) {
-  file <- paste0("tables/mti_gibbs_comparison_", suffix, ".tex")
+  file <- paste0("tables/mti_gibbs_full_assessment_", suffix, ".tex")
   path <- file.path(repo_root, file)
   if (!file.exists(path)) failures <- c(failures, paste("Missing posterior assessment inclusion:", file))
   else if (any(nzchar(trimws(readLines(path, warn = FALSE))))) has_posterior_assessment <- TRUE
@@ -180,7 +180,7 @@ for (suffix in c("main", "supplement")) {
 }
 if (has_posterior_assessment) {
   assessment <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
-    c(shQuote(file.path(repo_root, "application/scripts/110_review_mti_gibbs.R")), "--mode=verify"),
+    c(shQuote(file.path(repo_root, "application/scripts/114_report_mti_gibbs_full_assessment.R")), "--mode=verify"),
     stdout = TRUE, stderr = TRUE))
   if (!is.null(attr(assessment, "status")) && attr(assessment, "status") != 0L) {
     failures <- c(failures, "Posterior assessment text lacks verified matching evidence.", assessment)

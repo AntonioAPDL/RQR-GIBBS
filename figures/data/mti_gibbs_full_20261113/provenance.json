@@ -1,0 +1,52 @@
+{
+  "analysis_commit": "44a5a1f17fad967c6d110eac97d65d3634e0d1b1",
+  "sampling_commit": "5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3",
+  "analysis_programs": {
+    "application/scripts/114_report_mti_gibbs_full_assessment.R": "d0babd42894abe6a9df102077bec55e4ed8b658d70946d65226ea0005f32368b",
+    "application/scripts/lib/mti_gibbs_full_publication.R": "ba34c3bd19dfd564ced43cad8f71a9c5f4ce390a1d2565451ac3c85c5f773a8d",
+    "application/scripts/lib/mti_gibbs_full_publication_figures.R": "6328d1d9a4d171640998b5b2892631fcbd4dbb3173b8d0286636dd8a7266dbc9",
+    "application/scripts/lib/mti_gibbs_full_report_review.R": "f1f6fba47104a3d30865f7ca5010dbfe5943fc1db81c37b801d6771af1ef95d8",
+    "application/config/mti_gibbs_full_reporting_20261113.json": "265c39a56a4498d75f6ff8e12078cddee0e2e87fcccd902375a23388d35fb1c6"
+  },
+  "inputs": {
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_gibbs_full_launch_5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3/application/outputs/mti_gibbs_full_comparison_20261111/manifest.json": "d5f97d970d5d3bc6efc7678cba0972d0e69fd5e27d610302b839d868136074df",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_gibbs_full_launch_5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3/application/outputs/mti_gibbs_full_comparison_20261111/jobs.rds": "c6862dcda4e799a4657cb0512f2e96719b72c7a7aab39a74759fdd2d3a0a4e92",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_gibbs_full_launch_5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3/application/outputs/mti_gibbs_full_comparison_20261111/report_provenance.json": "2406b233e05d67d031f085fe8b45729b78e4858874819bf68b885ae0d2280d0f",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_gibbs_full_launch_5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3/application/outputs/mti_gibbs_full_comparison_20261111/dataset_summary.csv": "3bf094932f896b5e39cc4c12c0b3a94182db3784df060b4d029db58cf2304387",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_gibbs_full_launch_5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3/application/outputs/mti_gibbs_full_comparison_20261111/parameter_summary.csv": "6b74cfc5ffeb770755079b12791cf4b13bf6f3ac29ebe1eac758df252f441ba4",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_gibbs_full_launch_5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3/application/outputs/mti_gibbs_full_comparison_20261111/interval_comparison.csv": "168b34b4e06a3fbb3e3995b5bfbf410c9afe4248705c7947759b17e17bd24d12",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_gibbs_full_launch_5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3/application/outputs/mti_gibbs_full_comparison_20261111/comparison_summary.csv": "b0c5501f7871c8c6c93f8eb6478b91c2e219d0648daca1fb81d8d102e046ea0e",
+    "figures/data/mti_gibbs_review_20261112/datasets.csv": "f69580ec4a5d1b2a28b118bf0a741643abfdd55a53eadb210a351ace4ccdc0e8",
+    "figures/data/mti_gibbs_review_20261112/parameters.csv": "43aa0ccfea6483a291a2cbae05ef0700fadc28988799f6033e5db3cc1fc38cd4",
+    "figures/data/mti_gibbs_review_20261112/sensitivity.csv": "e07ac87c4096439c7b5e9ca30986478289a2295c059b05c4e89bf3c233719c51",
+    "figures/data/mti_gibbs_review_20261112/audit.csv": "82efb6499589803e8e56896783b275380f7b4246819aded38f0c0e90ee00d4a9",
+    "figures/data/mti_gibbs_review_20261112/agreement.csv": "dc05b164fccf8dc3287914cde66ba90a557a91fafd2dc4e3725012d299618cab",
+    "figures/data/mti_gibbs_review_20261112/overview.csv": "e38898f0fdfc419dfbd79a0432ddd06495fbc4aa12b4c2a550313d9e02de43fd",
+    "figures/data/mti_gibbs_review_20261112/cells.csv": "cce2be0d34a41b7b19488b379c3e313ed239864b3c6c7282e195cd50c62fe764",
+    "figures/data/mti_gibbs_review_20261112/summary.json": "b7735050a8ca176212a57e384e6a864dc35fa023b632fe6b9e91d357c2911a95",
+    "figures/generated/figS_mti_fixed_target_width.pdf": "032d30d8304fc05419754d613df6847a82962d352f9c7c4259dd1f55e74daba8",
+    "tables/mti_gibbs_comparison_main.tex": "f347fb6d419e41965f4b1b15130d83d0ccea9603c93cfbd85053faa472c8ca3e",
+    "tables/mti_gibbs_comparison_supplement.tex": "20c2c609555cefb5208f11b206e724800b8f914837adaa9c3b69a3d61793e6d8",
+    "application/scripts/110_review_mti_gibbs.R": "eea52be383b681f8a68b3cc0e4e916e0368af97e687ab1793f1d52d464d0cf93",
+    "application/scripts/lib/mti_gibbs_review.R": "f6ff0238cff59b3fb06fb93f72aa20b6936b7be3aebcec96574c2960d781acc6",
+    "application/config/mti_gibbs_review_20261112.json": "852ad9f90e7c5eabe36aa0bdba7ab467d7303ae8ee890a7650e9205bc53b0bd9"
+  },
+  "data_files": {
+    "figures/data/mti_gibbs_full_20261113/simulation_cells.csv": "abf766961a4927948aa6874263d3ce3465c4dc5dfcf359c5dc370a235edc0c0f",
+    "figures/data/mti_gibbs_full_20261113/application_partitions.csv": "337f715623b09b2f368e174014c9dc2996e0ecdef1b00c569b5dd054afdbf2de",
+    "figures/data/mti_gibbs_full_20261113/paired_cells.csv": "a4fec2f53b49306967f8194ff8319150e9ad092ca6ae3de1bcd2f58b02526840",
+    "figures/data/mti_gibbs_full_20261113/geometry.csv": "55a2efae0e027ad06c71dfdf1379bba48f059569fb3a5b85d32b9761c92ec352",
+    "figures/data/mti_gibbs_full_20261113/geometry_cells.csv": "e2245dac950794f0b90767c9aa9fb1d9e4bf3940defd52626044ba9266144a75",
+    "figures/data/mti_gibbs_full_20261113/median_sensitivity.csv": "dcd9a83ec2d2a896daa6fa4868f41a2f7f04c6b4a9838059839a1e7b35a8957d",
+    "figures/data/mti_gibbs_full_20261113/precision.csv": "d0c7b47a02f291d3f7655b4a41168cfec45d394bacefe0459cc9c4f9004074e4",
+    "figures/data/mti_gibbs_full_20261113/agreement.csv": "8eb60ba991c03b1629d907b710444445134ead199569ec51c3c6591d88de36ce",
+    "figures/data/mti_gibbs_full_20261113/cdf.csv": "a481cd4e8a9813e5c42777a06fe70b09c3204b38ef2cee8b219b75235fd011a3",
+    "figures/data/mti_gibbs_full_20261113/examples.csv": "ab67ab57fca3e94a1a00b40cc787f56f092c06694a99e5b9c895c94432a02a62",
+    "figures/data/mti_gibbs_full_20261113/chain_receipts.csv": "9642052297cfde52d3ec074d4c75285eb1afe10025435ad55ec7ef025b0fbcee",
+    "figures/data/mti_gibbs_full_20261113/trace_example.csv": "6cb024d9ffd0e594708d2c7adb16af7c94d12e0fbdef1727ed77d6540304874d",
+    "figures/data/mti_gibbs_full_20261113/rank_example.csv": "16548df8c53647aa7fafde5e0df059020da48b6ced7b2f352faee49fbb1bb258",
+    "figures/data/mti_gibbs_full_20261113/summary.json": "5040cb011e3df03dd1b7400932c297ea5c11f9e3169e9d3f8d97f9e1b3e20fb7"
+  },
+  "created_utc": "2026-11-13 09:32:24 UTC",
+  "session": ["R version 4.5.3 (2026-03-11)", "Platform: x86_64-redhat-linux-gnu", "Running under: AlmaLinux 8.10 (Cerulean Leopard)", "", "Matrix products: default", "BLAS/LAPACK: /usr/lib64/libopenblaso-r0.3.15.so;  LAPACK version 3.9.0", "", "locale:", " [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       ", " [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   ", " [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          ", "[10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   ", "", "time zone: America/Los_Angeles", "tzcode source: system (glibc)", "", "attached base packages:", "[1] stats     graphics  grDevices utils     datasets  methods   base     ", "", "loaded via a namespace (and not attached):", "[1] compiler_4.5.3      data.table_1.18.2.1 digest_0.6.39      ", "[4] jsonlite_2.0.0     "]
+}

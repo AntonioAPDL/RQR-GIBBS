@@ -1,0 +1,7 @@
+source,target_class,datasets,preferred
+"simulation","interior",34906,34906
+"simulation","outside",12407,12407
+"simulation","boundary",24687,24687
+"application","outside",1589,1589
+"application","interior",1334,1334
+"application","boundary",81,81

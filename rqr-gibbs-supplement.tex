@@ -34,6 +34,7 @@
 \newcommand{\mat}[1]{\bm{#1}}
 \newcommand{\RHS}{\mathrm{RHS}}
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.08}}
+\input{tables/mti_gibbs_full_numbers.tex}
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
 \newtheorem{lemma}{Lemma}
@@ -75,9 +76,10 @@ mean-tilted interval (MTI) family. It then records the finite-sample score
 balance used to interpret fixed-target fits, the Gibbs and ECM endpoint
 calculation and an alternative pseudo-asymmetric-Laplace augmentation, the direct
 Dirichlet-process content-probability check, and the iid tolerance-validation
-protocol. Endpoint regression, basis-expansion endpoint models, time-varying endpoint
-models, and broader Gibbs computation are treated in a companion computation
-paper.
+protocol. A complete fixed-target Gibbs assessment compares posterior-mean
+intervals with the calibrated ECM estimates on the same simulation samples
+and historical data partitions. Endpoint regression, basis-expansion endpoint
+models, and time-varying endpoint models are treated in a companion paper.
 \end{abstract}
 
 \section*{Part I. Notation, Inferential Objects, and Guide to Supporting Results}
@@ -1272,7 +1274,7 @@ places little restriction on width uncertainty under a diffuse prior.
 The study below records these empirical limits separately from the
 population admissibility conditions and from the tolerance assessment.
 
-\input{tables/mti_gibbs_comparison_supplement.tex}
+\input{tables/mti_gibbs_full_assessment_supplement.tex}
 
 \subsection{Fitted-Content and Tilt Selection}
 \label{sec:supp-mti-candidate-selection}
@@ -1388,11 +1390,12 @@ computed directly from these replication-level simulation outputs and the
 corresponding scan-calibration outputs. The scenario-range table in the main
 article is summarized across distributions within each \((n,c)\) cell, while
 the supplement keeps the distribution-level content-attainment and width
-summaries.
-Table~\ref{tab:supp-primary-dgp-delivery} gives the distribution-level
-content-attainment percentages before aggregation, and
-Table~\ref{tab:supp-primary-dgp-width-ranges} reports the corresponding
-distribution-level 2.5\%--97.5\% ranges of interval lengths. The
+summaries. The fixed-target Gibbs assessment uses the same 72,000 samples;
+it holds the recorded ECM-selected content and tilt fixed and adds a
+posterior-mean endpoint interval for each sample.
+Table~\ref{tab:supp-mti-full-simulation} and the following
+distribution-specific tables combine content-attainment percentages and
+2.5\%--97.5\% ranges of raw interval lengths for all four methods. The
 replication-level data file records indicators of interval production,
 infeasibility indicators, and raw width summaries for each
 distribution-level cell as reproducibility information.
@@ -1418,7 +1421,7 @@ simultaneous finite-panel guarantee.
 \paragraph{Independent uncertainty assessment.}
 The cutoff is fixed before the 1000 validation samples per case are generated.
 Pointwise exact 95\% binomial intervals accompany each attainment estimate.
-For MTI, simultaneous two-sided intervals across 72 cases allocate
+For MTI-ECM, simultaneous two-sided intervals across 72 cases allocate
 \(0.05/(2\cdot72)\) to each tail. Their lower bounds exceed \(0.95\) in
 53 cases; 19 include \(0.95\), and none has an upper bound below it.
 The smallest point estimate, \(951/1000\), occurs for the two-piece Normal at
@@ -1433,12 +1436,7 @@ stationarity summaries, and selected-target ranges for every distribution and
 design. These are numerical diagnostics of the implemented estimates, separate
 from whether their intervals attain the requested population content.
 
-\begingroup
-\TableStyle
-\input{tables/tolerance_validation_article_dgp_delivery.tex}
-\endgroup
-
-\input{tables/tolerance_validation_article_dgp_width_ranges.tex}
+\input{tables/mti_gibbs_full_validation_supplement.tex}
 
 The population benchmark used in the main width figure is shown in
 Figure~\ref{fig:supp-tolerance-population-shortest}. For each simulation law
@@ -1781,6 +1779,32 @@ and the nominal tolerance-confidence assessment remains the separate
 simulation study.
 
 
+\subsection{Fixed-Target Gibbs Comparisons on Historical Partitions}
+\label{sec:supp-pharma-gibbs}
+
+The complete Gibbs assessment uses the same \MTIFullApplications{}
+training partitions as the original ECM application. Each calculation
+conditions on the partition's selected fitted content and tilt, with the
+learning rate and Gaussian root priors unchanged. Posterior-mean endpoints
+give the interval \(I_{\mathrm G}\) defined in
+Section~\ref{sec:supp-mti-posterior-assessment}. Their held-out empirical
+content is computed on exactly the same withheld batches as the ECM and
+classical comparisons.
+
+For the tensile metric, mean widths across random partitions are
+\MTIFullTensileECM{} for ECM and \MTIFullTensileGibbs{} for Gibbs.
+The corresponding held-out attainment percentages are
+\MTIFullTensileECMAttainment\% and \MTIFullTensileGibbsAttainment\%.
+The greater Gibbs widths accompany increased held-out content, with
+substantial variation among partitions. The tables below keep the random,
+recorded-order, API-batch, and production-month schemes separate. Each
+scheme's width range summarizes its own intervals; a single chronological
+partition has a single reported width. These comparisons describe
+historical variation and posterior dispersion under the specified priors.
+Overlapping partitions do not provide independent tolerance replications.
+
+\input{tables/mti_gibbs_full_application_comparison.tex}
+
 \section{Reproducibility and Validation Limits}
 \label{sec:supp-reproducibility}
 
@@ -1791,6 +1815,17 @@ the direct DP fixed-interval content law under their stated assumptions. The
 scan-reference retained counts are calibrated before the replicated samples are analyzed.
 The MTI content-probability cutoff is selected in a separate
 calibration run and then applied unchanged in the independent validation run.
+
+The completed posterior assessment records all \MTIFullDatasets{} datasets,
+their selected targets, the four chain seeds, numerical settings, posterior
+summaries, and multi-chain diagnostics. The reproducible summaries retain
+the simulation designs and historical partition schemes separately.
+Numerical table entries and figures are generated from these records;
+the retained traces and pooled-rank counts reproduce the displayed
+diagnostics. The independent objective and prior-sensitivity calculations
+retain their original 456-example scope. The full posterior assessment
+adds no new calibration samples and leaves the original ECM tolerance
+results unchanged.
 
 The validation evidence is confined to iid continuous univariate samples from
 the prespecified simulation distributions. It does not establish tolerance
