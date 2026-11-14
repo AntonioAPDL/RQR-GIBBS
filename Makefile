@@ -918,6 +918,19 @@ review-mti-gibbs-full-report:
 
 .PHONY: test-mti-gibbs-full-publication report-mti-gibbs-full-publication render-mti-gibbs-full-publication verify-mti-gibbs-full-publication
 .PHONY: test-mti-gibbs-width-diagnosis diagnose-mti-gibbs-width check-mti-gibbs-width-references
+.PHONY: test-mti-prior-screen check-mti-prior-screen run-mti-prior-screen health-mti-prior-screen
+test-mti-prior-screen:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-prior-screen.R
+
+check-mti-prior-screen:
+	$(R) application/scripts/118_select_mti_prior.R check
+
+run-mti-prior-screen:
+	$(R) application/scripts/118_select_mti_prior.R run
+
+health-mti-prior-screen:
+	$(R) application/scripts/118_select_mti_prior.R health
+
 test-mti-gibbs-width-diagnosis:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-width-diagnosis.R
 
