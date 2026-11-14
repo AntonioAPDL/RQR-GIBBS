@@ -13,6 +13,14 @@ dir.create(output, showWarnings = FALSE)
 context <- mwd_context(cfg, directory)
 cases <- read.csv(file.path(directory, "selected_cases.csv"))
 samples <- lapply(seq_len(nrow(cases)), function(i) mwd_sample(cases[i, ], context))
+sensitivities <- read.csv(file.path(directory, "sensitivity_summary.csv"))
+empirical_content <- do.call(rbind, lapply(seq_len(nrow(sensitivities)), function(i) {
+  z <- sensitivities[i, ]; y <- samples[[match(z$case_id, cases$case_id)]]
+  data.frame(case_id = z$case_id, variant = z$variant, source = z$source,
+    empirical_training_content = mean(y >= z$lower & y <= z$upper),
+    population_content = z$population_content)
+}))
+mwd_write(empirical_content, file.path(output, "interval_content_diagnostics.csv"))
 coordinates <- do.call(rbind, lapply(seq_len(nrow(cases)), function(i) {
   t <- cases[i, ]; y <- samples[[i]]
   a <- t$ecm_lower; b <- t$ecm_upper
@@ -60,13 +68,14 @@ plot(x, loss - loss[1], type = "l", ylim = c(-1e-8, 1e-8), xlab = "Lower endpoin
   ylab = "Change in cumulative loss", main = "Limiting tilt: flat outward loss")
 cols <- c("#0072B2", "#D55E00", "#009E73")
 x <- seq(-300, min(y), length.out = 3000)
-densities <- vapply(c(1, 10, 100), function(s) dnorm(x, 0, s) / pnorm(min(y), 0, s), x)
-matplot(x, densities, type = "l", lty = 1, col = cols,
-  xlab = "Lower endpoint", ylab = "Conditional density", main = "Truncated Gaussian prior determines this tail")
+cdfs <- vapply(c(1, 10, 100), function(s) pnorm(x, 0, s) / pnorm(min(y), 0, s), x)
+matplot(x, cdfs, type = "l", lty = 1, col = cols,
+  xlab = "Lower endpoint", ylab = "Conditional distribution function", main = "Truncated Gaussian prior determines this tail")
 legend("topleft", c("Prior SD 1", "Prior SD 10", "Prior SD 100"), col = cols, lty = 1, bty = "n")
 mtext("Gamma diagnostic sample; upper endpoint fixed at the empirical q-quantile.", outer = TRUE, side = 1, cex = .8)
 dev.off()
-files <- c("ecm_coordinate_objective_checks.csv", "direct_loss_conditional_cdfs.csv", "limiting_loss_and_prior.pdf")
+files <- c("ecm_coordinate_objective_checks.csv", "direct_loss_conditional_cdfs.csv",
+  "interval_content_diagnostics.csv", "limiting_loss_and_prior.pdf")
 mgfp_json_write(list(source_commit = mgfp_git("rev-parse", "HEAD"),
   script_sha256 = mwd_file_hash("application/scripts/117_check_mti_gibbs_width_references.R"),
   diagnostic_identity_sha256 = manifest$identity_sha256, artifacts = mgfp_hashes(file.path(output, files)),
