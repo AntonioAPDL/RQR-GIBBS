@@ -937,8 +937,15 @@ launch-mti-gibbs:
 health-mti-gibbs:
 	$(R) application/scripts/105_compare_mti_gibbs_ecm.R --mode=health --output-dir=$(GIBBS_OUTPUT_DIR)
 
-arxiv-source: pdf
+arxiv-source: verify-mti-gibbs-full-publication
 	bash application/scripts/31_prepare_arxiv_source.sh
+
+.PHONY: article-handoff test-manuscript-source-package
+article-handoff: verify-mti-gibbs-full-publication
+	bash application/scripts/31_prepare_arxiv_source.sh --include-supplement=true
+
+test-manuscript-source-package:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-manuscript-source-package.R
 
 smoke:
 	$(R) application/scripts/00_validate_environment.R

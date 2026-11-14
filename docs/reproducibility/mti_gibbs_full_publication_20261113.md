@@ -119,3 +119,25 @@ calibration to the Gibbs means. Changing the prior, learning rate, fitted
 target rule, or optimizer would define different reported intervals and would
 need separately justified validation. No further screening or relaunch is
 required to present the completed study accurately.
+
+## Complete Manuscript Source
+
+The source-package command compiles an exact committed snapshot and uses
+PDFLaTeX recorder files to identify the inputs actually read, including
+nested full-study insertions and figures. This replaces the obsolete fixed
+file list. It produces a source-only ZIP and SHA-256 records; newly compiled
+review PDFs remain outside that ZIP. Existing output directories are preserved.
+
+```sh
+make test-manuscript-source-package
+make arxiv-source
+make article-handoff
+```
+
+`arxiv-source` includes the main article; `article-handoff` includes both
+main and supplement. Both require committed tracked changes and use only
+tracked manuscript inputs, with fresh BibTeX output. Results go to an ignored
+commit-labelled directory under `application/cache/`. These commands build
+documents without starting simulations, reading raw chains, or changing the
+article. The [completed-study reference](mti_completed_study_reference_20261113.md)
+maps the derivations, actual algorithms, and findings for dissertation use.

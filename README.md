@@ -200,6 +200,15 @@ source. The [publication reproduction instructions](docs/reproducibility/mti_gib
 define the summaries, historical checks, and separate computation and
 calibration interpretations. No command starts a new simulation.
 
+The [completed-study reference](docs/reproducibility/mti_completed_study_reference_20261113.md)
+maps the actual posterior derivations, algorithms, study results, and their
+interpretation for dissertation integration. `make arxiv-source` prepares
+the main article's source ZIP from a committed snapshot; `make article-handoff`
+includes main and supplement. Both discover nested inputs from LaTeX recorder
+files, compile fresh bibliographies, and keep review PDFs beside the ZIP.
+Outputs are ignored under `application/cache/`; neither command starts a sampler.
+Use `make test-manuscript-source-package` to check the packaging safeguards.
+
 ```bash
 make test-theory-figures
 make test-theory-tables
