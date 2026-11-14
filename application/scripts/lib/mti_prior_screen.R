@@ -9,6 +9,55 @@ mps_spec <- function(y, kappa) {
 mps_programs <- c("application/scripts/118_select_mti_prior.R", "application/scripts/lib/mti_prior_screen.R",
   "application/config/mti_prior_screen_20261113.json", mwd_programs)
 
+mps_restore_knots <- function(y, lower, upper, q, delta, variance) {
+  roots <- c(lower, upper); original <- roots; changes <- 0L
+  objective <- function(x) mgp_objective(y, x[1], x[2], q, delta, precision = 1 / variance)
+  for (j in rep(1:2, 2)) {
+    mode <- mgp_conditional(y, roots[3L - j], q, delta, precision = 1 / variance)$mode
+    tolerance <- sqrt(.Machine$double.eps) * max(1, abs(roots))
+    if (!(mode %in% y) || abs(mode - roots[j]) > tolerance || mode == roots[j]) next
+    proposal <- roots; proposal[j] <- mode
+    before <- objective(roots); after <- objective(proposal)
+    mwd_require(after <= before + 64 * .Machine$double.eps * max(1, abs(before)),
+      "Analytical knot restoration increased the posterior objective.")
+    roots <- proposal; changes <- changes + 1L
+  }
+  list(lower = min(roots), upper = max(roots), changes = changes,
+    displacement = max(abs(roots - original)), objective = objective(roots))
+}
+
+mps_check_candidates <- function(action, y, kappa, content, cutoff) {
+  d <- action$candidates
+  d$unrestored_lower <- d$lower; d$unrestored_upper <- d$upper
+  d$unrestored_objective <- d$ecm_objective
+  d$knot_restorations <- 0L; d$restoration_displacement <- 0
+  for (i in which(d$finite_interval)) {
+    direct <- mgp_objective(y, d$lower[i], d$upper[i], d$target_content[i], d$mean_tilt[i], precision = 1 / kappa^2)
+    mwd_require(abs(direct - d$ecm_objective[i]) <= 1e-7 * max(1, abs(direct)),
+      "A candidate ECM objective differs from the shared posterior target.")
+    checked <- mps_restore_knots(y, d$lower[i], d$upper[i], d$target_content[i], d$mean_tilt[i], kappa^2)
+    d$lower[i] <- checked$lower; d$upper[i] <- checked$upper
+    d$width[i] <- checked$upper - checked$lower; d$ecm_objective[i] <- checked$objective
+    d$knot_restorations[i] <- checked$changes; d$restoration_displacement[i] <- checked$displacement
+    d$observed_count[i] <- sum(y >= checked$lower & y <= checked$upper)
+    d$retained_fraction[i] <- d$observed_count[i] / length(y)
+  }
+  finite <- which(d$finite_interval)
+  if (length(finite)) {
+    p <- rqrgibbs::rqr_dp_content_probability(action$posterior_distribution_fit,
+      lower = d$lower[finite], upper = d$upper[finite], content = content)
+    d$posterior_content_probability[finite] <- p$posterior_content_probability
+    d$posterior_mean_content[finite] <- p$posterior_mean_content
+    d$posterior_var_content[finite] <- p$posterior_var_content
+    d$base_mass[finite] <- p$base_mass
+  }
+  d$posterior_constraint_satisfied <- is.finite(d$posterior_content_probability) & d$posterior_content_probability >= cutoff
+  eligible <- d[d$finite_interval & d$posterior_constraint_satisfied, ]
+  if (nrow(eligible)) eligible <- eligible[order(eligible$width, eligible$target_content,
+    abs(eligible$mean_tilt - eligible$central_tilt), eligible$lower, eligible$candidate_index), ]
+  list(candidates = d, selected = head(eligible, 1L))
+}
+
 mps_disk_check <- function(output, reserve) {
   rows <- system2("df", c("-Pk", shQuote(output)), stdout = TRUE)
   fields <- strsplit(trimws(tail(rows, 1L)), "[[:space:]]+")[[1]]
@@ -93,9 +142,12 @@ mps_fit <- function(task, cfg, context) {
     scan_target_content = task$retained_fraction, q_grid = menu$q_grid,
     tilt_grid_control = menu$tilt_grid_control, learning_rate = 1,
     beta_prior_obj = rqrgibbs::beta_prior("ridge", ridge = list(tau2 = task$kappa^2)),
-    ecm_control = control, expand_if_empty = TRUE, return_candidate_traces = TRUE)
+    ecm_control = control, expand_if_empty = cfg$conditional_profile_expansion, return_candidate_traces = TRUE)
+  checked <- mps_check_candidates(action, z, task$kappa, task$content, menu$posterior_confidence)
+  action$candidates <- checked$candidates; action$selected <- checked$selected
+  action$candidate_traces$candidate_selected <- action$candidate_traces$candidate_index %in% checked$selected$candidate_index
   if (!nrow(action$selected)) return(list(returned = FALSE, task = task, sample_sha256 = mwd_hash(y),
-    reason = action$posterior_constraint_status, candidates = action$candidates))
+    reason = "infeasible_after_analytical_knot_check", candidates = action$candidates))
   a <- action$selected
   q <- a$target_content; delta <- a$mean_tilt
   expected <- mgp_objective(z, a$lower, a$upper, q, delta, precision = 1 / task$kappa^2)
@@ -136,6 +188,7 @@ mps_fit <- function(task, cfg, context) {
     population_content = actual, attained = actual >= task$content, returned = TRUE,
     ecm_coordinate_gap = max(gains), ecm_coordinate_ok = max(gains) <= cfg$coordinate_gap_tolerance,
     ecm_flag = a$ecm_converged, ecm_iterations = a$ecm_iterations,
+    selected_knot_restorations = a$knot_restorations, selected_restoration_displacement = a$restoration_displacement,
     gibbs_preferred = all(parameters$preferred_pass), max_rhat = max(parameters$rhat),
     min_bulk_ess = min(parameters$ess_bulk), min_tail_ess = min(parameters$ess_tail))
   list(returned = TRUE, task = task, sample_sha256 = mwd_hash(y), rows = rows,

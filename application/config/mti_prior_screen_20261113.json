@@ -1,5 +1,5 @@
 {
-  "study_id": "mti_prior_screen_20261113",
+  "study_id": "mti_prior_screen_knot_checked_20261113",
   "diagnostic_config": "application/config/mti_gibbs_width_diagnosis_20261113.json",
   "kappa_grid": [1, 2, 3, 5, 10],
   "prior_center": "training_mean",
@@ -17,10 +17,12 @@
   "disk_reserve_gib": 16,
   "ecm_max_iter": 200,
   "coordinate_gap_tolerance": 0.000001,
+  "endpoint_restoration": "exact_conditional_knot_mode_within_sqrt_machine_epsilon",
+  "conditional_profile_expansion": false,
   "existing_dp_probability_cutoffs_are_unvalidated_for_new_prior": true,
   "posterior_action": "mean_ordered_endpoints_at_ecm_selected_q_delta",
   "automatic_prior_selection": false,
   "automatic_full_validation_launch": false,
   "automatic_article_replacement": false,
-  "output_dir": "application/outputs/mti_prior_screen_20261113"
+  "output_dir": "application/outputs/mti_prior_screen_knot_checked_20261113"
 }

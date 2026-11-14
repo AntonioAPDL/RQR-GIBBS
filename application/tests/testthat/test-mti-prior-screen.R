@@ -1,5 +1,6 @@
 root <- normalizePath(if (file.exists("application/scripts/lib/mti_prior_screen.R")) "." else "../../..")
 source(file.path(root, "application/scripts/lib/mti_gibbs_width_diagnosis.R"))
+source(file.path(root, "application/scripts/lib/mti_gibbs_practical.R"))
 source(file.path(root, "application/scripts/lib/mti_prior_screen.R"))
 
 testthat::test_that("the root prior and learning rate change together under response units", {
@@ -35,4 +36,17 @@ testthat::test_that("transforming the DP base preserves its original response pr
   transformed <- pnorm((high - p$center) / p$scale, -p$center / p$scale, 4 / p$scale) -
     pnorm((low - p$center) / p$scale, -p$center / p$scale, 4 / p$scale)
   testthat::expect_equal(raw, transformed)
+})
+
+testthat::test_that("only analytically verified neighboring posterior knots are restored", {
+  y <- c(-2, -.5, .2, 1, 2)
+  a <- -2 + 1e-10; b <- 2 - 1e-10
+  checked <- mps_restore_knots(y, a, b, .9999, 0, 1)
+  testthat::expect_identical(c(checked$lower, checked$upper), c(-2, 2))
+  testthat::expect_equal(sum(y >= checked$lower & y <= checked$upper), 5)
+  testthat::expect_lte(checked$objective, mgp_objective(y, a, b, .9999, 0, precision = 1) + 1e-12)
+  testthat::expect_lt(checked$displacement, 1e-9)
+  far <- mps_restore_knots(y, -300, 1.5, .9, -.2, 10000)
+  testthat::expect_identical(c(far$lower, far$upper), c(-300, 1.5))
+  testthat::expect_equal(far$changes, 0)
 })
