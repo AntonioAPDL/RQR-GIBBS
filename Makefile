@@ -917,12 +917,15 @@ review-mti-gibbs-full-report:
 	$(R) application/scripts/113_review_mti_gibbs_full_report.R --output-dir="$(GIBBS_OUTPUT_DIR)"
 
 .PHONY: test-mti-gibbs-full-publication report-mti-gibbs-full-publication render-mti-gibbs-full-publication verify-mti-gibbs-full-publication
-.PHONY: test-mti-gibbs-width-diagnosis diagnose-mti-gibbs-width
+.PHONY: test-mti-gibbs-width-diagnosis diagnose-mti-gibbs-width check-mti-gibbs-width-references
 test-mti-gibbs-width-diagnosis:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-width-diagnosis.R
 
 diagnose-mti-gibbs-width:
 	$(R) application/scripts/116_diagnose_mti_gibbs_width.R
+
+check-mti-gibbs-width-references:
+	$(R) application/scripts/117_check_mti_gibbs_width_references.R
 
 test-mti-gibbs-full-publication:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-full-publication.R

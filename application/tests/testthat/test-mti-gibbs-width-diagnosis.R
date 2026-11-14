@@ -78,3 +78,15 @@ testthat::test_that("diagnostic settings isolate the contrasts and retain wide i
   testthat::expect_false(cfg$promote_results)
   testthat::expect_false(cfg$new_tolerance_guarantee)
 })
+
+testthat::test_that("response rescaling requires matching prior and learning-rate rescaling", {
+  y <- c(-2, -.3, .1, .7, 2); a <- -1.2; b <- 1.5; delta <- -.2
+  variance <- 3; center <- .1; omega <- 1.7
+  energy <- omega * mwd_loss(y, a, b, .95, delta) + sum((c(a, b) - center)^2) / (2 * variance)
+  for (s in c(.1, 5, 100)) {
+    t <- 17
+    changed <- omega / s^2 * mwd_loss(s * y + t, s * a + t, s * b + t, .95, s * delta) +
+      sum((c(s * a + t, s * b + t) - (s * center + t))^2) / (2 * s^2 * variance)
+    testthat::expect_equal(changed, energy, tolerance = 1e-9)
+  }
+})
