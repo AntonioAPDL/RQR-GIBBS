@@ -1,0 +1,23 @@
+{
+  "study_id": "mti_gibbs_width_diagnosis_20261113",
+  "campaign": ".codex_work/mti_gibbs_full_launch_5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3/application/outputs/mti_gibbs_full_comparison_20261111",
+  "sampling_commit": "5d2e0f361503bded17e1bdf3b2fd2c72a98a4ed3",
+  "article_config": "application/config/mti_ecm_article_20261111.json",
+  "application_config": "application/config/pharma_tolerance_application_mti_only_20261020.json",
+  "publication_config": "application/config/mti_gibbs_full_reporting_20261113.json",
+  "practical_config": "application/config/mti_gibbs_practical_20261112.json",
+  "exdqlm_reference_commit": "dffb71ee70b597d6a716ee74be1cbc99731cd453",
+  "expected_cases": 13,
+  "prior_variances": [1, 10, 100, 1000, 10000],
+  "learning_rate_contrasts": [10, 100],
+  "chains": 4,
+  "n_burn": 2000,
+  "n_mcmc": 4000,
+  "maximum_workers": 32,
+  "seed_base": 1700000000,
+  "conditional_draws": 8000,
+  "output_dir": "application/outputs/mti_gibbs_width_diagnosis_20261113",
+  "selection_rule": "first_replication_all_families_n1000_c090_plus_four_prespecified_figures_plus_first_normal_n100_c090_and_n1000_c099_deduplicated",
+  "new_tolerance_guarantee": false,
+  "promote_results": false
+}
