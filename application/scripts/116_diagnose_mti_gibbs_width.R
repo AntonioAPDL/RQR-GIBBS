@@ -60,6 +60,7 @@ dir.create(file.path(output, "chains"), showWarnings = FALSE)
 paths <- file.path(output, "chains", sprintf("chain_%04d.rds", seq_along(new_jobs)))
 workers <- min(cfg$maximum_workers, parallelly::availableCores())
 batches <- split(seq_along(new_jobs), ceiling(seq_along(new_jobs) / workers))
+failures <- list()
 for (batch in batches) {
   outcomes <- parallel::mclapply(batch, function(j) {
     job <- new_jobs[[j]]; y <- samples[[job$sample_index]]
@@ -71,16 +72,23 @@ for (batch in batches) {
   }, mc.cores = workers, mc.set.seed = FALSE)
   bad <- Filter(function(x) !is.list(x) || !isTRUE(x$ok), outcomes)
   if (length(bad)) {
-    saveRDS(bad, file.path(output, "failed_jobs.rds")); stop("Diagnostic chains failed; original results are unchanged.")
+    failures <- c(failures, bad)
+    saveRDS(failures, file.path(output, "failed_jobs.rds"))
+    cat(sprintf("Retaining %d diagnostic failures; continuing the other specifications.\n", length(bad)))
   }
   cat(sprintf("%s: checked %d / %d diagnostic chains\n", mgfp_time(), max(batch), length(new_jobs)))
   flush.console()
 }
 policy <- mwd_json(cfg$practical_config)$policy
 fits <- list(); summaries <- parameters <- stein <- agreement <- list()
+incomplete <- list()
 for (s in seq_len(nrow(variants))) {
   idx <- (s - 1L) * cfg$chains + seq_len(cfg$chains)
   v <- variants[s, ]; i <- match(v$case_id, cases$case_id); task <- cases[i, ]
+  if (!all(file.exists(paste0(paths[idx], ".json")))) {
+    incomplete[[length(incomplete) + 1L]] <- cbind(v, completed_chains = sum(file.exists(paste0(paths[idx], ".json"))))
+    next
+  }
   f <- lapply(idx, function(j) mwd_read(paths[j], new_jobs[[j]], samples[[i]]))
   fits[[paste(v$case_id, v$variant, sep = ":")]] <- f
   summaries[[s]] <- mwd_summarize(task, v, f, context, policy)
@@ -92,6 +100,7 @@ for (s in seq_len(nrow(variants))) {
     agreement[[i]] <- mwd_old_agreement(task, original[[i]], f)
 }
 summaries <- do.call(rbind, summaries)
+if (length(incomplete)) mwd_write(do.call(rbind, incomplete), file.path(output, "incomplete_specifications.csv"))
 mwd_write(summaries, file.path(output, "sensitivity_summary.csv"))
 mwd_write(do.call(rbind, parameters), file.path(output, "parameter_summary.csv"))
 mwd_write(do.call(rbind, stein), file.path(output, "fresh_score_identities.csv"))
@@ -105,7 +114,9 @@ mwd_require(!any(vapply(boundary, inherits, logical(1), "try-error")), "Conditio
 mwd_write(do.call(rbind, boundary), file.path(output, "boundary_conditionals.csv"))
 mwd_figures(cases, summaries, samples, fits, original, output)
 mgfp_json_write(list(completed = mgfp_time(), cases = nrow(cases), specifications = nrow(variants),
-  chains = length(new_jobs), all_preferred = all(summaries$preferred),
+  attempted_chains = length(new_jobs), completed_chains = sum(file.exists(paste0(paths, ".json"))),
+  failed_chains = length(failures), complete_specifications = nrow(summaries),
+  all_complete_specifications_preferred = all(summaries$preferred),
   maximum_rhat = max(summaries$maximum_rhat), minimum_bulk_ess = min(summaries$minimum_bulk_ess),
   minimum_tail_ess = min(summaries$minimum_tail_ess), identity_sha256 = mwd_hash(identity),
   new_tolerance_guarantee = FALSE, article_replaced = FALSE), file.path(output, "completed.json"))
