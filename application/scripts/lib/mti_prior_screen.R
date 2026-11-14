@@ -98,6 +98,9 @@ mps_fit <- function(task, cfg, context) {
     reason = action$posterior_constraint_status, candidates = action$candidates))
   a <- action$selected
   q <- a$target_content; delta <- a$mean_tilt
+  expected <- mgp_objective(z, a$lower, a$upper, q, delta, precision = 1 / task$kappa^2)
+  mwd_require(abs(a$ecm_objective - expected) <= 1e-7 * max(1, abs(expected)),
+    "The ECM fit differs from the declared shared posterior objective.")
   initial <- mwd_initial(z, a$lower, a$upper, task$kappa^2, 0)
   sampling <- list(n_burn = cfg$n_burn, n_mcmc = cfg$n_mcmc, learning_rate = 1,
     prior_variance = task$kappa^2, initial_midpoint_offsets_sd = initial$offsets,
