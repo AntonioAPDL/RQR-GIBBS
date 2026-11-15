@@ -44,6 +44,14 @@ It does not replace the article's existing results automatically. See the
 [statistical specification and reproduction commands](docs/implementation_notes/mti_fixed_prior_validation_20261114.md),
 including the application's explicit working prior in published reporting units.
 
+The [numerical completion and assessment](docs/implementation_notes/mti_fixed_prior_closure_20261115.md)
+preserves the original simulation, repairs only unresolved endpoint
+representations using the same samples and priors, and prepares the complete
+application comparison and focused longer-chain diagnostics. It records both
+numerical sources and leaves article promotion to a review of the actual
+case-specific results. `make launch-mti-fixed-prior-closure` starts this
+continuation after its tests; it does not restart the simulation study.
+
 ## Statistical Framing
 
 MPI and MTI are loss-defined interval targets. Endpoint summaries from a

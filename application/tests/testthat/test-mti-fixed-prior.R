@@ -81,6 +81,27 @@ testthat::test_that("truth evaluation is separate from fitting inputs", {
   testthat::expect_false(identical(a$rows$population_content, b$rows$population_content))
 })
 
+testthat::test_that("the Gamma closed-count boundary is resolved after conditional refinement", {
+  cfg <- jsonlite::read_json(file.path(root, "application/config/mti_fixed_prior_20261114.json"), simplifyVector = TRUE)
+  set.seed(1840390352L); y <- (rgamma(500, .5) - .5) / sqrt(.5)
+  controls <- list(max_iter = 200L, tol_stationarity = .001, stable_iterations = 1L,
+    residual_product_floor = 1e-8, multistart = FALSE, ecm_backend = "cpp", store_iteration_trace = TRUE)
+  # Reproduce the original grid's binary value rather than its rounded decimal label.
+  q <- .9765 - .Machine$double.eps / 2
+  action <- rqrgibbs::rqr_mti_ecm_dp_profile_action(y, .95, .995, q_grid = q,
+    tilt_grid_control = list(tilt_offsets_sd = 0, include_zero_tilt = TRUE),
+    beta_prior_obj = rqrgibbs::beta_prior("ridge", ridge = list(tau2 = 4)),
+    ecm_control = controls, expand_if_empty = FALSE, return_candidate_traces = TRUE)
+  refined <- mfp_refine(action, y, 2, cfg$numerical, controls)
+  target <- refined$candidates[refined$candidates$mean_tilt == 0, ]
+  testthat::expect_equal(nrow(target), 1L)
+  testthat::expect_true(target$numerically_accurate && target$count_stable)
+  testthat::expect_equal(target$observed_count, 489L)
+  testthat::expect_equal(refined$unresolved_candidates, 0L)
+  trace <- refined$traces[[match(target$candidate_index, refined$candidates$candidate_index)]]
+  testthat::expect_true(any(trace$numerical_stage == "final_conditional_knot_representation"))
+})
+
 testthat::test_that("the historical cancellation case has a stable decreasing increment", {
   set.seed(1820100008L)
   raw <- stats::rt(100, 3) / sqrt(3)

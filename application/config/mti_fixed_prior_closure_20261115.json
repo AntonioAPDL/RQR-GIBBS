@@ -1,0 +1,19 @@
+{
+  "study_id": "mti_fixed_prior_closure_20261115",
+  "parent_commit": "9b53485fc9e4d6ab43a92d80a1b0931bf58c910e",
+  "parent_worktree": ".codex_work/mti_fixed_prior_9b53485fc9e4d6ab43a92d80a1b0931bf58c910e",
+  "parent_output": "application/outputs/mti_fixed_prior_20261114",
+  "prior_config": "application/config/mti_fixed_prior_20261114.json",
+  "output_root": "application/outputs/mti_fixed_prior_closure_20261115",
+  "maximum_workers": 40,
+  "wait_seconds": 60,
+  "maximum_wait_hours": 24,
+  "diagnostics": {
+    "response_id": "student_t3", "n": 500, "content": 0.99,
+    "per_pattern": 4, "patterns": ["ecm_only", "both", "neither"],
+    "chains": 4, "n_burn": 500, "n_mcmc": 8000,
+    "chain_seed_base": 1680000000, "maximum_workers": 8
+  },
+  "automatic_prior_tuning": false,
+  "automatic_article_replacement": false
+}

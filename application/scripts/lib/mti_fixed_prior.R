@@ -128,6 +128,20 @@ mfp_refine <- function(action, y, kappa, controls, ecm_control) {
       extra$candidate_index <- d$candidate_index[i]; extra$target_content <- q; extra$mean_tilt <- delta
       blocks[[length(blocks) + 1L]] <- extra
       d$conditional_mode_cycles[i] <- polished$cycles
+      if (!accuracy$pass) {
+        restored <- mfp_restore(y, roots, q, delta, kappa^2)
+        d$knot_displacement[i] <- max(d$knot_displacement[i], restored$displacement)
+        d$knot_adjustments[i] <- d$knot_adjustments[i] + nrow(restored$adjustments)
+        if (nrow(restored$adjustments)) checks[[length(checks) + 1L]] <- restored$adjustments
+        roots <- restored$roots
+        accuracy <- mfp_accuracy(y, roots, q, delta, kappa^2, controls)
+        if (nrow(restored$adjustments)) blocks[[length(blocks) + 1L]] <- data.frame(
+          iteration = d$ecm_iterations[i] + d$additional_iterations[i] + polished$cycles,
+          root1 = roots[1], root2 = roots[2], width = diff(roots),
+          objective = mgp_objective(y, roots[1], roots[2], q, delta, precision = 1 / kappa^2),
+          candidate_index = d$candidate_index[i], target_content = q, mean_tilt = delta,
+          numerical_stage = "final_conditional_knot_representation")
+      }
     }
     d$lower[i] <- roots[1]; d$upper[i] <- roots[2]; d$width[i] <- diff(roots)
     d$ecm_objective[i] <- mgp_objective(y, roots[1], roots[2], q, delta, precision = 1 / kappa^2)
@@ -388,11 +402,15 @@ mfp_collect_application <- function(tasks, directory, identity) {
     r <- readRDS(path); receipt <- mwd_json(paste0(path, ".json"))
     mwd_require(identical(receipt$identity, identity) && identical(receipt$sha256, mwd_file_hash(path)) &&
       identical(mwd_hash(r$task), mwd_hash(tasks[j, ])), "An application fit identity differs.")
-    if (isTRUE(r$returned)) rows[[length(rows) + 1L]] <- r$rows else
+    if (isTRUE(r$returned)) rows[[length(rows) + 1L]] <- r$rows else {
       failures[[length(failures) + 1L]] <- cbind(tasks[j, ], reason = r$reason)
+      rows[[length(rows) + 1L]] <- cbind(tasks[rep(j, 2), ], method = c("ecm", "gibbs"),
+        returned = FALSE, lower = NA_real_, upper = NA_real_, width = NA_real_,
+        heldout_empirical_content = NA_real_, ecm_coordinate_ok = FALSE, gibbs_adequate = FALSE)
+    }
     if (!is.null(r$comparators)) benchmarks[[length(benchmarks) + 1L]] <- r$comparators
   }
-  if (length(rows)) mwd_write(data.table::rbindlist(rows), file.path(directory, "interval_results.csv"))
+  if (length(rows)) mwd_write(data.table::rbindlist(rows, fill = TRUE), file.path(directory, "interval_results.csv"))
   if (length(failures)) mwd_write(data.table::rbindlist(failures), file.path(directory, "failed_fits.csv"))
   if (length(benchmarks)) mwd_write(data.table::rbindlist(benchmarks), file.path(directory, "comparator_results.csv"))
   numerical_pass <- !length(failures) && length(rows) == nrow(tasks) &&

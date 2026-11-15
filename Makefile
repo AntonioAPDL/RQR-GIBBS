@@ -920,6 +920,22 @@ review-mti-gibbs-full-report:
 .PHONY: test-mti-gibbs-width-diagnosis diagnose-mti-gibbs-width check-mti-gibbs-width-references
 .PHONY: test-mti-prior-screen check-mti-prior-screen run-mti-prior-screen health-mti-prior-screen
 .PHONY: test-mti-fixed-prior check-mti-fixed-prior prepare-mti-fixed-prior run-mti-fixed-prior launch-mti-fixed-prior health-mti-fixed-prior
+.PHONY: test-mti-fixed-prior-closure prepare-mti-fixed-prior-closure check-mti-fixed-prior-closure launch-mti-fixed-prior-closure health-mti-fixed-prior-closure
+test-mti-fixed-prior-closure:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-fixed-prior-closure.R
+
+prepare-mti-fixed-prior-closure:
+	$(R) application/scripts/121_complete_mti_fixed_prior.R prepare
+
+check-mti-fixed-prior-closure:
+	$(R) application/scripts/121_complete_mti_fixed_prior.R check
+
+launch-mti-fixed-prior-closure:
+	bash application/scripts/122_launch_mti_fixed_prior_closure.sh
+
+health-mti-fixed-prior-closure:
+	$(R) application/scripts/121_complete_mti_fixed_prior.R health
+
 test-mti-fixed-prior:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-fixed-prior.R
 
