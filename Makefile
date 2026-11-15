@@ -919,6 +919,25 @@ review-mti-gibbs-full-report:
 .PHONY: test-mti-gibbs-full-publication report-mti-gibbs-full-publication render-mti-gibbs-full-publication verify-mti-gibbs-full-publication
 .PHONY: test-mti-gibbs-width-diagnosis diagnose-mti-gibbs-width check-mti-gibbs-width-references
 .PHONY: test-mti-prior-screen check-mti-prior-screen run-mti-prior-screen health-mti-prior-screen
+.PHONY: test-mti-fixed-prior check-mti-fixed-prior prepare-mti-fixed-prior run-mti-fixed-prior launch-mti-fixed-prior health-mti-fixed-prior
+test-mti-fixed-prior:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-fixed-prior.R
+
+check-mti-fixed-prior:
+	$(R) application/scripts/119_validate_mti_fixed_prior.R check
+
+prepare-mti-fixed-prior:
+	$(R) application/scripts/119_validate_mti_fixed_prior.R prepare
+
+run-mti-fixed-prior:
+	$(R) application/scripts/119_validate_mti_fixed_prior.R pipeline
+
+launch-mti-fixed-prior:
+	bash application/scripts/120_launch_mti_fixed_prior.sh
+
+health-mti-fixed-prior:
+	$(R) application/scripts/119_validate_mti_fixed_prior.R health
+
 test-mti-prior-screen:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-prior-screen.R
 

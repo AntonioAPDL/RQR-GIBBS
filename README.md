@@ -33,6 +33,17 @@ attribution to the original residual-product criterion of Pouplin et al.
 Large generated objects, fitted model outputs, logs, run directories, local
 caches, and local literature PDFs are excluded from version control.
 
+## Fixed-Prior Reassessment
+
+The new ECM/Gibbs comparison fixes independent Gaussian root priors at SD 2
+in declared reference units, with SD 1 as a development sensitivity. Neither
+prior parameters nor the learning rate are estimated from each fitting sample.
+The staged study retains numerical diagnostics, uses fresh calibration and
+validation samples, and recomputes Young--Mathew and Wilks on the same data.
+It does not replace the article's existing results automatically. See the
+[statistical specification and reproduction commands](docs/implementation_notes/mti_fixed_prior_validation_20261114.md),
+including the application's explicit working prior in published reporting units.
+
 ## Statistical Framing
 
 MPI and MTI are loss-defined interval targets. Endpoint summaries from a
