@@ -20,6 +20,11 @@ testthat::test_that("held-out summaries preserve the partition and closed-interv
   testthat::expect_equal(nrow(primary), 3L)
   testthat::expect_setequal(primary$method_id, c("mti_ecm_adaptive_cell", "young_mathew", "wilks_minmax"))
   testthat::expect_equal(primary$heldout_upper_omitted, rep(1/3, 3))
+  path <- tempfile(); on.exit(unlink(path))
+  boundary <- values; boundary$lower <- 0.57432014310823753; boundary$upper <- 1.6666666666666667
+  pma_write_csv(as.data.frame(boundary), path)
+  testthat::expect_identical(data.table::fread(path)$lower, boundary$lower)
+  testthat::expect_identical(data.table::fread(path)$upper, boundary$upper)
   rows$heldout_empirical_content[1] <- 0
   testthat::expect_error(mff_application_values(rows, context), "differs from the original")
 })

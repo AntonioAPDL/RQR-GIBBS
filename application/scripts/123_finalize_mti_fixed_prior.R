@@ -2,7 +2,7 @@
 private <- Sys.getenv("MTI_PRIOR_R_LIBRARY")
 if (nzchar(private)) .libPaths(c(normalizePath(private, mustWork = TRUE), .libPaths()))
 for (name in c("mti_gibbs_practical", "mti_gibbs_full_report_review", "mti_gibbs_full_publication",
-  "mti_profile_revision", "mti_gibbs_width_diagnosis", "mti_prior_screen", "pharma_tolerance_application",
+  "mti_profile_revision", "mti_gibbs_width_diagnosis", "mti_prior_screen", "pharma_tolerance_application", "pharma_mti_application",
   "mti_fixed_prior", "mti_fixed_prior_closure", "mti_fixed_prior_finalization"))
   source(file.path("application/scripts/lib", paste0(name, ".R")))
 data.table::setDTthreads(1L)
@@ -55,7 +55,8 @@ if (mode == "check") {
 mwd_require(!nzchar(mgfp_git("status", "--porcelain")), "Commit the finalization source before launch.")
 programs <- unique(c(configuration, cfg$prior_config, "application/scripts/123_finalize_mti_fixed_prior.R",
   "application/scripts/lib/mti_fixed_prior_finalization.R", "application/scripts/lib/mti_fixed_prior_publication.R",
-  "application/scripts/lib/mti_fixed_prior.R", "application/scripts/lib/mti_fixed_prior_closure.R", mps_programs))
+  "application/scripts/lib/mti_fixed_prior.R", "application/scripts/lib/mti_fixed_prior_closure.R",
+  "application/scripts/lib/pharma_mti_application.R", mps_programs))
 identity <- list(source_commit = mgfp_git("rev-parse", "HEAD"), configuration = cfg,
   statistical_configuration = prior, programs = mgfp_hashes(programs), package = package,
   continuation_manifest_sha256 = mwd_file_hash(file.path(continuation, "manifest.json")),
@@ -81,11 +82,13 @@ tryCatch({
   input_hashes <- mgfp_hashes(inputs)
   tasks <- readRDS(file.path(continuation, "application/tasks.rds"))
   original_path <- function(job) file.path(continuation, "application/fits", sprintf("fit_%06d.rds", job))
-  eligible <- integer()
+  eligible <- integer(); original_rows <- comparator_rows <- vector("list", nrow(tasks))
   for (j in seq_len(nrow(tasks))) {
     original <- mfc_read(original_path(tasks$job_id[j]), manifest$identity_sha256, tasks[j, ])
     if (isTRUE(original$returned)) mfc_result_check(original, tasks[j, ], prior)
     if (mff_precision_only(original)) eligible <- c(eligible, j)
+    original_rows[[j]] <- original$rows
+    comparator_rows[[j]] <- original$comparators
   }
   phase("precision_refinement", expected = length(eligible))
   directory <- file.path(cfg$output_root, "precision")
@@ -121,12 +124,12 @@ tryCatch({
   mwd_require(all(vapply(refinements, function(r) isTRUE(r$returned) &&
     isTRUE(r$precision_refinement$original_prefix_preserved), FALSE)),
     "A precision refinement needs review; no publication evidence was promoted.")
-  rows <- data.table::fread(file.path(continuation, "application/interval_results.csv"))
+  rows <- data.table::rbindlist(original_rows, fill = TRUE)
   combined <- mff_merge(rows, refinements)
   application <- file.path(cfg$output_root, "application")
   dir.create(application, recursive = TRUE, showWarnings = FALSE)
-  mwd_write(combined, file.path(application, "interval_results.csv"))
-  mwd_write(data.table::fread(file.path(continuation, "application/comparator_results.csv")),
+  pma_write_csv(as.data.frame(combined), file.path(application, "interval_results.csv"))
+  pma_write_csv(as.data.frame(data.table::rbindlist(comparator_rows, fill = TRUE)),
     file.path(application, "comparator_results.csv"))
   mfc_application_review(application)
   numerical <- isTRUE(all(combined$returned & combined$ecm_coordinate_ok & combined$gibbs_adequate))

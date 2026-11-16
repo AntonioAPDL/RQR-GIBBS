@@ -81,7 +81,7 @@ mff_prepare_evidence <- function(cfg, prior, context, continuation, application,
     read(application, "comparator_results.csv")), fill = TRUE)
   mwd_require(nrow(app) == 4 * 3004 && all(table(app$method) == 3004), "Incomplete application comparison.")
   values <- mff_application_values(app, context)
-  mwd_write(values, file.path(output, "application_values.csv"))
+  pma_write_csv(as.data.frame(values), file.path(output, "application_values.csv"))
   mwd_write(mff_application_cells(values), file.path(output, "application_cells.csv"))
   numerical <- data.table::rbindlist(list(
     unique(s[method == "ecm"], by = "job_id")[, stage := "simulation"],
