@@ -101,6 +101,24 @@ testthat::test_that("checkpoint records reject changed tasks, identities, and fi
   testthat::expect_error(mbc_read_fit(path, "source", task), "identity or checksum")
 })
 
+testthat::test_that("health reads the selected detached study rather than the local rehearsal", {
+  directory <- tempfile(); dir.create(directory); on.exit(unlink(directory, recursive = TRUE))
+  local <- file.path(directory, "rehearsal"); frozen <- file.path(directory, "frozen")
+  for (path in c(local, frozen)) dir.create(file.path(path, "development"), recursive = TRUE)
+  mgfp_json_write(list(completed = 1L, expected = 864L), file.path(local, "development/progress.json"))
+  mgfp_json_write(list(completed = 864L, expected = 864L), file.path(frozen, "development/progress.json"))
+  pointer <- file.path(directory, "latest.json")
+  cfg <- list(study_id = "study", output_root = local)
+  mgfp_json_write(list(study_id = "study", output_root = frozen, checkout = "checkout", source_commit = "source"), pointer)
+  invisible(capture.output(health <- mbc_health(cfg, pointer)))
+  testthat::expect_identical(health$output_root, frozen)
+  testthat::expect_equal(health$status[["development/progress.json"]]$completed, 864L)
+  invisible(capture.output(rehearsal <- mbc_health(cfg, paste0(pointer, ".missing"))))
+  testthat::expect_equal(rehearsal$status[["development/progress.json"]]$completed, 1L)
+  cfg$study_id <- "other"
+  testthat::expect_error(mbc_health(cfg, pointer), "identifier differs")
+})
+
 testthat::test_that("resuming preserves complete fits and refuses changed or unresolved results", {
   directory <- tempfile(); dir.create(directory); on.exit(unlink(directory, recursive = TRUE))
   calls <- 0L

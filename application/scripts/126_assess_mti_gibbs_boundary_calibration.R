@@ -14,20 +14,7 @@ configuration <- "application/config/mti_gibbs_boundary_calibration_20261115.jso
 cfg <- mwd_json(configuration)
 dir.create(cfg$output_root, recursive = TRUE, showWarnings = FALSE)
 if (mode == "health") {
-  pointer <- file.path(mgfp_common(), ".codex_work/mti_gibbs_boundary_latest.json")
-  output <- cfg$output_root
-  if (file.exists(pointer)) {
-    latest <- mwd_json(pointer)
-    mwd_require(identical(latest$study_id, cfg$study_id), "Latest study identifier differs.")
-    output <- latest$output_root
-    cat("Frozen checkout:", latest$checkout, "\nSource:", latest$source_commit, "\n")
-  }
-  cat("Outputs:", output, "\n")
-  for (path in c("audit/summary.json", "study_summary.json", "controller_exit.json", "development/progress.json",
-    "calibration/progress.json", "pilot/progress.json")) {
-    file <- file.path(cfg$output_root, path)
-    if (file.exists(file)) { cat(path, "\n"); print(mwd_json(file)) }
-  }
+  mbc_health(cfg)
   quit(save = "no")
 }
 mwd_require(mode %in% c("prepare", "check", "audit", "pipeline"), "Unknown boundary study command.")

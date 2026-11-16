@@ -1,3 +1,20 @@
+mbc_health <- function(cfg, pointer = file.path(mgfp_common(), ".codex_work/mti_gibbs_boundary_latest.json")) {
+  output <- cfg$output_root
+  if (file.exists(pointer)) {
+    latest <- mwd_json(pointer)
+    mwd_require(identical(latest$study_id, cfg$study_id), "Latest study identifier differs.")
+    output <- latest$output_root
+    cat("Frozen checkout:", latest$checkout, "\nSource:", latest$source_commit, "\n")
+  }
+  cat("Outputs:", output, "\n")
+  paths <- c("audit/summary.json", "study_summary.json", "controller_exit.json", "development/progress.json",
+    "calibration/progress.json", "pilot/progress.json")
+  paths <- paths[file.exists(file.path(output, paths))]
+  status <- setNames(lapply(file.path(output, paths), mwd_json), paths)
+  for (name in names(status)) { cat(name, "\n"); print(status[[name]]) }
+  invisible(list(output_root = output, status = status))
+}
+
 mbc_context <- function(cfg) {
   prior <- mwd_json(cfg$prior_config)
   mwd_require(prior$primary_kappa == 2 && !cfg$fixed_prior_uses_analysis_sample &&
