@@ -97,3 +97,16 @@ The summary guard now permits at most 32 machine epsilons times the value
 scale. Exact RDS target hashes and saved sampling prefixes remain mandatory.
 The corrected finalization imports the five verified saved extensions from
 commit `9fd9ca40b5645342a8b15243f3bca14425ae4d04`; it does not resample them.
+
+## Reporting
+
+`125_report_mti_fixed_prior.R` provides `collect`, `render`, and `verify`
+commands. Collection requires a successful completed finalization and all
+simulation/application numerical checks. It preserves the original source
+identities and checksums, copies only small summaries, and adds actual
+posterior examples and representative application partitions. Rendering uses
+the existing three-method primary figure layout and separate four-method
+supplementary comparisons. Raw width percentiles remain within distribution
+and design; Gibbs intervals are not passed off as eligible ECM candidates.
+Original diffuse-prior reporting files remain available but are not inputs
+to the new reporting command. Heavy posterior objects remain ignored.

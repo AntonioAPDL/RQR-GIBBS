@@ -1,0 +1,9 @@
+{
+  "finalization_commit": "2baa2e91ca24612b08fbcf3b697e3fc5d11321a0",
+  "finalization_worktree": ".codex_work/mti_fixed_prior_finalization_2baa2e91ca24612b08fbcf3b697e3fc5d11321a0",
+  "output_root": "application/outputs/mti_fixed_prior_finalization_20261115",
+  "evidence_dir": "figures/data/mti_fixed_prior_20261115",
+  "table_dir": "tables/mti_fixed_prior_20261115",
+  "figure_dir": "figures/generated/mti_fixed_prior_20261115",
+  "prior_config": "application/config/mti_fixed_prior_20261114.json"
+}

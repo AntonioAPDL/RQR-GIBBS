@@ -42,7 +42,7 @@ mff_application_values <- function(rows, context) {
     value <- if (r$returned) mean(heldout >= r$lower & heldout <= r$upper) else NA_real_
     if (r$returned) mwd_require(abs(value - r$heldout_empirical_content) < 1e-12,
       "Saved held-out evaluation differs from the original partition.")
-    data.table(heldout_n = length(heldout), heldout_content = value,
+    data.table::data.table(heldout_n = length(heldout), heldout_content = value,
       heldout_attained = isTRUE(r$returned) && value >= r$content,
       lower_omitted = if (r$returned) mean(heldout < r$lower) else NA_real_,
       upper_omitted = if (r$returned) mean(heldout > r$upper) else NA_real_)

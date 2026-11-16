@@ -922,6 +922,15 @@ review-mti-gibbs-full-report:
 .PHONY: test-mti-fixed-prior check-mti-fixed-prior prepare-mti-fixed-prior run-mti-fixed-prior launch-mti-fixed-prior health-mti-fixed-prior
 .PHONY: test-mti-fixed-prior-closure prepare-mti-fixed-prior-closure check-mti-fixed-prior-closure launch-mti-fixed-prior-closure health-mti-fixed-prior-closure
 .PHONY: test-mti-fixed-prior-finalization prepare-mti-fixed-prior-finalization check-mti-fixed-prior-finalization launch-mti-fixed-prior-finalization health-mti-fixed-prior-finalization
+test-mti-fixed-prior-reporting:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-fixed-prior-reporting.R
+
+report-mti-fixed-prior:
+	$(R) application/scripts/125_report_mti_fixed_prior.R render
+
+verify-mti-fixed-prior-report:
+	$(R) application/scripts/125_report_mti_fixed_prior.R verify
+
 test-mti-fixed-prior-finalization:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-fixed-prior-finalization.R
 
