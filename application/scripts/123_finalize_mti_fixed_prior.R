@@ -97,7 +97,9 @@ tryCatch({
       identical(reuse_manifest$identity$continuation_manifest_sha256, identity$continuation_manifest_sha256) &&
       identical(mwd_hash(reuse_manifest$identity$statistical_configuration), mwd_hash(prior)),
       "Saved precision refinements have different source data or priors.")
-    mgfp_check_hashes(reuse_manifest$identity$programs)
+    saved_programs <- reuse_manifest$identity$programs
+    names(saved_programs) <- file.path(mgfp_common(), cfg$precision_reuse_worktree, names(saved_programs))
+    mgfp_check_hashes(saved_programs)
   }
   mfc_run_tasks(tasks[eligible, , drop = FALSE], directory, id, cfg$maximum_workers, prior$disk_reserve_gib,
     function(task) {

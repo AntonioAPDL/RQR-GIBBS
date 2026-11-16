@@ -97,4 +97,3 @@ The summary guard now permits at most 32 machine epsilons times the value
 scale. Exact RDS target hashes and saved sampling prefixes remain mandatory.
 The corrected finalization imports the five verified saved extensions from
 commit `9fd9ca40b5645342a8b15243f3bca14425ae4d04`; it does not resample them.
-
