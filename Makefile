@@ -962,6 +962,18 @@ verify-mti-gibbs-closeout:
 audit-mti-gibbs-boundary:
 	$(R) application/scripts/130_audit_completed_mti_gibbs_boundary.R
 
+.PHONY: test-mti-gibbs-decisions prepare-mti-gibbs-decisions check-mti-gibbs-decisions launch-mti-gibbs-decisions health-mti-gibbs-decisions
+test-mti-gibbs-decisions:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-decision-calibration.R
+prepare-mti-gibbs-decisions:
+	$(R) application/scripts/131_assess_mti_gibbs_decisions.R prepare
+check-mti-gibbs-decisions:
+	$(R) application/scripts/131_assess_mti_gibbs_decisions.R check
+launch-mti-gibbs-decisions:
+	bash application/scripts/132_launch_mti_gibbs_decisions.sh
+health-mti-gibbs-decisions:
+	$(R) application/scripts/131_assess_mti_gibbs_decisions.R health
+
 report-mti-fixed-prior:
 	$(R) application/scripts/125_report_mti_fixed_prior.R render
 

@@ -90,6 +90,14 @@ transferred to the pharmaceutical application.
 The [diagnostic PDF](figures/generated/mti_gibbs_boundary_20261116/gibbs_boundary_pilot_review.pdf)
 shows the complete case-specific attainment and raw width comparisons.
 
+A separate [interval-selection and radius-calibration experiment](docs/reproducibility/mti_gibbs_decision_calibration.md)
+retains these independent priors while comparing the actual Gibbs decisions.
+It first reuses saved candidates, then evaluates at most two alternative
+thresholds per design. Independent calibration and validation run only if a
+predeclared width-improvement criterion is met. Use
+`make launch-mti-gibbs-decisions` and `make health-mti-gibbs-decisions`.
+Experimental results do not replace manuscript results automatically.
+
 ## Statistical Framing
 
 MPI and MTI are loss-defined interval targets. Endpoint summaries from a

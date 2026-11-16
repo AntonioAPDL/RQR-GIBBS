@@ -1,0 +1,26 @@
+{
+  "study_id": "mti_gibbs_decision_calibration_20261116",
+  "boundary_config": "application/config/mti_gibbs_boundary_calibration_20261115.json",
+  "boundary_worktree": ".codex_work/mti_gibbs_boundary_97ea8fdb2a3cb31228a3a07cf2c2784074de4adc",
+  "boundary_output": "application/outputs/mti_gibbs_boundary_calibration_20261115",
+  "output_root": "application/outputs/mti_gibbs_decision_calibration_20261116",
+  "maximum_workers": 40,
+  "disk_reserve_gib": 32,
+  "exploratory_replications": 100,
+  "maximum_alternatives": 2,
+  "asymmetric_laws": ["exponential", "asym_laplace_tau010", "two_piece_normal_1_12", "beta18", "gamma05", "lognormal_hard"],
+  "materiality": {"minimum_asymmetric_reduction": 0.05, "maximum_case_increase": 0.02, "prefer_unchanged_within": 0.02},
+  "calibration_error": 0.05,
+  "protected_comparisons": 144,
+  "expected_cells": 72,
+  "shortlist_chain_seed_base": 2020000000,
+  "stages": {
+    "calibration": {"replications": 1000, "data_seed_base": 2040000000, "chain_seed_base": 2050000000},
+    "validation": {"replications": 1000, "data_seed_base": 2070000000, "chain_seed_base": 2080000000}
+  },
+  "sampling": {"chains": 4, "n_burn": 500, "n_mcmc": 1000, "maximum_retained": 8000},
+  "prior_sd": 2,
+  "learning_rate": 1,
+  "analysis_sample_used_for_prior": false,
+  "automatic_article_replacement": false
+}
