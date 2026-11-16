@@ -33,9 +33,21 @@ mfr_collect <- function(cfg) {
   diagnostic <- mwd_json(mwd_json(cfg$prior_config)$diagnostic_config)
   app_cfg <- mwd_json(diagnostic$application_config)
   observed_path <- file.path(app_cfg$paths$canonical_dir, "observed_batches.csv")
+  continuation <- manifest$identity$configuration
+  original_manifest <- mwd_json(file.path(mgfp_common(), continuation$continuation_worktree,
+    continuation$continuation_output, "manifest.json"))
+  mwd_require(mwd_file_hash(observed_path) == original_manifest$identity$parent_runtime$application_data[[observed_path]],
+    "Application observations differ from those used for fitting.")
   observed <- data.table::fread(observed_path)
-  mwd_write(observed, file.path(cfg$evidence_dir, "observed_batches.csv"))
+  pma_write_csv(as.data.frame(observed), file.path(cfg$evidence_dir, "observed_batches.csv"))
   values <- mfr_read(cfg$evidence_dir, "application_values")
+  sharing_path <- "figures/data/pharma_source_structure_ecm_20261111/partition_sharing.csv"
+  sharing <- data.table::fread(sharing_path)
+  shared <- merge(values, sharing, by = c("split_scheme", "split_id"), all.x = TRUE)
+  mwd_require(!anyNA(shared$campaign_shared) && nrow(shared) == nrow(values), "Application partitions differ from the campaign assessment.")
+  subset <- shared[split_scheme == "month_grouped" & campaign_shared == 0]
+  subset[, split_scheme := "campaign_disjoint_months"]
+  mwd_write(mff_application_cells(subset), file.path(cfg$evidence_dir, "campaign_cells.csv"))
   representatives <- pma_representative(mfr_application_input(values))
   mwd_write(representatives, file.path(cfg$evidence_dir, "representative_splits.csv"))
   parent <- file.path(mgfp_common(), ".codex_work", paste0("mti_fixed_prior_", p$simulation_source),
@@ -74,7 +86,7 @@ mfr_collect <- function(cfg) {
       trace <- draws[iteration %% 4L == 1L]
       ranks <- data.table::rbindlist(lapply(c("lower", "upper", "width", "midpoint"), function(v) {
         bins <- pmin(20L, ceiling(rank(draws[[v]], ties.method = "average") * 20 / nrow(draws)))
-        data.table(chain = draws$chain, bin = bins)[, .(count = .N), by = .(chain, bin)][, variable := v]
+        data.table::data.table(chain = draws$chain, bin = bins)[, .(count = .N), by = .(chain, bin)][, variable := v]
       }))
     }
   }
@@ -87,7 +99,7 @@ mfr_collect <- function(cfg) {
   hashes <- mgfp_hashes(files); names(hashes) <- basename(files)
   mgfp_json_write(list(finalization_commit = cfg$finalization_commit,
     staged_provenance_sha256 = mwd_file_hash(file.path(staged, "provenance.json")),
-    extra_sources = mgfp_hashes(c(observed_path, file.path(parent, "calibration/cell_summary.csv"), paths)),
+    extra_sources = mgfp_hashes(c(observed_path, sharing_path, file.path(parent, "calibration/cell_summary.csv"), paths)),
     data_files = hashes, quantile_type = 7L, prior_uses_analysis_data = FALSE),
     file.path(cfg$evidence_dir, "reporting_provenance.json"))
   invisible(cfg$evidence_dir)
@@ -98,6 +110,8 @@ mfr_verify <- function(cfg, rendered = FALSE) {
   p <- mwd_json(file.path(cfg$evidence_dir, "reporting_provenance.json"))
   mwd_require(!p$prior_uses_analysis_data && p$finalization_commit == cfg$finalization_commit,
     "Reporting prior or source differs.")
+  mwd_require(mwd_file_hash(file.path(cfg$evidence_dir, "provenance.json")) == p$staged_provenance_sha256,
+    "The original evidence attribution changed.")
   for (name in names(p$data_files)) mwd_require(
     mwd_file_hash(file.path(cfg$evidence_dir, name)) == p$data_files[[name]], "Reporting observations changed.")
   s <- mfr_read(cfg$evidence_dir, "simulation_cells")
@@ -106,6 +120,10 @@ mfr_verify <- function(cfg, rendered = FALSE) {
   mwd_require(nrow(s) == 288L && all(s$attempts == 1000L & s$returned == 1000L) &&
     all(a$attempts == a$returned) && all(z$attempts == z$accurate) &&
     sum(a$attempts) == 4 * 3004, "Reporting requires complete, numerically adequate comparisons.")
+  mwd_require(setequal(s$response_id, names(mgfp_families)) &&
+    all(s$successes >= 0 & s$successes <= s$attempts & is.finite(s$mean_width) & s$width_q025 > 0 &
+      s$width_q025 <= s$width_q975) && all(z$attempts[z$stage == "simulation"] == 72000L) &&
+    all(z$attempts[z$stage == "application"] == 3004L), "Invalid distributional or numerical summaries.")
   if (rendered) {
     p <- mwd_json(file.path(cfg$evidence_dir, "rendered.json"))
     mgfp_check_hashes(p$outputs)
@@ -153,7 +171,10 @@ mfr_numbers <- function(cfg) {
     method == wanted_method, mean_width]
   app <- function(wanted_method, variable) a[response_id == "fct_tensile" & split_scheme == "random" &
     method == wanted_method][[variable]]
-  values <- c(MTIFullDatasets = "75,004", MTIFullSimulations = "72,000", MTIFullApplications = "3,004",
+  count <- function(x) formatC(x, digits = 0, format = "f", big.mark = ",")
+  values <- c(MTIFullDatasets = count(sum(z$attempts)),
+    MTIFullSimulations = count(z[stage == "simulation", attempts]),
+    MTIFullApplications = count(z[stage == "application", attempts]),
     MTIFullRhat = mfr_number(max(z$max_rhat), 4), MTIFullBulkESS = as.character(floor(min(z$min_bulk_ess))),
     MTIFullTailESS = as.character(floor(min(z$min_tail_ess))),
     MTIFullAttainmentMin = mfr_number(100*min(s[method == "gibbs", attainment]), 1),
@@ -199,6 +220,35 @@ mfr_numbers <- function(cfg) {
     observed <- mfr_read(cfg$evidence_dir, "observed_batches")[[response]]
     values[paste0(prefix, "Skewness")] <- mfr_number(mean((observed - mean(observed))^3) / sd(observed)^3, 2)
   }
+  campaign <- mfr_read(cfg$evidence_dir, "campaign_cells")
+  values["MTIFixedCampaignTensileContent"] <- mfr_number(100*campaign[response_id == "fct_tensile" & method == "ecm", content_median], 1)
+  values["MTIFixedCampaignRsdContent"] <- mfr_number(100*campaign[response_id == "tbl_rsd_weight" & method == "ecm", content_median], 1)
   writeLines(c("% Generated from the fixed-prior study; no analysis-sample prior estimates.",
     sprintf("\\newcommand{\\%s}{%s}", names(values), values)), file.path(cfg$table_dir, "numbers.tex"))
+}
+
+mfr_extra_tables <- function(cfg) {
+  z <- mfr_read(cfg$evidence_dir, "numerical_assessment")
+  lines <- c("\\begin{tabular}{@{}lrrrr@{}}", "\\toprule",
+    "Data & Fits & Maximum $\\widehat R$ & Minimum bulk/tail ESS & Maximum coordinate gain\\\\", "\\midrule")
+  for (i in seq_len(nrow(z))) {
+    r <- z[i]
+    lines <- c(lines, sprintf("%s & %d & %.4f & %d / %d & $%.2f\\times10^{%d}$\\\\",
+      if (r$stage == "simulation") "Simulation" else "Application", r$attempts, r$max_rhat,
+      floor(r$min_bulk_ess), floor(r$min_tail_ess), r$max_coordinate_gap / 10^floor(log10(r$max_coordinate_gap)),
+      floor(log10(r$max_coordinate_gap))))
+  }
+  writeLines(c(lines, "\\bottomrule", "\\end{tabular}"), file.path(cfg$table_dir, "numerical_assessment.tex"))
+  z <- mfr_read(cfg$evidence_dir, "campaign_cells")
+  z <- z[order(response_id, match(method, names(mfr_labels)))]
+  lines <- c("\\begin{tabular}{@{}llrrr@{}}", "\\toprule",
+    "Response & Method & Width range & Content (\\%) & Held-out $\\ge c$ (\\%)\\\\", "\\midrule")
+  for (i in seq_len(nrow(z))) {
+    r <- z[i]; first <- i == 1L || r$response_id != z$response_id[i-1L]
+    lines <- c(lines, sprintf("%s & %s & %s & %.1f & %.1f\\\\",
+      if (!first) "" else if (r$response_id == "fct_tensile") "Tensile metric" else "Weight RSD",
+      mfr_labels[r$method], mfr_range(r$width_q025, r$width_q975), 100*r$content_median, 100*r$attainment))
+    if (i %% 4 == 0) lines <- c(lines, "\\addlinespace[0.3em]")
+  }
+  writeLines(c(lines, "\\bottomrule", "\\end{tabular}"), file.path(cfg$table_dir, "campaign_sensitivity.tex"))
 }

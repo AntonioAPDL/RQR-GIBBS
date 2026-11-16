@@ -1,0 +1,3 @@
+"relative_path","sha256","bytes","generator","method_ids"
+"figures/generated/mti_fixed_prior_20261115/fig04_tolerance_validation_primary.png","0dc230ad286c814ea1ec3031e8220b4a5b026c48bee251cf6ecb989125a7c169",82667,"figures/generate_tolerance_validation_primary_figure.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"
+"figures/data/mti_fixed_prior_20261115/primary_ranges.csv","622260ba5c00c08a29fb3486107de691391f49dd8d1ddf9913f8195377f65669",1359,"figures/generate_tolerance_validation_primary_figure.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"

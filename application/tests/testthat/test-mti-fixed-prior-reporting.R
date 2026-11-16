@@ -1,6 +1,7 @@
 root <- normalizePath(if (file.exists("application/scripts/lib/mti_fixed_prior_reporting.R")) "." else "../../..")
 for (name in c("mti_gibbs_full_report_review", "mti_gibbs_full_publication", "mti_gibbs_width_diagnosis",
-  "pharma_tolerance_application", "pharma_mti_application", "mti_fixed_prior_publication", "mti_fixed_prior_reporting"))
+  "mti_gibbs_full_publication_figures", "pharma_tolerance_application", "pharma_mti_application",
+  "mti_fixed_prior_publication", "mti_fixed_prior_reporting"))
   source(file.path(root, "application/scripts/lib", paste0(name, ".R")))
 
 testthat::test_that("held-out summaries preserve the partition and closed-interval convention", {
@@ -27,6 +28,25 @@ testthat::test_that("held-out summaries preserve the partition and closed-interv
   testthat::expect_identical(data.table::fread(path)$upper, boundary$upper)
   rows$heldout_empirical_content[1] <- 0
   testthat::expect_error(mff_application_values(rows, context), "differs from the original")
+})
+
+testthat::test_that("current manuscript evidence is complete and independently specified", {
+  cfg <- mwd_json(file.path(root, "application/config/mti_fixed_prior_reporting_20261115.json"))
+  if (!file.exists(file.path(root, cfg$evidence_dir, "reporting_provenance.json")))
+    testthat::skip("Current numerical summaries have not been collected in this source snapshot.")
+  original <- getwd(); setwd(root); on.exit(setwd(original))
+  testthat::expect_silent(mfr_verify(cfg))
+  cells <- mfr_read(cfg$evidence_dir, "simulation_cells")
+  testthat::expect_equal(cells[response_id == "student_t3" & n == 500 & content == .99 & method == "gibbs", successes], 931L)
+  testthat::expect_equal(cells[response_id == "student_t3" & n == 500 & content == .99 & method == "ecm", successes], 952L)
+  primary <- mfr_read(cfg$evidence_dir, "primary_widths")
+  testthat::expect_equal(nrow(primary), 216L)
+  testthat::expect_false("mti_gibbs_mean" %in% primary$method_id)
+  testthat::expect_equal(sort(unique(cells$attempts)), 1000L)
+  app <- mfr_read(cfg$evidence_dir, "application_values")
+  testthat::expect_equal(nrow(app), 12016L)
+  testthat::expect_false(any(app$data_adaptive_prior, na.rm = TRUE))
+  testthat::expect_true(all(mfr_read(cfg$evidence_dir, "numerical_assessment")$accurate == c(72000L, 3004L)))
 })
 
 testthat::test_that("primary tables contain only the specified methods and metric", {

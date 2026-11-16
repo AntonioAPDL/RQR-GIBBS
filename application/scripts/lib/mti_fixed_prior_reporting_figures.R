@@ -72,6 +72,35 @@ mfr_posterior_figure <- function(cfg) {
   dev.off(); path
 }
 
+mfr_sensitivity_figure <- function(cfg) {
+  d <- mfr_read(cfg$evidence_dir, "application_cells")[method != "gibbs"]
+  methods <- c("ecm", "young_mathew", "wilks")
+  schemes <- c("random", "chronological_forward", "chronological_reverse", "month_grouped", "api_grouped")
+  labels <- c("Random splits", "Forward order", "Reverse order", "Month groups", "API groups")
+  path <- file.path(cfg$figure_dir, "pharma_partition_sensitivity.png")
+  png(path, width = 3000, height = 2300, res = 240, pointsize = 18)
+  on.exit(dev.off())
+  par(mfrow = c(2, 2), mar = c(4.5, 7, 2.8, 1), oma = c(2.5, 0, 0, 0), mgp = c(2.8, .8, 0), cex = .9)
+  for (response in c("fct_tensile", "tbl_rsd_weight")) for (quantity in c("width", "content")) {
+    z <- d[response_id == response]
+    lo <- z[[paste0(quantity, "_q025")]]; hi <- z[[paste0(quantity, "_q975")]]
+    midpoint <- z[[if (quantity == "width") "median_width" else "content_median"]]
+    title <- if (response == "fct_tensile") "Reported tensile metric" else "Weight RSD"
+    plot(NA, xlim = if (quantity == "width") range(c(lo, hi)) else c(0, 1), ylim = c(.5, 5.5),
+      axes = FALSE, xlab = if (quantity == "width") "Interval width" else "Held-out empirical content",
+      ylab = "", main = paste(title, "-", quantity))
+    axis(1); axis(2, at = 5:1, labels = labels, las = 1, tick = FALSE, cex.axis = .82)
+    if (quantity == "content") abline(v = .9, lty = 2, col = "gray50")
+    yy <- 6 - match(z$split_scheme, schemes) + c(.2, 0, -.2)[match(z$method, methods)]
+    for (i in seq_len(nrow(z))) {
+      segments(lo[i], yy[i], hi[i], yy[i], col = mfr_colors[z$method[i]], lwd = 2)
+      points(midpoint[i], yy[i], col = mfr_colors[z$method[i]], pch = 16, cex = .7)
+    }
+    box(bty = "l")
+  }
+  mgfp_legend(gsub("--", "-", mfr_labels[methods]), mfr_colors[methods])
+}
+
 mfr_render <- function(cfg) {
   mfr_verify(cfg)
   dir.create(cfg$table_dir, recursive = TRUE, showWarnings = FALSE)
@@ -82,6 +111,7 @@ mfr_render <- function(cfg) {
   for (response in c("fct_tensile", "tbl_rsd_weight"))
     mfr_application_table(app, response, file.path(cfg$table_dir, paste0(response, ".tex")))
   mfr_numbers(cfg)
+  mfr_extra_tables(cfg)
   cells[, `:=`(method = c(ecm = "mti_ecm_adaptive_cell", gibbs = "mti_gibbs_mean",
     young_mathew = "young_mathew", wilks = "wilks")[method], datasets = attempts,
     attainment_rate = attainment, width_mean = mean_width)]
@@ -99,11 +129,16 @@ mfr_render <- function(cfg) {
   }
   mfr_application_figure(cfg, "fct_tensile", file.path(cfg$figure_dir, "pharma_tensile.png"))
   mfr_application_figure(cfg, "tbl_rsd_weight", file.path(cfg$figure_dir, "pharma_rsd.png"))
+  mfr_sensitivity_figure(cfg)
   mfr_posterior_figure(cfg)
+  comparison <- new.env(parent = environment())
+  sys.source("application/scripts/lib/mti_gibbs_full_publication_figures.R", envir = comparison)
+  comparison$mgfp_colors <- setNames(unname(mfr_colors),
+    c("mti_ecm_adaptive_cell", "mti_gibbs_mean", "young_mathew", "wilks"))
   temporary <- tempfile(); dir.create(file.path(temporary, "figures/generated"), recursive = TRUE)
   previous <- getwd(); on.exit({setwd(previous); unlink(temporary, recursive = TRUE)}, add = TRUE)
   setwd(temporary)
-  generated <- c(mgfp_width_figures(as.data.frame(cells)), mgfp_attainment_figure(as.data.frame(cells)),
+  generated <- c(comparison$mgfp_width_figures(as.data.frame(cells)), comparison$mgfp_attainment_figure(as.data.frame(cells)),
     mgfp_diagnostic_figures(list(trace_example = as.data.frame(mfr_read(file.path(previous, cfg$evidence_dir), "trace")),
       rank_example = as.data.frame(mfr_read(file.path(previous, cfg$evidence_dir), "ranks")))))
   for (file in generated) mwd_require(file.copy(file, file.path(previous, cfg$figure_dir, basename(file)), overwrite = TRUE),
@@ -111,6 +146,7 @@ mfr_render <- function(cfg) {
   setwd(previous)
   files <- c(list.files(cfg$table_dir, full.names = TRUE), list.files(cfg$figure_dir, full.names = TRUE))
   programs <- c("application/scripts/125_report_mti_fixed_prior.R", "application/scripts/lib/mti_fixed_prior_reporting.R",
+    "application/config/mti_fixed_prior_reporting_20261115.json", "application/config/mti_fixed_prior_20261114.json",
     "application/scripts/lib/mti_fixed_prior_reporting_figures.R", "application/scripts/lib/mti_fixed_prior_publication.R",
     "application/scripts/lib/mti_gibbs_full_publication_figures.R", "application/scripts/lib/pharma_mti_application.R",
     "figures/generate_tolerance_validation_primary_figure.R", "figures/generate_tolerance_validation_width_figure.R",

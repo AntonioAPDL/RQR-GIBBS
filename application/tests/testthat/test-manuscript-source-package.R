@@ -55,18 +55,18 @@ testthat::test_that("the source command delegates dependency discovery and avoid
   testthat::expect_false(any(grepl("rm -rf|required_files=", wrapper)))
   make <- readLines(file.path(root, "Makefile"))
   testthat::expect_true(any(grepl("^article-handoff:", make)))
-  testthat::expect_true(any(grepl("^arxiv-source: verify-mti-gibbs-full-publication$", make)))
+  testthat::expect_true(any(grepl("^arxiv-source: verify-mti-fixed-prior-report$", make)))
 })
 
 testthat::test_that("the completed-study reference points to existing derivations and fixed study identity", {
-  guide <- paste(readLines(file.path(root, "docs/reproducibility/mti_completed_study_reference_20261113.md")), collapse = "\n")
+  guide <- paste(readLines(file.path(root, "docs/reproducibility/mti_fixed_prior_study_reference_20261115.md")), collapse = "\n")
   labels <- unique(regmatches(guide, gregexpr("(?:sec|prop):[[:alnum:]:-]+", guide, perl = TRUE))[[1]])
   sources <- paste(c(readLines(file.path(root, "main.tex")), readLines(file.path(root, "rqr-gibbs-supplement.tex"))),
     collapse = "\n")
   testthat::expect_true(all(vapply(labels, function(x) grepl(paste0("\\label{", x, "}"), sources, fixed = TRUE), logical(1))))
-  summary <- jsonlite::read_json(file.path(root, "figures/data/mti_gibbs_full_20261113/summary.json"))
-  testthat::expect_true(grepl(summary$sampling_commit, guide, fixed = TRUE))
-  testthat::expect_true(grepl(format(summary$completion$datasets, big.mark = ","), guide, fixed = TRUE))
+  summary <- jsonlite::read_json(file.path(root, "figures/data/mti_fixed_prior_20261115/provenance.json"))
+  testthat::expect_true(grepl(summary$simulation_source, guide, fixed = TRUE))
+  testthat::expect_true(grepl("72,000", guide, fixed = TRUE))
   testthat::expect_true(grepl("marginal slice-within-Gibbs", guide, fixed = TRUE))
   testthat::expect_true(grepl("remain fixed throughout its chains", guide, fixed = TRUE))
 })

@@ -34,7 +34,7 @@
 \newcommand{\mat}[1]{\bm{#1}}
 \newcommand{\RHS}{\mathrm{RHS}}
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.08}}
-\input{tables/mti_gibbs_full_numbers.tex}
+\input{tables/mti_fixed_prior_20261115/numbers.tex}
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
 \newtheorem{lemma}{Lemma}
@@ -1198,10 +1198,22 @@ roots in turn. The numerical calculation
 uses a response-product floor near zero and objective backtracking.
 Each candidate is initialized from empirical fractional shortest-window
 endpoints shifted by its displacement from the central tilt. The reported
-configuration uses one start per candidate, at most 100 cycles, a stationarity
+configuration uses one start per candidate, initially at most 200 cycles, a stationarity
 tolerance of \(10^{-3}\), and a residual-product floor of \(10^{-8}\) times
 the implementation's response-product scale. The numerical floor makes the
 iteration approximate near zero residuals.
+Every candidate is then checked using its exact one-root conditional modes.
+A failed accuracy check permits additional ECM blocks of 800, 2000, and
+10,000 cycles, followed when necessary by at most 100 alternating conditional
+minimizations. Each accepted update preserves the penalized objective up to
+a recorded floating-point error bound. Endpoints within numerical precision
+of an observed knot are represented at that knot only after this objective
+check. This matters for the closed-interval DP counts.
+The final accuracy criteria require one-coordinate improvement below
+\(10^{-6}\), displacement below \(10^{-5}\max(1,b-a)\), and stable counts
+at both conditional modes. Candidate selection uses these final checked
+endpoints and recomputed DP probabilities. A numerical stopping flag from
+the initial ECM sequence is retained separately.
 
 \begin{algorithmblock}{Fixed-target MTI-ECM calculation}
 \item Fix \(q\), \(\delta\), \(\omega_{\mathrm R}\), the ridge prior precision,
@@ -1244,7 +1256,7 @@ They reduce to the unpenalized identities as \(\lambda\) decreases to zero.
 An empirical balance equation or a stable numerical sequence alone does not
 establish a global posterior mode. The reported results describe the specified
 finite-iteration ECM calculation with \(\omega_{\mathrm R}=1\),
-\(\lambda=10^{-4}\), and zero prior means; numerical stopping diagnostics
+\(\lambda=1/4\), and zero prior means; numerical stopping diagnostics
 are recorded separately from interval content and width.
 
 \subsection{Empirical Tilt Limits}
@@ -1271,10 +1283,92 @@ limits, movement in that direction reduces the unpenalized loss without
 bound. The Gaussian prior retains a proper generalized posterior in both
 cases by adding a quadratic penalty. Posterior propriety alone therefore
 places little restriction on width uncertainty under a diffuse prior.
-The study below records these empirical limits separately from the
-population admissibility conditions and from the tolerance assessment.
+These empirical limits differ from the population admissibility conditions
+and from the repeated-sampling tolerance assessment.
 
-\input{tables/mti_gibbs_full_assessment_supplement.tex}
+\subsection{Fixed-Target Posterior Assessment}
+\label{sec:supp-mti-posterior-assessment}
+
+The paired study uses independent \(\Normal(0,2^2)\) raw-root priors,
+learning rate one, and a fixed \(\Normal(0,4^2)\) DP base. The root prior
+locations and scales are specified in the reporting coordinates before
+observing any analysis sample. Simulated laws have predeclared population
+mean zero and variance one; individual samples are not standardized using
+their own moments. The pharmaceutical responses retain the public file's
+numerical units. The application priors provide working regularization;
+they encode no independently established manufacturing limits or physical
+measurement units.
+
+ECM selects a candidate \((q,\delta)\) on the training sample. The Gibbs
+calculation then holds this target fixed and samples
+\(\pi_{q,\delta}(a,b\mid D_n)\). This is a selected-target generalized
+posterior. It does not integrate uncertainty over \(q,\delta\), nor does
+it describe posterior-predictive responses. For ordered draws
+\(L=\min(a,b)\), \(U=\max(a,b)\), the comparison reports
+\[
+ I_{\mathrm G}=[\E(L\mid D_n,q,\delta),\E(U\mid D_n,q,\delta)].
+\]
+Its width equals the posterior mean of \(U-L\). Each returned interval's
+DP content probability is computed from its own endpoints; the eligibility
+of the ECM candidate need not hold for \(I_{\mathrm G}\).
+
+All reported chains use the marginal slice-within-Gibbs calculation derived
+above, which integrates out the latent scales while preserving the stated
+root posterior. Four independently seeded chains discard 500 iterations
+and initially retain 1000 draws each. They are extended to 2000 or 4000
+draws when needed. The prespecified diagnostics require rank-normalized
+\(\widehat R\le1.01\), bulk and tail effective sample sizes at least 400,
+and MCSE at most 5\% of the posterior standard deviation. For each endpoint,
+width, and midpoint, the MCSE of the mean must also be at most 1\% of the
+posterior median width. Five application fits require 8000 retained draws per
+chain to meet this last precision criterion. Their saved initial draws,
+targets, priors, and ECM intervals are preserved exactly.
+All \MTIFullDatasets{} validation/application calculations pass the final
+criteria. Their maximum \(\widehat R\) is \MTIFullRhat{}; minimum bulk and
+tail effective sample sizes are \MTIFullBulkESS{} and \MTIFullTailESS{}.
+
+\paragraph{Longer-chain comparisons.}
+Twelve Student \(t_3\) samples at \(n=500,c=0.99\) receive independently
+seeded four-chain calculations with 8000 retained draws per chain.
+Four samples are selected from each of three outcome groups: both ECM and
+Gibbs attain content, neither attains it, or only ECM attains it.
+All 48 endpoint, width, and midpoint mean differences are within twice
+their combined MCSE. All twelve population-content classifications are
+unchanged. These outcome-stratified calculations assess numerical stability;
+they are not additional independent performance replications.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/fixed_target_width.pdf}
+\caption{\textbf{Posterior width uncertainty at fixed fitted content and tilt.}
+Curves give empirical posterior cumulative probabilities from four chains;
+dashed lines mark the corresponding ECM widths. The simulation examples
+use the first replication in each displayed distribution/design. The
+application example uses its median-distance representative partition.
+Each panel retains its selected target and independently specified priors.}
+\label{fig:supp-mti-posterior-width}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_trace.pdf}
+\caption{\textbf{Fixed-target posterior traces for the Gaussian example.}
+The sample has \(n=1000,c=0.90\). Colors identify four chains; every fourth
+retained draw is displayed. All retained draws are used in posterior
+summaries and diagnostics. Endpoints, width, and midpoint are computed from
+the same sorted root pairs.}
+\label{fig:supp-mti-full-trace}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_ranks.pdf}
+\caption{\textbf{Pooled-rank counts for the Gaussian example.}
+Ranks use all retained draws for each quantity in
+Figure~\ref{fig:supp-mti-full-trace}, divided into 20 bins. Colors identify
+chains; dashed lines give the expected count under balanced mixing.}
+\label{fig:supp-mti-full-ranks}
+\end{figure}
 
 \subsection{Fitted-Content and Tilt Selection}
 \label{sec:supp-mti-candidate-selection}
@@ -1295,8 +1389,9 @@ additional prespecified contents near one when the reference is at least
 \(0.45\) sample standard deviations to the
 empirical fractional shortest-window tilt and includes zero. Candidates with
 absolute tilt above two sample standard deviations are removed. The full
-content grid and the deterministic expansion rule for an initially empty
-eligible set are listed in the computational settings. The shortest-candidate property
+content grid is specified before fitting. An empty eligible set is retained
+as a nonreturn; there is no adaptive expansion or substitute interval.
+The shortest-candidate property
 applies to this finite collection of ECM fits.
 
 \section{Direct DP Content Check}
@@ -1338,8 +1433,8 @@ Beta distribution.
 \end{proof}
 
 The direct DP check determines eligible MTI candidates for each training
-sample. Its threshold is chosen in a separate calibration run and fixed before
-independent validation. The Beta identity is a posterior probability statement
+sample. Its threshold is fixed before independent calibration assessment
+and validation. The Beta identity is a posterior probability statement
 under the DP response-distribution model. The repeated-sampling behavior of
 the selected interval is assessed empirically.
 
@@ -1353,7 +1448,7 @@ samples. The comparison includes the calibrated MTI rule, Young--Mathew
 interpolation, and Wilks full-range intervals. MTI
 searches fixed-target ECM endpoint fits over fitted content and retained-mean tilt,
 then applies a direct Dirichlet-process fixed-interval content probability
-threshold. Its cutoff is fixed from separate simulation calibration.
+threshold. Its cutoff is fixed before the separate calibration assessment.
 The scan reference below initializes the content grid. Young--Mathew and Wilks are classical order-statistic
 comparators. Regression and dynamic tolerance calibration require additional
 results because the fitted intervals vary with covariates or time.
@@ -1373,8 +1468,8 @@ asymmetric simulation distributions. The symmetric reference distributions are
 Gaussian and Student \(t_3\). The asymmetric simulation distributions are
 exponential, asymmetric Laplace with \(\tau=0.10\), two-piece Normal with scale
 ratio \(1{:}12\), Beta\((1,8)\), Gamma\((0.5,1)\), and log-normal with
-log-scale standard deviation \(1.25\). All laws are centered and scaled before
-sampling. Within each cell, all three methods use common random samples,
+log-scale standard deviation \(1.25\). All laws use their predeclared
+population centers and scales before sampling. Within each cell, all three methods use common random samples,
 independent of threshold development and calibration assessment. The
 reproducibility materials include the code version, simulation settings,
 package versions, random seeds, calibration files, and numerical summaries.
@@ -1401,42 +1496,116 @@ infeasibility indicators, and raw width summaries for each
 distribution-level cell as reproducibility information.
 
 \paragraph{Threshold development and assessment.}
-The calibration evaluates 1000 samples per distribution and setting
-for each candidate cutoff, giving 8000 across the distributional panel.
-The selection records empirical attainment, exact one-sided binomial lower
-bounds, interval return, eligible-candidate counts, and width stability.
+An initial numerical assessment uses 12 independent samples per distribution
+and design under each of two preassigned root-prior standard deviations,
+one and two. The declared primary analysis uses standard deviation two;
+it is not selected by validation performance. A fresh calibration assessment
+then uses 200 samples per distribution and design under this prior.
+The candidate-grid construction and probability cutoffs are inherited
+unchanged from their earlier development. This assessment records attainment,
+exact one-sided binomial bounds, interval return, and width without
+reselecting the cutoffs.
 The fixed cutoffs are \(0.995\) in eight settings and \(0.996\) at
 \(n=1000,c=0.99\). These posterior probability thresholds differ from the
 requested repeated-sampling confidence of \(0.95\).
 
-The smallest distribution-specific calibration lower bounds are approximately
-\(0.9460\) at \(n=100,c=0.95\) and \(0.9382\) at
-\(n=500,c=0.99\); the other seven settings exceed \(0.95\).
-The pointwise bounds do not adjust for the search over candidate cutoffs.
-Table~\ref{tab:supp-mti-profile-policy} retains these values explicitly.
-Consequently, the calibration is an empirical choice of a fixed rule whose
-performance must be read alongside independent validation, rather than a
-simultaneous finite-panel guarantee.
+Pointwise bounds from 200 replications can include values below \(0.95\),
+even when the observed rate exceeds it. They quantify uncertainty in this
+assessment and supply no simultaneous guarantee over the distributional
+panel. The independent validation uses different sample seeds and retains
+the same priors, targets, candidate rule, and thresholds.
 
 \paragraph{Independent uncertainty assessment.}
 The cutoff is fixed before the 1000 validation samples per case are generated.
 Pointwise exact 95\% binomial intervals accompany each attainment estimate.
 For MTI-ECM, simultaneous two-sided intervals across 72 cases allocate
 \(0.05/(2\cdot72)\) to each tail. Their lower bounds exceed \(0.95\) in
-53 cases; 19 include \(0.95\), and none has an upper bound below it.
-The smallest point estimate, \(951/1000\), occurs for the two-piece Normal at
-\(n=100,c=0.95\), with pointwise interval approximately
-\([0.9357,0.9635]\). Inconclusive validation intervals reflect Monte Carlo
-precision and are reported alongside the separate calibration assessment.
-The ECM stopping criterion is met in 42,116 of 72,000 selected fits; 29,884 reach
-the 100-cycle limit. The latter fits are retained in all attainment and width
-summaries. At \((n,c)=(50,0.90),(100,0.95),(500,0.99)\), every selected
-fit reaches that limit. The reproducibility materials give stopping counts,
-stationarity summaries, and selected-target ranges for every distribution and
-design. These are numerical diagnostics of the implemented estimates, separate
-from whether their intervals attain the requested population content.
+\MTIFixedECMLower{} cases; \MTIFixedECMInclude{} include \(0.95\), and
+none has an upper bound below it. The smallest point estimate,
+\(948/1000\), occurs for the two-piece Normal at \(n=100,c=0.95\).
+Inconclusive intervals reflect Monte Carlo precision and are retained in the
+interpretation. All 72,000 selected ECM fits meet the final coordinatewise
+accuracy criteria; the largest possible one-root objective improvement is
+\(7.55\times10^{-9}\). One initial floating-point knot failure is repaired
+on its original sample with identical targets and priors. Its original fit
+and the checked replacement are retained separately. Initial ECM stopping
+flags are not substituted for the final accuracy checks.
 
-\input{tables/mti_gibbs_full_validation_supplement.tex}
+\subsection{Posterior-Mean Interval Comparisons}
+\label{sec:supp-mti-full-validation}
+
+Posterior-mean endpoint attainment ranges from \MTIFullAttainmentMin\%
+to \MTIFullAttainmentMax\% across the 72 distribution/design cases.
+Mean widths exceed ECM widths in \MTIFixedGibbsWider{} cases. The Student
+\(t_3\), \(n=500,c=0.99\) case has Gibbs attainment \(931/1000\), with
+pointwise exact interval \([0.9135,0.9459]\), versus \(952/1000\) for
+ECM and \(946/1000\) for Young--Mathew. Its Gibbs mean width is 12.40,
+compared with 12.86 for ECM and Wilks. The simultaneous interval over 72
+Gibbs cases includes \(0.95\); this does not remove the pointwise warning.
+The separate calibration assessment also gives lower attainment for Gibbs
+in this case, \(185/200\), versus \(193/200\) for ECM.
+
+Across validation samples, 20,451 Gibbs mean intervals fall below the DP
+probability cutoff used for ECM eligibility; 1020 fall below posterior
+content probability \(0.95\). In the Student \(t_3\) case above, 539 of
+1000 Gibbs intervals fall below \(0.95\). Averaging sorted endpoints can
+move them across observations that carry DP posterior mass. Eligibility
+and tolerance performance must therefore be assessed for the actual
+reported interval. The longer-chain checks in
+Section~\ref{sec:supp-mti-posterior-assessment} support numerical stability
+of these posterior means.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_attainment.pdf}
+\caption{\textbf{Content attainment including posterior-mean intervals.}
+Segments span attainment proportions across the eight distributions for one
+design and method. They describe distributional variation, with binomial
+Monte Carlo bounds reported separately. The dashed line marks tolerance
+confidence \(0.95\). Gibbs intervals average sorted endpoints at the
+training-selected fitted content and tilt.}
+\label{fig:supp-mti-full-attainment}
+\end{figure}
+
+\input{tables/mti_fixed_prior_20261115/simulation_comparison.tex}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_width_ranges_01.pdf}
+\caption{\textbf{Width ranges for the symmetric simulation laws.}
+Segments give empirical 2.5\%--97.5\% quantiles across 1000 samples within
+each distribution, design, and method. Crosses mark mean widths. Values
+remain raw lengths on logarithmic axes.}
+\label{fig:supp-mti-full-widths-symmetric}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_width_ranges_02.pdf}
+\caption{\textbf{Width ranges for exponential and asymmetric Laplace samples.}
+Segments, crosses, grouping, and axes follow
+Figure~\ref{fig:supp-mti-full-widths-symmetric}. Each range is computed
+within its distribution and design.}
+\label{fig:supp-mti-full-widths-exponential-al}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_width_ranges_03.pdf}
+\caption{\textbf{Width ranges for two-piece Normal and Beta samples.}
+Segments, crosses, grouping, and axes follow
+Figure~\ref{fig:supp-mti-full-widths-symmetric}.}
+\label{fig:supp-mti-full-widths-two-piece-beta}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_width_ranges_04.pdf}
+\caption{\textbf{Width ranges for Gamma and log-normal samples.}
+Segments, crosses, grouping, and axes follow
+Figure~\ref{fig:supp-mti-full-widths-symmetric}.}
+\label{fig:supp-mti-full-widths-gamma-lognormal}
+\end{figure}
 
 The population benchmark used in the main width figure is shown in
 Figure~\ref{fig:supp-tolerance-population-shortest}. For each simulation law
@@ -1460,7 +1629,6 @@ These results provide empirical repeated-sampling evidence for the selected
 ECM rule. A distribution-free tolerance theorem for MTI remains to be
 established.
 
-\input{tables/tolerance_validation_mti_profile_policy.tex}
 
 \paragraph{Scan reference for the fitted-content search.}
 The reference retained count \(k\) is chosen before seeing the replicated
@@ -1552,7 +1720,6 @@ in the method reproducibility record.
 
 \section{Pharmaceutical Application Details}
 \label{sec:supp-pharma-application}
-\input{tables/pharma_application_numbers.tex}
 \input{tables/pharma_source_numbers.tex}
 
 \paragraph{Data and paired partitions.}
@@ -1646,12 +1813,12 @@ least \(c\). The splits reuse one finite dataset and are not independent
 sampling replications.}
 \label{tab:supp-pharma-rsd}
 \TableStyle
-\input{tables/pharma_application_supplement_summary.tex}
+\input{tables/mti_fixed_prior_20261115/tbl_rsd_weight.tex}
 \end{table}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/figS04_pharma_application_rsd_intervals.png}
+\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/pharma_rsd.png}
 \caption{\textbf{Interval placement and held-out comparisons for weight RSD.}
 The panels follow the main application figure. The representative split
 \PharmaRsdRepresentative{} is selected by the same median-distance rule.
@@ -1662,13 +1829,9 @@ quality-control decision.}
 \label{fig:supp-pharma-rsd}
 \end{figure}
 
-The paired comparisons below use MTI minus the named benchmark for endpoint,
-width, content, and omission differences. The width ratio divides MTI
-width by benchmark width. They summarize the observed paired split
-distributions without treating overlapping splits as independent observations.
-
-\input{tables/pharma_application_primary_paired_summary.tex}
-\input{tables/pharma_application_rsd_paired_summary.tex}
+The paired panels use ECM minus the named benchmark for width and held-out
+content. They summarize the paired split distributions without treating
+overlapping partitions as independent observations.
 
 \paragraph{Partition sensitivities.}
 Forward recorded order trains on the first \PharmaTrain{} batches in recorded
@@ -1685,8 +1848,8 @@ These orderings use batch identifiers and source rows. Ambiguous process date
 strings and unresolved relationships between production stages prevent a
 verified calendar interpretation.
 
-Tables~\ref{tab:supp-pharma-primary-sensitivity}
-and~\ref{tab:supp-pharma-rsd-sensitivity} give actual split counts and
+Tables~\ref{tab:supp-mti-full-application}
+and~\ref{tab:supp-mti-full-application-rsd} give actual split counts and
 summaries for each design. The recorded-order cases show that partition choice
 can materially change held-out empirical content. For MTI, reverse
 order gives tensile-metric content \PharmaTensileReverseContent\%;
@@ -1694,12 +1857,9 @@ forward order gives RSD content \PharmaRsdForwardContent\%.
 These comparisons describe variation across the recorded batches and are
 insufficient to distinguish dependence from changes in the batch distribution.
 
-\input{tables/pharma_application_primary_sensitivity.tex}
-\input{tables/pharma_application_rsd_sensitivity.tex}
-
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/figS05_pharma_application_partition_sensitivity.png}
+\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/pharma_partition_sensitivity.png}
 \caption{\textbf{Sensitivity to training and held-out partitions.} Points show
 median widths or held-out empirical content within each labeled design.
 Segments give empirical 95\% ranges for random and grouped splits. The two
@@ -1723,52 +1883,48 @@ As a retrospective sensitivity, we retain every existing month-grouped
 partition with no shared campaign. This response-independent criterion selects
 \PharmaCampaignDisjointMonths{} partitions; all \PharmaGroupedSplits{} original
 month partitions remain in the comparison. Table~\ref{tab:supp-pharma-campaign}
-reports the corresponding widths, empirical content, and omissions together.
+reports the corresponding widths and held-out empirical content together.
 For MTI the selected subset has median held-out content
-\PharmaCampaignTensileContent\% for the tensile metric and
-\PharmaCampaignRsdContent\% for RSD. These are overlapping partitions of one
+\MTIFixedCampaignTensileContent\% for the tensile metric and
+\MTIFixedCampaignRsdContent\% for RSD. These are overlapping partitions of one
 historical dataset. Moreover, \PharmaCampaignDisjointApiShared{} selected
 partitions still share API lots. Their content-attainment frequencies do not
 estimate nominal tolerance confidence or isolate a causal campaign effect.
 
 \begin{table}[H]
 \centering
-\caption{\textbf{Retrospective sensitivity to campaign sharing.} Both sets
-use existing month-grouped partitions with \PharmaTrain{} training and
-\PharmaHeldout{} withheld batches; no intervals are refitted. Brackets give
-empirical 2.5\%--97.5\% width quantiles. Content is median held-out empirical
-content; \(\ge c\) is the percentage of partitions meeting the requested
-content. Below/above gives median omitted fractions. Content, attainment, and
-omissions are percentages.
+\caption{\textbf{Retrospective sensitivity to campaign sharing.} The
+\PharmaCampaignDisjointMonths{} existing month-grouped partitions without
+shared campaigns use \PharmaTrain{} training and \PharmaHeldout{} withheld
+batches; no intervals are refitted. Width ranges give empirical
+2.5\%--97.5\% quantiles. Content is median held-out empirical content;
+\(\ge c\) is the percentage of partitions meeting the requested content.
 The subset is retrospective and the partitions are not independent samples.}
 \label{tab:supp-pharma-campaign}
-\input{tables/pharma_campaign_sensitivity.tex}
+\input{tables/mti_fixed_prior_20261115/campaign_sensitivity.tex}
 \end{table}
 
 \paragraph{Numerical diagnostics.}
 Every selected MTI fit retains its content, tilt, posterior content
-probability, candidate counts, ECM iterations, stopping flag, and final
-stationarity diagnostic. The stopping criterion uses
-\(\PharmaStationarityThreshold\) with at most \PharmaMaxIter{} cycles.
-The selected-fit stopping flag is met in \PharmaTensileConverged{} of
-\PharmaTensileReturned{} returned tensile-metric fits and
-\PharmaRsdConverged{} of \PharmaRsdReturned{} returned RSD fits.
-The main summaries retain every split. A separate numerical assessment compares
-all 3004 saved ECM intervals with the same fixed-target objective and examines
-longer iterations for 28 prespecified cases. Stable iterates can retain a
-positive objective gap; neither interval return nor a stopping flag proves
-global minimization. The held-out content calculations and the DP probability
-checks remain distinct from these optimization diagnostics. Overlapping
-partitions, ties, and possible dependence also limit the application.
+probability, candidate counts, ECM iterations, initial stopping flag, and
+final conditional-mode checks. All 3004 application fits meet the final
+coordinatewise criteria, with maximum possible one-coordinate improvement
+below \(8.50\times10^{-12}\). Five Gibbs calculations receive longer
+same-target chains for posterior-mean precision. Their original draws remain
+exact prefixes of the extended sequences. All partitions are retained.
+The held-out calculations and DP probabilities remain distinct from these
+numerical diagnostics. Exact endpoint precision is preserved when saving
+intervals, because rounding can change inclusion of tied observations.
 
 \begin{table}[H]
 \centering
-\caption{\textbf{MTI numerical diagnostics for primary random splits.}
-Numerical summaries are medians with empirical 95\% ranges among returned
-fits. Return counts and the convergence flag are reported separately.}
+\caption{\textbf{Numerical assessment of fixed-prior calculations.}
+Mixing summaries range over lower endpoint, upper endpoint, width, and
+midpoint. Coordinate gain is the largest possible objective improvement
+from an exact one-root conditional minimization at the selected ECM fit.}
 \label{tab:supp-pharma-numerical}
 \TableStyle
-\input{tables/pharma_application_numerical_diagnostics.tex}
+\input{tables/mti_fixed_prior_20261115/numerical_assessment.tex}
 \end{table}
 
 Failed interval calculations, if any, remain in the results and count as
@@ -1783,7 +1939,7 @@ simulation study.
 \label{sec:supp-pharma-gibbs}
 
 The complete Gibbs assessment uses the same \MTIFullApplications{}
-training partitions as the original ECM application. Each calculation
+training partitions as the fixed-prior ECM application. Each calculation
 conditions on the partition's selected fitted content and tilt, with the
 learning rate and Gaussian root priors unchanged. Posterior-mean endpoints
 give the interval \(I_{\mathrm G}\) defined in
@@ -1803,7 +1959,7 @@ partition has a single reported width. These comparisons describe
 historical variation and posterior dispersion under the specified priors.
 Overlapping partitions do not provide independent tolerance replications.
 
-\input{tables/mti_gibbs_full_application_comparison.tex}
+\input{tables/mti_fixed_prior_20261115/application_comparison.tex}
 
 \section{Reproducibility and Validation Limits}
 \label{sec:supp-reproducibility}
@@ -1813,8 +1969,8 @@ construction, and repeated-sampling evidence. The proofs above support the
 population MPI and MTI identities, the fractional empirical score balance, and
 the direct DP fixed-interval content law under their stated assumptions. The
 scan-reference retained counts are calibrated before the replicated samples are analyzed.
-The MTI content-probability cutoff is selected in a separate
-calibration run and then applied unchanged in the independent validation run.
+The MTI content-probability cutoffs and priors are fixed before the separate
+calibration assessment and independent validation run.
 
 The completed posterior assessment records all \MTIFullDatasets{} datasets,
 their selected targets, the four chain seeds, numerical settings, posterior
@@ -1822,10 +1978,15 @@ summaries, and multi-chain diagnostics. The reproducible summaries retain
 the simulation designs and historical partition schemes separately.
 Numerical table entries and figures are generated from these records;
 the retained traces and pooled-rank counts reproduce the displayed
-diagnostics. The independent objective and prior-sensitivity calculations
-retain their original 456-example scope. The full posterior assessment
-adds no new calibration samples and leaves the original ECM tolerance
-results unchanged.
+diagnostics. Validation uses 72,000 independent samples, preceded by 14,400
+calibration-assessment samples and 1728 initial prior-comparison fits.
+These counts refer to fitted samples, each with paired ECM/Gibbs summaries;
+the initial comparison fits the same 864 samples under two fixed priors.
+The 12 outcome-stratified longer-chain calculations and five application
+precision extensions are numerical checks on existing samples. They are
+excluded from repeated-sampling attainment estimates. All empirical tables
+and figures in these sections use the fixed-prior results, while the earlier
+diffuse-prior calculations remain in the software archive.
 
 The validation evidence is confined to iid continuous univariate samples from
 the prespecified simulation distributions. It does not establish tolerance

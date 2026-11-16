@@ -10,9 +10,18 @@ repo_root <- if (length(root_arg)) {
 repo_root <- normalizePath(repo_root, mustWork = TRUE)
 
 manuscripts <- c("main.tex", "rqr-gibbs-supplement.tex")
-included_text <- file.path("tables", list.files(file.path(repo_root, "tables"),
-  pattern = "^(pharma_application_.*|mti_gibbs_full_.*)\\.tex$"))
-source_files <- c(manuscripts, included_text)
+source_files <- manuscripts
+pending <- manuscripts
+while (length(pending)) {
+  file <- pending[1L]; pending <- pending[-1L]
+  text <- readLines(file.path(repo_root, file), warn = FALSE)
+  text <- text[!grepl("^[[:space:]]*%", text)]
+  input <- unlist(regmatches(text, gregexpr("\\\\input\\{[^}]+\\}", text)))
+  input <- sub("^\\\\input\\{", "", sub("\\}$", "", input))
+  input[!grepl("[.]tex$", input)] <- paste0(input[!grepl("[.]tex$", input)], ".tex")
+  input <- setdiff(unique(input), source_files)
+  source_files <- c(source_files, input); pending <- c(pending, input)
+}
 paths <- file.path(repo_root, source_files)
 if (any(!file.exists(paths))) {
   stop(
@@ -130,7 +139,9 @@ required <- list(
     "Widths are reported as distribution-level empirical",
     "Calibrated MTI Tolerance Intervals",
     "MTI is the proposed method in the comparison",
-    "all reported cells",
+    "Prior locations and scales are fixed before fitting",
+    "conditional on this selected target",
+    "underattainment",
     "allowing paired comparisons of attainment and width",
     "a distribution-free tolerance theorem for the fitted-content and tilt selection rule",
     "Regression-family and dynamic tolerance calibration require additional theory",
@@ -167,20 +178,15 @@ for (file in manuscripts) {
     }
   }
 }
-has_posterior_assessment <- FALSE
-for (suffix in c("main", "supplement")) {
-  file <- paste0("tables/mti_gibbs_full_assessment_", suffix, ".tex")
-  path <- file.path(repo_root, file)
-  if (!file.exists(path)) failures <- c(failures, paste("Missing posterior assessment inclusion:", file))
-  else if (any(nzchar(trimws(readLines(path, warn = FALSE))))) has_posterior_assessment <- TRUE
-  manuscript <- if (suffix == "main") "main.tex" else "rqr-gibbs-supplement.tex"
+for (manuscript in manuscripts) {
+  file <- "tables/mti_fixed_prior_20261115/numbers.tex"
   if (!any(grepl(paste0("\\input{", file, "}"), lines[[manuscript]], fixed = TRUE))) {
-    failures <- c(failures, paste(manuscript, "is missing its Gibbs comparison inclusion"))
+    failures <- c(failures, paste(manuscript, "is missing its fixed-prior numerical values"))
   }
 }
-if (has_posterior_assessment) {
+if (!length(failures)) {
   assessment <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
-    c(shQuote(file.path(repo_root, "application/scripts/114_report_mti_gibbs_full_assessment.R")), "--mode=verify"),
+    c(shQuote(file.path(repo_root, "application/scripts/125_report_mti_fixed_prior.R")), "verify"),
     stdout = TRUE, stderr = TRUE))
   if (!is.null(attr(assessment, "status")) && attr(assessment, "status") != 0L) {
     failures <- c(failures, "Posterior assessment text lacks verified matching evidence.", assessment)

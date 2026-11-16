@@ -98,7 +98,7 @@ msp_prepare <- function(root, include_supplement = FALSE, stamp = format(Sys.tim
     paste("Output directory already exists or cannot be created:", output))
   source <- file.path(output, "committed_source"); dir.create(source)
   archive <- file.path(output, "committed_source.tar")
-  reference <- "docs/reproducibility/mti_completed_study_reference_20261113.md"
+  reference <- "docs/reproducibility/mti_fixed_prior_study_reference_20261115.md"
   msp_run("git", c("--no-optional-locks", "archive", "--format=tar", paste0("--output=", archive), commit,
     "--", "main.tex", "rqr-gibbs-supplement.tex", "refs.bib", "tables", "figures", reference),
     root, file.path(output, "git-archive.txt"))
@@ -131,8 +131,9 @@ msp_prepare <- function(root, include_supplement = FALSE, stamp = format(Sys.tim
   writeLines(paste(msp_hash(zip), basename(zip)), paste0(zip, ".sha256"))
   msp_require(file.copy(file.path(source, reference), file.path(output, "COMPLETED_STUDY_REFERENCE.md")),
     "Could not copy the completed-study reference.")
-  evidence <- jsonlite::read_json(file.path(source, "figures/data/mti_gibbs_full_20261113/summary.json"))
-  jsonlite::write_json(list(source_commit = commit, sampling_commit = evidence$sampling_commit,
+  evidence <- jsonlite::read_json(file.path(source, "figures/data/mti_fixed_prior_20261115/provenance.json"))
+  jsonlite::write_json(list(source_commit = commit, sampling_commit = evidence$simulation_source,
+    application_commit = evidence$repair_and_application_source, finalization_commit = evidence$source_commit,
     root_documents = paste0(stems, ".tex"), project_files = as.list(setNames(vapply(files, msp_hash, ""), names(files))),
     archive = basename(zip), archive_sha256 = msp_hash(zip), committed_source_sha256 = msp_hash(archive),
     review_pdfs = as.list(setNames(vapply(stems, function(x) msp_hash(file.path(output, paste0(x, ".pdf"))), ""), stems)),

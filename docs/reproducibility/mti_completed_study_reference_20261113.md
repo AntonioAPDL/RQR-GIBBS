@@ -1,5 +1,10 @@
 # Completed MTI Study: Manuscript and Dissertation Reference
 
+Historical diffuse-prior study. The current manuscript uses the independent
+fixed-prior reassessment described in
+[the November 15 reference](mti_fixed_prior_study_reference_20261115.md).
+The empirical values below remain specific to the earlier study.
+
 ## Statistical Contributions
 
 The tolerance article develops a loss-defined family of interval functionals,

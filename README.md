@@ -35,12 +35,12 @@ caches, and local literature PDFs are excluded from version control.
 
 ## Fixed-Prior Reassessment
 
-The new ECM/Gibbs comparison fixes independent Gaussian root priors at SD 2
+The manuscript's ECM/Gibbs comparison fixes independent Gaussian root priors at SD 2
 in declared reference units, with SD 1 as a development sensitivity. Neither
 prior parameters nor the learning rate are estimated from each fitting sample.
-The staged study retains numerical diagnostics, uses fresh calibration and
+The completed study retains numerical diagnostics, uses fresh calibration and
 validation samples, and recomputes Young--Mathew and Wilks on the same data.
-It does not replace the article's existing results automatically. See the
+Its reviewed results now supply the main and supplementary empirical sections. See the
 [statistical specification and reproduction commands](docs/implementation_notes/mti_fixed_prior_validation_20261114.md),
 including the application's explicit working prior in published reporting units.
 
@@ -55,8 +55,20 @@ continuation after its tests; it does not restart the simulation study.
 The [fixed-prior numerical finalization](docs/implementation_notes/mti_fixed_prior_finalization_20261115.md)
 extends only application mean-precision flags at unchanged posterior targets,
 verifies every saved chain prefix, and stages source-attributed reporting
-evidence. It preserves both preceding studies and makes no automatic
-manuscript changes.
+evidence. All 72,000 validation and 3004 application pairs pass final numerical
+checks. Five application precision extensions preserve the original draws and
+finish at 8000 retained draws per chain. The original fit files are unchanged.
+
+`application/config/mti_fixed_prior_reporting_20261115.json` identifies the
+current manuscript inputs in `figures/data/mti_fixed_prior_20261115/`.
+`make report-mti-fixed-prior` regenerates its figures, tables, and numerical
+macros from these small tracked files without loading fitted objects.
+`make verify-mti-fixed-prior-report` checks data, source, and figure checksums.
+The primary comparison remains MTI-ECM, Young--Mathew, and Wilks; separate
+supplementary tables add Gibbs posterior-mean intervals. In Student t(3) at
+n=500, c=.99, the latter attain content in 931/1000 samples. Longer chains
+preserve that warning. It is reported rather than removed by retuning the
+prior or cutoff on validation samples.
 
 ## Statistical Framing
 
@@ -69,8 +81,9 @@ conditionally conjugate Gaussian root and GIG scale updates for MPI and
 fixed-tilt MTI. Gibbs sampling targets that fixed-target generalized posterior;
 ECM uses the same augmentation for mode estimation. Fitted content and tilt are
 selected separately. The completed fixed-target study examines marginal
-Gibbs posterior uncertainty alongside finite ECM estimates, with a smaller
-supporting comparison to the original augmented sampler. Its findings are
+Gibbs posterior uncertainty alongside checked ECM estimates. Earlier
+comparisons to the original augmented sampler remain historical evidence
+under their original priors. Current findings are
 reported separately from the calibrated tolerance comparison.
 
 MTI-ECM is the proposed tolerance procedure reported in the article. It searches
@@ -80,15 +93,14 @@ posterior content check. Its calibration rule is fixed before independent
 repeated-sampling validation. The primary simulation and pharmaceutical
 results report MTI-ECM, Young--Mathew, and Wilks; complete supplementary
 tables add the Gibbs posterior-mean intervals on the same data.
-The simulation comparison uses the genuine
-archived ECM study; its inexpensive comparators are recomputed on exactly the
-same samples. Stopping flags are distinct from interval return and population
-content attainment. See
+The simulation comparison uses new fixed-prior fits, and its inexpensive
+comparators are recomputed on exactly the same samples. Stopping flags are
+distinct from interval return and population content attainment. The earlier
+diffuse-prior results remain available through
 [the reproducibility description](docs/reproducibility/mti_ecm_recovery_20261111.md).
-The authorized full Gibbs study is complete, with zero remaining chains or
-required extensions. Its numerical evidence and manuscript reporting are
-described below. Reproducing a launch still requires its exact committed
-source; no further campaign is required to reproduce the published displays.
+Both studies are complete, with zero remaining chains or required extensions.
+Reproducing a launch requires its exact committed source; no further sampling
+is required to reproduce the manuscript displays.
 
 The scan reference (TCSP in the code) is retained for constructing the
 initial fitted-content grid. It is

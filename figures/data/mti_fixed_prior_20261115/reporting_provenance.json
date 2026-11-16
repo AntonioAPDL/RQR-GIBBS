@@ -1,0 +1,35 @@
+{
+  "finalization_commit": "9569be98ce285fe2359c939a645651bc00a14858",
+  "staged_provenance_sha256": "b598479454330541339ac6718c8716aa8758ebd92771b932c4d267e219dfad7d",
+  "extra_sources": {
+    "figures/data/pharma_mti_application_20261020/observed_batches.csv": "1553e9c92474fdc65822df30503b7779c9b3ec56374085458ea7964325ea46cf",
+    "figures/data/pharma_source_structure_ecm_20261111/partition_sharing.csv": "06497e8d42623ade042b8f9db9caaf84b8b0a321c738d921ea6d322c66fee13b",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_9b53485fc9e4d6ab43a92d80a1b0931bf58c910e/application/outputs/mti_fixed_prior_20261114/calibration/cell_summary.csv": "9a52a6612780b4a4a51d547f3ec3e58177bf3492ffbd1808bb3ea664d8106f72",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_9b53485fc9e4d6ab43a92d80a1b0931bf58c910e/application/outputs/mti_fixed_prior_20261114/validation/fits/fit_041001.rds": "665604db0666485841bfe81c92d5eaf0e9e654ce20cb2339b6d0d3e44784e7a1",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_9b53485fc9e4d6ab43a92d80a1b0931bf58c910e/application/outputs/mti_fixed_prior_20261114/validation/fits/fit_048001.rds": "a9a6e49b61d2ebd285821672fb03e6ee2f05ce36785306b265b6078cd497f34e",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_9b53485fc9e4d6ab43a92d80a1b0931bf58c910e/application/outputs/mti_fixed_prior_20261114/validation/fits/fit_050001.rds": "205db5bbd8ffe19a91eb0403a1c76abf4ea0ebc5af0efa76bd25ecc478505456",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_closure_abd14dbb8c4aa06f5622f256edb609646acd273b/application/outputs/mti_fixed_prior_closure_20261115/application/fits/fit_001414.rds": "37f3966f4a5efa8c48f3739ab4b3851bdf0fbe825c16c772132382314e3613e7"
+  },
+  "data_files": {
+    "application_cells.csv": "88cdb5b540ec0198ad6c46a19ad91d18f04909a5efa312b6f31eef543ed4c23d",
+    "application_values.csv": "46dfe5e9f0f47e847a5cbee5b4fa0f2396cb08f97201201e678e3cbd5d85a004",
+    "calibration_cells.csv": "9a52a6612780b4a4a51d547f3ec3e58177bf3492ffbd1808bb3ea664d8106f72",
+    "campaign_cells.csv": "9d192434cd34f95c899aa8ce2ef1d624bf1bc3602724ea54071ea75ca59ee2ad",
+    "cdf.csv": "5379daf36383c8f8b6f2ca00689a40dac5cc8a3aaa8901ce3f4250e6ceb58027",
+    "diagnostic_case_summary.csv": "c40961d2a0eb7b548438b012a177e7dd16b54b0460774c62486ed187950a4a47",
+    "diagnostic_mean_comparison.csv": "5a6d9661e52ca0174e88882339c672999cd4075baed5e066a44390dad3814623",
+    "diagnostic_tasks.csv": "70ed798cbda5fa3f604f281e7a77c7e127d9b678072677ef40fdf6f99848056e",
+    "examples.csv": "8a247f122e2d2662a529925d534196feea244f9f3705c77d08f39eb8fcb04c19",
+    "interval_dp_probabilities.csv": "422f930dd758ca107bde29fd6ec896506dc7592cf8c29b0d8388c7829e778ee4",
+    "numerical_assessment.csv": "9e8b4a2c6f91cef1387f7d8e9a85f57cfe0ba6c16d64c5d02ad8a2066dadfdaf",
+    "observed_batches.csv": "54b28a9c03c5cb82ca361b52259dcad615c2f3a24f1e194254920ad092d472bf",
+    "primary_ranges.csv": "622260ba5c00c08a29fb3486107de691391f49dd8d1ddf9913f8195377f65669",
+    "primary_widths.csv": "d508b685766156bcd449d29ba41e160233c0615ce78154987d5105889ba4c123",
+    "ranks.csv": "4bc0d01e550f8e9c5f56c3a0c718c0a578a589d08fbeab21760db8b8f30c933e",
+    "representative_splits.csv": "6dd77fee30d72ea6fa6ee95b676075611a79d21b5319ed8b94aeab353418c8b5",
+    "simulation_cells.csv": "057b779343f040943a43e77087f224a48cb4b487c11dae7439ffecc8c6b71c86",
+    "trace.csv": "4164c86e69e890ec1979fdef8e65f88572eaf67b0a4a11cc8be2684ff66809f6"
+  },
+  "quantile_type": 7,
+  "prior_uses_analysis_data": false
+}

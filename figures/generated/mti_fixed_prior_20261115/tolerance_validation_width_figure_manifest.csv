@@ -1,0 +1,4 @@
+"relative_path","sha256","bytes","generator","method_ids"
+"figures/generated/mti_fixed_prior_20261115/fig05_tolerance_validation_width_ranges.png","f45e768edf528b14d1c5dfcec0b130bbfec44284f0ae1487cb39cb470c295605",421778,"figures/generate_tolerance_validation_width_figure.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"
+"figures/data/mti_fixed_prior_20261115/primary_widths.csv","d508b685766156bcd449d29ba41e160233c0615ce78154987d5105889ba4c123",57270,"figures/generate_tolerance_validation_width_figure.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"
+"figures/data/tolerance_population_shortest_content_oracle.csv","946fc574dae08978c05ee30e69f59b0cac16d1c2b963aca007b18fc5ce7242bf",4045,"figures/generate_tolerance_validation_width_figure.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"

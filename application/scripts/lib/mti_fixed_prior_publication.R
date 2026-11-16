@@ -5,6 +5,9 @@ mff_simulation_cells <- function(rows, expected = 1000L, settings = 72L) {
   d <- data.table::as.data.table(rows)
   mwd_require(!anyDuplicated(d[, .(job_id, method)]) && setequal(unique(d$method), names(mff_methods)),
     "Duplicate simulation observations or missing comparison methods.")
+  keys <- unique(d[, .(job_id, response_id, n, content, tolerance_confidence)])
+  mwd_require(nrow(keys) == data.table::uniqueN(d$job_id) && all(d[, .N, by = job_id]$N == 4L),
+    "Simulation methods must use the same samples and design cells.")
   cells <- d[, .(attempts = .N, returned = sum(returned), successes = sum(returned & attained),
     attainment = mean(returned & attained), mean_width = mean(width, na.rm = TRUE),
     width_q025 = quantile(width, .025, na.rm = TRUE), width_q975 = quantile(width, .975, na.rm = TRUE)),

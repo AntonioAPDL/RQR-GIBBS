@@ -320,10 +320,9 @@ arxiv_script <- paste(
   collapse = "\n"
 )
 assert_true(
-  grepl("figures/generated/fig03_mean_tilt_cf_anchors.png", arxiv_script,
-        fixed = TRUE) &&
-    grepl("tables/mean_tilt_cf_mini_study.tex", arxiv_script, fixed = TRUE),
-  "arXiv source contract includes the main-text CF figure and table"
+  grepl("115_prepare_mti_manuscript_source.R", arxiv_script, fixed = TRUE) &&
+    file.exists(file.path(repository_root(), "application/scripts/lib/manuscript_source_package.R")),
+  "arXiv source command uses compiled dependency discovery tested with nested inputs"
 )
 for (term in c(
     "\\operatorname{AL}", "asymmetric-Laplace", "\\tau_{\\mathrm{AL}}"

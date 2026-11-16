@@ -77,7 +77,9 @@ testthat::test_that("reporting retains separate raw width quantiles and rejects 
   testthat::expect_equal(nrow(main), 6L)
   testthat::expect_false("mti_gibbs_mean" %in% main$method_id)
   testthat::expect_error(mff_simulation_cells(rbind(d, d[1, ]), 10L, 2L), "Duplicate")
-  testthat::expect_error(mff_simulation_cells(d[-1, ], 10L, 2L), "Incomplete")
+  testthat::expect_error(mff_simulation_cells(d[-1, ], 10L, 2L), "same samples")
+  changed <- d; changed$response_id[1] <- "exponential"
+  testthat::expect_error(mff_simulation_cells(changed, 10L, 2L), "same samples")
 })
 
 testthat::test_that("finalization waits for a successful complete continuation", {

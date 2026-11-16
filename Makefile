@@ -243,13 +243,19 @@ tolerance-validation-adaptive-article-inputs:
 
 theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) figures/generate_tolerance_population_oracle_figure.R --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
+	$(R) application/scripts/125_report_mti_fixed_prior.R render
+
+historical-tolerance-figures:
 	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results= --mti-ecm-results= --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --mti-method-id=mti_ecm_adaptive_cell --mti-label=MTI-ECM --delivery-y-min=.85 --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) figures/generate_tolerance_validation_width_figure.R --width-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_dgp_width_ranges.csv --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --mti-method-id=mti_ecm_adaptive_cell --mti-label=MTI-ECM --output-dir=$(THEORY_FIGURE_DIR)
-	$(R) figures/generate_tolerance_population_oracle_figure.R --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
 	$(PHARMA_MTI_R) figures/generate_pharma_mti_application_figures.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_FIGURE_DIR)
 
-theory-tables:
+theory-tables: theory-figures
 	$(R) tables/generate_mean_tilt_cf_mini_study_table.R --output-dir=$(THEORY_TABLE_DIR)
+	$(R) application/scripts/103_review_pharma_source_structure.R --config=$(PHARMA_SOURCE_CONFIG) --mode=tables --output-dir=$(THEORY_TABLE_DIR)
+
+historical-mti-ecm-tables:
 	$(R) application/scripts/104_recover_mti_ecm_article.R --mode=tables --output-dir=$(THEORY_TABLE_DIR)
 	$(PHARMA_MTI_R) tables/generate_pharma_mti_application_tables.R --config=$(PHARMA_MTI_CONFIG) --results-csv=$(PHARMA_MTI_RESULTS) --output-dir=$(THEORY_TABLE_DIR)
 	$(R) application/scripts/103_review_pharma_source_structure.R --config=$(PHARMA_SOURCE_CONFIG) --mode=tables --output-dir=$(THEORY_TABLE_DIR)
@@ -921,7 +927,7 @@ review-mti-gibbs-full-report:
 .PHONY: test-mti-prior-screen check-mti-prior-screen run-mti-prior-screen health-mti-prior-screen
 .PHONY: test-mti-fixed-prior check-mti-fixed-prior prepare-mti-fixed-prior run-mti-fixed-prior launch-mti-fixed-prior health-mti-fixed-prior
 .PHONY: test-mti-fixed-prior-closure prepare-mti-fixed-prior-closure check-mti-fixed-prior-closure launch-mti-fixed-prior-closure health-mti-fixed-prior-closure
-.PHONY: test-mti-fixed-prior-finalization prepare-mti-fixed-prior-finalization check-mti-fixed-prior-finalization launch-mti-fixed-prior-finalization health-mti-fixed-prior-finalization
+.PHONY: test-mti-fixed-prior-finalization prepare-mti-fixed-prior-finalization check-mti-fixed-prior-finalization launch-mti-fixed-prior-finalization health-mti-fixed-prior-finalization test-mti-fixed-prior-reporting report-mti-fixed-prior verify-mti-fixed-prior-report historical-tolerance-figures historical-mti-ecm-tables
 test-mti-fixed-prior-reporting:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-fixed-prior-reporting.R
 
@@ -1012,7 +1018,7 @@ render-mti-gibbs-full-publication:
 verify-mti-gibbs-full-publication:
 	$(R) application/scripts/114_report_mti_gibbs_full_assessment.R --mode=verify
 
-pdf supplement: verify-mti-gibbs-full-publication
+pdf supplement: verify-mti-fixed-prior-report
 
 launch-mti-gibbs:
 	bash application/scripts/107_launch_mti_gibbs.sh --confirm-article-commit=$(GIBBS_CONFIRM_COMMIT) --workers=50 --allow-full=true
@@ -1020,11 +1026,11 @@ launch-mti-gibbs:
 health-mti-gibbs:
 	$(R) application/scripts/105_compare_mti_gibbs_ecm.R --mode=health --output-dir=$(GIBBS_OUTPUT_DIR)
 
-arxiv-source: verify-mti-gibbs-full-publication
+arxiv-source: verify-mti-fixed-prior-report
 	bash application/scripts/31_prepare_arxiv_source.sh
 
 .PHONY: article-handoff test-manuscript-source-package
-article-handoff: verify-mti-gibbs-full-publication
+article-handoff: verify-mti-fixed-prior-report
 	bash application/scripts/31_prepare_arxiv_source.sh --include-supplement=true
 
 test-manuscript-source-package:

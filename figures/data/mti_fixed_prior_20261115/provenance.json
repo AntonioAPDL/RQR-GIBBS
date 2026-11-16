@@ -1,0 +1,92 @@
+{
+  "prior": {
+    "study_id": "mti_fixed_prior_20261114",
+    "diagnostic_config": "application/config/mti_gibbs_width_diagnosis_20261113.json",
+    "output_root": "application/outputs/mti_fixed_prior_20261114",
+    "primary_kappa": 2,
+    "simulation_reference": {
+      "mode": "fixed",
+      "center": 0,
+      "scale": 1,
+      "source": "predeclared_common_simulation_reporting_coordinates",
+      "estimated_from_analysis_sample": false
+    },
+    "application_reference": {
+      "mode": "fixed",
+      "center": 0,
+      "scale": 1,
+      "source": "predeclared_public_file_reporting_units_not_manufacturing_specifications",
+      "estimated_from_analysis_sample": false
+    },
+    "numerical": {
+      "initial_iterations": 200,
+      "continuation_budgets": [800, 2000, 10000],
+      "conditional_mode_cycles": 100,
+      "objective_tolerance": 1e-06,
+      "endpoint_tolerance": 1e-05
+    },
+    "sampling": {
+      "chains": 4,
+      "n_burn": 500,
+      "n_mcmc": 1000,
+      "maximum_retained": 4000
+    },
+    "maximum_workers": 40,
+    "disk_reserve_gib": 16,
+    "stages": {
+      "development": {
+        "replications": 12,
+        "kappa": [2, 1],
+        "data_seed_base": 1820000000,
+        "chain_seed_base": 1640000000
+      },
+      "calibration": {
+        "replications": 200,
+        "kappa": 2,
+        "data_seed_base": 1830000000,
+        "chain_seed_base": 1650000000
+      },
+      "validation": {
+        "replications": 1000,
+        "kappa": 2,
+        "data_seed_base": 1840000000,
+        "chain_seed_base": 1660000000
+      }
+    },
+    "probability_rule": "inherited_design_rule_requires_new_calibration",
+    "validation_gate": "primary_numerical_accuracy_and_no_simultaneous_upper_95_bound_below_requested_p",
+    "validation_gate_is_not_a_tolerance_guarantee": true,
+    "application_after_simulation_validation": true,
+    "automatic_article_replacement": false,
+    "automatic_prior_tuning": false
+  },
+  "source_commit": "9569be98ce285fe2359c939a645651bc00a14858",
+  "simulation_source": "9b53485fc9e4d6ab43a92d80a1b0931bf58c910e",
+  "repair_and_application_source": "abd14dbb8c4aa06f5622f256edb609646acd273b",
+  "quantile_type": 7,
+  "selected_target_posterior": true,
+  "generalized_bayes_response_likelihood": false,
+  "new_distribution_free_guarantee": false,
+  "automatic_article_replacement": false,
+  "diagnostic_cases_are_outcome_stratified": true,
+  "inputs": {
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_closure_abd14dbb8c4aa06f5622f256edb609646acd273b/application/outputs/mti_fixed_prior_closure_20261115/validation/interval_results.csv": "df4a9716c2cf22014c2f2fba3a9fe564ca2493421720b0080fb3da43c1b4f50a",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_closure_abd14dbb8c4aa06f5622f256edb609646acd273b/application/outputs/mti_fixed_prior_closure_20261115/validation/comparator_results.csv": "a6df0a5b99f899e8f65202d62a556e97c9370053eb5ba274aab93b5142b23714",
+    "application/outputs/mti_fixed_prior_finalization_20261115/application/interval_results.csv": "74506f96f2d63a17e8f346227ad96995934ff9e338987cc8ea555d5badc77231",
+    "application/outputs/mti_fixed_prior_finalization_20261115/application/comparator_results.csv": "1e31862a7e37593afaf88221790121538cf33e93a489ad9137e3b92b5bc8b3c4",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_closure_abd14dbb8c4aa06f5622f256edb609646acd273b/application/outputs/mti_fixed_prior_closure_20261115/repair_provenance.csv": "703dd6bb44af89ace44a9018c2398780426b0edebdcc21e4eb591a80e708d475",
+    "application/outputs/mti_fixed_prior_finalization_20261115/application_fit_provenance.csv": "8f4fa305bbdeda8ac80a14e1db929ff4a44bd596c819f9d9e70bab024705f8cd"
+  },
+  "data_files": {
+    "application_cells.csv": "88cdb5b540ec0198ad6c46a19ad91d18f04909a5efa312b6f31eef543ed4c23d",
+    "application_values.csv": "46dfe5e9f0f47e847a5cbee5b4fa0f2396cb08f97201201e678e3cbd5d85a004",
+    "diagnostic_case_summary.csv": "c40961d2a0eb7b548438b012a177e7dd16b54b0460774c62486ed187950a4a47",
+    "diagnostic_mean_comparison.csv": "5a6d9661e52ca0174e88882339c672999cd4075baed5e066a44390dad3814623",
+    "diagnostic_tasks.csv": "70ed798cbda5fa3f604f281e7a77c7e127d9b678072677ef40fdf6f99848056e",
+    "interval_dp_probabilities.csv": "422f930dd758ca107bde29fd6ec896506dc7592cf8c29b0d8388c7829e778ee4",
+    "numerical_assessment.csv": "9e8b4a2c6f91cef1387f7d8e9a85f57cfe0ba6c16d64c5d02ad8a2066dadfdaf",
+    "primary_ranges.csv": "622260ba5c00c08a29fb3486107de691391f49dd8d1ddf9913f8195377f65669",
+    "primary_widths.csv": "d508b685766156bcd449d29ba41e160233c0615ce78154987d5105889ba4c123",
+    "simulation_cells.csv": "057b779343f040943a43e77087f224a48cb4b487c11dae7439ffecc8c6b71c86"
+  }
+}
