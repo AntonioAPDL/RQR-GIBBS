@@ -43,6 +43,26 @@ testthat::test_that("confirmation uses all trials and retains raw sampling width
   testthat::expect_equal(z$upper_95, binom.test(2,4)$conf.int[2])
 })
 
+testthat::test_that("compact verification is independent of ignored server files", {
+  directory <- tempfile(); dir.create(directory); on.exit(unlink(directory, recursive = TRUE))
+  before <- getwd(); setwd(directory); on.exit(setwd(before), add = TRUE)
+  dir.create("evidence"); dir.create("application/config", recursive = TRUE)
+  writeLines("{}", "application/config/completed.json")
+  jsonlite::write_json(list(identity = list(programs = mgfp_hashes("application/config/completed.json"))),
+    "evidence/completed_manifest.json", auto_unbox = TRUE)
+  jsonlite::write_json(list(replay_datasets = 112, confirmation_datasets = 2000,
+    replay_maximum_selected_difference = 0, prior_sd = 2, prior_uses_sample = FALSE),
+    "evidence/summary.json", auto_unbox = TRUE)
+  jsonlite::write_json(list(inputs = setNames(list(mwd_file_hash("evidence/completed_manifest.json")),
+    "/absent/ignored/study/manifest.json"), artifacts = mgfp_hashes("evidence/summary.json"),
+    source = list(programs = mgfp_hashes("application/config/completed.json"))),
+    "evidence/provenance.json", auto_unbox = TRUE)
+  cfg <- list(evidence_root = "evidence", replay = list(endpoint_tolerance = 1e-10))
+  testthat::expect_silent(mbx_verify(cfg, rendered = FALSE))
+  writeLines("changed", "evidence/completed_manifest.json")
+  testthat::expect_error(mbx_verify(cfg, rendered = FALSE), "hash differs")
+})
+
 testthat::test_that("diagnostic rendering separates the legend and preserves all supplied cases", {
   directory <- tempfile(); dir.create(directory); on.exit(unlink(directory, recursive = TRUE))
   cfg <- list(evidence_root = file.path(directory,"data"), figure_root = file.path(directory,"figures"))

@@ -55,7 +55,11 @@ testthat::test_that("the source command delegates dependency discovery and avoid
   testthat::expect_false(any(grepl("rm -rf|required_files=", wrapper)))
   make <- readLines(file.path(root, "Makefile"))
   testthat::expect_true(any(grepl("^article-handoff:", make)))
-  testthat::expect_true(any(grepl("^arxiv-source: verify-mti-fixed-prior-report$", make)))
+  for (target in c("arxiv-source", "article-handoff")) {
+    dependencies <- grep(paste0("^",target,":"), make, value = TRUE)
+    testthat::expect_true(any(grepl("verify-mti-fixed-prior-report", dependencies, fixed = TRUE)))
+    testthat::expect_true(any(grepl("verify-mti-gibbs-closeout", dependencies, fixed = TRUE)))
+  }
 })
 
 testthat::test_that("the completed-study reference points to existing derivations and fixed study identity", {

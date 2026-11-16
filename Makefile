@@ -958,6 +958,9 @@ render-mti-gibbs-closeout:
 	$(R) application/scripts/128_close_mti_gibbs_boundary_study.R render
 verify-mti-gibbs-closeout:
 	$(R) application/scripts/128_close_mti_gibbs_boundary_study.R verify
+.PHONY: audit-mti-gibbs-boundary
+audit-mti-gibbs-boundary:
+	$(R) application/scripts/130_audit_completed_mti_gibbs_boundary.R
 
 report-mti-fixed-prior:
 	$(R) application/scripts/125_report_mti_fixed_prior.R render
@@ -1046,7 +1049,7 @@ render-mti-gibbs-full-publication:
 verify-mti-gibbs-full-publication:
 	$(R) application/scripts/114_report_mti_gibbs_full_assessment.R --mode=verify
 
-pdf supplement: verify-mti-fixed-prior-report
+pdf supplement: verify-mti-fixed-prior-report verify-mti-gibbs-closeout
 
 launch-mti-gibbs:
 	bash application/scripts/107_launch_mti_gibbs.sh --confirm-article-commit=$(GIBBS_CONFIRM_COMMIT) --workers=50 --allow-full=true
@@ -1054,11 +1057,11 @@ launch-mti-gibbs:
 health-mti-gibbs:
 	$(R) application/scripts/105_compare_mti_gibbs_ecm.R --mode=health --output-dir=$(GIBBS_OUTPUT_DIR)
 
-arxiv-source: verify-mti-fixed-prior-report
+arxiv-source: verify-mti-fixed-prior-report verify-mti-gibbs-closeout
 	bash application/scripts/31_prepare_arxiv_source.sh
 
 .PHONY: article-handoff test-manuscript-source-package
-article-handoff: verify-mti-fixed-prior-report
+article-handoff: verify-mti-fixed-prior-report verify-mti-gibbs-closeout
 	bash application/scripts/31_prepare_arxiv_source.sh --include-supplement=true
 
 test-manuscript-source-package:

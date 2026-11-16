@@ -23,6 +23,7 @@ is installed, compiled, or loaded.
 make test-mti-gibbs-closeout
 make prepare-mti-gibbs-closeout
 make run-mti-gibbs-closeout
+make audit-mti-gibbs-boundary
 make render-mti-gibbs-closeout
 make verify-mti-gibbs-closeout
 ```
@@ -35,6 +36,30 @@ Atomic fitted objects and receipts permit identical-source resumption;
 failed fits are preserved and stop advancement. The calculation is bounded
 and normally finishes within the interactive work session. It does not
 initiate a new full Gibbs study.
+
+Rendering and verification use committed compact evidence, including exact
+copies of the completed-study manifest and policy files. These commands do
+not require ignored server directories or saved fitted objects. The separate
+`audit-mti-gibbs-boundary` command checks those original objects, reconstructs
+every sample, and verifies the compact extracts against their original inputs.
+
+## Completed Findings
+
+All 112 replay datasets matched exactly, including every candidate and the
+selected interval. The independent confirmation produced ECM attainment
+1948/2000=.974, with exact 95% interval [.9660,.9805]. Young--Mathew attained
+content in 1941/2000 and Wilks in 2000/2000. No priors, cutoffs, candidate
+rules, or numerical criteria were changed. The earlier 88/100 outcome remains
+in the independent pilot data. Agreement with the original 975/1000 result
+supports retaining the original ECM comparison; the low pilot estimate is
+not removed or replaced.
+
+The completed Gibbs pilot has attainment 98--100% across the 72 cases. Its
+estimated mean width is larger than ECM in every case, smaller than
+Young--Mathew in 29, and smaller than Wilks in 48. These are case-specific
+comparisons on common samples. A posterior-mean interval and an ECM mode
+estimate are distinct summaries; adequate sampling alone does not make their
+widths or frequentist properties identical.
 
 Compact evidence is extracted under `figures/data/mti_gibbs_boundary_20261116`.
 It includes the confirmation observations and summaries, complete paired

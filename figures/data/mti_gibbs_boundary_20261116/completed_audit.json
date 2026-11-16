@@ -1,0 +1,48 @@
+{
+  "review_checkout_head": "0c3f65c5da000f0bc14b6182e80f7e12d4874e31",
+  "review_checkout_dirty": true,
+  "audit_program": {
+    "application/scripts/130_audit_completed_mti_gibbs_boundary.R": "0d8a7065a9a137bf5661bfb0768dbc2bd543dec9618cf7b3fd0442bbdb428dd7"
+  },
+  "completed_source_commit": "97ea8fdb2a3cb31228a3a07cf2c2784074de4adc",
+  "numerical": {
+    "development": {
+      "datasets": 864,
+      "targets": 2592,
+      "maximum_rhat": 1.00777189429959,
+      "minimum_bulk_ess": 1186.79614732798,
+      "minimum_tail_ess": 1296.11062932824
+    },
+    "calibration": {
+      "datasets": 14400,
+      "targets": 14400,
+      "maximum_rhat": 1.00865429915373,
+      "minimum_bulk_ess": 1079.49850823513,
+      "minimum_tail_ess": 924.950331881641
+    },
+    "pilot": {
+      "datasets": 7200,
+      "targets": 7200,
+      "maximum_rhat": 1.00846368074344,
+      "minimum_bulk_ess": 1222.79116567257,
+      "minimum_tail_ess": 1142.73018509646
+    }
+  },
+  "all_fits_tasks_and_sample_hashes_verified": true,
+  "calibration_recomputed": true,
+  "closeout_checks": {
+    "replay": {
+      "datasets": 112,
+      "all_checks_passed": true,
+      "mean_sample_sd": 0.989023707173327
+    },
+    "confirmation": {
+      "datasets": 2000,
+      "all_checks_passed": true,
+      "mean_sample_sd": 0.998993435176808
+    }
+  },
+  "population_content_decisions_verified": true,
+  "maximum_csv_cdf_roundtrip_error": 5.16120479687743e-11,
+  "time": "2026-11-16 20:31:09 UTC"
+}

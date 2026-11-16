@@ -1,0 +1,13 @@
+{
+  "inputs": {
+    "figures/data/mti_gibbs_boundary_20261116/summary.json": "94b5f957b64a09d1f131881396b204c19fa520725446a93697b74cff9e8da702",
+    "figures/data/mti_gibbs_boundary_20261116/comparison_summary.csv": "bfc791ea236374f5c5f48e51205d5b25d55103bdc5384c385e252c13da6745d6"
+  },
+  "programs": {
+    "application/scripts/lib/mti_gibbs_boundary_closeout_figures.R": "8b69505ba85f4143dda607113a43971996c2fb37116ea692f400994b95bcac6a"
+  },
+  "artifacts": {
+    "figures/generated/mti_gibbs_boundary_20261116/gibbs_boundary_pilot_review.pdf": "9c805b1a340b6064df62bfd9022e2c92f3c6379eddb5c2683ec6af05b7811bb9",
+    "tables/mti_gibbs_boundary_20261116/numbers.tex": "d9ffb8d584433fb7a042f68b3d2f9e7949440635e1e05379c431800303e83109"
+  }
+}

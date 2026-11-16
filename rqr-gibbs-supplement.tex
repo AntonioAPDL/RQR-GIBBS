@@ -35,6 +35,7 @@
 \newcommand{\RHS}{\mathrm{RHS}}
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.08}}
 \input{tables/mti_fixed_prior_20261115/numbers.tex}
+\input{tables/mti_gibbs_boundary_20261116/numbers.tex}
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
 \newtheorem{lemma}{Lemma}
@@ -1607,6 +1608,77 @@ Figure~\ref{fig:supp-mti-full-widths-symmetric}.}
 \label{fig:supp-mti-full-widths-gamma-lognormal}
 \end{figure}
 
+\subsection{Interior Tilts and Interval Calibration}
+\label{sec:supp-mti-interior-calibration}
+
+The empirical limits in Section~\ref{sec:supp-mti-empirical-limits} suggest
+a way to reduce the prior's influence on an inactive root. At the
+ECM-selected fitted content \(q\), project the selected tilt onto
+\[
+ [\delta_-+\varepsilon_n(\delta_+-\delta_-),\,
+   \delta_+-\varepsilon_n(\delta_+-\delta_-)].
+\]
+The two outward loss slopes are then positive. A separate assessment
+compares the original tilt with margins \(\log(n)/n\) and
+\(1/\sqrt n\) on the 864 original development samples. One rule per design
+is selected by the largest, then average, log mean-width ratio to ECM
+across the eight laws, after a preliminary radius adjustment computed
+from the development samples. The original
+tilt is retained at \(n=50,c=0.90\); the square-root margin is selected in
+the other eight designs. Each Gibbs calculation holds \(q\) and its
+resulting tilt fixed and retains the independent \(\Normal(0,2^2)\)
+root priors and learning rate one.
+
+Let \(m\) and \(h\) be the midpoint and half-width of the posterior-mean
+endpoint interval. The reported interval is \([m-sh,m+sh]\), with a
+positive multiplier \(s\) selected on independent calibration samples.
+For each law and design, the known simulation CDF determines the minimum
+multiplier required to reach content \(c\). Endpoint estimation uses only
+the training observations. With 200 calibration samples per case, the smallest
+order-statistic rank satisfying
+\[
+ \Pr\{\operatorname{Bin}(200,0.95)\le j-1\}
+ \ge 1-0.05/72
+\]
+is \(j=199\). The largest of these order statistics across the eight laws
+defines \(s\) for that design. The classical order-statistic argument
+\citep{Wilks1941ToleranceLimits} gives simultaneous calibration confidence
+of at least \(0.95\) that repeated-sampling attainment reaches \(0.95\)
+in the 72 specified cases, conditional on the independently selected rule.
+The rescaling changes the interval decision while preserving the fitted
+generalized posterior. Its assurance concerns the declared simulation
+panel; use with an unknown distribution or an application requires
+additional justification.
+
+A further 100 independent samples per case assess the preassigned rules. All
+fits meet the prescribed numerical criteria, with maximum \(\widehat R\)
+below \(1.009\). Calibrated Gibbs attainment ranges from \(98/100\) to
+\(100/100\). Its mean width exceeds ECM in all 72 cases, while remaining
+smaller than Young--Mathew in 29 and Wilks in 48. Each width comparison
+uses common samples within a distribution and design. In the Student
+\(t_3\), \(n=500,c=0.99\) case, the empirical projection leaves the
+selected tilts unchanged. Radius calibration raises attainment from
+\(91/100\) to \(99/100\), increasing mean width from 11.86 to 12.83;
+ECM gives \(94/100\) and mean width 12.37.
+
+The Gaussian \(n=500,c=0.95\) pilot gives ECM attainment \(88/100\),
+compared with \(975/1000\) in the primary validation and \(189/200\)
+in the new calibration samples. Reanalysis of all 100 pilot samples and
+the first 12 primary-validation samples reproduces every candidate and
+selected endpoint exactly. A further, preassigned independent confirmation
+with unchanged priors and controls gives
+\(\MTIBoundaryConfirmationSuccesses/\MTIBoundaryConfirmationSamples\),
+with exact 95\% interval
+\([\MTIBoundaryConfirmationLower,\MTIBoundaryConfirmationUpper]\).
+This confirmation agrees closely with the primary-validation estimate;
+the lower pilot estimate is retained with its own sample count and
+binomial uncertainty. No prior, candidate rule, or cutoff is changed.
+The complete law-specific raw width ranges and pointwise binomial intervals
+are available in the reproducibility materials.
+
+\subsection{Reference Intervals and Feasibility}
+\label{sec:supp-mti-reference-feasibility}
+
 The population benchmark used in the main width figure is shown in
 Figure~\ref{fig:supp-tolerance-population-shortest}. For each simulation law
 and content level, this interval is the shortest interval with population
@@ -1996,6 +2068,16 @@ precision extensions are numerical checks on existing samples. They are
 excluded from repeated-sampling attainment estimates. All empirical tables
 and figures in these sections use the fixed-prior results, while the earlier
 diffuse-prior calculations remain in the software archive.
+
+The interior-tilt assessment in
+Section~\ref{sec:supp-mti-interior-calibration} has separate records for
+864 development samples, 14,400 fresh calibration samples, and 7200
+independent pilot samples. The Gaussian confirmation uses a further
+\MTIBoundaryConfirmationSamples{} samples with fixed priors and candidate
+rules. These additional experiments preserve the primary comparison and
+its original samples. Reproduction commands verify the same-data ECM
+replay, independent seed streams, numerical summaries, calibrated
+intervals, and figure inputs.
 
 The validation evidence is confined to iid continuous univariate samples from
 the prespecified simulation distributions. It does not establish tolerance

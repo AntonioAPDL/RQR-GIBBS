@@ -73,12 +73,22 @@ prior or cutoff on validation samples.
 ## Separate Gibbs Boundary Study
 
 A separate, bounded study examines empirical tilt boundaries and calibration
-of the actual Gibbs-derived interval. It preserves the current article and
-priors, reuses the development samples, and separates new calibration from an
-independent pilot. Use `make test-mti-gibbs-boundary`,
+of the actual Gibbs-derived interval. It completed 864 development, 14,400
+fresh calibration, and 7200 independent pilot datasets under unchanged priors.
+Calibrated Gibbs attainment was 98--100% across the 72 pilot cases; mean
+width exceeded ECM in every case. These pilot results are reported separately
+from the original 1000-replication comparison. Use `make test-mti-gibbs-boundary`,
 `make launch-mti-gibbs-boundary`, and `make health-mti-gibbs-boundary`.
 See the [statistical specification and reproduction commands](docs/reproducibility/mti_gibbs_boundary_calibration.md).
-Neither manuscript replacement nor a full new main comparison is automatic.
+The [closeout assessment](docs/reproducibility/mti_gibbs_boundary_closeout.md)
+replayed 112 Gaussian datasets exactly and confirmed ECM attainment in
+1948/2000 new samples at n=500,c=.95. The original 88/100 pilot result is
+retained. `make audit-mti-gibbs-boundary` checks the saved fits and sample
+hashes; `make verify-mti-gibbs-closeout` verifies the compact evidence and
+repaired diagnostic figures. The finite-panel radius calibration is not
+transferred to the pharmaceutical application.
+The [diagnostic PDF](figures/generated/mti_gibbs_boundary_20261116/gibbs_boundary_pilot_review.pdf)
+shows the complete case-specific attainment and raw width comparisons.
 
 ## Statistical Framing
 

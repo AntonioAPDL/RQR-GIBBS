@@ -1,7 +1,14 @@
 mbx_verify <- function(cfg, rendered = TRUE) {
   p <- mwd_json(file.path(cfg$evidence_root, "provenance.json"))
-  mgfp_check_hashes(p$inputs); mgfp_check_hashes(p$artifacts)
+  archived <- basename(names(p$inputs))
+  archived[archived == "manifest.json"] <- "completed_manifest.json"
+  mwd_require(!anyDuplicated(archived), "Completed-study input names are ambiguous.")
+  mgfp_check_hashes(p$inputs, file.path(cfg$evidence_root, archived))
+  mgfp_check_hashes(p$artifacts)
   mgfp_check_hashes(p$source$programs)
+  old <- mwd_json(file.path(cfg$evidence_root, "completed_manifest.json"))$identity$programs
+  configurations <- grepl("^application/config/.*[.]json$", names(old))
+  mgfp_check_hashes(old[configurations])
   s <- mwd_json(file.path(cfg$evidence_root, "summary.json"))
   mwd_require(s$replay_datasets == 112 && s$confirmation_datasets == 2000 &&
     s$replay_maximum_selected_difference <= cfg$replay$endpoint_tolerance &&

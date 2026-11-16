@@ -1,0 +1,10 @@
+{
+  "target_policy": {
+    "application/outputs/mti_gibbs_boundary_calibration_20261115/development_policy.csv": "26b71c9d4b287f7ad4af9a304aa654c8d98a51c07e03dd5772c9bdfbc75b1d4e"
+  },
+  "interval_policy": {
+    "application/outputs/mti_gibbs_boundary_calibration_20261115/calibration_policy.csv": "e343187cb272c4f93d9bb7a1f40e68979bc0fb29b0a020dc66aea384616d82c8"
+  },
+  "identity_hash": "6ec977222b2a57a98cb2985ec6b8d29f33fc9c31d632b987e3f41bc00db65249",
+  "frozen_before_pilot": true
+}
