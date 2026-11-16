@@ -53,6 +53,11 @@ testthat::test_that("lengthening a fixed-target chain preserves every saved draw
   testthat::expect_error(mff_extend(r, prior, context, 256L, policy), "observations changed")
   merged <- mff_merge(data.table::as.data.table(r$rows), list(a))
   testthat::expect_equal(nrow(merged), 2L)
+  path <- tempfile(fileext = ".csv"); data.table::fwrite(r$rows, path)
+  testthat::expect_silent(mff_merge(data.table::fread(path), list(a)))
+  changed <- a; changed$rows$width[changed$rows$method == "ecm"] <- changed$rows$width[1] + 1e-8
+  testthat::expect_error(mff_merge(data.table::fread(path), list(changed)), "ECM interval changed")
+  unlink(path)
   testthat::expect_error(mff_merge(r$rows, list(a, a)), "Duplicate")
   good <- r$rows; good$gibbs_mean_precision <- TRUE
   testthat::expect_error(mff_merge(good, list(a)), "adequate result")

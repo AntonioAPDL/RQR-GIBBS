@@ -96,8 +96,11 @@ mff_merge <- function(original, refinements) {
       !all(before$gibbs_mean_precision) && isTRUE(r$precision_refinement$original_prefix_preserved),
       "An adequate result or incompatible target cannot be replaced by precision refinement.")
     fields <- c("lower", "upper", "width", "selected_q", "selected_delta", "prior_mean", "prior_sd")
-    mwd_require(isTRUE(all.equal(as.data.frame(before[method == "ecm", ..fields]),
-      as.data.frame(r$rows[r$rows$method == "ecm", fields]), check.attributes = FALSE, tolerance = 0)),
+    a <- as.matrix(before[method == "ecm", ..fields])
+    b <- as.matrix(r$rows[r$rows$method == "ecm", fields])
+    # Decimal CSV summaries need not preserve the final binary digit of an RDS value.
+    mwd_require(all(is.finite(a) & is.finite(b)) &&
+      all(abs(a - b) <= 32 * .Machine$double.eps * pmax(1, abs(a), abs(b))),
       "The ECM interval changed in a precision refinement.")
   }
   data.table::rbindlist(c(list(d[!job_id %in% ids]), lapply(refinements, `[[`, "rows")), fill = TRUE)

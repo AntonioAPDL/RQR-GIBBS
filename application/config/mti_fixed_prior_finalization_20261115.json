@@ -6,6 +6,8 @@
   "prior_config": "application/config/mti_fixed_prior_20261114.json",
   "output_root": "application/outputs/mti_fixed_prior_finalization_20261115",
   "evidence_dir": "figures/data/mti_fixed_prior_20261115",
+  "precision_reuse_worktree": ".codex_work/mti_fixed_prior_finalization_9fd9ca40b5645342a8b15243f3bca14425ae4d04",
+  "precision_reuse_commit": "9fd9ca40b5645342a8b15243f3bca14425ae4d04",
   "retained_budgets": [8000, 16000],
   "maximum_workers": 8,
   "wait_seconds": 60,

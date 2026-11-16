@@ -89,9 +89,31 @@ tryCatch({
   }
   phase("precision_refinement", expected = length(eligible))
   directory <- file.path(cfg$output_root, "precision")
+  reuse <- if (!is.null(cfg$precision_reuse_worktree))
+    file.path(mgfp_common(), cfg$precision_reuse_worktree, cfg$output_root) else NULL
+  if (!is.null(reuse)) {
+    reuse_manifest <- mwd_json(file.path(reuse, "manifest.json"))
+    mwd_require(identical(reuse_manifest$identity$source_commit, cfg$precision_reuse_commit) &&
+      identical(reuse_manifest$identity$continuation_manifest_sha256, identity$continuation_manifest_sha256) &&
+      identical(mwd_hash(reuse_manifest$identity$statistical_configuration), mwd_hash(prior)),
+      "Saved precision refinements have different source data or priors.")
+    mgfp_check_hashes(reuse_manifest$identity$programs)
+  }
   mfc_run_tasks(tasks[eligible, , drop = FALSE], directory, id, cfg$maximum_workers, prior$disk_reserve_gib,
-    function(task) mff_extend(mfc_read(original_path(task$job_id), manifest$identity_sha256, task),
-      prior, context, cfg$retained_budgets, policy))
+    function(task) {
+      original <- mfc_read(original_path(task$job_id), manifest$identity_sha256, task)
+      saved <- if (!is.null(reuse)) file.path(reuse, "precision/fits", sprintf("fit_%06d.rds", task$job_id)) else ""
+      if (file.exists(saved)) {
+        r <- mfc_read(saved, reuse_manifest$identity_sha256, task)
+        mfc_result_check(r, task, prior)
+        mff_prefix_check(original$fits, r$fits)
+        fields <- c("task", "prior", "sample_sha256", "candidates", "selected", "selected_ecm_trace",
+          "selected_knot_adjustments", "q", "delta_reference", "dp_prior", "comparators")
+        mwd_require(identical(mwd_hash(original[fields]), mwd_hash(r[fields])), "A saved precision target changed.")
+        return(r)
+      }
+      mff_extend(original, prior, context, cfg$retained_budgets, policy)
+    })
   refinements <- lapply(eligible, function(j) mfc_read(file.path(directory, "fits",
     sprintf("fit_%06d.rds", tasks$job_id[j])), id, tasks[j, ]))
   mwd_require(all(vapply(refinements, function(r) isTRUE(r$returned) &&

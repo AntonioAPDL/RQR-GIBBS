@@ -88,3 +88,13 @@ therefore does not establish frequentist tolerance validity for that summary.
 The complete validation and the outcome-stratified longer-chain diagnostic
 cases must be interpreted before manuscript promotion. Subsequent prose,
 captions, and notation follow `STYLE_PROFILE.md`.
+# CSV Round-Trip Check
+
+The first finalization stopped after all five precision extensions passed.
+The merge guard compared binary fitted values with decimal CSV summaries at
+zero tolerance. Differences were at the last printed digit (about 1e-16).
+The summary guard now permits at most 32 machine epsilons times the value
+scale. Exact RDS target hashes and saved sampling prefixes remain mandatory.
+The corrected finalization imports the five verified saved extensions from
+commit `9fd9ca40b5645342a8b15243f3bca14425ae4d04`; it does not resample them.
+
