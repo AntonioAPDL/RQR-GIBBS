@@ -110,3 +110,14 @@ supplementary comparisons. Raw width percentiles remain within distribution
 and design; Gibbs intervals are not passed off as eligible ECM candidates.
 Original diffuse-prior reporting files remain available but are not inputs
 to the new reporting command. Heavy posterior objects remain ignored.
+
+## Posterior Example Ordering
+
+The November 15 health check found that posterior display cases followed
+task-storage order, putting Student t(3), n=500, c=.99 first. The trace and
+rank captions instead named the intended Gaussian n=1000, c=.90 example.
+Display selection now explicitly orders Gaussian, Student t(3), and
+exponential cases. Trace and rank files retain sample identifiers and design
+fields, checked against the example and caption before rendering. The
+original fits, all performance summaries, and numerical diagnostic results
+are unchanged. This correction requires no sampling or new calibration.

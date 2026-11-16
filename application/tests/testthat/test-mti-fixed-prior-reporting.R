@@ -47,6 +47,24 @@ testthat::test_that("current manuscript evidence is complete and independently s
   testthat::expect_equal(nrow(app), 12016L)
   testthat::expect_false(any(app$data_adaptive_prior, na.rm = TRUE))
   testthat::expect_true(all(mfr_read(cfg$evidence_dir, "numerical_assessment")$accurate == c(72000L, 3004L)))
+  example <- mfr_read(cfg$evidence_dir, "examples")[case_id == 1L]
+  testthat::expect_equal(example$response_id, "normal")
+  testthat::expect_equal(example$n, 1000L)
+  trace <- mfr_read(cfg$evidence_dir, "trace")
+  testthat::expect_true(all(trace$source_job_id == example$source_job_id & trace$response_id == "normal"))
+  ranks <- mfr_read(cfg$evidence_dir, "ranks")
+  testthat::expect_true(all(ranks$source_job_id == example$source_job_id & ranks$response_id == "normal"))
+})
+
+testthat::test_that("posterior display examples have explicit order independent of task storage", {
+  d <- data.table::data.table(response_id = rep(c("student_t3", "exponential", "normal"), each = 2),
+    n = rep(c(500L, 1000L, 1000L), each = 2), content = rep(c(.99, .9, .9), each = 2),
+    job_id = c(41002L, 41001L, 50002L, 50001L, 48002L, 48001L))
+  selected <- mfr_example_tasks(d)
+  testthat::expect_equal(selected$response_id, c("normal", "student_t3", "exponential"))
+  testthat::expect_equal(selected$job_id, c(48001L, 41001L, 50001L))
+  testthat::expect_identical(mfr_example_tasks(d[6:1]), selected)
+  testthat::expect_error(mfr_example_tasks(d[response_id != "normal"]), "example is missing")
 })
 
 testthat::test_that("primary tables contain only the specified methods and metric", {

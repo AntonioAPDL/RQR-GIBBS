@@ -4,6 +4,17 @@ mfr_colors <- c(ecm = "#009E73", gibbs = "#0072B2", young_mathew = "#CC79A7", wi
 mfr_number <- function(x, digits = 3) sprintf(paste0("%.", digits, "f"), x)
 mfr_range <- function(x, y, digits = 3) paste0(mfr_number(x, digits), "--", mfr_number(y, digits))
 
+mfr_example_tasks <- function(tasks) {
+  d <- data.table::as.data.table(tasks)
+  selected <- d[(response_id == "normal" & n == 1000 & content == .9) |
+    (response_id == "student_t3" & n == 500 & content == .99) |
+    (response_id == "exponential" & n == 1000 & content == .9), .SD[which.min(job_id)],
+    by = .(response_id, n, content)]
+  order <- match(c("normal", "student_t3", "exponential"), selected$response_id)
+  mwd_require(length(order) == 3L && !anyNA(order), "A prespecified posterior example is missing.")
+  selected[order]
+}
+
 mfr_application_input <- function(values) {
   d <- as.data.frame(values[values$method != "gibbs", ])
   d$method_id <- unname(mff_ids[d$method]); d$method <- unname(mfr_labels[d$method])
@@ -55,10 +66,7 @@ mfr_collect <- function(cfg) {
   calibration <- mfr_read(file.path(parent, "calibration"), "cell_summary")
   mwd_write(calibration, file.path(cfg$evidence_dir, "calibration_cells.csv"))
   tasks <- data.table::fread(file.path(parent, "validation/tasks.csv"))
-  selected <- tasks[(response_id == "normal" & n == 1000 & content == .9) |
-    (response_id == "student_t3" & n == 500 & content == .99) |
-    (response_id == "exponential" & n == 1000 & content == .9), .SD[which.min(job_id)],
-    by = .(response_id, n, content)]
+  selected <- mfr_example_tasks(tasks)
   paths <- file.path(parent, "validation/fits", sprintf("fit_%06d.rds", selected$job_id))
   app <- values[response_id == "fct_tensile" & method == "ecm" & split_scheme == "random" &
     split_id == representatives$split_id[representatives$response_id == "fct_tensile"]]
@@ -77,17 +85,23 @@ mfr_collect <- function(cfg) {
       z$width <- z$upper - z$lower; z$midpoint <- (z$upper + z$lower) / 2
       z$chain <- chain; z$iteration <- seq_len(nrow(z)); z
     }))
-    examples[[i]] <- data.frame(case_id = i, response_id = r$task$response_id, n = r$task$n,
+    examples[[i]] <- data.frame(case_id = i, source_job_id = r$task$job_id,
+      response_id = r$task$response_id, n = r$task$n,
       content = r$task$content, q = r$q, delta = r$delta_reference, ecm_width = e$width,
       retained = nrow(r$fits[[1]]$draws))
     cdf[[i]] <- data.frame(case_id = i, probability = seq(0, 1, length.out = 201),
       width = quantile(draws$width, seq(0, 1, length.out = 201), names = FALSE))
     if (i == 1L) {
       trace <- draws[iteration %% 4L == 1L]
+      trace[, `:=`(case_id = i, source_job_id = r$task$job_id,
+        response_id = r$task$response_id, n = r$task$n, content = r$task$content,
+        q = r$q, delta = r$delta_reference)]
       ranks <- data.table::rbindlist(lapply(c("lower", "upper", "width", "midpoint"), function(v) {
         bins <- pmin(20L, ceiling(rank(draws[[v]], ties.method = "average") * 20 / nrow(draws)))
         data.table::data.table(chain = draws$chain, bin = bins)[, .(count = .N), by = .(chain, bin)][, variable := v]
       }))
+      ranks[, `:=`(case_id = i, source_job_id = r$task$job_id,
+        response_id = r$task$response_id, n = r$task$n, content = r$task$content)]
     }
   }
   for (name in c("examples", "cdf", "trace", "ranks")) {
@@ -124,6 +138,17 @@ mfr_verify <- function(cfg, rendered = FALSE) {
     all(s$successes >= 0 & s$successes <= s$attempts & is.finite(s$mean_width) & s$width_q025 > 0 &
       s$width_q025 <= s$width_q975) && all(z$attempts[z$stage == "simulation"] == 72000L) &&
     all(z$attempts[z$stage == "application"] == 3004L), "Invalid distributional or numerical summaries.")
+  examples <- mfr_read(cfg$evidence_dir, "examples")
+  first <- examples[case_id == 1L]
+  mwd_require(nrow(first) == 1L && first$response_id == "normal" && first$n == 1000 && first$content == .9,
+    "The posterior trace example differs from its Gaussian n=1000, c=.90 caption.")
+  for (name in c("trace", "ranks")) {
+    shown <- mfr_read(cfg$evidence_dir, name)
+    mwd_require(nrow(shown) > 0 && all(c("case_id", "source_job_id", "response_id", "n", "content") %in% names(shown)) &&
+      all(shown$case_id == first$case_id & shown$source_job_id == first$source_job_id &
+      shown$response_id == first$response_id & shown$n == first$n & shown$content == first$content),
+      "Displayed traces or ranks differ from the named posterior example.")
+  }
   if (rendered) {
     p <- mwd_json(file.path(cfg$evidence_dir, "rendered.json"))
     mgfp_check_hashes(p$outputs)
