@@ -1959,6 +1959,15 @@ partition has a single reported width. These comparisons describe
 historical variation and posterior dispersion under the specified priors.
 Overlapping partitions do not provide independent tolerance replications.
 
+Weight RSD is nonnegative, whereas the Gaussian root priors allow endpoints
+anywhere on the real line. Gibbs posterior-mean lower endpoints are negative
+in \MTIFixedRsdGibbsNegativeLower{} of \MTIFixedRsdRandomSplits{} random
+partitions; their median is \(\MTIFixedRsdGibbsMedianLower\) in the file's
+reporting units. The reported widths retain this portion below zero.
+It contributes no population content for a nonnegative response and illustrates
+a limitation of the unrestricted working prior. A support-constrained
+formulation would require its own computation and tolerance assessment.
+
 \input{tables/mti_fixed_prior_20261115/application_comparison.tex}
 
 \section{Reproducibility and Validation Limits}

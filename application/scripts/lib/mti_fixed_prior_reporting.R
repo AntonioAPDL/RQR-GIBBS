@@ -15,6 +15,39 @@ mfr_example_tasks <- function(tasks) {
   selected[order]
 }
 
+mfr_width_patterns <- function(cells) {
+  d <- data.table::dcast(cells, response_id + n + content ~ method, value.var = "mean_width")
+  mwd_require(nrow(d) > 0 && all(c("ecm", "young_mathew", "gibbs") %in% names(d)) &&
+    all(is.finite(d$ecm) & is.finite(d$young_mathew) & is.finite(d$gibbs)),
+    "Method-specific widths are missing from a design.")
+  d[, .(designs = .N, ecm_shorter_young_mathew = sum(ecm < young_mathew),
+    gibbs_wider_ecm = sum(gibbs > ecm)), by = response_id][order(response_id)]
+}
+
+mfr_wilks_agreement <- function(intervals, comparators, tolerance = 1e-12) {
+  mwd_require(length(tolerance) == 1L && is.finite(tolerance) && tolerance >= 0,
+    "Endpoint comparison tolerance must be nonnegative and finite.")
+  columns <- c("job_id", "response_id", "n", "content", "lower", "upper")
+  e <- data.table::as.data.table(intervals)[method == "ecm", ..columns]
+  w <- data.table::as.data.table(comparators)[method == "wilks", ..columns]
+  for (d in list(e, w)) mwd_require(nrow(d) > 0 && !anyDuplicated(d$job_id) &&
+    all(complete.cases(d)) && all(is.finite(d$lower) & is.finite(d$upper) & d$lower <= d$upper),
+    "Endpoint comparison requires unique samples and valid finite intervals.")
+  mwd_require(setequal(e$job_id, w$job_id), "Endpoint comparison samples differ.")
+  paired <- merge(e, w, by = c("job_id", "response_id", "n", "content"), suffixes = c("_ecm", "_wilks"))
+  mwd_require(nrow(paired) == nrow(e), "Endpoint comparison designs differ.")
+  paired[, same := abs(lower_ecm - lower_wilks) <= tolerance * pmax(1, abs(lower_wilks)) &
+    abs(upper_ecm - upper_wilks) <= tolerance * pmax(1, abs(upper_wilks))]
+  paired[, .(samples = .N, same_intervals = sum(same)), by = .(response_id, n, content)][order(response_id, n, content)]
+}
+
+mfr_application_support <- function(values) {
+  d <- data.table::as.data.table(values)
+  mwd_require(all(is.finite(d$lower) & is.finite(d$upper)), "Application endpoints are missing.")
+  d[, .(partitions = .N, negative_lower = sum(lower < 0), median_lower = median(lower),
+    median_upper = median(upper)), by = .(response_id, split_scheme, method)][order(response_id, split_scheme, method)]
+}
+
 mfr_application_input <- function(values) {
   d <- as.data.frame(values[values$method != "gibbs", ])
   d$method_id <- unname(mff_ids[d$method]); d$method <- unname(mfr_labels[d$method])
@@ -52,6 +85,18 @@ mfr_collect <- function(cfg) {
   observed <- data.table::fread(observed_path)
   pma_write_csv(as.data.frame(observed), file.path(cfg$evidence_dir, "observed_batches.csv"))
   values <- mfr_read(cfg$evidence_dir, "application_values")
+  mwd_write(mfr_application_support(values), file.path(cfg$evidence_dir, "application_support.csv"))
+  mwd_write(mfr_width_patterns(mfr_read(cfg$evidence_dir, "simulation_cells")),
+    file.path(cfg$evidence_dir, "width_patterns.csv"))
+  validation <- file.path(mgfp_common(), continuation$continuation_worktree,
+    continuation$continuation_output, "validation")
+  comparison_paths <- file.path(validation, c("interval_results.csv", "comparator_results.csv"))
+  for (path in comparison_paths) mwd_require(!is.null(p$inputs[[path]]) &&
+    mwd_file_hash(path) == p$inputs[[path]], "Endpoint comparison source differs from the completed study.")
+  comparison_columns <- c("job_id", "response_id", "n", "content", "method", "lower", "upper")
+  mwd_write(mfr_wilks_agreement(data.table::fread(comparison_paths[1], select = comparison_columns),
+    data.table::fread(comparison_paths[2], select = comparison_columns)),
+    file.path(cfg$evidence_dir, "wilks_interval_agreement.csv"))
   sharing_path <- "figures/data/pharma_source_structure_ecm_20261111/partition_sharing.csv"
   sharing <- data.table::fread(sharing_path)
   shared <- merge(values, sharing, by = c("split_scheme", "split_id"), all.x = TRUE)
@@ -113,8 +158,9 @@ mfr_collect <- function(cfg) {
   hashes <- mgfp_hashes(files); names(hashes) <- basename(files)
   mgfp_json_write(list(finalization_commit = cfg$finalization_commit,
     staged_provenance_sha256 = mwd_file_hash(file.path(staged, "provenance.json")),
-    extra_sources = mgfp_hashes(c(observed_path, sharing_path, file.path(parent, "calibration/cell_summary.csv"), paths)),
-    data_files = hashes, quantile_type = 7L, prior_uses_analysis_data = FALSE),
+    extra_sources = mgfp_hashes(c(observed_path, sharing_path, file.path(parent, "calibration/cell_summary.csv"),
+      comparison_paths, paths)), data_files = hashes, quantile_type = 7L,
+    endpoint_comparison_tolerance = 1e-12, prior_uses_analysis_data = FALSE),
     file.path(cfg$evidence_dir, "reporting_provenance.json"))
   invisible(cfg$evidence_dir)
 }
@@ -138,6 +184,19 @@ mfr_verify <- function(cfg, rendered = FALSE) {
     all(s$successes >= 0 & s$successes <= s$attempts & is.finite(s$mean_width) & s$width_q025 > 0 &
       s$width_q025 <= s$width_q975) && all(z$attempts[z$stage == "simulation"] == 72000L) &&
     all(z$attempts[z$stage == "application"] == 3004L), "Invalid distributional or numerical summaries.")
+  mwd_require(isTRUE(all.equal(as.data.frame(mfr_read(cfg$evidence_dir, "width_patterns")),
+    as.data.frame(mfr_width_patterns(s)))) &&
+    isTRUE(all.equal(as.data.frame(mfr_read(cfg$evidence_dir, "application_support")),
+      as.data.frame(mfr_application_support(mfr_read(cfg$evidence_dir, "application_values"))))),
+    "Width or support summaries differ from their recorded intervals.")
+  agreement <- mfr_read(cfg$evidence_dir, "wilks_interval_agreement")
+  mwd_require(nrow(agreement) == 72L && !anyDuplicated(agreement[, .(response_id, n, content)]) &&
+    all(agreement$samples == 1000L & agreement$same_intervals >= 0L &
+      agreement$same_intervals <= agreement$samples) && p$endpoint_comparison_tolerance == 1e-12,
+    "Invalid paired endpoint comparison.")
+  boundary <- agreement[(n == 50 & content == .9) | (n == 100 & content == .95) | (n == 500 & content == .99)]
+  mwd_require(nrow(boundary) == 24L && all(boundary$same_intervals == boundary$samples),
+    "The reported boundary agreement differs from the paired interval results.")
   examples <- mfr_read(cfg$evidence_dir, "examples")
   first <- examples[case_id == 1L]
   mwd_require(nrow(first) == 1L && first$response_id == "normal" && first$n == 1000 && first$content == .9,
@@ -191,6 +250,12 @@ mfr_numbers <- function(cfg) {
   v <- mfr_read(cfg$evidence_dir, "application_values")
   z <- mfr_read(cfg$evidence_dir, "numerical_assessment")
   reps <- mfr_read(cfg$evidence_dir, "representative_splits")
+  patterns <- mfr_read(cfg$evidence_dir, "width_patterns")
+  support <- mfr_read(cfg$evidence_dir, "application_support")
+  asymmetric <- patterns[!response_id %in% c("normal", "student_t3"), ecm_shorter_young_mathew]
+  asymmetric_range <- if (min(asymmetric) == max(asymmetric)) as.character(min(asymmetric)) else
+    paste0(min(asymmetric), "--", max(asymmetric))
+  rsd <- support[response_id == "tbl_rsd_weight" & split_scheme == "random" & method == "gibbs"]
   wide <- data.table::dcast(s, response_id + n + content ~ method, value.var = "mean_width")
   mean_at <- function(family, wanted_method) s[response_id == family & n == 1000 & content == .9 &
     method == wanted_method, mean_width]
@@ -213,6 +278,12 @@ mfr_numbers <- function(cfg) {
     MTIFullTensileECMAttainment = mfr_number(100*app("ecm", "attainment"), 1),
     MTIFullTensileGibbsAttainment = mfr_number(100*app("gibbs", "attainment"), 1),
     MTIFixedECMShorter = as.character(sum(wide$ecm < wide$young_mathew)),
+    MTIFixedNormalShorter = as.character(patterns[response_id == "normal", ecm_shorter_young_mathew]),
+    MTIFixedStudentShorter = as.character(patterns[response_id == "student_t3", ecm_shorter_young_mathew]),
+    MTIFixedAsymmetricShorter = asymmetric_range,
+    MTIFixedRsdGibbsNegativeLower = count(rsd$negative_lower),
+    MTIFixedRsdRandomSplits = count(rsd$partitions),
+    MTIFixedRsdGibbsMedianLower = mfr_number(rsd$median_lower, 3),
     MTIFixedGibbsWider = as.character(sum(wide$gibbs > wide$ecm)),
     MTIFixedECMLower = as.character(sum(s[method == "ecm", simultaneous_lower] > .95)),
     MTIFixedECMInclude = as.character(sum(s[method == "ecm", simultaneous_lower] <= .95 &

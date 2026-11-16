@@ -103,6 +103,13 @@ partitions before any manuscript summaries are written.
 ECM mean width is smaller than Young--Mathew in 39/72 cases. Gibbs mean
 width is larger than ECM in 70/72. Width percentiles are computed separately
 within each law and design; no pooled raw-width averages are reported.
+The ECM gain occurs in six of nine designs for each asymmetric law, one for
+the Gaussian, and two for Student t(3). At (n,c)=(50,.90), (100,.95), and
+(500,.99), ECM and Wilks endpoints agree in all 1000 replications of every
+law. These comparisons use matched sample identifiers and both endpoints,
+with tolerance 1e-12 times the greater of one and the absolute reference
+endpoint. The saved summaries are `width_patterns.csv` and
+`wilks_interval_agreement.csv` in the current evidence directory.
 
 For Student t(3), n=500, c=.99, ECM attains content in 952/1000 samples;
 Gibbs means in 931/1000; Young--Mathew in 946/1000. The Gibbs pointwise
@@ -117,6 +124,12 @@ ECM remains the primary tolerance method alongside Young--Mathew and Wilks.
 Gibbs is reported separately as selected-target posterior uncertainty and a
 paired mean-interval comparison. Application partitions overlap and supply
 descriptive historical evidence, not independent tolerance replications.
+For nonnegative weight RSD, Gibbs mean lower endpoints are negative in
+772/1000 random partitions, with median -.901816. The reported endpoints and
+widths are unchanged: unrestricted Gaussian root priors permit this behavior.
+`application_support.csv` records endpoint signs separately by response,
+partition scheme, and method. A future support restriction would be a change
+in method requiring its own scientific justification and assessment.
 
 ## Source Identities and Reproduction
 

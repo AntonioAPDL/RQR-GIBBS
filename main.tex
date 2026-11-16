@@ -84,8 +84,8 @@ rule with Young--Mathew and Wilks intervals across eight continuous
 distributions and nine feasible designs at tolerance confidence \(0.95\).
 Observed ECM content attainment ranges from \(0.948\) to \(0.997\); width gains
 depend on sample size, content, and asymmetry. Fixed-target Gibbs calculations
-on the same samples assess posterior uncertainty under independently specified
-root priors. Posterior-mean intervals generally increase width and content
+quantify endpoint uncertainty conditional on the selected content and tilt.
+Posterior-mean intervals generally increase width and content
 attainment, with an underattainment warning in one heavy-tailed setting.
 A historical pharmaceutical example examines interval placement, held-out
 empirical content, and sensitivity to data partitioning.
@@ -164,8 +164,8 @@ The contributions are as follows. First, the residual-product loss is shown to
 target MPI, and MTI is shown to generalize MPI by indexing admissible contiguous
 fixed-content windows through retained-mean tilt. Second, this geometry is used
 to develop a generalized posterior with conditionally conjugate Gibbs updates
-and corresponding ECM calculations for MPI and fixed-tilt MTI. A full
-paired computation study assesses posterior uncertainty at the selected targets.
+and corresponding ECM calculations for MPI and fixed-tilt MTI. Paired ECM
+and Gibbs calculations assess posterior uncertainty at the selected targets.
 The tolerance
 procedure then searches over fitted content and tilt using these endpoint fits
 and a separate DP content check.
@@ -816,7 +816,9 @@ Dirichlet-process posterior for
 \citep{Ferguson1973DP}. This check is used to select eligible MTI
 candidates during the fitted-content and tilt search. Its probability threshold
 is specified by the design before independent calibration assessment and
-validation. The resulting tolerance performance is assessed on fresh samples.
+validation. The DP model supplies this content calculation; root uncertainty
+follows the loss-based posterior in~\eqref{eq:mti-generalized-posterior}.
+The resulting tolerance performance is assessed on fresh samples.
 
 \section{Calibrated MTI Tolerance Intervals}
 \label{sec:mti-tolerance}
@@ -1079,10 +1081,15 @@ These comparisons quantify uncertainty over this finite design and leave a
 distribution-free guarantee for the fitted rule unresolved.
 
 MTI-ECM has smaller mean width than Young--Mathew in
-\MTIFixedECMShorter{} of 72 distribution/design cases. Width gains vary with
-asymmetry and distance from the sample-range boundary. In the Student
-\(t_3\) case at \(n=500,c=0.99\), ECM and Wilks have the same mean width,
-approximately 12.86, while Young--Mathew has mean width 12.41.
+\MTIFixedECMShorter{} of 72 distribution/design cases. For each of the six
+asymmetric laws, the gain occurs in \MTIFixedAsymmetricShorter{} of the nine
+designs, compared with \MTIFixedNormalShorter{} for the Gaussian and
+\MTIFixedStudentShorter{} for Student \(t_3\).
+At \((n,c)=(50,0.90),(100,0.95)\), and \((500,0.99)\), ECM and Wilks
+have matching endpoints, to numerical precision, in every replication of
+all eight laws. These boundary designs contribute no width improvement over
+Wilks. In the Student \(t_3\) case at \(n=500,c=0.99\), their common mean
+width is approximately 12.86, while Young--Mathew has mean width 12.41.
 All selected ECM intervals pass the final coordinatewise accuracy checks.
 The initial ECM stopping flag remains separate from those checks and from
 whether population content reaches \(c\).
@@ -1240,52 +1247,42 @@ generalizes MPI by making retained-mean balance a fixed coordinate:
 content-\(c\) windows. Equal-tailed and shortest-contiguous intervals are
 therefore distribution-specific members of the same placement family.
 
-MTI uses this placement family to search for short tolerance intervals.
-Fixed-target endpoint estimates under the generalized-Bayes criterion are combined with a DP
-posterior content check. The selection rule and independent Gaussian root
-priors are fixed before calibration assessment and validation. The primary
-implementation uses ECM; Gibbs sampling
-provides a separate computation for fixed-target posterior uncertainty. The
-independent study finds ECM content attainment from 94.8\% to 99.7\%, with
-smaller mean widths than Young--Mathew in \MTIFixedECMShorter{} of 72
-distribution/design cases. The simultaneous confidence bounds include nominal
-confidence in \MTIFixedECMInclude{} cases. These findings are
-specific to the calibrated rule and the simulation design. The finite grid,
-finite numerical calculation, and empirical calibration limit any broader
-optimality or distribution-free interpretation. The final coordinate checks
-support numerical accuracy without establishing global posterior modes.
-
 The generalized-Bayes construction extends empirical residual-product
 minimization to a distribution over interval roots. Proper Gaussian priors
 and normal--exponential augmentation give conditionally conjugate Gibbs
 updates for MPI and fixed-tilt MTI; ECM uses the same augmented criterion
-for mode estimation. The tilt controls the interval functional, and the
-content--tilt search seeks the shortest eligible fitted candidate. Posterior
-uncertainty at a fixed target and the repeated-sampling performance of this
-selection rule answer different inferential questions. All \MTIFullDatasets{}
-fixed-target Gibbs calculations met the recorded mixing and Monte Carlo
-error criteria. Posterior-mean intervals are wider in most settings, while
-the Student \(t_3\), \(n=500,c=0.99\) comparison identifies narrower intervals
-with lower content attainment. Longer chains preserve this finding.
-Posterior dispersion, optimization accuracy, and tolerance calibration
-therefore require separate assessments. The Gibbs results describe
-uncertainty conditional on the training-selected target; the primary
-short-interval comparison uses the assessed ECM selection rule.
+for mode estimation. The implemented marginal sampler integrates out the
+latent scales and targets the same root posterior. The resulting endpoint
+uncertainty is conditional on the selected fitted content and tilt.
 
-The separation between target, computation, and tolerance guarantees is essential. MTI
-identifies which fixed-content interval is being estimated. A generalized
-posterior describes uncertainty for a fixed loss-defined target. A response
-model, such as a direct Dirichlet-process posterior for \(F\), gives
-model-based content probabilities. The full MTI selection rule is assessed
-by its repeated-sampling content-attainment rate. Establishing a theorem for
-this selected interval requires an argument beyond either fixed-target
-calculation.
+The tolerance procedure combines ECM endpoint estimates with a separate DP
+posterior content check. The selection rule and Gaussian root priors are fixed
+before calibration assessment and validation. ECM content attainment ranges
+from 94.8\% to 99.7\%, with smaller mean widths than Young--Mathew in
+\MTIFixedECMShorter{} of 72 distribution/design cases. Width gains are most
+consistent across the asymmetric laws and vary with distance from the
+sample-range boundary. The finite candidate grid, coordinatewise numerical
+checks, and empirical calibration limit broader optimality or distribution-free
+claims. The DP content law supplies a posterior probability under its response
+model; tolerance confidence concerns the complete selection rule over repeated
+samples.
+
+Gibbs posterior-mean intervals are wider than ECM intervals in most settings.
+For Student \(t_3\) at \(n=500,c=0.99\), they are instead narrower and have
+lower content attainment. The longer-chain checks support numerical stability
+in this case. Thus posterior-mean endpoints require their own calibration if
+they are to be used as a tolerance rule, while the posterior draws describe
+fixed-target uncertainty. The primary short-interval comparison uses the
+independently assessed ECM rule.
 
 The pharmaceutical application has a narrower role. It demonstrates how the
 precalibrated procedures behave on historical batch data, while the
 repeated-sampling tolerance evidence comes from the simulation design.
 Unresolved measurement definitions and shared production campaigns limit the
 physical and future-production interpretation of these comparisons.
+For the nonnegative weight RSD response, unrestricted root priors also allow
+Gibbs endpoint summaries below zero. Support restrictions would need to be
+justified for the scientific response and assessed as part of a revised method.
 
 The tolerance evidence is confined to iid continuous univariate simulations;
 the historical pharmaceutical example has a descriptive role. Boundary tilts

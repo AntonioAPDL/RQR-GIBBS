@@ -5,6 +5,8 @@
     "figures/data/pharma_mti_application_20261020/observed_batches.csv": "1553e9c92474fdc65822df30503b7779c9b3ec56374085458ea7964325ea46cf",
     "figures/data/pharma_source_structure_ecm_20261111/partition_sharing.csv": "06497e8d42623ade042b8f9db9caaf84b8b0a321c738d921ea6d322c66fee13b",
     "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_9b53485fc9e4d6ab43a92d80a1b0931bf58c910e/application/outputs/mti_fixed_prior_20261114/calibration/cell_summary.csv": "9a52a6612780b4a4a51d547f3ec3e58177bf3492ffbd1808bb3ea664d8106f72",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_closure_abd14dbb8c4aa06f5622f256edb609646acd273b/application/outputs/mti_fixed_prior_closure_20261115/validation/interval_results.csv": "df4a9716c2cf22014c2f2fba3a9fe564ca2493421720b0080fb3da43c1b4f50a",
+    "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_closure_abd14dbb8c4aa06f5622f256edb609646acd273b/application/outputs/mti_fixed_prior_closure_20261115/validation/comparator_results.csv": "a6df0a5b99f899e8f65202d62a556e97c9370053eb5ba274aab93b5142b23714",
     "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_9b53485fc9e4d6ab43a92d80a1b0931bf58c910e/application/outputs/mti_fixed_prior_20261114/validation/fits/fit_048001.rds": "a9a6e49b61d2ebd285821672fb03e6ee2f05ce36785306b265b6078cd497f34e",
     "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_9b53485fc9e4d6ab43a92d80a1b0931bf58c910e/application/outputs/mti_fixed_prior_20261114/validation/fits/fit_041001.rds": "665604db0666485841bfe81c92d5eaf0e9e654ce20cb2339b6d0d3e44784e7a1",
     "/data/muscat_data/jaguir26/RQR-GIBBS/.codex_work/mti_fixed_prior_9b53485fc9e4d6ab43a92d80a1b0931bf58c910e/application/outputs/mti_fixed_prior_20261114/validation/fits/fit_050001.rds": "205db5bbd8ffe19a91eb0403a1c76abf4ea0ebc5af0efa76bd25ecc478505456",
@@ -12,6 +14,7 @@
   },
   "data_files": {
     "application_cells.csv": "88cdb5b540ec0198ad6c46a19ad91d18f04909a5efa312b6f31eef543ed4c23d",
+    "application_support.csv": "a0932d4909c761860fe80198ca34f76d86bdc1da147eff2957a97ef41382f4e5",
     "application_values.csv": "46dfe5e9f0f47e847a5cbee5b4fa0f2396cb08f97201201e678e3cbd5d85a004",
     "calibration_cells.csv": "9a52a6612780b4a4a51d547f3ec3e58177bf3492ffbd1808bb3ea664d8106f72",
     "campaign_cells.csv": "9d192434cd34f95c899aa8ce2ef1d624bf1bc3602724ea54071ea75ca59ee2ad",
@@ -28,8 +31,11 @@
     "ranks.csv": "505e42891385c7deeb4f363fdb77b08c9d053d8070f5310729c9a59d6fe6ea41",
     "representative_splits.csv": "6dd77fee30d72ea6fa6ee95b676075611a79d21b5319ed8b94aeab353418c8b5",
     "simulation_cells.csv": "057b779343f040943a43e77087f224a48cb4b487c11dae7439ffecc8c6b71c86",
-    "trace.csv": "32ed2889233bfec0476d73e0268b071ac2e2a9365de068912b7a5b54529a9020"
+    "trace.csv": "32ed2889233bfec0476d73e0268b071ac2e2a9365de068912b7a5b54529a9020",
+    "width_patterns.csv": "17c25a4b71fe0c1e3df54728e7b3c99eae1af4226fef10508df3145d0ca4bc96",
+    "wilks_interval_agreement.csv": "8f4c876317c3b2e1af37c5be83ffb3884e81afcbdaa44f8c84e6133ccd4cf214"
   },
   "quantile_type": 7,
+  "endpoint_comparison_tolerance": 1e-12,
   "prior_uses_analysis_data": false
 }
