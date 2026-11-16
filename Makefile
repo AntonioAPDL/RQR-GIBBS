@@ -921,6 +921,22 @@ review-mti-gibbs-full-report:
 .PHONY: test-mti-prior-screen check-mti-prior-screen run-mti-prior-screen health-mti-prior-screen
 .PHONY: test-mti-fixed-prior check-mti-fixed-prior prepare-mti-fixed-prior run-mti-fixed-prior launch-mti-fixed-prior health-mti-fixed-prior
 .PHONY: test-mti-fixed-prior-closure prepare-mti-fixed-prior-closure check-mti-fixed-prior-closure launch-mti-fixed-prior-closure health-mti-fixed-prior-closure
+.PHONY: test-mti-fixed-prior-finalization prepare-mti-fixed-prior-finalization check-mti-fixed-prior-finalization launch-mti-fixed-prior-finalization health-mti-fixed-prior-finalization
+test-mti-fixed-prior-finalization:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-fixed-prior-finalization.R
+
+prepare-mti-fixed-prior-finalization:
+	$(R) application/scripts/123_finalize_mti_fixed_prior.R prepare
+
+check-mti-fixed-prior-finalization:
+	$(R) application/scripts/123_finalize_mti_fixed_prior.R check
+
+launch-mti-fixed-prior-finalization:
+	bash application/scripts/124_launch_mti_fixed_prior_finalization.sh
+
+health-mti-fixed-prior-finalization:
+	$(R) application/scripts/123_finalize_mti_fixed_prior.R health
+
 test-mti-fixed-prior-closure:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-fixed-prior-closure.R
 

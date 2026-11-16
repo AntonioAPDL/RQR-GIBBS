@@ -1,0 +1,15 @@
+{
+  "study_id": "mti_fixed_prior_finalization_20261115",
+  "continuation_commit": "abd14dbb8c4aa06f5622f256edb609646acd273b",
+  "continuation_worktree": ".codex_work/mti_fixed_prior_closure_abd14dbb8c4aa06f5622f256edb609646acd273b",
+  "continuation_output": "application/outputs/mti_fixed_prior_closure_20261115",
+  "prior_config": "application/config/mti_fixed_prior_20261114.json",
+  "output_root": "application/outputs/mti_fixed_prior_finalization_20261115",
+  "evidence_dir": "figures/data/mti_fixed_prior_20261115",
+  "retained_budgets": [8000, 16000],
+  "maximum_workers": 8,
+  "wait_seconds": 60,
+  "maximum_wait_hours": 24,
+  "automatic_prior_tuning": false,
+  "automatic_article_replacement": false
+}

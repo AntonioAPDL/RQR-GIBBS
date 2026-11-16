@@ -52,6 +52,12 @@ numerical sources and leaves article promotion to a review of the actual
 case-specific results. `make launch-mti-fixed-prior-closure` starts this
 continuation after its tests; it does not restart the simulation study.
 
+The [fixed-prior numerical finalization](docs/implementation_notes/mti_fixed_prior_finalization_20261115.md)
+extends only application mean-precision flags at unchanged posterior targets,
+verifies every saved chain prefix, and stages source-attributed reporting
+evidence. It preserves both preceding studies and makes no automatic
+manuscript changes.
+
 ## Statistical Framing
 
 MPI and MTI are loss-defined interval targets. Endpoint summaries from a
