@@ -1,0 +1,16 @@
+{
+  "study_id": "mti_gibbs_boundary_closeout_20261116",
+  "boundary_config": "application/config/mti_gibbs_boundary_calibration_20261115.json",
+  "completed_commit": "97ea8fdb2a3cb31228a3a07cf2c2784074de4adc",
+  "completed_worktree": ".codex_work/mti_gibbs_boundary_97ea8fdb2a3cb31228a3a07cf2c2784074de4adc",
+  "output_root": "application/outputs/mti_gibbs_boundary_closeout_20261116",
+  "evidence_root": "figures/data/mti_gibbs_boundary_20261116",
+  "figure_root": "figures/generated/mti_gibbs_boundary_20261116",
+  "maximum_workers": 40,
+  "disk_reserve_gib": 16,
+  "replay": {"pilot_samples": 100, "historical_samples": 12, "endpoint_tolerance": 1e-10},
+  "confirmation": {"replications": 2000, "data_seed_base": 1920000000, "engine_seed_base": 1930000000,
+    "n": 500, "content": 0.95, "tolerance_confidence": 0.95, "prior_sd": 2},
+  "prior_tuning": false,
+  "replace_original_results": false
+}

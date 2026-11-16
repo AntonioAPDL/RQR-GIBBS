@@ -947,6 +947,18 @@ launch-mti-gibbs-boundary:
 health-mti-gibbs-boundary:
 	$(R) application/scripts/126_assess_mti_gibbs_boundary_calibration.R health
 
+.PHONY: test-mti-gibbs-closeout prepare-mti-gibbs-closeout run-mti-gibbs-closeout render-mti-gibbs-closeout verify-mti-gibbs-closeout
+test-mti-gibbs-closeout:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-boundary-closeout.R
+prepare-mti-gibbs-closeout:
+	$(R) application/scripts/128_close_mti_gibbs_boundary_study.R prepare
+run-mti-gibbs-closeout:
+	bash application/scripts/129_run_mti_gibbs_boundary_closeout.sh
+render-mti-gibbs-closeout:
+	$(R) application/scripts/128_close_mti_gibbs_boundary_study.R render
+verify-mti-gibbs-closeout:
+	$(R) application/scripts/128_close_mti_gibbs_boundary_study.R verify
+
 report-mti-fixed-prior:
 	$(R) application/scripts/125_report_mti_fixed_prior.R render
 
