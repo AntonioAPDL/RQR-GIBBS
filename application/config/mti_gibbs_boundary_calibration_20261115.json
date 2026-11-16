@@ -1,0 +1,29 @@
+{
+  "study_id": "mti_gibbs_boundary_calibration_20261115",
+  "baseline_article_commit": "4cc1f57fcf1c3ddba9503d33241c05a67b81d85f",
+  "parent_commit": "9b53485fc9e4d6ab43a92d80a1b0931bf58c910e",
+  "parent_worktree": ".codex_work/mti_fixed_prior_9b53485fc9e4d6ab43a92d80a1b0931bf58c910e",
+  "parent_output": "application/outputs/mti_fixed_prior_20261114",
+  "completed_evidence": "figures/data/mti_fixed_prior_20261115",
+  "prior_config": "application/config/mti_fixed_prior_20261114.json",
+  "diagnostic_config": "application/config/mti_gibbs_width_diagnosis_20261113.json",
+  "output_root": "application/outputs/mti_gibbs_boundary_calibration_20261115",
+  "variants": ["original", "log_rank", "sqrt_rank"],
+  "expected_cells": 72,
+  "maximum_workers": 40,
+  "disk_reserve_gib": 16,
+  "calibration_error": 0.05,
+  "development_chain_seed_base": 1870000000,
+  "rehearsal": {"data_seed": 1900000001, "chain_seed_base": 1910000000},
+  "stages": {
+    "calibration": {"replications": 200, "data_seed_base": 1850000000, "chain_seed_base": 1880000000},
+    "pilot": {"replications": 100, "data_seed_base": 1860000000, "chain_seed_base": 1890000000}
+  },
+  "sampling": {"chains": 4, "n_burn": 500, "n_mcmc": 1000, "maximum_retained": 8000},
+  "selection_criterion": "development_worst_then_mean_log_calibrated_width_ratio_then_least_change",
+  "fixed_prior_uses_analysis_sample": false,
+  "known_support_used_in_fitting": false,
+  "calibration_scope": "declared_72_case_simulation_panel_only",
+  "automatic_article_replacement": false,
+  "automatic_full_validation_launch": false
+}

@@ -70,6 +70,16 @@ n=500, c=.99, the latter attain content in 931/1000 samples. Longer chains
 preserve that warning. It is reported rather than removed by retuning the
 prior or cutoff on validation samples.
 
+## Separate Gibbs Boundary Study
+
+A separate, bounded study examines empirical tilt boundaries and calibration
+of the actual Gibbs-derived interval. It preserves the current article and
+priors, reuses the development samples, and separates new calibration from an
+independent pilot. Use `make test-mti-gibbs-boundary`,
+`make launch-mti-gibbs-boundary`, and `make health-mti-gibbs-boundary`.
+See the [statistical specification and reproduction commands](docs/reproducibility/mti_gibbs_boundary_calibration.md).
+Neither manuscript replacement nor a full new main comparison is automatic.
+
 ## Statistical Framing
 
 MPI and MTI are loss-defined interval targets. Endpoint summaries from a

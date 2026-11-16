@@ -931,6 +931,22 @@ review-mti-gibbs-full-report:
 test-mti-fixed-prior-reporting:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-fixed-prior-reporting.R
 
+.PHONY: test-mti-gibbs-boundary prepare-mti-gibbs-boundary check-mti-gibbs-boundary launch-mti-gibbs-boundary health-mti-gibbs-boundary
+test-mti-gibbs-boundary:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-boundary-calibration.R
+
+prepare-mti-gibbs-boundary:
+	$(R) application/scripts/126_assess_mti_gibbs_boundary_calibration.R prepare
+
+check-mti-gibbs-boundary:
+	$(R) application/scripts/126_assess_mti_gibbs_boundary_calibration.R check
+
+launch-mti-gibbs-boundary:
+	bash application/scripts/127_launch_mti_gibbs_boundary_calibration.sh
+
+health-mti-gibbs-boundary:
+	$(R) application/scripts/126_assess_mti_gibbs_boundary_calibration.R health
+
 report-mti-fixed-prior:
 	$(R) application/scripts/125_report_mti_fixed_prior.R render
 
