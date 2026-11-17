@@ -98,6 +98,16 @@ predeclared width-improvement criterion is met. Use
 `make launch-mti-gibbs-decisions` and `make health-mti-gibbs-decisions`.
 Experimental results do not replace manuscript results automatically.
 
+The [unscaled Gibbs comparison](docs/reproducibility/mti_gibbs_joint.md)
+compares independently fixed root priors, DP assumptions, and design-specific
+probability thresholds without a final radius multiplier. It assesses the
+actual posterior-mean intervals after ECM target selection. The bounded
+developmental comparison precedes any independent 1000-replication assessment.
+`make launch-mti-gibbs-joint` schedules it after successful completion and
+verification of the preceding experiment; `make health-mti-gibbs-joint`
+reports its waiting or execution status. Neither study changes the article
+or pharmaceutical application automatically.
+
 ## Statistical Framing
 
 MPI and MTI are loss-defined interval targets. Endpoint summaries from a

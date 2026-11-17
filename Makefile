@@ -974,6 +974,20 @@ launch-mti-gibbs-decisions:
 health-mti-gibbs-decisions:
 	$(R) application/scripts/131_assess_mti_gibbs_decisions.R health
 
+.PHONY: test-mti-gibbs-joint prepare-mti-gibbs-joint check-mti-gibbs-joint launch-mti-gibbs-joint health-mti-gibbs-joint verify-mti-gibbs-joint
+test-mti-gibbs-joint:
+	$(R) -e 'p <- Sys.getenv("MTI_PRIOR_R_LIBRARY"); if (nzchar(p)) .libPaths(c(p, .libPaths())); testthat::test_file("application/tests/testthat/test-mti-gibbs-joint.R", reporter = "summary", stop_on_failure = TRUE)'
+prepare-mti-gibbs-joint:
+	$(R) application/scripts/133_assess_mti_gibbs_joint.R prepare
+check-mti-gibbs-joint:
+	$(R) application/scripts/133_assess_mti_gibbs_joint.R check
+launch-mti-gibbs-joint:
+	bash application/scripts/134_launch_mti_gibbs_joint.sh
+health-mti-gibbs-joint:
+	$(R) application/scripts/133_assess_mti_gibbs_joint.R health
+verify-mti-gibbs-joint:
+	$(R) application/scripts/133_assess_mti_gibbs_joint.R verify
+
 report-mti-fixed-prior:
 	$(R) application/scripts/125_report_mti_fixed_prior.R render
 

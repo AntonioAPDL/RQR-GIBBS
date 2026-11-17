@@ -1,0 +1,40 @@
+{
+  "study_id": "mti_gibbs_joint_20261117",
+  "predecessor_config": "application/config/mti_gibbs_decision_calibration_20261116.json",
+  "output_root": "application/outputs/mti_gibbs_joint_20261117",
+  "maximum_workers": 40,
+  "disk_reserve_gib": 32,
+  "dependency_poll_seconds": 300,
+  "development_replications": 100,
+  "initial_check_replications": 12,
+  "validation_replications": 1000,
+  "expected_cells": 72,
+  "root_sd": [2, 1],
+  "dp_concentration": [1, 0.5, 2],
+  "dp_base_sd": [4, 2, 8],
+  "independent_coordinates": {"center": 0, "scale": 1, "estimated_from_analysis_sample": false},
+  "learning_rate": 1,
+  "radius_multiplier": 1,
+  "maximum_initial_rules": 5,
+  "maximum_refinement_rules": 2,
+  "selection": {
+    "minimum_worst_law_width_reduction": 0.01,
+    "paired_interval_probability": 0.95,
+    "require_remaining_development_attainment": true,
+    "require_remaining_development_width_gain": true,
+    "automatic_fresh_validation_if_any_design_advances": true
+  },
+  "seeds": {
+    "development_chain_base": 2095000000,
+    "development_ecm_base": 2097000000,
+    "rehearsal_chain_base": 2098000000,
+    "validation_data_base": 2100000000,
+    "validation_chain_base": 2110000000,
+    "validation_ecm_base": 2130000000
+  },
+  "sampling": {"chains": 4, "n_burn": 500, "n_mcmc": 1000, "maximum_retained": 8000},
+  "assurance": {"error": 0.05, "comparisons": 72},
+  "automatic_article_replacement": false,
+  "application_transfer": false,
+  "full_gibbs_candidate_profile": "separate_scientific_review"
+}
