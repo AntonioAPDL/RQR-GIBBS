@@ -68,6 +68,17 @@ Rscript -e '
   p$selection_sha256<-digest::digest(file=path,algo="sha256",serialize=FALSE);
   dependency<-file.path(a[3],"dependency.json");
   if(file.exists(dependency)) stopifnot(identical(jsonlite::read_json(dependency),p)) else jsonlite::write_json(p,dependency,auto_unbox=TRUE,pretty=TRUE);
+  reuse<-Sys.getenv("MTI_JOINT_REUSE_ROOT");
+  if(nzchar(reuse)) {
+    reuse<-normalizePath(reuse,mustWork=TRUE); m<-file.path(reuse,"manifest.json");
+    old<-jsonlite::read_json(m)$identity; stopifnot(is.null(old$mode_reuse));
+    checkout<-file.path(a[1],".codex_work",paste0("mti_gibbs_joint_",old$source_commit));
+    stopifnot(dir.exists(checkout));
+    value<-list(output_root=reuse,checkout=checkout,source_commit=old$source_commit,
+      manifest_sha256=digest::digest(file=m,algo="sha256",serialize=FALSE));
+    file<-file.path(a[3],"reuse_source.json");
+    if(file.exists(file)) stopifnot(identical(jsonlite::read_json(file),value)) else jsonlite::write_json(value,file,auto_unbox=TRUE,pretty=TRUE);
+  }
   target<-file.path(a[1],".codex_work/mti_gibbs_joint_latest.json"); tmp<-paste0(target,".tmp");
   jsonlite::write_json(list(study_id="mti_gibbs_joint_20261117",checkout=a[2],output_root=a[3],source_commit=a[4]),tmp,auto_unbox=TRUE,pretty=TRUE); stopifnot(file.rename(tmp,target))' \
   "$root" "$launch" "$storage" "$commit"

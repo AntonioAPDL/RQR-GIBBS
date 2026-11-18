@@ -1,9 +1,10 @@
 root <- normalizePath(if (file.exists("application/scripts/lib/mti_gibbs_joint.R")) "." else "../../..")
 for (name in c("mti_gibbs_practical", "mti_gibbs_full_report_review", "mti_gibbs_full_publication",
   "mti_gibbs_width_diagnosis", "mti_prior_screen", "mti_fixed_prior", "mti_gibbs_boundary_calibration",
-  "mti_gibbs_decision_calibration", "mti_gibbs_joint", "mti_gibbs_joint_study"))
+  "mti_gibbs_decision_calibration", "mti_gibbs_joint", "mti_gibbs_joint_study", "mti_gibbs_joint_reuse"))
   source(file.path(root, "application/scripts/lib", paste0(name, ".R")))
 joint_config <- function() mwd_json(file.path(root, "application/config/mti_gibbs_joint_20261117.json"))
+joint_radius <- function(s = 1) data.frame(n=100L,content=.9,tolerance_confidence=.95,rule="proposed",multiplier=s)
 joint_candidates <- function() data.frame(candidate_index = 1:4, target_content = c(.92,.94,.96,.98),
   mean_tilt = 0, central_tilt = 0, lower = -c(1,2,3,4), upper = c(1,2,3,4), width = c(2,4,6,8),
   finite_interval = TRUE, numerically_accurate = TRUE, posterior_content_probability = c(.6,.8,.95,1))
@@ -131,13 +132,13 @@ testthat::test_that("developmental advancement is law-specific, paired, and not 
   d <- data.table::CJ(job_id=1:100,response_id=paste0("law",1:8),rule=c("R0","new"))
   d[, `:=`(n=100L,content=.9,tolerance_confidence=.95,replication=job_id,
     returned=TRUE,adequate=TRUE,attained=TRUE,width=ifelse(rule=="R0",10,8))]
-  s <- mjc_scores(d,cfg); testthat::expect_true(s$scores$advance)
+  s <- mjc_scores(d,cfg,joint_radius()); testthat::expect_true(s$scores$advance)
   d[rule=="new" & response_id=="law1" & replication>94,attained:=FALSE]
-  testthat::expect_false(mjc_scores(d,cfg)$scores$advance)
+  testthat::expect_false(mjc_scores(d,cfg,joint_radius())$scores$advance)
   d[rule=="new",attained:=TRUE]; d[rule=="new" & response_id=="law1",width:=10.01]
-  testthat::expect_false(mjc_scores(d,cfg)$scores$advance)
+  testthat::expect_false(mjc_scores(d,cfg,joint_radius())$scores$advance)
   d[rule=="new",width:=8]; d[rule=="new" & job_id==1 & response_id=="law1",adequate:=FALSE]
-  testthat::expect_false(mjc_scores(d,cfg)$scores$advance)
+  testthat::expect_false(mjc_scores(d,cfg,joint_radius())$scores$advance)
 })
 
 testthat::test_that("nonreturns are attainment failures and width ranges condition on returns", {
@@ -228,6 +229,8 @@ testthat::test_that("nonadvancing designs retain R0 explicitly rather than inven
   scores <- data.table::data.table(n=100,content=.9,rule="new",advance=FALSE,worst_ratio=.8,mean_log_ratio=log(.8))
   frozen <- mjs_freeze(scores,selections,joint_config())
   testthat::expect_true(all(frozen$rule=="R0"));testthat::expect_false(any(frozen$advanced))
+  testthat::expect_equal(nrow(frozen),1L)
+  testthat::expect_false("gibbs_new_unscaled" %in% frozen$method)
   scores$advance <- TRUE
   frozen <- mjs_freeze(scores,selections,joint_config())
   testthat::expect_equal(frozen[method=="gibbs_new_unscaled",rule],"new")
@@ -242,10 +245,12 @@ testthat::test_that("paired figures and summaries keep distributions separate an
     replication=1:3)
   rows[, `:=`(job_id=replication+ifelse(response_id=="normal",0L,3L),tolerance_confidence=.95,
     returned=TRUE,attained=TRUE,width=ifelse(method=="gibbs_new_unscaled",2,3),population_content=.98)]
+  rows[method=="gibbs_R0_unscaled",width:=4]
   invisible(mjs_report(rows,cfg))
   testthat::expect_true(file.info(file.path(d,"validation/width_and_attainment.pdf"))$size>1000)
   paired <- data.table::fread(file.path(d,"validation/paired_comparison.csv"))
   testthat::expect_equal(nrow(paired),2L);testthat::expect_true(all(paired$mean_paired_width_change == -1))
+  testthat::expect_true(all(paired$reference_method == "gibbs_R0_scaled"))
   summary <- mjc_summary(rows,cfg)
   testthat::expect_true(all(is.na(summary[method!="gibbs_new_unscaled",simultaneous_lower])))
 })
@@ -267,7 +272,7 @@ testthat::test_that("independent assessment shares the R0 draws and preserves pr
   cfg <- joint_config()
   task <- data.frame(job_id=1L,n=100L,content=.9,tolerance_confidence=.95,response_id="normal",data_seed=17L)
   rules <- data.frame(n=100L,content=.9,prior_sd=c(2,1),rule=c("R0","new"),
-    method=c("gibbs_R0_unscaled","gibbs_new_unscaled"))
+    method=c("gibbs_R0_unscaled","gibbs_new_unscaled"),advanced=c(FALSE,TRUE))
   context <- list(laws=list(normal=list(r=function(n) y,p=pnorm)),
     policy=data.frame(n=100L,content=.9,screen=.9),
     radius=data.table::data.table(n=100L,content=.9,rule="proposed",multiplier=1.1))
@@ -277,4 +282,88 @@ testthat::test_that("independent assessment shares the R0 draws and preserves pr
   testthat::expect_equal(value$rows[method=="gibbs_new_unscaled",width],1.6)
   testthat::expect_equal(value$rows[method=="ecm_primary",width],6)
   testthat::expect_false(anyDuplicated(value$rows$method)>0)
+})
+
+testthat::test_that("calibrated scoring changes only the reference and keeps exact scale relations", {
+  cfg <- joint_config()
+  d <- data.table::CJ(job_id=1:100,response_id=paste0("law",1:8),rule=c("R0","new"))
+  d[, `:=`(n=100L,content=.9,tolerance_confidence=.95,replication=job_id,
+    returned=TRUE,adequate=TRUE,attained=TRUE,width=ifelse(rule=="R0",10,8+job_id/1000))]
+  before <- data.table::copy(d); baseline <- mjc_scores(d,cfg,joint_radius())
+  for (s in c(.8,1,1.2)) {
+    out <- mjc_scores(d,cfg,joint_radius(s))
+    testthat::expect_equal(out$cells$mean_ratio,baseline$cells$mean_ratio/s)
+    testthat::expect_equal(out$cells$paired_log_upper,baseline$cells$paired_log_upper-log(s))
+    testthat::expect_identical(d,before)
+  }
+  testthat::expect_error(mjc_scores(d,cfg,rbind(joint_radius(),joint_radius())),"Duplicate")
+  testthat::expect_error(mjc_scores(d,cfg,joint_radius(-1)),"invalid")
+  r <- joint_radius(); r$tolerance_confidence <- .9
+  testthat::expect_error(mjc_scores(d,cfg,r),"Missing")
+  testthat::expect_error(mjc_scores(d,cfg,r[0,]),"Missing")
+  testthat::expect_error(mjc_scores(d[!(rule=="R0" & job_id==1)],cfg,joint_radius()),"Missing R0")
+})
+
+testthat::test_that("only advancing designs enter the fixed independent domain", {
+  tasks <- data.frame(job_id=1:6,n=rep(c(100L,500L),each=3),content=.9,tolerance_confidence=.95,data_seed=101:106)
+  frozen <- data.frame(n=c(100L,500L),content=.9,tolerance_confidence=.95,advanced=c(FALSE,TRUE))
+  d <- mjs_validation_domain(tasks,frozen)
+  testthat::expect_identical(d,tasks[4:6,,drop=FALSE],ignore_attr=TRUE)
+  testthat::expect_identical(d$job_id,4:6)
+  frozen$advanced <- FALSE
+  testthat::expect_equal(nrow(mjs_validation_domain(tasks,frozen)),0L)
+  testthat::expect_equal(joint_config()$assurance$comparisons,72L)
+})
+
+testthat::test_that("function fingerprints ignore prose and score edits, and detect computation changes", {
+  path <- tempfile(fileext=".R"); on.exit(unlink(path))
+  writeLines(c("fit <- function(x) x + 1", "score <- function(x) x / 2"),path)
+  a <- mjr_function(path,"fit")
+  writeLines(c("# A reporting revision", "fit <- function(x) x + 1", "score <- function(x) x / 4"),path)
+  testthat::expect_identical(a,mjr_function(path,"fit"))
+  writeLines("fit <- function(x) x + 2",path)
+  testthat::expect_false(identical(a,mjr_function(path,"fit")))
+})
+
+testthat::test_that("posterior target identities do not depend on developmental scoring", {
+  cfg <- joint_config(); target <- list(q=.95,geometry=list(delta=0)); y <- c(-1,0,1)
+  before <- mjc_target_key(y,target,2,cfg,list())
+  cfg$selection$minimum_worst_law_width_reduction <- .02
+  testthat::expect_identical(before,mjc_target_key(y,target,2,cfg,list()))
+  cfg$sampling$n_mcmc <- 2000
+  testthat::expect_false(identical(before,mjc_target_key(y,target,2,cfg,list())))
+})
+
+testthat::test_that("mode reuse checks original bytes, task, computation and observations", {
+  source <- tempfile(); target <- tempfile()
+  dir.create(file.path(source,"modes/fits"),recursive=TRUE);dir.create(target)
+  on.exit(unlink(c(source,target),recursive=TRUE))
+  cfg <- joint_config(); cfg$output_root <- target
+  tasks <- data.frame(job_id=1L,n=3L,response_id="normal",data_seed=10L)
+  old <- list(source_commit=mgfp_git("rev-parse","HEAD"),configuration=cfg,programs=list())
+  id <- mwd_hash(list(old,"modes",tasks))
+  mgfp_json_write(list(identity=old),file.path(source,"manifest.json"))
+  mgfp_json_write(list(analysis_id=id),file.path(source,"modes/manifest.json"))
+  # JSON is the canonical identity representation used by the actual driver.
+  old <- mwd_json(file.path(source,"manifest.json"))$identity
+  id <- mwd_hash(list(old,"modes",tasks))
+  mgfp_json_write(list(analysis_id=id),file.path(source,"modes/manifest.json"))
+  set.seed(10); y <- rnorm(3)
+  anchors <- lapply(c(2,1),function(sd) list(prior=list(prior_sd=sd),sample_sha256=mwd_hash(y),
+    candidates=joint_candidates()));names(anchors)<-c("2","1")
+  path <- file.path(source,"modes/fits/fit_000001.rds")
+  mbc_atomic_fit(list(ok=TRUE,task=tasks[1,],anchors=anchors),path,id,tasks[1,])
+  current <- old
+  current$mode_reuse <- list(output_root=source,checkout=root,source_commit=old$source_commit,
+    manifest_sha256=mwd_file_hash(file.path(source,"manifest.json")))
+  context <- list(laws=list(normal=list(r=rnorm)))
+  invisible(capture.output(testthat::expect_equal(mjs_import_modes(tasks,cfg,current,context),1L)))
+  newpath <- file.path(target,"modes/fits/fit_000001.rds")
+  testthat::expect_identical(mwd_file_hash(path),mwd_file_hash(newpath))
+  testthat::expect_identical(mbc_read_fit(newpath,mwd_hash(list(current,"modes",tasks)),tasks[1,])$anchors,anchors)
+  invisible(capture.output(testthat::expect_equal(mjs_import_modes(tasks,cfg,current,context),1L)))
+  changed <- current;changed$configuration$root_sd<-c(2,.5)
+  testthat::expect_error(mjs_import_modes(tasks,cfg,changed,context),"settings differ")
+  saveRDS(list(ok=TRUE),path)
+  testthat::expect_error(mjs_import_modes(tasks,cfg,current,context),"checksum")
 })

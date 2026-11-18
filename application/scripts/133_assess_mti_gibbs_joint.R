@@ -5,7 +5,7 @@ if (nzchar(private)) .libPaths(c(normalizePath(private, mustWork = TRUE), .libPa
 libraries <- c("mti_gibbs_practical", "mti_gibbs_full_report_review", "mti_gibbs_full_publication",
   "mti_profile_revision", "mti_gibbs_width_diagnosis", "mti_prior_screen", "pharma_tolerance_application",
   "mti_fixed_prior", "mti_gibbs_boundary_calibration", "mti_gibbs_boundary_study",
-  "mti_gibbs_decision_calibration", "mti_gibbs_decision_study", "mti_gibbs_joint", "mti_gibbs_joint_study")
+  "mti_gibbs_decision_calibration", "mti_gibbs_decision_study", "mti_gibbs_joint", "mti_gibbs_joint_study", "mti_gibbs_joint_reuse")
 for (name in libraries) source(file.path("application/scripts/lib", paste0(name, ".R")))
 data.table::setDTthreads(1L)
 RNGkind("Mersenne-Twister", "Inversion", "Rejection")
@@ -55,6 +55,8 @@ identity <- list(source_commit = mgfp_git("rev-parse", "HEAD"), programs = mgfp_
   configuration = cfg, package = context$package, R = R.version.string, rng = RNGkind(),
   generators = context$generator_sha256, seed_audit = audit, dependency = dependency,
   exdqlm_reference_commit = mwd_json(mwd_json(mwd_json(cfg$predecessor_config)$boundary_config)$diagnostic_config)$exdqlm_reference_commit)
+reuse_path <- file.path(cfg$output_root, "reuse_source.json")
+if (file.exists(reuse_path)) identity$mode_reuse <- mwd_json(reuse_path)
 mwd_require(identity$exdqlm_reference_commit == "dffb71ee70b597d6a716ee74be1cbc99731cd453", "Pinned reference changed.")
 if (mode == "prepare") {
   print(vapply(designs, nrow, 1L)); print(audit)
@@ -111,6 +113,7 @@ if (file.exists(manifest)) mwd_require(mwd_json(manifest)$identity_hash == mwd_h
 stage <- "modes"
 tryCatch({
   tasks <- designs$development
+  mjs_import_modes(tasks, cfg, identity, context)
   modes <- mjs_queue(tasks, stage, cfg, identity, workers, function(task) mjs_modes(task, cfg, context))
   stage <- "replay"
   comparison <- mjs_replay(tasks, modes, cfg, context, workers)
@@ -122,7 +125,7 @@ tryCatch({
     mjs_gibbs(task, a, selection, cfg, context, old = mjs_old(task, context))
   })
   rows <- mjs_collect(development, tasks)
-  scores <- mjc_scores(rows, cfg)
+  scores <- mjc_scores(rows, cfg, context$radius)
   refinement <- mjs_refinement(comparison$curves, selection, scores$scores, cfg)
   mwd_write(refinement, file.path(cfg$output_root, "refinement_selection.csv"))
   if (nrow(refinement)) {
@@ -135,7 +138,7 @@ tryCatch({
     })
     rows <- data.table::rbindlist(list(rows, mjs_collect(refined, selected_tasks)), fill = TRUE)
     selection <- data.table::rbindlist(list(selection, refinement), fill = TRUE)
-    scores <- mjc_scores(rows, cfg)
+    scores <- mjc_scores(rows, cfg, context$radius)
   }
   mwd_write(rows, file.path(cfg$output_root, "development_results.csv"))
   mwd_write(scores$scores, file.path(cfg$output_root, "development_scores.csv"))
@@ -146,28 +149,40 @@ tryCatch({
   mwd_write(frozen, file.path(cfg$output_root, "frozen_selection.csv"))
   frozen_sha <- mwd_file_hash(frozen_path)
   radius_path <- file.path(dependency$output_root, "calibrated_radius.rds")
-  frozen_radius <- mwd_json(file.path(dependency$output_root, "frozen_radius.json"))
+  frozen_radius <- context$frozen_radius
   mwd_require(frozen_radius$radius_sha256 == mwd_file_hash(radius_path), "Frozen predecessor radius changed.")
-  context$radius <- readRDS(radius_path)
-  mgfp_json_write(list(selection_sha256 = frozen_sha, predecessor_radius_sha256 = frozen_radius$radius_sha256,
-    frozen_before_fresh_data = TRUE, advancing_designs = sum(frozen$advanced), source_commit = identity$source_commit),
-    file.path(cfg$output_root, "frozen_policy.json"))
+  eligible <- mjs_validation_domain(designs$validation, frozen)
+  eligible_path <- file.path(cfg$output_root, "eligible_validation_tasks.rds")
+  if (file.exists(eligible_path)) mwd_require(identical(readRDS(eligible_path), eligible),
+    "Frozen validation observations changed.") else saveRDS(eligible, eligible_path)
+  policy_record <- list(selection_sha256 = frozen_sha, predecessor_radius_sha256 = frozen_radius$radius_sha256,
+    width_reference = cfg$width_reference, validation_domain = cfg$validation_domain,
+    validation_tasks_sha256 = mwd_hash(eligible), validation_datasets = nrow(eligible),
+    assurance_comparisons = cfg$assurance$comparisons,
+    frozen_before_fresh_data = TRUE, advancing_designs = sum(frozen$advanced), source_commit = identity$source_commit)
+  policy_path <- file.path(cfg$output_root, "frozen_policy.json")
+  if (file.exists(policy_path)) {
+    saved <- mwd_json(policy_path)
+    mwd_require(saved$validation_tasks_sha256 == policy_record$validation_tasks_sha256 &&
+      saved$selection_sha256 == frozen_sha && saved$predecessor_radius_sha256 == frozen_radius$radius_sha256 &&
+      saved$source_commit == identity$source_commit, "Frozen independent-assessment policy changed.")
+  } else mgfp_json_write(policy_record, policy_path)
   if (!any(frozen$advanced)) {
     mgfp_json_write(list(status = "complete_no_developmental_gain", stage = "development", article_replaced = FALSE,
       reason = "No complete unscaled rule met the prespecified attainment and paired width criteria.", time = mgfp_time()),
       file.path(cfg$output_root, "study_summary.json"))
   } else if (cfg$selection$automatic_fresh_validation_if_any_design_advances) {
     stage <- "validation"
-    validation <- mjs_queue(designs$validation, stage, cfg, list(identity, frozen_sha, frozen_radius), workers,
+    validation <- mjs_queue(eligible, stage, cfg, list(identity, frozen_sha, frozen_radius, mwd_hash(eligible)), workers,
       function(task) mjs_final_job(task, frozen, cfg, context))
     mwd_require(mwd_file_hash(frozen_path) == frozen_sha && mwd_file_hash(radius_path) == frozen_radius$radius_sha256,
       "A fixed rule changed during independent assessment.")
-    final <- mjs_collect(validation, designs$validation)
+    final <- mjs_collect(validation, eligible)
     mwd_write(final, file.path(cfg$output_root, "validation/interval_results.csv"))
     mwd_write(mjc_summary(final, cfg), file.path(cfg$output_root, "validation/comparison_summary.csv"))
     mjs_report(final, cfg)
     mgfp_json_write(list(status = "complete_requires_scientific_review", article_replaced = FALSE,
-      advancing_designs = sum(frozen$advanced), validation_datasets = nrow(designs$validation), time = mgfp_time()),
+      advancing_designs = sum(frozen$advanced), validation_datasets = nrow(eligible), time = mgfp_time()),
       file.path(cfg$output_root, "study_summary.json"))
   } else {
     mgfp_json_write(list(status = "complete_development_requires_scientific_review", article_replaced = FALSE,

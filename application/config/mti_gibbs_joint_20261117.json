@@ -15,6 +15,9 @@
   "independent_coordinates": {"center": 0, "scale": 1, "estimated_from_analysis_sample": false},
   "learning_rate": 1,
   "radius_multiplier": 1,
+  "assessment_revision": 2,
+  "width_reference": "frozen_calibrated_R0",
+  "validation_domain": "advancing_designs_only",
   "maximum_initial_rules": 5,
   "maximum_refinement_rules": 2,
   "selection": {

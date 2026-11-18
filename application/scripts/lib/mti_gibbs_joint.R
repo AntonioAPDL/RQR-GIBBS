@@ -5,6 +5,8 @@ mjc_validate <- function(cfg) {
     cfg$independent_coordinates$center == 0 && cfg$independent_coordinates$scale == 1 &&
     !cfg$independent_coordinates$estimated_from_analysis_sample && cfg$learning_rate == 1 &&
     cfg$radius_multiplier == 1 && !cfg$automatic_article_replacement && !cfg$application_transfer &&
+    cfg$assessment_revision == 2 && cfg$width_reference == "frozen_calibrated_R0" &&
+    cfg$validation_domain == "advancing_designs_only" &&
     cfg$maximum_initial_rules == 5 && cfg$maximum_refinement_rules == 2 &&
     cfg$development_replications == 100 && cfg$initial_check_replications == 12 &&
     cfg$expected_cells == 72 && cfg$validation_replications == 1000 &&
@@ -144,9 +146,10 @@ mjc_select <- function(y, anchor, rule, content, variant) {
 
 mjc_sampler_hashes <- function() {
   paths <- c("application/scripts/lib/mti_gibbs_practical.R",
-    "application/scripts/lib/mti_gibbs_width_diagnosis.R", "application/scripts/lib/mti_gibbs_joint.R")
+    "application/scripts/lib/mti_gibbs_width_diagnosis.R")
   root <- if (file.exists(paths[1])) "." else "../../.."
-  as.list(setNames(vapply(file.path(root, paths), mwd_file_hash, ""), paths))
+  list(version = 2L, files = as.list(setNames(vapply(file.path(root, paths), mwd_file_hash, ""), paths)),
+    sampling_function = mwd_hash(list(formals(mjc_sample), body(mjc_sample))))
 }
 
 mjc_target_key <- function(y, target, sd, cfg, policy) mwd_hash(list(
@@ -191,11 +194,30 @@ mjc_interval <- function(record) {
   interval
 }
 
-mjc_scores <- function(rows, cfg) {
+mjc_reference_radius <- function(radius, designs) {
+  r <- data.table::as.data.table(radius)
+  keys <- c("n", "content", "tolerance_confidence")
+  mwd_require(all(c(keys, "rule", "multiplier") %in% names(r)), "Incomplete reference radius policy.")
+  r <- r[rule == "proposed"]
+  mwd_require(!anyDuplicated(r[, ..keys]) && all(is.finite(r$multiplier) & r$multiplier > 0),
+    "Duplicate or invalid reference radius policy.")
+  d <- unique(data.table::as.data.table(designs)[, ..keys])
+  out <- merge(d, r[, c(keys, "multiplier"), with = FALSE], by = keys, all.x = TRUE)
+  mwd_require(nrow(out) == nrow(d) && !anyNA(out$multiplier), "Missing design or confidence in reference radius policy.")
+  out
+}
+
+mjc_scores <- function(rows, cfg, radius) {
   d <- data.table::as.data.table(rows)
-  reference <- d[rule == "R0", .(job_id, response_id, reference_width = width,
+  policy <- mjc_reference_radius(radius, d)
+  reference <- d[rule == "R0", .(job_id, response_id, n, content, tolerance_confidence, reference_width = width,
     reference_returned = returned, reference_attained = attained)]
+  mwd_require(!anyDuplicated(reference[, .(job_id, response_id)]), "Duplicate R0 developmental results.")
+  reference <- merge(reference, policy, by = c("n", "content", "tolerance_confidence"))
+  reference[, reference_width := reference_width * multiplier]
+  reference[, c("n", "content", "tolerance_confidence", "multiplier") := NULL]
   z <- merge(d[rule != "R0"], reference, by = c("job_id", "response_id"))
+  mwd_require(nrow(z) == nrow(d[rule != "R0"]), "Missing R0 developmental results.")
   if (!nrow(z)) return(list(scores = data.table::data.table(), cells = data.table::data.table()))
   bound <- function(x) {
     if (length(x) < 2 || any(!is.finite(x))) return(Inf)

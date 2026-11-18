@@ -96,7 +96,8 @@ For an alternative to advance, require:
 - Complete numerical calculations and no nonreturns.
 - Observed actual Gibbs attainment at least p in each of the eight laws,
   both across all 100 datasets and across replications 13--100.
-- Worst-law mean Gibbs width ratio at most .99 relative to R0.
+- Worst-law mean Gibbs width ratio at most .99 relative to the separately
+  frozen, calibrated R0 interval.
 - Negative upper 95% paired mean-log width-change bounds in every law,
   and width improvement in every law among replications 13--100.
 
@@ -109,8 +110,16 @@ Where no initial alternative advances, allow one refinement of at most
 two further rules from the same full ECM comparison: the next attainable
 and next unrestricted choices. Reassess all 100 datasets and every law in
 that design, with checked target reuse. No second refinement is automatic.
-Select at most one new rule per design. Nonadvancing designs retain R0,
-explicitly as unchanged comparisons rather than successful new methods.
+Select at most one new rule per design. A nonadvancing design has no selected
+alternative and no row named `gibbs_new_unscaled`. R0 remains a named reference.
+
+Assessment revision 2 uses the predecessor's `proposed` radius policy, checked
+against both frozen selection and radius hashes. If its multiplier in a design
+is s, the developmental Gibbs width ratio is divided by s, and its paired
+log-width bound shifts by -log(s). Proposed endpoints and posterior draws are
+unchanged. ECM nomination remains explicitly an ECM proxy: the constant
+rescaling cannot change its within-design ordering. Raw R0 is retained as a
+diagnostic, rather than used as the primary width threshold.
 
 Multiple Gibbs candidates per rule remain a separately reviewed question.
 The experiment records the checked ECM candidate count and review status;
@@ -121,7 +130,9 @@ global minimum posterior-mean width.
 
 If no design advances, stop and retain the negative developmental result.
 If at least one advances, freeze the complete design-specific procedure
-and then evaluate 1000 fresh datasets per case. No further calibration
+and then evaluate 1000 fresh datasets per law in each advancing design only.
+The exact task subset is frozen and hashed before its observations are generated.
+There are 8,000 jobs per advancing design, at most 72,000 overall. No further calibration
 panel is needed because the final observations do not change the rule.
 
 Compare the new unscaled rule, R0 unscaled, R0 with its separately frozen
@@ -164,6 +175,19 @@ MTI_JOINT_OUTPUT_ROOT=/var/tmp/jaguir26-mti-studies/joint_rehearsal MTI_JOINT_WO
 make launch-mti-gibbs-joint
 make health-mti-gibbs-joint
 ```
+
+For the controlled mode-only transition from source `99d8a31`, set
+`MTI_JOINT_REUSE_ROOT` to its stopped output directory when scheduling the
+new committed source. The old study must have no saved Gibbs-development fits.
+The import checks package, R/RNG, generators, seed allocations, dependency,
+all unchanged supporting programs, mode-fitting function expressions, task
+receipts, sample hashes, actual priors, and candidate accuracy. It copies only
+complete successful fits, retaining their exact bytes and original receipt
+hashes in new origin records. Corruption or changed computation stops reuse.
+Interrupted writes remain in the old directory and are recomputed only when
+they lack a complete receipt. The source directory is never modified.
+This is a specific interrupted-stage transition, not permission to relabel
+old posterior calculations under a changed model.
 
 `MTI_JOINT_OUTPUT_ROOT` is an optional local rehearsal directory; production
 uses the launcher's fixed output link. The launcher freezes a clean committed checkout and the predecessor's

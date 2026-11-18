@@ -23,6 +23,13 @@ mjs_context <- function(cfg, dependency) {
   context$reference <- reference[, .(n, content, tolerance_confidence, rule = "R0", gamma,
     prior_sd = 2, concentration = 1, base_sd = 4, model = "sd2_a1_h4", reference_dp = TRUE)]
   context$dependency <- dependency
+  radius_path <- file.path(dependency$output_root, "calibrated_radius.rds")
+  frozen_radius <- mwd_json(file.path(dependency$output_root, "frozen_radius.json"))
+  mwd_require(identical(frozen_radius$radius_sha256, mwd_file_hash(radius_path)) &&
+    identical(frozen_radius$selection_sha256, dependency$selection_sha256), "Frozen predecessor radius changed.")
+  context$radius <- readRDS(radius_path)
+  mjc_reference_radius(context$radius, context$reference)
+  context$frozen_radius <- frozen_radius
   saved <- mwd_json(file.path(context$boundary, "manifest.json"))$identity
   mwd_require(identical(saved$configuration$sampling, cfg$sampling), "Saved Gibbs sampling settings differ.")
   mgfp_check_hashes(saved$programs[c("application/scripts/lib/mti_gibbs_practical.R",
@@ -306,11 +313,22 @@ mjs_freeze <- function(scores, selections, cfg) {
     chosen <- selections[selections$n == n0 & selections$content == c0 & selections$rule == selected_rule, ]
     reference <- selections[selections$n == n0 & selections$content == c0 & selections$rule == "R0", ]
     mwd_require(nrow(chosen) == 1 && nrow(reference) == 1, "A design selection is ambiguous.")
-    chosen$method <- "gibbs_new_unscaled"; chosen$advanced <- selected_rule != "R0"; chosen$slot <- 2L
     reference$method <- "gibbs_R0_unscaled"; reference$advanced <- FALSE; reference$slot <- 1L
-    choices[[length(choices) + 1L]] <- data.table::rbindlist(list(reference, chosen), fill = TRUE)
+    if (selected_rule != "R0") {
+      chosen$method <- "gibbs_new_unscaled"; chosen$advanced <- TRUE; chosen$slot <- 2L
+      choices[[length(choices) + 1L]] <- data.table::rbindlist(list(reference, chosen), fill = TRUE)
+    } else choices[[length(choices) + 1L]] <- reference
   }
   data.table::rbindlist(choices, fill = TRUE)
+}
+
+mjs_validation_domain <- function(tasks, frozen) {
+  keys <- c("n", "content", "tolerance_confidence")
+  advancing <- unique(data.table::as.data.table(frozen)[advanced == TRUE, ..keys])
+  d <- data.table::as.data.table(tasks)
+  selected <- merge(d, advancing, by = keys)
+  data.table::setorder(selected, job_id)
+  as.data.frame(selected[, names(d), with = FALSE])
 }
 
 mjs_final_job <- function(task, frozen, cfg, context) {
@@ -318,7 +336,8 @@ mjs_final_job <- function(task, frozen, cfg, context) {
   rules <- as.data.frame(frozen[frozen$n == task$n & frozen$content == task$content, ])
   anchors <- lapply(unique(c(2, rules$prior_sd)), function(sd) mjc_fit_anchor(y, task, sd, cfg, context))
   names(anchors) <- as.character(unique(c(2, rules$prior_sd)))
-  # Retain method labels even when an unchanged design uses R0 twice.
+  mwd_require(sum(rules$advanced) == 1 && nrow(rules) == 2,
+    "Independent assessment requires an advancing alternative, without substitution.")
   rules$rule <- rules$method
   value <- mjs_gibbs(task, anchors, rules, cfg, context)
   r0 <- data.table::copy(value$rows[rule == "gibbs_R0_unscaled"])
@@ -353,6 +372,7 @@ mjs_preserve <- function(cfg, identity) {
     "development/tasks.csv", "development/manifest.json", "refinement/tasks.csv", "refinement/manifest.json",
     "development_results.csv", "development_scores.csv", "development_cells.csv", "refinement_selection.csv",
     "frozen_selection.csv", "frozen_selection.rds", "frozen_policy.json", "candidate_profile_review.json",
+    "reuse_source.json", "modes/reuse_receipt.json", "eligible_validation_tasks.rds",
     "validation/interval_results.csv", "validation/comparison_summary.csv", "validation/paired_comparison.csv",
     "validation/tasks.csv", "validation/manifest.json", "validation/width_and_attainment.pdf",
     "study_summary.json", "rehearsal.json", "rehearsal_traces.pdf")
@@ -376,7 +396,14 @@ mjs_verify <- function(directory, cfg) {
     actual <- mjc_summary(rows, cfg)
     keys <- c("n", "content", "response_id", "method")
     data.table::setorderv(actual, keys); data.table::setorderv(expected, keys)
-    mwd_require(nrow(actual) == cfg$expected_cells * 6 &&
+    domain <- readRDS(file.path(directory, "eligible_validation_tasks.rds"))
+    frozen <- mwd_json(file.path(directory, "frozen_policy.json"))
+    mwd_require(frozen$validation_tasks_sha256 == mwd_hash(domain), "Frozen validation domain changed.")
+    expected_cases <- unique(data.table::as.data.table(domain)[, .(n, content, response_id)])
+    methods <- c("gibbs_new_unscaled", "gibbs_R0_unscaled", "gibbs_R0_scaled", "ecm_primary", "young_mathew", "wilks")
+    mwd_require(nrow(rows) == nrow(domain) * length(methods) && setequal(rows$method, methods) &&
+      setequal(rows$job_id, domain$job_id) &&
+      nrow(actual) == nrow(expected_cases) * length(methods) &&
       all(actual$samples == cfg$validation_replications) &&
       isTRUE(all.equal(as.data.frame(actual), as.data.frame(expected), tolerance = 1e-10, check.attributes = FALSE)),
       "The independent comparison does not reproduce its interval data.")
@@ -386,7 +413,7 @@ mjs_verify <- function(directory, cfg) {
 
 mjs_report <- function(rows, cfg) {
   d <- data.table::as.data.table(rows)
-  reference <- d[method == "gibbs_R0_unscaled", .(job_id, reference_width = width,
+  reference <- d[method == "gibbs_R0_scaled", .(job_id, reference_width = width,
     reference_returned = returned, reference_attained = attained)]
   paired <- merge(d[method == "gibbs_new_unscaled"], reference, by = "job_id")
   comparison <- paired[, {
@@ -399,6 +426,7 @@ mjs_report <- function(rows, cfg) {
       paired_width_upper = if (is.finite(se)) mean(differences) + qt(.975, .N - 1) * se else NA_real_,
       newly_attained = sum(attained & !reference_attained), lost_attainment = sum(!attained & reference_attained))
   }, by = .(n, content, response_id)]
+  comparison[, reference_method := "gibbs_R0_scaled"]
   mwd_write(comparison, file.path(cfg$output_root, "validation/paired_comparison.csv"))
   summary <- mjc_summary(rows, cfg)
   methods <- c("gibbs_new_unscaled", "gibbs_R0_unscaled", "gibbs_R0_scaled", "ecm_primary", "young_mathew", "wilks")
