@@ -8,6 +8,25 @@ joint_candidates <- function() data.frame(candidate_index = 1:4, target_content 
   mean_tilt = 0, central_tilt = 0, lower = -c(1,2,3,4), upper = c(1,2,3,4), width = c(2,4,6,8),
   finite_interval = TRUE, numerically_accurate = TRUE, posterior_content_probability = c(.6,.8,.95,1))
 
+testthat::test_that("the actual launcher allocates workers for idle and busy hosts", {
+  testthat::skip_if(!nzchar(Sys.which("bash")) || !nzchar(Sys.which("awk")))
+  launcher <- readLines(file.path(root, "application/scripts/134_launch_mti_gibbs_joint.sh"))
+  allocation <- launcher[grepl("^  (free=|export MTI_JOINT_WORKERS=)", launcher)]
+  testthat::expect_length(allocation, 2L)
+  fixture <- tempfile(); on.exit(unlink(fixture))
+  allocation <- gsub("$(getconf _NPROCESSORS_ONLN)", "64", allocation, fixed = TRUE)
+  allocation <- gsub("/proc/loadavg", shQuote(fixture), allocation, fixed = TRUE)
+  command <- paste(c("set -euo pipefail", allocation, 'printf "%s\\n" "$MTI_JOINT_WORKERS"'), collapse = "\n")
+  loads <- c(0, 30.4, 63.5, 64, 80)
+  expected <- c(40L, 33L, 1L, 1L, 1L)
+  for (i in seq_along(loads)) {
+    writeLines(sprintf("%g 0 0 1/1 1", loads[i]), fixture)
+    value <- system2("bash", c("-c", shQuote(command)), stdout = TRUE, stderr = TRUE)
+    testthat::expect_null(attr(value, "status"))
+    testthat::expect_identical(value, as.character(expected[i]))
+  }
+})
+
 testthat::test_that("the fixed independent coordinates and unscaled definition are enforced", {
   cfg <- joint_config(); testthat::expect_true(mjc_validate(cfg))
   testthat::expect_equal(nrow(mjc_models(cfg)), 18)

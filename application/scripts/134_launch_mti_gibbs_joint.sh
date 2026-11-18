@@ -35,7 +35,7 @@ if "$foreground"; then
   done
   Rscript application/scripts/131_assess_mti_gibbs_decisions.R verify "$predecessor"
   # Respect other users' activity as well as the forty-worker ceiling.
-  free=$(awk -v cores="$(getconf _NPROCESSORS_ONLN)" '{n=int(cores-$1); print n>0?n:1}' /proc/loadavg)
+  free=$(awk -v cores="$(getconf _NPROCESSORS_ONLN)" '{n=int(cores-$1); print (n>0?n:1)}' /proc/loadavg)
   export MTI_JOINT_WORKERS=$(( free < 40 ? free : 40 ))
   Rscript application/scripts/133_assess_mti_gibbs_joint.R prepare
   Rscript application/scripts/133_assess_mti_gibbs_joint.R check
