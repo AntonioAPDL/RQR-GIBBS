@@ -4,8 +4,8 @@
 
 This separate experiment asks whether fixed root priors, Dirichlet-process
 (DP) assumptions, and a design-specific candidate probability threshold can
-improve unscaled posterior-mean intervals. It does not alter the current
-manuscript, application, or running radius-calibration experiment.
+improve unscaled posterior-mean intervals. It preserves the completed
+radius-calibration study and the current manuscript and application results.
 
 The configuration is `application/config/mti_gibbs_joint_20261117.json`.
 The statistical functions are in `application/scripts/lib/mti_gibbs_joint.R`;

@@ -988,6 +988,14 @@ health-mti-gibbs-joint:
 verify-mti-gibbs-joint:
 	$(R) application/scripts/133_assess_mti_gibbs_joint.R verify
 
+.PHONY: report-mti-gibbs-decisions verify-mti-gibbs-decision-report test-mti-gibbs-decision-report
+report-mti-gibbs-decisions:
+	$(R) application/scripts/135_report_mti_gibbs_decisions.R render
+verify-mti-gibbs-decision-report:
+	$(R) application/scripts/135_report_mti_gibbs_decisions.R verify
+test-mti-gibbs-decision-report:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-decision-reporting.R
+
 report-mti-fixed-prior:
 	$(R) application/scripts/125_report_mti_fixed_prior.R render
 
@@ -1075,7 +1083,7 @@ render-mti-gibbs-full-publication:
 verify-mti-gibbs-full-publication:
 	$(R) application/scripts/114_report_mti_gibbs_full_assessment.R --mode=verify
 
-pdf supplement: verify-mti-fixed-prior-report verify-mti-gibbs-closeout
+pdf supplement: verify-mti-fixed-prior-report verify-mti-gibbs-closeout verify-mti-gibbs-decision-report
 
 launch-mti-gibbs:
 	bash application/scripts/107_launch_mti_gibbs.sh --confirm-article-commit=$(GIBBS_CONFIRM_COMMIT) --workers=50 --allow-full=true
@@ -1083,11 +1091,11 @@ launch-mti-gibbs:
 health-mti-gibbs:
 	$(R) application/scripts/105_compare_mti_gibbs_ecm.R --mode=health --output-dir=$(GIBBS_OUTPUT_DIR)
 
-arxiv-source: verify-mti-fixed-prior-report verify-mti-gibbs-closeout
+arxiv-source: verify-mti-fixed-prior-report verify-mti-gibbs-closeout verify-mti-gibbs-decision-report
 	bash application/scripts/31_prepare_arxiv_source.sh
 
 .PHONY: article-handoff test-manuscript-source-package
-article-handoff: verify-mti-fixed-prior-report verify-mti-gibbs-closeout
+article-handoff: verify-mti-fixed-prior-report verify-mti-gibbs-closeout verify-mti-gibbs-decision-report
 	bash application/scripts/31_prepare_arxiv_source.sh --include-supplement=true
 
 test-manuscript-source-package:

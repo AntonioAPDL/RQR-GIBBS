@@ -1,0 +1,30 @@
+{
+  "source_commit": "e8456e7717e2a863acfe2917efc303a206cd890d",
+  "identity_hash": "9c22ebea2d1ab97081c42c124302c0b415a76a40eee7f6c9fa37c791ae9c1c42",
+  "artifacts": {
+    "manifest.json": "92e99f3b502c0766b956b559bc18772650bf85c82be18a48ffc2bf10339c26fa",
+    "replay/summary.json": "150cc2e43198eef028a73551d4e2f0677299e16c26c6fd7c59d6ef6cb77150b5",
+    "replay/shortlist.csv": "3869cc6cca72a13f5008ba328979e2a185eaf711d0e04ada2a5cd15517cc6c14",
+    "replay/radius_law_comparison.csv": "99721267b29afccdec6068ce96d11cf58dcc15733044ddf3bc6d7fbe0e1a4905",
+    "replay/radius_design_comparison.csv": "6d550a100e3bf18481f860461494379582a3c6c8874392faa70594fdb75d6058",
+    "materiality_decision.json": "91d57f724027e227e710cb64ae6cc8ca54f301e878334e5a3c7dbd499200940b",
+    "exploratory_policy.csv": "befa615dcb5b3af24697bfe52cd31ac12b869d8a13d8a21f594c3df7b5ef39f1",
+    "exploratory_scores.csv": "662745fc3425efc8833050282ec9dde09f912bd910586afb511d38ae0cd31401",
+    "exploratory_cells.csv": "e4b3784ea521b9fffb18f6fc8f901df33eabda060aab15cad47d06fc8bce7d77",
+    "frozen_selection.rds": "5fd01cf0332676d047f63a846a6f2d28de2b2285f6251a4829ada58383d5af4d",
+    "frozen_policy.json": "84abc0696977dd966490b1733f91eeac0c6689c5660f650eec299df7f95e27de",
+    "frozen_radius.json": "9f11dedc7a7f07e46bb8cd53672930e39e1436cc4712353ef2037424df3d7867",
+    "calibration_policy.csv": "e1cbaf053151f983d46f54d7fd01e13a75be07a8f1bb6ad9da8df3605a5aa2fe",
+    "calibration_cells.csv": "a26e92a2b9ac1f5bfb9cb1f306680b90288024c193a6d68e8eba822f11733bc8",
+    "calibrated_radius.rds": "a6396a53927475c03c30857dc298def755210b106b44a4219be139bc616f7e45",
+    "validation/tasks.csv": "3fe88b848dd0553727baaa2997186d322734b47703352aa43069273d596463b4",
+    "validation/posterior_summary.csv": "fdc1977a7e082219b95b981e7c2dc3d8712ee3fd63e7f1f9b7fd6bd822b1ae9f",
+    "validation/interval_results.csv": "c0e7bce59eed3ea367b27f64ab97185eb3e38c3b0053d1d567c262bff585f3aa",
+    "validation/comparison_summary.csv": "f7cc63be93bb83923586cc266bccbf6a06bd127f7b32caf1340945a55366679d",
+    "validation/paired_comparison.csv": "3269e92523e5c370e974ee5215a886843d5cd208e12a2a51fac5174d70484dc4",
+    "validation/width_and_attainment.pdf": "0273437af5ee30f28cee9474ba6ee8dabfd62cad49292510fc632a6c67748336"
+  },
+  "original_article_unchanged": true,
+  "statistical_assurance": "declared_finite_panel_only",
+  "created": "2026-11-18 06:28:34 UTC"
+}

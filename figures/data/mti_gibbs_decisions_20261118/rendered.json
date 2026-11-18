@@ -1,0 +1,42 @@
+{
+  "inputs": {
+    "figures/data/mti_gibbs_decisions_20261118/comparison_summary.csv": "0c6f8d50e2ba118c4af6c718dd822c5bad23d768721057c9ba84876a4b136190",
+    "figures/data/mti_gibbs_decisions_20261118/completed_calibration_policy.csv": "e1cbaf053151f983d46f54d7fd01e13a75be07a8f1bb6ad9da8df3605a5aa2fe",
+    "figures/data/mti_gibbs_decisions_20261118/completed_evidence_receipt.json": "c89013be16ec812b2e81805aefce6824b7800e92bfa968585bad9c4f035a3c8f",
+    "figures/data/mti_gibbs_decisions_20261118/completed_frozen_radius.json": "9f11dedc7a7f07e46bb8cd53672930e39e1436cc4712353ef2037424df3d7867",
+    "figures/data/mti_gibbs_decisions_20261118/completed_frozen_selection.csv": "bf97f5580c9e031d6d14624c59eb4a42963b7e370c2cf87728f3c08e0846c52a",
+    "figures/data/mti_gibbs_decisions_20261118/completed_manifest.json": "92e99f3b502c0766b956b559bc18772650bf85c82be18a48ffc2bf10339c26fa",
+    "figures/data/mti_gibbs_decisions_20261118/numerical_summary.json": "882d29545353b4286ded26e202c3d646e69f6bde2d45ad49d8374e445bdd09a5",
+    "figures/data/mti_gibbs_decisions_20261118/proposed_summary.csv": "90b2ead9a064d6210c2971d6af4692ff0c5d36218e384a8534631a86bb88587a",
+    "figures/data/mti_gibbs_decisions_20261118/provenance.json": "b2be9175c3b1c891f690b0e1352eff31705486a1d7e3b3a8e5ba98bf2873d49f",
+    "figures/data/mti_gibbs_decisions_20261118/width_comparison.csv": "36781ad35d4a937dd2d9fe8f608e55ab8b8973ab9fbe5b7fcb669d0e4f7d9635",
+    "figures/data/tolerance_population_shortest_content_oracle.csv": "946fc574dae08978c05ee30e69f59b0cac16d1c2b963aca007b18fc5ce7242bf"
+  },
+  "programs": {
+    "application/scripts/135_report_mti_gibbs_decisions.R": "57b6a72dc7ce63a5eb4c195c79f2881612a3242e8463bedaa8caff84cc5b4775",
+    "application/scripts/lib/mti_gibbs_decision_reporting.R": "95ed3b59ed123fc05791029d0c6130286a710ca1242c2b7568126b75acff741f",
+    "application/config/mti_gibbs_decision_reporting_20261118.json": "0452ff8d57e82a03d8428cc1d4c3289e083aa1f5d5394bcd5e49af42af46b04e"
+  },
+  "artifacts": {
+    "tables/mti_gibbs_decisions_20261118/comparison.tex": "442c92b03a9c2d766aa8bda49afdbd48b82a9d668c436decd830215cb91158f9",
+    "tables/mti_gibbs_decisions_20261118/numbers.tex": "29c3f30219a23cef7a5ff442946f269ba23efa5fdb5d2e8509639da8b8f2d0eb",
+    "figures/generated/mti_gibbs_decisions_20261118/attainment_n100_c90.pdf": "692a901daf3923d6d3a7da9ba31b6dd40d8acd6238661fbabc883676ee2684af",
+    "figures/generated/mti_gibbs_decisions_20261118/attainment_n100_c95.pdf": "c304a1c67b20b98708bf172c47e418075c1cc942d001f410389759a894b0f9f0",
+    "figures/generated/mti_gibbs_decisions_20261118/attainment_n1000_c90.pdf": "59555af6b725ca0a37e626841efe1a1ffa845e622df3b7e7f3b2472c2c4327c7",
+    "figures/generated/mti_gibbs_decisions_20261118/attainment_n1000_c95.pdf": "e7ac5890f1cbca7a38c27d3c8b4632ec1588dc9635851cca94472a2ffe873bd4",
+    "figures/generated/mti_gibbs_decisions_20261118/attainment_n1000_c99.pdf": "d6e19c1091bceb740e6a8fbe2f70acc4c6b8fe9a7806ace35a4f855e30f8aa3d",
+    "figures/generated/mti_gibbs_decisions_20261118/attainment_n50_c90.pdf": "dd8f1c22e1b107ecda7f93977b68bce6793990e7969f9a36924069c6eaa1cd96",
+    "figures/generated/mti_gibbs_decisions_20261118/attainment_n500_c90.pdf": "c6621feb4293458106ac24ddccd343723493e987421f95e3c165bb8c4496bbe3",
+    "figures/generated/mti_gibbs_decisions_20261118/attainment_n500_c95.pdf": "762ee22761af1ea6fa880d72b213dbccb3fa53f54ae3836be23d194662a88ec4",
+    "figures/generated/mti_gibbs_decisions_20261118/attainment_n500_c99.pdf": "7ffc671b679077924136d6921bb0e8dec445887b2d14e8fb9720282092810cb6",
+    "figures/generated/mti_gibbs_decisions_20261118/width_n100_c90.pdf": "a5b13d19e3f159f49f477b6f940b75faf4021adc8223dceeca0bb19863426b81",
+    "figures/generated/mti_gibbs_decisions_20261118/width_n100_c95.pdf": "a3121dfce8f6457180dd837fb4b0c02c504efdf28b937c5527fdc49593942526",
+    "figures/generated/mti_gibbs_decisions_20261118/width_n1000_c90.pdf": "24351165208b83e05ad18248960a985485035ee22c2d47ffc650645cec496d81",
+    "figures/generated/mti_gibbs_decisions_20261118/width_n1000_c95.pdf": "87fe387c50b2914ce95b80c78007977d838cff028f761cfd44f4f96963ed7dbf",
+    "figures/generated/mti_gibbs_decisions_20261118/width_n1000_c99.pdf": "c3483a6634f2199881ed0e19bfd3c6f764eb22254b5ec86b18bee98bac50787f",
+    "figures/generated/mti_gibbs_decisions_20261118/width_n50_c90.pdf": "1945b0f6d1b30de9efd8900de2e5167ac6c456fa7cd807f30bd4bb420592e92f",
+    "figures/generated/mti_gibbs_decisions_20261118/width_n500_c90.pdf": "1b8ff478619e5f8198683e7a703e8f48a0215e979eef2df64ffb1cb4aba185d1",
+    "figures/generated/mti_gibbs_decisions_20261118/width_n500_c95.pdf": "686ff7973f9f1bf19557c7687dd46c7e63d42509f7bc82adadd83f7c8c1a5eda",
+    "figures/generated/mti_gibbs_decisions_20261118/width_n500_c99.pdf": "5e69842126120d6c46a57cfb65098300f588957035a233c343728330c146a30d"
+  }
+}

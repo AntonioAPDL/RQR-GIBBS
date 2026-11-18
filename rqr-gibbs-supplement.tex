@@ -35,6 +35,7 @@
 \newcommand{\RHS}{\mathrm{RHS}}
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.08}}
 \input{tables/mti_fixed_prior_20261115/numbers.tex}
+\input{tables/mti_gibbs_decisions_20261118/numbers.tex}
 \input{tables/mti_gibbs_boundary_20261116/numbers.tex}
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
@@ -1618,52 +1619,117 @@ ECM-selected fitted content \(q\), project the selected tilt onto
  [\delta_-+\varepsilon_n(\delta_+-\delta_-),\,
    \delta_+-\varepsilon_n(\delta_+-\delta_-)].
 \]
-The two outward loss slopes are then positive. A separate assessment
-compares the original tilt with margins \(\log(n)/n\) and
-\(1/\sqrt n\) on the 864 original development samples. One rule per design
-is selected by the largest, then average, log mean-width ratio to ECM
-across the eight laws, after a preliminary radius adjustment computed
-from the development samples. The original
-tilt is retained at \(n=50,c=0.90\); the square-root margin is selected in
-the other eight designs. Each Gibbs calculation holds \(q\) and its
-resulting tilt fixed and retains the independent \(\Normal(0,2^2)\)
-root priors and learning rate one.
+The two outward loss slopes are then positive. An initial comparison
+uses margins \(\log(n)/n\) and \(1/\sqrt n\) on 864 development samples.
+The original tilt is retained at \(n=50,c=0.90\); the square-root margin
+is selected in the other eight designs. Each Gibbs calculation holds
+\(q\) and its resulting tilt fixed, with independent
+\(\Normal(0,2^2)\) root priors and learning rate one.
+
+The assessment also considers the DP probability threshold
+\(\gamma\), which determines candidate eligibility before Gibbs sampling.
+The candidates' DP content probabilities determine the thresholds examined
+during development. At most two alternatives per design are compared on
+100 previously generated samples per law. The selected threshold changes
+only at \(n=500,c=0.90\), from \(0.995\) to approximately \(0.8374\).
+The original thresholds remain fixed in the other eight designs. This
+selection uses repeated-sampling attainment and width during development;
+the chosen procedure is then fixed before independent calibration and
+validation. The DP prior remains concentration one with base
+\(\Normal(0,4^2)\). The threshold is a posterior eligibility probability,
+distinct from the requested frequentist tolerance confidence \(p=0.95\).
 
 Let \(m\) and \(h\) be the midpoint and half-width of the posterior-mean
 endpoint interval. The reported interval is \([m-sh,m+sh]\), with a
 positive multiplier \(s\) selected on independent calibration samples.
 For each law and design, the known simulation CDF determines the minimum
 multiplier required to reach content \(c\). Endpoint estimation uses only
-the training observations. With 200 calibration samples per case, the smallest
+the training observations. With 1000 calibration samples per case, the smallest
 order-statistic rank satisfying
 \[
- \Pr\{\operatorname{Bin}(200,0.95)\le j-1\}
- \ge 1-0.05/72
+ \Pr\{\operatorname{Bin}(1000,0.95)\le j-1\}
+ \ge 1-0.05/144
 \]
-is \(j=199\). The largest of these order statistics across the eight laws
-defines \(s\) for that design. The classical order-statistic argument
+is \(j=973\). The confidence budget covers both the unchanged-threshold
+and selected-threshold rules in all 72 cases. For each rule and design,
+the largest of its eight law-specific order statistics defines \(s\).
+The classical order-statistic argument
 \citep{Wilks1941ToleranceLimits} gives simultaneous calibration confidence
 of at least \(0.95\) that repeated-sampling attainment reaches \(0.95\)
-in the 72 specified cases, conditional on the independently selected rule.
+in these 144 rule/case comparisons, conditional on development.
 The rescaling changes the interval decision while preserving the fitted
 generalized posterior. Its assurance concerns the declared simulation
 panel; use with an unknown distribution or an application requires
 additional justification.
 
-A further 100 independent samples per case assess the preassigned rules. All
-fits meet the prescribed numerical criteria, with maximum \(\widehat R\)
-below \(1.009\). Calibrated Gibbs attainment ranges from \(98/100\) to
-\(100/100\). Its mean width exceeds ECM in all 72 cases, while remaining
-smaller than Young--Mathew in 29 and Wilks in 48. Each width comparison
-uses common samples within a distribution and design. In the Student
-\(t_3\), \(n=500,c=0.99\) case, the empirical projection leaves the
-selected tilts unchanged. Radius calibration raises attainment from
-\(91/100\) to \(99/100\), increasing mean width from 11.86 to 12.83;
-ECM gives \(94/100\) and mean width 12.37.
+A further 1000 independent samples per case assess the preassigned procedures,
+with ECM, Young--Mathew, and Wilks recomputed on the same samples.
+All posterior calculations meet the numerical criteria; the largest
+\(\widehat R\) is \(\MTIDecisionMaxRhat\), the smallest bulk and tail
+effective sample sizes exceed 1116 and 978, respectively, and at most
+2000 retained draws per chain are needed. Calibrated Gibbs attainment
+ranges from \MTIDecisionAttainmentMin\% to \MTIDecisionAttainmentMax\%.
+All \MTIDecisionPointwise{} pointwise exact 95\% lower confidence bounds
+exceed \(0.95\). With a separate one-sided Bonferroni adjustment over 72
+validation statements, \MTIDecisionSimultaneous{} lower bounds exceed
+\(0.95\). These validation bounds quantify Monte Carlo uncertainty;
+the independent order-statistic calibration provides the finite-panel
+assurance described above.
 
-The Gaussian \(n=500,c=0.95\) pilot gives ECM attainment \(88/100\),
+Relative to the earlier radius rule, mean widths decrease by
+\MTIDecisionWidthGainMin\%--\MTIDecisionWidthGainMax\% across the 72 cases.
+The resulting Gibbs intervals are narrower on average than ECM in
+\MTIDecisionShorterECM{} cases, Young--Mathew in
+\MTIDecisionShorterYM{}, and Wilks in \MTIDecisionShorterWilks{}.
+Table~\ref{tab:supp-mti-calibrated-gibbs} shows the design-specific pattern.
+In particular, at \(n=500,c=0.99\), the calibrated Gibbs intervals
+are wider on average than all three comparators in each of the eight laws.
+Figures~\ref{fig:supp-mti-calibrated-gibbs-width}
+and~\ref{fig:supp-mti-calibrated-gibbs-attainment} display this case.
+Higher attainment accompanies the additional width. The earlier
+matched-target comparison isolates posterior averaging at fixed \(q,\delta\);
+this assessment also changes target selection and the reported half-width.
+
+\begin{table}[!htbp]
+\centering
+\caption{\textbf{Calibrated MTI-Gibbs assessment.} Attainment ranges are
+minimum--maximum percentages across the eight laws, each with 1000 fresh
+samples. The last three columns count laws with smaller Gibbs mean width
+than the named comparator on these same samples. Widths are compared within
+each law; the counts contain no averaging of raw widths across laws.}
+\label{tab:supp-mti-calibrated-gibbs}
+\TableStyle
+\input{tables/mti_gibbs_decisions_20261118/comparison.tex}
+\end{table}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_decisions_20261118/width_n500_c99.pdf}
+\caption{\textbf{Calibrated Gibbs widths at high target content.}
+Segments show empirical 2.5\%--97.5\% width ranges within each law at
+\(n=500,c=0.99,p=0.95\); crosses mark mean widths across 1000 samples.
+The logarithmic horizontal axis retains raw interval lengths.
+Dashed gray markers denote population shortest content-\(c\) widths,
+which serve as population references. Wilks intervals are solid black.}
+\label{fig:supp-mti-calibrated-gibbs-width}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_decisions_20261118/attainment_n500_c99.pdf}
+\caption{\textbf{Calibrated Gibbs content attainment at high target content.}
+Points show empirical attainment on the same samples as
+Figure~\ref{fig:supp-mti-calibrated-gibbs-width}; segments are pointwise
+exact 95\% binomial confidence intervals. The dashed line marks requested
+tolerance confidence \(0.95\). These confidence intervals describe
+Monte Carlo uncertainty in attainment, rather than ranges of population
+content within the fitted intervals.}
+\label{fig:supp-mti-calibrated-gibbs-attainment}
+\end{figure}
+
+The earlier Gaussian \(n=500,c=0.95\) pilot gives ECM attainment \(88/100\),
 compared with \(975/1000\) in the primary validation and \(189/200\)
-in the new calibration samples. Reanalysis of all 100 pilot samples and
+in that pilot's calibration samples. Reanalysis of all 100 pilot samples and
 the first 12 primary-validation samples reproduces every candidate and
 selected endpoint exactly. A further, preassigned independent confirmation
 with unchanged priors and controls gives
@@ -2069,10 +2135,16 @@ excluded from repeated-sampling attainment estimates. All empirical tables
 and figures in these sections use the fixed-prior results, while the earlier
 diffuse-prior calculations remain in the software archive.
 
-The interior-tilt assessment in
-Section~\ref{sec:supp-mti-interior-calibration} has separate records for
-864 development samples, 14,400 fresh calibration samples, and 7200
-independent pilot samples. The Gaussian confirmation uses a further
+The initial interior-tilt study used 864 development samples, 14,400
+calibration samples, and 7200 pilot samples. The threshold and
+radius assessment in Section~\ref{sec:supp-mti-interior-calibration}
+uses 7200 previously generated development samples, 72,000 independent
+calibration samples, and 72,000 further validation samples.
+Its tables and figures use these common independent samples for every comparator;
+the primary ECM comparison and historical matched-target diagnostics retain
+their original samples. Case-specific summaries, exact confidence bounds,
+width quantiles, source identifiers, and reproduction commands accompany
+the article. The Gaussian confirmation uses a further
 \MTIBoundaryConfirmationSamples{} samples with fixed priors and candidate
 rules. These additional experiments preserve the primary comparison and
 its original samples. Reproduction commands verify the same-data ECM

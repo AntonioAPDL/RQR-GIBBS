@@ -41,6 +41,7 @@
 \newcommand{\RHS}{\mathrm{RHS}}
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4.5pt}\renewcommand{\arraystretch}{1.12}}
 \input{tables/mti_fixed_prior_20261115/numbers.tex}
+\input{tables/mti_gibbs_decisions_20261118/numbers.tex}
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
 \newtheorem{theorem}{Theorem}
@@ -87,6 +88,8 @@ depend on sample size, content, and asymmetry. Fixed-target Gibbs calculations
 quantify endpoint uncertainty conditional on the selected content and tilt.
 Posterior-mean intervals generally increase width and content
 attainment, with an underattainment warning in one heavy-tailed setting.
+Independent interval calibration provides finite-panel tolerance assurance
+for a separate Gibbs rule.
 A historical pharmaceutical example examines interval placement, held-out
 empirical content, and sensitivity to data partitioning.
 \end{abstract}
@@ -1119,13 +1122,20 @@ The three-method comparison above retains the calibrated ECM rule; the
 additional Gibbs assessment isolates the effect of posterior averaging at
 the same selected targets.
 
-An independent supplementary assessment uses the empirical tilt limits to
-regularize target selection and separately calibrates the reported
-posterior-mean interval. It retains the same priors and evaluates the
-attainment--width tradeoff on 100 fresh samples per distribution and design.
-Its results and finite-panel calibration assumptions are given in the
-supplement's section on interior tilts and interval calibration, separately
-from the primary ECM comparison.
+A separate supplementary assessment projects boundary tilts toward the
+empirical interior and calibrates the half-width of the resulting
+posterior-mean interval. Root priors remain fixed; a developmental comparison
+also selects the DP probability threshold by sample size and target content.
+After independent calibration, 1000 fresh samples per distribution and design
+give Gibbs content attainment of
+\MTIDecisionAttainmentMin\%--\MTIDecisionAttainmentMax\%.
+Mean widths are smaller than ECM in \MTIDecisionShorterECM{} of 72 cases,
+Young--Mathew in \MTIDecisionShorterYM{}, and Wilks in
+\MTIDecisionShorterWilks{}. These comparisons use common samples within
+the new assessment, separately from the primary ECM results above.
+The supplement gives the calibration assumptions, case-specific results,
+and remaining conservatism. Its finite-panel calibration does not transfer
+automatically to a new response distribution or the application.
 
 
 \section{Pharmaceutical Batch Application}
@@ -1282,6 +1292,12 @@ in this case. Thus posterior-mean endpoints require their own calibration if
 they are to be used as a tolerance rule, while the posterior draws describe
 fixed-target uncertainty. The primary short-interval comparison uses the
 independently assessed ECM rule.
+
+The supplementary interval-calibration assessment improves Gibbs widths
+relative to the earlier radius rule while retaining high content attainment.
+It remains wider than ECM in most cases. Its threshold selection, tilt
+projection, and radius adjustment each contribute to the reported procedure;
+the comparison with ECM therefore concerns more than posterior averaging.
 
 The pharmaceutical application has a narrower role. It demonstrates how the
 precalibrated procedures behave on historical batch data, while the

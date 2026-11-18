@@ -1,0 +1,21 @@
+{
+  "source_commit": "e8456e7717e2a863acfe2917efc303a206cd890d",
+  "cohort": "independent_decision_validation",
+  "input_hashes": {
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_decision_e8456e7717e2a863acfe2917efc303a206cd890d/evidence_receipt.json": "c89013be16ec812b2e81805aefce6824b7800e92bfa968585bad9c4f035a3c8f",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_decision_e8456e7717e2a863acfe2917efc303a206cd890d/validation/interval_results.csv": "c0e7bce59eed3ea367b27f64ab97185eb3e38c3b0053d1d567c262bff585f3aa",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_decision_e8456e7717e2a863acfe2917efc303a206cd890d/validation/posterior_summary.csv": "fdc1977a7e082219b95b981e7c2dc3d8712ee3fd63e7f1f9b7fd6bd822b1ae9f",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_decision_e8456e7717e2a863acfe2917efc303a206cd890d/validation/comparison_summary.csv": "f7cc63be93bb83923586cc266bccbf6a06bd127f7b32caf1340945a55366679d"
+  },
+  "artifacts": {
+    "figures/data/mti_gibbs_decisions_20261118/comparison_summary.csv": "0c6f8d50e2ba118c4af6c718dd822c5bad23d768721057c9ba84876a4b136190",
+    "figures/data/mti_gibbs_decisions_20261118/completed_calibration_policy.csv": "e1cbaf053151f983d46f54d7fd01e13a75be07a8f1bb6ad9da8df3605a5aa2fe",
+    "figures/data/mti_gibbs_decisions_20261118/completed_evidence_receipt.json": "c89013be16ec812b2e81805aefce6824b7800e92bfa968585bad9c4f035a3c8f",
+    "figures/data/mti_gibbs_decisions_20261118/completed_frozen_radius.json": "9f11dedc7a7f07e46bb8cd53672930e39e1436cc4712353ef2037424df3d7867",
+    "figures/data/mti_gibbs_decisions_20261118/completed_frozen_selection.csv": "bf97f5580c9e031d6d14624c59eb4a42963b7e370c2cf87728f3c08e0846c52a",
+    "figures/data/mti_gibbs_decisions_20261118/completed_manifest.json": "92e99f3b502c0766b956b559bc18772650bf85c82be18a48ffc2bf10339c26fa",
+    "figures/data/mti_gibbs_decisions_20261118/numerical_summary.json": "882d29545353b4286ded26e202c3d646e69f6bde2d45ad49d8374e445bdd09a5",
+    "figures/data/mti_gibbs_decisions_20261118/proposed_summary.csv": "90b2ead9a064d6210c2971d6af4692ff0c5d36218e384a8534631a86bb88587a",
+    "figures/data/mti_gibbs_decisions_20261118/width_comparison.csv": "36781ad35d4a937dd2d9fe8f608e55ab8b8973ab9fbe5b7fcb669d0e4f7d9635"
+  }
+}

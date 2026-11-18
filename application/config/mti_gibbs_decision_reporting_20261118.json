@@ -1,0 +1,16 @@
+{
+  "completed_source": "e8456e7717e2a863acfe2917efc303a206cd890d",
+  "completed_evidence_sha256": "c89013be16ec812b2e81805aefce6824b7800e92bfa968585bad9c4f035a3c8f",
+  "evidence_root": "figures/data/mti_gibbs_decisions_20261118",
+  "table_root": "tables/mti_gibbs_decisions_20261118",
+  "figure_root": "figures/generated/mti_gibbs_decisions_20261118",
+  "cases": 72,
+  "samples_per_case": 1000,
+  "methods": ["gibbs_proposed", "ecm", "young_mathew", "wilks"],
+  "calibration_samples": 1000,
+  "calibration_rank": 973,
+  "calibration_comparisons": 144,
+  "calibration_error": 0.05,
+  "validation_error": 0.05,
+  "attainment_axis_minimum": 0.85
+}

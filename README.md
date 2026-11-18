@@ -92,11 +92,15 @@ shows the complete case-specific attainment and raw width comparisons.
 
 A separate [interval-selection and radius-calibration experiment](docs/reproducibility/mti_gibbs_decision_calibration.md)
 retains these independent priors while comparing the actual Gibbs decisions.
-It first reuses saved candidates, then evaluates at most two alternative
-thresholds per design. Independent calibration and validation run only if a
-predeclared width-improvement criterion is met. Use
-`make launch-mti-gibbs-decisions` and `make health-mti-gibbs-decisions`.
-Experimental results do not replace manuscript results automatically.
+It completed 7200 developmental, 72,000 independent calibration, and 72,000
+independent validation datasets. Calibrated Gibbs attainment is 96.4--100%,
+with smaller mean widths than ECM in 9/72 cases, Young--Mathew in 38/72,
+and Wilks in 51/72. The supplement reports this common-cohort comparison
+separately from the primary ECM results. See the
+[completed assessment and reproduction instructions](docs/reproducibility/mti_gibbs_decision_reporting.md).
+`make report-mti-gibbs-decisions` regenerates its tables, eighteen figures,
+and numerical macros from compact tracked evidence; no sampling is needed.
+`make verify-mti-gibbs-decision-report` checks those records and outputs.
 
 The [unscaled Gibbs comparison](docs/reproducibility/mti_gibbs_joint.md)
 compares independently fixed root priors, DP assumptions, and design-specific
@@ -107,6 +111,9 @@ developmental comparison precedes any independent 1000-replication assessment.
 verification of the preceding experiment; `make health-mti-gibbs-joint`
 reports its waiting or execution status. Neither study changes the article
 or pharmaceutical application automatically.
+Advancement uses the already frozen calibrated Gibbs reference, retaining
+unscaled reference intervals as diagnostics. A nonadvancing design has no
+new method; only advancing designs proceed to 1000 fresh samples per law.
 
 ## Statistical Framing
 

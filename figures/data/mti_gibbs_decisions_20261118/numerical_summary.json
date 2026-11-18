@@ -1,0 +1,13 @@
+{
+  "source_commit": "e8456e7717e2a863acfe2917efc303a206cd890d",
+  "cases": 72,
+  "datasets": 72000,
+  "interval_records": 432000,
+  "posterior_records": 144000,
+  "maximum_rhat": 1.00936266599242,
+  "minimum_bulk_ess": 1116.42703122959,
+  "minimum_tail_ess": 978.613030692378,
+  "maximum_retained_per_chain": 2000,
+  "pointwise_lower_above_p": 72,
+  "simultaneous_lower_above_p": 69
+}
