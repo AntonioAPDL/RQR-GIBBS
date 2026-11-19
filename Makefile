@@ -988,6 +988,20 @@ health-mti-gibbs-joint:
 verify-mti-gibbs-joint:
 	$(R) application/scripts/133_assess_mti_gibbs_joint.R verify
 
+.PHONY: test-mti-ecm-nominal prepare-mti-ecm-nominal check-mti-ecm-nominal launch-mti-ecm-nominal health-mti-ecm-nominal verify-mti-ecm-nominal
+test-mti-ecm-nominal:
+	$(R) -e 'p <- Sys.getenv("MTI_PRIOR_R_LIBRARY"); if (nzchar(p)) .libPaths(c(p, .libPaths())); testthat::test_file("application/tests/testthat/test-mti-ecm-nominal.R", reporter = "summary", stop_on_failure = TRUE)'
+prepare-mti-ecm-nominal:
+	$(R) application/scripts/136_assess_mti_ecm_nominal.R prepare
+check-mti-ecm-nominal:
+	$(R) application/scripts/136_assess_mti_ecm_nominal.R check
+launch-mti-ecm-nominal:
+	bash application/scripts/137_launch_mti_ecm_nominal.sh
+health-mti-ecm-nominal:
+	$(R) application/scripts/136_assess_mti_ecm_nominal.R health
+verify-mti-ecm-nominal:
+	$(R) application/scripts/136_assess_mti_ecm_nominal.R verify
+
 .PHONY: report-mti-gibbs-decisions verify-mti-gibbs-decision-report test-mti-gibbs-decision-report
 report-mti-gibbs-decisions:
 	$(R) application/scripts/135_report_mti_gibbs_decisions.R render
