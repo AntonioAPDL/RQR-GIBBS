@@ -126,14 +126,12 @@ testthat::test_that("the reporting and verification path reproduces results and 
   on.exit(unlink(directory,recursive=TRUE))
   cfg <- nominal_config();cfg$output_root <- directory;cfg$expected_cells <- 1;cfg$validation_replications <- 2
   tasks <- data.frame(job_id=1:2,n=100,content=.9,response_id="normal")
-  policy <- data.table::data.table(n=100,content=.9,method="ecm_primary",available=TRUE,gamma=.995)
-  saveRDS(tasks,file.path(directory,"validation_tasks.rds"));saveRDS(policy,file.path(directory,"frozen_selection.rds"))
+  policy <- data.table::data.table(n=100,content=.9,method="ecm_primary",available=TRUE,gamma=.995,reason="")
   source <- file.path(root,"application/config/mti_ecm_nominal_20261119.json")
   mgfp_json_write(list(identity=list(programs=mgfp_hashes(source),article_files=mgfp_hashes(source))),
     file.path(directory,"manifest.json"))
-  mgfp_json_write(list(frozen_before_fresh_data=TRUE,development_only_selection=TRUE,
-    automatic_article_replacement=FALSE,selection_sha256=mwd_file_hash(file.path(directory,"frozen_selection.rds")),
-    tasks_sha256=mwd_file_hash(file.path(directory,"validation_tasks.rds"))),file.path(directory,"frozen_policy.json"))
+  freeze <- mec_freeze(policy,tasks,directory,"fixture")
+  testthat::expect_identical(mec_freeze(policy,tasks,directory,"fixture"),freeze)
   rows <- data.table::rbindlist(lapply(c("ecm_primary","young_mathew","wilks"),function(m)
     data.frame(job_id=1:2,n=100,content=.9,tolerance_confidence=.95,response_id="normal",method=m,
       lower=0,upper=c(.92,.98),width=c(.92,.98),population_content=c(.92,.98),
@@ -146,4 +144,19 @@ testthat::test_that("the reporting and verification path reproduces results and 
   p <- data.table::fread(file.path(directory,"validation/paired_comparison.csv"));p$mean_width_change[1] <- 1
   mwd_write(p,file.path(directory,"validation/paired_comparison.csv"))
   testthat::expect_error(mec_verify(cfg,context),"paired comparison")
+})
+
+testthat::test_that("freezing records unavailable rules and refuses later alteration", {
+  directory <- tempfile();dir.create(directory);on.exit(unlink(directory,recursive=TRUE))
+  p <- data.table::data.table(n=100,content=.9,method=c("ecm_primary","unavailable"),
+    available=c(TRUE,FALSE),gamma=c(.995,NA_real_),reason=c("","not_nominated"))
+  tasks <- data.frame(job_id=1L)
+  frozen <- mec_freeze(p,tasks,directory,"fixture")
+  testthat::expect_equal(frozen$unavailable_rules$method,"unavailable")
+  testthat::expect_identical(mec_freeze(p,tasks,directory,"fixture"),frozen)
+  changed <- data.table::copy(p);changed$gamma[1] <- .9
+  testthat::expect_error(mec_freeze(changed,tasks,directory,"fixture"),"rules changed")
+  unlink(file.path(directory,"frozen_policy.json"));dir.create(file.path(directory,"validation/fits"),recursive=TRUE)
+  saveRDS(list(),file.path(directory,"validation/fits/fit_000001.rds"))
+  testthat::expect_error(mec_freeze(p,tasks,directory,"fixture"),"after fresh fitting")
 })

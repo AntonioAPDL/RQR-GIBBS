@@ -108,21 +108,7 @@ tryCatch({
   policy <- data.table::rbindlist(lapply(pieces,`[[`,"selection"))
   mwd_write(curve,file.path(cfg$output_root,"development/threshold_curves.csv"))
   mwd_write(policy,file.path(cfg$output_root,"frozen_selection.csv"))
-  frozen <- file.path(cfg$output_root,"frozen_selection.rds")
-  if(file.exists(frozen))mwd_require(identical(serialize(readRDS(frozen),NULL),serialize(policy,NULL)),
-    "Frozen ECM rules changed.") else saveRDS(policy,frozen)
-  tasks_file <- file.path(cfg$output_root,"validation_tasks.rds")
-  if(file.exists(tasks_file))mwd_require(identical(readRDS(tasks_file),plan$tasks),"Frozen assessment tasks changed.") else saveRDS(plan$tasks,tasks_file)
-  freeze <- list(selection_sha256=mwd_file_hash(frozen),tasks_sha256=mwd_file_hash(tasks_file),
-    source_commit=identity$source_commit,frozen_before_fresh_data=TRUE,
-    development_only_selection=TRUE,automatic_article_replacement=FALSE,
-    unavailable_rules=as.data.frame(policy[!available,.(n,content,method,reason)]))
-  freeze_file <- file.path(cfg$output_root,"frozen_policy.json")
-  if(file.exists(freeze_file)) {
-    old <- mwd_json(freeze_file)
-    mwd_require(old$selection_sha256==freeze$selection_sha256 && old$tasks_sha256==freeze$tasks_sha256,
-      "Frozen policy or independent task hashes changed.")
-  } else mgfp_json_write(freeze,freeze_file)
+  freeze <- mec_freeze(policy,plan$tasks,cfg$output_root,identity$source_commit)
   stage <- "validation"
   assessment <- mjs_queue(plan$tasks,stage,cfg,list(identity,freeze),workers,
     function(task)mec_job(task,policy,cfg,context))

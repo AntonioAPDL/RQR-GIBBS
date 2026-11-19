@@ -108,6 +108,31 @@ mec_select_rules <- function(curve, confidence, cfg) {
   data.table::rbindlist(out,fill=TRUE)
 }
 
+mec_freeze <- function(policy,tasks,directory,commit) {
+  frozen <- file.path(directory,"frozen_selection.rds")
+  if(file.exists(frozen))mwd_require(identical(serialize(readRDS(frozen),NULL),serialize(policy,NULL)),
+    "Frozen ECM rules changed.") else saveRDS(policy,frozen)
+  tasks_file <- file.path(directory,"validation_tasks.rds")
+  if(file.exists(tasks_file))mwd_require(identical(readRDS(tasks_file),tasks),"Frozen assessment tasks changed.") else
+    saveRDS(tasks,tasks_file)
+  d <- as.data.frame(policy)
+  freeze <- list(selection_sha256=mwd_file_hash(frozen),tasks_sha256=mwd_file_hash(tasks_file),
+    source_commit=commit,frozen_before_fresh_data=TRUE,development_only_selection=TRUE,
+    automatic_article_replacement=FALSE,
+    unavailable_rules=d[!d$available,c("n","content","method","reason"),drop=FALSE])
+  path <- file.path(directory,"frozen_policy.json")
+  if(file.exists(path)) {
+    old <- mwd_json(path)
+    mwd_require(old$selection_sha256==freeze$selection_sha256 && old$tasks_sha256==freeze$tasks_sha256 &&
+      old$source_commit==commit,"Frozen policy or independent task hashes changed.")
+  } else {
+    mwd_require(!length(Sys.glob(file.path(directory,"validation/fits/*.rds"))),
+      "Cannot declare a rule frozen after fresh fitting has started.")
+    mgfp_json_write(freeze,path)
+  }
+  freeze
+}
+
 mec_profile <- function(design, tasks, source, context, cfg) {
   selected <- tasks[tasks$n==design$n & tasks$content==design$content,,drop=FALSE]
   primary <- mec_primary(context,design$n,design$content)
