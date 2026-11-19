@@ -12,6 +12,7 @@ mjc_validate <- function(cfg) {
     cfg$expected_cells == 72 && cfg$validation_replications == 1000 &&
     cfg$maximum_workers <= 40 && cfg$sampling$chains == 4 &&
     cfg$sampling$maximum_retained >= cfg$sampling$n_mcmc &&
+    identical(as.numeric(cfg$precision_extension$retained_per_chain), c(32000, 64000)) &&
     cfg$selection$minimum_worst_law_width_reduction > 0 &&
     cfg$selection$minimum_worst_law_width_reduction < 1 &&
     cfg$selection$paired_interval_probability > 0 && cfg$selection$paired_interval_probability < 1 &&

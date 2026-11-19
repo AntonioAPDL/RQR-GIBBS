@@ -5,7 +5,8 @@ if (nzchar(private)) .libPaths(c(normalizePath(private, mustWork = TRUE), .libPa
 libraries <- c("mti_gibbs_practical", "mti_gibbs_full_report_review", "mti_gibbs_full_publication",
   "mti_profile_revision", "mti_gibbs_width_diagnosis", "mti_prior_screen", "pharma_tolerance_application",
   "mti_fixed_prior", "mti_gibbs_boundary_calibration", "mti_gibbs_boundary_study",
-  "mti_gibbs_decision_calibration", "mti_gibbs_decision_study", "mti_gibbs_joint", "mti_gibbs_joint_study", "mti_gibbs_joint_reuse")
+  "mti_gibbs_decision_calibration", "mti_gibbs_decision_study", "mti_fixed_prior_finalization",
+  "mti_gibbs_joint", "mti_gibbs_joint_precision", "mti_gibbs_joint_study", "mti_gibbs_joint_reuse")
 for (name in libraries) source(file.path("application/scripts/lib", paste0(name, ".R")))
 data.table::setDTthreads(1L)
 RNGkind("Mersenne-Twister", "Inversion", "Rejection")
@@ -119,6 +120,7 @@ tryCatch({
   comparison <- mjs_replay(tasks, modes, cfg, context, workers)
   selection <- comparison$selection
   stage <- "development"
+  mjs_import_development(tasks, selection, modes, cfg, identity, context)
   mode_index <- setNames(seq_len(nrow(tasks)), tasks$job_id)
   development <- mjs_queue(tasks, stage, cfg, list(identity, selection), workers, function(task) {
     a <- mjs_read(modes, tasks, mode_index[[as.character(task$job_id)]])$anchors

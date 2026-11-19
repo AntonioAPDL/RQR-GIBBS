@@ -71,11 +71,25 @@ Rscript -e '
   reuse<-Sys.getenv("MTI_JOINT_REUSE_ROOT");
   if(nzchar(reuse)) {
     reuse<-normalizePath(reuse,mustWork=TRUE); m<-file.path(reuse,"manifest.json");
-    old<-jsonlite::read_json(m)$identity; stopifnot(is.null(old$mode_reuse));
+    old<-jsonlite::read_json(m)$identity;
+    stage<-Sys.getenv("MTI_JOINT_REUSE_STAGE","modes"); stopifnot(stage %in% c("modes","development"));
+    if(stage=="modes") stopifnot(is.null(old$mode_reuse));
     checkout<-file.path(a[1],".codex_work",paste0("mti_gibbs_joint_",old$source_commit));
     stopifnot(dir.exists(checkout));
     value<-list(output_root=reuse,checkout=checkout,source_commit=old$source_commit,
       manifest_sha256=digest::digest(file=m,algo="sha256",serialize=FALSE));
+    if(stage=="development") {
+      cfg<-jsonlite::read_json(file.path(a[2],"application/config/mti_gibbs_joint_20261117.json"));
+      stopifnot(identical(old$source_commit,cfg$development_recovery$source_commit));
+      stopifnot(jsonlite::read_json(file.path(reuse,"controller_exit.json"))$exit_code==1);
+      stopifnot(jsonlite::read_json(file.path(reuse,"study_summary.json"))$stage=="development");
+      files<-c("modes/manifest.json","development/manifest.json","modes/tasks.csv","development/tasks.csv",
+        "initial_selection.csv","ecm_threshold_comparison.csv","candidate_profile_review.json",
+        "study_summary.json","controller_exit.json","modes/reuse_receipt.json");
+      value$stage<-stage;
+      value$artifacts<-as.list(setNames(vapply(file.path(reuse,files),function(p)
+        digest::digest(file=p,algo="sha256",serialize=FALSE),""),files));
+    }
     file<-file.path(a[3],"reuse_source.json");
     if(file.exists(file)) stopifnot(identical(jsonlite::read_json(file),value)) else jsonlite::write_json(value,file,auto_unbox=TRUE,pretty=TRUE);
   }

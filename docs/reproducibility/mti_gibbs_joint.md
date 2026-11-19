@@ -189,6 +189,56 @@ they lack a complete receipt. The source directory is never modified.
 This is a specific interrupted-stage transition, not permission to relabel
 old posterior calculations under a changed model.
 
+### Precision Recovery After Development Began
+
+Source `f0f1b7017983813620e683bd9354f2a6866c53f3` stopped after
+1,320 developmental datasets: 1,319 were numerically adequate and one
+contained a posterior-mean precision failure. All 7,200 mode calculations
+were complete. The four-chain target requiring more precision was the
+lognormal sample at n=50, c=.90, replication 19, job 1304. Its preferred
+mixing checks passed; its width mean had MCSE .196 against the existing
+precision limit .138. This is distinct from statistical underattainment.
+
+The separate `mti_gibbs_joint_precision.R` retains the original sampler and
+posterior target identifiers. After the original 1000--8000 schedule, only
+targets with all preferred mixing checks satisfied and unresolved mean
+precision can receive more computation: 32,000 retained draws per chain,
+then at most 64,000 if mean precision alone still fails. The same priors,
+observations, q, tilt, learning rate, starts, warmup and chain seeds are used.
+Every saved warmup, retained root draw and objective prefix must reproduce
+exactly. A deteriorating mixing check stops further automatic extension.
+Adequate calculations are never extended, and the precision thresholds are
+unchanged. Extra draws estimate the same posterior; they do not reduce its
+intrinsic uncertainty. Actual budgets and original-record hashes are saved
+with every extended target.
+
+For this specific stopped source, schedule the committed recovery using:
+
+```bash
+MTI_JOINT_REUSE_STAGE=development \
+MTI_JOINT_REUSE_ROOT=/var/tmp/jaguir26-mti-studies/mti_gibbs_joint_f0f1b7017983813620e683bd9354f2a6866c53f3 \
+make launch-mti-gibbs-joint
+```
+
+The configured source, saved counts and failed job must match the reviewed
+stop. Supporting programs, computation expressions, scientific settings,
+observations and posterior target keys are checked. The analytical DP
+comparison is deterministically replayed from the exact saved mode objects;
+its full-precision selection must reproduce the original developmental
+analysis hash, and its three saved comparison files must be byte-identical.
+This replay avoids using rounded CSV or JSON columns as numerical inputs.
+It makes no new nominations. Mode objects and successful development fits
+are copied byte for byte with their original receipt hashes. The original
+failed object and receipt are also archived unchanged. Only its inadequate
+target is extended; all other targets and ECM endpoints are preserved.
+New receipts record the original source and the distinct recovery source.
+
+Restarting the recovery verifies imported fits and skips completed numerical
+extensions. It never deletes or overwrites the stopped source. The remaining
+5,880 initial datasets, bounded refinement and conditional fresh assessment
+follow the original design. No model menu, prior, threshold-selection rule,
+assurance budget, or manuscript result changes as part of this recovery.
+
 `MTI_JOINT_OUTPUT_ROOT` is an optional local rehearsal directory; production
 uses the launcher's fixed output link. The launcher freezes a clean committed checkout and the predecessor's
 target-selection hash. It polls a durable completion record every five

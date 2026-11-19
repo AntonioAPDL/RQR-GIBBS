@@ -1,7 +1,8 @@
 root <- normalizePath(if (file.exists("application/scripts/lib/mti_gibbs_joint.R")) "." else "../../..")
 for (name in c("mti_gibbs_practical", "mti_gibbs_full_report_review", "mti_gibbs_full_publication",
   "mti_gibbs_width_diagnosis", "mti_prior_screen", "mti_fixed_prior", "mti_gibbs_boundary_calibration",
-  "mti_gibbs_decision_calibration", "mti_gibbs_joint", "mti_gibbs_joint_study", "mti_gibbs_joint_reuse"))
+  "mti_gibbs_decision_calibration", "mti_fixed_prior_finalization", "mti_gibbs_joint", "mti_gibbs_joint_precision",
+  "mti_gibbs_joint_study", "mti_gibbs_joint_reuse"))
   source(file.path(root, "application/scripts/lib", paste0(name, ".R")))
 joint_config <- function() mwd_json(file.path(root, "application/config/mti_gibbs_joint_20261117.json"))
 joint_radius <- function(s = 1) data.frame(n=100L,content=.9,tolerance_confidence=.95,rule="proposed",multiplier=s)
@@ -203,7 +204,7 @@ testthat::test_that("equal DP-selected targets share draws, while changed priors
   target <- list(q=.96,delta_reference=0,geometry=list(delta=0,original_margin=.2),
     selected=data.frame(candidate_index=1L,lower=-1,upper=1,posterior_content_probability=.999))
   environment(fit)$mjc_select <- function(...) target
-  environment(fit)$mjc_sample <- function(y,target,sd,cfg,policy,seed) {
+  environment(fit)$mjr_sample_checked <- function(y,target,sd,cfg,policy,seed) {
     calls <<- c(calls,sd)
     list(adequate=TRUE,fits=list(list(draws=cbind(rep(-1,10),rep(1,10)))),
       parameters=data.frame(variable=c("lower","upper","width","midpoint"),mean=c(-1,1,2,0),
@@ -366,4 +367,175 @@ testthat::test_that("mode reuse checks original bytes, task, computation and obs
   testthat::expect_error(mjs_import_modes(tasks,cfg,changed,context),"settings differ")
   saveRDS(list(ok=TRUE),path)
   testthat::expect_error(mjs_import_modes(tasks,cfg,current,context),"checksum")
+})
+
+joint_precision_record <- function(keep = 8000L) {
+  draws <- cbind(lower=rep(-1,keep),upper=rep(1,keep))
+  fit <- list(draws=draws,warmup_root1=matrix(1:4,2),warmup_root2=matrix(5:8,2),
+    retained_objective=rep(0,keep))
+  list(fits=rep(list(fit),4), parameters=data.frame(variable=c("lower","upper","width","midpoint"),
+    mean=c(-1,1,2,0),q=.96,delta=0,preferred_pass=TRUE,mean_precision=c(TRUE,TRUE,FALSE,TRUE),
+    rhat=1,ess_bulk=1000,ess_tail=1000,mcse_mean=.02),
+    history=data.frame(retained=keep,adequate=FALSE,max_rhat=1,min_bulk_ess=1000,
+      min_tail_ess=1000,max_mcse_mean=.02), adequate=FALSE,prior_sd=1,q=.96,delta=0,seed=100L)
+}
+
+testthat::test_that("precision extension is separate from unchanged posterior target identities", {
+  cfg <- joint_config(); y <- c(-1,0,1); target <- list(q=.96,geometry=list(delta=0))
+  key <- mjc_target_key(y,target,1,cfg,list())
+  cfg$precision_extension$retained_per_chain <- 64000
+  testthat::expect_identical(key,mjc_target_key(y,target,1,cfg,list()))
+  testthat::expect_error(mjc_validate(cfg),"specification")
+  r <- joint_precision_record(); testthat::expect_true(mjp_precision_only(r))
+  r$adequate <- TRUE; testthat::expect_false(mjp_precision_only(r))
+  r <- joint_precision_record();r$parameters$preferred_pass[1]<-FALSE
+  testthat::expect_false(mjp_precision_only(r))
+  r$parameters$preferred_pass[1]<-NA;testthat::expect_false(mjp_precision_only(r))
+})
+
+testthat::test_that("same-target extension preserves prefixes and stops at its finite precision limit", {
+  extend <- mjp_extend; environment(extend) <- new.env(parent=environment(mjp_extend))
+  original <- joint_precision_record(); seen <- list()
+  environment(extend)$mgp_slice_fit <- function(y,task,cfg,n_keep) {
+    seen[[length(seen)+1L]] <<- list(task=task,settings=cfg,keep=n_keep,y=y)
+    f <- original$fits[[task$chain]]
+    f$draws <- f$draws[rep(1L,n_keep),,drop=FALSE];rownames(f$draws)<-NULL
+    f$retained_objective <- rep(0,n_keep);f
+  }
+  environment(extend)$mgp_summaries <- function(fits,task,policy) {
+    p <- original$parameters;p$mean_precision <- nrow(fits[[1]]$draws)>=64000;p
+  }
+  cfg <- joint_config(); target <- list(q=.96,content=.9,geometry=list(delta=0),selected=data.frame(lower=-1,upper=1))
+  y <- c(-1,0,1)
+  result <- extend(original,y,target,1,cfg,list(),100L)
+  testthat::expect_true(result$adequate)
+  testthat::expect_equal(result$history$retained,c(8000,32000,64000))
+  testthat::expect_true(result$precision_extension$exact_prefix_preserved)
+  testthat::expect_identical(result$precision_extension$original_record_sha256,mwd_hash(original))
+  testthat::expect_equal(vapply(seen,function(x) x$task$seed,0L),rep(101:104,2))
+  testthat::expect_true(all(vapply(seen,function(x) identical(x$y,y) && x$settings$prior_variance==1 &&
+    x$task$q==.96 && x$task$delta==0 && x$settings$n_burn==500, FALSE)))
+  testthat::expect_identical(original,joint_precision_record())
+  bad <- target;bad$geometry$delta<-.1
+  testthat::expect_error(extend(original,y,bad,1,cfg,list(),100L),"target or seed")
+  testthat::expect_error(extend(original,y,target,2,cfg,list(),100L),"target or seed")
+  testthat::expect_error(extend(original,y,target,1,cfg,list(),200L),"target or seed")
+  adequate <- original;adequate$adequate<-TRUE
+  testthat::expect_error(extend(adequate,y,target,1,cfg,list(),100L),"Only mean-precision")
+  cfg$precision_extension$retained_per_chain <- 128000
+  testthat::expect_error(extend(original,y,target,1,cfg,list(),100L),"bounded")
+  cfg <- joint_config()
+  environment(extend)$mgp_slice_fit <- function(y,task,cfg,n_keep) {
+    f <- original$fits[[task$chain]]; f$draws <- f$draws[rep(1L,n_keep),,drop=FALSE]
+    f$draws[1,1]<--2;f$retained_objective<-rep(0,n_keep);f
+  }
+  testthat::expect_error(extend(original,y,target,1,cfg,list(),100L),"prefix changed")
+})
+
+testthat::test_that("longer draws do not authorize another attempt after mixing degrades", {
+  extend <- mjp_extend;environment(extend)<-new.env(parent=environment(mjp_extend))
+  original <- joint_precision_record();calls<-0L
+  environment(extend)$mgp_slice_fit <- function(y,task,cfg,n_keep) {
+    calls <<- calls+1L; f<-original$fits[[task$chain]]
+    f$draws<-f$draws[rep(1L,n_keep),,drop=FALSE];f$retained_objective<-rep(0,n_keep);f
+  }
+  environment(extend)$mgp_summaries <- function(...) {
+    p<-original$parameters;p$preferred_pass<-FALSE;p
+  }
+  target<-list(q=.96,content=.9,geometry=list(delta=0),selected=data.frame(lower=-1,upper=1))
+  value<-extend(original,c(-1,0,1),target,1,joint_config(),list(),100L)
+  testthat::expect_false(value$adequate);testthat::expect_equal(calls,4L)
+  testthat::expect_equal(tail(value$history$retained,1),32000)
+})
+
+testthat::test_that("recovery preserves adequate records and rejects relabeled targets", {
+  before<-list(task=data.frame(job_id=1304L),records=list(good=list(adequate=TRUE,x=1),bad=joint_precision_record()))
+  before$rows<-data.table::data.table(rule="x",prior_sd=1,concentration=1,base_sd=4,gamma=.97,q=.96,delta=0,
+    original_delta=0,tilt_variant="original",original_margin=.1,selected_candidate=1L,ecm_lower=-1,ecm_upper=1,
+    ecm_dp_probability=.99,sample_sha256="sample",target_key="target",radius_multiplier=1)
+  after<-before;after$ok<-TRUE
+  after$records$bad$adequate<-TRUE
+  after$records$bad$parameters$mean_precision<-TRUE
+  after$records$bad$precision_extension<-list(original_record_sha256=mwd_hash(before$records$bad))
+  after$records$bad$fits<-lapply(before$records$bad$fits,function(f) {
+    f$draws<-rbind(f$draws,f$draws);rownames(f$draws)<-NULL
+    f$retained_objective<-rep(f$retained_objective,2);f
+  })
+  testthat::expect_true(mjr_check_recovered(before,after))
+  changed<-after;changed$records$good$x<-2
+  testthat::expect_error(mjr_check_recovered(before,changed),"adequate target")
+  changed<-after;changed$rows<-data.table::copy(after$rows);changed$rows$q<-.99
+  testthat::expect_error(mjr_check_recovered(before,changed),"selected targets")
+  changed<-after;changed$records$bad$fits[[1]]$retained_objective[1]<-1
+  testthat::expect_error(mjr_check_recovered(before,changed),"prefix changed")
+})
+
+testthat::test_that("development imports retain original bytes, receipts, and deterministic restart", {
+  d<-tempfile();dir.create(d);on.exit(unlink(d,recursive=TRUE))
+  from<-file.path(d,"original.rds");to<-file.path(d,"new/fit.rds")
+  task<-data.frame(job_id=1L);value<-list(ok=TRUE,task=task,x=1)
+  mbc_atomic_fit(value,from,"old",task)
+  origin<-list(file=from,sha256=mwd_file_hash(from),receipt_sha256=mwd_file_hash(paste0(from,".json")))
+  a<-mjr_copy(from,to,"new",task,origin);b<-mjr_copy(from,to,"new",task,origin)
+  testthat::expect_identical(a,b);testthat::expect_identical(mwd_file_hash(from),mwd_file_hash(to))
+  changed<-origin;changed$sha256<-"bad"
+  testthat::expect_error(mjr_copy(from,to,"new",task,changed),"origin changed")
+  saveRDS(list(ok=TRUE),to)
+  testthat::expect_error(mjr_copy(from,to,"new",task,origin),"checksum")
+})
+
+testthat::test_that("only the precision wrapper is interchangeable in recovery computation checks", {
+  path<-tempfile(fileext=".R");on.exit(unlink(path))
+  writeLines("fit <- function(x) mjc_sample(x, q=1)",path)
+  original<-mjr_function(path,"fit",TRUE)
+  writeLines("fit <- function(x) mjr_sample_checked(x, q=1)",path)
+  testthat::expect_identical(original,mjr_function(path,"fit",TRUE))
+  testthat::expect_false(identical(original,mjr_function(path,"fit")))
+  writeLines("fit <- function(x) mjr_sample_checked(x, q=2)",path)
+  testthat::expect_false(identical(original,mjr_function(path,"fit",TRUE)))
+})
+
+testthat::test_that("development reuse rejects changed scientific settings and unreviewed sources", {
+  cfg<-joint_config()
+  old<-list(source_commit=cfg$development_recovery$source_commit,configuration=cfg)
+  current<-list(configuration=cfg,mode_reuse=list(stage="development"))
+  changed<-current;changed$configuration$selection$minimum_worst_law_width_reduction<-.02
+  testthat::expect_error(mjr_check_development(old,changed,data.frame()),"settings differ")
+  changed<-current;changed$configuration$dp_concentration<-c(1,2,3)
+  testthat::expect_error(mjr_check_development(old,changed,data.frame()),"settings differ")
+  changed<-old;changed$source_commit<-"unreviewed"
+  testthat::expect_error(mjr_check_development(changed,current,data.frame()),"not been reviewed")
+  changed<-current;changed$mode_reuse$stage<-"modes"
+  testthat::expect_error(mjr_check_development(old,changed,data.frame()),"not been reviewed")
+})
+
+testthat::test_that("imported data.table rule columns do not mask the selected rule object", {
+  check<-mjr_check_result;environment(check)<-new.env(parent=environment(mjr_check_result))
+  y<-c(-1,0,1);task<-data.frame(job_id=1L,n=3L,content=.9,data_seed=10L,response_id="normal")
+  target<-list(q=.96,geometry=list(delta=0),selected=data.frame(candidate_index=1L,lower=-1,upper=1))
+  environment(check)$mjc_select<-function(...) target
+  environment(check)$mjc_target_key<-function(...) "target"
+  r<-joint_precision_record();r$adequate<-TRUE;r$parameters$mean_precision<-TRUE
+  rows<-data.table::data.table(rule="R0",returned=TRUE,sample_sha256=mwd_hash(y),target_key="target",
+    q=.96,delta=0,prior_sd=1,gamma=.97,concentration=1,base_sd=4,selected_candidate=1L,
+    ecm_lower=-1,ecm_upper=1,adequate=TRUE,lower=-1,upper=1)
+  value<-list(ok=TRUE,task=task,rows=rows,records=list(target=r))
+  rules<-data.frame(n=3L,content=.9,rule="R0",prior_sd=1,gamma=.97,concentration=1,base_sd=4)
+  context<-list(laws=list(normal=list(r=function(n)y)),policy_diagnostics=list(),
+    old_tilts=data.frame(n=3L,content=.9,variant="original"))
+  testthat::expect_identical(check(value,task,list("1"=list()),rules,joint_config(),context),y)
+  value$ok<-FALSE
+  testthat::expect_error(check(value,task,list("1"=list()),rules,joint_config(),context),"status")
+})
+
+testthat::test_that("the automatic wrapper leaves adequate and mixing-limited records unchanged", {
+  sample<-mjr_sample_checked;environment(sample)<-new.env(parent=environment(mjr_sample_checked))
+  record<-joint_precision_record();called<-FALSE
+  environment(sample)$mjc_sample<-function(...) record
+  environment(sample)$mjp_extend<-function(...) {called<<-TRUE;stop("Unexpected extension")}
+  record$adequate<-TRUE
+  testthat::expect_identical(sample(NULL,NULL,NULL,NULL,NULL,NULL),record)
+  record$adequate<-FALSE;record$parameters$preferred_pass[1]<-FALSE
+  testthat::expect_identical(sample(NULL,NULL,NULL,NULL,NULL,NULL),record)
+  testthat::expect_false(called)
 })

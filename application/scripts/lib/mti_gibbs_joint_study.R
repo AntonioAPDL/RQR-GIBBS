@@ -256,7 +256,7 @@ mjs_gibbs <- function(task, anchors, selection, cfg, context, previous = NULL, o
           source_receipt = mwd_file_hash(file.path(context$boundary, "calibration/fits", sprintf("fit_%06d.rds.json", task$old_job_id))))
         records[[key]] <- saved
       } else {
-        records[[key]] <- mjc_sample(y, target, rule$prior_sd, cfg, context$policy_diagnostics,
+        records[[key]] <- mjr_sample_checked(y, target, rule$prior_sd, cfg, context$policy_diagnostics,
           as.integer(task$chain_seed + 10 * rule$slot))
         fresh <- fresh + 1L
       }
@@ -372,7 +372,7 @@ mjs_preserve <- function(cfg, identity) {
     "development/tasks.csv", "development/manifest.json", "refinement/tasks.csv", "refinement/manifest.json",
     "development_results.csv", "development_scores.csv", "development_cells.csv", "refinement_selection.csv",
     "frozen_selection.csv", "frozen_selection.rds", "frozen_policy.json", "candidate_profile_review.json",
-    "reuse_source.json", "modes/reuse_receipt.json", "eligible_validation_tasks.rds",
+    "reuse_source.json", "modes/reuse_receipt.json", "development/reuse_receipt.json", "eligible_validation_tasks.rds",
     "validation/interval_results.csv", "validation/comparison_summary.csv", "validation/paired_comparison.csv",
     "validation/tasks.csv", "validation/manifest.json", "validation/width_and_attainment.pdf",
     "study_summary.json", "rehearsal.json", "rehearsal_traces.pdf")

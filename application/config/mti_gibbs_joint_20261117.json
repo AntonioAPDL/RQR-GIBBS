@@ -36,6 +36,13 @@
     "validation_ecm_base": 2130000000
   },
   "sampling": {"chains": 4, "n_burn": 500, "n_mcmc": 1000, "maximum_retained": 8000},
+  "precision_extension": {"retained_per_chain": [32000, 64000]},
+  "development_recovery": {
+    "source_commit": "f0f1b7017983813620e683bd9354f2a6866c53f3",
+    "saved_datasets": 1320,
+    "successful_datasets": 1319,
+    "precision_only_job": 1304
+  },
   "assurance": {"error": 0.05, "comparisons": 72},
   "automatic_article_replacement": false,
   "application_transfer": false,
