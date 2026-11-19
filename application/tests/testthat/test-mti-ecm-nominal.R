@@ -1,7 +1,7 @@
 root <- normalizePath(if(file.exists("application/scripts/lib/mti_ecm_nominal.R"))"." else "../../..")
 for(name in c("mti_gibbs_practical","mti_gibbs_full_report_review","mti_gibbs_full_publication",
   "mti_gibbs_width_diagnosis","mti_fixed_prior","mti_gibbs_boundary_calibration",
-  "mti_gibbs_decision_calibration","mti_gibbs_joint","mti_ecm_nominal"))
+  "mti_gibbs_decision_calibration","mti_gibbs_joint","mti_ecm_nominal","mti_ecm_nominal_finalization"))
   source(file.path(root,"application/scripts/lib",paste0(name,".R")))
 nominal_config <- function()mwd_json(file.path(root,"application/config/mti_ecm_nominal_20261119.json"))
 nominal_candidates <- function()data.frame(candidate_index=1:3,target_content=c(.92,.96,.99),
@@ -144,6 +144,9 @@ testthat::test_that("the reporting and verification path reproduces results and 
   p <- data.table::fread(file.path(directory,"validation/paired_comparison.csv"));p$mean_width_change[1] <- 1
   mwd_write(p,file.path(directory,"validation/paired_comparison.csv"))
   testthat::expect_error(mec_verify(cfg,context),"paired comparison")
+  rows$lower[1] <- .1
+  mec_write_intervals(rows,file.path(directory,"validation/interval_results.csv"))
+  testthat::expect_error(mec_verify(cfg,context),"Population contents or widths")
 })
 
 testthat::test_that("freezing records unavailable rules and refuses later alteration", {
@@ -159,4 +162,118 @@ testthat::test_that("freezing records unavailable rules and refuses later altera
   unlink(file.path(directory,"frozen_policy.json"));dir.create(file.path(directory,"validation/fits"),recursive=TRUE)
   saveRDS(list(),file.path(directory,"validation/fits/fit_000001.rds"))
   testthat::expect_error(mec_freeze(p,tasks,directory,"fixture"),"after fresh fitting")
+})
+
+testthat::test_that("interval export preserves doubles at a Gamma support boundary", {
+  directory <- tempfile();dir.create(directory);on.exit(unlink(directory,recursive=TRUE))
+  cdf <- function(y)pgamma(y*sqrt(.5)+.5,shape=.5)
+  d <- data.frame(method=c("gamma","normal"),lower=c(-sqrt(.5)+1e-12,-1.2345678901234567),
+    upper=c(6.03907312052499,2.3456789012345678),q=c(.99999999999999,NA_real_))
+  d$width <- d$upper-d$lower;d$population_content <- cdf(d$upper)-cdf(d$lower)
+  old <- file.path(directory,"old.csv");mwd_write(d,old)
+  rounded <- data.table::fread(old)
+  testthat::expect_gt(abs(cdf(rounded$upper[1])-cdf(rounded$lower[1])-d$population_content[1]),1e-12)
+  path <- file.path(directory,"precise.csv");testthat::expect_true(mec_write_intervals(d,path))
+  restored <- data.table::fread(path)
+  for(name in names(d)[vapply(d,is.double,FALSE)])testthat::expect_identical(restored[[name]],d[[name]])
+  testthat::expect_identical(cdf(restored$upper)-cdf(restored$lower),d$population_content)
+  testthat::expect_identical(d$method,c("gamma","normal"))
+})
+
+nominal_finalization_fixture <- function() {
+  parent <- tempfile();directory <- file.path(parent,"original")
+  dir.create(file.path(directory,"validation/fits"),recursive=TRUE)
+  cfg <- nominal_config();cfg$output_root <- directory;cfg$expected_cells <- 1;cfg$validation_replications <- 2
+  commit <- mgfp_git("rev-parse","HEAD")
+  tasks <- data.frame(job_id=1:2,n=100,content=.9,response_id="normal",data_seed=c(71L,72L))
+  policy <- data.table::data.table(n=100,content=.9,method="ecm_primary",available=TRUE,gamma=.995,reason="")
+  programs <- mgfp_hashes("application/config/mti_ecm_nominal_20261119.json")
+  mgfp_json_write(list(identity=list(source_commit=commit,configuration=cfg,programs=programs,article_files=programs)),
+    file.path(directory,"manifest.json"))
+  mec_freeze(policy,tasks,directory,commit)
+  mwd_write(policy,file.path(directory,"frozen_selection.csv"))
+  mgfp_json_write(list(analysis_id="fixture"),file.path(directory,"validation/manifest.json"))
+  mgfp_json_write(list(completed_datasets=2,expected_datasets=2,remaining_datasets=0,numerical_pass=TRUE),
+    file.path(directory,"validation/progress.json"))
+  mgfp_json_write(list(exit_code=1),file.path(directory,"controller_exit.json"))
+  mgfp_json_write(list(status="stopped_requires_review"),file.path(directory,"study_summary.json"))
+  rows <- lapply(seq_len(nrow(tasks)),function(i) {
+    task <- tasks[i,,drop=FALSE];set.seed(task$data_seed);y <- runif(task$n)
+    d <- data.table::data.table(job_id=task$job_id,n=100,content=.9,tolerance_confidence=.95,
+      response_id="normal",method=c("ecm_primary","young_mathew","wilks"),lower=0,
+      upper=if(i==1).92 else .98,width=if(i==1).92 else .98,
+      population_content=if(i==1).92 else .98,returned=TRUE,attained=TRUE,numerically_accurate=TRUE)
+    mbc_atomic_fit(list(ok=TRUE,unresolved_candidates=0L,sample_sha256=mwd_hash(y),
+      prior=list(prior_sd=2,data_adaptive_prior=FALSE),candidates=data.frame(numerically_accurate=TRUE),rows=d),
+      file.path(directory,"validation/fits",sprintf("fit_%06d.rds",task$job_id)),"fixture",task)
+    d
+  })
+  rows <- data.table::rbindlist(rows);mwd_write(rows,file.path(directory,"validation/interval_results.csv"))
+  mec_report(rows,cfg)
+  list(parent=parent,study=list(checkout=normalizePath("."),output_root=directory,source_commit=commit),
+    programs=programs,context=list(laws=list(normal=list(r=runif,p=punif))))
+}
+
+testthat::test_that("separate finalization preserves sampling history and resumes without refitting", {
+  withr::local_dir(root)
+  f <- nominal_finalization_fixture();on.exit(unlink(f$parent,recursive=TRUE))
+  exit_path <- file.path(f$study$output_root,"controller_exit.json");before <- mwd_file_hash(exit_path)
+  result <- mec_finalize(f$study,f$context,f$programs)
+  record <- mwd_json(file.path(result$output_root,"finalization.json"))
+  testthat::expect_equal(record$datasets,2L);testthat::expect_equal(record$interval_rows,6L)
+  testthat::expect_equal(record$refitted_datasets,0L)
+  testthat::expect_equal(record$changed_attainment_events,0L)
+  testthat::expect_identical(mwd_file_hash(exit_path),before)
+  testthat::expect_identical(mwd_json(exit_path)$exit_code,1L)
+  testthat::expect_true(mec_verify_finalization(result$output_root,f$context))
+  testthat::expect_identical(mec_finalize(f$study,f$context,f$programs),result)
+  record_path <- file.path(result$output_root,"finalization.json")
+  damaged <- record;damaged$identity$article_replaced <- TRUE
+  mgfp_json_write(damaged,record_path)
+  testthat::expect_error(mec_verify_finalization(result$output_root,f$context),"identity changed")
+  mgfp_json_write(record,record_path)
+  hash_path <- file.path(f$study$output_root,"frozen_selection.rds")
+  changed <- readRDS(hash_path);changed$gamma <- .9;saveRDS(changed,hash_path)
+  testthat::expect_error(mec_verify_finalization(result$output_root,f$context),"hash differs")
+})
+
+testthat::test_that("finalization refuses missing work, wrong samples, damaged receipts and changed outcomes", {
+  withr::local_dir(root)
+  f <- nominal_finalization_fixture();on.exit(unlink(f$parent,recursive=TRUE))
+  wrong <- f$study;wrong$source_commit <- "changed"
+  testthat::expect_error(mec_sampling_source(wrong),"commit changed")
+  progress <- file.path(f$study$output_root,"validation/progress.json")
+  mgfp_json_write(list(completed_datasets=1,expected_datasets=2,remaining_datasets=1,numerical_pass=TRUE),progress)
+  testthat::expect_error(mec_sampling_source(f$study),"Sampling is incomplete")
+  mgfp_json_write(list(completed_datasets=2,expected_datasets=2,remaining_datasets=0,numerical_pass=TRUE),progress)
+  source <- mec_sampling_source(f$study)
+  path <- file.path(f$study$output_root,"validation/fits/fit_000001.rds")
+  old <- readRDS(path);bad <- old;bad$sample_sha256 <- "changed"
+  task <- readRDS(file.path(f$study$output_root,"validation_tasks.rds"))[1,,drop=FALSE]
+  mbc_atomic_fit(bad,path,"fixture",task)
+  testthat::expect_error(mec_finalization_rows(source,f$context,1L),"saved sample")
+  saveRDS(old,path)
+  testthat::expect_error(mec_finalization_rows(source,f$context,1L),"checksum differs")
+  rows <- data.table::fread(file.path(f$study$output_root,"validation/interval_results.csv"))
+  rows$attained[1] <- FALSE
+  testthat::expect_error(mec_same_outcomes(rows,file.path(f$study$output_root,"validation/interval_results.csv")),
+    "change a recorded")
+})
+
+testthat::test_that("generator loading uses disposable scratch instead of original output", {
+  parent <- tempfile();dir.create(parent);on.exit(unlink(parent,recursive=TRUE))
+  original <- file.path(parent,"original");previous <- file.path(parent,"previous")
+  dir.create(original);dir.create(previous)
+  mgfp_json_write(list(identity=list(source=list(output_root=previous,dependency=list()))),
+    file.path(original,"manifest.json"))
+  mgfp_json_write(list(identity=list(configuration=list(output_root=original))),file.path(previous,"manifest.json"))
+  context <- mec_finalization_context;environment(context) <- new.env(parent=environment(context))
+  environment(context)$mjs_context <- function(cfg,dependency) {
+    stopifnot(cfg$output_root!=original)
+    saveRDS(list(generated=TRUE),file.path(cfg$output_root,"frozen_data_generators.R"))
+    list(scratch=cfg$output_root)
+  }
+  result <- context(list(output_root=original))
+  testthat::expect_false(dir.exists(result$scratch))
+  testthat::expect_false(file.exists(file.path(original,"frozen_data_generators.R")))
 })

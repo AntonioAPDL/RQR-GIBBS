@@ -6,7 +6,8 @@ libraries <- c("mti_gibbs_practical","mti_gibbs_full_report_review","mti_gibbs_f
   "mti_profile_revision","mti_gibbs_width_diagnosis","mti_prior_screen","pharma_tolerance_application",
   "mti_fixed_prior","mti_gibbs_boundary_calibration","mti_gibbs_boundary_study",
   "mti_gibbs_decision_calibration","mti_gibbs_decision_study","mti_fixed_prior_finalization",
-  "mti_gibbs_joint","mti_gibbs_joint_precision","mti_gibbs_joint_study","mti_gibbs_joint_reuse","mti_ecm_nominal")
+  "mti_gibbs_joint","mti_gibbs_joint_precision","mti_gibbs_joint_study","mti_gibbs_joint_reuse","mti_ecm_nominal",
+  "mti_ecm_nominal_finalization")
 for(name in libraries)source(file.path("application/scripts/lib",paste0(name,".R")))
 data.table::setDTthreads(1L)
 options(datatable.optimize=0L)
@@ -17,11 +18,39 @@ cfg <- mwd_json(configuration);mec_validate(cfg)
 override <- Sys.getenv("MTI_ECM_NOMINAL_OUTPUT_ROOT")
 if(nzchar(override))cfg$output_root <- override
 pointer <- file.path(mgfp_common(),".codex_work/mti_ecm_nominal_latest.json")
+finalized_pointer <- file.path(mgfp_common(),".codex_work/mti_ecm_nominal_finalized_latest.json")
 if(mode=="health") {
   if(file.exists(pointer))cfg$output_root <- mwd_json(pointer)$output_root
   for(name in c("manifest.json","development/progress.json","validation/progress.json","study_summary.json","controller_exit.json")) {
     file <- file.path(cfg$output_root,name)
     if(file.exists(file)){cat(name,"\n");print(if(name=="manifest.json")mwd_json(file)$started else mwd_json(file))}
+  }
+  if(file.exists(finalized_pointer)) {
+    p <- mwd_json(finalized_pointer)
+    if(identical(p$sampling_output_root,normalizePath(cfg$output_root,mustWork=TRUE))) {
+      cat("Separate finalization\n");print(p)
+      print(mwd_json(file.path(p$output_root,"finalization_status.json")))
+    }
+  }
+  quit(save="no")
+}
+if(mode %in% c("finalize","verify-finalized")) {
+  mwd_require(file.exists(pointer),"The original study pointer is missing.")
+  study <- mwd_json(pointer)
+  context <- mec_finalization_context(study)
+  if(mode=="finalize") {
+    mwd_require(!nzchar(mgfp_git("status","--porcelain")),"Commit the analysis source before finalization.")
+    programs <- unique(c(configuration,"application/scripts/136_assess_mti_ecm_nominal.R",
+      file.path("application/scripts/lib",paste0(libraries,".R")),mps_programs))
+    result <- mec_finalize(study,context,mgfp_hashes(programs))
+    mgfp_json_write(result,finalized_pointer)
+    print(result)
+  } else {
+    mwd_require(file.exists(finalized_pointer),"No separate finalization has been recorded.")
+    p <- mwd_json(finalized_pointer)
+    mwd_require(identical(p$sampling_output_root,normalizePath(study$output_root,mustWork=TRUE)),
+      "The finalized report belongs to another sampling study.")
+    mec_verify_finalization(p$output_root,context)
   }
   quit(save="no")
 }
@@ -113,7 +142,7 @@ tryCatch({
   assessment <- mjs_queue(plan$tasks,stage,cfg,list(identity,freeze),workers,
     function(task)mec_job(task,policy,cfg,context))
   rows <- mjs_collect(assessment,plan$tasks)
-  mwd_write(rows,file.path(cfg$output_root,"validation/interval_results.csv"))
+  mec_write_intervals(rows,file.path(cfg$output_root,"validation/interval_results.csv"))
   mec_report(rows,cfg)
   mec_verify(cfg,context)
   mgfp_json_write(list(status="complete_exploratory_requires_scientific_review",article_replaced=FALSE,

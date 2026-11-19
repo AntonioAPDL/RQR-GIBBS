@@ -1002,6 +1002,12 @@ health-mti-ecm-nominal:
 verify-mti-ecm-nominal:
 	$(R) application/scripts/136_assess_mti_ecm_nominal.R verify
 
+.PHONY: finalize-mti-ecm-nominal verify-finalized-mti-ecm-nominal
+finalize-mti-ecm-nominal:
+	$(R) application/scripts/136_assess_mti_ecm_nominal.R finalize
+verify-finalized-mti-ecm-nominal:
+	$(R) application/scripts/136_assess_mti_ecm_nominal.R verify-finalized
+
 .PHONY: report-mti-gibbs-decisions verify-mti-gibbs-decision-report test-mti-gibbs-decision-report
 report-mti-gibbs-decisions:
 	$(R) application/scripts/135_report_mti_gibbs_decisions.R render

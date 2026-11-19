@@ -244,6 +244,25 @@ mec_job <- function(task,policy,cfg,context) {
     prior=anchor$prior,unresolved_candidates=anchor$unresolved_candidates)
 }
 
+mec_write_intervals <- function(rows,path) {
+  original <- data.table::as.data.table(rows)
+  export <- data.table::copy(original)
+  doubles <- names(export)[vapply(export,is.double,FALSE)]
+  for(name in doubles) {
+    values <- sprintf("%.17g",export[[name]])
+    values[is.na(export[[name]]) & !is.nan(export[[name]])] <- NA_character_
+    data.table::set(export,j=name,value=values)
+  }
+  temporary <- tempfile(".ecm-intervals-",tmpdir=dirname(path));on.exit(unlink(temporary))
+  data.table::fwrite(export,temporary,na="NA")
+  restored <- data.table::fread(temporary)
+  mwd_require(all(vapply(doubles,function(name)
+    identical(as.numeric(original[[name]]),as.numeric(restored[[name]])),FALSE)),
+    "Interval export changed a double-precision value.")
+  mwd_require(file.rename(temporary,path),"Cannot publish full-precision intervals.")
+  invisible(TRUE)
+}
+
 mec_summary <- function(rows,cfg) {
   d <- data.table::as.data.table(rows)
   size <- nrow(unique(d[,.(n,content,response_id,method)]))
@@ -316,10 +335,16 @@ mec_report <- function(rows,cfg) {
   invisible(list(summary=summary,paired=paired))
 }
 
-mec_verify <- function(cfg,context) {
+mec_verify <- function(cfg,context,sampling_root=NULL) {
   directory <- cfg$output_root
   manifest <- mwd_json(file.path(directory,"manifest.json"))$identity
-  mgfp_check_hashes(manifest$programs);mgfp_check_hashes(manifest$article_files)
+  paths <- names(manifest$programs)
+  if(!is.null(sampling_root)) {
+    mwd_require(all(!grepl("^/|(^|/)\\.\\.(/|$)",paths)),"Invalid relative sampling program paths.")
+    paths <- file.path(sampling_root,paths)
+    mgfp_check_hashes(manifest$article_files,file.path(sampling_root,names(manifest$article_files)))
+  }
+  mgfp_check_hashes(manifest$programs,paths);mgfp_check_hashes(manifest$article_files)
   freeze <- mwd_json(file.path(directory,"frozen_policy.json"))
   mwd_require(freeze$frozen_before_fresh_data && freeze$development_only_selection &&
     !freeze$automatic_article_replacement &&

@@ -98,3 +98,52 @@ summaries while checking frozen rules and unchanged manuscript files.
 Results remain exploratory, including any underattainment or lack of
 improvement. Any later manuscript inclusion requires scientific review;
 there is no automatic article replacement or application transfer.
+
+## Postprocessing Without Refitting
+
+Interval CSV exports preserve seventeen significant digits. This matters
+near a finite support boundary, where an endpoint change from decimal
+rounding can noticeably affect a distribution function even though the
+fitted interval is unchanged. The export is read back and checked before
+publication. Numerical and population-content verification tolerances are
+unchanged.
+
+The November 19 assessment completed all 72,000 datasets but its original
+controller stopped during verification of the lower-precision CSV. A
+separate finalization command recovers reports from the original RDS fits:
+
+```sh
+make finalize-mti-ecm-nominal
+make verify-finalized-mti-ecm-nominal
+make health-mti-ecm-nominal
+```
+
+Run these with committed analysis source and the pinned installed R
+library. The original sampling pointer must identify its pinned checkout
+and complete output. Finalization refuses incomplete work. It checks the
+original source files, every saved receipt, reconstructed sample hashes,
+sample-independent priors, candidate accuracy and full-precision contents.
+It does not call the fitter or generate new validation datasets.
+
+Reports are written beside the original output under a directory ending
+in `_finalized_<analysis-commit>`. Both sampling and analysis commits are
+recorded. The separate local pointer is
+`.codex_work/mti_ecm_nominal_finalized_latest.json`; the sampling pointer,
+raw fits, frozen rules, original reports and controller exit are preserved.
+Health output displays the historical stop separately from successful
+finalization. Repeated finalization verifies existing evidence rather than
+refitting or replacing results. A leftover finalization lock requires
+inspection before manual resumption.
+
+The finalized reports contain the full casewise summaries, paired raw
+width comparisons, the 36-page exploratory PDF and a method overview of
+attainment ranges and underattainment counts. No width averages across
+distributions are introduced. All original return and attainment events
+must agree. A complete status means that results reproduce, not that
+exploratory thresholds attain their requested tolerance probability.
+Current primary ECM results and both manuscripts remain unchanged.
+
+These assessment datasets may inform future development; they cannot
+independently validate a rule selected after inspecting them. Any further
+calibration requires separately justified choices, frozen before new
+independent assessment. Finalization does not schedule another study.
