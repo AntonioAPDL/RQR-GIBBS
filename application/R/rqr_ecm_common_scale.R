@@ -258,7 +258,8 @@
     response_likelihood = FALSE, formal_tolerance_action = FALSE, conditional_on_fixed_target = TRUE,
     model_spec = list(family = "rqr_fixed_design", inference = spec$update, generalized_bayes = TRUE,
       response_likelihood = FALSE, calibrated_uncertainty = FALSE, coverage_level = q,
-      learning_rate = omega, learning_rate_mode = "bounded_common_scale", common_scale = spec,
+      learning_rate = omega, learning_rate_mode = if (is.finite(spec$log_rate_bounds[2]))
+        "bounded_common_scale" else "unrestricted_gamma_common_scale", common_scale = spec,
       mean_tilt = mt$observed, beta_prior_type = "ridge", ecm_backend = control$ecm_backend), y = y, X = X,
     provenance = list(response_digest = .rqr_digest(y), design_digest = .rqr_digest(X),
       scale_prior_digest = .rqr_digest(spec), prior_digest = .rqr_digest(beta_prior_obj),

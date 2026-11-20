@@ -217,6 +217,8 @@ test_that("Gamma R and native reference fixtures agree across supports and updat
     expect_true(a$numerically_accurate && b$numerically_accurate)
     expect_equal(c(a$beta_root1,a$beta_root2,a$objective),c(b$beta_root1,b$beta_root2,b$objective),tolerance=1e-7)
     expect_true(all(is.finite(a$objective_trace$log_learning_rate)))
+    expect_equal(a$model_spec$learning_rate_mode,if(is.finite(bounds[2]))
+      "bounded_common_scale" else "unrestricted_gamma_common_scale")
   }
 })
 
