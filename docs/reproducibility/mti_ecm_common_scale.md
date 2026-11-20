@@ -148,3 +148,55 @@ The panel bound follows
 [Hoeffding (1963)](https://doi.org/10.1080/01621459.1963.10500830).
 It supports a scale-prior diagnostic, not a distribution-free tolerance
 guarantee for the fitted intervals.
+
+## Completed Screening Assessment
+
+The November 19 screening completed all 864 datasets using up to 40 workers.
+All candidate fits passed the declared numerical checks; all six compared
+methods returned intervals on all planned samples. The source is
+`a32c4af5eee9c4714e748fc0a4c775a7ac168259`; separate analysis preserves
+these fits, source receipts and original reports. `review.json` records
+the exact later analysis commit and checksums.
+
+For the primary rate range [0.25,4], paired comparisons with fixed-scale
+ECM use the existing relative endpoint tolerance, 1e-5 times the larger
+of one and fixed-scale width:
+
+| Comparison | Datasets |
+| --- | ---: |
+| Endpoints agree within numerical tolerance | 863/864 |
+| Unknown-scale interval is shorter beyond numerical tolerance | 0/864 |
+| Unknown-scale interval is wider beyond numerical tolerance | 1/864 |
+| Population-content attainment event changes | 0/864 |
+| Fitted rate equals its upper prior bound | 485/864 |
+
+The one wider interval occurs for Student t(3), n=1000,c=0.99, replication1:
+width changes from 9.505234 to 9.918846. It attains the required population
+content under both calculations. Widening the rate-prior range also changes
+only one paired interval beyond the endpoint tolerance. The corrected
+heterogeneous-panel lower bound for upper-bound mode frequency is 0.5197,
+so the prespecified scientific stop remains triggered. This describes
+prior sensitivity and lack of demonstrated benefit, not numerical failure
+or an improper bounded posterior.
+
+Estimated scale is active: the real exponential rehearsal selected rate
+about 1.31, while many high-content cases selected the upper bound. Stable
+endpoints despite changing scale are consistent with nonsmooth data-knot
+solutions. Uniformly multiplying an unpenalized loss leaves its minimizers
+unchanged; in this construction scale affects point estimates through its
+balance with Gaussian regularization. The current DP eligibility rule
+further restricts which candidate intervals can be reported.
+
+Relaxed calibration was retained and replayed. For both closest-nominal
+and compatibility rules, the primary unknown-scale and fixed-scale cutoffs
+agree in eight of nine designs. Their minimum observed attainment agrees
+in every design with available paired rules. These 12-sample development
+comparisons provide no independent evidence of a new tolerance improvement;
+point-target eligibility is especially coarse at this replication count.
+
+Consequently no 72,000-dataset unknown-scale validation, Gibbs extension,
+application transfer or manuscript replacement was launched. The fixed-scale
+ECM remains authoritative. The experimental API, full diagnostics and
+casewise comparisons are retained for research; a future Gibbs investigation
+would need an explicit uncertainty-focused rationale and prior assessment,
+rather than an assumed improvement in ECM interval width.

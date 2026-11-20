@@ -222,16 +222,20 @@ msc_figures <- function(rows,cells,records,cfg) {
   path<-file.path(cfg$output_root,"screening/common_scale_diagnostics.pdf")
   grDevices::pdf(path,width=12,height=8,onefile=TRUE);on.exit(grDevices::dev.off())
   methods<-c("fixed","narrow","primary","broad","young_mathew","wilks")
+  method_labels<-c("Fixed scale","Narrow range","Primary range","Broad range","Young-Mathew","Wilks")
+  law_labels<-c(normal="Normal",student_t3="Student t (3 df)",exponential="Exponential",
+    asym_laplace_tau010="Asymmetric Laplace",two_piece_normal_1_12="Two-piece Normal",
+    beta18="Beta(1,8)",gamma05="Gamma(0.5,1)",lognormal_hard="Lognormal")
   colors<-c("#0072B2","#009E73","#D55E00","#CC79A7","#777777","black")
   for(law in unique(cells$response_id)) {
     data<-cells[response_id==law];design<-unique(data[,.(n,content)])
     graphics::par(mfrow=c(1,2),mar=c(5,8,4,1))
     for(quantity in c("attainment","mean_width")) {
       limits<-if(quantity=="attainment")c(0,1) else range(c(data$width_q025,data$width_q975),finite=TRUE)
-      graphics::plot(NA,xlim=limits,ylim=c(0,nrow(design)+1),yaxt="n",ylab="",
+      graphics::plot(NA,xlim=limits,ylim=c(-.8,nrow(design)+1),yaxt="n",ylab="",
         xlab=if(quantity=="attainment")"Content attainment (Monte Carlo 95% CI)" else "Raw interval width (empirical 95% range)",
-        main=paste(law,if(quantity=="attainment")"attainment" else "width"))
-      graphics::axis(2,at=seq_len(nrow(design)),labels=paste0("n=",design$n,", c=",design$content),las=1,cex.axis=.85)
+        main=paste(law_labels[law],if(quantity=="attainment")"attainment" else "width"))
+      graphics::axis(2,at=seq_len(nrow(design)),labels=sprintf("n=%d, c=%.2f",design$n,design$content),las=1,cex.axis=.85)
       if(quantity=="attainment")graphics::abline(v=.95,lty=2,col="gray50")
       for(j in seq_along(methods)) {
         z<-merge(design[,position:=seq_len(.N)],data[method==methods[j]],by=c("n","content"))
@@ -241,16 +245,16 @@ msc_figures <- function(rows,cells,records,cfg) {
         graphics::segments(lo,pos,hi,pos,col=colors[j],lwd=1.5)
         graphics::points(z[[quantity]],pos,pch=4,col=colors[j],cex=.7)
       }
-      graphics::legend("bottomright",legend=methods,col=colors,lty=1,cex=.65,bg="white")
+      graphics::legend("bottom",legend=method_labels,col=colors,lty=1,cex=.65,ncol=3,bty="n")
     }
     graphics::par(mfrow=c(1,1),mar=c(5,5,4,1))
     z<-rows[response_id==law & method %in% c("narrow","primary","broad") & returned]
     groups<-interaction(z$method,z$n,z$content,drop=TRUE)
     if(nrow(z)) {
       graphics::boxplot(log(z$rate)~groups,las=2,cex.axis=.65,ylab="Estimated log inverse loss scale",
-        main=paste(law,"selected scale; exploratory screening"))
+        main=paste(law_labels[law],"selected scale; exploratory screening"))
       graphics::abline(h=0,col="gray50",lty=2)
-    } else {graphics::plot.new();graphics::title(main=paste(law,"no eligible common-scale intervals"))}
+    } else {graphics::plot.new();graphics::title(main=paste(law_labels[law],"no eligible common-scale intervals"))}
   }
   for(index in which(vapply(records,function(z)z$task$replication==1,FALSE))) {
     record<-records[[index]];task<-record$task
@@ -258,9 +262,12 @@ msc_figures <- function(rows,cells,records,cfg) {
       t<-record$models[[model]]$trace
       if(!nrow(t))next
       graphics::par(mfrow=c(2,2),mar=c(4,4,3,1))
-      for(variable in c("root1","root2","log_learning_rate","objective")) {
-        graphics::plot(seq_len(nrow(t)),t[[variable]],type="l",xlab="Recorded update",ylab=variable,
-          main=paste(task$response_id,task$n,task$content,model))
+      variable_labels<-c(root1="Root a",root2="Root b",log_learning_rate="Log inverse loss scale",objective="Negative log joint density")
+      for(variable in names(variable_labels)) {
+        graphics::plot(seq_len(nrow(t)),t[[variable]],type="l",xlab="Recorded update",ylab=variable_labels[variable],
+          main=sprintf("%s, n=%d, c=%.2f",law_labels[task$response_id],task$n,task$content),
+          sub=sprintf("%s range; q=%.4f, delta=%.3f",model,record$models[[model]]$selected$target_content,
+            record$models[[model]]$selected$mean_tilt))
       }
     }
   }

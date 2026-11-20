@@ -23,7 +23,10 @@ if(mode=="health") {
   for(name in c("startup_status.json","screening/progress.json","study_summary.json","verification.json","controller_exit.json")) {
     p<-file.path(cfg$output_root,name);if(file.exists(p)){cat(name,"\n");print(mwd_json(p))}
   }
-  if(file.exists(review_pointer)){cat("Separate statistical review\n");print(mwd_json(review_pointer))}
+  if(file.exists(review_pointer)) {
+    cat("Separate statistical review\n");value<-mwd_json(review_pointer)
+    print(value[c("source_commit","analysis_commit","output_root","datasets","passed","result")])
+  }
   quit(save="no")
 }
 if(mode %in% c("review","verify-review")) {
