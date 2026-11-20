@@ -188,6 +188,141 @@ void canonicalize(double& b1, double& b2, const bool enabled) {
 
 } // namespace
 
+namespace {
+double cs_loss(const Rcpp::NumericVector& y, double a, double b, double q, double delta) {
+  double value = 0.0;
+  for (double z : y) {
+    double e = (z-a)*(z-b);
+    value += e*(q-(e < 0.0 ? 1.0 : 0.0))-q*delta*(a+b-2.0*z);
+  }
+  return value;
+}
+
+double cs_objective(const Rcpp::NumericVector& y, double a, double b,
+                    double q, double delta, double eta, double precision) {
+  return std::exp(eta)*cs_loss(y,a,b,q,delta)+precision*(a*a+b*b)/2.0-y.size()*eta;
+}
+
+double cs_scale_mode(double coefficient, double power, double lo, double hi) {
+  return coefficient <= 0.0 ? hi : std::max(lo,std::min(hi,std::log(power)-std::log(coefficient)));
+}
+
+double cs_root_mode(const Rcpp::NumericVector& ys, double other, double q,
+                    double delta, double omega, double precision) {
+  double slope = -ys.size()*q*delta;
+  for (double y : ys) slope += -q*(y-other)+std::min(y-other,0.0);
+  double mass = 0.0;
+  for (double y : ys) {
+    double before = precision*y+omega*(slope+mass);
+    mass += std::abs(y-other);
+    double after = precision*y+omega*(slope+mass);
+    if (after >= 0.0) return before <= 0.0 ? y : -omega*(slope+mass-std::abs(y-other))/precision;
+  }
+  return -omega*(slope+mass)/precision;
+}
+
+double cs_increment(const Rcpp::NumericVector& y, double old, double other,
+                    double proposed, double q, double delta, double omega, double precision) {
+  const double step = proposed-old;
+  double value = -y.size()*q*delta*step;
+  for (double z : y) {
+    double e0 = (z-old)*(z-other), e1 = (z-proposed)*(z-other);
+    value += ((e0 < 0.0) == (e1 < 0.0)) ? -step*(z-other)*(q-(e0 < 0.0 ? 1.0 : 0.0)) :
+      e1*(q-(e1 < 0.0 ? 1.0 : 0.0))-e0*(q-(e0 < 0.0 ? 1.0 : 0.0));
+  }
+  return omega*value+precision*step*(old+proposed)/2.0;
+}
+}
+
+// [[Rcpp::export]]
+Rcpp::List rqr_ecm_common_scale_run_cpp(
+    const Rcpp::NumericVector& y, double q, double delta, double precision,
+    const Rcpp::NumericVector& roots, double eta, const Rcpp::NumericVector& bounds,
+    int max_iter, int polish_cycles, double relative_floor, std::string floor_type,
+    double tol_parameters, double tol_objective, double monotone_tolerance,
+    int backtracking_max_steps, std::string update, bool sort_roots, std::string label) {
+  Rcpp::NumericVector deltas(y.size(),delta);
+  validate_common(y,deltas,q,std::exp(eta),precision);
+  if (roots.size()!=2 || bounds.size()!=2 || !std::isfinite(roots[0]) || !std::isfinite(roots[1]) ||
+      !std::isfinite(bounds[0]) || !std::isfinite(bounds[1]) || bounds[0]>=0.0 || bounds[1]<=0.0 ||
+      !std::isfinite(std::exp(bounds[1])) || std::exp(bounds[0])<=0.0 ||
+      eta<bounds[0] || eta>bounds[1] || max_iter<1 || polish_cycles<1 ||
+      relative_floor<0.0 || !std::isfinite(relative_floor) ||
+      (floor_type!="hard" && floor_type!="smooth") || (update!="ecm" && update!="ecme") ||
+      backtracking_max_steps<0) Rcpp::stop("Invalid common-scale ECM controls.");
+  double a=roots[0],b=roots[1],objective=cs_objective(y,a,b,q,delta,eta,precision);
+  const double floor=relative_floor*product_scale(y);
+  Rcpp::NumericVector ys=Rcpp::clone(y); std::sort(ys.begin(),ys.end());
+  std::vector<double> ta,tb,te,to,tl;
+  std::vector<int> ti; std::vector<std::string> tp;
+  int backtracking=0;
+  auto record = [&](std::string phase,int iteration) {
+    ta.push_back(a);tb.push_back(b);te.push_back(eta);to.push_back(objective);
+    tl.push_back(cs_loss(y,a,b,q,delta));ti.push_back(iteration);tp.push_back(phase);
+  };
+  record("initial",0);
+  const double phi=2.0/(q*(1.0-q)),xi=(1.0-2.0*q)/(q*(1.0-q));
+  for (int iteration=1;iteration<=max_iter;++iteration) {
+    if (iteration%100==0) Rcpp::checkUserInterrupt();
+    double olda=a,oldb=b,oldeta=eta,oldobj=objective,omega=std::exp(eta);
+    Rcpp::NumericVector e=residuals(y,a,b);
+    Rcpp::List inv=inverse_latent(e,q,floor,floor_type);
+    Rcpp::NumericVector tau=inv["tau"],ev(y.size());
+    for (int i=0;i<y.size();++i) ev[i]=q*(1.0-q)*(std::abs(e[i])+2.0/omega);
+    double pa=update_root(y,deltas,tau,b,q,omega,precision);
+    double pb=update_root(y,deltas,tau,pa,q,omega,precision);
+    canonicalize(pa,pb,sort_roots);
+    double h=0.0;
+    for (int i=0;i<y.size();++i) {
+      double enew=(y[i]-pa)*(y[i]-pb);
+      h+=enew*enew*tau[i]/(2.0*phi)-xi*enew/phi+(xi*xi/(2.0*phi)+1.0)*ev[i]
+        -q*delta*(pa+pb-2.0*y[i]);
+    }
+    double pe=update=="ecm" ? cs_scale_mode(h,1.5*y.size(),bounds[0],bounds[1]) :
+      cs_scale_mode(cs_loss(y,pa,pb,q,delta),y.size(),bounds[0],bounds[1]);
+    bool accepted=false;
+    for (int bt=0;bt<=backtracking_max_steps;++bt) {
+      double step=std::ldexp(1.0,-bt),na=olda+step*(pa-olda),nb=oldb+step*(pb-oldb),ne=oldeta+step*(pe-oldeta);
+      double no=cs_objective(y,na,nb,q,delta,ne,precision);
+      if (std::isfinite(no) && no<=oldobj+monotone_tolerance) {
+        a=na;b=nb;eta=ne;objective=no;backtracking+=bt;accepted=true;break;
+      }
+    }
+    if (!accepted) break;
+    record(update,iteration);
+    if (std::max(std::max(std::abs(a-olda),std::abs(b-oldb)),std::abs(eta-oldeta))<tol_parameters &&
+        std::abs(objective-oldobj)<=tol_objective*std::max(1.0,std::abs(oldobj))) break;
+  }
+  for (int cycle=1;cycle<=polish_cycles;++cycle) {
+    double pa=cs_root_mode(ys,b,q,delta,std::exp(eta),precision);
+    if (cs_increment(y,a,b,pa,q,delta,std::exp(eta),precision)>1e-7*std::max(1.0,std::abs(objective)))
+      Rcpp::stop("Root polishing increased the objective.");
+    a=pa;
+    double pb=cs_root_mode(ys,a,q,delta,std::exp(eta),precision);
+    if (cs_increment(y,b,a,pb,q,delta,std::exp(eta),precision)>1e-7*std::max(1.0,std::abs(objective)))
+      Rcpp::stop("Root polishing increased the objective.");
+    b=pb;canonicalize(a,b,sort_roots);
+    eta=cs_scale_mode(cs_loss(y,a,b,q,delta),y.size(),bounds[0],bounds[1]);
+    objective=cs_objective(y,a,b,q,delta,eta,precision);record("observed_coordinate_polish",cycle);
+    double ma=cs_root_mode(ys,b,q,delta,std::exp(eta),precision),mb=cs_root_mode(ys,a,q,delta,std::exp(eta),precision);
+    double gap=std::max(0.0,std::max(-cs_increment(y,a,b,ma,q,delta,std::exp(eta),precision),
+      -cs_increment(y,b,a,mb,q,delta,std::exp(eta),precision)));
+    if (gap<=1e-6 && std::max(std::abs(a-ma),std::abs(b-mb))<=1e-5*std::max(1.0,std::abs(b-a))) break;
+  }
+  int n=ta.size();Rcpp::NumericVector width(n),rate(n),scale(n);
+  Rcpp::LogicalVector atlo(n),athi(n);Rcpp::CharacterVector labels(n,label);
+  for (int i=0;i<n;++i) {width[i]=std::abs(tb[i]-ta[i]);rate[i]=std::exp(te[i]);scale[i]=std::exp(-te[i]);
+    atlo[i]=te[i]==bounds[0];athi[i]=te[i]==bounds[1];}
+  Rcpp::DataFrame trace=Rcpp::DataFrame::create(Rcpp::Named("start_label")=labels,
+    Rcpp::Named("phase")=tp,Rcpp::Named("iteration")=ti,Rcpp::Named("root1")=ta,
+    Rcpp::Named("root2")=tb,Rcpp::Named("width")=width,Rcpp::Named("log_learning_rate")=te,
+    Rcpp::Named("learning_rate")=rate,Rcpp::Named("loss_scale")=scale,Rcpp::Named("objective")=to,
+    Rcpp::Named("tilted_loss")=tl,Rcpp::Named("at_lower_bound")=atlo,Rcpp::Named("at_upper_bound")=athi);
+  return Rcpp::List::create(Rcpp::Named("roots")=Rcpp::NumericVector::create(a,b),
+    Rcpp::Named("eta")=eta,Rcpp::Named("objective")=objective,Rcpp::Named("trace")=trace,
+    Rcpp::Named("backtracking_count")=backtracking);
+}
+
 //' C++ intercept-only fixed-target MTI-ECM start
 //'
 //' @keywords internal

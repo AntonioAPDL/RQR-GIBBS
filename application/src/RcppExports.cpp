@@ -11,6 +11,34 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// rqr_ecm_common_scale_run_cpp
+Rcpp::List rqr_ecm_common_scale_run_cpp(const Rcpp::NumericVector& y, double q, double delta, double precision, const Rcpp::NumericVector& roots, double eta, const Rcpp::NumericVector& bounds, int max_iter, int polish_cycles, double relative_floor, std::string floor_type, double tol_parameters, double tol_objective, double monotone_tolerance, int backtracking_max_steps, std::string update, bool sort_roots, std::string label);
+RcppExport SEXP _rqrgibbs_rqr_ecm_common_scale_run_cpp(SEXP ySEXP, SEXP qSEXP, SEXP deltaSEXP, SEXP precisionSEXP, SEXP rootsSEXP, SEXP etaSEXP, SEXP boundsSEXP, SEXP max_iterSEXP, SEXP polish_cyclesSEXP, SEXP relative_floorSEXP, SEXP floor_typeSEXP, SEXP tol_parametersSEXP, SEXP tol_objectiveSEXP, SEXP monotone_toleranceSEXP, SEXP backtracking_max_stepsSEXP, SEXP updateSEXP, SEXP sort_rootsSEXP, SEXP labelSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< double >::type q(qSEXP);
+    Rcpp::traits::input_parameter< double >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< double >::type precision(precisionSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type roots(rootsSEXP);
+    Rcpp::traits::input_parameter< double >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type bounds(boundsSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< int >::type polish_cycles(polish_cyclesSEXP);
+    Rcpp::traits::input_parameter< double >::type relative_floor(relative_floorSEXP);
+    Rcpp::traits::input_parameter< std::string >::type floor_type(floor_typeSEXP);
+    Rcpp::traits::input_parameter< double >::type tol_parameters(tol_parametersSEXP);
+    Rcpp::traits::input_parameter< double >::type tol_objective(tol_objectiveSEXP);
+    Rcpp::traits::input_parameter< double >::type monotone_tolerance(monotone_toleranceSEXP);
+    Rcpp::traits::input_parameter< int >::type backtracking_max_steps(backtracking_max_stepsSEXP);
+    Rcpp::traits::input_parameter< std::string >::type update(updateSEXP);
+    Rcpp::traits::input_parameter< bool >::type sort_roots(sort_rootsSEXP);
+    Rcpp::traits::input_parameter< std::string >::type label(labelSEXP);
+    rcpp_result_gen = Rcpp::wrap(rqr_ecm_common_scale_run_cpp(y, q, delta, precision, roots, eta, bounds, max_iter, polish_cycles, relative_floor, floor_type, tol_parameters, tol_objective, monotone_tolerance, backtracking_max_steps, update, sort_roots, label));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rqr_ecm_intercept_run_cpp
 Rcpp::List rqr_ecm_intercept_run_cpp(const Rcpp::NumericVector& y, const double coverage_level, const double learning_rate, const Rcpp::NumericVector& mean_tilt, const double prior_prec, const double beta1_start, const double beta2_start, const int max_iter, const double tol_objective, const double tol_parameters, const double tol_stationarity, const int stable_iterations, const double residual_product_floor, const Rcpp::NumericVector& floor_schedule, const std::string floor_type, const bool monotone_backtracking, const int backtracking_max_steps, const double monotone_tolerance, const bool canonicalize_complete_roots, const std::string start_label);
 RcppExport SEXP _rqrgibbs_rqr_ecm_intercept_run_cpp(SEXP ySEXP, SEXP coverage_levelSEXP, SEXP learning_rateSEXP, SEXP mean_tiltSEXP, SEXP prior_precSEXP, SEXP beta1_startSEXP, SEXP beta2_startSEXP, SEXP max_iterSEXP, SEXP tol_objectiveSEXP, SEXP tol_parametersSEXP, SEXP tol_stationaritySEXP, SEXP stable_iterationsSEXP, SEXP residual_product_floorSEXP, SEXP floor_scheduleSEXP, SEXP floor_typeSEXP, SEXP monotone_backtrackingSEXP, SEXP backtracking_max_stepsSEXP, SEXP monotone_toleranceSEXP, SEXP canonicalize_complete_rootsSEXP, SEXP start_labelSEXP) {
@@ -132,6 +160,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_rqrgibbs_rqr_ecm_common_scale_run_cpp", (DL_FUNC) &_rqrgibbs_rqr_ecm_common_scale_run_cpp, 18},
     {"_rqrgibbs_rqr_ecm_intercept_run_cpp", (DL_FUNC) &_rqrgibbs_rqr_ecm_intercept_run_cpp, 20},
     {"_rqrgibbs_rqr_mvn_draw_cpp", (DL_FUNC) &_rqrgibbs_rqr_mvn_draw_cpp, 4},
     {"_rqrgibbs_rqr_filter_log_marginal_cpp", (DL_FUNC) &_rqrgibbs_rqr_filter_log_marginal_cpp, 7},

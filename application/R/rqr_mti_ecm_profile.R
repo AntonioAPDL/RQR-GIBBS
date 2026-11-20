@@ -123,7 +123,8 @@
       mean_tilt = delta,
       beta_prior_obj = beta_prior_obj,
       ecm_control = ecm_control,
-      init = init
+      init = init,
+      scale_control = ecm_control$scale_control %||% NULL
     ),
     error = function(e) e
   )
@@ -148,6 +149,11 @@
       failure_reason = conditionMessage(fit),
       stringsAsFactors = FALSE
     )
+    if (!is.null(ecm_control$scale_control)) {
+      for (name in c("learning_rate", "loss_scale", "log_learning_rate", "coordinate_gap", "endpoint_gap", "scale_gap", "scale_displacement", "tilted_loss")) row[[name]] <- NA_real_
+      row$scale_at_upper_bound <- row$scale_at_lower_bound <- FALSE
+      row$numerically_accurate <- FALSE
+    }
     if (!isTRUE(return_trace)) return(row)
     return(list(row = row, trace = data.frame()))
   }
@@ -186,6 +192,19 @@
     failure_reason = "",
     stringsAsFactors = FALSE
   )
+  if (!is.null(fit$common_scale)) {
+    row$learning_rate <- fit$learning_rate
+    row$loss_scale <- fit$common_scale$loss_scale
+    row$log_learning_rate <- fit$common_scale$log_learning_rate
+    row$scale_at_upper_bound <- fit$common_scale$at_upper_bound
+    row$scale_at_lower_bound <- fit$common_scale$at_lower_bound
+    row$numerically_accurate <- fit$numerically_accurate
+    row$coordinate_gap <- fit$stationarity_diagnostic$common_scale_accuracy$coordinate_gap
+    row$endpoint_gap <- fit$stationarity_diagnostic$common_scale_accuracy$endpoint_gap
+    row$scale_gap <- fit$stationarity_diagnostic$common_scale_accuracy$scale_gap
+    row$scale_displacement <- fit$stationarity_diagnostic$common_scale_accuracy$scale_displacement
+    row$tilted_loss <- fit$stationarity_diagnostic$common_scale_accuracy$loss
+  }
   if (!isTRUE(return_trace)) return(row)
   trace <- fit$objective_trace
   if (is.null(trace) || !nrow(trace)) {
@@ -277,7 +296,9 @@ rqr_mti_ecm_dp_profile_action <- function(
     ),
     ecm_control
   )
+  scale_control <- ecm_control$scale_control
   ecm_control <- .rqr_ecm_assert_control(ecm_control)
+  if (!is.null(scale_control)) ecm_control$scale_control <- scale_control
 
   if (is.null(q_grid)) {
     q_grid <- do.call(
@@ -378,6 +399,9 @@ rqr_mti_ecm_dp_profile_action <- function(
   candidates$posterior_constraint_satisfied <-
     is.finite(candidates$posterior_content_probability) &
     candidates$posterior_content_probability >= post_conf
+  if (!is.null(ecm_control$scale_control)) {
+    candidates$posterior_constraint_satisfied <- candidates$posterior_constraint_satisfied & candidates$numerically_accurate
+  }
 
   expanded <- FALSE
   if (!any(candidates$posterior_constraint_satisfied) &&
@@ -419,6 +443,9 @@ rqr_mti_ecm_dp_profile_action <- function(
       more$posterior_constraint_satisfied <-
         is.finite(more$posterior_content_probability) &
         more$posterior_content_probability >= post_conf
+      if (!is.null(ecm_control$scale_control)) {
+        more$posterior_constraint_satisfied <- more$posterior_constraint_satisfied & more$numerically_accurate
+      }
       candidates <- rbind(candidates, more)
     }
   }

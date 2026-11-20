@@ -386,16 +386,30 @@
 #' @param ecm_control Named list controlling iterations, safeguards,
 #'   backtracking, and deterministic multi-start.
 #' @param init Optional initial values or `previous_fit` for warm starts.
+#' @param scale_control Optional proper bounded common-scale specification.
+#'   Supply `log_rate_bounds` enclosing zero; `update` is `"ecm"` or
+#'   `"ecme"`. This opt-in intercept-only extension estimates a joint mode
+#'   in roots and log inverse loss scale. The default retains fixed scale.
 #' @param ... Reserved.
 #' @return An `rqr_ecm` object.
 #' @export
 rqr_ecm_fit <- function(y, X, coverage_level, learning_rate = 1,
                         mean_tilt = 0, beta_prior_obj = NULL,
-                        ecm_control = list(), init = list(), ...) {
+                        ecm_control = list(), init = list(), scale_control = NULL, ...) {
   extra <- list(...)
   if (length(extra)) {
     stop("Additional arguments are reserved for future ECM extensions.",
          call. = FALSE)
+  }
+  if (!is.null(ecm_control$scale_control)) {
+    if (!is.null(scale_control) && !identical(scale_control, ecm_control$scale_control)) {
+      stop("Conflicting common-scale specifications.", call. = FALSE)
+    }
+    scale_control <- ecm_control$scale_control
+  }
+  if (!is.null(scale_control)) {
+    return(.rqr_ecm_common_scale_fit(y, X, coverage_level, learning_rate,
+      mean_tilt, beta_prior_obj, ecm_control, init, scale_control))
   }
   dat <- .rqr_assert_xy(y, X)
   y <- dat$y

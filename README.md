@@ -33,6 +33,17 @@ attribution to the original residual-product criterion of Pouplin et al.
 Large generated objects, fitted model outputs, logs, run directories, local
 caches, and local literature PDFs are excluded from version control.
 
+## Experimental Common Loss Scale
+
+An opt-in intercept-only ECM extension estimates a common loss scale under
+a proper prior uniform on a finite log-scale range. The current articles
+and reported fixed-scale results are unchanged. The
+[derivation](docs/theory/mti_common_scale.md) states the joint generalized
+posterior and propriety argument; the
+[reproduction instructions](docs/reproducibility/mti_ecm_common_scale.md)
+describe R/C++ checks, prior-range sensitivity, relaxed-calibration comparisons
+and the all-case screening. Gibbs sampling for this extension remains deferred.
+
 ## Fixed-Prior Reassessment
 
 The manuscript's ECM/Gibbs comparison fixes independent Gaussian root priors at SD 2

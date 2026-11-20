@@ -1002,6 +1002,20 @@ health-mti-ecm-nominal:
 verify-mti-ecm-nominal:
 	$(R) application/scripts/136_assess_mti_ecm_nominal.R verify
 
+.PHONY: test-mti-ecm-common-scale prepare-mti-ecm-common-scale check-mti-ecm-common-scale launch-mti-ecm-common-scale health-mti-ecm-common-scale verify-mti-ecm-common-scale
+test-mti-ecm-common-scale:
+	$(R) -e 'pkgload::load_all("application", quiet=TRUE); testthat::test_file("application/tests/testthat/test-rqr-ecm-common-scale.R", reporter="summary", stop_on_failure=TRUE); testthat::test_file("application/tests/testthat/test-mti-ecm-common-scale-study.R", reporter="summary", stop_on_failure=TRUE)'
+prepare-mti-ecm-common-scale:
+	$(R) application/scripts/138_assess_mti_ecm_common_scale.R prepare
+check-mti-ecm-common-scale:
+	$(R) application/scripts/138_assess_mti_ecm_common_scale.R check
+launch-mti-ecm-common-scale:
+	bash application/scripts/139_launch_mti_ecm_common_scale.sh
+health-mti-ecm-common-scale:
+	$(R) application/scripts/138_assess_mti_ecm_common_scale.R health
+verify-mti-ecm-common-scale:
+	$(R) application/scripts/138_assess_mti_ecm_common_scale.R verify
+
 .PHONY: finalize-mti-ecm-nominal verify-finalized-mti-ecm-nominal
 finalize-mti-ecm-nominal:
 	$(R) application/scripts/136_assess_mti_ecm_nominal.R finalize
