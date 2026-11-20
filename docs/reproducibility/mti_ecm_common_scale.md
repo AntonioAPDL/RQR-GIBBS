@@ -103,8 +103,13 @@ Unavailable calibrations and missing intervals remain explicit.
 
 ## Scientific Decision
 
-An exact one-sided binomial lower bound above one half identifies majority
-upper-bound selection. When broader support changes paired endpoints beyond
+A one-sided Hoeffding lower bound above one half identifies majority
+upper-bound selection across the heterogeneous panel. For N returned fits
+and K upper-bound modes it is
+`max(0, K/N - sqrt(log(1/alpha)/(2*N)))`. Independence is sufficient;
+identical probabilities across laws and designs are not required. This
+panel diagnostic differs from the exact binomial intervals used separately
+within each distribution/design. When broader support changes paired endpoints beyond
 the existing numerical endpoint tolerance, this triggers
 `scientific_stop_bound_sensitive`. This is a prior-sensitivity decision,
 not a tolerance test or an implementation failure. Successful computation
@@ -117,3 +122,29 @@ requires scientific review of boundary effects, widths and calibration;
 the conditional stages are described in the user's ignored research plan.
 This separation avoids spending a broad validation on a model whose scale
 is predominantly determined by an arbitrary finite bound.
+
+## Separate Statistical Review
+
+The initial screening source a32c4af used a pooled binomial lower bound
+for this diagnostic. Its fitted roots, candidate tables, casewise attainment
+intervals and traces are unchanged. Later analysis corrects only the
+heterogeneous-panel bound, preserving all original reports and exits:
+
+```sh
+make review-mti-ecm-common-scale
+make verify-reviewed-mti-ecm-common-scale
+```
+
+Run with committed analysis source and its matching installed package,
+after the original controller finishes. Review verifies every original
+source/fit receipt, reproduces observations and contents, rechecks selected
+roots and scale, and writes separate reports under `_review_<analysis-commit>`.
+It performs no fitting or sampling. The separate pointer is
+`.codex_work/mti_ecm_common_scale_review_latest.json`; health displays both
+the historical and reviewed assessments. Repeated review verifies the
+existing outputs. Corrupted original evidence or revised reports stop it.
+
+The panel bound follows
+[Hoeffding (1963)](https://doi.org/10.1080/01621459.1963.10500830).
+It supports a scale-prior diagnostic, not a distribution-free tolerance
+guarantee for the fitted intervals.

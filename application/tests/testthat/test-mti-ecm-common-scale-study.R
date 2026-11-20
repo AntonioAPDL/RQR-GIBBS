@@ -24,7 +24,9 @@ testthat::test_that("a boundary majority plus range dependence blocks a large ru
   result<-msc_bound_review(rbind(a,b),cfg)
   testthat::expect_true(result$stop_bound_sensitive)
   testthat::expect_equal(result$primary_upper_bound,n)
-  testthat::expect_gt(result$exact_lower_bound,.5)
+  testthat::expect_gt(result$panel_lower_bound,.5)
+  testthat::expect_equal(result$panel_lower_bound,1-sqrt(log(1/cfg$boundary_error)/(2*n)))
+  testthat::expect_match(result$bound_method,"heterogeneous")
   b$lower<--1
   testthat::expect_false(msc_bound_review(rbind(a,b),cfg)$stop_bound_sensitive)
   a$at_upper_bound<-rep(c(TRUE,FALSE),50)
@@ -46,4 +48,19 @@ testthat::test_that("missing eligibility is recorded without a substitute interv
   testthat::expect_true(good$returned)
   testthat::expect_equal(good$rate,2)
   testthat::expect_equal(good$candidate_index,4)
+})
+
+testthat::test_that("separate review refuses incomplete screening before any fitting", {
+  directory<-tempfile();dir.create(directory);dir.create(file.path(directory,"screening"))
+  on.exit(unlink(directory,recursive=TRUE))
+  jsonlite::write_json(list(identity=list(configuration=list(expected_cells=72,screening_replications=12))),
+    file.path(directory,"manifest.json"),auto_unbox=TRUE)
+  jsonlite::write_json(list(remaining_datasets=1,numerical_pass=TRUE,completed_datasets=863),
+    file.path(directory,"screening/progress.json"),auto_unbox=TRUE)
+  testthat::expect_error(msc_review(list(output_root=directory),cs_config()),"controller")
+  jsonlite::write_json(list(exit_code=1),file.path(directory,"controller_exit.json"),auto_unbox=TRUE)
+  testthat::expect_error(msc_review(list(output_root=directory),cs_config()),"incomplete")
+  testthat::expect_false("msc_fit" %in% all.names(body(msc_review)))
+  testthat::expect_false("msc_job" %in% all.names(body(msc_review)))
+  testthat::expect_true("write_verification" %in% names(formals(msc_verify)))
 })

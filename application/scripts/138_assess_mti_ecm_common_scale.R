@@ -15,12 +15,27 @@ args<-commandArgs(TRUE);mode<-if(length(args))args[1] else "prepare"
 configuration<-"application/config/mti_ecm_common_scale_20261119.json"
 cfg<-mwd_json(configuration);msc_validate(cfg)
 pointer<-file.path(mgfp_common(),".codex_work/mti_ecm_common_scale_latest.json")
+review_pointer<-file.path(mgfp_common(),".codex_work/mti_ecm_common_scale_review_latest.json")
 cfg$output_root<-Sys.getenv("MTI_COMMON_SCALE_OUTPUT_ROOT",file.path("/var/tmp/jaguir26-mti-studies",
   paste0("mti_ecm_common_scale_",mgfp_git("rev-parse","HEAD"))))
 if(mode=="health") {
   if(file.exists(pointer))cfg$output_root<-mwd_json(pointer)$output_root
   for(name in c("startup_status.json","screening/progress.json","study_summary.json","verification.json","controller_exit.json")) {
     p<-file.path(cfg$output_root,name);if(file.exists(p)){cat(name,"\n");print(mwd_json(p))}
+  }
+  if(file.exists(review_pointer)){cat("Separate statistical review\n");print(mwd_json(review_pointer))}
+  quit(save="no")
+}
+if(mode %in% c("review","verify-review")) {
+  mwd_require(file.exists(pointer),"The original screening pointer is missing.")
+  if(mode=="review") {
+    value<-msc_review(mwd_json(pointer),cfg)
+    mgfp_json_write(value,review_pointer);print(value$result)
+  } else {
+    mwd_require(file.exists(review_pointer),"No separate review has been recorded.")
+    value<-mwd_json(review_pointer);mgfp_check_hashes(value$outputs);mgfp_check_hashes(value$inputs)
+    mwd_require(value$passed && value$no_refitting && value$original_outputs_preserved,"Invalid review evidence.")
+    print(value$result)
   }
   quit(save="no")
 }

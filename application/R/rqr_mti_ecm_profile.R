@@ -523,6 +523,7 @@ rqr_mti_ecm_dp_profile_action <- function(
       ecm_control = ecm_control
     ))
   )
+  if (!is.null(scale_control)) out$common_scale_prior <- .rqr_cs_spec(scale_control)
   out$provenance_digest <- .rqr_bayes_digest(list(
     selected = selected,
     candidates = candidates,

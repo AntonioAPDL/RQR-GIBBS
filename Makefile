@@ -1015,6 +1015,11 @@ health-mti-ecm-common-scale:
 	$(R) application/scripts/138_assess_mti_ecm_common_scale.R health
 verify-mti-ecm-common-scale:
 	$(R) application/scripts/138_assess_mti_ecm_common_scale.R verify
+.PHONY: review-mti-ecm-common-scale verify-reviewed-mti-ecm-common-scale
+review-mti-ecm-common-scale:
+	$(R) application/scripts/138_assess_mti_ecm_common_scale.R review
+verify-reviewed-mti-ecm-common-scale:
+	$(R) application/scripts/138_assess_mti_ecm_common_scale.R verify-review
 
 .PHONY: finalize-mti-ecm-nominal verify-finalized-mti-ecm-nominal
 finalize-mti-ecm-nominal:

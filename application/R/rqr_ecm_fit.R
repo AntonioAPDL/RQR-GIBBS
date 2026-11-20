@@ -739,6 +739,7 @@ summary.rqr_ecm <- function(object, ...) {
     selected_start = object$selected_start,
     multistart_summary = object$multistart_summary
   )
+  if (!is.null(object$common_scale)) out$common_scale <- object$common_scale
   class(out) <- c("summary.rqr_ecm", "list")
   out
 }

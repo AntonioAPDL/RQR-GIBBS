@@ -39,7 +39,7 @@
   slope <- -q * sum(difference) + sum(pmin(difference, 0)) - length(y) * q * delta
   after <- precision * ys + omega * (slope + mass[-1L])
   crossing <- which(after >= 0)[1L]
-  if (is.na(crossing)) return(-omega * (slope + tail(mass, 1L)) / precision)
+  if (is.na(crossing)) return(-omega * (slope + utils::tail(mass, 1L)) / precision)
   before <- precision * ys[crossing] + omega * (slope + mass[crossing])
   if (before <= 0) ys[crossing] else -omega * (slope + mass[crossing]) / precision
 }

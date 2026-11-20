@@ -127,7 +127,7 @@ msc_job <- function(task,cfg,context) {
 msc_bound_review <- function(rows,cfg) {
   d<-data.table::as.data.table(rows)[method=="primary"]
   n<-sum(d$returned);k<-sum(d$at_upper_bound & d$returned)
-  lower<-if(k==0 || n==0)0 else qbeta(cfg$boundary_error,k,n-k+1)
+  lower<-if(n==0)0 else max(0,k/n-sqrt(log(1/cfg$boundary_error)/(2*n)))
   a<-data.table::as.data.table(rows)[method=="primary" & returned,.(job_id,lower,upper,width)]
   b<-data.table::as.data.table(rows)[method=="broad" & returned,.(job_id,lower,upper)]
   paired<-merge(a,b,by="job_id",suffixes=c("_primary","_broad"))
@@ -135,7 +135,8 @@ msc_bound_review <- function(rows,cfg) {
     abs(paired$upper_primary-paired$upper_broad)>1e-5*pmax(1,paired$width)
   majority<-lower>cfg$boundary_majority
   list(primary_returned=n,primary_upper_bound=k,upper_bound_fraction=if(n)k/n else NA_real_,
-    exact_lower_bound=lower,majority_bound=majority,paired_ranges=nrow(paired),changed_range_pairs=sum(changed),
+    panel_lower_bound=lower,bound_method="one_sided_Hoeffding_independent_heterogeneous_Bernoulli",
+    majority_bound=majority,paired_ranges=nrow(paired),changed_range_pairs=sum(changed),
     stop_bound_sensitive=majority && any(changed),not_a_tolerance_test=TRUE)
 }
 
@@ -239,7 +240,7 @@ msc_figures <- function(rows,cells,records,cfg) {
   invisible(path)
 }
 
-msc_verify <- function(cfg,context,tasks,identity) {
+msc_verify <- function(cfg,context,tasks,identity,write_verification=TRUE) {
   paths<-file.path(cfg$output_root,"screening/fits",sprintf("fit_%06d.rds",tasks$job_id))
   stage<-mwd_json(file.path(cfg$output_root,"screening/manifest.json"))$analysis_id
   mwd_require(identical(stage,mwd_hash(list(identity,"screening",tasks))),"Screening identity changed.")
@@ -267,7 +268,50 @@ msc_verify <- function(cfg,context,tasks,identity) {
   })
   manifest<-mwd_json(file.path(cfg$output_root,"manifest.json"))$identity
   mgfp_check_hashes(manifest$article_files)
-  mgfp_json_write(list(passed=TRUE,datasets=length(records),article_unchanged=TRUE,
+  if(write_verification)mgfp_json_write(list(passed=TRUE,datasets=length(records),article_unchanged=TRUE,
     no_gibbs_sampling=TRUE,prior_uses_analysis_data=FALSE,time=mgfp_time()),file.path(cfg$output_root,"verification.json"))
   records
+}
+
+msc_review <- function(study,cfg) {
+  original<-mwd_json(file.path(study$output_root,"manifest.json"))
+  old<-original$identity$configuration
+  progress<-mwd_json(file.path(study$output_root,"screening/progress.json"))
+  mwd_require(file.exists(file.path(study$output_root,"controller_exit.json")),
+    "Wait for the original controller to finish before separate review.")
+  mwd_require(progress$remaining_datasets==0 && progress$numerical_pass &&
+    progress$completed_datasets==old$expected_cells*old$screening_replications,
+    "The original screening fits are incomplete.")
+  commit<-paste(system2("git",c("--no-optional-locks","-C",shQuote(study$checkout),"rev-parse","HEAD"),stdout=TRUE),collapse="")
+  mwd_require(commit==study$source_commit && commit==original$identity$source_commit,"The original source checkout changed.")
+  mgfp_check_hashes(original$identity$programs,file.path(study$checkout,names(original$identity$programs)))
+  mgfp_check_hashes(original$identity$package$libraries)
+  inputs<-list.files(study$output_root,recursive=TRUE,full.names=TRUE)
+  inputs<-inputs[grepl("[.](json|csv|pdf)$",inputs)]
+  before<-mgfp_hashes(inputs)
+  current<-mgfp_git("rev-parse","HEAD")
+  mwd_require(!nzchar(mgfp_git("status","--porcelain")),"Commit review source before producing revised reports.")
+  target<-paste0(study$output_root,"_review_",current)
+  dir.create(file.path(target,"screening"),recursive=TRUE,showWarnings=FALSE)
+  context<-msc_context(cfg,target)
+  tasks<-context$development[context$development$replication<=old$screening_replications,,drop=FALSE]
+  tasks$source_job_id<-tasks$job_id;tasks$job_id<-seq_len(nrow(tasks))
+  records<-msc_verify(old,context,tasks,original$identity,write_verification=FALSE)
+  reviewed<-old;reviewed$output_root<-target
+  if(file.exists(file.path(target,"review.json"))) {
+    prior<-mwd_json(file.path(target,"review.json"))
+    mgfp_check_hashes(prior$outputs)
+    mgfp_check_hashes(prior$inputs)
+    mwd_require(prior$source_commit==commit && prior$analysis_commit==current,"Reviewed source changed.")
+    return(prior)
+  }
+  result<-msc_report(records,reviewed,context)
+  mgfp_check_hashes(before)
+  files<-list.files(target,recursive=TRUE,full.names=TRUE)
+  evidence<-list(source_commit=commit,analysis_commit=current,output_root=target,
+    sampling_output_root=study$output_root,datasets=length(records),passed=TRUE,
+    no_refitting=TRUE,original_outputs_preserved=TRUE,
+    correction="Heterogeneous panel bound uses Hoeffding; within-case binomial intervals unchanged.",
+    result=result,inputs=before,outputs=mgfp_hashes(files),time=mgfp_time())
+  mgfp_json_write(evidence,file.path(target,"review.json"));evidence
 }

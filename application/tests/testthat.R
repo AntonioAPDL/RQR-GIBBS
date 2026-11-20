@@ -10,5 +10,5 @@ library(rqrgibbs)
 # separate pinned-reference suite.
 test_check(
   "rqrgibbs",
-  filter = "native|mti-intercept-profile|mti-content-grid"
+  filter = "native|mti-intercept-profile|mti-content-grid|rqr-ecm-common-scale"
 )

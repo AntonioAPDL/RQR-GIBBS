@@ -80,6 +80,7 @@ test_that("R and C++ common-scale ECM fit the declared target", {
     expect_true(all(diff(a$objective_trace$objective)<=1e-8))
     expect_equal(predict_interval(a,matrix(1,1,1))$width,abs(a$beta_root2-a$beta_root1))
     expect_false(a$response_likelihood)
+    expect_equal(summary(a)$common_scale,a$common_scale)
     expect_false(a$formal_tolerance_action)
     ref <- rqr_ecm_fit(y,X,.85,learning_rate=a$learning_rate,mean_tilt=.1,
       beta_prior_obj=beta_prior("ridge",ridge=list(tau2=4)),ecm_control=control,
@@ -116,6 +117,7 @@ test_that("common-scale rejection and DP candidate integration are explicit", {
   expect_gt(nrow(action$candidates),0)
   expect_true(all(c("numerically_accurate","learning_rate","loss_scale") %in% names(action$candidates)))
   expect_length(action$candidates$learning_rate,nrow(action$candidates))
+  expect_equal(action$common_scale_prior$log_rate_bounds,sc$log_rate_bounds)
   expect_true(all(action$candidates$numerically_accurate))
   expect_true(all(is.finite(action$candidates$loss_scale)))
   prob<-rqr_dp_content_probability(action$posterior_distribution_fit,
