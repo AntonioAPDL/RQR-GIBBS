@@ -261,13 +261,15 @@ msc_figures <- function(rows,cells,records,cfg) {
     for(model in names(cfg$scale_ranges)) {
       t<-record$models[[model]]$trace
       if(!nrow(t))next
-      graphics::par(mfrow=c(2,2),mar=c(4,4,3,1))
+      graphics::par(mfrow=c(2,2),mar=c(5.3,5,3,1))
       variable_labels<-c(root1="Root a",root2="Root b",log_learning_rate="Log inverse loss scale",objective="Negative log joint density")
       for(variable in names(variable_labels)) {
-        graphics::plot(seq_len(nrow(t)),t[[variable]],type="l",xlab="Recorded update",ylab=variable_labels[variable],
+        graphics::plot(seq_len(nrow(t)),t[[variable]],type="l",yaxt="n",xlab="Recorded update",ylab=variable_labels[variable],
           main=sprintf("%s, n=%d, c=%.2f",law_labels[task$response_id],task$n,task$content),
           sub=sprintf("%s range; q=%.4f, delta=%.3f",model,record$models[[model]]$selected$target_content,
             record$models[[model]]$selected$mean_tilt))
+        ticks<-graphics::axTicks(2)
+        graphics::axis(2,at=ticks,labels=format(ticks,digits=10,trim=TRUE),cex.axis=.8)
       }
     }
   }
