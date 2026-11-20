@@ -386,7 +386,10 @@
 #' @param ecm_control Named list controlling iterations, safeguards,
 #'   backtracking, and deterministic multi-start.
 #' @param init Optional initial values or `previous_fit` for warm starts.
-#' @param scale_control Optional proper bounded common-scale specification.
+#' @param scale_control Optional common loss-scale specification. Use
+#'   `prior="log_uniform"` on finite `log_rate_bounds`, or `prior="gamma_rate"`
+#'   with positive `shape` and `rate` on inverse scale. Gamma priors allow a
+#'   zero lower rate bound; unbounded upper support currently requires zero tilt.
 #'   Supply `log_rate_bounds` enclosing zero; `update` is `"ecm"` or
 #'   `"ecme"`. This opt-in intercept-only extension estimates a joint mode
 #'   in roots and log inverse loss scale. The default retains fixed scale.

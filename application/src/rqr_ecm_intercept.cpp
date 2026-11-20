@@ -199,11 +199,13 @@ double cs_loss(const Rcpp::NumericVector& y, double a, double b, double q, doubl
 }
 
 double cs_objective(const Rcpp::NumericVector& y, double a, double b,
-                    double q, double delta, double eta, double precision) {
-  return std::exp(eta)*cs_loss(y,a,b,q,delta)+precision*(a*a+b*b)/2.0-y.size()*eta;
+                    double q, double delta, double eta, double precision,
+                    double shape, double rate) {
+  return std::exp(eta)*(cs_loss(y,a,b,q,delta)+rate)+precision*(a*a+b*b)/2.0-(y.size()+shape)*eta;
 }
 
 double cs_scale_mode(double coefficient, double power, double lo, double hi) {
+  if (coefficient<=0.0 && !std::isfinite(hi)) Rcpp::stop("Nonpositive unrestricted Gamma rate.");
   return coefficient <= 0.0 ? hi : std::max(lo,std::min(hi,std::log(power)-std::log(coefficient)));
 }
 
@@ -240,17 +242,22 @@ Rcpp::List rqr_ecm_common_scale_run_cpp(
     const Rcpp::NumericVector& roots, double eta, const Rcpp::NumericVector& bounds,
     int max_iter, int polish_cycles, double relative_floor, std::string floor_type,
     double tol_parameters, double tol_objective, double monotone_tolerance,
-    int backtracking_max_steps, std::string update, bool sort_roots, std::string label) {
+    int backtracking_max_steps, std::string update, bool sort_roots, std::string label,
+    double shape=0.0, double rate=0.0) {
   Rcpp::NumericVector deltas(y.size(),delta);
   validate_common(y,deltas,q,std::exp(eta),precision);
   if (roots.size()!=2 || bounds.size()!=2 || !std::isfinite(roots[0]) || !std::isfinite(roots[1]) ||
-      !std::isfinite(bounds[0]) || !std::isfinite(bounds[1]) || bounds[0]>=0.0 || bounds[1]<=0.0 ||
-      !std::isfinite(std::exp(bounds[1])) || std::exp(bounds[0])<=0.0 ||
+      std::isnan(bounds[0]) || std::isnan(bounds[1]) || bounds[0]>=0.0 || bounds[1]<=0.0 ||
+      (!std::isinf(bounds[1]) && !std::isfinite(std::exp(bounds[1]))) ||
+      (!std::isinf(bounds[0]) && std::exp(bounds[0])<=0.0) ||
+      !std::isfinite(shape) || !std::isfinite(rate) || shape<0.0 || rate<0.0 ||
+      ((std::isinf(bounds[0]) || std::isinf(bounds[1])) && (shape<=0.0 || rate<=0.0)) ||
+      (std::isinf(bounds[1]) && delta!=0.0) ||
       eta<bounds[0] || eta>bounds[1] || max_iter<1 || polish_cycles<1 ||
       relative_floor<0.0 || !std::isfinite(relative_floor) ||
       (floor_type!="hard" && floor_type!="smooth") || (update!="ecm" && update!="ecme") ||
       backtracking_max_steps<0) Rcpp::stop("Invalid common-scale ECM controls.");
-  double a=roots[0],b=roots[1],objective=cs_objective(y,a,b,q,delta,eta,precision);
+  double a=roots[0],b=roots[1],objective=cs_objective(y,a,b,q,delta,eta,precision,shape,rate);
   const double floor=relative_floor*product_scale(y);
   Rcpp::NumericVector ys=Rcpp::clone(y); std::sort(ys.begin(),ys.end());
   std::vector<double> ta,tb,te,to,tl;
@@ -278,12 +285,12 @@ Rcpp::List rqr_ecm_common_scale_run_cpp(
       h+=enew*enew*tau[i]/(2.0*phi)-xi*enew/phi+(xi*xi/(2.0*phi)+1.0)*ev[i]
         -q*delta*(pa+pb-2.0*y[i]);
     }
-    double pe=update=="ecm" ? cs_scale_mode(h,1.5*y.size(),bounds[0],bounds[1]) :
-      cs_scale_mode(cs_loss(y,pa,pb,q,delta),y.size(),bounds[0],bounds[1]);
+    double pe=update=="ecm" ? cs_scale_mode(h+rate,1.5*y.size()+shape,bounds[0],bounds[1]) :
+      cs_scale_mode(cs_loss(y,pa,pb,q,delta)+rate,y.size()+shape,bounds[0],bounds[1]);
     bool accepted=false;
     for (int bt=0;bt<=backtracking_max_steps;++bt) {
       double step=std::ldexp(1.0,-bt),na=olda+step*(pa-olda),nb=oldb+step*(pb-oldb),ne=oldeta+step*(pe-oldeta);
-      double no=cs_objective(y,na,nb,q,delta,ne,precision);
+      double no=cs_objective(y,na,nb,q,delta,ne,precision,shape,rate);
       if (std::isfinite(no) && no<=oldobj+monotone_tolerance) {
         a=na;b=nb;eta=ne;objective=no;backtracking+=bt;accepted=true;break;
       }
@@ -302,21 +309,21 @@ Rcpp::List rqr_ecm_common_scale_run_cpp(
     if (cs_increment(y,b,a,pb,q,delta,std::exp(eta),precision)>1e-7*std::max(1.0,std::abs(objective)))
       Rcpp::stop("Root polishing increased the objective.");
     b=pb;canonicalize(a,b,sort_roots);
-    eta=cs_scale_mode(cs_loss(y,a,b,q,delta),y.size(),bounds[0],bounds[1]);
-    objective=cs_objective(y,a,b,q,delta,eta,precision);record("observed_coordinate_polish",cycle);
+    eta=cs_scale_mode(cs_loss(y,a,b,q,delta)+rate,y.size()+shape,bounds[0],bounds[1]);
+    objective=cs_objective(y,a,b,q,delta,eta,precision,shape,rate);record("observed_coordinate_polish",cycle);
     double ma=cs_root_mode(ys,b,q,delta,std::exp(eta),precision),mb=cs_root_mode(ys,a,q,delta,std::exp(eta),precision);
     double gap=std::max(0.0,std::max(-cs_increment(y,a,b,ma,q,delta,std::exp(eta),precision),
       -cs_increment(y,b,a,mb,q,delta,std::exp(eta),precision)));
     if (gap<=1e-6 && std::max(std::abs(a-ma),std::abs(b-mb))<=1e-5*std::max(1.0,std::abs(b-a))) break;
   }
-  int n=ta.size();Rcpp::NumericVector width(n),rate(n),scale(n);
+  int n=ta.size();Rcpp::NumericVector width(n),rates(n),scale(n);
   Rcpp::LogicalVector atlo(n),athi(n);Rcpp::CharacterVector labels(n,label);
-  for (int i=0;i<n;++i) {width[i]=std::abs(tb[i]-ta[i]);rate[i]=std::exp(te[i]);scale[i]=std::exp(-te[i]);
+  for (int i=0;i<n;++i) {width[i]=std::abs(tb[i]-ta[i]);rates[i]=std::exp(te[i]);scale[i]=std::exp(-te[i]);
     atlo[i]=te[i]==bounds[0];athi[i]=te[i]==bounds[1];}
   Rcpp::DataFrame trace=Rcpp::DataFrame::create(Rcpp::Named("start_label")=labels,
     Rcpp::Named("phase")=tp,Rcpp::Named("iteration")=ti,Rcpp::Named("root1")=ta,
     Rcpp::Named("root2")=tb,Rcpp::Named("width")=width,Rcpp::Named("log_learning_rate")=te,
-    Rcpp::Named("learning_rate")=rate,Rcpp::Named("loss_scale")=scale,Rcpp::Named("objective")=to,
+    Rcpp::Named("learning_rate")=rates,Rcpp::Named("loss_scale")=scale,Rcpp::Named("objective")=to,
     Rcpp::Named("tilted_loss")=tl,Rcpp::Named("at_lower_bound")=atlo,Rcpp::Named("at_upper_bound")=athi);
   return Rcpp::List::create(Rcpp::Named("roots")=Rcpp::NumericVector::create(a,b),
     Rcpp::Named("eta")=eta,Rcpp::Named("objective")=objective,Rcpp::Named("trace")=trace,

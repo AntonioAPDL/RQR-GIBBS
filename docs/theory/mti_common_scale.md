@@ -90,6 +90,52 @@ when L<=0. No sampler for this nonzero-tilt extension is enabled here.
 Gibbs would require independent distributional checks and its own tolerance
 assessment. ECM returns a joint mode and does not integrate scale uncertainty.
 
+## Informative Gamma Extension
+
+The optional `prior="gamma_rate"` uses shape-rate parameters alpha,beta>0
+on omega, equivalently an inverse-Gamma(alpha,beta) prior on sigma itself.
+Relative to da db d eta the joint posterior kernel is
+
+    exp{(n+alpha)eta-exp(eta)(L+beta)-(a^2+b^2)/(2tau^2)}.
+
+For finite upper rate support B, the Gaussian exponential-moment bound
+above proves propriety. A zero lower rate bound is allowed: near zero,
+the integrand is bounded by a constant times omega^(n+alpha-1), which
+is integrable. Zero is a support limit, never a draw or initialization.
+
+For unrestricted upper support and exactly zero tilt, L>=0. Integrating
+omega gives a root factor proportional to (beta+L)^(-n-alpha), bounded
+by beta^(-n-alpha). Integrating the proper root priors is therefore finite.
+This proof covers the implemented zero-tilt unrestricted control, not
+the current nonzero-tilt search.
+
+Fix a=min(y) and let b>=max(y). The coefficient of b in L is
+n[(1-q)(mean(y)-min(y))-q delta]. A negative coefficient makes L
+unbounded below. By continuity, for any finite beta there is an open
+root region where beta+L<0 and the omega integral diverges. Gaussian root
+priors assign positive density there and cannot repair propriety. The
+analogous negative-tilt ray coefficient is
+n[(1-q)(max(y)-mean(y))+q delta]. These are sufficient obstructions;
+passing them is not a proof of admissibility. The API consequently rejects
+unrestricted upper support for every nonzero tilt.
+
+The collapsed conditional has shape alpha+n and rate beta+L when positive;
+the augmented conditional has shape alpha+3n/2 and rate beta+H. Finite
+support also permits nonpositive rates, yielding a bounded power-exponential
+density instead of an ordinary Gamma distribution. This calculation does
+not enable learned-scale Gibbs sampling in the current API.
+
+The eta CM updates add alpha to n or 3n/2 and beta to L or H respectively.
+The full observed objective governs safeguards and coordinate accuracy.
+Gamma(alpha,alpha) gives observed conditional rate mode (n+alpha)/(L+alpha),
+restricted to support. Fixed prior concentration need not hold this near
+one as n grows. Increasing alpha without bound instead approaches fixed
+scale, a regularization limit rather than learned physical variance.
+
+All prior quantities are independently specified. For y'=m+s*y,
+omega'=omega/s^2 and beta'=s^2*beta; root priors and bounds transform
+consistently. The new priors require their own statistical assessment.
+
 The general rationale for loss-based updating is given by
 [Bissiri, Holmes and Walker (2016)](https://arxiv.org/abs/1306.6430).
 The normal-exponential representation follows

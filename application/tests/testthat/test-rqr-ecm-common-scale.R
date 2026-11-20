@@ -150,3 +150,128 @@ test_that("negative tilted losses remain computable under proper finite bounds",
   expect_true(fits[[1]]$common_scale$at_upper_bound)
   expect_true(all(is.finite(fits[[1]]$objective_trace$objective)))
 })
+
+test_that("Gamma support and parameters preserve propriety restrictions", {
+  sc <- list(prior="gamma_rate",shape=16,rate=16,log_rate_bounds=log(c(.25,4)))
+  expect_equal(.rqr_cs_spec(sc)$shape,16)
+  for(key in c("shape","rate"))for(value in c(0,-1,Inf,NA)) {
+    bad<-sc;bad[[key]]<-value
+    expect_error(.rqr_cs_spec(bad),"positive")
+  }
+  expect_error(.rqr_cs_spec(list(log_rate_bounds=c(-1,1),shape=4)),"only")
+  expect_equal(.rqr_cs_spec(modifyList(sc,list(log_rate_bounds=c(-Inf,log(4)))))$log_rate_bounds[1],-Inf)
+  y<-c(-1,.2,1);X<-matrix(1,3,1)
+  expect_error(rqr_ecm_fit(y,X,.9,mean_tilt=.1,
+    scale_control=modifyList(sc,list(log_rate_bounds=c(-Inf,Inf)))),"zero tilt")
+  expect_error(.rqr_cs_scale_mode(-1,4,c(-Inf,Inf)),"Nonpositive")
+  expect_error(rqr_ecm_common_scale_run_cpp(y,.9,.1,.25,c(-1,1),0,c(-Inf,Inf),
+    10L,10L,1e-8,"hard",1e-6,1e-6,1e-8,10L,"ecm",TRUE,"invalid",16,16),"Invalid")
+})
+
+test_that("Gamma conditionals and reciprocal Jacobians match direct integration", {
+  alpha<-4;beta<-4;n<-3;loss<-2.1
+  integral<-integrate(function(w)dgamma(w,alpha,rate=beta)*w^n*exp(-w*loss),0,Inf)$value
+  expected<-exp(alpha*log(beta)-lgamma(alpha)+lgamma(alpha+n)-(alpha+n)*log(beta+loss))
+  expect_equal(integral,expected,tolerance=1e-8)
+  for(w in c(.25,.7,1,2,4)) {
+    sigma<-1/w
+    ig<-exp(alpha*log(beta)-lgamma(alpha)-(alpha+1)*log(sigma)-beta/sigma)
+    expect_equal(dgamma(w,alpha,rate=beta),ig/w^2,tolerance=1e-12)
+    expect_equal(log(dgamma(w,alpha,rate=beta)*w),alpha*log(w)-beta*w+
+      alpha*log(beta)-lgamma(alpha),tolerance=1e-12)
+  }
+  for(coefficient in c(-3,0,.1,12))for(alpha in c(4,16,64))for(power in c(n+alpha,1.5*n+alpha)) {
+    bounds<-log(c(.25,4));eta<-.rqr_cs_scale_mode(coefficient,power,bounds)
+    f<-function(z)coefficient*exp(z)-power*z
+    expect_lte(f(eta),optimize(f,bounds)$objective+1e-7)
+  }
+  for(B in c(-2,0,2)) {
+    value<-integrate(function(w)w^(alpha+n-1)*exp(-B*w),0,4)$value
+    expect_true(is.finite(value) && value>0)
+  }
+})
+
+test_that("Gamma R and native reference fixtures agree across supports and updates", {
+  index<-0L
+  for(n in c(2L,3L,6L,20L))for(delta in c(0,.3))for(alpha in c(4,16,64))for(update in c("ecm","ecme")) {
+    y<-seq(-1.2,1.8,length.out=n);X<-matrix(1,n,1)
+    sc<-list(prior="gamma_rate",shape=alpha,rate=alpha,log_rate_bounds=log(c(.25,4)),
+      update=update,multistart_rates=FALSE)
+    control<-list(max_iter=80,multistart=FALSE)
+    a<-rqr_ecm_fit(y,X,.91,mean_tilt=delta,ecm_control=control,scale_control=sc)
+    b<-rqr_ecm_fit(y,X,.91,mean_tilt=delta,ecm_control=c(control,list(ecm_backend="cpp")),scale_control=sc)
+    expect_true(a$numerically_accurate && b$numerically_accurate)
+    expect_equal(c(a$beta_root1,a$beta_root2,a$learning_rate,a$objective),
+      c(b$beta_root1,b$beta_root2,b$learning_rate,b$objective),tolerance=1e-7)
+    expect_equal(a$objective,.rqr_cs_objective(y,c(a$beta_root1,a$beta_root2),.91,delta,
+      log(a$learning_rate),.25,a$common_scale),tolerance=1e-8)
+    expect_true(all(diff(b$objective_trace$objective)<=1e-8))
+    index<-index+1L
+  }
+  expect_equal(index,48L)
+  for(bounds in list(c(-Inf,log(4)),c(-Inf,Inf))) {
+    y<-c(-1,-.2,.7,2);X<-matrix(1,4,1)
+    sc<-list(prior="gamma_rate",shape=16,rate=16,log_rate_bounds=bounds)
+    a<-rqr_ecm_fit(y,X,.85,scale_control=sc)
+    b<-rqr_ecm_fit(y,X,.85,scale_control=sc,ecm_control=list(ecm_backend="cpp"))
+    expect_true(a$numerically_accurate && b$numerically_accurate)
+    expect_equal(c(a$beta_root1,a$beta_root2,a$objective),c(b$beta_root1,b$beta_root2,b$objective),tolerance=1e-7)
+    expect_true(all(is.finite(a$objective_trace$log_learning_rate)))
+  }
+})
+
+test_that("signed-loss ray diagnosis is a sufficient obstruction and not a proof of safety", {
+  y<-c(-.1,.1);d<-.rqr_cs_tilt_domain(y,.95,.5)
+  expect_true(d$unbounded_loss_ray)
+  expect_lt(d$positive_ray_slope,0)
+  expect_false(d$unrestricted_gamma_proved)
+  expect_equal(d$retained_tilt_upper,-d$retained_tilt_lower)
+  expect_true(.rqr_cs_tilt_domain(y,.95,0)$unrestricted_gamma_proved)
+  lo<-.rqr_cs_loss(y,c(min(y),100),.95,.5)
+  hi<-.rqr_cs_loss(y,c(min(y),1000),.95,.5)
+  expect_equal((hi-lo)/900,d$positive_ray_slope,tolerance=1e-12)
+})
+
+test_that("Gamma objective transforms with fixed externally specified response units", {
+  y<-c(-1,.2,2);r<-c(-.7,1.1);q<-.9;d<-.2;w<-1.3;s<-3
+  sc<-list(shape=16,rate=16)
+  original<-.rqr_cs_objective(y,r,q,d,log(w),.25,sc)
+  transformed<-.rqr_cs_objective(s*y,s*r,q,s*d,log(w/s^2),.25/s^2,
+    list(shape=16,rate=16*s^2))
+  expect_equal(transformed-original,2*(length(y)+16)*log(s),tolerance=1e-10)
+  strong<-rqr_ecm_fit(y,matrix(1,3,1),q,scale_control=list(prior="gamma_rate",shape=1e6,
+    rate=1e6,log_rate_bounds=log(c(.25,4))),ecm_control=list(ecm_backend="cpp"))
+  expect_equal(strong$learning_rate,1,tolerance=1e-5)
+})
+
+test_that("Gamma prior reaches actual DP profile candidates and their scale checks", {
+  y<-c(-2,-1,-.3,.1,.6,1.4,3)
+  sc<-list(prior="gamma_rate",shape=16,rate=16,log_rate_bounds=c(-Inf,log(4)))
+  action<-rqr_mti_ecm_dp_profile_action(y,.7,.5,q_grid=c(.8,.92),
+    tilt_grid_control=list(tilt_offsets_sd=0,include_zero_tilt=FALSE),
+    dp_base_measure=rqr_dp_base_normal(0,4),expand_if_empty=FALSE,return_candidate_traces=TRUE,
+    ecm_control=list(max_iter=80,multistart=FALSE,ecm_backend="cpp",scale_control=sc))
+  expect_equal(action$common_scale_prior$prior,"gamma_rate")
+  expect_equal(action$common_scale_prior$shape,16)
+  expect_gt(nrow(action$candidates),0)
+  expect_length(action$candidates$learning_rate,nrow(action$candidates))
+  expect_true(all(action$candidates$numerically_accurate))
+  expect_true(any(abs(action$candidates$learning_rate-1)>1e-5))
+  expect_true(all(is.finite(action$candidate_traces$objective)))
+})
+
+test_that("small Gamma joint modes agree with independent root-profile optimization", {
+  y<-c(-1,-.4,.3,1.2);q<-.8;delta<-.1;bounds<-log(c(.25,4))
+  spec<-list(prior="gamma_rate",shape=4,rate=4,log_rate_bounds=bounds)
+  fit<-rqr_ecm_fit(y,matrix(1,4,1),q,mean_tilt=delta,scale_control=spec,
+    ecm_control=list(ecm_backend="cpp",max_iter=100))
+  profile<-function(r) {
+    loss<-.rqr_cs_loss(y,r,q,delta)
+    eta<-.rqr_cs_scale_mode(loss+4,length(y)+4,bounds)
+    .rqr_cs_objective(y,r,q,delta,eta,.25,spec)
+  }
+  grid<-expand.grid(a=seq(-2,1,length.out=25),b=seq(-1,3,length.out=25))
+  values<-apply(grid,1,profile)
+  reference<-optim(as.numeric(grid[which.min(values),]),profile,method="Nelder-Mead",control=list(reltol=1e-11))
+  expect_lte(fit$objective,reference$value+1e-5)
+})

@@ -1021,6 +1021,20 @@ review-mti-ecm-common-scale:
 verify-reviewed-mti-ecm-common-scale:
 	$(R) application/scripts/138_assess_mti_ecm_common_scale.R verify-review
 
+.PHONY: test-mti-gamma-scale prepare-mti-gamma-scale check-mti-gamma-scale launch-mti-gamma-scale health-mti-gamma-scale verify-mti-gamma-scale
+test-mti-gamma-scale:
+	$(R) -e 'pkgload::load_all("application", quiet=TRUE); testthat::test_file("application/tests/testthat/test-rqr-ecm-common-scale.R", reporter="summary", stop_on_failure=TRUE); testthat::test_file("application/tests/testthat/test-mti-gamma-scale-study.R", reporter="summary", stop_on_failure=TRUE)'
+prepare-mti-gamma-scale:
+	$(R) application/scripts/140_assess_mti_gamma_scale.R prepare
+check-mti-gamma-scale:
+	$(R) application/scripts/140_assess_mti_gamma_scale.R check
+launch-mti-gamma-scale:
+	bash application/scripts/141_launch_mti_gamma_scale.sh
+health-mti-gamma-scale:
+	$(R) application/scripts/140_assess_mti_gamma_scale.R health
+verify-mti-gamma-scale:
+	$(R) application/scripts/140_assess_mti_gamma_scale.R verify
+
 .PHONY: finalize-mti-ecm-nominal verify-finalized-mti-ecm-nominal
 finalize-mti-ecm-nominal:
 	$(R) application/scripts/136_assess_mti_ecm_nominal.R finalize

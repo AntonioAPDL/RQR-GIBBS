@@ -44,6 +44,14 @@ posterior and propriety argument; the
 describe R/C++ checks, prior-range sensitivity, relaxed-calibration comparisons
 and the all-case screening. Gibbs sampling for this extension remains deferred.
 
+An [informative Gamma-prior experiment](docs/reproducibility/mti_gamma_scale.md)
+adds conjugate-form scale updates with proper bounded support and a proved
+zero-tilt unrestricted control. Six predeclared prior/support specifications
+are compared on the same development samples. `make launch-mti-gamma-scale`
+runs the saved-loss audit, integrated rehearsal and all-case screening with
+up to 40 workers. Independent calibration, validation and any new Gibbs
+study remain conditional on the numerical and scientific assessment.
+
 ## Fixed-Prior Reassessment
 
 The manuscript's ECM/Gibbs comparison fixes independent Gaussian root priors at SD 2

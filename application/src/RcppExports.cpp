@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // rqr_ecm_common_scale_run_cpp
-Rcpp::List rqr_ecm_common_scale_run_cpp(const Rcpp::NumericVector& y, double q, double delta, double precision, const Rcpp::NumericVector& roots, double eta, const Rcpp::NumericVector& bounds, int max_iter, int polish_cycles, double relative_floor, std::string floor_type, double tol_parameters, double tol_objective, double monotone_tolerance, int backtracking_max_steps, std::string update, bool sort_roots, std::string label);
-RcppExport SEXP _rqrgibbs_rqr_ecm_common_scale_run_cpp(SEXP ySEXP, SEXP qSEXP, SEXP deltaSEXP, SEXP precisionSEXP, SEXP rootsSEXP, SEXP etaSEXP, SEXP boundsSEXP, SEXP max_iterSEXP, SEXP polish_cyclesSEXP, SEXP relative_floorSEXP, SEXP floor_typeSEXP, SEXP tol_parametersSEXP, SEXP tol_objectiveSEXP, SEXP monotone_toleranceSEXP, SEXP backtracking_max_stepsSEXP, SEXP updateSEXP, SEXP sort_rootsSEXP, SEXP labelSEXP) {
+Rcpp::List rqr_ecm_common_scale_run_cpp(const Rcpp::NumericVector& y, double q, double delta, double precision, const Rcpp::NumericVector& roots, double eta, const Rcpp::NumericVector& bounds, int max_iter, int polish_cycles, double relative_floor, std::string floor_type, double tol_parameters, double tol_objective, double monotone_tolerance, int backtracking_max_steps, std::string update, bool sort_roots, std::string label, double shape, double rate);
+RcppExport SEXP _rqrgibbs_rqr_ecm_common_scale_run_cpp(SEXP ySEXP, SEXP qSEXP, SEXP deltaSEXP, SEXP precisionSEXP, SEXP rootsSEXP, SEXP etaSEXP, SEXP boundsSEXP, SEXP max_iterSEXP, SEXP polish_cyclesSEXP, SEXP relative_floorSEXP, SEXP floor_typeSEXP, SEXP tol_parametersSEXP, SEXP tol_objectiveSEXP, SEXP monotone_toleranceSEXP, SEXP backtracking_max_stepsSEXP, SEXP updateSEXP, SEXP sort_rootsSEXP, SEXP labelSEXP, SEXP shapeSEXP, SEXP rateSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -35,7 +35,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type update(updateSEXP);
     Rcpp::traits::input_parameter< bool >::type sort_roots(sort_rootsSEXP);
     Rcpp::traits::input_parameter< std::string >::type label(labelSEXP);
-    rcpp_result_gen = Rcpp::wrap(rqr_ecm_common_scale_run_cpp(y, q, delta, precision, roots, eta, bounds, max_iter, polish_cycles, relative_floor, floor_type, tol_parameters, tol_objective, monotone_tolerance, backtracking_max_steps, update, sort_roots, label));
+    Rcpp::traits::input_parameter< double >::type shape(shapeSEXP);
+    Rcpp::traits::input_parameter< double >::type rate(rateSEXP);
+    rcpp_result_gen = Rcpp::wrap(rqr_ecm_common_scale_run_cpp(y, q, delta, precision, roots, eta, bounds, max_iter, polish_cycles, relative_floor, floor_type, tol_parameters, tol_objective, monotone_tolerance, backtracking_max_steps, update, sort_roots, label, shape, rate));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -160,7 +162,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rqrgibbs_rqr_ecm_common_scale_run_cpp", (DL_FUNC) &_rqrgibbs_rqr_ecm_common_scale_run_cpp, 18},
+    {"_rqrgibbs_rqr_ecm_common_scale_run_cpp", (DL_FUNC) &_rqrgibbs_rqr_ecm_common_scale_run_cpp, 20},
     {"_rqrgibbs_rqr_ecm_intercept_run_cpp", (DL_FUNC) &_rqrgibbs_rqr_ecm_intercept_run_cpp, 20},
     {"_rqrgibbs_rqr_mvn_draw_cpp", (DL_FUNC) &_rqrgibbs_rqr_mvn_draw_cpp, 4},
     {"_rqrgibbs_rqr_filter_log_marginal_cpp", (DL_FUNC) &_rqrgibbs_rqr_filter_log_marginal_cpp, 7},

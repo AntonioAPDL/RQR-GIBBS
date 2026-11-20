@@ -42,13 +42,18 @@ msc_context <- function(cfg,directory) {
 }
 
 msc_fit <- function(y,task,cfg,context,bounds) {
+  msc_fit_control(y,task,cfg,context,
+    list(log_rate_bounds=log(bounds),update=cfg$update,polish_cycles=cfg$polish_cycles))
+}
+
+msc_fit_control <- function(y,task,cfg,context,scale_control) {
   rule <- context$policy[context$policy$n==task$n & context$policy$content==task$content,,drop=FALSE]
   mwd_require(nrow(rule)==1,"A primary ECM design rule is missing.")
   menu <- rqrgibbs::rqr_mti_ecm_adaptive_profile_menu(y,task$content,task$tolerance_confidence,
     scan_target_content=task$retained_fraction,policy="cell",policy_config=context$profile,calibration_rule=as.list(rule))
   ec <- context$profile$ecm_control;ec$max_iter<-cfg$initial_iterations;ec$multistart<-FALSE
   ec$ecm_backend<-"cpp";ec$seed<-task$ecm_seed;ec$store_iteration_trace<-TRUE
-  ec$scale_control<-list(log_rate_bounds=log(bounds),update=cfg$update,polish_cycles=cfg$polish_cycles)
+  ec$scale_control<-scale_control
   prior<-rqrgibbs::beta_prior("ridge",ridge=list(tau2=cfg$prior_sd^2))
   action<-rqrgibbs::rqr_mti_ecm_dp_profile_action(y,task$content,menu$posterior_confidence,
     dp_concentration=cfg$dp_concentration,dp_base_measure=rqrgibbs::rqr_dp_base_normal(0,cfg$dp_base_sd),
@@ -79,7 +84,8 @@ msc_fit <- function(y,task,cfg,context,bounds) {
   if(nrow(selected))trace<-trace[trace$candidate_index==selected$candidate_index,,drop=FALSE]
   else trace<-head(trace,0)
   list(candidates=d,selected=selected,trace=as.data.frame(trace),gamma=menu$posterior_confidence,
-    accurate=all(d$finite_interval & d$numerically_accurate),bounds=bounds)
+    accurate=all(d$finite_interval & d$numerically_accurate),bounds=exp(scale_control$log_rate_bounds),
+    scale_control=scale_control)
 }
 
 msc_row <- function(selected,method,task,gamma) {

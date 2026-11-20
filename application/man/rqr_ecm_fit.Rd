@@ -48,8 +48,13 @@ tolerances. The default stationarity tolerance for the convergence flag is
 \item{init}{Optional initial root coefficients or a \code{previous_fit} for
 warm starts.}
 \item{scale_control}{Optional intercept-only common-loss-scale extension.
-Supply \code{log_rate_bounds} as two finite bounds strictly enclosing zero.
-The proper prior is uniform in log inverse loss scale. \code{update} selects
+Supply \code{log_rate_bounds} strictly enclosing zero. The default prior is
+\code{"log_uniform"} and requires finite bounds. Alternatively, supply
+\code{prior="gamma_rate"} and positive \code{shape} and \code{rate} for a
+Gamma prior on inverse loss scale, equivalently an inverse-Gamma prior on
+loss scale itself. This permits a lower log bound of \code{-Inf}; an upper
+bound of \code{Inf} is supported only for exactly zero tilt.
+\code{update} selects
 \code{"ecm"} (default) or \code{"ecme"}; \code{polish_cycles} bounds exact
 observed-coordinate polishing. The default \code{NULL} preserves fixed scale.}
 \item{...}{Reserved.}
@@ -95,6 +100,17 @@ polish both versions near nonsmooth data knots. The returned
 displacement, not global optimality. Bound indicators and scale traces
 permit sensitivity assessment. This opt-in extension changes neither
 learned-scale Gibbs restrictions nor authoritative tolerance results.
+
+For the Gamma prior the density in \eqn{(a,b,\eta)} has kernel
+\eqn{\exp\{(n+\alpha)\eta-\exp(\eta)(L_{q,\delta}+\beta)\}}
+times the root priors. Shape and rate are \eqn{\alpha,\beta}; the density
+Jacobian is included. Bounded support remains proper for signed losses.
+An updated nonpositive rate on bounded support defines a bounded
+power-exponential density, not an ordinary positive-rate Gamma distribution.
+The unrestricted Gamma extension is proper at zero tilt. Nonzero tilt can
+produce unbounded negative loss and is rejected for unrestricted upper
+support. Neither positivity at a fitted mode nor a larger prior rate supplies
+a joint propriety proof. Mode estimation does not integrate scale uncertainty.
 
 \code{rqr_ecm_path()} traces fixed \eqn{(q,\delta)} targets.  It does not
 perform TCSP scan calibration.
