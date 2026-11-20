@@ -168,6 +168,30 @@ msc_calibration <- function(records,cfg,context) {
     issues=data.table::rbindlist(issues,fill=TRUE),screening_only=TRUE)
 }
 
+msc_paired_comparison <- function(rows) {
+  d<-data.table::as.data.table(rows)
+  mwd_require(!anyDuplicated(d[,.(job_id,method)]),"Duplicate paired method results.")
+  keys<-c("job_id","response_id","n","content","data_seed")
+  reference<-d[method=="fixed",c(keys,"returned","lower","upper","width","attained"),with=FALSE]
+  pieces<-lapply(intersect(c("narrow","primary","broad"),unique(d$method)),function(model) {
+    paired<-merge(d[method==model],reference,by=keys,suffixes=c("_new","_fixed"))
+    mwd_require(nrow(paired)==nrow(reference),"Paired methods have different observations.")
+    tol<-1e-5*pmax(1,paired$width_fixed);both<-paired$returned_new & paired$returned_fixed
+    paired[,`:=`(model=model,pair_returned=both,
+      same_endpoints=both & abs(lower_new-lower_fixed)<=tol & abs(upper_new-upper_fixed)<=tol,
+      narrower=both & width_new<width_fixed-tol,wider=both & width_new>width_fixed+tol,
+      width_difference=width_new-width_fixed,attainment_changed=attained_new!=attained_fixed)]
+    paired
+  })
+  paired<-data.table::rbindlist(pieces,fill=TRUE)
+  totals<-paired[,.(datasets=.N,returned_pairs=sum(pair_returned),same_endpoints=sum(same_endpoints),
+    narrower=sum(narrower),wider=sum(wider),attainment_events_changed=sum(attainment_changed)),by=model]
+  casewise<-paired[,.(samples=.N,returned_pairs=sum(pair_returned),same_endpoints=sum(same_endpoints),
+    narrower=sum(narrower),wider=sum(wider),mean_width_difference=mean(width_difference,na.rm=TRUE),
+    attainment_events_changed=sum(attainment_changed)),by=.(model,response_id,n,content)]
+  list(totals=totals,casewise=casewise)
+}
+
 msc_report <- function(records,cfg,context) {
   rows<-data.table::rbindlist(lapply(records,`[[`,"rows"),fill=TRUE)
   cells<-rows[,.(samples=.N,returned=sum(returned),successes=sum(attained),attainment=mean(attained),
@@ -178,6 +202,8 @@ msc_report <- function(records,cfg,context) {
   cells[,upper_95:=ifelse(successes==samples,1,qbeta(.975,successes+1,samples-successes))]
   mec_write_intervals(rows,file.path(cfg$output_root,"screening/interval_results.csv"))
   mec_write_intervals(cells,file.path(cfg$output_root,"screening/case_summary.csv"))
+  paired<-msc_paired_comparison(rows)
+  mec_write_intervals(paired$casewise,file.path(cfg$output_root,"screening/paired_comparison.csv"))
   review<-msc_bound_review(rows,cfg);calibration<-msc_calibration(records,cfg,context)
   mec_write_intervals(calibration$curves,file.path(cfg$output_root,"screening/threshold_curves.csv"))
   mec_write_intervals(calibration$selection,file.path(cfg$output_root,"screening/exploratory_rules.csv"))
@@ -187,6 +213,7 @@ msc_report <- function(records,cfg,context) {
   result<-list(status=status,datasets=length(records),remaining_screening_datasets=0,
     numerical_pass=all(vapply(records,function(z)z$ok,FALSE)),prior_uses_analysis_data=FALSE,
     boundary_review=review,relaxed_rules_are_screening_only=TRUE,
+    paired_endpoint_summary=as.data.frame(paired$totals),
     no_gibbs_sampling=TRUE,article_replaced=FALSE,time=mgfp_time())
   mgfp_json_write(result,file.path(cfg$output_root,"study_summary.json"));result
 }

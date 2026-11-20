@@ -64,3 +64,17 @@ testthat::test_that("separate review refuses incomplete screening before any fit
   testthat::expect_false("msc_job" %in% all.names(body(msc_review)))
   testthat::expect_true("write_verification" %in% names(formals(msc_verify)))
 })
+
+testthat::test_that("paired width comparisons preserve laws and actual observations", {
+  d<-data.table::data.table(job_id=1:2,response_id=c("a","b"),n=100,content=.9,
+    data_seed=1:2,method="fixed",returned=TRUE,lower=c(-1,-100),upper=c(1,100),width=c(2,200),attained=TRUE)
+  other<-data.table::copy(d);other$method<-"primary";other$upper[2]<-110;other$width[2]<-210
+  comparison<-msc_paired_comparison(rbind(d,other))
+  testthat::expect_equal(comparison$totals$same_endpoints,1)
+  testthat::expect_equal(comparison$totals$wider,1)
+  testthat::expect_equal(comparison$casewise$mean_width_difference,c(0,10))
+  testthat::expect_false("mean_width_difference" %in% names(comparison$totals))
+  bad<-data.table::copy(other);bad$data_seed[1]<-99
+  testthat::expect_error(msc_paired_comparison(rbind(d,bad)),"different observations")
+  testthat::expect_error(msc_paired_comparison(rbind(d,other,other)),"Duplicate")
+})
