@@ -54,6 +54,14 @@ study remain conditional on the numerical and scientific assessment.
 
 ## Fixed-Prior Reassessment
 
+A separate [ECM calibration study](docs/reproducibility/mti_ecm_adaptive_calibration.md)
+reuses inspected results as development data, checks a bounded fitted-content
+and tilt refinement, and compares simple observable-sample eligibility rules.
+It keeps the root/DP priors and loss scale fixed and leaves fitted endpoints
+unchanged after estimation. A supported development choice is frozen before
+1000 fresh samples per case; otherwise the study stops. The experiment uses
+up to 40 available workers and does not automatically change either article.
+
 The manuscript's ECM/Gibbs comparison fixes independent Gaussian root priors at SD 2
 in declared reference units, with SD 1 as a development sensitivity. Neither
 prior parameters nor the learning rate are estimated from each fitting sample.

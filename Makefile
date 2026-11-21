@@ -1529,6 +1529,20 @@ health-dlm-diagnostic-aware:
 			"$(RQR_DLM_DIAGNOSTIC_RUN_ROOT)"; \
 	fi
 
+.PHONY: test-mti-ecm-adaptive-calibration prepare-mti-ecm-adaptive-calibration check-mti-ecm-adaptive-calibration launch-mti-ecm-adaptive-calibration health-mti-ecm-adaptive-calibration verify-mti-ecm-adaptive-calibration
+test-mti-ecm-adaptive-calibration:
+	$(R) -e 'testthat::test_file("application/tests/testthat/test-mti-ecm-adaptive-calibration.R", reporter="summary", stop_on_failure=TRUE)'
+prepare-mti-ecm-adaptive-calibration:
+	Rscript application/scripts/142_assess_mti_ecm_adaptive_calibration.R prepare
+check-mti-ecm-adaptive-calibration:
+	Rscript application/scripts/142_assess_mti_ecm_adaptive_calibration.R check
+launch-mti-ecm-adaptive-calibration:
+	bash application/scripts/143_launch_mti_ecm_adaptive_calibration.sh
+health-mti-ecm-adaptive-calibration:
+	Rscript application/scripts/142_assess_mti_ecm_adaptive_calibration.R health
+verify-mti-ecm-adaptive-calibration:
+	Rscript application/scripts/142_assess_mti_ecm_adaptive_calibration.R verify
+
 literature-manifest:
 	$(R) application/scripts/01_build_literature_manifest.R
 
