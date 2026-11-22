@@ -41,6 +41,25 @@ testthat::test_that("production specification preserves the fixed prior and orig
   testthat::expect_equal(system2("bash", c("-n", "application/scripts/149_launch_mti_gibbs_skewness.sh")), 0L)
 })
 
+testthat::test_that("full-study storage arithmetic does not overflow R integers", {
+  withr::local_dir(root)
+  cfg <- mgs_config()
+  env <- new.env(parent = environment(mgs_resources))
+  env$readLines <- function(path, ...) {
+    if (path == "/proc/loadavg") return("0 0 0 1/1 1")
+    if (path == "/proc/meminfo") return("MemAvailable: 104857600 kB")
+    base::readLines(path, ...)
+  }
+  env$system2 <- function(command, args, ...) if (args[1] == "-Pk")
+    c("Filesystem 1024-blocks Used Available Capacity Mounted", "fixture 3000000000 0 2000000000 1% /tmp") else
+    c("Filesystem Inodes IUsed IFree IUse% Mounted", "fixture 3000000000 0 2000000000 1% /tmp")
+  resources <- mgs_resources; environment(resources) <- env
+  testthat::expect_no_warning(full <- resources(cfg, tempdir(), 36000L, 1L))
+  testthat::expect_equal(full$required_gib, 32 + 54000000000 / 1024^3)
+  testthat::expect_equal(full$workers, 1L)
+  testthat::expect_equal(resources(cfg, tempdir(), 0L, 1L)$required_gib, 32)
+})
+
 testthat::test_that("continuation preserves the uninterrupted chain and its MTI objective", {
   x <- mgs_fixture()
   init <- mwd_initial(x$input$y, -1, 2, 4, 0)

@@ -275,7 +275,7 @@ mgs_resources <- function(cfg, directory, remaining, requested = cfg$maximum_wor
     max(0L, floor((memory - cfg$memory_reserve_gib) / cfg$memory_per_worker_gib)))
   free <- as.numeric(strsplit(trimws(tail(system2("df", c("-Pk", shQuote(directory)), stdout = TRUE), 1)), " +")[[1]][4]) * 1024
   inodes <- as.numeric(strsplit(trimws(tail(system2("df", c("-Pi", shQuote(directory)), stdout = TRUE), 1)), " +")[[1]][4])
-  required <- cfg$disk_reserve_gib * 1024^3 + remaining * cfg$worst_case_bytes_per_dataset
+  required <- cfg$disk_reserve_gib * 1024^3 + as.double(remaining) * cfg$worst_case_bytes_per_dataset
   mwd_require(is.finite(workers) && workers >= 1L && free >= required &&
     inodes >= remaining * 26L + cfg$inode_reserve, "Insufficient free CPU, memory, disk or inodes.")
   list(workers = as.integer(workers), available_gib = free / 1024^3, required_gib = required / 1024^3,

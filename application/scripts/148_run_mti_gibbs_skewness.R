@@ -67,8 +67,11 @@ if (mode == "run") {
     stdout = file.path(directory, "unit_tests.log"), stderr = file.path(directory, "unit_tests.log"),
     env = paste0("R_LIBS=", shQuote(normalizePath(private))))
   mwd_require(status == 0L, "Frozen-source tests failed; sampling not started.")
+  stage("checking_resources")
   requested <- as.integer(Sys.getenv("MTI_GIBBS_SKEWNESS_WORKERS", cfg$maximum_workers))
-  resources <- mgs_resources(cfg, directory, nrow(prepared$tasks), requested)
+  completed <- vapply(prepared$tasks$job_id, function(id)
+    file.exists(paste0(mgs_result_path(directory, id), ".json")), FALSE)
+  resources <- mgs_resources(cfg, directory, sum(!completed), requested)
   mgfp_json_write(resources, file.path(directory, "launch_resources.json"))
   stage("qualifying_saved_targets", workers = resources$workers)
   qualification <- mgs_qualify(prepared, cfg, context, directory, resources$workers)
