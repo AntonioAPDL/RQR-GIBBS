@@ -1,0 +1,49 @@
+{
+  "study_id": "mti_skewness_extension_20261121",
+  "replications": 1000,
+  "maximum_workers": 40,
+  "disk_reserve_gib": 32,
+  "memory_reserve_gib": 8,
+  "memory_per_worker_gib": 1,
+  "prior_sd": 2,
+  "learning_rate": 1,
+  "radius_multiplier": 1,
+  "dp_concentration": 1,
+  "dp_base_sd": 4,
+  "tolerance_confidence": 0.95,
+  "source_reference_commit": "28950e67cccd814ecfdedd81f558b80e7472d14c",
+  "exdqlm_reference_commit": "dffb71ee70b597d6a716ee74be1cbc99731cd453",
+  "historical_evidence": "figures/data/mti_fixed_prior_20261115",
+  "historical_source_commit": "abd14dbb8c4aa06f5622f256edb609646acd273b",
+  "validation_config": "application/config/rqr_bayes_uq_validation_mti_ecm_independent_guarded_20260827.json",
+  "policy_csv": "application/config/mti_ecm_adaptive_cell_guarded_p995_policy_20260827.csv",
+  "scan_csv": "tables/tolerance_validation_article_scan_calibration.csv",
+  "prior_config": "application/config/mti_fixed_prior_20261114.json",
+  "data_stream_seed": 2101261121,
+  "ecm_seed_base": 2010000000,
+  "methods": ["ecm", "young_mathew", "wilks"],
+  "package_sources": [
+    {"package":"expint","version":"0.2-1","sha256":"1285dffcea822a5d8d65aca464783ce25d21bff4da00687f817efc205d249fda"},
+    {"package":"statmod","version":"1.5.2","sha256":"5f83d82043c5e26f1048fc0139580da1b7e40becf95fb4cb26ed3afcd46a581d"},
+    {"package":"actuar","version":"3.3-7","sha256":"00c1667797822f7ec46d10675a09facf8c1aea3c582e0f7223fa6c9bf069f5d8"}
+  ],
+  "laws": [
+    {"id":"lognormal_sd150", "family":"lognormal", "meanlog":0, "sdlog":1.5, "conditional":false},
+    {"id":"weibull_shape050", "family":"weibull", "shape":0.5, "scale":1, "conditional":false},
+    {"id":"lomax_shape350", "family":"lomax", "shape":3.5, "scale":1, "conditional":false},
+    {"id":"invgauss_shape025", "family":"invgauss", "mean":1, "shape":0.25, "conditional":false},
+    {"id":"gamma_shape025", "family":"gamma", "shape":0.25, "scale":1, "conditional":true},
+    {"id":"beta_shape025_8", "family":"beta", "shape1":0.25, "shape2":8, "conditional":true}
+  ],
+  "numerical_admission": {
+    "raw_cdf_quantile_tolerance": 1e-10,
+    "boundary_event_budget": "one_over_assessment_replications",
+    "decision_uses_fitted_performance": false
+  },
+  "sample_gibbs": false,
+  "generalized_bayes": true,
+  "response_likelihood": false,
+  "posterior_predictive_response_draws": false,
+  "automatic_article_replacement": false,
+  "automatic_prior_tuning": false
+}

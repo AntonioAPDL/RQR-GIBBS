@@ -1543,6 +1543,26 @@ health-mti-ecm-adaptive-calibration:
 verify-mti-ecm-adaptive-calibration:
 	Rscript application/scripts/142_assess_mti_ecm_adaptive_calibration.R verify
 
+.PHONY: mti-skewness-runtime test-mti-skewness test-mti-skewness-reporting prepare-mti-skewness check-mti-skewness launch-mti-skewness health-mti-skewness verify-mti-skewness export-mti-skewness
+mti-skewness-runtime:
+	Rscript application/scripts/146_prepare_mti_skewness_runtime.R
+test-mti-skewness:
+	Rscript application/tests/test_skewness_extension.R
+test-mti-skewness-reporting:
+	Rscript application/tests/test_skewness_reporting.R
+prepare-mti-skewness:
+	Rscript application/scripts/144_run_mti_skewness_extension.R prepare
+check-mti-skewness:
+	Rscript application/scripts/144_run_mti_skewness_extension.R check
+launch-mti-skewness:
+	bash application/scripts/145_launch_mti_skewness_extension.sh
+health-mti-skewness:
+	Rscript application/scripts/144_run_mti_skewness_extension.R health
+verify-mti-skewness:
+	Rscript application/scripts/144_run_mti_skewness_extension.R verify
+export-mti-skewness:
+	Rscript application/scripts/144_run_mti_skewness_extension.R export
+
 literature-manifest:
 	$(R) application/scripts/01_build_literature_manifest.R
 

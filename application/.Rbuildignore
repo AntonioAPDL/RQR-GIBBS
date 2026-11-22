@@ -9,6 +9,7 @@
 ^outputs$
 ^runs$
 ^scripts$
+^tests/test_skewness_(extension|reporting)\.R$
 ^tests/testthat/test-mti-ecm-recovery\.R$
 ^tests/testthat/test-mti-gibbs-comparison\.R$
 ^tests/testthat/test-rqr-oracle-tilt-illustrations\.R$

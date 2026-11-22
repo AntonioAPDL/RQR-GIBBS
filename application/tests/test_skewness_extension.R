@@ -1,0 +1,66 @@
+#!/usr/bin/env Rscript
+Sys.setenv(MTI_SKEWNESS_NO_MAIN=1)
+source("application/scripts/144_run_mti_skewness_extension.R")
+cfg<-msx_configuration("application/config/mti_skewness_extension_20261121.json")
+admission<-msx_admission(cfg)
+stopifnot(sum(admission$admitted)>=4L,all(admission$admitted[!admission$conditional]),
+  all(admission$raw_cdf_error<1e-10))
+specs<-lapply(seq_len(nrow(cfg$laws)),function(i)as.list(cfg$laws[i,]))
+laws<-setNames(lapply(specs,msx_law),cfg$laws$id)
+for(law in laws){
+  p<-c(.005,.025,.05,.25,.5,.75,.95,.975,.995)
+  stopifnot(max(abs(law$p(law$q(p))-p))<1e-10,
+    law$p(-Inf)==0,law$p(Inf)==1,law$sd>0,
+    all(diff(law$q(p))>0),all(msx_content(law,law$q(.025),law$q(.975))>.9499999999))
+}
+lomax<-laws$lomax_shape350
+x<-c(0,.1,1,10,100)
+stopifnot(max(abs(lomax$raw_p(x)-(-expm1(-3.5*log1p(x)))))<1e-14,
+  abs(actuar::mpareto(1,shape=3.5,scale=1)-lomax$mean)<1e-14,
+  abs(actuar::mpareto(2,shape=3.5,scale=1)-lomax$sd^2-lomax$mean^2)<1e-14,
+  abs(statmod::qinvgauss(.5,mean=1,shape=.25)-laws$invgauss_shape025$raw_q(.5))<1e-14)
+design<-msx_design(cfg,admission)
+stopifnot(nrow(design$tasks)==sum(admission$admitted)*9L*1000L,
+  !anyDuplicated(design$tasks$task_key),!anyDuplicated(vapply(design$streams,mwd_hash,"")))
+ids<-c(1L,5L,13L)
+generate<-function(i)msx_generate(design$tasks[i,,drop=FALSE],laws[[design$tasks$law_id[i]]],design$streams[[i]])
+serial<-lapply(ids,generate)
+parallel_result<-parallel::mclapply(ids,generate,mc.cores=2,mc.set.seed=FALSE)
+stopifnot(identical(serial,parallel_result),identical(serial[[1]],generate(ids[1])),
+  identical(rev(serial),lapply(rev(ids),generate)))
+directory<-tempfile("skewness-tests-",tmpdir="application/cache")
+dir.create(directory)
+task<-design$tasks[1,,drop=FALSE]
+value<-list(task=task,resolved=TRUE,sample=serial[[1]])
+path<-file.path(directory,"example.rds")
+msx_save(value,path,"test-identity")
+stopifnot(identical(msx_read(path,"test-identity",task),value))
+expect_error<-function(expr)stopifnot(inherits(tryCatch({force(expr);NULL},error=function(e)e),"error"))
+expect_error(msx_read(path,"different-identity",task))
+changed<-task;changed$replication<-999L
+expect_error(msx_read(path,"test-identity",changed))
+saveRDS(list(changed=TRUE),path)
+expect_error(msx_read(path,"test-identity",task))
+rows<-data.table::data.table(study_id="test",task_key=as.character(1:1000),law_id="normal",n=50,
+  content=.9,tolerance_confidence=.95,method="ecm",returned=TRUE,width=1:1000,attained=c(rep(TRUE,950),rep(FALSE,50)))
+s<-msx_summary(rows)
+stopifnot(s$samples==1000L,s$attainment==.95,s$mean_width==500.5,
+  s$width_q025==unname(quantile(1:1000,.025,type=7)),
+  s$lower_95==qbeta(.025,950,51),s$upper_95==qbeta(.975,951,50))
+rows$attained<-FALSE;s<-msx_summary(rows);stopifnot(s$lower_95==0,is.finite(s$upper_95))
+rows$attained<-TRUE;s<-msx_summary(rows);stopifnot(s$upper_95==1,is.finite(s$lower_95))
+rows<-rbind(rows,rows[1]);expect_error(msx_summary(rows))
+queue_dir<-file.path(directory,"queue");dir.create(queue_dir);dir.create(file.path(queue_dir,"fits"))
+prepared<-list(design=list(tasks=design$tasks[1:3,],streams=design$streams[1:3]),identity="queue-test")
+fake<-function(task,state,context,cfg)list(task=task,resolved=TRUE,sample=list(state=state),elapsed_seconds=.001)
+first<-file.path(queue_dir,"fits","fit_000001.rds")
+msx_save(fake(prepared$design$tasks[1,,drop=FALSE],design$streams[[1]],NULL,cfg),first,prepared$identity)
+hash<-mwd_file_hash(first)
+msx_run(cfg,NULL,prepared,queue_dir,2,job=fake)
+stopifnot(mwd_file_hash(first)==hash,length(list.files(file.path(queue_dir,"fits"),pattern="rds.json$"))==3)
+msx_run(cfg,NULL,prepared,queue_dir,2,job=function(...)stop("Completed work was rerun."))
+stopifnot(mwd_file_hash(first)==hash)
+bad<-prepared;bad$identity<-"different-study";expect_error(msx_run(cfg,NULL,bad,queue_dir,2,job=fake))
+file.remove(paste0(first,".json"))
+expect_error(msx_run(cfg,NULL,prepared,queue_dir,2,job=fake))
+cat("Skewness distribution, RNG, receipt integrity and summary tests passed.\n")

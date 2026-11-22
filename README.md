@@ -537,3 +537,13 @@ Independent comparison tables and figures are written only to the new run's
 manuscripts remain unchanged until a separate scientific review. See
 [the final study specification](docs/implementation_notes/mti_final_study_20261022.md)
 for the fixed design, decision rules, reproducibility records, and limitations.
+
+## Additional Skewed Distributions
+
+The fixed-prior ECM distributional extension compares MTI-ECM, Young--Mathew
+and sample-range Wilks on additional skewed laws, retaining the existing
+eight-distribution article evidence. It uses 1,000 replications for each of
+the nine existing sample-size/content designs, with tolerance confidence .95.
+It changes neither the MTI prior nor its calibration and includes no new Gibbs
+fits. See [the reproducibility instructions](docs/implementation_notes/mti_skewness_extension_20261121.md)
+for numerical inclusion checks, exact method definitions, commands and outputs.
