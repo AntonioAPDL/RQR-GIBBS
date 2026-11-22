@@ -1,0 +1,20 @@
+{
+  "study_source_commit": "5abbdcc4c81cbb777b1c81247a32e1bbbe9fe22a",
+  "study_config": "application/config/mti_skewness_extension_20261121.json",
+  "study_pointer": ".codex_work/mti_skewness_extension_latest.json",
+  "local_output": "application/outputs/mti_skewness_publication_20261122",
+  "evidence_dir": "figures/data/mti_skewness_extension_20261121",
+  "table_dir": "tables/mti_skewness_extension_20261121",
+  "figure_dir": "figures/generated/mti_skewness_extension_20261121",
+  "historical_evidence": "figures/data/mti_fixed_prior_20261115",
+  "replications": 1000,
+  "historical_cases": 72,
+  "added_cases": 36,
+  "primary_cases": 108,
+  "methods": ["ecm", "young_mathew", "wilks"],
+  "law_order": ["normal", "student_t3", "asym_laplace_tau010", "two_piece_normal_1_12", "beta18", "exponential", "gamma05", "weibull_shape050", "lognormal_hard", "lognormal_sd150", "invgauss_shape025", "lomax_shape350"],
+  "labels": ["Gaussian", "Student t(3)", "Asymmetric Laplace (0.10)", "Two-piece normal (1:12)", "Beta(1,8)", "Exponential", "Gamma(0.5,1)", "Weibull (shape 0.50)", "Lognormal (log SD 1.25)", "Lognormal (log SD 1.50)", "Inverse Gaussian (shape 0.25)", "Lomax (shape 3.50)"],
+  "workers": 4,
+  "sample_gibbs": false,
+  "refit": false
+}

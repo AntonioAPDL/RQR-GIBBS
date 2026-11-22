@@ -56,7 +56,7 @@ msp_build <- function(source, build, stem) {
   for (pass in 2:3) msp_run("pdflatex", args, source, file.path(build, paste0("pdflatex-", pass, ".txt")),
     env = "TEXINPUTS=.:")
   log <- paste(readLines(file.path(build, paste0(stem, ".log")), warn = FALSE), collapse = " ")
-  msp_require(!grepl("undefined|multiply defined|Label\\(s\\) may have changed|Rerun to get|Missing character|Overfull \\\\[hv]box",
+  msp_require(!grepl("undefined|multiply defined|Label\\(s\\) may have changed|Rerun to get|Missing character|Overfull \\\\[hv]box|Float too large",
     log, ignore.case = TRUE), paste("Unresolved manuscript diagnostics; inspect", build))
   msp_inputs(file.path(build, paste0(stem, ".fls")), source, build, stem)
 }
@@ -99,8 +99,9 @@ msp_prepare <- function(root, include_supplement = FALSE, stamp = format(Sys.tim
   source <- file.path(output, "committed_source"); dir.create(source)
   archive <- file.path(output, "committed_source.tar")
   reference <- "docs/reproducibility/mti_fixed_prior_study_reference_20261115.md"
+  extension_reference <- "docs/reproducibility/mti_skewness_study_reference_20261122.md"
   msp_run("git", c("--no-optional-locks", "archive", "--format=tar", paste0("--output=", archive), commit,
-    "--", "main.tex", "rqr-gibbs-supplement.tex", "refs.bib", "tables", "figures", reference),
+    "--", "main.tex", "rqr-gibbs-supplement.tex", "refs.bib", "tables", "figures", reference, extension_reference),
     root, file.path(output, "git-archive.txt"))
   utils::untar(archive, exdir = source)
   stems <- c("main", if (include_supplement) "rqr-gibbs-supplement")
@@ -131,9 +132,14 @@ msp_prepare <- function(root, include_supplement = FALSE, stamp = format(Sys.tim
   writeLines(paste(msp_hash(zip), basename(zip)), paste0(zip, ".sha256"))
   msp_require(file.copy(file.path(source, reference), file.path(output, "COMPLETED_STUDY_REFERENCE.md")),
     "Could not copy the completed-study reference.")
+  msp_require(file.copy(file.path(source, extension_reference), file.path(output, "EXPANDED_COMPARISON_REFERENCE.md")),
+    "Could not copy the expanded-comparison reference.")
   evidence <- jsonlite::read_json(file.path(source, "figures/data/mti_fixed_prior_20261115/provenance.json"))
+  expanded <- jsonlite::read_json(file.path(source, "figures/data/mti_skewness_extension_20261121/provenance.json"))
   jsonlite::write_json(list(source_commit = commit, sampling_commit = evidence$simulation_source,
     application_commit = evidence$repair_and_application_source, finalization_commit = evidence$source_commit,
+    primary_extension_commit = expanded$study_source_commit, primary_cases = expanded$primary_cases,
+    primary_replications = expanded$replications, extension_includes_gibbs = expanded$new_gibbs_fits,
     root_documents = paste0(stems, ".tex"), project_files = as.list(setNames(vapply(files, msp_hash, ""), names(files))),
     archive = basename(zip), archive_sha256 = msp_hash(zip), committed_source_sha256 = msp_hash(archive),
     review_pdfs = as.list(setNames(vapply(stems, function(x) msp_hash(file.path(output, paste0(x, ".pdf"))), ""), stems)),

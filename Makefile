@@ -245,6 +245,7 @@ theory-figures:
 	$(R) figures/generate_rqr_theory_figures.R --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) figures/generate_tolerance_population_oracle_figure.R --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) application/scripts/125_report_mti_fixed_prior.R render
+	$(R) application/scripts/147_publish_mti_skewness_extension.R render
 
 historical-tolerance-figures:
 	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results= --mti-ecm-results= --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --mti-method-id=mti_ecm_adaptive_cell --mti-label=MTI-ECM --delivery-y-min=.85 --output-dir=$(THEORY_FIGURE_DIR)
@@ -1052,6 +1053,19 @@ test-mti-gibbs-decision-report:
 report-mti-fixed-prior:
 	$(R) application/scripts/125_report_mti_fixed_prior.R render
 
+.PHONY: collect-mti-skewness-publication report-mti-skewness-publication verify-mti-skewness-publication test-mti-skewness-publication
+collect-mti-skewness-publication:
+	$(R) application/scripts/147_publish_mti_skewness_extension.R collect
+
+report-mti-skewness-publication:
+	$(R) application/scripts/147_publish_mti_skewness_extension.R render
+
+verify-mti-skewness-publication:
+	$(R) application/scripts/147_publish_mti_skewness_extension.R verify
+
+test-mti-skewness-publication:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-skewness-publication.R
+
 verify-mti-fixed-prior-report:
 	$(R) application/scripts/125_report_mti_fixed_prior.R verify
 
@@ -1136,7 +1150,7 @@ render-mti-gibbs-full-publication:
 verify-mti-gibbs-full-publication:
 	$(R) application/scripts/114_report_mti_gibbs_full_assessment.R --mode=verify
 
-pdf supplement: verify-mti-fixed-prior-report verify-mti-gibbs-closeout verify-mti-gibbs-decision-report
+pdf supplement: verify-mti-fixed-prior-report verify-mti-gibbs-closeout verify-mti-gibbs-decision-report verify-mti-skewness-publication
 
 launch-mti-gibbs:
 	bash application/scripts/107_launch_mti_gibbs.sh --confirm-article-commit=$(GIBBS_CONFIRM_COMMIT) --workers=50 --allow-full=true
@@ -1144,11 +1158,11 @@ launch-mti-gibbs:
 health-mti-gibbs:
 	$(R) application/scripts/105_compare_mti_gibbs_ecm.R --mode=health --output-dir=$(GIBBS_OUTPUT_DIR)
 
-arxiv-source: verify-mti-fixed-prior-report verify-mti-gibbs-closeout verify-mti-gibbs-decision-report
+arxiv-source: verify-mti-fixed-prior-report verify-mti-gibbs-closeout verify-mti-gibbs-decision-report verify-mti-skewness-publication
 	bash application/scripts/31_prepare_arxiv_source.sh
 
 .PHONY: article-handoff test-manuscript-source-package
-article-handoff: verify-mti-fixed-prior-report verify-mti-gibbs-closeout verify-mti-gibbs-decision-report
+article-handoff: verify-mti-fixed-prior-report verify-mti-gibbs-closeout verify-mti-gibbs-decision-report verify-mti-skewness-publication
 	bash application/scripts/31_prepare_arxiv_source.sh --include-supplement=true
 
 test-manuscript-source-package:

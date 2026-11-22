@@ -59,6 +59,7 @@ testthat::test_that("the source command delegates dependency discovery and avoid
     dependencies <- grep(paste0("^",target,":"), make, value = TRUE)
     testthat::expect_true(any(grepl("verify-mti-fixed-prior-report", dependencies, fixed = TRUE)))
     testthat::expect_true(any(grepl("verify-mti-gibbs-closeout", dependencies, fixed = TRUE)))
+    testthat::expect_true(any(grepl("verify-mti-skewness-publication", dependencies, fixed = TRUE)))
   }
 })
 
@@ -73,4 +74,13 @@ testthat::test_that("the completed-study reference points to existing derivation
   testthat::expect_true(grepl("72,000", guide, fixed = TRUE))
   testthat::expect_true(grepl("marginal slice-within-Gibbs", guide, fixed = TRUE))
   testthat::expect_true(grepl("remain fixed throughout its chains", guide, fixed = TRUE))
+  expanded <- paste(readLines(file.path(root, "docs/reproducibility/mti_skewness_study_reference_20261122.md")),
+    collapse = "\n")
+  evidence <- jsonlite::read_json(file.path(root, "figures/data/mti_skewness_extension_20261121/provenance.json"))
+  testthat::expect_true(grepl(evidence$study_source_commit, expanded, fixed = TRUE))
+  testthat::expect_true(grepl("324,000", expanded, fixed = TRUE))
+  testthat::expect_true(grepl("no new Gibbs or application fits", expanded, fixed = TRUE))
+  builder <- paste(readLines(file.path(root, "application/scripts/lib/manuscript_source_package.R")), collapse = "\n")
+  testthat::expect_true(grepl("Float too large", builder, fixed = TRUE))
+  testthat::expect_true(grepl("primary_extension_commit = expanded$study_source_commit", builder, fixed = TRUE))
 })

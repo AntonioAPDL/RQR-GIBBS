@@ -11,6 +11,7 @@
 \usepackage{amsthm}
 \numberwithin{equation}{section}
 \usepackage{graphicx}
+\usepackage{caption}
 \usepackage{float}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
@@ -41,6 +42,7 @@
 \newcommand{\RHS}{\mathrm{RHS}}
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4.5pt}\renewcommand{\arraystretch}{1.12}}
 \input{tables/mti_fixed_prior_20261115/numbers.tex}
+\input{tables/mti_skewness_extension_20261121/numbers.tex}
 \input{tables/mti_gibbs_decisions_20261118/numbers.tex}
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
@@ -81,8 +83,8 @@ For tolerance inference, a calibrated rule searches fitted content and tilt
 using ECM estimates under proper Gaussian priors. A Dirichlet-process
 posterior content check determines eligible candidates, and the shortest
 eligible fitted interval is reported. Independent simulations compare this
-rule with Young--Mathew and Wilks intervals across eight continuous
-distributions and nine feasible designs at tolerance confidence \(0.95\).
+rule with Young--Mathew and Wilks intervals across twelve continuous
+distributional settings and nine feasible designs at tolerance confidence \(0.95\).
 Observed ECM content attainment ranges from \(0.948\) to \(0.997\); width gains
 depend on sample size, content, and asymmetry. Fixed-target Gibbs calculations
 quantify endpoint uncertainty conditional on the selected content and tilt.
@@ -974,14 +976,21 @@ tilt selection rule.
 The tolerance study evaluates the selected MTI rule on samples independent
 of its calibration, following simulation-study reporting principles
 \citep{MorrisWhiteCrowther2019Simulation}. It uses iid continuous samples from
-eight centered and scaled simulation distributions. Gaussian and Student \(t_3\)
+twelve centered and scaled distributional settings. Gaussian and Student \(t_3\)
 samples serve as symmetric reference distributions. The asymmetric simulation
 distributions are exponential,
 asymmetric Laplace with \(\tau=0.10\), a two-piece Normal law with scale ratio
 \(1{:}12\), Beta\((1,8)\), Gamma\((0.5,1)\), and log-normal with log-scale
-standard deviation \(1.25\). This panel is intentionally skewed toward
-asymmetric laws to examine interval placement when equal-tail or full-range
-behavior can be inefficient.
+standard deviations \(1.25\) and \(1.50\), Weibull with shape \(0.5\),
+Lomax with shape \(3.5\), and inverse Gaussian with mean one and shape
+\(0.25\). The latter four settings extend the original eight-distribution
+comparison with the fitting rule, priors, and probability cutoffs unchanged.
+They examine stronger log-normal skewness, a decreasing hazard, polynomial
+tails, and a long right tail with finite moments, respectively. All responses
+are centered and scaled using their specified population mean and standard
+deviation. Individual samples do not determine the priors. The asymmetric
+settings examine interval placement when equal-tail or full-range behavior
+can be inefficient; both symmetric references are retained.
 Multimodal cases are excluded because none of the reported methods is designed
 to recover disconnected high-density regions.
 The primary simulation design fixes tolerance confidence at \(0.95\) and uses
@@ -1037,16 +1046,16 @@ sample-based tolerance procedure.
 \centering
 \caption{\textbf{Independent-sample tolerance validation.} Results are shown by
 feasible sample-size/content cell and method. Each row summarizes the range
-across eight simulation distributions at tolerance confidence \(0.95\). All three
+across twelve distributional settings at tolerance confidence \(0.95\). All three
 reported methods produced an interval in every replication in this run.}
 \label{tab:tolerance-validation-primary}
 \TableStyle
-\input{tables/mti_fixed_prior_20261115/primary_ranges.tex}
+\input{tables/mti_skewness_extension_20261121/primary_ranges.tex}
 \end{table}
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/fig04_tolerance_validation_primary.png}
+\includegraphics[width=\textwidth]{figures/generated/mti_skewness_extension_20261121/fig04_tolerance_validation_primary.png}
 \caption{\textbf{Content-attainment by sample size and target content.}
 Intervals not produced are counted as nonattainment.
 Vertical intervals in the content-attainment panels show the range across
@@ -1055,49 +1064,81 @@ Dashed reference lines mark nominal tolerance confidence \(0.95\).}
 \label{fig:tolerance-validation-primary}
 \end{figure}
 
-\begin{figure}[!htbp]
+\begin{figure}[p]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/fig05_tolerance_validation_width_ranges.png}
-\caption{\textbf{Interval-width ranges by distribution.} Horizontal intervals show empirical
-2.5\%--97.5\% ranges of interval lengths within each distribution,
-sample-size/content cell, and method. Crosses mark the mean interval width
-across the 1000 replications for that method. Dashed gray markers show the corresponding
-population shortest content-\(c\) interval widths under the known simulation
-laws. The horizontal axis is logarithmic to display light-tailed, heavy-tailed,
-and strongly skewed cases in one figure; the values remain raw interval
-lengths.}
+\includegraphics[width=\textwidth]{figures/generated/mti_skewness_extension_20261121/width_ranges_small.pdf}
+\caption{\textbf{Interval-width ranges for small samples.} Segments span empirical
+2.5\%--97.5\% width quantiles across the 1000 replications within each
+distribution, design, and method. Crosses mark means; dashed gray markers
+give population shortest content-\(c\) widths under the known laws. Raw
+interval lengths are shown on logarithmic axes.}
 \label{fig:tolerance-validation-width-ranges}
 \end{figure}
 
-In the completed run, MTI-ECM content attainment ranges from 94.8\% to 99.7\%
+\begin{figure}[p]
+\ContinuedFloat
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_skewness_extension_20261121/width_ranges_n500.pdf}
+\caption{\textbf{Interval-width ranges for \(n=500\).} Continued from
+Figure~\ref{fig:tolerance-validation-width-ranges}; segments, crosses, and
+population references have the same definitions.}
+\label{fig:tolerance-validation-width-ranges-n500}
+\end{figure}
+
+\begin{figure}[p]
+\ContinuedFloat
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_skewness_extension_20261121/width_ranges_n1000.pdf}
+\caption{\textbf{Interval-width ranges for \(n=1000\).} Continued from
+Figure~\ref{fig:tolerance-validation-width-ranges}; all lengths remain on the
+population-standardized response scale.}
+\label{fig:tolerance-validation-width-ranges-n1000}
+\end{figure}
+
+In the completed comparison, MTI-ECM content attainment ranges from
+\MTIExpandedECMMin\% to \MTIExpandedECMMax\%
 across distribution-level cells, compared with
-93.9\% to 97.6\% for Young--Mathew, and 94.8\% to 100.0\% for Wilks.
+\MTIExpandedYMMin\% to \MTIExpandedYMMax\% for Young--Mathew, and
+\MTIExpandedWilksMin\% to \MTIExpandedWilksMax\% for Wilks.
 Figures~\ref{fig:tolerance-validation-primary}
 and~\ref{fig:tolerance-validation-width-ranges} show the same comparison without
 pooling widths across distributional scenarios. The smallest ECM estimate is
 \(948/1000\), for the two-piece Normal law at \(n=100,c=0.95\).
 Its pointwise exact binomial interval includes \(0.95\).
-Of the 72 simultaneous ECM validation confidence intervals,
-\MTIFixedECMLower{} have lower bounds above \(0.95\) and
-\MTIFixedECMInclude{} include \(0.95\); none has an upper bound below it.
+Of the \MTIExpandedCases{} simultaneous ECM validation confidence intervals,
+\MTIExpandedECMLower{} have lower bounds above \(0.95\) and
+\MTIExpandedECMInclude{} include \(0.95\); none has an upper bound below it.
 These comparisons quantify uncertainty over this finite design and leave a
 distribution-free guarantee for the fitted rule unresolved.
 
 MTI-ECM has smaller mean width than Young--Mathew in
-\MTIFixedECMShorter{} of 72 distribution/design cases. For each of the six
-asymmetric laws, the gain occurs in \MTIFixedAsymmetricShorter{} of the nine
+\MTIExpandedECMShorter{} of \MTIExpandedCases{} distribution/design cases.
+For each of the ten asymmetric settings, the gain occurs in \MTIFixedAsymmetricShorter{} of the nine
 designs, compared with \MTIFixedNormalShorter{} for the Gaussian and
 \MTIFixedStudentShorter{} for Student \(t_3\).
 At \((n,c)=(50,0.90),(100,0.95)\), and \((500,0.99)\), ECM and Wilks
 have matching endpoints, to numerical precision, in every replication of
-all eight laws. These boundary designs contribute no width improvement over
+all twelve settings. These boundary designs contribute no width improvement over
 Wilks. In the Student \(t_3\) case at \(n=500,c=0.99\), their common mean
 width is approximately 12.86, while Young--Mathew has mean width 12.41.
 All selected ECM intervals pass the final coordinatewise accuracy checks.
 The initial ECM stopping flag remains separate from those checks and from
 whether population content reaches \(c\).
 
-The fixed-target Gibbs assessment uses these same 72,000 validation samples,
+Across the 36 added cases, ECM attainment is
+\MTIExpandedNewMin\%--\MTIExpandedNewMax\%. Its mean widths are
+\MTIExpandedNewGainMin\%--\MTIExpandedNewGainMax\% smaller than
+Young--Mathew in 24 cases and \MTIExpandedNewLossMin\%--\MTIExpandedNewLossMax\%
+larger in the 12 boundary cases. These are casewise comparisons with the
+unchanged method. For inverse Gaussian samples at \(n=500,c=0.95\),
+Young--Mathew attainment is \MTIExpandedYMWarning\%, with pointwise exact
+95\% interval \([\MTIExpandedYMWarningLower,\MTIExpandedYMWarningUpper]\%\).
+Its simultaneous upper bound over 108 cases is
+\MTIExpandedYMWarningAdjustedUpper\%; the pointwise warning therefore does
+not establish underattainment simultaneously across the design.
+
+The fixed-target Gibbs assessment uses the original eight-distribution subset
+of 72,000 validation samples,
 holding each sample's selected \(q,\delta\) fixed. Posterior-mean endpoint
 intervals have content attainment of \MTIFullAttainmentMin\%--\MTIFullAttainmentMax\%,
 with greater mean width than ECM in \MTIFixedGibbsWider{} of 72 settings.
@@ -1276,8 +1317,8 @@ uncertainty is conditional on the selected fitted content and tilt.
 The tolerance procedure combines ECM endpoint estimates with a separate DP
 posterior content check. The selection rule and Gaussian root priors are fixed
 before calibration assessment and validation. ECM content attainment ranges
-from 94.8\% to 99.7\%, with smaller mean widths than Young--Mathew in
-\MTIFixedECMShorter{} of 72 distribution/design cases. Width gains are most
+from \MTIExpandedECMMin\% to \MTIExpandedECMMax\%, with smaller mean widths than Young--Mathew in
+\MTIExpandedECMShorter{} of \MTIExpandedCases{} distribution/design cases. Width gains are most
 consistent across the asymmetric laws and vary with distance from the
 sample-range boundary. The finite candidate grid, coordinatewise numerical
 checks, and empirical calibration limit broader optimality or distribution-free

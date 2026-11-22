@@ -1,0 +1,3 @@
+"relative_path","sha256","bytes","generator","method_ids"
+"figures/generated/mti_skewness_extension_20261121/fig04_tolerance_validation_primary.png","181dadf5d13f194d1f4e2774e9e43b764c641bba158d33e6dff446934899fb13",82862,"figures/generate_tolerance_validation_primary_figure.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"
+"figures/data/mti_skewness_extension_20261121/primary_ranges.csv","edb51dee9fcd4eb9d3b5a7c7dbfe6afa4fcf899a2032e96dc1855aed43997949",2475,"figures/generate_tolerance_validation_primary_figure.R","mti_ecm_adaptive_cell;young_mathew;wilks_minmax"

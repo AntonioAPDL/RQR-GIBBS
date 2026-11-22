@@ -35,6 +35,7 @@
 \newcommand{\RHS}{\mathrm{RHS}}
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.08}}
 \input{tables/mti_fixed_prior_20261115/numbers.tex}
+\input{tables/mti_skewness_extension_20261121/numbers.tex}
 \input{tables/mti_gibbs_decisions_20261118/numbers.tex}
 \input{tables/mti_gibbs_boundary_20261116/numbers.tex}
 \DeclareMathOperator{\argmin}{arg\,min}
@@ -1465,19 +1466,22 @@ explicit feasible design cells:
   &(1000,0.90),(1000,0.95),(1000,0.99)\}.
   \end{aligned}
 \]
-The distributional panel contains two symmetric reference distributions and six
-asymmetric simulation distributions. The symmetric reference distributions are
+The primary comparison contains twelve distributional settings: two symmetric
+references and ten asymmetric settings. The symmetric reference distributions are
 Gaussian and Student \(t_3\). The asymmetric simulation distributions are
 exponential, asymmetric Laplace with \(\tau=0.10\), two-piece Normal with scale
 ratio \(1{:}12\), Beta\((1,8)\), Gamma\((0.5,1)\), and log-normal with
-log-scale standard deviation \(1.25\). All laws use their predeclared
-population centers and scales before sampling. Within each cell, all three methods use common random samples,
+log-scale standard deviation \(1.25\). Four additional settings use log-normal
+log-scale standard deviation \(1.50\), Weibull shape \(0.5\), Lomax shape
+\(3.5\), and inverse Gaussian mean one and shape \(0.25\).
+All laws use their predeclared population centers and scales before sampling.
+Within each cell, all three methods use common random samples,
 independent of threshold development and calibration assessment. The
 reproducibility materials include the code version, simulation settings,
 package versions, random seeds, calibration files, and numerical summaries.
 The article comparison uses the three methods from this paired independent
-validation. The reported rows contribute 216,000
-replication-level method evaluations over the 72 distribution-level cells used in the main
+validation. The reported rows contribute 324,000
+replication-level method evaluations over the 108 distribution-level cells used in the main
 comparison. All three procedures are evaluated on identical samples within
 each replication. Distribution definitions, random seeds, and sample-level
 checks are recorded in the reproducibility materials. All simulations
@@ -1487,7 +1491,8 @@ computed directly from these replication-level simulation outputs and the
 corresponding scan-calibration outputs. The scenario-range table in the main
 article is summarized across distributions within each \((n,c)\) cell, while
 the supplement keeps the distribution-level content-attainment and width
-summaries. The fixed-target Gibbs assessment uses the same 72,000 samples;
+summaries. The fixed-target Gibbs assessment uses the original eight-law
+subset of 72,000 samples;
 it holds the recorded ECM-selected content and tilt fixed and adds a
 posterior-mean endpoint interval for each sample.
 Table~\ref{tab:supp-mti-full-simulation} and the following
@@ -1515,23 +1520,78 @@ Pointwise bounds from 200 replications can include values below \(0.95\),
 even when the observed rate exceeds it. They quantify uncertainty in this
 assessment and supply no simultaneous guarantee over the distributional
 panel. The independent validation uses different sample seeds and retains
-the same priors, targets, candidate rule, and thresholds.
+the same priors, targets, candidate rule, and thresholds. The four added
+distributional settings receive 1000 independent validation samples per
+design under this unchanged specification. They do not enter threshold
+development or calibration assessment, and no Gibbs fits are added for
+these settings.
 
 \paragraph{Independent uncertainty assessment.}
 The cutoff is fixed before the 1000 validation samples per case are generated.
 Pointwise exact 95\% binomial intervals accompany each attainment estimate.
-For MTI-ECM, simultaneous two-sided intervals across 72 cases allocate
-\(0.05/(2\cdot72)\) to each tail. Their lower bounds exceed \(0.95\) in
-\MTIFixedECMLower{} cases; \MTIFixedECMInclude{} include \(0.95\), and
+For MTI-ECM, simultaneous two-sided intervals across 108 cases allocate
+\(0.05/(2\cdot108)\) to each tail. Their lower bounds exceed \(0.95\) in
+\MTIExpandedECMLower{} cases; \MTIExpandedECMInclude{} include \(0.95\), and
 none has an upper bound below it. The smallest point estimate,
 \(948/1000\), occurs for the two-piece Normal at \(n=100,c=0.95\).
 Inconclusive intervals reflect Monte Carlo precision and are retained in the
-interpretation. All 72,000 selected ECM fits meet the final coordinatewise
+interpretation. All original 72,000 selected ECM fits meet the final coordinatewise
 accuracy criteria; the largest possible one-root objective improvement is
 \(7.55\times10^{-9}\). One initial floating-point knot failure is repaired
 on its original sample with identical targets and priors. Its original fit
 and the checked replacement are retained separately. Initial ECM stopping
 flags are not substituted for the final accuracy checks.
+
+\subsection{Additional Asymmetric Distributions}
+\label{sec:supp-mti-added-distributions}
+
+The added settings examine stronger skewness and different right-tail
+behavior while retaining all original distributions and designs. If \(X\)
+denotes an unstandardized draw, the fitted response is
+\(Z=\{X-\E(X)\}/\sqrt{\operatorname{Var}(X)}\), using the specified
+population moments. The added log-normal law has
+\(\log X\sim\Normal(0,1.5^2)\). The Weibull law has
+\(F(x)=1-\exp(-\sqrt{x})\) for \(x\ge0\), mean two, and variance 20.
+The Lomax law has \(F(x)=1-(1+x)^{-3.5}\) for \(x\ge0\), mean
+\(1/2.5\), and variance \(3.5/(2.5^2\cdot1.5)\). Its third moment is
+finite and its fourth moment is infinite. The inverse Gaussian law has
+mean one, shape \(0.25\), and variance four. These population transformations
+do not use realized sample values to specify root priors or the DP base.
+
+Before comparative fitting, numerical checks deferred Gamma\((0.25,1)\)
+and Beta\((0.25,8)\). On the standardized scale, draws near their lower
+support could become indistinguishable from that boundary in double
+precision with sample-level probability about \(0.065\) at \(n=1000\),
+exceeding the prespecified probability threshold of \(0.001\). This decision preceded
+method evaluation, and no milder parameters were substituted. The numerical restriction does not establish
+a statistical failure of any method.
+
+All 36,000 added fits retain their original samples, target menus, priors,
+and final conditional refinements. Every candidate satisfies the final
+coordinatewise objective and endpoint checks, with maximum possible
+one-root objective improvement \(1.00\times10^{-6}\) and maximum
+width-scaled endpoint discrepancy \(1.00\times10^{-5}\), rounded upward.
+The stricter initial stopping flags remain recorded separately. Near the
+Weibull support boundary, decimal rounding of saved endpoints can affect
+CDF evaluation. Saving endpoints with 17 significant digits preserves their
+full numerical precision and reproduces their population-content scores
+exactly. This correction changes no attainment classification.
+
+Table~\ref{tab:supp-mti-added-simulation} gives the additional cases.
+Their ECM attainment ranges from \MTIExpandedNewMin\% to
+\MTIExpandedNewMax\%, and each added distribution has smaller ECM mean
+width than Young--Mathew in six of nine designs. For inverse Gaussian
+samples at \(n=500,c=0.95\), Young--Mathew attainment is
+\MTIExpandedYMWarning\%, with pointwise exact interval
+\([\MTIExpandedYMWarningLower,\MTIExpandedYMWarningUpper]\%\).
+The 108-case simultaneous interval includes \(0.95\). These bounds concern
+Monte Carlo uncertainty in the full primary comparison; the original Gibbs
+comparison retains its separate 72-case family.
+
+\clearpage
+{\small\setlength{\tabcolsep}{4pt}\setlength{\LTcapwidth}{0.9\textwidth}
+\renewcommand{\arraystretch}{1.05}
+\input{tables/mti_skewness_extension_20261121/added_comparison.tex}}
 
 \subsection{Posterior-Mean Interval Comparisons}
 \label{sec:supp-mti-full-validation}
@@ -2125,7 +2185,7 @@ summaries, and multi-chain diagnostics. The reproducible summaries retain
 the simulation designs and historical partition schemes separately.
 Numerical table entries and figures are generated from these records;
 the retained traces and pooled-rank counts reproduce the displayed
-diagnostics. Validation uses 72,000 independent samples, preceded by 14,400
+diagnostics. The original paired validation uses 72,000 independent samples, preceded by 14,400
 calibration-assessment samples and 1728 initial prior-comparison fits.
 These counts refer to fitted samples, each with paired ECM/Gibbs summaries;
 the initial comparison fits the same 864 samples under two fixed priors.
@@ -2134,6 +2194,13 @@ precision extensions are numerical checks on existing samples. They are
 excluded from repeated-sampling attainment estimates. All empirical tables
 and figures in these sections use the fixed-prior results, while the earlier
 diffuse-prior calculations remain in the software archive.
+The additional asymmetric-distribution comparison contributes 36,000 fresh
+samples and 108,000 paired MTI-ECM, Young--Mathew, and Wilks evaluations.
+The resulting primary comparison has 108,000 samples and 324,000 method
+evaluations. It preserves all original primary summaries and does not extend
+the Gibbs or pharmaceutical evidence. Saved distribution-level summaries
+reproduce the expanded tables and figures. They are checked against the
+original fitted intervals, with code and package versions recorded.
 
 The initial interior-tilt study used 864 development samples, 14,400
 calibration samples, and 7200 pilot samples. The threshold and

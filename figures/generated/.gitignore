@@ -15,3 +15,7 @@
 !mti_fixed_prior_20261115/*.csv
 !mti_gibbs_decisions_20261118/
 !mti_gibbs_decisions_20261118/*.pdf
+!mti_skewness_extension_20261121/
+!mti_skewness_extension_20261121/*.png
+!mti_skewness_extension_20261121/*.pdf
+!mti_skewness_extension_20261121/*.csv

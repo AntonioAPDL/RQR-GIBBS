@@ -87,7 +87,10 @@ checks. Five application precision extensions preserve the original draws and
 finish at 8000 retained draws per chain. The original fit files are unchanged.
 
 `application/config/mti_fixed_prior_reporting_20261115.json` identifies the
-current manuscript inputs in `figures/data/mti_fixed_prior_20261115/`.
+original paired-study and current application inputs in
+`figures/data/mti_fixed_prior_20261115/`. The expanded primary comparison is
+specified separately in `application/config/mti_skewness_publication_20261122.json`;
+see [Additional Skewed Distributions](#additional-skewed-distributions) below.
 `make report-mti-fixed-prior` regenerates its figures, tables, and numerical
 macros from these small tracked files without loading fitted objects.
 `make verify-mti-fixed-prior-report` checks data, source, and figure checksums.
@@ -547,3 +550,24 @@ the nine existing sample-size/content designs, with tolerance confidence .95.
 It changes neither the MTI prior nor its calibration and includes no new Gibbs
 fits. See [the reproducibility instructions](docs/implementation_notes/mti_skewness_extension_20261121.md)
 for numerical inclusion checks, exact method definitions, commands and outputs.
+
+The completed extension adds four settings and 36,000 independent samples.
+The primary article now compares MTI-ECM, Young--Mathew, and Wilks across 12
+settings and nine designs (108,000 datasets, 324,000 method evaluations).
+The original eight-setting, 72,000-sample Gibbs comparison and the application
+are unchanged. Width summaries retain each distribution and design separately.
+
+The compact committed evidence reproduces the expanded tables and figures
+without fitted objects or the original simulation environment:
+
+```bash
+make report-mti-skewness-publication
+make verify-mti-skewness-publication
+make test-mti-skewness-publication
+```
+
+`make collect-mti-skewness-publication` additionally requires the preserved
+local study and its frozen package library; it checks all original binary
+fits and writes a separate 17-digit endpoint export. It launches no fitting.
+See [the completed-study reference](docs/reproducibility/mti_skewness_study_reference_20261122.md)
+for data roles, numerical checks, interpretation, and source identifiers.

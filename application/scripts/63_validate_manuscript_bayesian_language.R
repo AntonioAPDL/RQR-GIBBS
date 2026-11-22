@@ -162,7 +162,7 @@ required <- list(
     "Generalized Posterior and Propriety",
     "Proper fixed-target generalized posterior",
     "Posterior Modes and Empirical Balance",
-    "216,000",
+    "324,000",
     "Tolerance-Validation Protocol and Feasibility",
     "Full-range feasibility thresholds",
     "The validation evidence is confined"
@@ -179,17 +179,21 @@ for (file in manuscripts) {
   }
 }
 for (manuscript in manuscripts) {
-  file <- "tables/mti_fixed_prior_20261115/numbers.tex"
-  if (!any(grepl(paste0("\\input{", file, "}"), lines[[manuscript]], fixed = TRUE))) {
-    failures <- c(failures, paste(manuscript, "is missing its fixed-prior numerical values"))
+  for (file in c("tables/mti_fixed_prior_20261115/numbers.tex",
+    "tables/mti_skewness_extension_20261121/numbers.tex")) {
+    if (!any(grepl(paste0("\\input{", file, "}"), lines[[manuscript]], fixed = TRUE))) {
+      failures <- c(failures, paste(manuscript, "is missing verified numerical values from", file))
+    }
   }
 }
 if (!length(failures)) {
-  assessment <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
-    c(shQuote(file.path(repo_root, "application/scripts/125_report_mti_fixed_prior.R")), "verify"),
-    stdout = TRUE, stderr = TRUE))
-  if (!is.null(attr(assessment, "status")) && attr(assessment, "status") != 0L) {
-    failures <- c(failures, "Posterior assessment text lacks verified matching evidence.", assessment)
+  for (script in c("125_report_mti_fixed_prior.R", "147_publish_mti_skewness_extension.R")) {
+    assessment <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
+      c(shQuote(file.path(repo_root, "application/scripts", script)), "verify"),
+      stdout = TRUE, stderr = TRUE))
+    if (!is.null(attr(assessment, "status")) && attr(assessment, "status") != 0L) {
+      failures <- c(failures, "Posterior assessment text lacks verified matching evidence.", assessment)
+    }
   }
 }
 

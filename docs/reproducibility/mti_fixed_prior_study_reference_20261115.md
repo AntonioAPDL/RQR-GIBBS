@@ -1,4 +1,10 @@
-# Fixed-Prior MTI Study: Current Manuscript Reference
+# Fixed-Prior MTI Study: Original Paired Comparison
+
+The primary three-method comparison now includes four additional distributional
+settings. See [the expanded-comparison reference](mti_skewness_study_reference_20261122.md)
+for its 108 cases. The 72-case ECM/Gibbs comparison, application, algorithms,
+and numerical findings described below are preserved. Counts and results in
+this reference concern that original paired study.
 
 This reference supersedes the empirical results in
 `mti_completed_study_reference_20261113.md`. The earlier diffuse-prior
