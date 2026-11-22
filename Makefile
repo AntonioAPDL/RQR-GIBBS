@@ -1066,6 +1066,25 @@ verify-mti-skewness-publication:
 test-mti-skewness-publication:
 	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-skewness-publication.R
 
+.PHONY: prepare-mti-gibbs-skewness-runtime test-mti-gibbs-skewness check-mti-gibbs-skewness launch-mti-gibbs-skewness resume-mti-gibbs-skewness health-mti-gibbs-skewness
+prepare-mti-gibbs-skewness-runtime:
+	$(R) application/scripts/150_prepare_mti_gibbs_skewness_runtime.R
+
+test-mti-gibbs-skewness:
+	R_LIBS=application/cache/gibbs_skewness_library OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 $(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-skewness.R
+
+check-mti-gibbs-skewness:
+	$(R) application/scripts/148_run_mti_gibbs_skewness.R check
+
+launch-mti-gibbs-skewness:
+	bash application/scripts/149_launch_mti_gibbs_skewness.sh
+
+resume-mti-gibbs-skewness:
+	bash application/scripts/149_launch_mti_gibbs_skewness.sh --resume
+
+health-mti-gibbs-skewness:
+	$(R) application/scripts/148_run_mti_gibbs_skewness.R health
+
 verify-mti-fixed-prior-report:
 	$(R) application/scripts/125_report_mti_fixed_prior.R verify
 

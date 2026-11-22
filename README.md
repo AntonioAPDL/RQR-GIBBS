@@ -571,3 +571,22 @@ local study and its frozen package library; it checks all original binary
 fits and writes a separate 17-digit endpoint export. It launches no fitting.
 See [the completed-study reference](docs/reproducibility/mti_skewness_study_reference_20261122.md)
 for data roles, numerical checks, interpretation, and source identifiers.
+
+## Gibbs Assessment for the Added Distributions
+
+The fixed-target Gibbs extension reuses the 36,000 saved added-law samples
+and their ECM-selected content and tilt. It changes no priors or calibration,
+repeats no ECM search, and preserves the original 72,000 Gibbs comparisons.
+It uses the existing four-chain marginal slice-within-Gibbs sampler, exact
+chain continuation, per-stage checksums and a 40-worker ceiling. Completed
+four-method summaries and convergence figures are written locally for review;
+the article and current primary results are not replaced automatically.
+
+Use `make prepare-mti-gibbs-skewness-runtime`, `make test-mti-gibbs-skewness`,
+and `make check-mti-gibbs-skewness` before committing and running
+`make launch-mti-gibbs-skewness`. Check progress on demand with
+`make health-mti-gibbs-skewness`; a stopped run can be continued with
+`make resume-mti-gibbs-skewness`. See
+[the statistical and reproduction guide](docs/reproducibility/mti_gibbs_skewness_extension_20261122.md)
+for the fixed target, diagnostic criteria, data roles, numerical checks and
+review requirements.
