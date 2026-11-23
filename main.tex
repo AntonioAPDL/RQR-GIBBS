@@ -43,6 +43,7 @@
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4.5pt}\renewcommand{\arraystretch}{1.12}}
 \input{tables/mti_fixed_prior_20261115/numbers.tex}
 \input{tables/mti_skewness_extension_20261121/numbers.tex}
+\input{tables/mti_gibbs_skewness_20261122/numbers.tex}
 \input{tables/mti_gibbs_decisions_20261118/numbers.tex}
 \DeclareMathOperator{\argmin}{arg\,min}
 \newtheorem{proposition}{Proposition}
@@ -1137,14 +1138,25 @@ Its simultaneous upper bound over 108 cases is
 \MTIExpandedYMWarningAdjustedUpper\%; the pointwise warning therefore does
 not establish underattainment simultaneously across the design.
 
-The fixed-target Gibbs assessment uses the original eight-distribution subset
-of 72,000 validation samples,
+The fixed-target Gibbs assessment uses the same twelve distributions and
+\MTIGibbsExpandedSamples{} validation samples,
 holding each sample's selected \(q,\delta\) fixed. Posterior-mean endpoint
-intervals have content attainment of \MTIFullAttainmentMin\%--\MTIFullAttainmentMax\%,
-with greater mean width than ECM in \MTIFixedGibbsWider{} of 72 settings.
+intervals have content attainment of \MTIGibbsExpandedMin\%--\MTIGibbsExpandedMax\%,
+with greater mean width than ECM in \MTIGibbsExpandedWider{} of
+\MTIGibbsExpandedCases{} settings.
 For example, at \(n=1000,c=0.90\), Normal mean widths are
 \MTIFullNormalECM{} for ECM and \MTIFullNormalGibbs{} for Gibbs; for
 Gamma\((0.5,1)\) they are \MTIFullGammaECM{} and \MTIFullGammaGibbs{}.
+
+For the four added skewed laws, Gibbs attainment is
+\MTIGibbsAddedMin\%--\MTIGibbsAddedMax\%, while mean widths are
+\MTIGibbsAddedWidthMin\%--\MTIGibbsAddedWidthMax\% larger than ECM.
+At \(n=1000,c=0.90\), the lower-endpoint shift accounts for
+\MTIGibbsLowerShareMin\%--\MTIGibbsLowerShareMax\% of the mean width
+increase. The Gaussian root priors permit these lower endpoints to extend
+below the population support, adding width in a region with no probability
+mass.
+
 For Student \(t_3\) at \(n=500,c=0.99\), Gibbs mean endpoints instead give
 attainment \(931/1000\), with pointwise exact 95\% interval
 \([0.9135,0.9459]\), and mean width 12.40. The shorter interval accompanies
@@ -1168,6 +1180,7 @@ empirical interior and calibrates the half-width of the resulting
 posterior-mean interval. Root priors remain fixed; a developmental comparison
 also selects the DP probability threshold by sample size and target content.
 After independent calibration, 1000 fresh samples per distribution and design
+under the original eight distributions
 give Gibbs content attainment of
 \MTIDecisionAttainmentMin\%--\MTIDecisionAttainmentMax\%.
 Mean widths are smaller than ECM in \MTIDecisionShorterECM{} of 72 cases,

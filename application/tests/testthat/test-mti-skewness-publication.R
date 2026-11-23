@@ -111,7 +111,7 @@ testthat::test_that("article tables, figures and build checks use the expanded c
     testthat::expect_equal(rawToChar(readBin(file, "raw", 4)), "%PDF")
   }
   main <- paste(readLines("main.tex"), collapse = "\n")
-  testthat::expect_true(grepl("original eight-distribution subset", main, fixed = TRUE))
+  testthat::expect_true(grepl("same twelve distributions", main, fixed = TRUE))
   testthat::expect_true(grepl(paste0(cfg$table_dir, "/primary_ranges.tex"), main, fixed = TRUE))
   testthat::expect_equal(length(gregexpr("\\ContinuedFloat", main, fixed = TRUE)[[1]]), 2L)
   make <- readLines("Makefile")

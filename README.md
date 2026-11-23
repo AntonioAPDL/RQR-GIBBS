@@ -7,7 +7,8 @@ and calibrated MTI-ECM tolerance intervals.
 The manuscript in `main.tex` is now focused on fixed-content interval geometry,
 the MPI and MTI targets, the calibrated MTI procedure, and iid tolerance
 validation against Young--Mathew and Wilks. It includes fixed-target Gibbs and
-ECM derivations and the completed 75,004-dataset posterior assessment.
+ECM derivations and the completed posterior assessment of 108,000 simulation
+samples and 3004 application partitions.
 Broader endpoint-regression, basis-expansion, and dynamic development is in the
 companion manuscript repository `AntonioAPDL/MTI-EXTENSIONS`.
 
@@ -554,8 +555,10 @@ for numerical inclusion checks, exact method definitions, commands and outputs.
 The completed extension adds four settings and 36,000 independent samples.
 The primary article now compares MTI-ECM, Young--Mathew, and Wilks across 12
 settings and nine designs (108,000 datasets, 324,000 method evaluations).
-The original eight-setting, 72,000-sample Gibbs comparison and the application
-are unchanged. Width summaries retain each distribution and design separately.
+The original eight-setting, 72,000-sample Gibbs estimates and the application
+are preserved. A separate completed extension adds Gibbs fits on the 36,000
+new samples, as described below. Width summaries retain each distribution
+and design separately.
 
 The compact committed evidence reproduces the expanded tables and figures
 without fitted objects or the original simulation environment:
@@ -578,11 +581,26 @@ The fixed-target Gibbs extension reuses the 36,000 saved added-law samples
 and their ECM-selected content and tilt. It changes no priors or calibration,
 repeats no ECM search, and preserves the original 72,000 Gibbs comparisons.
 It uses the existing four-chain marginal slice-within-Gibbs sampler, exact
-chain continuation, per-stage checksums and a 40-worker ceiling. Completed
-four-method summaries and convergence figures are written locally for review;
-the article and current primary results are not replaced automatically.
+chain continuation, per-stage checksums and a 40-worker ceiling. The completed
+study has 36,000 numerically adequate fits and no sampling errors or warnings.
+Its frozen reports remain unchanged. The supplementary comparison includes
+all 12 distributions and 108 cases; the primary three-method results and the
+separately calibrated 72-case Gibbs study retain their original roles.
 
-Use `make prepare-mti-gibbs-skewness-runtime`, `make test-mti-gibbs-skewness`,
+The compact publication evidence supports reproduction without fitted objects:
+
+```bash
+make report-mti-gibbs-skewness-publication
+make verify-mti-gibbs-skewness-publication
+make test-mti-gibbs-skewness-publication
+```
+
+Collection alone uses the completed local study. It preserves all frozen
+records and writes a separate case-complete replication export under ignored
+outputs. See [the publication reference](docs/reproducibility/mti_gibbs_skewness_publication_20261122.md)
+for data roles, endpoint comparisons, uncertainty summaries and limitations.
+
+For a new numerical reproduction, use `make prepare-mti-gibbs-skewness-runtime`, `make test-mti-gibbs-skewness`,
 and `make check-mti-gibbs-skewness` before committing and running
 `make launch-mti-gibbs-skewness`. Check progress on demand with
 `make health-mti-gibbs-skewness`; a stopped run can be continued with

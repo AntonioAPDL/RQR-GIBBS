@@ -143,6 +143,7 @@ testthat::test_that("dataset dispatch and resume preserve draws without ECM fitt
   testthat::expect_equal(nrow(result$parameters), 8L)
   testthat::expect_equal(nrow(result$diagnostics), 2L)
   testthat::expect_false(any(result$diagnostics$sampling_error))
+  testthat::expect_true(all(result$rows$case_id == "fixture"))
   trace <- file.path(a, "trace.pdf")
   mgs_trace_pdf(prepared, x$cfg, a, result$diagnostics, trace)
   testthat::expect_gt(file.info(trace)$size, 5000)
@@ -154,6 +155,37 @@ testthat::test_that("dataset dispatch and resume preserve draws without ECM fitt
   testthat::expect_true(all(bad$diagnostics$warnings == 1L))
   testthat::expect_true(all(!bad$rows[method == "gibbs", returned]))
   testthat::expect_true(all(!bad$rows[method == "gibbs", attained]))
+})
+
+testthat::test_that("export case identities are recovered only from matching frozen tasks", {
+  task <- data.frame(job_id = 1L, case_id = "normal_n0050_c090_p095", law_id = "normal",
+    n = 50L, content = .9, replication = 1L, sample_sha256 = "sample")
+  d <- data.table::as.data.table(task)[rep(1, 4)]
+  d[, `:=`(method = c("ecm", "gibbs", "young_mathew", "wilks"), case_id = NA_character_)]
+  restored <- mgs_complete_cases(d, task)
+  testthat::expect_true(all(restored$case_id == task$case_id))
+  testthat::expect_true(all(is.na(d$case_id)))
+  testthat::expect_error(mgs_complete_cases(d[, !"sample_sha256"], task), "Missing interval fields")
+  d$case_id[1] <- "wrong"
+  testthat::expect_error(mgs_complete_cases(d, task), "conflicts")
+  d$case_id <- NA_character_; d$sample_sha256[1] <- "wrong"
+  testthat::expect_error(mgs_complete_cases(d, task), "task differs")
+  d$job_id[1] <- 2L
+  testthat::expect_error(mgs_complete_cases(d, task), "no frozen task")
+})
+
+testthat::test_that("comparison pages reset clipping and legends restore it", {
+  path <- file.path(withr::local_tempdir(), "clipping.pdf")
+  grDevices::pdf(path)
+  on.exit(grDevices::dev.off())
+  for (page in 1:2) {
+    graphics::par(xpd = NA)
+    mgs_comparison_layout()
+    testthat::expect_identical(graphics::par("xpd"), FALSE)
+    graphics::plot.new(); graphics::plot.new()
+    mgs_legend(c("ECM", "Gibbs", "Young-Mathew", "Wilks"), c("green", "blue", "magenta", "black"))
+    testthat::expect_identical(graphics::par("xpd"), FALSE)
+  }
 })
 
 testthat::test_that("expanded bounds preserve old estimates and use 108 cases per method", {

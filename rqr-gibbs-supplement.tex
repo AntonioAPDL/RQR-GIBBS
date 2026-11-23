@@ -36,6 +36,7 @@
 \newcommand{\TableStyle}{\footnotesize\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.08}}
 \input{tables/mti_fixed_prior_20261115/numbers.tex}
 \input{tables/mti_skewness_extension_20261121/numbers.tex}
+\input{tables/mti_gibbs_skewness_20261122/numbers.tex}
 \input{tables/mti_gibbs_decisions_20261118/numbers.tex}
 \input{tables/mti_gibbs_boundary_20261116/numbers.tex}
 \DeclareMathOperator{\argmin}{arg\,min}
@@ -1326,9 +1327,15 @@ width, and midpoint, the MCSE of the mean must also be at most 1\% of the
 posterior median width. Five application fits require 8000 retained draws per
 chain to meet this last precision criterion. Their saved initial draws,
 targets, priors, and ECM intervals are preserved exactly.
-All \MTIFullDatasets{} validation/application calculations pass the final
+All \MTIFullDatasets{} original validation/application calculations pass the final
 criteria. Their maximum \(\widehat R\) is \MTIFullRhat{}; minimum bulk and
 tail effective sample sizes are \MTIFullBulkESS{} and \MTIFullTailESS{}.
+The 36,000 additional Gibbs calculations for the four added distributions
+meet the same mean-precision criteria, with maximum \(\widehat R\)
+\MTIGibbsAddedRhat{} and minimum bulk and tail effective sample sizes
+\MTIGibbsAddedBulkESS{} and \MTIGibbsAddedTailESS{}, respectively.
+Separate tail-quantile MCSE records support evaluations requiring posterior
+credible bounds; the reported intervals use posterior endpoint means.
 
 \paragraph{Longer-chain comparisons.}
 Twelve Student \(t_3\) samples at \(n=500,c=0.99\) receive independently
@@ -1491,8 +1498,8 @@ computed directly from these replication-level simulation outputs and the
 corresponding scan-calibration outputs. The scenario-range table in the main
 article is summarized across distributions within each \((n,c)\) cell, while
 the supplement keeps the distribution-level content-attainment and width
-summaries. The fixed-target Gibbs assessment uses the original eight-law
-subset of 72,000 samples;
+summaries. The fixed-target Gibbs assessment uses all twelve laws and
+\MTIGibbsExpandedSamples{} samples;
 it holds the recorded ECM-selected content and tilt fixed and adds a
 posterior-mean endpoint interval for each sample.
 Table~\ref{tab:supp-mti-full-simulation} and the following
@@ -1523,8 +1530,8 @@ panel. The independent validation uses different sample seeds and retains
 the same priors, targets, candidate rule, and thresholds. The four added
 distributional settings receive 1000 independent validation samples per
 design under this unchanged specification. They do not enter threshold
-development or calibration assessment, and no Gibbs fits are added for
-these settings.
+development or calibration assessment. The Gibbs calculation reuses every
+saved sample and its selected \(q,\delta\), with independent chain seeds.
 
 \paragraph{Independent uncertainty assessment.}
 The cutoff is fixed before the 1000 validation samples per case are generated.
@@ -1577,7 +1584,8 @@ CDF evaluation. Saving endpoints with 17 significant digits preserves their
 full numerical precision and reproduces their population-content scores
 exactly. This correction changes no attainment classification.
 
-Table~\ref{tab:supp-mti-added-simulation} gives the additional cases.
+The distribution-specific tables in
+Section~\ref{sec:supp-mti-full-validation} give the additional cases.
 Their ECM attainment ranges from \MTIExpandedNewMin\% to
 \MTIExpandedNewMax\%, and each added distribution has smaller ECM mean
 width than Young--Mathew in six of nine designs. For inverse Gaussian
@@ -1585,29 +1593,26 @@ samples at \(n=500,c=0.95\), Young--Mathew attainment is
 \MTIExpandedYMWarning\%, with pointwise exact interval
 \([\MTIExpandedYMWarningLower,\MTIExpandedYMWarningUpper]\%\).
 The 108-case simultaneous interval includes \(0.95\). These bounds concern
-Monte Carlo uncertainty in the full primary comparison; the original Gibbs
-comparison retains its separate 72-case family.
-
-\clearpage
-{\small\setlength{\tabcolsep}{4pt}\setlength{\LTcapwidth}{0.9\textwidth}
-\renewcommand{\arraystretch}{1.05}
-\input{tables/mti_skewness_extension_20261121/added_comparison.tex}}
+Monte Carlo uncertainty in the full primary comparison. The expanded
+fixed-target Gibbs comparison also uses a 108-case family for its
+simultaneous bounds.
 
 \subsection{Posterior-Mean Interval Comparisons}
 \label{sec:supp-mti-full-validation}
 
-Posterior-mean endpoint attainment ranges from \MTIFullAttainmentMin\%
-to \MTIFullAttainmentMax\% across the 72 distribution/design cases.
-Mean widths exceed ECM widths in \MTIFixedGibbsWider{} cases. The Student
+Posterior-mean endpoint attainment ranges from \MTIGibbsExpandedMin\%
+to \MTIGibbsExpandedMax\% across the \MTIGibbsExpandedCases{}
+distribution/design cases.
+Mean widths exceed ECM widths in \MTIGibbsExpandedWider{} cases. The Student
 \(t_3\), \(n=500,c=0.99\) case has Gibbs attainment \(931/1000\), with
 pointwise exact interval \([0.9135,0.9459]\), versus \(952/1000\) for
 ECM and \(946/1000\) for Young--Mathew. Its Gibbs mean width is 12.40,
-compared with 12.86 for ECM and Wilks. The simultaneous interval over 72
+compared with 12.86 for ECM and Wilks. The simultaneous interval over 108
 Gibbs cases includes \(0.95\); this does not remove the pointwise warning.
 The separate calibration assessment also gives lower attainment for Gibbs
 in this case, \(185/200\), versus \(193/200\) for ECM.
 
-Across validation samples, 20,451 Gibbs mean intervals fall below the DP
+Among the original 72,000 validation samples, 20,451 Gibbs mean intervals fall below the DP
 probability cutoff used for ECM eligibility; 1020 fall below posterior
 content probability \(0.95\). In the Student \(t_3\) case above, 539 of
 1000 Gibbs intervals fall below \(0.95\). Averaging sorted endpoints can
@@ -1617,11 +1622,37 @@ reported interval. The longer-chain checks in
 Section~\ref{sec:supp-mti-posterior-assessment} support numerical stability
 of these posterior means.
 
+\paragraph{Endpoint changes under stronger asymmetry.}
+In the 36 added cases, Gibbs attainment is
+\MTIGibbsAddedMin\%--\MTIGibbsAddedMax\%, with mean widths
+\MTIGibbsAddedWidthMin\%--\MTIGibbsAddedWidthMax\% larger than ECM.
+The width difference equals the downward change of the lower endpoint plus
+the upward change of the upper endpoint. At \(n=1000,c=0.90\), the lower
+change accounts for \MTIGibbsLowerShareMin\%--\MTIGibbsLowerShareMax\%
+of the mean difference. Most of that additional length is below the true
+population support. At \(n=500,c=0.99\), the lower change accounts for
+roughly one third of the much smaller width increase, with the remainder
+from the upper endpoint. Thus posterior averaging affects the two ends
+differently across designs.
+
+The Gaussian root priors allow posterior mass below the population support,
+so a lower-root mean can move outward while the upper-root mean changes
+little. For the first replication in each added
+case, the exact conditional root modes, holding the other ECM root fixed,
+agree with the selected ECM endpoints. These checks support the numerical
+accuracy of those coordinate updates; global joint optimality remains a
+separate question. For the added samples, \MTIGibbsAddedBelowCutoff{}
+posterior-mean intervals fall below the ECM probability cutoff, even though
+none has DP content probability below \(0.95\). Content probabilities are
+therefore recomputed at the posterior-mean endpoints rather than inherited
+from the selected ECM candidate. The high observed attainment concerns
+these simulated laws and fixed priors.
+
 \begin{figure}[p]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_attainment.pdf}
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_skewness_20261122/attainment_ranges.pdf}
 \caption{\textbf{Content attainment including posterior-mean intervals.}
-Segments span attainment proportions across the eight distributions for one
+Segments span attainment proportions across the twelve distributions for one
 design and method. They describe distributional variation, with binomial
 Monte Carlo bounds reported separately. The dashed line marks tolerance
 confidence \(0.95\). Gibbs intervals average sorted endpoints at the
@@ -1629,21 +1660,23 @@ training-selected fitted content and tilt.}
 \label{fig:supp-mti-full-attainment}
 \end{figure}
 
-\input{tables/mti_fixed_prior_20261115/simulation_comparison.tex}
+\input{tables/mti_gibbs_skewness_20261122/simulation_comparison.tex}
 
 \begin{figure}[p]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_width_ranges_01.pdf}
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_skewness_20261122/width_ranges_01.pdf}
 \caption{\textbf{Width ranges for the symmetric simulation laws.}
 Segments give empirical 2.5\%--97.5\% quantiles across 1000 samples within
 each distribution, design, and method. Crosses mark mean widths. Values
-remain raw lengths on logarithmic axes.}
+remain raw lengths on logarithmic axes. Dashed gray segments mark the
+shortest population intervals with content \(c\), a reference depending
+on population content alone. Wilks intervals are solid black.}
 \label{fig:supp-mti-full-widths-symmetric}
 \end{figure}
 
 \begin{figure}[p]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_width_ranges_02.pdf}
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_skewness_20261122/width_ranges_02.pdf}
 \caption{\textbf{Width ranges for exponential and asymmetric Laplace samples.}
 Segments, crosses, grouping, and axes follow
 Figure~\ref{fig:supp-mti-full-widths-symmetric}. Each range is computed
@@ -1653,7 +1686,7 @@ within its distribution and design.}
 
 \begin{figure}[p]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_width_ranges_03.pdf}
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_skewness_20261122/width_ranges_03.pdf}
 \caption{\textbf{Width ranges for two-piece Normal and Beta samples.}
 Segments, crosses, grouping, and axes follow
 Figure~\ref{fig:supp-mti-full-widths-symmetric}.}
@@ -1662,15 +1695,39 @@ Figure~\ref{fig:supp-mti-full-widths-symmetric}.}
 
 \begin{figure}[p]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/mti_fixed_prior_20261115/figS_mti_full_width_ranges_04.pdf}
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_skewness_20261122/width_ranges_04.pdf}
 \caption{\textbf{Width ranges for Gamma and log-normal samples.}
 Segments, crosses, grouping, and axes follow
 Figure~\ref{fig:supp-mti-full-widths-symmetric}.}
 \label{fig:supp-mti-full-widths-gamma-lognormal}
 \end{figure}
 
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_skewness_20261122/width_ranges_05.pdf}
+\caption{\textbf{Width ranges under stronger log-normal skewness and a decreasing Weibull hazard.}
+The log-normal law has log standard deviation 1.5; the Weibull shape is 0.5.
+Segments, crosses, grouping, and population references follow
+Figure~\ref{fig:supp-mti-full-widths-symmetric}.}
+\label{fig:supp-mti-full-widths-added-lognormal-weibull}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_skewness_20261122/width_ranges_06.pdf}
+\caption{\textbf{Width ranges for inverse Gaussian and Lomax samples.}
+The inverse Gaussian law has mean one and shape 0.25; the Lomax shape is 3.5.
+Segments, crosses, grouping, and population references follow
+Figure~\ref{fig:supp-mti-full-widths-symmetric}.}
+\label{fig:supp-mti-full-widths-added-invgauss-lomax}
+\end{figure}
+
 \subsection{Interior Tilts and Interval Calibration}
 \label{sec:supp-mti-interior-calibration}
+
+The calibration assessment in this section retains the original eight-law,
+72-case design. The four added distributions enter only the fixed-target
+Gibbs comparison above.
 
 The empirical limits in Section~\ref{sec:supp-mti-empirical-limits} suggest
 a way to reduce the prior's influence on an inactive root. At the

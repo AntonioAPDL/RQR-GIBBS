@@ -1,0 +1,19 @@
+{
+  "study_source_commit": "a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a",
+  "study_identity": "e9647b7b0513e2d3c8051f5c3a034bb4854073f405321c69fffc579160dc9bbf",
+  "study_pointer": ".codex_work/mti_gibbs_skewness_latest.json",
+  "study_config": "application/config/mti_gibbs_skewness_20261122.json",
+  "primary_config": "application/config/mti_skewness_publication_20261122.json",
+  "local_output": "application/outputs/mti_gibbs_skewness_publication_20261122",
+  "evidence_dir": "figures/data/mti_gibbs_skewness_20261122",
+  "table_dir": "tables/mti_gibbs_skewness_20261122",
+  "figure_dir": "figures/generated/mti_gibbs_skewness_20261122",
+  "replications": 1000,
+  "cases": 108,
+  "added_cases": 36,
+  "methods": ["ecm", "gibbs", "young_mathew", "wilks"],
+  "figure_order": ["normal", "student_t3", "exponential", "asym_laplace_tau010", "two_piece_normal_1_12", "beta18", "gamma05", "lognormal_hard", "lognormal_sd150", "weibull_shape050", "invgauss_shape025", "lomax_shape350"],
+  "refit": false,
+  "change_primary_comparison": false,
+  "change_calibrated_gibbs_study": false
+}

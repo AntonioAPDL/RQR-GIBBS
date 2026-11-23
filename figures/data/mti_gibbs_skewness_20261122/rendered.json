@@ -1,0 +1,32 @@
+{
+  "outputs": {
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_01.pdf": "1bdd96030cab8aea911a3db23f1b44552d50fea34641cf4bd93dca18ff192016",
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_02.pdf": "23214bdfb5cc16ee23172d99a28318f6a211eb2f229bac0693fa1c59f3153ca1",
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_03.pdf": "cdee017b0cb700c0e3b1e0f25258fe6e741172c8fecc1a031bbdc6410ab8c31b",
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_04.pdf": "a908a25f7f32b6e2c71f8077aa11282cba03db135d513f4b7c498e887a7a4cc9",
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_05.pdf": "d9ba6ea96c721276682d3e6875ae63b45919281accfa522f74ca08a61fd90757",
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_06.pdf": "cac17702e02e36e83083501310d9782b0bcbff38f0b9663481130462182bfc46",
+    "figures/generated/mti_gibbs_skewness_20261122/attainment_ranges.pdf": "26a2f75c88ff60f0d09d0625f57092af67412d1c77abcae5f8763fd2464909b9",
+    "tables/mti_gibbs_skewness_20261122/numbers.tex": "acb5b5981a5ce64b6fc2f5ebb1c2dd61ed476e9f8073569d6c6d5f62f0f530f2",
+    "tables/mti_gibbs_skewness_20261122/simulation_comparison.tex": "2f3e6f40cdbe5ef05120ee2c4a73e35a8f73367b8fc707aba453efb2ef7c9120"
+  },
+  "programs": {
+    "application/scripts/151_publish_mti_gibbs_skewness.R": "2a4de5d8df0152f9b2617b45add43bdfdec7fd1b4caa79e769cb949bab543af7",
+    "application/scripts/lib/mti_gibbs_practical.R": "6d21f7cc59fbdf7b8db91b1961286dda686cd36efeef9245797b729865fe23bd",
+    "application/scripts/lib/mti_gibbs_full_report_review.R": "f1f6fba47104a3d30865f7ca5010dbfe5943fc1db81c37b801d6771af1ef95d8",
+    "application/scripts/lib/mti_gibbs_full_publication.R": "ba34c3bd19dfd564ced43cad8f71a9c5f4ce390a1d2565451ac3c85c5f773a8d",
+    "application/scripts/lib/mti_gibbs_width_diagnosis.R": "5f30b5820524396fab76ce287ddb8c20811b5f72b0292fbe4c61acad1ab17444",
+    "application/scripts/lib/pharma_tolerance_application.R": "8f5c404e46b7cb6609fe165492ca48981ccf24cf866045a7f342714455bd6128",
+    "application/scripts/lib/pharma_mti_application.R": "f7d12c0d50ba4a541b23a8373c57e1ee3b309963c5cd3bab071d94309c69f30a",
+    "application/scripts/lib/mti_fixed_prior_publication.R": "921f33ffc114e9671a608bc3db473b67076e539cf9f0ca29993a66a7eafbe3a1",
+    "application/scripts/lib/mti_fixed_prior_reporting.R": "a5f3b2aa0080836139aea5363d940f14d07eb40adf71b62a2a0114c92aa18802",
+    "application/scripts/lib/mti_skewness_distributions.R": "281f23e2e3d5cdbd84e209302003d2dbf406b77df2931cc6acd83f400bce2e46",
+    "application/scripts/lib/mti_skewness_reporting.R": "e4e3056a8452845fda00223ab7cb8f3970c770af146dca3aff55a93d170d6ca3",
+    "application/scripts/lib/mti_skewness_publication.R": "1d933182420cf34e1c808fbfd8a68ba045b25315329f4a90235e60c7d6e873fd",
+    "application/scripts/lib/mti_gibbs_skewness.R": "2719a15bac7ca0a96978f029d6feb03cbcf557a5f282365cb2d2658883e93e2a",
+    "application/scripts/lib/mti_gibbs_skewness_reporting.R": "6183be5ef2148459c3c2987dc6089f92fde03c901670762bd496218621d09f5b",
+    "application/scripts/lib/mti_gibbs_skewness_publication.R": "624fcdfb102134c109a670f45570763e851282325e59b015f292a11048e9f6b6",
+    "application/scripts/lib/mti_gibbs_full_publication_figures.R": "6328d1d9a4d171640998b5b2892631fcbd4dbb3173b8d0286636dd8a7266dbc9",
+    "application/config/mti_gibbs_skewness_publication_20261122.json": "117e9104813bd2e2d0e21432ca0dbf475636751f34204c7d229c692f742f4379"
+  }
+}

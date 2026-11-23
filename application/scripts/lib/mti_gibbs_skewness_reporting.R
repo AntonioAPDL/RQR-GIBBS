@@ -50,7 +50,7 @@ mgs_collect <- function(prepared, cfg, context, directory, workers = 4L) {
       old <- data.table::copy(input$rows)
       old[, `:=`(numerical_adequate = TRUE, screen_pass = TRUE)]
       rows[[j]] <- data.table::rbindlist(list(old, r), fill = TRUE)
-      rows[[j]][, `:=`(study_id = cfg$study_id, task_key = paste(cfg$study_id, task$job_id, sep = ":"),
+      rows[[j]][, `:=`(case_id = task$case_id, study_id = cfg$study_id, task_key = paste(cfg$study_id, task$job_id, sep = ":"),
         sample_sha256 = input$sample_sha256)]
       diagnostics[[j]] <- data.table::data.table(job_id = task$job_id, case_id = task$case_id,
         law_id = task$law_id, n = task$n, content = task$content, adequate = isTRUE(value$adequate),
@@ -105,6 +105,33 @@ mgs_paired <- function(rows) {
   }))
 }
 
+mgs_complete_cases <- function(rows, tasks) {
+  d <- data.table::copy(data.table::as.data.table(rows))
+  fields <- c("job_id", "law_id", "n", "content", "replication", "sample_sha256")
+  mwd_require(all(fields %in% names(d)) && all(c(fields, "case_id") %in% names(tasks)) &&
+    !anyDuplicated(tasks$job_id) && all(!is.na(tasks$case_id) & nzchar(tasks$case_id)),
+    "Missing interval fields or invalid frozen case index.")
+  index <- match(d$job_id, tasks$job_id)
+  mwd_require(!anyNA(index), "An exported interval has no frozen task.")
+  for (field in c("law_id", "n", "content", "replication", "sample_sha256"))
+    mwd_require(all(d[[field]] == tasks[[field]][index]), paste("Interval task differs:", field))
+  expected <- tasks$case_id[index]
+  if ("case_id" %in% names(d)) mwd_require(all(is.na(d$case_id) | d$case_id == "" | d$case_id == expected),
+    "An exported case identifier conflicts with its frozen task.")
+  d[, case_id := expected]
+  d
+}
+
+mgs_comparison_layout <- function() graphics::par(mfrow = c(1, 2), mar = c(4.5, 12, 3, 1),
+  oma = c(2, 0, 2, 0), las = 1, cex = .9, xpd = FALSE)
+
+mgs_legend <- function(labels, colors) {
+  old <- graphics::par(xpd = NA)
+  on.exit(graphics::par(old))
+  graphics::legend(graphics::grconvertX(.5, "ndc", "user"), graphics::grconvertY(.035, "ndc", "user"),
+    labels, col = colors, lty = 1, bty = "n", cex = .9, horiz = TRUE, xjust = .5, yjust = .5)
+}
+
 mgs_comparison_pdf <- function(cells, cfg, path) {
   labels <- mwd_json("application/config/mti_skewness_publication_20261122.json")
   laws <- rev(labels$law_order); names_laws <- setNames(labels$labels, labels$law_order)
@@ -117,7 +144,7 @@ mgs_comparison_pdf <- function(cells, cfg, path) {
   on.exit(grDevices::dev.off())
   for (i in seq_len(nrow(designs))) {
     z <- cells[n == designs$n[i] & content == designs$content[i]]
-    graphics::par(mfrow = c(1, 2), mar = c(4.5, 12, 3, 1), oma = c(2, 0, 2, 0), las = 1, cex = .9)
+    mgs_comparison_layout()
     for (metric in c("attainment", "width")) {
       reference <- references[content == designs$content[i]]
       limits <- if (metric == "attainment") c(.85, 1.003) else
@@ -142,9 +169,7 @@ mgs_comparison_pdf <- function(cells, cfg, path) {
         below <- which(lo < limits[1]); if (length(below)) graphics::points(rep(limits[1], length(below)), y[below], pch = 17, col = colors[j], cex = .6)
       }
     }
-    graphics::par(xpd = NA)
-    graphics::legend(graphics::grconvertX(.5, "ndc", "user"), graphics::grconvertY(.04, "ndc", "user"),
-      names_methods, col = colors, lty = 1, bty = "n", cex = .8, horiz = TRUE, xjust = .5, yjust = .5)
+    mgs_legend(names_methods, colors)
     graphics::mtext(sprintf("n = %d; required content = %.2f; tolerance confidence = .95", designs$n[i], designs$content[i]),
       outer = TRUE, side = 3, line = .2, cex = 1.05)
     graphics::mtext("Width crosses mark means. Triangles indicate attainment intervals extending below 0.85.", outer = TRUE, side = 1, line = .3, cex = .7)

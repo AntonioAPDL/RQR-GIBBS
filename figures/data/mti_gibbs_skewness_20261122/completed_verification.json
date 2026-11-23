@@ -1,0 +1,27 @@
+{
+  "completed": true,
+  "numerically_adequate": true,
+  "datasets": 36000,
+  "adequate_datasets": 36000,
+  "sampling_errors": 0,
+  "warning_datasets": 0,
+  "primary_cases": 108,
+  "gibbs_cases": 108,
+  "original_gibbs_cases": 72,
+  "identity": "e9647b7b0513e2d3c8051f5c3a034bb4854073f405321c69fffc579160dc9bbf",
+  "files": {
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/report/added_cells.csv": "86a2e47a5d2a2aa4b979d9aff1242d3f4d89691a247ca5fed3cf34c39e0e9594",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/report/added_interval_results.csv": "27851cd7214b104950bdc6cf208225671d9fe58aff3e874f2016f61d73ba2497",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/report/combined_cells.csv": "d5186d9f2b32058433ef708f98e128731d2449ec0b5122129202afebd8778621",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/report/convergence_examples.pdf": "c483aa2ce2c81da9391c239eb6b3b6aaa51b566febb5d5813738a5b0837d9afc",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/report/four_method_cases.tex": "4dfeafc8f785982a52b2010e64bc03bf23cb857b6237e21cf74e005ff37222fd",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/report/four_method_comparison.pdf": "e3b56b0bf6c146a8eaaea96c1371df57299a1c3fefed025f236ba6f37a57d3de",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/report/numerical_diagnostics.csv": "cee41d22084913a915e2ae467ed9b88821dd51edd5bc2b54c21a3149378c11b0",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/report/paired_added_comparison.csv": "58df4a2d28939d0a9c2d0436084b98f744c6a2e272f15aa8cbbe330f21e7f042",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/report/parameter_summary.csv": "ba65230827ecdc3f78dfe18b510389827746293380d0a4f57ffd271a52f9e7a3",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/report/scientific_review.md": "fc99aadf5d94420edcf7cee768425a6fadc6dc52fd8bc4de5dabbb05382dabb2"
+  },
+  "original_primary_unchanged": true,
+  "article_replaced": false,
+  "time": "2026-11-23 02:11:22 UTC"
+}

@@ -7,9 +7,12 @@ sample-range intervals. It combines the original eight distributional settings
 with four additional settings, retaining all original results. Each of the
 12 settings has 1,000 replications at each of nine designs, giving 108 cases,
 108,000 datasets and 324,000 method evaluations. Common samples within each
-case allow paired comparisons. There are no new Gibbs or application fits;
-those comparisons retain their original eight-setting, 72-case design and
-separate uncertainty assessment.
+case allow paired comparisons. This primary study supplies no new Gibbs or
+application fits. A separate completed fixed-target Gibbs extension now adds
+36,000 fits on its saved samples and extends that comparison to 108 cases;
+see [its publication reference](mti_gibbs_skewness_publication_20261122.md).
+The application and separately calibrated Gibbs study retain their original
+designs and uncertainty assessments.
 
 Tolerance confidence is .95. Designs are (n,c) = (50,.90), (100,.90),
 (100,.95), (500,.90), (500,.95), (500,.99), (1000,.90), (1000,.95),
@@ -70,8 +73,9 @@ Attainment is the replication proportion for which the known population
 content reaches c, counting nonreturns as failures. Pointwise exact binomial
 95% intervals quantify Monte Carlo uncertainty. Two-sided Bonferroni-adjusted
 intervals use a family of 108 cases per primary method: 73 ECM lower bounds
-exceed .95, 35 include .95, and none is wholly below it. The original Gibbs
-family remains 72. Young--Mathew attainment for inverse Gaussian samples at
+exceed .95, 35 include .95, and none is wholly below it. The expanded fixed-target
+Gibbs comparison also uses 108 cases; the separate calibrated Gibbs study
+retains 72. Young--Mathew attainment for inverse Gaussian samples at
 n=500,c=.95 is 931/1000, with pointwise interval [.9135,.9459]; its 108-case
 simultaneous upper bound is .9559. Report both the pointwise warning and its
 multiplicity qualification, without asserting a general comparator defect.

@@ -17,6 +17,14 @@ if (mode == "health") {
   }
   count <- length(list.files(file.path(pointer$output_root, "assessments"), pattern = "[.]rds[.]json$", recursive = TRUE))
   cat("Saved datasets:", count, "/ 36000; remaining:", 36000L - count, "\n")
+  publication <- file.path(common, "figures/data/mti_gibbs_skewness_20261122/provenance.json")
+  if (file.exists(publication)) {
+    published <- jsonlite::read_json(publication)
+    if (published$study_source_commit == pointer$source_commit) cat(
+      "Publication: this study is included in the 108-case supplementary comparison.\n",
+      "The frozen numerical study's article_replaced flag records automatic replacement only.\n",
+      "Check publication evidence with make verify-mti-gibbs-skewness-publication.\n", sep = "")
+  }
   quit(save = "no")
 }
 private <- Sys.getenv("MTI_GIBBS_SKEWNESS_LIBRARY", "application/cache/gibbs_skewness_library")

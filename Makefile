@@ -246,6 +246,7 @@ theory-figures:
 	$(R) figures/generate_tolerance_population_oracle_figure.R --oracle-width-csv=$(TOLERANCE_POPULATION_ORACLE_WIDTHS) --output-dir=$(THEORY_FIGURE_DIR)
 	$(R) application/scripts/125_report_mti_fixed_prior.R render
 	$(R) application/scripts/147_publish_mti_skewness_extension.R render
+	$(R) application/scripts/151_publish_mti_gibbs_skewness.R render
 
 historical-tolerance-figures:
 	$(R) figures/generate_tolerance_validation_primary_figure.R --primary-results= --mti-ecm-results= --scenario-range-csv=$(THEORY_TABLE_DIR)/tolerance_validation_article_scenario_ranges.csv --mti-method-id=mti_ecm_adaptive_cell --mti-label=MTI-ECM --delivery-y-min=.85 --output-dir=$(THEORY_FIGURE_DIR)
@@ -1084,6 +1085,21 @@ resume-mti-gibbs-skewness:
 
 health-mti-gibbs-skewness:
 	$(R) application/scripts/148_run_mti_gibbs_skewness.R health
+
+.PHONY: collect-mti-gibbs-skewness-publication report-mti-gibbs-skewness-publication verify-mti-gibbs-skewness-publication test-mti-gibbs-skewness-publication
+collect-mti-gibbs-skewness-publication:
+	$(R) application/scripts/151_publish_mti_gibbs_skewness.R collect
+
+report-mti-gibbs-skewness-publication:
+	$(R) application/scripts/151_publish_mti_gibbs_skewness.R render
+
+verify-mti-gibbs-skewness-publication:
+	$(R) application/scripts/151_publish_mti_gibbs_skewness.R verify
+
+test-mti-gibbs-skewness-publication:
+	$(R) application/scripts/66_run_testthat_file_strict.R application/tests/testthat/test-mti-gibbs-skewness-publication.R
+
+pdf supplement arxiv-source article-handoff: verify-mti-gibbs-skewness-publication
 
 verify-mti-fixed-prior-report:
 	$(R) application/scripts/125_report_mti_fixed_prior.R verify
