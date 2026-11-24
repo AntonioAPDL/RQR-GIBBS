@@ -79,8 +79,19 @@ testthat::test_that("the completed-study reference points to existing derivation
   evidence <- jsonlite::read_json(file.path(root, "figures/data/mti_skewness_extension_20261121/provenance.json"))
   testthat::expect_true(grepl(evidence$study_source_commit, expanded, fixed = TRUE))
   testthat::expect_true(grepl("324,000", expanded, fixed = TRUE))
-  testthat::expect_true(grepl("no new Gibbs or application fits", expanded, fixed = TRUE))
+  testthat::expect_true(grepl("no new Gibbs or application fits",
+    gsub("[[:space:]]+", " ", expanded), fixed = TRUE))
   builder <- paste(readLines(file.path(root, "application/scripts/lib/manuscript_source_package.R")), collapse = "\n")
   testthat::expect_true(grepl("Float too large", builder, fixed = TRUE))
   testthat::expect_true(grepl("primary_extension_commit = expanded$study_source_commit", builder, fixed = TRUE))
+})
+
+testthat::test_that("source receipts distinguish the primary and separate Gibbs extensions", {
+  records <- msp_study_records(root)
+  testthat::expect_equal(records$primary_cases, 108L)
+  testthat::expect_false(records$extension_includes_gibbs)
+  testthat::expect_equal(records$gibbs_cases, 108L)
+  testthat::expect_equal(records$gibbs_added_fits, 36000L)
+  testthat::expect_match(records$gibbs_extension_commit, "^[a-f0-9]{40}$")
+  testthat::expect_match(records$gibbs_extension_identity, "^[a-f0-9]{64}$")
 })

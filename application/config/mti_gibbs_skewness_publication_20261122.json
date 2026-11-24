@@ -13,6 +13,7 @@
   "added_cases": 36,
   "methods": ["ecm", "gibbs", "young_mathew", "wilks"],
   "figure_order": ["normal", "student_t3", "exponential", "asym_laplace_tau010", "two_piece_normal_1_12", "beta18", "gamma05", "lognormal_hard", "lognormal_sd150", "weibull_shape050", "invgauss_shape025", "lomax_shape350"],
+  "diagnostic_example": {"law_id":"lomax_shape350", "n":1000, "content":0.90, "replication":1, "display_every":4},
   "refit": false,
   "change_primary_comparison": false,
   "change_calibrated_gibbs_study": false

@@ -1,14 +1,18 @@
 {
   "outputs": {
-    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_01.pdf": "1bdd96030cab8aea911a3db23f1b44552d50fea34641cf4bd93dca18ff192016",
-    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_02.pdf": "23214bdfb5cc16ee23172d99a28318f6a211eb2f229bac0693fa1c59f3153ca1",
-    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_03.pdf": "cdee017b0cb700c0e3b1e0f25258fe6e741172c8fecc1a031bbdc6410ab8c31b",
-    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_04.pdf": "a908a25f7f32b6e2c71f8077aa11282cba03db135d513f4b7c498e887a7a4cc9",
-    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_05.pdf": "d9ba6ea96c721276682d3e6875ae63b45919281accfa522f74ca08a61fd90757",
-    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_06.pdf": "cac17702e02e36e83083501310d9782b0bcbff38f0b9663481130462182bfc46",
-    "figures/generated/mti_gibbs_skewness_20261122/attainment_ranges.pdf": "26a2f75c88ff60f0d09d0625f57092af67412d1c77abcae5f8763fd2464909b9",
-    "tables/mti_gibbs_skewness_20261122/numbers.tex": "acb5b5981a5ce64b6fc2f5ebb1c2dd61ed476e9f8073569d6c6d5f62f0f530f2",
-    "tables/mti_gibbs_skewness_20261122/simulation_comparison.tex": "2f3e6f40cdbe5ef05120ee2c4a73e35a8f73367b8fc707aba453efb2ef7c9120"
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_01.pdf": "d1a56d8fa1e7bf8ed694e85253dc00cbb308b59464fb2240db64c37e941dd6db",
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_02.pdf": "f109664c08f721cda81cc2fb07502d27b216628cc640b021bedf146922202200",
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_03.pdf": "372ecf8584725554b766fa07eb672e729a3b8028723e1065f6942e715375868d",
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_04.pdf": "f27bef04eb37b39fc4c625aca8252101deafe78529f1b0d679e1cba967ade6e7",
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_05.pdf": "09a67fda28a40c0b5f39b820e17452fb7c9bd44b5798792cf4349011fb19f806",
+    "figures/generated/mti_gibbs_skewness_20261122/width_ranges_06.pdf": "c320d7ae6fb0fef59acc9ca937249874d2f3006e747159172784e85a02cfd112",
+    "figures/generated/mti_gibbs_skewness_20261122/attainment_ranges.pdf": "76202c1646640f68e685d71725bf9b0bfe8790e6dc5688552c31cbb9c8c5a811",
+    "figures/generated/mti_gibbs_skewness_20261122/population_shortest_intervals.pdf": "56eabd0b3ff62ac1a2f5a9e5dc7ed3967cf90460e5b38b29054dbe07b18452d2",
+    "figures/generated/mti_gibbs_skewness_20261122/diagnostic_traces.pdf": "c10f8f5d78105a20164c5bac7c5fca602ad74a607b07f139405f04091c81a8fb",
+    "figures/generated/mti_gibbs_skewness_20261122/diagnostic_ranks.pdf": "df3e4acdb4acdbde2f65f268ed2df4f5142ac4d26765556fd82921b0df9e330d",
+    "tables/mti_gibbs_skewness_20261122/numbers.tex": "ea06f407bb9ee6be2227a8603043d49cd1b699ba74d1d0cbfa1490a10f6dd1a6",
+    "tables/mti_gibbs_skewness_20261122/simulation_comparison.tex": "ebdca0b52ba770c3dd1437e5b0fc2bb4176a054a7c101fd20bc6a94bb4a8e743",
+    "tables/mti_gibbs_skewness_20261122/numerical_assessment.tex": "b79a4d772513d2041386511154fc30c92898300e08abfb09826f69e7ec3aead6"
   },
   "programs": {
     "application/scripts/151_publish_mti_gibbs_skewness.R": "2a4de5d8df0152f9b2617b45add43bdfdec7fd1b4caa79e769cb949bab543af7",
@@ -25,8 +29,8 @@
     "application/scripts/lib/mti_skewness_publication.R": "1d933182420cf34e1c808fbfd8a68ba045b25315329f4a90235e60c7d6e873fd",
     "application/scripts/lib/mti_gibbs_skewness.R": "2719a15bac7ca0a96978f029d6feb03cbcf557a5f282365cb2d2658883e93e2a",
     "application/scripts/lib/mti_gibbs_skewness_reporting.R": "6183be5ef2148459c3c2987dc6089f92fde03c901670762bd496218621d09f5b",
-    "application/scripts/lib/mti_gibbs_skewness_publication.R": "624fcdfb102134c109a670f45570763e851282325e59b015f292a11048e9f6b6",
+    "application/scripts/lib/mti_gibbs_skewness_publication.R": "36b7819ac73d4f16b5b59b083a58492492baeeb959ffefc6a636582651fb80f5",
     "application/scripts/lib/mti_gibbs_full_publication_figures.R": "6328d1d9a4d171640998b5b2892631fcbd4dbb3173b8d0286636dd8a7266dbc9",
-    "application/config/mti_gibbs_skewness_publication_20261122.json": "117e9104813bd2e2d0e21432ca0dbf475636751f34204c7d229c692f742f4379"
+    "application/config/mti_gibbs_skewness_publication_20261122.json": "e0839dcf7d8f9240a5b5164f208c209d20d2f883b7babe5c6f6b471394dd156e"
   }
 }

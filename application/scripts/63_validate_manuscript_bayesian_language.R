@@ -145,8 +145,8 @@ required <- list(
     "allowing paired comparisons of attainment and width",
     "a distribution-free tolerance theorem for the fitted-content and tilt selection rule",
     "Regression-family and dynamic tolerance calibration require additional theory",
-    "L_q'=\\frac{b_q}{\\lambda_q(a_q-b_q)}<0",
-    "U_q'=\\frac{a_q}{\\lambda_q(a_q-b_q)}>0"
+    "Calibrated MTI interval construction",
+    "MTIGibbsExpandedSamples"
   ),
   "rqr-gibbs-supplement.tex" = c(
     "mean-preserving interval (MPI)",
@@ -165,7 +165,10 @@ required <- list(
     "324,000",
     "Tolerance-Validation Protocol and Feasibility",
     "Full-range feasibility thresholds",
-    "The validation evidence is confined"
+    "The validation evidence is confined",
+    "MTIGibbsAssessedDatasets",
+    "L_q'=\\frac{b_q}{\\lambda_q(a_q-b_q)}<0",
+    "U_q'=\\frac{a_q}{\\lambda_q(a_q-b_q)}>0"
   )
 )
 
@@ -180,14 +183,16 @@ for (file in manuscripts) {
 }
 for (manuscript in manuscripts) {
   for (file in c("tables/mti_fixed_prior_20261115/numbers.tex",
-    "tables/mti_skewness_extension_20261121/numbers.tex")) {
+    "tables/mti_skewness_extension_20261121/numbers.tex",
+    "tables/mti_gibbs_skewness_20261122/numbers.tex")) {
     if (!any(grepl(paste0("\\input{", file, "}"), lines[[manuscript]], fixed = TRUE))) {
       failures <- c(failures, paste(manuscript, "is missing verified numerical values from", file))
     }
   }
 }
 if (!length(failures)) {
-  for (script in c("125_report_mti_fixed_prior.R", "147_publish_mti_skewness_extension.R")) {
+  for (script in c("125_report_mti_fixed_prior.R", "147_publish_mti_skewness_extension.R",
+    "151_publish_mti_gibbs_skewness.R")) {
     assessment <- suppressWarnings(system2(file.path(R.home("bin"), "Rscript"),
       c(shQuote(file.path(repo_root, "application/scripts", script)), "verify"),
       stdout = TRUE, stderr = TRUE))

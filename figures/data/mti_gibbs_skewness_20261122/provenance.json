@@ -1,7 +1,7 @@
 {
   "study_source_commit": "a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a",
   "study_identity": "e9647b7b0513e2d3c8051f5c3a034bb4854073f405321c69fffc579160dc9bbf",
-  "collection_base_commit": "a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a",
+  "collection_base_commit": "8e5544d59fed6ef066d10ae94cc12c26e393c790",
   "exdqlm_reference_commit": "dffb71ee70b597d6a716ee74be1cbc99731cd453",
   "cases": 108,
   "added_cases": 36,
@@ -33,11 +33,24 @@
     "application/scripts/lib/mti_skewness_publication.R": "1d933182420cf34e1c808fbfd8a68ba045b25315329f4a90235e60c7d6e873fd",
     "application/scripts/lib/mti_gibbs_skewness.R": "2719a15bac7ca0a96978f029d6feb03cbcf557a5f282365cb2d2658883e93e2a",
     "application/scripts/lib/mti_gibbs_skewness_reporting.R": "6183be5ef2148459c3c2987dc6089f92fde03c901670762bd496218621d09f5b",
-    "application/scripts/lib/mti_gibbs_skewness_publication.R": "624fcdfb102134c109a670f45570763e851282325e59b015f292a11048e9f6b6",
+    "application/scripts/lib/mti_gibbs_skewness_publication.R": "36b7819ac73d4f16b5b59b083a58492492baeeb959ffefc6a636582651fb80f5",
     "application/scripts/lib/mti_gibbs_full_publication_figures.R": "6328d1d9a4d171640998b5b2892631fcbd4dbb3173b8d0286636dd8a7266dbc9"
   },
+  "diagnostic_sources": {
+    "/var/tmp/jaguir26-mti-studies/mti_skewness_extension_20261121_5abbdcc4c81cbb777b1c81247a32e1bbbe9fe22a/fits/fit_000025.rds": "3aca4ca0c1359e0c6900aedeeae45df8b9edc7d8a33474edd68c1cfa407ea559",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/assessments/0000/dataset_000025.rds": "2c9339ac444fb1a02e4e3a03ae770c5c8eef20ffcfb66b460ffa7a3c435943f5",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/assessments/0000/dataset_000025.rds.json": "fbca0721178cfa58af9ef0eeafe74e8c818494662b147d7935694e6c97ab33bb",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/chains/0000/dataset_000025_chain_1_n1000.rds": "81cce3af253821e936fecf66e6b6852c44ec3918597783e340abc5b064b82f7c",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/chains/0000/dataset_000025_chain_2_n1000.rds": "86f3ffeb10a92d57636ec18506c766188af568abd689ed5f4a9ee9aa2bb4903f",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/chains/0000/dataset_000025_chain_3_n1000.rds": "fa5df99a3d75b10e23c3a60087b6d47857cf9c7a7ef271e7c5ffe48b1e585334",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/chains/0000/dataset_000025_chain_4_n1000.rds": "6a98450a2f43aeb5b9cdd47b0bb578bf7c01d664ec444fa4033b82d9b55fc885",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/chains/0000/dataset_000025_chain_1_n1000.rds.json": "fc56c2d6e83394eb15c0d7841e90c06d390d7359aef345974370671eb401f9f1",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/chains/0000/dataset_000025_chain_2_n1000.rds.json": "49b96995c719dc0029806e864c01151329080261c3dd874c8a25d62f9e96a511",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/chains/0000/dataset_000025_chain_3_n1000.rds.json": "f970ce152d4b297addf7bc7b931b06180ab16082f98ae14894f2ef10dc9eabfc",
+    "/var/tmp/jaguir26-mti-studies/mti_gibbs_skewness_20261122_a35a9cfcdafd9a17e3ceb523a88ee5e245e5aa3a/chains/0000/dataset_000025_chain_4_n1000.rds.json": "7c9909a03211207b07a43a74b018957c8032dfa01b7941edd6d5e580241719bf"
+  },
   "configuration": {
-    "application/config/mti_gibbs_skewness_publication_20261122.json": "117e9104813bd2e2d0e21432ca0dbf475636751f34204c7d229c692f742f4379",
+    "application/config/mti_gibbs_skewness_publication_20261122.json": "e0839dcf7d8f9240a5b5164f208c209d20d2f883b7babe5c6f6b471394dd156e",
     "application/config/mti_skewness_publication_20261122.json": "6f62d88725bab322cb51f3f3d84418c70902071d095ebfe45a790e17b6198c18",
     "application/config/mti_gibbs_skewness_20261122.json": "16a25b592439669d59c025ac4133de15ba8ac720cfee871378439c780056ab2f",
     "application/config/mti_fixed_prior_20261114.json": "f9eaa86cce255fa12eb807fe00111de3f4440a38852d96b147b9b1b84339c66c",
@@ -60,6 +73,9 @@
     "numerical_summary.csv": "f5f3585ab9fe0adbe5bf5cbc6263989b1cd02d844a5951093ca0958ed38c871f",
     "endpoint_comparison.csv": "05dc0e7ec64770602bfca01cd44b014975906b0fe04194118339c77e144f2ff6",
     "conditional_mode_checks.csv": "8828cb0055b86a24574882d4e73b0d8831069c1f9ac7f716e35abf7ec099b065",
+    "diagnostic_example.csv": "640dbeb0f578a73d43204f4e981c28a3b0effdac182927b3eeee46e2a6a2233f",
+    "diagnostic_trace.csv": "233886fdd1d17438c74e697e5cc9f6ecceb6f2d40300c2ca4900414e1c562d47",
+    "diagnostic_ranks.csv": "5c8cfeb518212b416c3faecdead25d0827cf9ba4aa4b4239701add22e485dbfc",
     "completed_manifest.json": "d9468d8e44d81692760051ace29b79b26763caabc594817f3c9f5a025f7c115f",
     "completed_verification.json": "c1e47ac76391bdb33097168f4fd31701ef1518c21b99e1eb18bee3da918c136e",
     "completed_controller_exit.json": "897226c67e198a84b056a3f0f352866d34d0552d821950ab5f553d8191b3797e"

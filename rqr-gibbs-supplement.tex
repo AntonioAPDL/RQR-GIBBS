@@ -406,7 +406,7 @@ under the quantile-window assumptions alone: for the symmetric distribution
 with density \(1/2\) on \([-2,-1]\cup[1,2]\), \(\mu=0\) and the MPI
 window has \(u_c=(1-c)/2\), hence \(L_c=-1-c\) and \(U_c=1+c\), so the
 zero-content limit straddles the support gap rather than contracting to
-\(\mu\). The corrected zero-content limit is a property of the population
+\(\mu\). This zero-content limit is a property of the population
 interval path; the
 midpoint at a fixed positive \(c\) is not generally the mean, and independent
 fits at several content levels do not by themselves define joint
@@ -433,10 +433,11 @@ functional rather than merely re-expressing it.
 
 Finally, with fixed endpoints,
 \(\rho_c\{(y-a)(y-b)\}=O(y^2)\) as \(|y|\to\infty\), and the endpoint scores
-grow linearly in \(|y|\). MPI is distribution-free in the sense that it does
-not posit a parametric response density. Its retained-mean target still depends
-on second moments, so the finite-second-moment assumption and response-scale
-choice are scientifically consequential.
+grow linearly in \(|y|\). MPI does not posit a parametric response density.
+Retained-mean identification uses a finite first moment when the score
+identities are justified; the finite-risk and global-minimization arguments
+above assume a finite second moment. These moment conditions and the response
+scale affect the target and its interpretation.
 
 Endpoint atoms require directional conditions. Write
 \(m=(a+b)/2\), \(h=(b-a)/2>0\), so
@@ -737,8 +738,8 @@ z_p+\frac{\gamma_1}{6}(z_p^2-1)
 approximates the quantile function of \(Z\) around the standard Normal law.
 For content \(c\), define
 \[
-q_c=\Phi^{-1}\{(1+c)/2\},\qquad
-K_c=q_c\phi(q_c)/c.
+z_c=\Phi^{-1}\{(1+c)/2\},\qquad
+K_c=z_c\phi(z_c)/c.
 \]
 Integrating the expansion over the equal-tailed probability window gives
 \[
@@ -791,22 +792,39 @@ validation. A posterior treatment of tilt, or reuse of
 the MPI hierarchical-scale update at nonzero tilt, would require a separate
 model. Strong skewness, finite-support boundary solutions, and heavy-tailed
 cases can move the first-order shortest approximation outside the admissible
-finite-root tilt range. For this reason, the numerical summaries include adjusted
-skewness, excess kurtosis, standardized sixth moment, probability-window
-clipping, boundary proximity, and bootstrap sensitivity summaries. The main
-article's deterministic Cornish--Fisher figure and population comparison table
-illustrate both near-Normal accuracy and material departures under stronger
-skewness or support-boundary geometry. These calculations assess the
-approximation, while empirical validation and held-out selection rules require
-separate study. The table reports the population values used to produce
-the display.
+finite-root tilt range. Figure~\ref{fig:mean-tilt-cf-anchors} and
+Table~\ref{tab:mean-tilt-cf-mini-study} use population quantities to show
+near-Normal accuracy and departures under stronger skewness or
+support-boundary geometry. They do not assess a sample plug-in estimator.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/fig03_mean_tilt_cf_anchors.png}
+\caption{\textbf{Cornish--Fisher recovery-tilt approximation.}
+For content \(c=0.80\), solid curves give the population window-to-tilt map
+and width profile in the left-skewed example. Filled markers identify the
+exact MPI, ET, and SH tilts; open markers give the first-order approximations
+using true population skewness.}
+\label{fig:mean-tilt-cf-anchors}
+\end{figure}
+
+\input{tables/mean_tilt_cf_mini_study.tex}
+
+The approximation is exact at symmetry and close for the near-Normal Gamma
+examples. Errors are larger for the log-normal and bounded Beta laws, and for
+the exponential law, whose shortest interval is a support-boundary solution.
+The reflected Beta examples verify the sign reversal and show that skewness
+alone does not determine accuracy. The ET approximation is more accurate
+than the SH approximation in these examples; this is a descriptive comparison.
 
 The tilt indexes the estimand and is initially treated like a fixed quantile
 level. A scalar tilt generally defines only a restricted global target in a
 regression model; pointwise equal-tailed or shortest recovery generally
 requires \(\delta(x)\). Sampling \(\delta\) as an ordinary unknown would mix
-different interval functionals. Data-driven tilt selection therefore requires
-a separate selection rule based on independent test data. Under
+different interval functionals. A data-driven procedure must specify how it
+selects the target. The tolerance construction selects content and tilt on
+the training sample and assesses the complete rule on independent validation
+samples. Under
 positive affine transformation \(Y^\star=r+sY\), the corresponding target uses
 \(\delta^\star=s\delta\), as stated in
 Section~\ref{sec:supp-population-target}.
@@ -821,6 +839,38 @@ Proposition~\ref{prop:supp-mti-posterior-proper} gives an explicit bound for
 the intercept-only calculation.
 Nonzero tilt under heavier-tailed shrinkage priors requires a separate
 coercivity or propriety result.
+
+\subsection{Width Along the Population Shortest-Interval Path}
+
+Suppose a differentiable, strictly unimodal density has a unique interior
+shortest interval \(I_q=[L_q,U_q]=[Q(u_q),Q(u_q+q)]\) over a range of contents.
+Its endpoint densities satisfy \(f(L_q)=f(U_q)=\lambda_q\).
+Put \(a_q=f'(L_q)>0\) and \(b_q=f'(U_q)<0\). Differentiating the content
+and equal-density equations gives
+\[
+L_q'=\frac{b_q}{\lambda_q(a_q-b_q)}<0,\qquad
+U_q'=\frac{a_q}{\lambda_q(a_q-b_q)}>0.
+\]
+The first-order shares of added probability at the left and right boundaries
+are therefore
+\[
+p_L(q)=\frac{-b_q}{a_q-b_q},\qquad
+p_R(q)=\frac{a_q}{a_q-b_q},\qquad p_L(q)+p_R(q)=1.
+\]
+Local symmetry makes these shares equal. The shortest width satisfies
+\[
+W_{\mathrm{SH}}'(q)=\lambda_q^{-1},\qquad
+W_{\mathrm{SH}}''(q)=-\frac{a_qb_q}{\lambda_q^3(a_q-b_q)}>0.
+\]
+Additional content becomes increasingly costly in width as the endpoints
+move into lower-density regions. With
+\(m_q=q^{-1}\int_{u_q}^{u_q+q}Q(s)\,ds=\mu+\delta_{\mathrm{SH}}(q)\),
+\[
+\delta_{\mathrm{SH}}'(q)=\frac{p_L(q)L_q+p_R(q)U_q-m_q}{q}.
+\]
+These identities describe the smooth interior population path. Boundary and
+nonunique intervals require separate treatment. The numerical tolerance
+construction evaluates its finite grid without using these derivatives.
 
 \section{Empirical Balance}
 \label{sec:supp-static-theory}
@@ -847,20 +897,20 @@ s_i\in\partial\rho_c(\widehat e_i),
 \]
 where \(s_i=c-1\) if \(\widehat e_i<0\), \(s_i=c\) if
 \(\widehat e_i>0\), and \(s_i\in[c-1,c]\) if \(\widehat e_i=0\). Set
-\(\widehat q_i=c-s_i\). Then
-\(\widehat q_i=1\) strictly inside the fitted interval,
-\(\widehat q_i=0\) strictly outside, and
-\(\widehat q_i\in[0,1]\) only at fitted roots.
+\(\widehat w_i=c-s_i\). Then
+\(\widehat w_i=1\) strictly inside the fitted interval,
+\(\widehat w_i=0\) strictly outside, and
+\(\widehat w_i\in[0,1]\) only at fitted roots.
 
 \begin{theorem}[Exact fractional empirical balance]
 \label{thm:supp-fractional-balance}
 At any interior subgradient-stationary intercept-only MTI solution,
-there are allocations \(\widehat q_i\in[0,1]\) with the membership convention
+there are allocations \(\widehat w_i\in[0,1]\) with the membership convention
 above such that
 \[
-\sum_{i=1}^n\widehat q_i=nc,
+\sum_{i=1}^n\widehat w_i=nc,
 \qquad
-\sum_{i=1}^n\widehat q_i y_i
+\sum_{i=1}^n\widehat w_i y_i
 =nc(\overline y+\delta).
 \]
 \end{theorem}
@@ -873,10 +923,10 @@ The endpoint subgradient equations are
 \sum_{i=1}^n s_i(\widehat a-y_i)-nc\delta=0.
 \]
 Subtracting them and using \(\widehat b-\widehat a>0\) gives
-\(\sum_i s_i=0\), hence \(\sum_i\widehat q_i=nc\). Substituting this identity
+\(\sum_i s_i=0\), hence \(\sum_i\widehat w_i=nc\). Substituting this identity
 back into either endpoint equation gives
 \[
-\sum_{i=1}^n(\widehat q_i-c)y_i=nc\delta,
+\sum_{i=1}^n(\widehat w_i-c)y_i=nc\delta,
 \]
 which is the retained-mean balance.
 \end{proof}
@@ -902,13 +952,12 @@ and restricted-regression extensions require separate arguments.
 For linear roots in a globally ordered chart, the same subgradient selection
 gives
 \begin{align}
-\sum_i X_i\left[(c-\widehat q_i)(\widehat b_i-y_i)-c\delta_i\right]&=0,\\
-\sum_i X_i\left[(c-\widehat q_i)(\widehat a_i-y_i)-c\delta_i\right]&=0.
+\sum_i X_i\left[(c-\widehat w_i)(\widehat b_i-y_i)-c\delta_i\right]&=0,\\
+\sum_i X_i\left[(c-\widehat w_i)(\widehat a_i-y_i)-c\delta_i\right]&=0.
 \end{align}
 Subtracting yields the width-weighted calibration equation
 \[
-\sum_i X_i\widehat w_i(c-\widehat q_i)=0,
-\qquad \widehat w_i=\widehat b_i-\widehat a_i.
+\sum_i X_i(\widehat b_i-\widehat a_i)(c-\widehat w_i)=0.
 \]
 This is the finite-sample analogue of the restricted population score. Pointwise
 conditional coverage requires correct specification and a sufficiently rich
@@ -1228,9 +1277,14 @@ moments \(\tau_i\), using the prespecified numerical floor only when needed.
 the other root. Repeat with the roles exchanged.
 \item Accept a full cycle when the exact penalized objective does not increase
 beyond the prespecified numerical allowance, using backtracking if necessary.
-\item Stop at the stated stationarity criterion or iteration limit. Return
-the final roots, stopping flag, objective, and stationarity diagnostic. Sort
-the roots to report the candidate interval.
+\item Stop the initial sequence at the stationarity criterion or iteration
+limit and retain its flag. Check both exact one-root conditional modes.
+If needed, apply the additional ECM blocks and conditional minimizations
+specified above, with the same objective checks.
+\item Sort the final roots and recheck coordinate gain, displacement, and
+closed-interval counts. Recompute the DP content probability at these
+endpoints. An unresolved candidate makes the overall search unresolved;
+the initial stopping flag alone does not determine eligibility.
 \end{algorithmblock}
 
 \subsection{Posterior Modes and Empirical Balance}
@@ -1328,14 +1382,19 @@ posterior median width. Five application fits require 8000 retained draws per
 chain to meet this last precision criterion. Their saved initial draws,
 targets, priors, and ECM intervals are preserved exactly.
 All \MTIFullDatasets{} original validation/application calculations pass the final
-criteria. Their maximum \(\widehat R\) is \MTIFullRhat{}; minimum bulk and
+criteria \citep{VehtariEtAl2021Rhat}. Their maximum \(\widehat R\) is \MTIFullRhat{}; minimum bulk and
 tail effective sample sizes are \MTIFullBulkESS{} and \MTIFullTailESS{}.
 The 36,000 additional Gibbs calculations for the four added distributions
 meet the same mean-precision criteria, with maximum \(\widehat R\)
 \MTIGibbsAddedRhat{} and minimum bulk and tail effective sample sizes
 \MTIGibbsAddedBulkESS{} and \MTIGibbsAddedTailESS{}, respectively.
-Separate tail-quantile MCSE records support evaluations requiring posterior
-credible bounds; the reported intervals use posterior endpoint means.
+Across all \MTIGibbsAssessedDatasets{} simulation and application datasets,
+the maximum \(\widehat R\) is \MTIGibbsAllRhat{}, with minimum bulk and tail
+effective sample sizes \MTIGibbsAllBulkESS{} and \MTIGibbsAllTailESS{}.
+Tail-quantile precision is assessed separately. In the added comparison,
+82,969 of 144,000 parameter summaries fail the specified tail-quantile
+precision criterion. These quantiles are not used to construct the reported
+posterior-mean intervals, and the chains are not extended for that purpose.
 
 \paragraph{Longer-chain comparisons.}
 Twelve Student \(t_3\) samples at \(n=500,c=0.99\) receive independently
@@ -1380,6 +1439,29 @@ chains; dashed lines give the expected count under balanced mixing.}
 \label{fig:supp-mti-full-ranks}
 \end{figure}
 
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_skewness_20261122/diagnostic_traces.pdf}
+\caption{\textbf{Fixed-target posterior traces for the Lomax example.}
+The first replication at \(n=1000,c=0.90\) is chosen by design.
+Four independently seeded chains retain the ECM-selected content and tilt.
+Every fourth retained draw is displayed; ordered endpoints, width, and
+midpoint are computed from the same root pairs. Posterior summaries and
+diagnostics use all retained draws.}
+\label{fig:supp-mti-lomax-traces}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_skewness_20261122/diagnostic_ranks.pdf}
+\caption{\textbf{Pooled-rank counts for the Lomax example.}
+Ranks use all retained draws in Figure~\ref{fig:supp-mti-lomax-traces},
+divided into 20 bins for each quantity. Dashed lines give the expected count
+per chain under balanced mixing. These numerical diagnostics are distinct
+from the repeated-sampling variability of intervals across datasets.}
+\label{fig:supp-mti-lomax-ranks}
+\end{figure}
+
 \subsection{Fitted-Content and Tilt Selection}
 \label{sec:supp-mti-candidate-selection}
 
@@ -1392,12 +1474,33 @@ before independent validation replications.
 The ECM content grid uses offsets
 \(-0.04\), \(-0.02\), \(-0.01\), \(-0.005\), \(-0.0025\),
 \(-0.001\), \(0\), \(0.001\), \(0.0025\), \(0.005\), and \(0.01\)
-from the scan reference, restricted to \((c+10^{-4},0.9999]\), with
-additional prespecified contents near one when the reference is at least
-\(0.990\). At each content, the tilt grid adds
+from a reference \(q_0\). Ordinarily \(q_0=k/n\). If this fraction is outside
+\((c,1)\), set
+\(q_0=\min\{0.9999,c+\max(2\times10^{-4},1/n)\}\).
+When \(q_0\ge0.990\), or the scan uses all \(n\) observations, also include
+\[
+\begin{gathered}
+0.995,\ 0.996,\ 0.9965,\ 0.997,\ 0.99725,\ 0.9975,\ 0.998,\\
+0.9985,\ 0.999,\ 0.99925,\ 0.9995,\ 0.99975,\ 0.9999.
+\end{gathered}
+\]
+Keep values strictly above \(c+10^{-4}\) and below one, cap them at
+\(0.9999\), and remove duplicates. These rules retain a nonempty grid in
+every reported design.
+
+For an integer count \(k\), let \(I_k\) be the shortest closed window of
+\(k\) ordered observations, taking the first window in a tie, and let
+\(d_k\) be its retained mean minus the full sample mean. If \(nq=k+t\)
+with integer \(k\) and \(0<t<1\), define the central tilt as
+\(d(q)=(1-t)d_k+td_{k+1}\) and interpolate the two endpoint pairs with
+the same weights. At an integer \(nq\), use \(I_k\) and \(d_k\) directly.
+Interpolation supplies an initialization, not a claim of exact empirical
+content for the interpolated interval.
+At each content, the tilt grid adds
 \(-0.45\), \(-0.30\), \(-0.15\), \(0\), \(0.15\), \(0.30\), and
 \(0.45\) sample standard deviations to the
-empirical fractional shortest-window tilt and includes zero. Candidates with
+central tilt \(d(q)\) and includes zero. Shift both starting endpoints by
+\(\delta-d(q)\) for a candidate tilt \(\delta\). Candidates with
 absolute tilt above two sample standard deviations are removed. The full
 content grid is specified before fitting. An empty eligible set is retained
 as a nonreturn; there is no adaptive expansion or substitute interval.
@@ -1573,7 +1676,7 @@ exceeding the prespecified probability threshold of \(0.001\). This decision pre
 method evaluation, and no milder parameters were substituted. The numerical restriction does not establish
 a statistical failure of any method.
 
-All 36,000 added fits retain their original samples, target menus, priors,
+All 36,000 added fits retain their original samples, candidate grids, priors,
 and final conditional refinements. Every candidate satisfies the final
 coordinatewise objective and endpoint checks, with maximum possible
 one-root objective improvement \(1.00\times10^{-6}\) and maximum
@@ -1793,8 +1896,6 @@ validation statements, \MTIDecisionSimultaneous{} lower bounds exceed
 the independent order-statistic calibration provides the finite-panel
 assurance described above.
 
-Relative to the earlier radius rule, mean widths decrease by
-\MTIDecisionWidthGainMin\%--\MTIDecisionWidthGainMax\% across the 72 cases.
 The resulting Gibbs intervals are narrower on average than ECM in
 \MTIDecisionShorterECM{} cases, Young--Mathew in
 \MTIDecisionShorterYM{}, and Wilks in \MTIDecisionShorterWilks{}.
@@ -1866,15 +1967,15 @@ The population benchmark used in the main width figure is shown in
 Figure~\ref{fig:supp-tolerance-population-shortest}. For each simulation law
 and content level, this interval is the shortest interval with population
 content \(c\) under the known distribution after centering and scaling. It
-provides a lower width reference for the empirical intervals, rather than a
-sample-based tolerance procedure.
+provides a lower width reference for realized intervals attaining content
+\(c\). It need not bound failed intervals or expected tolerance-interval width.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/generated/figS03_tolerance_population_shortest_intervals.png}
+\includegraphics[width=\textwidth]{figures/generated/mti_gibbs_skewness_20261122/population_shortest_intervals.pdf}
 \caption{\textbf{Population shortest-content intervals for the simulation
 distributions.} Horizontal intervals show the shortest population content-\(c\)
-intervals for the centered and scaled simulation laws. The figure supplies the
+intervals for all twelve centered and scaled simulation laws. The figure supplies the
 width benchmarks used to interpret the empirical width ranges in the main
 article.}
 \label{fig:supp-tolerance-population-shortest}
@@ -1966,8 +2067,9 @@ This distinction matters for interpreting the small sample sizes in
 simulation design therefore lists the feasible cells explicitly instead of
 forming a Cartesian product of sample sizes and contents. This prevents the
 comparison from treating structural infeasibility of the sample-bounded
-order-statistic procedures as a method failure. It does not establish the
-same feasibility boundary for the model-based MTI procedure.
+Wilks intervals as a method failure. Young--Mathew interpolation can
+extrapolate beyond the sample range, so this boundary does not delimit its
+possible outputs or those of the model-based MTI procedure.
 The Young--Mathew comparator is evaluated through the \texttt{tolerance}
 package's \texttt{nptol.int(..., method = "YM")} function. The completed
 run used \texttt{tolerance} version 3.0.0, and the package version is included
@@ -2021,8 +2123,8 @@ identical partitions. Each split is generated from its recorded seed; changing
 worker order leaves its membership unchanged. The requested population
 content is \(c=\PharmaContent\), and nominal tolerance confidence is
 \(\PharmaConfidence\). The selected MTI rule uses posterior content
-probability threshold \(\PharmaScreen\) and internal retained-count reference
-\(k=\PharmaRetained\). This internal calibration anchor is used to construct
+probability threshold \(\PharmaScreen\) and retained-count reference
+\(k=\PharmaRetained\). This scan reference is used to construct
 the fitted-content search. Fitted content and tilt vary within each sample
 under the preassigned rule; fitting settings and the calibration rule are
 unchanged across responses and partitions.
@@ -2176,10 +2278,12 @@ intervals, because rounding can change inclusion of tied observations.
 \caption{\textbf{Numerical assessment of fixed-prior calculations.}
 Mixing summaries range over lower endpoint, upper endpoint, width, and
 midpoint. Coordinate gain is the largest possible objective improvement
-from an exact one-root conditional minimization at the selected ECM fit.}
+from an exact one-root conditional minimization at the selected ECM fit.
+Simulation summaries cover all 108,000 samples from twelve distributions;
+the 3004 historical application fits are summarized separately.}
 \label{tab:supp-pharma-numerical}
 \TableStyle
-\input{tables/mti_fixed_prior_20261115/numerical_assessment.tex}
+\input{tables/mti_gibbs_skewness_20261122/numerical_assessment.tex}
 \end{table}
 
 Failed interval calculations, if any, remain in the results and count as
@@ -2236,7 +2340,7 @@ scan-reference retained counts are calibrated before the replicated samples are 
 The MTI content-probability cutoffs and priors are fixed before the separate
 calibration assessment and independent validation run.
 
-The completed posterior assessment records all \MTIFullDatasets{} datasets,
+The completed posterior assessment records all \MTIGibbsAssessedDatasets{} datasets,
 their selected targets, the four chain seeds, numerical settings, posterior
 summaries, and multi-chain diagnostics. The reproducible summaries retain
 the simulation designs and historical partition schemes separately.
@@ -2254,8 +2358,9 @@ diffuse-prior calculations remain in the software archive.
 The additional asymmetric-distribution comparison contributes 36,000 fresh
 samples and 108,000 paired MTI-ECM, Young--Mathew, and Wilks evaluations.
 The resulting primary comparison has 108,000 samples and 324,000 method
-evaluations. It preserves all original primary summaries and does not extend
-the Gibbs or pharmaceutical evidence. Saved distribution-level summaries
+evaluations. A separate fixed-target Gibbs assessment on the same 36,000
+additional samples brings the posterior comparison to 108,000 simulation
+samples. The pharmaceutical evidence remains unchanged. Saved distribution-level summaries
 reproduce the expanded tables and figures. They are checked against the
 original fitted intervals, with code and package versions recorded.
 

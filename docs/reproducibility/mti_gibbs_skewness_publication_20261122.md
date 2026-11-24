@@ -68,11 +68,17 @@ summaries and paired comparisons. It reproduces compact case summaries and
 adds a separate local replication export with case identifiers filled from
 the frozen task index. The original report and fitted objects remain unchanged.
 Only 36 original parent samples are read for exact conditional-mode checks;
-no MCMC or ECM fitting routine is called.
+no MCMC or ECM fitting routine is called. The first Lomax replication at
+n=1000,c=.90 also supplies a saved-draw diagnostic example. Its four chain
+files and assessment are checked against their completion receipts, sample
+identity and reported endpoint means. Every fourth retained draw is exported
+for display; pooled-rank counts use every retained draw. Source hashes are
+recorded, while the full chains remain local.
 
 Compact evidence is in `figures/data/mti_gibbs_skewness_20261122/`, including
 432 case/method summaries, paired added-case contrasts, endpoint changes,
-case-level numerical summaries, conditional-mode checks, original completion
+case-level numerical summaries, conditional-mode checks, a thinned diagnostic
+trace and complete pooled-rank counts, original completion
 records and source/data hashes. Full replication exports and fitted objects
 remain ignored. The primary evidence directories are separately checked for
 unchanged contents.
@@ -99,6 +105,20 @@ width figures. Four methods are grouped closely within each design, with
 separation between designs; Wilks lines are solid black. Attainment segments
 span the observed proportions across twelve laws. Pointwise and 108-case
 simultaneous binomial bounds remain in the compact case data.
+
+The combined numerical-assessment table covers 108,000 simulation fits and
+3004 historical application fits. Across them, maximum R-hat is 1.009611,
+minimum bulk ESS is 1056.64 and minimum tail ESS is 1099.06. These are the
+summaries used in the main computation section. Original 72,000-fit records
+remain unchanged. The new population-reference figure covers all twelve
+laws and three contents, using the primary study's existing 36 references.
+It bounds the width of a realized interval attaining the requested content;
+it is not a lower bound for every failed interval or for expected width.
+
+Source-package receipts distinguish the original fixed-prior study, the
+three-method primary extension and this separate Gibbs extension. The upload
+archives contain only actual TeX dependencies and generated bibliographies;
+the three reproduction guides accompany the local review copies separately.
 
 The new publication configuration does not modify the primary configuration's
 `sample_gibbs=false`: that declaration still correctly describes its original

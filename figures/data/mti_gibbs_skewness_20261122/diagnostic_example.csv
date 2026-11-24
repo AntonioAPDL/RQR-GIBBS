@@ -1,0 +1,2 @@
+"job_id","law_id","n","content","replication","q","delta","sample_sha256","retained_per_chain","display_every","lower_mean","upper_mean"
+25,"lomax_shape350",1000,"0.90000000000000002",1,"0.92400000000000004","-0.18750922376120488","ee17273ac32b748ecffa47e6d3ef9c3a73e329b8d3c20e4a51954df60d2741e0",1000,4,"-1.877141738940945","1.0062517604278334"

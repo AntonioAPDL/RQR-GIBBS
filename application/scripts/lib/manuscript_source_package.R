@@ -75,6 +75,24 @@ msp_copy <- function(files, destination) {
   }
 }
 
+msp_study_records <- function(source) {
+  evidence <- jsonlite::read_json(file.path(source, "figures/data/mti_fixed_prior_20261115/provenance.json"))
+  expanded <- jsonlite::read_json(file.path(source, "figures/data/mti_skewness_extension_20261121/provenance.json"))
+  gibbs <- jsonlite::read_json(file.path(source, "figures/data/mti_gibbs_skewness_20261122/provenance.json"))
+  msp_require(expanded$primary_cases == 108L && !expanded$new_gibbs_fits &&
+    gibbs$cases == 108L && gibbs$added_cases == 36L && gibbs$replications == 1000L &&
+    !gibbs$fits_rerun && !gibbs$targets_resampled && !gibbs$prior_uses_analysis_data,
+    "Unexpected completed-study identities or interpretation.")
+  list(sampling_commit = evidence$simulation_source,
+    application_commit = evidence$repair_and_application_source, finalization_commit = evidence$source_commit,
+    primary_extension_commit = expanded$study_source_commit, primary_cases = expanded$primary_cases,
+    primary_replications = expanded$replications, extension_includes_gibbs = expanded$new_gibbs_fits,
+    gibbs_extension_commit = gibbs$study_source_commit, gibbs_extension_identity = gibbs$study_identity,
+    gibbs_cases = gibbs$cases, gibbs_added_cases = gibbs$added_cases,
+    gibbs_replications = gibbs$replications,
+    gibbs_added_fits = gibbs$added_cases * gibbs$replications)
+}
+
 msp_prepare <- function(root, include_supplement = FALSE, stamp = format(Sys.time(),
   "%Y%m%d_%H%M%S", tz = "America/Los_Angeles")) {
   root <- normalizePath(root, mustWork = TRUE)
@@ -100,8 +118,9 @@ msp_prepare <- function(root, include_supplement = FALSE, stamp = format(Sys.tim
   archive <- file.path(output, "committed_source.tar")
   reference <- "docs/reproducibility/mti_fixed_prior_study_reference_20261115.md"
   extension_reference <- "docs/reproducibility/mti_skewness_study_reference_20261122.md"
+  gibbs_reference <- "docs/reproducibility/mti_gibbs_skewness_publication_20261122.md"
   msp_run("git", c("--no-optional-locks", "archive", "--format=tar", paste0("--output=", archive), commit,
-    "--", "main.tex", "rqr-gibbs-supplement.tex", "refs.bib", "tables", "figures", reference, extension_reference),
+    "--", "main.tex", "rqr-gibbs-supplement.tex", "refs.bib", "tables", "figures", reference, extension_reference, gibbs_reference),
     root, file.path(output, "git-archive.txt"))
   utils::untar(archive, exdir = source)
   stems <- c("main", if (include_supplement) "rqr-gibbs-supplement")
@@ -134,16 +153,13 @@ msp_prepare <- function(root, include_supplement = FALSE, stamp = format(Sys.tim
     "Could not copy the completed-study reference.")
   msp_require(file.copy(file.path(source, extension_reference), file.path(output, "EXPANDED_COMPARISON_REFERENCE.md")),
     "Could not copy the expanded-comparison reference.")
-  evidence <- jsonlite::read_json(file.path(source, "figures/data/mti_fixed_prior_20261115/provenance.json"))
-  expanded <- jsonlite::read_json(file.path(source, "figures/data/mti_skewness_extension_20261121/provenance.json"))
-  jsonlite::write_json(list(source_commit = commit, sampling_commit = evidence$simulation_source,
-    application_commit = evidence$repair_and_application_source, finalization_commit = evidence$source_commit,
-    primary_extension_commit = expanded$study_source_commit, primary_cases = expanded$primary_cases,
-    primary_replications = expanded$replications, extension_includes_gibbs = expanded$new_gibbs_fits,
+  msp_require(file.copy(file.path(source, gibbs_reference), file.path(output, "EXPANDED_GIBBS_REFERENCE.md")),
+    "Could not copy the expanded-Gibbs reference.")
+  jsonlite::write_json(c(list(source_commit = commit), msp_study_records(source), list(
     root_documents = paste0(stems, ".tex"), project_files = as.list(setNames(vapply(files, msp_hash, ""), names(files))),
     archive = basename(zip), archive_sha256 = msp_hash(zip), committed_source_sha256 = msp_hash(archive),
     review_pdfs = as.list(setNames(vapply(stems, function(x) msp_hash(file.path(output, paste0(x, ".pdf"))), ""), stems)),
-    draws_required = FALSE, simulations_launched = FALSE, created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE)),
+    draws_required = FALSE, simulations_launched = FALSE, created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE))),
     file.path(output, "source_receipt.json"), pretty = TRUE, auto_unbox = TRUE)
   list(directory = output, zip = zip, root_documents = stems, source_commit = commit, files = names(files))
 }

@@ -77,7 +77,7 @@ residual-product loss is its zero-tilt member; other admissible tilts include
 distribution-specific central and shortest intervals. A loss-based generalized
 posterior describes uncertainty in the interval roots. Normal--exponential
 augmentation gives conditionally conjugate Gaussian root and
-generalized-inverse-Gaussian scale updates. Gibbs sampling and
+generalized-inverse-Gaussian latent-scale updates. Gibbs sampling and
 expectation/conditional maximization (ECM) provide posterior summaries and
 mode estimates, respectively.
 For tolerance inference, a calibrated rule searches fitted content and tilt
@@ -339,7 +339,8 @@ design-weighted projections of these identities.
 
 The endpoint scores have two population consequences: they set the interval
 content and make the retained conditional distribution preserve the conditional
-mean.
+mean. Here \(X\) denotes an optional covariate vector; without covariates,
+the following statement applies to the unconditional distribution of \(Y\).
 
 \begin{proposition}[Mean-preserving score characterization]
 \label{prop:population-characterization}
@@ -574,56 +575,12 @@ population map for external target specification.}
 \label{fig:mean-tilt-map}
 \end{figure}
 
-For initialization and external tilt selection, the same identities suggest a
-simple first-order approximation. Let \(\gamma_1\) denote standardized
-skewness and set
-\[
-q_c=\Phi^{-1}\{(1+c)/2\},\qquad K_c=q_c\phi(q_c)/c.
-\]
-A Cornish--Fisher expansion around a standardized Normal law
-\citep{CornishFisher1937} gives the
-shortest-oriented and equal-tailed standardized tilt approximations
-\[
-d_{\mathrm{SH}}^{\mathrm{CF}}=-\gamma_1K_c,\qquad
-d_{\mathrm{ET}}^{\mathrm{CF}}=\frac{1}{3}d_{\mathrm{SH}}^{\mathrm{CF}},
-\qquad d=\delta/\operatorname{SD}(Y).
-\]
-These formulas are not new interval targets; they are local skewness-based
-approximations to the population recovery tilts. Right skewness gives a
-negative shortest-oriented tilt, while left skewness gives a positive tilt.
-They supply simple, interpretable starting values for tilt exploration, not
-automatic shortest-interval estimators. Figure~\ref{fig:mean-tilt-cf-anchors}
-places the two approximations on the exact population tilt path using true
-population skewness rather than a sample estimate.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/generated/fig03_mean_tilt_cf_anchors.png}
-\caption{\textbf{Cornish--Fisher recovery-tilt approximation.}
-For content \(c=0.80\), the solid curves are the population window-to-tilt
-map and width profile from the left-skewed illustration. Filled markers are
-the exact population MPI, ET, and SH tilts. Open markers are the first-order
-Cornish--Fisher approximations computed from true population skewness. The display
-diagnoses a population approximation for initialization and external
-tilt selection. Data-driven tilt estimation, MCMC evidence, and response prediction
-are separate empirical tasks.}
-\label{fig:mean-tilt-cf-anchors}
-\end{figure}
-
-\input{tables/mean_tilt_cf_mini_study.tex}
-
-Table~\ref{tab:mean-tilt-cf-mini-study} shows why the approximation should
-remain an approximation rather than a target definition. It is exact at symmetry and
-close for the near-Normal Gamma laws. Its errors are larger for lognormal and
-bounded Beta shapes and for the exponential law, whose shortest interval is a
-support-boundary solution. The reflected Beta rows verify the expected sign
-reversal but also show that skewness alone does not determine approximation
-accuracy. Across these examples the ET approximation is more accurate than the
-SH approximation, but that comparison is descriptive rather than a general
-ordering.
-The numerical summaries therefore report moment shape,
-probability-window boundary behavior, and bootstrap sensitivity whenever a
-sample plug-in approximation is constructed.
+Near a Normal law, a first-order Cornish--Fisher expansion
+\citep{CornishFisher1937} relates these recovery tilts to skewness. Right
+skewness suggests a negative shortest-interval tilt, and reflection reverses
+its sign. The supplement gives the approximation and population examples,
+including its limitations near support boundaries. The tolerance procedure
+below instead uses empirical shortest windows to construct its tilt grid.
 
 The recovery tilts above are population quantities. A universal tilt does not
 recover the same interval functional across distributions, and conditional
@@ -662,13 +619,13 @@ nonsmooth when an observation lies on a root. The finite-sample score identity i
 therefore fractional. For intercept-only MTI with fixed \(\delta\), let
 \((\widehat a,\widehat b)\), \(\widehat a<\widehat b\), be an interior
 subgradient-stationary empirical solution. Then there exist allocations
-\(\widehat q_i\in[0,1]\), equal to one for observations strictly inside the
+\(\widehat w_i\in[0,1]\), equal to one for observations strictly inside the
 fitted interval, zero for observations strictly outside it, and fractional only
 at fitted roots, such that
 \[
-\sum_{i=1}^n \widehat q_i=nc,
+\sum_{i=1}^n \widehat w_i=nc,
 \qquad
-\sum_{i=1}^n \widehat q_i y_i
+\sum_{i=1}^n \widehat w_i y_i
 =nc(\overline y+\delta).
 \]
 Thus the fitted training interval has exact fractional content and exact
@@ -802,11 +759,13 @@ slice-within-Gibbs sampling for the same fixed-target root distribution.
 Four independently seeded chains begin with 500 discarded iterations and
 1000 retained draws each. Additional draws are used only to meet the
 prespecified mixing and Monte Carlo error criteria. Across the
-\MTIFullSimulations{} validation samples and \MTIFullApplications{}
+\MTIGibbsExpandedSamples{} validation samples and \MTIFullApplications{}
 application partitions, all final calculations meet those criteria; the
-largest rank-normalized \(\widehat R\) is \MTIFullRhat{} and the smallest
-bulk and tail effective sample sizes are \MTIFullBulkESS{} and
-\MTIFullTailESS{}. The selected \(q,\delta\) remain fixed during sampling.
+largest rank-normalized \(\widehat R\) is \MTIGibbsAllRhat{} and the smallest
+bulk and tail effective sample sizes are \MTIGibbsAllBulkESS{} and
+\MTIGibbsAllTailESS{} \citep{VehtariEtAl2021Rhat}.
+These checks support the reported posterior means; the supplement separately
+records the precision of posterior tail quantiles. The selected \(q,\delta\) remain fixed during sampling.
 The resulting posterior uncertainty is conditional on this selected target;
 it does not integrate over fitted-content and tilt selection.
 Writing \(L=\min(a,b)\) and \(U=\max(a,b)\), the Gibbs comparison uses
@@ -903,7 +862,9 @@ For each \((n,c,1-\alpha)\) setting, the study fixes a previously developed
 candidate rule and posterior probability cutoff before generating new
 samples under the declared priors. The cutoffs are \(0.995\) in eight designs
 and \(0.996\) at \(n=1000,c=0.99\). A separate assessment uses 200 samples
-per distribution and design, followed by 1000 independent validation samples.
+per distribution and design in the original eight-distribution panel.
+Independent validation uses 1000 samples in each of the twelve distributions
+and nine designs.
 No prior, cutoff, or candidate grid is reselected using these validation
 outcomes. Exact binomial bounds quantify Monte Carlo uncertainty. The
 calibration assessment and validation concern this finite distributional
@@ -916,55 +877,30 @@ model. Neither result by itself supplies a distribution-free tolerance theorem
 for the fitted-content and tilt selection rule. Its observed content-attainment
 rates in Section~\ref{sec:evaluation} provide empirical repeated-sampling
 evidence for the prespecified design. The shortest-candidate property is
-restricted to the evaluated grid of numerical fits. Selected-target endpoint
-uncertainty and regression-family tolerance calibration require additional
-results.
+restricted to the evaluated grid of numerical fits. Uncertainty accounting
+for fitted-content and tilt selection, and tolerance calibration for regression
+families, require additional results.
 
-\paragraph{Shortest-path continuation.}
-The population shortest-window path gives useful continuation geometry for
-moving across contents and explains the width cost of increasing fitted
-content. Suppose that the density is
-differentiable and strictly unimodal,
-and that the shortest window
-\(I_q=[L_q,U_q]=[Q(u_q),Q(u_q+q)]\) is unique and interior over a range of
-\(q\). Equal endpoint densities then satisfy
-\[
-f(L_q)=f(U_q)=\lambda_q.
-\]
-Writing \(a_q=f'(L_q)>0\) and \(b_q=f'(U_q)<0\), formal differentiation of
-the content and equal-density equations gives
-\[
-L_q'=\frac{b_q}{\lambda_q(a_q-b_q)}<0,
-\qquad
-U_q'=\frac{a_q}{\lambda_q(a_q-b_q)}>0.
-\]
-Thus the first-order shares of added probability assigned to the left and
-right boundaries are
-\[
-p_L(q)=\frac{-b_q}{a_q-b_q},\qquad
-p_R(q)=\frac{a_q}{a_q-b_q},\qquad
-p_L(q)+p_R(q)=1.
-\]
-Only under local symmetry are the two shares equal to one half. The width
-satisfies
-\[
-W_{\mathrm{SH}}'(q)=\frac{1}{\lambda_q},
-\qquad
-W_{\mathrm{SH}}''(q)
-=-\frac{a_qb_q}{\lambda_q^3(a_q-b_q)}>0.
-\]
-Hence additional content becomes increasingly expensive as the endpoints move
-into lower-density regions. If
-\(m_q=q^{-1}\int_{u_q}^{u_q+q}Q(s)\,ds
-=\mu+\delta_{\mathrm{SH}}(q)\), then
-\[
-\delta_{\mathrm{SH}}'(q)
-=\frac{p_L(q)L_q+p_R(q)U_q-m_q}{q}.
-\]
-These derivatives describe the population path under the stated interior
-conditions. The implemented MTI procedure evaluates its finite grid directly;
-it does not require these derivatives. Boundary and nonunique shortest
-intervals require separate treatment.
+\begin{algorithmblock}{Calibrated MTI interval construction}
+\item Before validation, fix the priors, learning rate, scan calibration,
+candidate-grid rule, and cell-specific DP probability threshold \(\gamma\).
+\item For the observed sample, construct the fitted-content grid from the
+scan reference. At each content, construct the empirical shortest-window
+tilt reference and its prespecified neighboring tilts, including zero.
+\item Fit each \((q,\delta)\) by ECM. Apply the final conditional-mode
+accuracy checks and any required refinements; use the checked endpoints to
+compute their closed-interval DP content probability.
+\item Among eligible, numerically resolved fits, select the shortest interval
+with the stated tie rule. Record a nonreturn if the search is unresolved or
+no fit is eligible. Retain all such outcomes in validation.
+\item For the fixed-target Gibbs comparison, hold the selected \((q,\delta)\)
+and priors fixed, sample the root posterior, and average the ordered endpoints.
+This gives a separate interval whose content attainment is assessed separately.
+\end{algorithmblock}
+
+The supplement specifies the full grid and numerical checks. It also derives
+the population width cost of increasing content; those derivatives are not
+needed to evaluate the candidate grid.
 
 \section{Validation Design}
 \label{sec:evaluation}
@@ -1002,8 +938,8 @@ calibration assessment, allowing paired comparisons of attainment and width.
 The feasible cells are \(n=50,c=0.90\), \(n=100,c\in\{0.90,0.95\}\), and
 \(n\in\{500,1000\},c\in\{0.90,0.95,0.99\}\).
 
-The small-sample restriction is structural. For a two-sided distribution-free
-interval, even the full sample range reaches content \(c\) with confidence
+The small-sample restriction comes from the sample-bounded reference class.
+The full sample range reaches content \(c\) with confidence
 \(0.95\) only when
 \[
   1-n(1-c)c^{n-1}-c^n \ge 0.95 .
@@ -1012,8 +948,10 @@ For intervals contained in the sample range, the corresponding minimum sample
 sizes are \(46\), \(93\), and \(473\) for
 \(c=0.90\), \(0.95\), and \(0.99\), respectively. Thus
 \(n=50,c=0.95\) and \(n=100,c=0.99\) are excluded from the confirmatory
-comparison because the sample-bounded order-statistic comparators cannot
-support the requested statement in those cells. These thresholds describe the
+comparison because the Wilks sample range cannot
+support the requested statement in those cells. Young--Mathew interpolation
+can extrapolate beyond the sample range; it is evaluated on the same common
+design rather than used to define this restriction. These thresholds describe the
 design's distribution-free reference class; they are not a feasibility theorem
 for the model-based MTI rule. The \(c=0.99\) rows begin at \(n=500\), the
 nearest rounded sample size above the \(n=473\) threshold.
@@ -1029,7 +967,9 @@ reference. Tolerance performance is assessed on the fresh validation samples.
 Young--Mathew interpolation
 \citep{YoungMathew2014NonparametricTolerance} and Wilks min--max intervals
 \citep{Wilks1941ToleranceLimits,Wilks1942StatisticalPrediction} provide the
-classical order-statistic comparators. The primary metric is the
+classical comparators. Throughout the tables and figures, ``Wilks'' denotes
+the full sample range, rather than a rank-trimmed Wilks interval.
+The primary metric is the
 content-attainment rate: the Monte Carlo estimate of
 \(\Pr_F^n\{C_F(\widehat T_n)\ge c\}\), where
 \(C_F([L,U])=F(U)-F(L)\). For each replication, this content check uses the
@@ -1040,8 +980,9 @@ distribution-level empirical 2.5\%--97.5\% ranges, avoiding width averages
 across distributions with different scales and tail behavior.
 Figure~\ref{fig:tolerance-validation-width-ranges} also marks the population
 shortest content-\(c\) interval for each simulation law. This benchmark uses
-the known distribution and serves as a lower width reference rather than as a
-sample-based tolerance procedure.
+the known distribution. Its width bounds a realized interval from below
+when that interval attains content \(c\); it need not bound a failed interval.
+It is not a sample-based tolerance procedure or a bound on expected width.
 
 \begin{table}[!htbp]
 \centering
@@ -1068,11 +1009,11 @@ Dashed reference lines mark nominal tolerance confidence \(0.95\).}
 \begin{figure}[p]
 \centering
 \includegraphics[width=\textwidth]{figures/generated/mti_skewness_extension_20261121/width_ranges_small.pdf}
-\caption{\textbf{Interval-width ranges for small samples.} Segments span empirical
-2.5\%--97.5\% width quantiles across the 1000 replications within each
-distribution, design, and method. Crosses mark means; dashed gray markers
-give population shortest content-\(c\) widths under the known laws. Raw
-interval lengths are shown on logarithmic axes.}
+\caption{\textbf{Interval-width ranges for small samples.} Segments span
+2.5\%--97.5\% width quantiles across 1000 replications per distribution,
+design, and method; crosses mark means. Dashed gray markers give population
+shortest content-\(c\) widths, which bound lengths of content-attaining
+intervals. Axes show raw lengths on logarithmic scales.}
 \label{fig:tolerance-validation-width-ranges}
 \end{figure}
 
@@ -1347,9 +1288,8 @@ they are to be used as a tolerance rule, while the posterior draws describe
 fixed-target uncertainty. The primary short-interval comparison uses the
 independently assessed ECM rule.
 
-The supplementary interval-calibration assessment improves Gibbs widths
-relative to the earlier radius rule while retaining high content attainment.
-It remains wider than ECM in most cases. Its threshold selection, tilt
+The supplementary interval-calibration assessment gives high content attainment
+but remains wider than ECM in most cases. Its threshold selection, tilt
 projection, and radius adjustment each contribute to the reported procedure;
 the comparison with ECM therefore concerns more than posterior averaging.
 

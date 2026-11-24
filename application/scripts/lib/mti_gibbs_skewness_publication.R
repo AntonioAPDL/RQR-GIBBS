@@ -18,7 +18,7 @@ mgsp_programs <- c("application/scripts/151_publish_mti_gibbs_skewness.R",
     "mti_skewness_distributions", "mti_skewness_reporting", "mti_skewness_publication",
     "mti_gibbs_skewness", "mti_gibbs_skewness_reporting", "mti_gibbs_skewness_publication",
     "mti_gibbs_full_publication_figures"), ".R"))
-mgsp_methods <- c(ecm = "MTI-ECM", gibbs = "MTI-Gibbs", young_mathew = "Young--Mathew", wilks = "Wilks")
+mgsp_methods <- c(ecm = "MTI-ECM", gibbs = "MTI-Gibbs", young_mathew = "Young--Mathew", wilks = "Wilks (range)")
 mgsp_colors <- c(ecm = "#009E73", gibbs = "#0072B2", young_mathew = "#CC79A7", wilks = "black")
 mgsp_read <- function(cfg, name) data.table::fread(file.path(cfg$evidence_dir, paste0(name, ".csv")))
 
@@ -59,6 +59,49 @@ mgsp_endpoints <- function(rows, tasks, cfg) {
     shorter_than_ecm = sum(width_difference < 0),
     below_ecm_cutoff = sum(dp_probability < ecm_probability_threshold),
     below_095 = sum(dp_probability < .95)), by = .(law_id, n, content)]
+}
+
+mgsp_diagnostic_extract <- function(cfg, directory, manifest, tasks) {
+  example <- cfg$diagnostic_example
+  task <- tasks[tasks$law_id == example$law_id & tasks$n == example$n &
+    tasks$content == example$content & tasks$replication == example$replication, , drop = FALSE]
+  mwd_require(nrow(task) == 1L && example$display_every == 4L, "Invalid diagnostic example.")
+  parent <- file.path(manifest$parent, "fits", sprintf("fit_%06d.rds", task$job_id))
+  mwd_require(mwd_file_hash(parent) == task$parent_sha256, "Diagnostic sample source changed.")
+  y <- readRDS(parent)$sample$y
+  result_path <- mgs_result_path(directory, task$job_id)
+  mwd_require(file.exists(paste0(result_path, ".json")), "Missing diagnostic assessment receipt.")
+  assessment <- mgs_read(result_path, task, cfg$study_identity, function(x)
+    mwd_require(isTRUE(x$adequate) && x$sample_sha256 == task$sample_sha256 &&
+      all(x$parameters$preferred_pass & x$parameters$mean_precision), "Inadequate diagnostic example."))
+  count <- assessment$row$retained_per_chain
+  paths <- vapply(1:4, function(chain) mgs_chain_path(directory, task$job_id, chain, count), "")
+  draws <- data.table::rbindlist(lapply(1:4, function(chain) {
+    t <- data.frame(chain = chain, seed = as.integer(cfg$study$chain_seed_base + 10L * task$job_id + chain),
+      q = task$q, delta = task$delta, ecm_lower = task$ecm_lower, ecm_upper = task$ecm_upper)
+    mwd_require(file.exists(paste0(paths[chain], ".json")), "Missing diagnostic chain receipt.")
+    saved <- mgs_read(paths[chain], t, cfg$study_identity,
+      function(x) mgs_validate_chain(x, y, cfg$study, count))
+    d <- data.table::as.data.table(saved$fit$draws)
+    d[, `:=`(width = upper - lower, midpoint = (upper + lower) / 2,
+      chain = chain, iteration = seq_len(.N))]
+    d
+  }))
+  mwd_require(max(abs(colMeans(draws[, .(lower, upper)]) -
+    unlist(assessment$row[c("lower", "upper")], use.names = FALSE))) < 1e-12,
+    "Diagnostic endpoint means differ from the completed assessment.")
+  ranks <- data.table::rbindlist(lapply(c("lower", "upper", "width", "midpoint"), function(v) {
+    bins <- pmin(20L, ceiling(rank(draws[[v]], ties.method = "average") * 20 / nrow(draws)))
+    counts <- data.table::data.table(chain = draws$chain, bin = bins)[, .(count = .N), by = .(chain, bin)]
+    out <- merge(data.table::CJ(chain = 1:4, bin = 1:20), counts, all.x = TRUE)
+    out[is.na(count), count := 0L]; out[, variable := v]; out
+  }))
+  metadata <- data.table::data.table(job_id = task$job_id, law_id = task$law_id, n = task$n,
+    content = task$content, replication = task$replication, q = task$q, delta = task$delta,
+    sample_sha256 = task$sample_sha256, retained_per_chain = count, display_every = example$display_every,
+    lower_mean = assessment$row$lower, upper_mean = assessment$row$upper)
+  list(metadata = metadata, trace = draws[iteration %% example$display_every == 1L], ranks = ranks,
+    sources = mgfp_hashes(c(parent, result_path, paste0(result_path, ".json"), paths, paste0(paths, ".json"))))
 }
 
 mgsp_collect <- function(cfg, directory) {
@@ -117,6 +160,7 @@ mgsp_collect <- function(cfg, directory) {
       replication = t$replication, lower_mode_gap = abs(lower - t$ecm_lower),
       upper_mode_gap = abs(upper - t$ecm_upper))
   }))
+  example <- mgsp_diagnostic_extract(cfg, directory, manifest, tasks)
   dir.create(cfg$evidence_dir, recursive = TRUE, showWarnings = FALSE)
   dir.create(cfg$local_output, recursive = TRUE, showWarnings = FALSE)
   export <- file.path(cfg$local_output, "interval_results_complete_cases.csv")
@@ -126,7 +170,8 @@ mgsp_collect <- function(cfg, directory) {
     mwd_require(identical(rows[[field]], restored[[field]]), paste("Gibbs export round trip differs:", field))
   values <- list(combined_cells = cells, added_cells = cells[law_id %in% cfg$study$law_ids],
     paired_comparison = pairs, numerical_summary = numerical, endpoint_comparison = endpoint,
-    conditional_mode_checks = conditional)
+    conditional_mode_checks = conditional, diagnostic_example = example$metadata,
+    diagnostic_trace = example$trace, diagnostic_ranks = example$ranks)
   for (name in names(values)) msu_write(values[[name]], file.path(cfg$evidence_dir, paste0(name, ".csv")))
   for (name in c("manifest", "verification", "controller_exit"))
     mwd_require(file.copy(file.path(directory, paste0(name, ".json")),
@@ -145,7 +190,7 @@ mgsp_collect <- function(cfg, directory) {
     endpoint_digits = 17L, quantile_type = 7L,
     posterior_tail_precision_failures = sum(!parameters$interval_precision),
     parameter_summaries = nrow(parameters), corrected_local_export = mgfp_hashes(export),
-    collection_programs = mgfp_hashes(mgsp_programs),
+    collection_programs = mgfp_hashes(mgsp_programs), diagnostic_sources = example$sources,
     configuration = mgfp_hashes(c(cfg$configuration_path, cfg$primary_config, cfg$study_config,
       cfg$study$prior_config, cfg$study$diagnostic_config, cfg$study$parent_config)),
     protected_evidence = mgfp_hashes(protected), data_files = hashes), file.path(cfg$evidence_dir, "provenance.json"))
@@ -179,6 +224,25 @@ mgsp_verify <- function(cfg, rendered = FALSE) {
   conditional <- mgsp_read(cfg, "conditional_mode_checks")
   mwd_require(nrow(conditional) == 36L && all(conditional$replication == 1L) &&
     all(conditional$lower_mode_gap == 0 & conditional$upper_mode_gap == 0), "Conditional-mode checks differ.")
+  example <- mgsp_read(cfg, "diagnostic_example")
+  trace <- mgsp_read(cfg, "diagnostic_trace"); ranks <- mgsp_read(cfg, "diagnostic_ranks")
+  specification <- cfg$diagnostic_example
+  mwd_require(nrow(example) == 1L && example$law_id == specification$law_id &&
+    example$n == specification$n && example$content == specification$content &&
+    example$replication == specification$replication && example$display_every == specification$display_every &&
+    example$q > example$content && example$q < 1 &&
+    setequal(trace$chain, 1:4) && !anyDuplicated(trace[, .(chain, iteration)]) &&
+    all(trace$iteration %% example$display_every == 1L) &&
+    all(trace$iteration > 0 & trace$iteration <= example$retained_per_chain) &&
+    all(is.finite(as.matrix(trace))) && all(trace$upper >= trace$lower) &&
+    all(table(trace$chain) == ceiling(example$retained_per_chain / example$display_every)) &&
+    all(abs(trace$width - trace$upper + trace$lower) < 1e-12) &&
+    all(abs(trace$midpoint - (trace$lower + trace$upper) / 2) < 1e-12) &&
+    nrow(ranks) == 320L && !anyDuplicated(ranks[, .(chain, bin, variable)]) &&
+    setequal(ranks$chain, 1:4) && setequal(ranks$bin, 1:20) &&
+    setequal(ranks$variable, c("lower", "upper", "width", "midpoint")) &&
+    all(ranks$count >= 0L) && all(ranks[, .(count = sum(count)), by = .(chain, variable)]$count == example$retained_per_chain),
+    "Diagnostic display does not match the specified saved-draw example.")
   wide <- data.table::dcast(added, law_id + n + content ~ method, value.var = "mean_width")
   msu_equal(endpoints[, .(law_id, n, content, mean_width_gibbs, mean_width_ecm)],
     wide[, .(law_id, n, content, mean_width_gibbs = gibbs, mean_width_ecm = ecm)], c("law_id", "n", "content"))
@@ -209,7 +273,12 @@ mgsp_numbers <- function(cfg) {
   w <- data.table::dcast(cells, law_id + n + content ~ method, value.var = "mean_width")
   number <- function(x) sprintf("%.1f", x)
   shares <- e[n == 1000 & content == .90, 100 * lower_share]
+  assessment <- mgsp_assessment(cfg)
   c(MTIGibbsExpandedCases = "108", MTIGibbsExpandedSamples = "108,000",
+    MTIGibbsAssessedDatasets = formatC(sum(assessment$datasets), format = "d", big.mark = ","),
+    MTIGibbsAllRhat = sprintf("%.4f", max(assessment$max_rhat)),
+    MTIGibbsAllBulkESS = as.character(floor(min(assessment$min_bulk_ess))),
+    MTIGibbsAllTailESS = as.character(floor(min(assessment$min_tail_ess))),
     MTIGibbsExpandedWider = as.character(sum(w$gibbs > w$ecm)),
     MTIGibbsExpandedMin = number(100 * min(g$attainment)), MTIGibbsExpandedMax = number(100 * max(g$attainment)),
     MTIGibbsAddedMin = number(100 * min(a$attainment)), MTIGibbsAddedMax = number(100 * max(a$attainment)),
@@ -222,6 +291,17 @@ mgsp_numbers <- function(cfg) {
     MTIGibbsAddedBelowCutoff = formatC(sum(e$below_ecm_cutoff), format = "d", big.mark = ","),
     MTIGibbsAddedBelowNominal = as.character(sum(e$below_095)),
     MTIGibbsExpandedStudentUpper = sprintf("%.4f", g[law_id == "student_t3" & n == 500 & content == .99, simultaneous_upper]))
+}
+
+mgsp_assessment <- function(cfg) {
+  old <- data.table::fread(file.path(cfg$study$historical_evidence, "numerical_assessment.csv"))
+  extra <- mgsp_read(cfg, "numerical_summary")
+  modes <- msu_read(cfg$primary, "numerical_diagnostics")
+  old[stage == "simulation", `:=`(attempts = attempts + sum(extra$datasets),
+    max_rhat = max(max_rhat, extra$max_rhat), min_bulk_ess = min(min_bulk_ess, extra$min_bulk_ess),
+    min_tail_ess = min(min_tail_ess, extra$min_tail_ess),
+    max_coordinate_gap = max(max_coordinate_gap, modes$max_objective_gap))]
+  old[, .(stage, datasets = attempts, max_rhat, min_bulk_ess, min_tail_ess, max_coordinate_gap)]
 }
 
 mgsp_number_lines <- function(values) c("% Generated from the completed fixed-target Gibbs extension.",
@@ -242,6 +322,21 @@ mgsp_tables <- function(cfg) {
   d[, `:=`(response_id = law_id, datasets = samples, attainment_rate = attainment)]
   mgsp_renderer(cfg)$mgfp_simulation_table(as.data.frame(d), file.path(cfg$table_dir, "simulation_comparison.tex"))
   writeLines(mgsp_number_lines(mgsp_numbers(cfg)), file.path(cfg$table_dir, "numbers.tex"))
+  assessment <- mgsp_assessment(cfg)
+  lines <- c("\\begin{tabular}{@{}lrrrr@{}}", "\\toprule",
+    "Data & Fits & Maximum $\\widehat R$ & Minimum ESS & Maximum gain\\\\",
+    " & & & Bulk / tail & \\\\", "\\midrule")
+  for (i in seq_len(nrow(assessment))) {
+    a <- assessment[i]
+    exponent <- floor(log10(a$max_coordinate_gap))
+    mantissa <- signif(a$max_coordinate_gap / 10^exponent, 3L)
+    if (mantissa >= 10) { mantissa <- mantissa / 10; exponent <- exponent + 1L }
+    lines <- c(lines, sprintf("%s & %s & %.4f & %d / %d & $%.2f\\times10^{%d}$\\\\",
+      if (a$stage == "simulation") "Simulation" else "Application", formatC(a$datasets, format = "d", big.mark = ","),
+      a$max_rhat, floor(a$min_bulk_ess), floor(a$min_tail_ess),
+      mantissa, exponent))
+  }
+  writeLines(c(lines, "\\bottomrule", "\\end{tabular}"), file.path(cfg$table_dir, "numerical_assessment.tex"))
 }
 
 mgsp_width_figures <- function(cfg) {
@@ -311,15 +406,75 @@ mgsp_attainment_figure <- function(cfg) {
   path
 }
 
+mgsp_population_figure <- function(cfg) {
+  d <- msu_read(cfg$primary, "population_content_references")
+  mwd_require(nrow(d) == 36L && setequal(d$dgp_id, cfg$figure_order), "Incomplete population references.")
+  path <- file.path(cfg$figure_dir, "population_shortest_intervals.pdf")
+  grDevices::pdf(path, width = 8.4, height = 10, useDingbats = FALSE)
+  graphics::par(mfrow = c(4, 3), mar = c(3, 2, 2, .5), oma = c(1.5, 1.5, 0, 0))
+  labels <- setNames(cfg$primary$labels, cfg$primary$law_order)
+  colors <- c("#009E73", "#0072B2", "#D55E00")
+  for (law in cfg$figure_order) {
+    z <- d[dgp_id == law][order(content)]
+    graphics::plot(NA, xlim = range(c(z$lower, z$upper)), ylim = c(.5, 3.5),
+      axes = FALSE, xlab = "", ylab = "", main = labels[law], cex.main = .9)
+    graphics::axis(1, cex.axis = .8)
+    graphics::axis(2, at = 1:3, labels = sprintf("%.2f", z$content), las = 1, tick = FALSE, cex.axis = .8)
+    graphics::segments(z$lower, 1:3, z$upper, 1:3, col = colors, lwd = 2)
+    graphics::points(z$lower, 1:3, col = colors, pch = 16, cex = .6)
+    graphics::points(z$upper, 1:3, col = colors, pch = 16, cex = .6)
+    graphics::box()
+  }
+  graphics::mtext("Standardized response", side = 1, outer = TRUE)
+  graphics::mtext("Population content", side = 2, outer = TRUE)
+  grDevices::dev.off()
+  path
+}
+
+mgsp_diagnostic_figures <- function(cfg) {
+  trace <- mgsp_read(cfg, "diagnostic_trace"); ranks <- mgsp_read(cfg, "diagnostic_ranks")
+  labels <- c(lower = "Lower endpoint", upper = "Upper endpoint", width = "Width", midpoint = "Midpoint")
+  colors <- c("#0072B2", "#D55E00", "#009E73", "#CC79A7")
+  paths <- file.path(cfg$figure_dir, c("diagnostic_traces.pdf", "diagnostic_ranks.pdf"))
+  grDevices::pdf(paths[1], width = 8, height = 6, useDingbats = FALSE)
+  graphics::par(mfrow = c(2, 2), mar = c(3.6, 4.2, 2, .5), oma = c(2.2, 0, 0, 0),
+    mgp = c(2.1, .65, 0))
+  for (v in names(labels)) {
+    graphics::plot(NA, xlim = range(trace$iteration), ylim = range(trace[[v]]),
+      xlab = "Retained iteration", ylab = labels[v], main = labels[v], cex.main = 1)
+    for (ch in 1:4) {
+      z <- trace[chain == ch]
+      graphics::lines(z$iteration, z[[v]], col = grDevices::adjustcolor(colors[ch], .65), lwd = .5)
+    }
+  }
+  mgs_legend(paste("Chain", 1:4), colors); grDevices::dev.off()
+  grDevices::pdf(paths[2], width = 8, height = 8, useDingbats = FALSE)
+  graphics::par(mfrow = c(4, 4), mar = c(2.5, 2.5, 2, .5), oma = c(1.8, 2, 0, 0))
+  for (v in names(labels)) for (ch in 1:4) {
+    z <- ranks[variable == v & chain == ch][order(bin)]
+    graphics::barplot(z$count, col = colors[ch], border = NA,
+      main = paste(labels[v], "- chain", ch), cex.main = .75, space = 0,
+      ylim = c(0, max(ranks[variable == v, count]) * 1.05), axes = FALSE)
+    graphics::axis(2, cex.axis = .65, las = 1)
+    graphics::axis(1, at = c(.5, 9.5, 19.5), labels = c(1, 10, 20), cex.axis = .7)
+    graphics::abline(h = sum(z$count) / nrow(z), lty = 2, col = "grey35")
+  }
+  graphics::mtext("Pooled-rank bin", side = 1, outer = TRUE)
+  graphics::mtext("Count", side = 2, outer = TRUE)
+  grDevices::dev.off()
+  paths
+}
+
 mgsp_render <- function(cfg) {
   mgsp_verify(cfg)
   mgsp_tables(cfg)
   dir.create(cfg$figure_dir, recursive = TRUE, showWarnings = FALSE)
-  figures <- c(mgsp_width_figures(cfg), mgsp_attainment_figure(cfg))
+  figures <- c(mgsp_width_figures(cfg), mgsp_attainment_figure(cfg),
+    mgsp_population_figure(cfg), mgsp_diagnostic_figures(cfg))
   dir.create(cfg$local_output, recursive = TRUE, showWarnings = FALSE)
   mgs_comparison_pdf(mgsp_read(cfg, "combined_cells"), cfg$study,
     file.path(cfg$local_output, "four_method_comparison.pdf"))
-  outputs <- c(figures, file.path(cfg$table_dir, c("numbers.tex", "simulation_comparison.tex")))
+  outputs <- c(figures, file.path(cfg$table_dir, c("numbers.tex", "simulation_comparison.tex", "numerical_assessment.tex")))
   mgfp_json_write(list(outputs = mgfp_hashes(outputs),
     programs = mgfp_hashes(c(mgsp_programs, cfg$configuration_path))),
     file.path(cfg$evidence_dir, "rendered.json"))
